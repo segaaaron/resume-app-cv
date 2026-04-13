@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(brew upgrade:*)",
+      "WebFetch(domain:www.cvwizard.com)",
+      "Bash(npx:*)"
+    ]
+  }
+}
