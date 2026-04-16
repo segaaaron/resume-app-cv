@@ -8,7 +8,7 @@
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-mono: ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -49,13 +49,16 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0.005 220);
   --foreground: oklch(0.145 0 0);
+  --brand: #2a72d7;
+  --brand-50: #eaf3fc;
+  --brand-700: #165b9c;
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  --primary: oklch(0.45 0.18 255);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -126,5 +129,41 @@
   }
   html {
     @apply font-sans;
+  }
+}
+
+/* ── Resume page layout ──────────────────────────────────────────────────────── */
+
+/* Resume preview — single white sheet */
+.resume-pages {
+  background-color: white;
+}
+
+/* Resume entry: never split across pages when printing */
+.resume-entry {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+@media print {
+  .resume-pages {
+    background-image: none !important;
+    background: white !important;
+  }
+
+  /* Ensure entries don't split across printed pages */
+  .resume-entry {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* Section headings stay with their first entry */
+  .resume-section {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .resume-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
   }
 }

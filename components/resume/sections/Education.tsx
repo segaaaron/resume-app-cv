@@ -1,0 +1,88 @@
+"use client"
+
+import { useState } from "react"
+import { useResumeStore } from "@/stores/resumeStore"
+import type { EducationItem } from "@/types/resume"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { nanoid } from "nanoid"
+
+export default function EducationSection() {
+  const { sectionData, updateSectionData } = useResumeStore()
+  const items = sectionData.education
+  const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null)
+
+  function add() {
+    const newItem: EducationItem = {
+      id: nanoid(), institution: "", degree: "", fieldOfStudy: "",
+      city: "", startDate: "", endDate: "", currentlyStudying: false, description: "",
+    }
+    updateSectionData("education", [...items, newItem])
+    setOpenId(newItem.id)
+  }
+
+  function update(id: string, field: keyof EducationItem, value: unknown) {
+    updateSectionData("education", items.map((i) => (i.id === id ? { ...i, [field]: value } : i)))
+  }
+
+  function remove(id: string) {
+    updateSectionData("education", items.filter((i) => i.id !== id))
+    if (openId === id) setOpenId(null)
+  }
+
+  return (
+    <div className="space-y-2">
+      {items.map((item) => (
+        <div key={item.id} className="border border-border rounded-lg overflow-hidden">
+          <button
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors"
+            onClick={() => setOpenId(openId === item.id ? null : item.id)}
+          >
+            <span className="font-medium truncate text-left">
+              {item.degree || item.institution || "Nueva educación"}
+            </span>
+            <div className="flex items-center gap-1 shrink-0">
+              <button onClick={(e) => { e.stopPropagation(); remove(item.id) }} className="p-1 hover:text-destructive transition-colors">
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+              {openId === item.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </div>
+          </button>
+
+          {openId === item.id && (
+            <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
+              {[
+                { label: "Institución", field: "institution" as const },
+                { label: "Título/Grado", field: "degree" as const },
+                { label: "Campo de estudio", field: "fieldOfStudy" as const },
+                { label: "Ciudad", field: "city" as const },
+                { label: "Fecha inicio", field: "startDate" as const },
+              ].map(({ label, field }) => (
+                <div key={field}>
+                  <Label className="text-xs mb-1 block text-muted-foreground">{label}</Label>
+                  <Input value={item[field] as string} onChange={(e) => update(item.id, field, e.target.value)} className="h-8 text-xs" />
+                </div>
+              ))}
+              {!item.currentlyStudying && (
+                <div>
+                  <Label className="text-xs mb-1 block text-muted-foreground">Fecha fin</Label>
+                  <Input value={item.endDate} onChange={(e) => update(item.id, "endDate", e.target.value)} className="h-8 text-xs" />
+                </div>
+              )}
+              <div className="col-span-2 flex items-center gap-2">
+                <Switch id={`studying-${item.id}`} checked={item.currentlyStudying} onCheckedChange={(v) => update(item.id, "currentlyStudying", v)} />
+                <Label htmlFor={`studying-${item.id}`} className="text-xs">Estudio actualmente aquí</Label>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
+        <Plus className="h-3.5 w-3.5" /> Añadir educación
+      </Button>
+    </div>
+  )
+}
