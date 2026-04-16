@@ -25,6 +25,12 @@ import BauhausTemplate from "./templates/Bauhaus"
 import OutlineTemplate from "./templates/Outline"
 import SparkTemplate from "./templates/Spark"
 import CarbonTemplate from "./templates/Carbon"
+import BlueprintTemplate from "./templates/Blueprint"
+import RivieraTemplate from "./templates/Riviera"
+import StripeTemplate from "./templates/Stripe"
+import VogueTemplate from "./templates/Vogue"
+import CoralTemplate from "./templates/Coral"
+import VitaeTemplate from "./templates/Vitae"
 
 const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   classic: ClassicTemplate,
@@ -51,23 +57,56 @@ const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   outline: OutlineTemplate,
   spark: SparkTemplate,
   carbon: CarbonTemplate,
+  blueprint: BlueprintTemplate,
+  riviera: RivieraTemplate,
+  stripe: StripeTemplate,
+  vogue: VogueTemplate,
+  coral: CoralTemplate,
+  vitae: VitaeTemplate,
 }
+
+// Google Fonts dynamic loader
+function buildFontUrl(family: string) {
+  const encoded = family.replace(/ /g, "+")
+  return `https://fonts.googleapis.com/css2?family=${encoded}:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,700&display=swap`
+}
+
+// Font size is applied via CSS zoom so it scales EVERYTHING:
+// Tailwind rem-based classes, inline px styles, images, paddings.
+// Base reference = 14px (default fontSize). zoom = config.fontSize / 14.
+// Compensate dimensions so the visual A4 size stays 210×297mm.
+const BASE_FONT = 14
 
 export default function ResumePreview() {
   const { config } = useResumeStore()
   const Template = TEMPLATE_MAP[config.templateId] ?? ClassicTemplate
 
+  const scale = config.fontSize / BASE_FONT
+  // Compensated dimensions: visually always 210×297mm regardless of zoom
+  const cssWidth = `${(210 / scale).toFixed(4)}mm`
+  const cssMinHeight = `${(297 / scale).toFixed(4)}mm`
+
   return (
-    <div
-      className="bg-white shadow-2xl resume-pages"
-      style={{
-        width: "210mm",
-        minHeight: "297mm",
-        fontFamily: config.fontFamily,
-        fontSize: `${config.fontSize}px`,
-      }}
-    >
-      <Template />
-    </div>
+    <>
+      {/* Dynamically load the selected Google Font */}
+      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+      <style>{`@import url('${buildFontUrl(config.fontFamily)}');`}</style>
+
+      <div
+        className="bg-white shadow-2xl resume-pages"
+        style={{
+          // zoom scales everything including Tailwind rem classes and inline px styles
+          zoom: scale,
+          width: cssWidth,
+          minHeight: cssMinHeight,
+          // fontFamily cascades to all children that don't override it
+          fontFamily: `'${config.fontFamily}', sans-serif`,
+          // lineHeight controls text line spacing (spacing slider)
+          lineHeight: config.spacing * 1.4,
+        }}
+      >
+        <Template />
+      </div>
+    </>
   )
 }

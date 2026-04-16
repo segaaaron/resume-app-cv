@@ -1,0 +1,13 @@
+.git
+.gitignore
+.env
+.env.*
+!.env.example
+node_modules
+.next
+.vercel
+README.md
+*.md
+Dockerfile
+docker-compose*.yml
+.dockerignore

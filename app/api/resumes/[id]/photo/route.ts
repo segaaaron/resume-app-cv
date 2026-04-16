@@ -1,0 +1,64 @@
+import { NextResponse } from "next/server"
+import { auth } from "@/lib/auth"
+import { db } from "@/lib/db"
+
+type Params = { params: Promise<{ id: string }> }
+
+// Upload photo — stores as base64 data URL directly in photoUrl field
+export async function POST(req: Request, { params }: Params) {
+  const session = await auth()
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id } = await params
+
+  const formData = await req.formData()
+  const file = formData.get("photo") as File | null
+  if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
+
+  const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    return NextResponse.json({ error: "Solo se permiten imágenes JPEG, PNG, WebP o GIF" }, { status: 400 })
+  }
+
+  // Limit: 1 MB (base64 añade ~33% — 1 MB → ~1.33 MB en BD)
+  if (file.size > 1 * 1024 * 1024) {
+    return NextResponse.json({ error: "La imagen no puede superar 1 MB" }, { status: 400 })
+  }
+
+  let buffer: Buffer
+  try {
+    buffer = Buffer.from(await file.arrayBuffer())
+  } catch {
+    return NextResponse.json({ error: "No se pudo leer el archivo" }, { status: 400 })
+  }
+
+  const base64 = `data:${file.type};base64,${buffer.toString("base64")}`
+
+  const existing = await db.resume.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  await db.resume.update({
+    where: { id },
+    data: { photoUrl: base64 },
+  })
+
+  return NextResponse.json({ photoUrl: base64 })
+}
+
+// Delete photo
+export async function DELETE(_req: Request, { params }: Params) {
+  const session = await auth()
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { id } = await params
+
+  const existing = await db.resume.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })
+  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  await db.resume.update({
+    where: { id },
+    data: { photoUrl: null },
+  })
+
+  return NextResponse.json({ success: true })
+}

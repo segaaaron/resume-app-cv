@@ -220,7 +220,7 @@ function CoverLetterPreview({ content, colorScheme }: { content: Content; colorS
       </div>
 
       {/* Closing */}
-      <p className="text-sm mb-8">{content.closing || "Atentamente"},</p>
+      {content.closing && <p className="text-sm mb-8">{content.closing},</p>}
 
       {/* Signature line */}
       <div className="mt-10 pt-4 border-t" style={{ borderColor: colorScheme + "40" }}>

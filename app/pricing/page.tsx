@@ -1,9 +1,8 @@
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
-import { Button } from "@/components/ui/button"
-import Link from "next/link"
 import { Check } from "lucide-react"
 import type { Metadata } from "next"
+import PricingButtons from "@/components/marketing/PricingButtons"
 
 export const metadata: Metadata = {
   title: "Precios — CVV Pro",
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 
 const features = [
   "CVs ilimitados",
-  "12 plantillas profesionales",
+  "29 plantillas profesionales",
   "Descarga en PDF",
   "Cartas de presentación",
   "Seguimiento de candidaturas",
@@ -48,9 +47,7 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Button variant="secondary" size="lg" className="w-full" asChild>
-                <Link href="/register">Comenzar prueba</Link>
-              </Button>
+              <PricingButtons plan="trial" />
               <p className="text-xs text-white/60 text-center mt-2">Cancela en cualquier momento</p>
             </div>
 
@@ -70,9 +67,7 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <Button size="lg" className="w-full" asChild>
-                <Link href="/register">Empezar ahora</Link>
-              </Button>
+              <PricingButtons plan="pro" />
               <p className="text-xs text-muted-foreground text-center mt-2">Cancela en cualquier momento</p>
             </div>
           </div>

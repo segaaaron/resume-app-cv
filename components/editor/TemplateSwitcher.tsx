@@ -8,7 +8,7 @@ export default function TemplateSwitcher() {
   const { config, setTemplate } = useResumeStore()
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 bg-white/95 backdrop-blur border-t border-border px-4 py-3">
+    <div className="shrink-0 bg-white/95 backdrop-blur border-t border-border px-4 py-3">
       <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
         {TEMPLATES.map((template) => (
           <button

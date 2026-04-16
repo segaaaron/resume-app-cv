@@ -71,10 +71,12 @@ model Resume {
   spacing         Float    @default(1.0)
   sections        Json     @default("[]")
   personalDetails Json     @default("{}")
-  photoUrl        String?
+  photoUrl        String?  @db.Text
   language        String   @default("es")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model CoverLetter {
@@ -88,6 +90,8 @@ model CoverLetter {
   fontFamily  String   @default("Poppins")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([userId])
 }
 
 model Application {
@@ -103,6 +107,8 @@ model Application {
   appliedAt DateTime?
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([userId])
 }
 
 enum Plan {

@@ -24,6 +24,24 @@ interface UserData {
 export default function SettingsForm({ user }: { user: UserData }) {
   const [name, setName] = useState(user.name ?? "")
   const [saving, setSaving] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
+
+  async function handleManageSubscription() {
+    setPortalLoading(true)
+    try {
+      const res = await fetch("/api/stripe/portal", { method: "POST" })
+      const data = await res.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        toast.error(data.error ?? "Error al abrir el portal")
+      }
+    } catch {
+      toast.error("Error de conexión")
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -121,6 +139,11 @@ export default function SettingsForm({ user }: { user: UserData }) {
           <Button variant="outline" size="sm" onClick={() => window.location.href = "/pricing"} className="gap-2">
             <Crown className="h-3.5 w-3.5" />
             Mejorar a Pro
+          </Button>
+        )}
+        {user.plan !== "FREE" && (
+          <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={portalLoading} className="gap-2">
+            {portalLoading ? "Cargando..." : "Gestionar suscripción"}
           </Button>
         )}
 

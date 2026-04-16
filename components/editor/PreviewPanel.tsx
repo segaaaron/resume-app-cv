@@ -23,21 +23,30 @@ export default function PreviewPanel() {
         </Button>
       </div>
 
-      {/* Preview area */}
-      <div className="flex-1 overflow-auto flex items-start justify-center pt-8 pb-24 px-8">
+      {/* Preview area — outer container has scaled dimensions so no blank space */}
+      <div className="flex-1 overflow-auto flex justify-center pt-8 px-8">
         <div
           style={{
-            transform: `scale(${scale})`,
-            transformOrigin: "top center",
-            width: "210mm",
-            minHeight: "297mm",
+            width: `calc(210mm * ${scale})`,
+            height: `calc(297mm * ${scale})`,
+            flexShrink: 0,
           }}
         >
-          <ResumePreview />
+          <div
+            style={{
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+              width: "210mm",
+              minHeight: "297mm",
+            }}
+          >
+            <ResumePreview />
+          </div>
         </div>
       </div>
 
-      {/* Template switcher at bottom */}
+      {/* <div className="mb-8"></div> */}
+      {/* Template switcher — static at bottom */}
       <TemplateSwitcher />
     </div>
   )

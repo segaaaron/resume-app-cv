@@ -180,6 +180,12 @@ export type TemplateId =
   | "outline"
   | "spark"
   | "carbon"
+  | "blueprint"
+  | "riviera"
+  | "stripe"
+  | "vogue"
+  | "coral"
+  | "vitae"
 
 export interface ResumeConfig {
   templateId: TemplateId
@@ -236,6 +242,12 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "outline", name: "Outline", description: "Ultra-minimalista, solo bordes sin rellenos", columns: "double", hasPhoto: false },
   { id: "spark", name: "Spark", description: "Header degradado dinámico, badges de skills", columns: "double", hasPhoto: false },
   { id: "carbon", name: "Carbon", description: "Dark mode, ideal para perfiles tech y diseño", columns: "double", hasPhoto: true },
+  { id: "blueprint", name: "Blueprint", description: "Sidebar navy con foto circular y headings en color", columns: "double", hasPhoto: true },
+  { id: "riviera", name: "Riviera", description: "Sidebar oscuro, header con nombre partido en color y blanco", columns: "double", hasPhoto: true },
+  { id: "stripe", name: "Stripe", description: "Banda de color completa con foto, dos columnas abajo", columns: "double", hasPhoto: true },
+  { id: "vogue", name: "Vogue", description: "Nombre gigante estilo editorial, foto cuadrada en header", columns: "double", hasPhoto: true },
+  { id: "coral", name: "Coral", description: "Header centrado con foto, acento lateral en secciones", columns: "double", hasPhoto: true },
+  { id: "vitae", name: "Vitae", description: "Sidebar navy con foto circular, nombre partido en color, headers con tab diagonal", columns: "double", hasPhoto: true },
 ]
 
 export const FONT_OPTIONS = [

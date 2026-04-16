@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
+import { getLimits } from "@/lib/plans"
 
 export async function GET() {
   const session = await auth()
@@ -26,6 +27,19 @@ export async function GET() {
 export async function POST() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  // Plan limit check
+  const user = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } })
+  const limits = getLimits(user?.plan ?? "FREE")
+  if (limits.maxResumes !== Infinity) {
+    const count = await db.resume.count({ where: { userId: session.user.id } })
+    if (count >= limits.maxResumes) {
+      return NextResponse.json(
+        { error: `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.` },
+        { status: 403 }
+      )
+    }
+  }
 
   const defaultData = ResumeSectionsSchema.parse({})
 

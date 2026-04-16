@@ -39,7 +39,8 @@ export default function FormPanel() {
 
   return (
     <aside className="w-[420px] shrink-0 bg-white border-r border-border flex flex-col overflow-hidden">
-      <Tabs defaultValue="content" className="flex flex-col h-full">
+      <Tabs defaultValue="content" className="flex flex-col h-full overflow-hidden">
+        {/* Static tab bar */}
         <TabsList className="rounded-none border-b h-10 bg-white justify-start px-4 gap-4 shrink-0">
           <TabsTrigger value="content" className="gap-1.5 text-xs data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-2">
             <LayoutTemplate className="h-3.5 w-3.5" /> Contenido
@@ -49,7 +50,8 @@ export default function FormPanel() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="content" className="flex-1 overflow-y-auto mt-0 p-4 space-y-2">
+        {/* Scrollable content */}
+        <TabsContent value="content" className="flex-1 min-h-0 overflow-y-auto mt-0 p-4 space-y-2 data-[state=inactive]:hidden">
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={visibleSections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
               {visibleSections.map((section) => (
@@ -71,7 +73,7 @@ export default function FormPanel() {
           )}
         </TabsContent>
 
-        <TabsContent value="design" className="flex-1 overflow-y-auto mt-0">
+        <TabsContent value="design" className="flex-1 min-h-0 overflow-y-auto mt-0 data-[state=inactive]:hidden">
           <DesignPanel />
         </TabsContent>
       </Tabs>

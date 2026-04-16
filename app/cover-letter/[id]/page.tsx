@@ -27,7 +27,7 @@ export default async function CoverLetterPage({ params }: { params: Promise<{ id
         recipientTitle: content.recipientTitle ?? "",
         company: content.company ?? "",
         body: content.body ?? "",
-        closing: content.closing ?? "Atentamente",
+        closing: content.closing ?? "",
       }}
     />
   )

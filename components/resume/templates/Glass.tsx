@@ -31,7 +31,7 @@ export default function GlassTemplate() {
         <div className="flex items-center gap-6">
           {config.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" className="w-22 h-22 rounded-2xl object-cover border-2 border-white/50 shrink-0 w-20 h-20" />
+            <img src={config.photoUrl} alt="" className="w-22 h-22 rounded-2xl object-cover object-top border-2 border-white/50 shrink-0 w-20 h-20" />
           ) : (
             <div className="w-20 h-20 rounded-2xl flex items-center justify-center border-2 border-white/50 shrink-0 text-2xl font-black" style={{ background: `${color}25`, color }}>
               {initials || "?"}

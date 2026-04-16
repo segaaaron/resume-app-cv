@@ -16,11 +16,23 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
 
   if (!resume) notFound()
 
-  const sections = (resume.sections as unknown as ResumeSection[]) ?? DEFAULT_SECTIONS
-  const rawData = (resume.personalDetails as object) ?? {}
+  // Parse sections safely — fall back to defaults if DB data is malformed
+  let sections: ResumeSection[] = DEFAULT_SECTIONS
+  try {
+    const raw = resume.sections
+    if (Array.isArray(raw) && raw.length > 0) {
+      sections = raw as unknown as ResumeSection[]
+    }
+  } catch {
+    sections = DEFAULT_SECTIONS
+  }
 
-  // Merge stored data into schema defaults
-  const sectionData: ResumeSections = ResumeSectionsSchema.parse(rawData)
+  // Merge stored data through Zod schema to fill any missing fields safely
+  const sectionData: ResumeSections = ResumeSectionsSchema.parse(
+    typeof resume.personalDetails === "object" && resume.personalDetails !== null
+      ? resume.personalDetails
+      : {}
+  )
 
   const config: ResumeConfig = {
     templateId: (resume.templateId as ResumeConfig["templateId"]) ?? "classic",

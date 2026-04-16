@@ -8,11 +8,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function PersonalDetailsSection() {
+  const resumeId = useResumeStore((s) => s.resumeId)
   const { sectionData, updateSectionData } = useResumeStore()
 
-  const { register, watch } = useForm<PersonalDetails>({
+  const { register, watch, reset } = useForm<PersonalDetails>({
     defaultValues: sectionData.personalDetails,
   })
+
+  // When the store finishes initializing (resumeId goes from null → actual ID),
+  // reset the form with the real server data. useForm only captures defaultValues
+  // once at mount, so without this the form stays empty after init().
+  useEffect(() => {
+    reset(sectionData.personalDetails)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeId])
 
   useEffect(() => {
     const sub = watch((values) => {

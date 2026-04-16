@@ -136,17 +136,24 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         if (!resumeId) return
         set((state) => { state.isSaving = true })
         try {
-          await fetch(`/api/resumes/${resumeId}`, {
+          const res = await fetch(`/api/resumes/${resumeId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, sections, sectionData, config }),
           })
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}))
+            console.error("[save] server error:", res.status, err)
+            set((state) => { state.isSaving = false })
+            return
+          }
           set((state) => {
             state.isSaving = false
             state.lastSaved = new Date()
             state.isDirty = false
           })
-        } catch {
+        } catch (err) {
+          console.error("[save] network error:", err)
           set((state) => { state.isSaving = false })
         }
       },

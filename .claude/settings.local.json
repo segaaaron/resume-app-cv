@@ -25,7 +25,14 @@
       "Bash(grep -c \"dangerouslySetInnerHTML\" /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/components/resume/templates/*.tsx)",
       "Bash(grep -l \"dangerouslySetInnerHTML\" components/resume/templates/*.tsx)",
       "Bash(xargs cat:*)",
-      "Bash(perl -i -pe ':*)"
+      "Bash(perl -i -pe ':*)",
+      "Bash(grep -rn \"STORAGE\\\\|S3\\\\|CLOUDINARY\\\\|BLOB\" /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/.env*)",
+      "Bash(perl -i -pe 's/object-cover\\(?! object-top\\)/object-cover object-top/g' Blueprint.tsx Carbon.tsx Luxurious.tsx Vertical.tsx Sharp.tsx Circular.tsx Modern.tsx Casual.tsx Sidebar.tsx Glass.tsx)",
+      "Bash(psql postgresql://postgres:postgres@localhost:5432/cvvpro -c \"\\\\dt\")",
+      "Bash(ls /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/app/api/resumes/[id]/)",
+      "Bash(grep -A10 \"export async function PATCH\" /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/app/api/resumes/[id]/route.ts)",
+      "Bash(psql:*)",
+      "Bash(grep:*)"
     ]
   }
 }

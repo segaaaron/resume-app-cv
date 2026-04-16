@@ -43,6 +43,7 @@ const TEMPLATE_VISUALS: Record<string, {
   outline:      { bg: "#fff",    accent: "#374151", headerBg: "#fff",     headerText: "#111827", style: "bordered" },
   spark:        { bg: "#fff",    accent: "#06b6d4", headerBg: "linear-gradient(135deg,#6366f1,#06b6d4)", headerText: "#fff", style: "top-band" },
   carbon:       { bg: "#111827", accent: "#22d3ee", headerBg: "#0f172a",  headerText: "#22d3ee", style: "dark",      tag: "Foto" },
+  blueprint:    { bg: "#f8fafc", accent: "#2a72d7", headerBg: "#1e3a5f",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
 }
 
 function TemplatePreview({ id, visual }: { id: string; visual: typeof TEMPLATE_VISUALS[string] }) {

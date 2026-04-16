@@ -28,7 +28,7 @@ export default function CircularTemplate() {
             <img
               src={config.photoUrl}
               alt="Foto"
-              className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shrink-0"
+              className="w-24 h-24 rounded-full object-cover object-top border-4 border-white/30 shrink-0"
             />
           ) : (
             <div

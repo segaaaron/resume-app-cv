@@ -32,7 +32,7 @@ export default function CasualTemplate() {
             <img
               src={config.photoUrl}
               alt="Foto"
-              className="w-20 h-20 rounded-2xl object-cover border-4 border-white/40 shrink-0"
+              className="w-20 h-20 rounded-2xl object-cover object-top border-4 border-white/40 shrink-0"
             />
           ) : (
             <div className="w-20 h-20 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border-4 border-white/30">

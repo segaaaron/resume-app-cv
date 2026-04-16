@@ -26,6 +26,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
     fontSize: resume.fontSize,
     spacing: resume.spacing,
     photoUrl: resume.photoUrl,
+    language: (resume.language as ResumeConfig["language"]) ?? "es",
   }
 
   return (

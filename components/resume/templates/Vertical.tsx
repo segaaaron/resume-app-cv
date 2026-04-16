@@ -26,7 +26,7 @@ export default function VerticalTemplate() {
             <img
               src={config.photoUrl}
               alt="Foto"
-              className="w-24 h-24 rounded-full mx-auto object-cover border-4"
+              className="w-24 h-24 rounded-full mx-auto object-cover object-top border-4"
               style={{ borderColor: color }}
             />
           ) : (

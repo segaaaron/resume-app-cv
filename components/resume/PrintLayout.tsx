@@ -7,6 +7,7 @@ import ResumePreview from "./ResumePreview"
 import { Button } from "@/components/ui/button"
 import { Printer, ArrowLeft } from "lucide-react"
 import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 
 interface Props {
   resumeId: string
@@ -20,11 +21,20 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   const init = useResumeStore((s) => s.init)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
+
+  useEffect(() => {
+    if (searchParams.get("auto") === "true") {
+      // Wait for fonts/images to load before printing
+      const timer = setTimeout(() => window.print(), 800)
+      return () => clearTimeout(timer)
+    }
+  }, [searchParams])
 
   return (
     <>
