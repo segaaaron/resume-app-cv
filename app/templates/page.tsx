@@ -210,24 +210,24 @@ export default function TemplatesPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1 py-20 px-4">
+      <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-7xl mx-auto">
           {/* Hero */}
-          <div className="text-center mb-16">
+          <div className="text-center mb-10 sm:mb-16">
             <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">
-              24 plantillas
+              29 plantillas
             </span>
-            <h1 className="text-5xl font-extrabold tracking-tight mb-4">
+            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
               Elige tu diseño perfecto
             </h1>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
               Diseños modernos para cada industria y nivel profesional.
               Cambia de plantilla en cualquier momento sin perder tu contenido.
             </p>
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
             {TEMPLATES.map((template) => {
               const visual = TEMPLATE_VISUALS[template.id] ?? {
                 bg: "#fff", accent: "#2a72d7", headerBg: "#2a72d7", headerText: "#fff", style: "top-band" as const,

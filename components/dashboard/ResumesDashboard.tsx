@@ -77,16 +77,16 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Mis CVs</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Mis CVs</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {resumes.length} {resumes.length === 1 ? "currículum" : "currículums"}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <ImportResumeButton />
-          <Button onClick={createResume} disabled={creating} className="gap-2">
+          <Button onClick={createResume} disabled={creating} className="gap-2 flex-1 sm:flex-none">
             <Plus className="h-4 w-4" />
             Nuevo CV
           </Button>

@@ -92,12 +92,23 @@ function extractEmail(text: string): string {
 }
 
 function extractPhone(text: string): string {
-  const m = text.match(/(?:\+\d{1,3}[\s\-.]?)?\(?\d{2,4}\)?[\s\-.]?\d{3,4}[\s\-.]?\d{3,4}/g) ?? []
-  return m.find(p => p.replace(/\D/g, "").length >= 7) ? clean(m.find(p => p.replace(/\D/g, "").length >= 7)!) : ""
+  const m = text.match(/(?:\+\d{1,3}[\s\-.]?)?\(?\d{2,4}\)?[\s\-.]?\d{3,4}[\s\-.]?\d{3,4}(?!\d)/g) ?? []
+  const found = m.find(p => p.replace(/\D/g, "").length >= 7)
+  if (!found) return ""
+  const phone = found.trim()
+  // Strip trailing " NNNN" groups that are address numbers appended to the phone
+  // (happens when phone and address share a line in PDF extraction)
+  const stripped = phone.replace(/\s+\d{1,5}$/, "")
+  if (stripped !== phone && stripped.replace(/\D/g, "").length >= 7) {
+    return clean(stripped)
+  }
+  return clean(phone)
 }
 
 function extractLinkedIn(text: string): string {
-  return text.match(/linkedin\.com\/in\/[\w\-.]+/i)?.[0] ?? ""
+  // Collapse newlines that split a LinkedIn URL slug (e.g. "saravia-\nios" → "saravia-ios")
+  const collapsed = text.replace(/(linkedin\.com\/in\/[\w\-.]+-)\n([\w\-.]+)/gi, "$1$2")
+  return collapsed.match(/linkedin\.com\/in\/[\w\-.]+/i)?.[0] ?? ""
 }
 
 function extractGitHub(text: string): string {

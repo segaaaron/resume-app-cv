@@ -23,14 +23,14 @@ export default function PricingPage() {
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1 py-20 px-4">
+      <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-4xl font-bold mb-4">Un precio, todo incluido</h1>
-          <p className="text-muted-foreground text-lg mb-12">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-4">Un precio, todo incluido</h1>
+          <p className="text-muted-foreground text-base sm:text-lg mb-8 sm:mb-12">
             Sin niveles confusos. Sin funciones ocultas. Todo disponible desde el primer día.
           </p>
 
-          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
             {/* Trial */}
             <div className="bg-primary text-white rounded-2xl p-8 text-left">
               <div className="mb-6">

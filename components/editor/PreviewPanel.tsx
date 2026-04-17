@@ -33,6 +33,7 @@ export default function PreviewPanel() {
           }}
         >
           <div
+          className="pb-8"
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "top left",

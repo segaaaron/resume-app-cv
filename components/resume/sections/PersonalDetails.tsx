@@ -15,9 +15,6 @@ export default function PersonalDetailsSection() {
     defaultValues: sectionData.personalDetails,
   })
 
-  // When the store finishes initializing (resumeId goes from null → actual ID),
-  // reset the form with the real server data. useForm only captures defaultValues
-  // once at mount, so without this the form stays empty after init().
   useEffect(() => {
     reset(sectionData.personalDetails)
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -32,18 +29,18 @@ export default function PersonalDetailsSection() {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Field label="Nombre" id="firstName" register={register("firstName")} />
-      <Field label="Apellido" id="lastName" register={register("lastName")} />
-      <Field label="Título profesional" id="jobTitle" register={register("jobTitle")} className="col-span-2" />
-      <Field label="Email" id="email" type="email" register={register("email")} />
-      <Field label="Teléfono" id="phone" register={register("phone")} />
-      <Field label="Ciudad" id="city" register={register("city")} />
-      <Field label="País" id="country" register={register("country")} />
-      <Field label="Código postal" id="postalCode" register={register("postalCode")} />
-      <Field label="Dirección" id="address" register={register("address")} />
-      <Field label="Sitio web" id="website" register={register("website")} />
-      <Field label="LinkedIn" id="linkedin" register={register("linkedin")} />
-      <Field label="GitHub" id="github" register={register("github")} />
+      <Field label="Nombre"            id="firstName"  autoComplete="given-name"      register={register("firstName")} />
+      <Field label="Apellido"          id="lastName"   autoComplete="family-name"     register={register("lastName")} />
+      <Field label="Título profesional" id="jobTitle"  autoComplete="organization-title" register={register("jobTitle")} className="col-span-2" />
+      <Field label="Email"             id="email"      type="email" autoComplete="email"        register={register("email")} />
+      <Field label="Teléfono"          id="phone"      type="tel"   autoComplete="tel"          register={register("phone")} />
+      <Field label="Ciudad"            id="city"       autoComplete="address-level2"  register={register("city")} />
+      <Field label="País"              id="country"    autoComplete="country-name"    register={register("country")} />
+      <Field label="Código postal"     id="postalCode" autoComplete="postal-code"     register={register("postalCode")} />
+      <Field label="Dirección"         id="address"    autoComplete="street-address"  register={register("address")} />
+      <Field label="Sitio web"  id="website"  autoComplete="url" register={register("website")} />
+      <Field label="LinkedIn"  id="linkedin" autoComplete="off" register={register("linkedin")} className="col-span-2" />
+      <Field label="GitHub"    id="github"   autoComplete="off" register={register("github")}   className="col-span-2" />
     </div>
   )
 }
@@ -52,12 +49,14 @@ function Field({
   label,
   id,
   type = "text",
+  autoComplete,
   register,
   className,
 }: {
   label: string
   id: string
   type?: string
+  autoComplete?: string
   register: ReturnType<ReturnType<typeof useForm>["register"]>
   className?: string
 }) {
@@ -66,7 +65,7 @@ function Field({
       <Label htmlFor={id} className="text-xs mb-1 block text-muted-foreground">
         {label}
       </Label>
-      <Input id={id} type={type} className="h-8 text-sm" {...register} />
+      <Input id={id} type={type} autoComplete={autoComplete} className="h-8 text-sm" {...register} />
     </div>
   )
 }

@@ -52,7 +52,7 @@ export default function LoginForm() {
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-white border border-border rounded-2xl p-8 shadow-sm">
+      <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
         <h1 className="text-2xl font-bold mb-1">Bienvenido de vuelta</h1>
         <p className="text-muted-foreground text-sm mb-6">Inicia sesión para continuar</p>
 

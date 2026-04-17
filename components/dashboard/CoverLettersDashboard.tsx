@@ -60,14 +60,14 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold">Cartas de Presentación</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Cartas de Presentación</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {letters.length} {letters.length === 1 ? "carta" : "cartas"}
           </p>
         </div>
-        <Button onClick={createLetter} disabled={creating} className="gap-2">
+        <Button onClick={createLetter} disabled={creating} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           Nueva carta
         </Button>
