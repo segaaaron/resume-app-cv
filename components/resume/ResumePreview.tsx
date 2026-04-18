@@ -30,7 +30,21 @@ import RivieraTemplate from "./templates/Riviera"
 import StripeTemplate from "./templates/Stripe"
 import VogueTemplate from "./templates/Vogue"
 import CoralTemplate from "./templates/Coral"
-import VitaeTemplate from "./templates/Vitae"
+import AuroraTemplate from "./templates/Aurora"
+import HelixTemplate from "./templates/Helix"
+import LumiereTemplate from "./templates/Lumiere"
+import PrismTemplate from "./templates/Prism"
+import ConsulTemplate from "./templates/Consul"
+import RoseTemplate from "./templates/Rose"
+import MinimalTemplate from "./templates/Minimal"
+import NauticalTemplate from "./templates/Nautical"
+import WaveTemplate from "./templates/Wave"
+import CobaltTemplate from "./templates/Cobalt"
+import BannerTemplate from "./templates/Banner"
+import DualityTemplate from "./templates/Duality"
+import ObsidianTemplate from "./templates/Obsidian"
+import VertexTemplate from "./templates/Vertex"
+import PrestigeTemplate from "./templates/Prestige"
 
 const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   classic: ClassicTemplate,
@@ -62,7 +76,21 @@ const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   stripe: StripeTemplate,
   vogue: VogueTemplate,
   coral: CoralTemplate,
-  vitae: VitaeTemplate,
+  aurora: AuroraTemplate,
+  helix: HelixTemplate,
+  lumiere: LumiereTemplate,
+  prism: PrismTemplate,
+  consul: ConsulTemplate,
+  rose: RoseTemplate,
+  minimal: MinimalTemplate,
+  nautical: NauticalTemplate,
+  wave: WaveTemplate,
+  cobalt: CobaltTemplate,
+  banner: BannerTemplate,
+  duality: DualityTemplate,
+  obsidian: ObsidianTemplate,
+  vertex: VertexTemplate,
+  prestige: PrestigeTemplate,
 }
 
 // Google Fonts dynamic loader

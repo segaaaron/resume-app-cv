@@ -21,6 +21,9 @@ export default function Navbar() {
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-muted-foreground">
           <Link href="/templates" className="hover:text-foreground transition-colors">Plantillas</Link>
+          <Link href="/pro-disenos" className="flex items-center gap-1 font-semibold bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
+            ✦ Pro Diseños
+          </Link>
           <Link href="/pricing" className="hover:text-foreground transition-colors">Precios</Link>
           <Link href="/#faq" className="hover:text-foreground transition-colors">FAQ</Link>
         </nav>
@@ -52,6 +55,7 @@ export default function Navbar() {
       {open && (
         <div className="md:hidden border-t border-border bg-white px-4 py-4 flex flex-col gap-3 text-sm">
           <Link href="/templates" className="py-2 hover:text-primary" onClick={() => setOpen(false)}>Plantillas</Link>
+          <Link href="/pro-disenos" className="py-2 font-semibold bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent" onClick={() => setOpen(false)}>✦ Pro Diseños</Link>
           <Link href="/pricing" className="py-2 hover:text-primary" onClick={() => setOpen(false)}>Precios</Link>
           <Link href="/#faq" className="py-2 hover:text-primary" onClick={() => setOpen(false)}>FAQ</Link>
           <hr />

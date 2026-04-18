@@ -185,7 +185,21 @@ export type TemplateId =
   | "stripe"
   | "vogue"
   | "coral"
-  | "vitae"
+  | "aurora"
+  | "helix"
+  | "lumiere"
+  | "prism"
+  | "consul"
+  | "rose"
+  | "minimal"
+  | "nautical"
+  | "wave"
+  | "cobalt"
+  | "banner"
+  | "duality"
+  | "obsidian"
+  | "vertex"
+  | "prestige"
 
 export interface ResumeConfig {
   templateId: TemplateId
@@ -247,7 +261,21 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "stripe", name: "Stripe", description: "Banda de color completa con foto, dos columnas abajo", columns: "double", hasPhoto: true },
   { id: "vogue", name: "Vogue", description: "Nombre gigante estilo editorial, foto cuadrada en header", columns: "double", hasPhoto: true },
   { id: "coral", name: "Coral", description: "Header centrado con foto, acento lateral en secciones", columns: "double", hasPhoto: true },
-  { id: "vitae", name: "Vitae", description: "Sidebar navy con foto circular, nombre partido en color, headers con tab diagonal", columns: "double", hasPhoto: true },
+  { id: "aurora",  name: "Aurora ✦",  description: "Header fluido con ola SVG, arcos decorativos, diseño orgánico para creativos", columns: "double", hasPhoto: false },
+  { id: "helix",   name: "Helix ✦",   description: "Sidebar oscuro con patrón hexagonal SVG y progreso circular para skills", columns: "double", hasPhoto: true },
+  { id: "lumiere", name: "Lumière ✦", description: "Art Deco de lujo con ornamentos SVG simétricos, para ejecutivos y directivos", columns: "double", hasPhoto: false },
+  { id: "prism",   name: "Prism ⭐",   description: "Sidebar oscuro + section headers con tab curvo SVG, estilo David Martin", columns: "double", hasPhoto: true },
+  { id: "consul",  name: "Consul",    description: "Sidebar azul con nombre apilado, foto circular y secciones con línea inferior", columns: "double", hasPhoto: true },
+  { id: "rose",     name: "Rose ⚡",     description: "Sidebar rosa cálido con foto circular, secciones elegantes y acento dusty rose", columns: "double", hasPhoto: true },
+  { id: "minimal",  name: "Minimal ⚡",  description: "Ultra-limpio con nombre gigante, puntos de rating y máximo espacio blanco", columns: "double", hasPhoto: true },
+  { id: "nautical", name: "Nautical ⚡", description: "Sidebar navy estrecho con barras de progreso y nombre bicolor a la derecha", columns: "double", hasPhoto: true },
+  { id: "wave",     name: "Wave ⚡",     description: "Header degradado teal con ola SVG curva, badges de contacto y estrellas", columns: "double", hasPhoto: true },
+  { id: "cobalt",   name: "Cobalt ⚡",   description: "Sidebar muy oscuro con anillo de foto, barras de skills e iconos de hobbies", columns: "double", hasPhoto: true },
+  { id: "banner",   name: "Banner ⚡",   description: "Headers en forma de banner/ribbon SVG navy con foto circular superior", columns: "double", hasPhoto: true },
+  { id: "duality",  name: "Duality ⚡",  description: "Panel derecho dark con contenido principal a la izquierda, acento cyan", columns: "double", hasPhoto: true },
+  { id: "obsidian", name: "Obsidian ⚡", description: "Fondo oscuro con panel blanco curvo SVG a la derecha, estilo premium", columns: "double", hasPhoto: true },
+  { id: "vertex",   name: "Vertex ⚡",   description: "Triángulos decorativos en esquinas, gauges circulares SVG para idiomas", columns: "double", hasPhoto: true },
+  { id: "prestige", name: "Prestige ⚡", description: "Fondo crema con bloque navy para resumen, acento cobre/bronce elegante", columns: "double", hasPhoto: true },
 ]
 
 export const FONT_OPTIONS = [

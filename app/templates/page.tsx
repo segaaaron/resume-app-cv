@@ -44,6 +44,11 @@ const TEMPLATE_VISUALS: Record<string, {
   spark:        { bg: "#fff",    accent: "#06b6d4", headerBg: "linear-gradient(135deg,#6366f1,#06b6d4)", headerText: "#fff", style: "top-band" },
   carbon:       { bg: "#111827", accent: "#22d3ee", headerBg: "#0f172a",  headerText: "#22d3ee", style: "dark",      tag: "Foto" },
   blueprint:    { bg: "#f8fafc", accent: "#2a72d7", headerBg: "#1e3a5f",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  aurora:       { bg: "#fff",    accent: "#8b5cf6", headerBg: "linear-gradient(135deg,#4c1d95,#8b5cf6)", headerText: "#fff", style: "top-band" },
+  helix:        { bg: "#fff",    accent: "#22d3ee", headerBg: "#0d1117",  headerText: "#22d3ee", style: "sidebar",   tag: "Foto" },
+  lumiere:      { bg: "#faf9f7", accent: "#b45309", headerBg: "#fff",     headerText: "#1a1a1a", style: "minimal" },
+  prism:        { bg: "#fff",    accent: "#29b6d8", headerBg: "#1b2a3b",  headerText: "#29b6d8", style: "sidebar",   tag: "Foto" },
+  consul:       { bg: "#fff",    accent: "#2563eb", headerBg: "#2563eb",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
 }
 
 function TemplatePreview({ id, visual }: { id: string; visual: typeof TEMPLATE_VISUALS[string] }) {
@@ -226,34 +231,28 @@ export default function TemplatesPage() {
             </p>
           </div>
 
-          {/* Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
-            {TEMPLATES.map((template) => {
+          {/* ── Pro Diseños ── */}
+          {(() => {
+            const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
+            const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
+            const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id) && t.id !== "vitae")
+
+            const TemplateCard = ({ template }: { template: typeof TEMPLATES[number] }) => {
               const visual = TEMPLATE_VISUALS[template.id] ?? {
                 bg: "#fff", accent: "#2a72d7", headerBg: "#2a72d7", headerText: "#fff", style: "top-band" as const,
               }
               return (
-                <Link
-                  key={template.id}
-                  href="/register"
-                  id={template.id}
-                  className="group flex flex-col"
-                >
-                  {/* Card */}
+                <Link key={template.id} href="/register" id={template.id} className="group flex flex-col">
                   <div
                     className="relative aspect-[3/4] overflow-hidden rounded-xl border border-border transition-all duration-200 group-hover:shadow-xl group-hover:-translate-y-1 group-hover:border-primary/40"
                     style={{ backgroundColor: visual.bg }}
                   >
                     <TemplatePreview id={template.id} visual={visual} />
-
-                    {/* Hover overlay */}
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-200 rounded-xl flex items-center justify-center">
                       <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 bg-white text-primary font-semibold text-xs px-3 py-1.5 rounded-full shadow-md">
                         Usar plantilla
                       </span>
                     </div>
-
-                    {/* Badges */}
                     <div className="absolute top-2 left-2 flex flex-col gap-1">
                       {visual.tag && (
                         <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-black/60 text-white leading-none">
@@ -267,16 +266,47 @@ export default function TemplatesPage() {
                       )}
                     </div>
                   </div>
-
-                  {/* Info */}
                   <div className="mt-2.5 px-0.5">
                     <h3 className="font-semibold text-sm leading-tight">{template.name}</h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">{template.description}</p>
                   </div>
                 </Link>
               )
-            })}
-          </div>
+            }
+
+            return (
+              <>
+                {/* Pro Diseños section */}
+                <div className="mb-12">
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="flex-1 h-px bg-border" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-extrabold tracking-tight">Pro Diseños</span>
+                      <span className="text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-violet-500 to-cyan-500 text-white px-2.5 py-0.5 rounded-full">
+                        Premium
+                      </span>
+                    </div>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+                    {proTemplates.map((t) => <TemplateCard key={t.id} template={t} />)}
+                  </div>
+                </div>
+
+                {/* Divider */}
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="flex-1 h-px bg-border" />
+                  <span className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">Todas las plantillas</span>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+
+                {/* Regular grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
+                  {regularTemplates.map((t) => <TemplateCard key={t.id} template={t} />)}
+                </div>
+              </>
+            )
+          })()}
 
           {/* CTA */}
           <div className="mt-20 text-center bg-muted/40 rounded-2xl py-12 px-6">
