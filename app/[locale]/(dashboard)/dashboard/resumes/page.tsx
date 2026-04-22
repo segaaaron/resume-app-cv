@@ -1,21 +1,38 @@
+import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import ResumesDashboard from "@/components/dashboard/ResumesDashboard"
 
-export default async function ResumesPage() {
+export default async function ResumesPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
   const session = await auth()
-  const resumes = await db.resume.findMany({
-    where: { userId: session!.user!.id },
-    orderBy: { updatedAt: "desc" },
-    select: {
-      id: true,
-      title: true,
-      templateId: true,
-      colorScheme: true,
-      updatedAt: true,
-      createdAt: true,
-    },
-  })
+
+  if (!session?.user?.id) {
+    redirect(`/${locale}/login`)
+  }
+
+  type ResumeRow = { id: string; title: string; templateId: string; colorScheme: string; updatedAt: Date; createdAt: Date }
+  let resumes: ResumeRow[] = []
+  try {
+    resumes = await db.resume.findMany({
+      where: { userId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        templateId: true,
+        colorScheme: true,
+        updatedAt: true,
+        createdAt: true,
+      },
+    })
+  } catch {
+    redirect(`/${locale}/login`)
+  }
 
   return <ResumesDashboard initialResumes={resumes} />
 }

@@ -222,16 +222,18 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
           {isActive && (
             <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-destructive/40 text-destructive hover:bg-destructive/5"
-                  disabled={cancelLoading}
-                  type="button"
-                >
-                  {cancelLoading ? t("canceling") : t("cancel_subscription")}
-                </Button>
+              <AlertDialogTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-destructive/40 text-destructive hover:bg-destructive/5"
+                    disabled={cancelLoading}
+                    type="button"
+                  />
+                }
+              >
+                {cancelLoading ? t("canceling") : t("cancel_subscription")}
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>

@@ -55,7 +55,10 @@
       "Bash(perl -i -pe 's/objectFit: \"cover\" \\\\}/objectFit: \"cover\", objectPosition: `center \\\\${config.photoPosition ?? 15}%` }/g' components/resume/templates/__TRACKED_VAR__)",
       "Bash(perl -i -pe 's|\\(className=\"[^\"]*object-cover[^\"]*\"\\)\\(\\\\s*\\\\/>\\)|\\\\1 style={{ objectPosition: `center \\\\${config.photoPosition ?? 15}%` }}\\\\2|g' components/resume/templates/__TRACKED_VAR__)",
       "Bash(perl:*)",
-      "Bash(xargs -I{} basename {})"
+      "Bash(xargs -I{} basename {})",
+      "WebSearch",
+      "Bash(ls /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/*.tsx)",
+      "Bash(ls:*)"
     ]
   }
 }

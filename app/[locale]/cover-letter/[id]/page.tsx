@@ -3,11 +3,10 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor"
 
-export default async function CoverLetterPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CoverLetterPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const session = await auth()
-  if (!session?.user) redirect("/es/login")
-
-  const { id } = await params
+  const { id, locale } = await params
+  if (!session?.user) redirect(`/${locale}/login`)
   const letter = await db.coverLetter.findFirst({
     where: { id, userId: session.user.id },
   })

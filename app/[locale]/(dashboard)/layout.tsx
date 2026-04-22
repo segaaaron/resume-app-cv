@@ -11,9 +11,18 @@ export const metadata: Metadata = {
   },
 }
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode
+  params: Promise<{ locale: string }>
+}) {
+  const { locale } = await params
   const session = await auth()
-  if (!session?.user) redirect("/es/login")
+  if (!session?.user) {
+    redirect(`/${locale}/login`)
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

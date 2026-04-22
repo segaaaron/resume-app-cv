@@ -81,7 +81,10 @@ export default function DashboardNav({ user }: Props) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive cursor-pointer"
-              onClick={() => signOut({ callbackUrl: `/${locale}` })}
+              onClick={async () => {
+                await signOut({ redirect: false })
+                window.location.href = `/${locale}`
+              }}
             >
               <LogOut className="h-4 w-4 mr-2" />
               {t("logout")}

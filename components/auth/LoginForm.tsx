@@ -12,11 +12,12 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 
 export default function LoginForm() {
   const t = useTranslations("auth.login")
   const router = useRouter()
+  const locale = useLocale()
   const [googleLoading, setGoogleLoading] = useState(false)
 
   const schema = z.object({
@@ -42,14 +43,14 @@ export default function LoginForm() {
     if (result?.error) {
       toast.error(t("error"))
     } else {
-      router.push("/dashboard/resumes")
+      router.push(`/${locale}/dashboard/resumes`)
       router.refresh()
     }
   }
 
   async function loginWithGoogle() {
     setGoogleLoading(true)
-    await signIn("google", { callbackUrl: "/dashboard/resumes" })
+    await signIn("google", { callbackUrl: `/${locale}/dashboard/resumes` })
   }
 
   return (

@@ -40,7 +40,7 @@ export default async function RootLayout({
       className={`${plusJakartaSans.variable} h-full antialiased`}
       style={{ fontFamily: "var(--font-jakarta), sans-serif" }}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
         <SessionProvider session={session}>
           {children}
           <Toaster position="bottom-right" />

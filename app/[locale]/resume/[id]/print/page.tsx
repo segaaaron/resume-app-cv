@@ -5,11 +5,10 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import PrintLayout from "@/components/resume/PrintLayout"
 
-export default async function PrintPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function PrintPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const session = await auth()
-  if (!session?.user) redirect("/es/login")
-
-  const { id } = await params
+  const { id, locale } = await params
+  if (!session?.user) redirect(`/${locale}/login`)
   const resume = await db.resume.findFirst({
     where: { id, userId: session.user.id },
   })
@@ -26,6 +25,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
     fontSize: resume.fontSize,
     spacing: resume.spacing,
     photoUrl: resume.photoUrl,
+    photoPosition: resume.photoPosition,
     language: (resume.language as ResumeConfig["language"]) ?? "es",
   }
 

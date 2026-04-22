@@ -3,9 +3,10 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import CoverLettersDashboard from "@/components/dashboard/CoverLettersDashboard"
 
-export default async function CoverLettersPage() {
+export default async function CoverLettersPage({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params
   const session = await auth()
-  if (!session?.user?.id) redirect("/es/login")
+  if (!session?.user?.id) redirect(`/${locale}/login`)
 
   const letters = await db.coverLetter.findMany({
     where: { userId: session.user.id },
