@@ -31,6 +31,7 @@ interface ResumeActions {
   setFontSize: (size: number) => void
   setSpacing: (spacing: number) => void
   setPhoto: (url: string | null) => void
+  setPhotoPosition: (position: number) => void
   updateSectionData: <K extends keyof ResumeSections>(key: K, value: ResumeSections[K]) => void
   reorderSections: (fromIndex: number, toIndex: number) => void
   toggleSection: (id: string) => void
@@ -46,6 +47,7 @@ const defaultConfig: ResumeConfig = {
   fontSize: 14,
   spacing: 1.0,
   photoUrl: null,
+  photoPosition: 15,
   language: "es",
 }
 
@@ -92,6 +94,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
       setFontSize: (size) => set((state) => { state.config.fontSize = size; state.isDirty = true }),
       setSpacing: (spacing) => set((state) => { state.config.spacing = spacing; state.isDirty = true }),
       setPhoto: (url) => set((state) => { state.config.photoUrl = url; state.isDirty = true }),
+      setPhotoPosition: (position) => set((state) => { state.config.photoPosition = position; state.isDirty = true }),
 
       updateSectionData: (key, value) => {
         set((state) => {

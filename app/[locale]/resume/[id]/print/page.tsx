@@ -7,7 +7,7 @@ import PrintLayout from "@/components/resume/PrintLayout"
 
 export default async function PrintPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user) redirect("/login")
+  if (!session?.user) redirect("/es/login")
 
   const { id } = await params
   const resume = await db.resume.findFirst({

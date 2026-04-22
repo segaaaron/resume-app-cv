@@ -56,7 +56,7 @@ export default function WaveTemplate() {
         <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "28px 30px 0" }}>
           <div style={{ width: 70, height: 70, borderRadius: "50%", overflow: "hidden", border: "3px solid " + cyan, flexShrink: 0, backgroundColor: headerDark, position: "relative" }}>
             {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
             ) : (
               <svg width="70" height="70" viewBox="0 0 70 70"><circle cx="35" cy="26" r="12" fill="#ffffff55" /><ellipse cx="35" cy="60" rx="20" ry="16" fill="#ffffff55" /></svg>
             )}

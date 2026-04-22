@@ -41,8 +41,8 @@ export default function RivieraTemplate() {
             <img
               src={config.photoUrl}
               alt=""
-              className="rounded-full object-cover object-top mb-4"
-              style={{ width: 90, height: 90, border: `3px solid ${color}` }}
+              className="rounded-full object-cover mb-4"
+              style={{ width: 90, height: 90, border: `3px solid ${color}`, objectPosition: `center ${config.photoPosition ?? 15}%` }}
             />
           ) : (
             <div

@@ -26,9 +26,9 @@ export default function SharpTemplate() {
         <div className="flex items-center gap-6 px-10 pt-8 pb-14">
           {config.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" className="w-20 h-20 object-cover object-top border-4 border-white/30 shrink-0" style={{ clipPath: "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)" }} />
+            <img src={config.photoUrl} alt="" className="w-20 h-20 object-cover border-4 border-white/30 shrink-0" style={{ clipPath: "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
           ) : (
-            <div className="w-20 h-20 bg-white/20 border-4 border-white/30 flex items-center justify-center shrink-0 text-white font-black text-2xl" style={{ clipPath: "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)" }}>
+            <div className="w-20 h-20 bg-white/20 border-4 border-white/30 flex items-center justify-center shrink-0 text-white font-black text-2xl" style={{ clipPath: "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)", objectPosition: `center ${config.photoPosition ?? 15}%` }}>
               {initials || "?"}
             </div>
           )}

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import {
   DndContext,
@@ -21,6 +22,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LayoutTemplate, Settings2 } from "lucide-react"
 
 export default function FormPanel() {
+  const t = useTranslations("editor")
   const { sections, reorderSections } = useResumeStore()
   const visibleSections = sections.filter((s) => s.visible)
 
@@ -43,10 +45,10 @@ export default function FormPanel() {
         {/* Static tab bar */}
         <TabsList className="rounded-none border-b h-10 bg-white justify-start px-4 gap-4 shrink-0">
           <TabsTrigger value="content" className="gap-1.5 text-xs data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-2">
-            <LayoutTemplate className="h-3.5 w-3.5" /> Contenido
+            <LayoutTemplate className="h-3.5 w-3.5" /> {t("form.content_tab")}
           </TabsTrigger>
           <TabsTrigger value="design" className="gap-1.5 text-xs data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-2">
-            <Settings2 className="h-3.5 w-3.5" /> Diseño
+            <Settings2 className="h-3.5 w-3.5" /> {t("form.design_tab")}
           </TabsTrigger>
         </TabsList>
 
@@ -64,7 +66,7 @@ export default function FormPanel() {
           {sections.filter((s) => !s.visible).length > 0 && (
             <div className="mt-4">
               <p className="text-xs text-muted-foreground font-medium mb-2 uppercase tracking-wider">
-                Secciones ocultas
+                {t("form.hidden_sections")}
               </p>
               {sections.filter((s) => !s.visible).map((section) => (
                 <SectionBlock key={section.id} section={section} />

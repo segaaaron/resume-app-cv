@@ -62,8 +62,8 @@ export default function StripeTemplate() {
             <img
               src={config.photoUrl}
               alt=""
-              className="object-cover object-top"
-              style={{ width: 88, height: 88, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.4)" }}
+              className="object-cover"
+              style={{ width: 88, height: 88, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.4)", objectPosition: `center ${config.photoPosition ?? 15}%` }}
             />
           ) : (
             <div

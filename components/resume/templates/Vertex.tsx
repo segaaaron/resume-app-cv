@@ -73,7 +73,7 @@ export default function VertexTemplate() {
           </div>
           <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${gold}`, position: "relative" }}>
             {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
             ) : (
               <svg width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#f0f0f0" rx="40" /><circle cx="40" cy="30" r="13" fill="#ccc" /><ellipse cx="40" cy="66" rx="22" ry="18" fill="#ccc" /></svg>
             )}

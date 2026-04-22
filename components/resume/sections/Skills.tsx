@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { SkillItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
@@ -8,16 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X } from "lucide-react"
 import { nanoid } from "nanoid"
 
-const LEVELS = [
-  { value: "beginner", label: "Básico" },
-  { value: "intermediate", label: "Intermedio" },
-  { value: "advanced", label: "Avanzado" },
-  { value: "expert", label: "Experto" },
-]
-
 export default function SkillsSection() {
+  const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
   const skills = sectionData.skills
+
+  const LEVELS = [
+    { value: "beginner",     label: t("skills.beginner") },
+    { value: "intermediate", label: t("skills.intermediate") },
+    { value: "advanced",     label: t("skills.advanced") },
+    { value: "expert",       label: t("skills.expert") },
+  ]
 
   function add() {
     const newSkill: SkillItem = { id: nanoid(), name: "", level: "intermediate" }
@@ -39,7 +41,7 @@ export default function SkillsSection() {
           <Input
             value={skill.name}
             onChange={(e) => update(skill.id, "name", e.target.value)}
-            placeholder="ej: React, Figma, SQL..."
+            placeholder={t("skills.placeholder")}
             className="h-8 text-xs flex-1"
           />
           <Select value={skill.level} onValueChange={(v) => update(skill.id, "level", v ?? "intermediate")}>
@@ -58,7 +60,7 @@ export default function SkillsSection() {
         </div>
       ))}
       <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
-        <Plus className="h-3.5 w-3.5" /> Añadir habilidad
+        <Plus className="h-3.5 w-3.5" /> {t("add_skill")}
       </Button>
     </div>
   )

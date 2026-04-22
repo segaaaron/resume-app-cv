@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { LanguageItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
@@ -8,17 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X } from "lucide-react"
 import { nanoid } from "nanoid"
 
-const LEVELS = [
-  { value: "elementary", label: "Elemental" },
-  { value: "limited", label: "Limitado" },
-  { value: "professional", label: "Profesional" },
-  { value: "full_professional", label: "Profesional completo" },
-  { value: "native", label: "Nativo" },
-]
-
 export default function LanguagesSection() {
+  const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
   const languages = sectionData.languages
+
+  const LEVELS = [
+    { value: "elementary",       label: t("languages.elementary") },
+    { value: "limited",          label: t("languages.limited") },
+    { value: "professional",     label: t("languages.professional") },
+    { value: "full_professional", label: t("languages.full_professional") },
+    { value: "native",           label: t("languages.native") },
+  ]
 
   function add() {
     updateSectionData("languages", [...languages, { id: nanoid(), name: "", level: "professional" as const }])
@@ -39,7 +41,7 @@ export default function LanguagesSection() {
           <Input
             value={lang.name}
             onChange={(e) => update(lang.id, "name", e.target.value)}
-            placeholder="ej: Español, Inglés..."
+            placeholder={t("languages.placeholder")}
             className="h-8 text-xs flex-1"
           />
           <Select value={lang.level} onValueChange={(v) => { if (v) update(lang.id, "level", v) }}>
@@ -58,7 +60,7 @@ export default function LanguagesSection() {
         </div>
       ))}
       <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
-        <Plus className="h-3.5 w-3.5" /> Añadir idioma
+        <Plus className="h-3.5 w-3.5" /> {t("add_language")}
       </Button>
     </div>
   )

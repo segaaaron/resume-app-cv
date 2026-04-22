@@ -37,7 +37,7 @@ export default function VogueTemplate() {
         <div className="absolute top-0 right-0" style={{ width: 110, height: 110 }}>
           {config.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" className="w-full h-full object-cover object-top" />
+            <img src={config.photoUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
           ) : (
             <div
               className="w-full h-full flex items-center justify-center font-extrabold text-2xl text-white"

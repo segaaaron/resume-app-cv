@@ -12,17 +12,19 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-
-const schema = z.object({
-  email: z.string().email("Email inválido"),
-  password: z.string().min(1, "Contraseña requerida"),
-})
-
-type FormData = z.infer<typeof schema>
+import { useTranslations } from "next-intl"
 
 export default function LoginForm() {
+  const t = useTranslations("auth.login")
   const router = useRouter()
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  const schema = z.object({
+    email: z.string().email(t("email_invalid")),
+    password: z.string().min(1, t("password_required")),
+  })
+
+  type FormData = z.infer<typeof schema>
 
   const {
     register,
@@ -38,7 +40,7 @@ export default function LoginForm() {
     })
 
     if (result?.error) {
-      toast.error("Email o contraseña incorrectos")
+      toast.error(t("error"))
     } else {
       router.push("/dashboard/resumes")
       router.refresh()
@@ -53,8 +55,7 @@ export default function LoginForm() {
   return (
     <div className="w-full max-w-md">
       <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
-        <h1 className="text-2xl font-bold mb-1">Bienvenido de vuelta</h1>
-        <p className="text-muted-foreground text-sm mb-6">Inicia sesión para continuar</p>
+        <h1 className="text-2xl font-bold text-center mb-6">{t("title")}</h1>
 
         <Button
           variant="outline"
@@ -72,7 +73,7 @@ export default function LoginForm() {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
           )}
-          Continuar con Google
+          {t("google")}
         </Button>
 
         <div className="relative mb-4">
@@ -80,17 +81,17 @@ export default function LoginForm() {
             <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs text-muted-foreground">
-            <span className="bg-white px-2">o con email</span>
+            <span className="bg-white px-2">{t("or")}</span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("email")}</Label>
             <Input
               id="email"
               type="email"
-              placeholder="tu@email.com"
+              placeholder={t("email_placeholder")}
               className="mt-1"
               {...register("email")}
             />
@@ -98,11 +99,11 @@ export default function LoginForm() {
           </div>
 
           <div>
-            <Label htmlFor="password">Contraseña</Label>
+            <Label htmlFor="password">{t("password")}</Label>
             <Input
               id="password"
               type="password"
-              placeholder="••••••••"
+              placeholder={t("password_placeholder")}
               className="mt-1"
               {...register("password")}
             />
@@ -111,14 +112,14 @@ export default function LoginForm() {
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Iniciar sesión
+            {t("submit")}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-4">
-          ¿No tienes cuenta?{" "}
+          {t("no_account")}{" "}
           <Link href="/register" className="text-primary font-medium hover:underline">
-            Regístrate gratis
+            {t("register_link")}
           </Link>
         </p>
       </div>

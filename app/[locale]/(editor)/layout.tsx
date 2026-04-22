@@ -3,6 +3,6 @@ import { auth } from "@/lib/auth"
 
 export default async function EditorRootLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
-  if (!session?.user) redirect("/login")
+  if (!session?.user) redirect("/es/login")
   return <>{children}</>
 }

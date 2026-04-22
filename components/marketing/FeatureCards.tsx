@@ -1,35 +1,38 @@
 import { FileText, Mail, Briefcase, Kanban } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 
-const features = [
-  {
-    icon: FileText,
-    title: "CV Profesional",
-    description: "Crea CVs ilimitados y edítalos en cualquier momento con nuestro editor en tiempo real.",
-  },
-  {
-    icon: Mail,
-    title: "Cartas de Presentación",
-    description: "Escribe cartas de presentación profesionales que complementen tu CV.",
-  },
-  {
-    icon: Briefcase,
-    title: "Ofertas de Trabajo",
-    description: "Encuentra oportunidades laborales relevantes para tu perfil directamente en la plataforma.",
-  },
-  {
-    icon: Kanban,
-    title: "Gestión de Candidaturas",
-    description: "Organiza y da seguimiento a tus postulaciones con un tablero Kanban intuitivo.",
-  },
-]
+export default async function FeatureCards() {
+  const t = await getTranslations("features")
 
-export default function FeatureCards() {
+  const features = [
+    {
+      icon: FileText,
+      title: t("cv_title"),
+      description: t("cv_desc"),
+    },
+    {
+      icon: Mail,
+      title: t("cover_letter_title"),
+      description: t("cover_letter_desc"),
+    },
+    {
+      icon: Briefcase,
+      title: t("jobs_title"),
+      description: t("jobs_desc"),
+    },
+    {
+      icon: Kanban,
+      title: t("kanban_title"),
+      description: t("kanban_desc"),
+    },
+  ]
+
   return (
     <section className="py-20 px-4 bg-background">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-4">Todo lo que necesitas</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">{t("title")}</h2>
         <p className="text-center text-muted-foreground mb-12">
-          Una plataforma completa para tu búsqueda de empleo
+          {t("subtitle")}
         </p>
 
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">

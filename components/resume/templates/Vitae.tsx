@@ -69,7 +69,7 @@ export default function VitaeTemplate() {
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={config.photoUrl} alt=""
-                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top center" }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }}
               />
             ) : (
               <div style={{

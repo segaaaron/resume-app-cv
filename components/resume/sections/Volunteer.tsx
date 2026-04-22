@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { VolunteerItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function VolunteerSection() {
+  const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
   const items = sectionData.volunteer
   const [openId, setOpenId] = useState<string | null>(null)
@@ -29,12 +31,19 @@ export default function VolunteerSection() {
     updateSectionData("volunteer", items.filter((i) => i.id !== id))
   }
 
+  const fieldLabelMap: Record<"organization" | "role" | "startDate" | "endDate", string> = {
+    organization: t("volunteer.organization"),
+    role: t("volunteer.role"),
+    startDate: t("volunteer.start_date"),
+    endDate: t("volunteer.end_date"),
+  }
+
   return (
     <div className="space-y-2">
       {items.map((item) => (
         <div key={item.id} className="border border-border rounded-lg overflow-hidden">
           <button className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50" onClick={() => setOpenId(openId === item.id ? null : item.id)}>
-            <span className="font-medium truncate text-left">{item.role || item.organization || "Nuevo voluntariado"}</span>
+            <span className="font-medium truncate text-left">{item.role || item.organization || t("new_volunteer")}</span>
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={(e) => { e.stopPropagation(); remove(item.id) }} className="p-1 hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></button>
               {openId === item.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -45,13 +54,13 @@ export default function VolunteerSection() {
               {(["organization", "role", "startDate", "endDate"] as const).map((field) => (
                 <div key={field}>
                   <Label className="text-xs mb-1 block text-muted-foreground">
-                    {field === "organization" ? "Organización" : field === "role" ? "Rol" : field === "startDate" ? "Inicio" : "Fin"}
+                    {fieldLabelMap[field]}
                   </Label>
                   <Input value={item[field]} onChange={(e) => update(item.id, field, e.target.value)} className="h-8 text-xs" />
                 </div>
               ))}
               <div className="col-span-2">
-                <Label className="text-xs mb-1 block text-muted-foreground">Descripción</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground">{t("description")}</Label>
                 <Textarea value={item.description} onChange={(e) => update(item.id, "description", e.target.value)} className="text-xs min-h-[60px] resize-none" />
               </div>
             </div>
@@ -59,7 +68,7 @@ export default function VolunteerSection() {
         </div>
       ))}
       <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
-        <Plus className="h-3.5 w-3.5" /> Añadir voluntariado
+        <Plus className="h-3.5 w-3.5" /> {t("add_volunteer")}
       </Button>
     </div>
   )

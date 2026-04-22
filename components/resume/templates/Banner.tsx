@@ -65,7 +65,7 @@ export default function BannerTemplate() {
         </div>
         <div style={{ width: 75, height: 75, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `2px solid ${navy}`, position: "relative" }}>
           {config.photoUrl ? (
-            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
           ) : (
             <svg width="75" height="75" viewBox="0 0 75 75"><rect width="75" height="75" fill="#eef" /><circle cx="37" cy="28" r="13" fill="#bbc" /><ellipse cx="37" cy="64" rx="22" ry="18" fill="#bbc" /></svg>
           )}

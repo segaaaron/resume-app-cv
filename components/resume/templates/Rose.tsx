@@ -50,7 +50,7 @@ export default function RoseTemplate() {
   const PhotoPlaceholder = () => (
     <div style={{ width: 90, height: 90, borderRadius: "50%", backgroundColor: accent + "33", margin: "0 auto 14px", overflow: "hidden", position: "relative" }}>
       {config.photoUrl ? (
-        <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+        <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
       ) : (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%", height: "100%" }}>
           <svg width="50" height="50" viewBox="0 0 50 50"><circle cx="25" cy="20" r="10" fill={accent} /><ellipse cx="25" cy="44" rx="18" ry="14" fill={accent} /></svg>

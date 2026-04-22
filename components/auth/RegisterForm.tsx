@@ -12,18 +12,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
-
-const schema = z.object({
-  name: z.string().min(2, "Nombre demasiado corto"),
-  email: z.string().email("Email inválido"),
-  password: z.string().min(8, "Mínimo 8 caracteres"),
-})
-
-type FormData = z.infer<typeof schema>
+import { useTranslations } from "next-intl"
 
 export default function RegisterForm() {
+  const t = useTranslations("auth.register")
   const router = useRouter()
   const [googleLoading, setGoogleLoading] = useState(false)
+
+  const schema = z.object({
+    name: z.string().min(2, t("name_short")),
+    email: z.string().email(t("email_invalid")),
+    password: z.string().min(8, t("password_min")),
+  })
+
+  type FormData = z.infer<typeof schema>
 
   const {
     register,
@@ -40,7 +42,7 @@ export default function RegisterForm() {
 
     if (!res.ok) {
       const { error } = await res.json()
-      toast.error(error ?? "Error al crear la cuenta")
+      toast.error(error ?? t("error"))
       return
     }
 
@@ -62,8 +64,8 @@ export default function RegisterForm() {
   return (
     <div className="w-full max-w-md">
       <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
-        <h1 className="text-2xl font-bold mb-1">Crea tu cuenta gratis</h1>
-        <p className="text-muted-foreground text-sm mb-6">Empieza a crear tu CV profesional hoy</p>
+        <h1 className="text-2xl font-bold mb-1">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm mb-6">{t("subtitle")}</p>
 
         <Button
           variant="outline"
@@ -81,7 +83,7 @@ export default function RegisterForm() {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
           )}
-          Continuar con Google
+          {t("google")}
         </Button>
 
         <div className="relative mb-4">
@@ -89,46 +91,47 @@ export default function RegisterForm() {
             <div className="w-full border-t border-border" />
           </div>
           <div className="relative flex justify-center text-xs text-muted-foreground">
-            <span className="bg-white px-2">o con email</span>
+            <span className="bg-white px-2">{t("or")}</span>
           </div>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="name">Nombre completo</Label>
-            <Input id="name" placeholder="Juan García" className="mt-1" {...register("name")} />
+            <Label htmlFor="name">{t("name")}</Label>
+            <Input id="name" placeholder={t("name_placeholder")} className="mt-1" {...register("name")} />
             {errors.name && <p className="text-xs text-destructive mt-1">{errors.name.message}</p>}
           </div>
 
           <div>
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="tu@email.com" className="mt-1" {...register("email")} />
+            <Label htmlFor="email">{t("email")}</Label>
+            <Input id="email" type="email" placeholder={t("email_placeholder")} className="mt-1" {...register("email")} />
             {errors.email && <p className="text-xs text-destructive mt-1">{errors.email.message}</p>}
           </div>
 
           <div>
-            <Label htmlFor="password">Contraseña</Label>
-            <Input id="password" type="password" placeholder="Mínimo 8 caracteres" className="mt-1" {...register("password")} />
+            <Label htmlFor="password">{t("password")}</Label>
+            <Input id="password" type="password" placeholder={t("password_placeholder")} className="mt-1" {...register("password")} />
             {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Crear cuenta gratis
+            {t("submit")}
           </Button>
         </form>
 
         <p className="text-center text-sm text-muted-foreground mt-4">
-          ¿Ya tienes cuenta?{" "}
+          {t("have_account")}{" "}
           <Link href="/login" className="text-primary font-medium hover:underline">
-            Inicia sesión
+            {t("login_link")}
           </Link>
         </p>
 
         <p className="text-center text-xs text-muted-foreground mt-3">
-          Al registrarte aceptas nuestros{" "}
-          <Link href="/terms" className="underline">Términos</Link> y{" "}
-          <Link href="/privacy" className="underline">Política de privacidad</Link>
+          {t("terms_prefix")}{" "}
+          <Link href="/terms" className="underline">{t("terms")}</Link>{" "}
+          {t("and")}{" "}
+          <Link href="/privacy" className="underline">{t("privacy")}</Link>
         </p>
       </div>
     </div>

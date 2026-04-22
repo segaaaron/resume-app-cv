@@ -42,8 +42,8 @@ export default function BlueprintTemplate() {
               <img
                 src={config.photoUrl}
                 alt=""
-                className="rounded-full object-cover object-top border-4 border-white/30"
-                style={{ width: 88, height: 88 }}
+                className="rounded-full object-cover border-4 border-white/30"
+                style={{ width: 88, height: 88, objectPosition: `center ${config.photoPosition ?? 15}%` }}
               />
             ) : (
               <div

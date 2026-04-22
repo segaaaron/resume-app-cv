@@ -2,12 +2,14 @@
 
 import { useForm } from "react-hook-form"
 import { useEffect } from "react"
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { PersonalDetails } from "@/types/resume"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
 export default function PersonalDetailsSection() {
+  const t = useTranslations("editor.sections_form")
   const resumeId = useResumeStore((s) => s.resumeId)
   const { sectionData, updateSectionData } = useResumeStore()
 
@@ -29,18 +31,18 @@ export default function PersonalDetailsSection() {
 
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Field label="Nombre"            id="firstName"  autoComplete="given-name"      register={register("firstName")} />
-      <Field label="Apellido"          id="lastName"   autoComplete="family-name"     register={register("lastName")} />
-      <Field label="Título profesional" id="jobTitle"  autoComplete="organization-title" register={register("jobTitle")} className="col-span-2" />
-      <Field label="Email"             id="email"      type="email" autoComplete="email"        register={register("email")} />
-      <Field label="Teléfono"          id="phone"      type="tel"   autoComplete="tel"          register={register("phone")} />
-      <Field label="Ciudad"            id="city"       autoComplete="address-level2"  register={register("city")} />
-      <Field label="País"              id="country"    autoComplete="country-name"    register={register("country")} />
-      <Field label="Código postal"     id="postalCode" autoComplete="postal-code"     register={register("postalCode")} />
-      <Field label="Dirección"         id="address"    autoComplete="street-address"  register={register("address")} />
-      <Field label="Sitio web"  id="website"  autoComplete="url" register={register("website")} />
-      <Field label="LinkedIn"  id="linkedin" autoComplete="off" register={register("linkedin")} className="col-span-2" />
-      <Field label="GitHub"    id="github"   autoComplete="off" register={register("github")}   className="col-span-2" />
+      <Field label={t("personal.first_name")}  id="firstName"  autoComplete="given-name"         register={register("firstName")} />
+      <Field label={t("personal.last_name")}   id="lastName"   autoComplete="family-name"        register={register("lastName")} />
+      <Field label={t("personal.job_title")}   id="jobTitle"   autoComplete="organization-title" register={register("jobTitle")} className="col-span-2" />
+      <Field label={t("personal.email")}       id="email"      type="email" autoComplete="email"        register={register("email")} />
+      <Field label={t("personal.phone")}       id="phone"      type="tel"   autoComplete="tel"          register={register("phone")} />
+      <Field label={t("personal.city")}        id="city"       autoComplete="address-level2"     register={register("city")} />
+      <Field label={t("personal.country")}     id="country"    autoComplete="country-name"       register={register("country")} />
+      <Field label={t("personal.postal_code")} id="postalCode" autoComplete="postal-code"        register={register("postalCode")} />
+      <Field label={t("personal.address")}     id="address"    autoComplete="street-address"     register={register("address")} />
+      <Field label={t("personal.website")}     id="website"    autoComplete="url"                register={register("website")} />
+      <Field label={t("personal.linkedin")}    id="linkedin"   autoComplete="off"                register={register("linkedin")} className="col-span-2" />
+      <Field label={t("personal.github")}      id="github"     autoComplete="off"                register={register("github")}   className="col-span-2" />
     </div>
   )
 }

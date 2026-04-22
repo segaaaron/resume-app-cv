@@ -1,33 +1,36 @@
 import { PencilLine, Palette, Download } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 
-const steps = [
-  {
-    icon: PencilLine,
-    step: "1",
-    title: "Ingresa tus datos",
-    description: "Completa las secciones relevantes: experiencia, educación, habilidades y más.",
-  },
-  {
-    icon: Palette,
-    step: "2",
-    title: "Elige tu plantilla",
-    description: "Personaliza con una de nuestras 12 plantillas profesionales según tu estilo.",
-  },
-  {
-    icon: Download,
-    step: "3",
-    title: "Descarga tu CV",
-    description: "Exporta en PDF de alta calidad y edítalo cuando quieras.",
-  },
-]
+export default async function HowItWorks() {
+  const t = await getTranslations("how_it_works")
 
-export default function HowItWorks() {
+  const steps = [
+    {
+      icon: PencilLine,
+      step: "1",
+      title: t("step1_title"),
+      description: t("step1_desc"),
+    },
+    {
+      icon: Palette,
+      step: "2",
+      title: t("step2_title"),
+      description: t("step2_desc"),
+    },
+    {
+      icon: Download,
+      step: "3",
+      title: t("step3_title"),
+      description: t("step3_desc"),
+    },
+  ]
+
   return (
     <section className="py-20 px-4 bg-white">
       <div className="max-w-5xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-4">¿Cómo funciona?</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">{t("title")}</h2>
         <p className="text-center text-muted-foreground mb-12">
-          Tres pasos simples para tener tu CV listo
+          {t("subtitle")}
         </p>
 
         <div className="grid md:grid-cols-3 gap-8">

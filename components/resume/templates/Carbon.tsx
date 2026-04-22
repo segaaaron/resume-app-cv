@@ -27,7 +27,7 @@ export default function CarbonTemplate() {
         <div className="flex justify-center">
           {config.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" className="w-20 h-20 rounded-full object-cover object-top border-2" style={{ borderColor: color }} />
+            <img src={config.photoUrl} alt="" className="w-20 h-20 rounded-full object-cover border-2" style={{ borderColor: color, objectPosition: `center ${config.photoPosition ?? 15}%` }} />
           ) : (
             <div className="w-20 h-20 rounded-full flex items-center justify-center font-extrabold text-xl border-2" style={{ borderColor: color, color, backgroundColor: color + "20" }}>
               {initials || "?"}

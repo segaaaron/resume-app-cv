@@ -6,6 +6,7 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
+import { isActive, isSuperAdmin } from "@/lib/plans"
 
 interface Props {
   resumeId: string
@@ -32,9 +33,16 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
 
+  const hasAccess = isSuperAdmin(role) || isActive(
+    plan,
+    trialEndsAt ? new Date(trialEndsAt) : null,
+    subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
+    subscriptionStatus
+  )
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <EditorTopBar />
+      <EditorTopBar hasAccess={hasAccess} />
       <div className="flex flex-1 overflow-hidden">
         <FormPanel />
         <PreviewPanel

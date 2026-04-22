@@ -47,7 +47,7 @@ export default function CobaltTemplate() {
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
           <div style={{ width: 95, height: 95, borderRadius: "50%", overflow: "hidden", border: `3px solid ${accent}`, backgroundColor: "#0a1a2e", position: "relative" }}>
             {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
             ) : (
               <svg width="95" height="95" viewBox="0 0 95 95"><circle cx="47" cy="35" r="16" fill="#ffffff44" /><ellipse cx="47" cy="78" rx="26" ry="20" fill="#ffffff44" /></svg>
             )}

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations, useLocale } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -20,7 +21,7 @@ import {
 import { toast } from "sonner"
 import { User, Mail, Calendar, Crown, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { es, enUS } from "date-fns/locale"
 
 interface UserData {
   id: string
@@ -34,6 +35,9 @@ interface UserData {
 }
 
 export default function SettingsForm({ user }: { user: UserData }) {
+  const t = useTranslations("dashboard.settings")
+  const locale = useLocale()
+  const dateLocale = locale === "es" ? es : enUS
   const [name, setName] = useState(user.name ?? "")
   const [saving, setSaving] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
@@ -48,10 +52,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
       if (data.url) {
         window.location.href = data.url
       } else {
-        toast.error(data.error ?? "Error al abrir el portal")
+        toast.error(data.error ?? t("portal_error"))
       }
     } catch {
-      toast.error("Error de conexión")
+      toast.error(t("connection_error"))
     } finally {
       setPortalLoading(false)
     }
@@ -64,12 +68,12 @@ export default function SettingsForm({ user }: { user: UserData }) {
       const data = await res.json()
       if (res.ok && data.success) {
         setSubscriptionStatus("CANCELED")
-        toast.success("Suscripción cancelada. Mantienes acceso hasta el vencimiento del período actual.")
+        toast.success(t("cancel_success"))
       } else {
-        toast.error(data.error ?? "Error al cancelar suscripción")
+        toast.error(data.error ?? t("cancel_error"))
       }
     } catch {
-      toast.error("Error de conexión")
+      toast.error(t("connection_error"))
     } finally {
       setCancelLoading(false)
     }
@@ -85,18 +89,18 @@ export default function SettingsForm({ user }: { user: UserData }) {
         body: JSON.stringify({ name }),
       })
       if (res.ok) {
-        toast.success("Perfil actualizado")
+        toast.success(t("save_success"))
       } else {
-        toast.error("Error al guardar")
+        toast.error(t("save_error"))
       }
     } catch {
-      toast.error("Error al guardar")
+      toast.error(t("save_error"))
     } finally {
       setSaving(false)
     }
   }
 
-  const planLabel = user.plan === "PRO" ? "Pro" : user.plan === "TRIAL" ? "Trial" : "Gratis"
+  const planLabel = user.plan === "PRO" ? "Pro" : user.plan === "TRIAL" ? "Trial" : t("plan_free")
   const planColor = user.plan === "PRO" ? "bg-amber-100 text-amber-700" : user.plan === "TRIAL" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
 
   const isCanceled = subscriptionStatus === "CANCELED"
@@ -105,11 +109,17 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
   return (
     <div className="space-y-6">
+      {/* Page title */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold">{t("title")}</h1>
+        <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
+      </div>
+
       {/* Profile Card */}
       <div className="border border-border rounded-xl p-6 space-y-5">
         <h2 className="font-semibold flex items-center gap-2">
           <User className="h-4 w-4" />
-          Perfil
+          {t("profile_section")}
         </h2>
 
         <div className="flex items-center gap-4">
@@ -120,7 +130,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
             </AvatarFallback>
           </Avatar>
           <div>
-            <p className="font-medium">{user.name ?? "Sin nombre"}</p>
+            <p className="font-medium">{user.name ?? t("no_name")}</p>
             <p className="text-sm text-muted-foreground">{user.email}</p>
           </div>
         </div>
@@ -129,27 +139,27 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
         <form onSubmit={handleSave} className="space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="name">Nombre completo</Label>
+            <Label htmlFor="name">{t("name_label")}</Label>
             <Input
               id="name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Tu nombre"
+              placeholder={t("name_placeholder")}
               maxLength={100}
             />
           </div>
 
           <div className="space-y-1.5">
-            <Label>Correo electrónico</Label>
+            <Label>{t("email_label")}</Label>
             <div className="flex items-center gap-2">
               <Input value={user.email} disabled className="bg-muted" />
               <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
             </div>
-            <p className="text-xs text-muted-foreground">El correo no puede cambiarse</p>
+            <p className="text-xs text-muted-foreground">{t("email_note")}</p>
           </div>
 
           <Button type="submit" disabled={saving}>
-            {saving ? "Guardando..." : "Guardar cambios"}
+            {saving ? t("saving") : t("save_button")}
           </Button>
         </form>
       </div>
@@ -158,63 +168,61 @@ export default function SettingsForm({ user }: { user: UserData }) {
       <div className="border border-border rounded-xl p-6 space-y-4">
         <h2 className="font-semibold flex items-center gap-2">
           <Crown className="h-4 w-4" />
-          Plan y cuenta
+          {t("plan_section")}
         </h2>
 
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium">Plan actual</p>
+            <p className="text-sm font-medium">{t("current_plan")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
               {user.plan === "FREE"
-                ? "Acceso a funcionalidades básicas"
+                ? t("plan_free_desc")
                 : user.plan === "TRIAL"
-                  ? "Prueba activa"
-                  : "Acceso completo a todas las funcionalidades"}
+                  ? t("plan_trial_desc")
+                  : t("plan_pro_desc")}
             </p>
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full ${planColor}`}>{planLabel}</span>
         </div>
 
-        {/* Subscription status banners */}
         {isCanceled && user.subscriptionEndsAt && (
           <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm">
             <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
             <p className="text-amber-800">
-              Suscripción cancelada — sin renovación automática. Mantienes acceso hasta el{" "}
+              {t("canceled_notice")}{" "}
               <span className="font-semibold">
-                {format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: es })}
-              </span>
-              .
+                {format(new Date(user.subscriptionEndsAt), "d MMMM yyyy", { locale: dateLocale })}
+              </span>.
             </p>
           </div>
         )}
 
         {isActive && user.subscriptionEndsAt && (
           <p className="text-xs text-muted-foreground">
-            Suscripción mensual · próxima renovación:{" "}
+            {t("renewal_notice")}{" "}
             <span className="font-medium text-foreground">
-              {format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: es })}
+              {format(new Date(user.subscriptionEndsAt), "d MMMM yyyy", { locale: dateLocale })}
             </span>
           </p>
         )}
 
         <div className="flex flex-wrap gap-2">
           {user.plan !== "PRO" && (
-            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pricing"} className="gap-2">
+            <Button variant="outline" size="sm" onClick={() => window.location.href = `/${locale}/pricing`} className="gap-2">
               <Crown className="h-3.5 w-3.5" />
-              Mejorar a Pro
+              {t("upgrade_button")}
             </Button>
           )}
 
           {hasSubscription && (
             <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
-              {portalLoading ? "Cargando..." : "Gestionar suscripción"}
+              {portalLoading ? t("loading") : t("manage_subscription")}
             </Button>
           )}
 
           {isActive && (
             <AlertDialog>
-              <AlertDialogTrigger>
+              <AlertDialogTrigger asChild>
                 <Button
                   variant="outline"
                   size="sm"
@@ -222,27 +230,27 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   disabled={cancelLoading}
                   type="button"
                 >
-                  {cancelLoading ? "Cancelando..." : "Cancelar suscripción"}
+                  {cancelLoading ? t("canceling") : t("cancel_subscription")}
                 </Button>
               </AlertDialogTrigger>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
+                  <AlertDialogTitle>{t("cancel_dialog_title")}</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tu suscripción no se renovará automáticamente.
+                    {t("cancel_dialog_desc")}
                     {user.subscriptionEndsAt && (
-                      <> Mantendrás acceso completo hasta el <strong>{format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: es })}</strong>.</>
+                      <> <strong>{format(new Date(user.subscriptionEndsAt), "d MMMM yyyy", { locale: dateLocale })}</strong>.</>
                     )}
-                    {" "}Después tu cuenta pasará al plan gratuito.
+                    {" "}{t("cancel_dialog_after")}
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>Mantener suscripción</AlertDialogCancel>
+                  <AlertDialogCancel>{t("keep_subscription")}</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleCancelSubscription}
                     className="bg-destructive text-white hover:bg-destructive/90"
                   >
-                    Sí, cancelar
+                    {t("confirm_cancel")}
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>
@@ -254,23 +262,21 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Calendar className="h-4 w-4" />
-          Miembro desde {format(new Date(user.createdAt), "MMMM yyyy", { locale: es })}
+          {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
         </div>
       </div>
 
       {/* Danger Zone */}
       <div className="border border-destructive/30 rounded-xl p-6 space-y-3">
-        <h2 className="font-semibold text-destructive">Zona de peligro</h2>
-        <p className="text-sm text-muted-foreground">
-          Una vez eliminada tu cuenta, todos tus datos serán borrados permanentemente y no podrán recuperarse.
-        </p>
+        <h2 className="font-semibold text-destructive">{t("danger_zone")}</h2>
+        <p className="text-sm text-muted-foreground">{t("danger_desc")}</p>
         <Button
           variant="outline"
           size="sm"
           className="border-destructive/50 text-destructive hover:bg-destructive/5"
-          onClick={() => toast.error("Por favor contacta soporte para eliminar tu cuenta")}
+          onClick={() => toast.error(t("contact_support"))}
         >
-          Eliminar cuenta
+          {t("delete_account")}
         </Button>
       </div>
     </div>

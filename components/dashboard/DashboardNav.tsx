@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { FileText, Mail, Briefcase, Kanban, LogOut, ChevronDown } from "lucide-react"
+import { FileText, Mail, LogOut, ChevronDown } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,13 +13,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
-
-const tabs = [
-  { label: "CVs", href: "/dashboard/resumes", icon: FileText },
-  { label: "Cartas", href: "/dashboard/cover-letters", icon: Mail },
-  { label: "Empleos", href: "/dashboard/jobs", icon: Briefcase },
-  { label: "Candidaturas", href: "/dashboard/applications", icon: Kanban },
-]
+import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
+import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null }
@@ -27,12 +22,19 @@ interface Props {
 
 export default function DashboardNav({ user }: Props) {
   const pathname = usePathname()
+  const t = useTranslations("dashboard.nav")
+  const locale = useLocale()
+
+  const tabs = [
+    { label: t("cvs"),    href: `/${locale}/dashboard/resumes`,       icon: FileText },
+    { label: t("letters"), href: `/${locale}/dashboard/cover-letters`, icon: Mail },
+  ]
 
   return (
     <header className="bg-white border-b border-border sticky top-0 z-40">
       <div className="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
         <div className="flex items-center min-w-0 flex-1">
-          <Link href="/" className="flex items-center gap-1.5 font-bold text-primary mr-3 sm:mr-4 shrink-0">
+          <Link href={`/${locale}`} className="flex items-center gap-1.5 font-bold text-primary mr-3 sm:mr-4 shrink-0">
             <FileText className="h-5 w-5" />
             <span className="hidden sm:block">READY CV</span>
           </Link>
@@ -44,7 +46,7 @@ export default function DashboardNav({ user }: Props) {
                 href={href}
                 className={cn(
                   "flex items-center gap-1.5 px-2.5 sm:px-4 py-4 text-sm font-medium border-b-2 transition-colors whitespace-nowrap shrink-0",
-                  pathname.startsWith(href)
+                  pathname.startsWith(`/${locale}/dashboard/${href.split("/dashboard/")[1]}`)
                     ? "border-primary text-primary"
                     : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted"
                 )}
@@ -55,6 +57,8 @@ export default function DashboardNav({ user }: Props) {
             ))}
           </nav>
         </div>
+
+        <LocaleSwitcher />
 
         <DropdownMenu>
           <DropdownMenuTrigger className="flex items-center gap-1.5 h-9 px-2 rounded-lg hover:bg-muted transition-colors shrink-0">
@@ -68,19 +72,19 @@ export default function DashboardNav({ user }: Props) {
             <ChevronDown className="h-3 w-3" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => window.location.href = "/dashboard/settings"}>
-              Configuración
+            <DropdownMenuItem onClick={() => window.location.href = `/${locale}/dashboard/settings`}>
+              {t("settings")}
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => window.location.href = "/pricing"}>
-              Mejorar plan
+            <DropdownMenuItem onClick={() => window.location.href = `/${locale}/pricing`}>
+              {t("upgrade")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive cursor-pointer"
-              onClick={() => signOut({ callbackUrl: "/" })}
+              onClick={() => signOut({ callbackUrl: `/${locale}` })}
             >
               <LogOut className="h-4 w-4 mr-2" />
-              Cerrar sesión
+              {t("logout")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { TEMPLATES } from "@/types/resume"
 import { cn } from "@/lib/utils"
@@ -23,6 +24,7 @@ interface Props {
 }
 
 export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
+  const t = useTranslations("editor")
   const { config, setTemplate } = useResumeStore()
 
   const hasAccess = isSuperAdmin(role) || isActive(
@@ -34,7 +36,7 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
 
 
   function handleLockedTemplate() {
-    toast.error("Esta plantilla requiere un plan Pro o Trial activo.", {
+    toast.error(t("pro_required"), {
       action: {
         label: "Ver planes",
         onClick: () => { window.location.href = "/pricing" },
@@ -99,7 +101,7 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
 
         {/* ── Plantillas por defecto ── */}
         <div className="flex gap-3 overflow-x-auto pb-1 scrollbar-hide">
-          {regularTemplates.map((t) => <TemplateThumb key={t.id} template={t} locked={false} />)}
+          {regularTemplates.map((t) => <TemplateThumb key={t.id} template={t} locked={!hasAccess} />)}
         </div>
 
         {/* ── Pro Diseños ── */}

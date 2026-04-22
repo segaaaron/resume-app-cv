@@ -1,9 +1,11 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Textarea } from "@/components/ui/textarea"
 
 export default function SummarySection() {
+  const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
 
   return (
@@ -11,7 +13,7 @@ export default function SummarySection() {
       <Textarea
         value={sectionData.summary}
         onChange={(e) => updateSectionData("summary", e.target.value)}
-        placeholder="Escribe un breve resumen de tu perfil profesional, destacando tu experiencia, habilidades clave y objetivos..."
+        placeholder={t("summary_placeholder")}
         className="text-sm min-h-[120px] resize-none"
       />
       <p className="text-xs text-muted-foreground mt-1 text-right">

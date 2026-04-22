@@ -15,8 +15,9 @@ const patchSchema = z.object({
     fontFamily:  z.string().max(100).optional(),
     fontSize:    z.number().int().min(8).max(24).optional(),
     spacing:     z.number().min(0.5).max(3).optional(),
-    photoUrl:    z.string().nullable().optional(),
-    language:    z.enum(["es", "en"]).optional(),
+    photoUrl:      z.string().nullable().optional(),
+    photoPosition: z.number().int().min(0).max(100).optional(),
+    language:      z.enum(["es", "en"]).optional(),
   }).optional(),
 })
 
@@ -68,6 +69,7 @@ export async function PATCH(req: Request, { params }: Params) {
       fontSize:        config?.fontSize ?? undefined,
       spacing:         config?.spacing ?? undefined,
       photoUrl:        config?.photoUrl !== undefined ? config.photoUrl : undefined,
+      photoPosition:   config?.photoPosition ?? undefined,
       language:        config?.language ?? undefined,
     },
   })

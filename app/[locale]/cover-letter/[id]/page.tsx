@@ -5,7 +5,7 @@ import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor"
 
 export default async function CoverLetterPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user) redirect("/login")
+  if (!session?.user) redirect("/es/login")
 
   const { id } = await params
   const letter = await db.coverLetter.findFirst({

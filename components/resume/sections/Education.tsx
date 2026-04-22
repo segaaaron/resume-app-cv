@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { EducationItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
@@ -11,6 +12,7 @@ import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function EducationSection() {
+  const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
   const items = sectionData.education
   const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null)
@@ -42,7 +44,7 @@ export default function EducationSection() {
             onClick={() => setOpenId(openId === item.id ? null : item.id)}
           >
             <span className="font-medium truncate text-left">
-              {item.degree || item.institution || "Nueva educación"}
+              {item.degree || item.institution || t("new_education")}
             </span>
             <div className="flex items-center gap-1 shrink-0">
               <button onClick={(e) => { e.stopPropagation(); remove(item.id) }} className="p-1 hover:text-destructive transition-colors">
@@ -54,34 +56,34 @@ export default function EducationSection() {
 
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
-              {[
-                { label: "Institución", field: "institution" as const },
-                { label: "Título/Grado", field: "degree" as const },
-                { label: "Campo de estudio", field: "fieldOfStudy" as const },
-                { label: "Ciudad", field: "city" as const },
-                { label: "Fecha inicio", field: "startDate" as const },
-              ].map(({ label, field }) => (
+              {([
+                { labelKey: "education.institution", field: "institution" as const },
+                { labelKey: "education.degree", field: "degree" as const },
+                { labelKey: "education.field_of_study", field: "fieldOfStudy" as const },
+                { labelKey: "education.city", field: "city" as const },
+                { labelKey: "education.start_date", field: "startDate" as const },
+              ] as const).map(({ labelKey, field }) => (
                 <div key={field}>
-                  <Label className="text-xs mb-1 block text-muted-foreground">{label}</Label>
+                  <Label className="text-xs mb-1 block text-muted-foreground">{t(labelKey)}</Label>
                   <Input value={item[field] as string} onChange={(e) => update(item.id, field, e.target.value)} className="h-8 text-xs" />
                 </div>
               ))}
               {!item.currentlyStudying && (
                 <div>
-                  <Label className="text-xs mb-1 block text-muted-foreground">Fecha fin</Label>
+                  <Label className="text-xs mb-1 block text-muted-foreground">{t("education.end_date")}</Label>
                   <Input value={item.endDate} onChange={(e) => update(item.id, "endDate", e.target.value)} className="h-8 text-xs" />
                 </div>
               )}
               <div className="col-span-2 flex items-center gap-2">
                 <Switch id={`studying-${item.id}`} checked={item.currentlyStudying} onCheckedChange={(v) => update(item.id, "currentlyStudying", v)} />
-                <Label htmlFor={`studying-${item.id}`} className="text-xs">Estudio actualmente aquí</Label>
+                <Label htmlFor={`studying-${item.id}`} className="text-xs">{t("currently_studying")}</Label>
               </div>
             </div>
           )}
         </div>
       ))}
       <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
-        <Plus className="h-3.5 w-3.5" /> Añadir educación
+        <Plus className="h-3.5 w-3.5" /> {t("add_education")}
       </Button>
     </div>
   )

@@ -1,27 +1,30 @@
 import { Star } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 
-const testimonials = [
-  {
-    name: "María García",
-    role: "Diseñadora UX",
-    rating: 5,
-    text: "Increíble herramienta. En menos de 30 minutos tenía mi CV listo y profesional. Conseguí entrevistas al día siguiente.",
-  },
-  {
-    name: "Carlos López",
-    role: "Desarrollador Backend",
-    rating: 5,
-    text: "Las plantillas son muy elegantes y el editor en tiempo real es fantástico. Totalmente recomendado.",
-  },
-  {
-    name: "Ana Martínez",
-    role: "Project Manager",
-    rating: 4,
-    text: "Muy fácil de usar. Me encanta que pueda cambiar de plantilla sin perder mis datos. ¡Excelente!",
-  },
-]
+export default async function SocialProof() {
+  const t = await getTranslations("social_proof")
 
-export default function SocialProof() {
+  const testimonials = [
+    {
+      name: t("testimonial1_name"),
+      role: t("testimonial1_role"),
+      rating: 5,
+      text: t("testimonial1_text"),
+    },
+    {
+      name: t("testimonial2_name"),
+      role: t("testimonial2_role"),
+      rating: 5,
+      text: t("testimonial2_text"),
+    },
+    {
+      name: t("testimonial3_name"),
+      role: t("testimonial3_role"),
+      rating: 4,
+      text: t("testimonial3_text"),
+    },
+  ]
+
   return (
     <section className="py-20 px-4 bg-[#eaf3fc]">
       <div className="max-w-5xl mx-auto text-center">
@@ -30,8 +33,8 @@ export default function SocialProof() {
             <Star key={i} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
           ))}
         </div>
-        <p className="text-4xl font-bold mb-1">4.5/5</p>
-        <p className="text-muted-foreground mb-12">Basado en más de 48,000 reseñas</p>
+        <p className="text-4xl font-bold mb-1">{t("rating")}</p>
+        <p className="text-muted-foreground mb-12">{t("based_on")}</p>
 
         <div className="grid md:grid-cols-3 gap-6">
           {testimonials.map(({ name, role, rating, text }) => (
@@ -41,7 +44,7 @@ export default function SocialProof() {
                   <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                 ))}
               </div>
-              <p className="text-sm text-foreground mb-4 leading-relaxed">"{text}"</p>
+              <p className="text-sm text-foreground mb-4 leading-relaxed">&quot;{text}&quot;</p>
               <div>
                 <p className="font-semibold text-sm">{name}</p>
                 <p className="text-xs text-muted-foreground">{role}</p>

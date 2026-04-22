@@ -76,6 +76,7 @@ model Resume {
   sections        Json     @default("[]")
   personalDetails Json     @default("{}")
   photoUrl        String?  @db.Text
+  photoPosition   Int      @default(15)
   language        String   @default("es")
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt

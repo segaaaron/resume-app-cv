@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ReferenceItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
@@ -9,6 +10,7 @@ import { Plus, X } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function ReferencesSection() {
+  const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
   const items = sectionData.references
 
@@ -24,6 +26,13 @@ export default function ReferencesSection() {
     updateSectionData("references", items.filter((i) => i.id !== id))
   }
 
+  const fieldLabelMap: Record<"name" | "company" | "phone" | "email", string> = {
+    name: t("references.name"),
+    company: t("references.company"),
+    phone: t("references.phone"),
+    email: t("references.email"),
+  }
+
   return (
     <div className="space-y-3">
       {items.map((item) => (
@@ -35,7 +44,7 @@ export default function ReferencesSection() {
             {(["name", "company", "phone", "email"] as const).map((field) => (
               <div key={field}>
                 <Label className="text-xs mb-1 block text-muted-foreground">
-                  {field === "name" ? "Nombre" : field === "company" ? "Empresa" : field === "phone" ? "Teléfono" : "Email"}
+                  {fieldLabelMap[field]}
                 </Label>
                 <Input value={item[field]} onChange={(e) => update(item.id, field, e.target.value)} className="h-7 text-xs" />
               </div>
@@ -44,7 +53,7 @@ export default function ReferencesSection() {
         </div>
       ))}
       <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
-        <Plus className="h-3.5 w-3.5" /> Añadir referencia
+        <Plus className="h-3.5 w-3.5" /> {t("add_reference")}
       </Button>
     </div>
   )

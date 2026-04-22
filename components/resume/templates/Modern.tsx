@@ -22,7 +22,7 @@ export default function ModernTemplate() {
         <div className="flex justify-center">
           {config.photoUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="Photo" className="w-24 h-24 rounded-full object-cover object-top border-4 border-white/30" />
+            <img src={config.photoUrl} alt="Photo" className="w-24 h-24 rounded-full object-cover border-4 border-white/30" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
           ) : (
             <div className="w-24 h-24 rounded-full bg-white/15 border-4 border-white/25 flex items-center justify-center">
               <span className="text-3xl font-extrabold text-white/70">

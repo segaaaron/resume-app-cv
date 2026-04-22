@@ -73,7 +73,7 @@ export default function PrestigeTemplate() {
         </div>
         <div style={{ width: 90, height: 90, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${copper}`, position: "relative" }}>
           {config.photoUrl ? (
-            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
           ) : (
             <svg width="90" height="90" viewBox="0 0 90 90"><rect width="90" height="90" fill="#ece6dd" rx="45" /><circle cx="45" cy="34" r="15" fill="#ccc" /><ellipse cx="45" cy="74" rx="24" ry="18" fill="#ccc" /></svg>
           )}

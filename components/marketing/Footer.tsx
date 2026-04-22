@@ -1,28 +1,31 @@
 import Link from "next/link"
 import { FileText } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 
-const links = {
-  Herramientas: [
-    { label: "Constructor de CV", href: "/dashboard/resumes" },
-    { label: "Carta de Presentación", href: "/dashboard/cover-letters" },
-    { label: "Ofertas de Trabajo", href: "/dashboard/jobs" },
-    { label: "Mis Candidaturas", href: "/dashboard/applications" },
-  ],
-  Recursos: [
-    { label: "Plantillas de CV", href: "/templates" },
-    { label: "Ejemplos de CV", href: "/examples" },
-    { label: "Artículos", href: "/articles" },
-  ],
-  Soporte: [
-    { label: "FAQ", href: "/#faq" },
-    { label: "Precios", href: "/pricing" },
-    { label: "Contacto", href: "/contact" },
-    { label: "Privacidad", href: "/privacy" },
-    { label: "Términos", href: "/terms" },
-  ],
-}
+export default async function Footer() {
+  const t = await getTranslations("footer")
 
-export default function Footer() {
+  const links = {
+    [t("tools")]: [
+      { label: t("cv_builder"), href: "/dashboard/resumes" },
+      { label: t("cover_letter"), href: "/dashboard/cover-letters" },
+      { label: t("job_offers"), href: "/dashboard/jobs" },
+      { label: t("applications"), href: "/dashboard/applications" },
+    ],
+    [t("resources")]: [
+      { label: t("cv_templates"), href: "/templates" },
+      { label: t("cv_examples"), href: "/examples" },
+      { label: t("articles"), href: "/articles" },
+    ],
+    [t("support")]: [
+      { label: "FAQ", href: "/#faq" },
+      { label: t("pricing"), href: "/pricing" },
+      { label: t("contact"), href: "/contact" },
+      { label: t("privacy"), href: "/privacy" },
+      { label: t("terms"), href: "/terms" },
+    ],
+  }
+
   return (
     <footer className="bg-[#1d1d20] text-white py-16 px-4">
       <div className="max-w-6xl mx-auto">
@@ -33,7 +36,7 @@ export default function Footer() {
               READY CV
             </Link>
             <p className="text-sm text-white/60 leading-relaxed">
-              La plataforma más completa para crear tu currículum profesional y gestionar tu búsqueda de empleo.
+              {t("description")}
             </p>
           </div>
 
@@ -54,10 +57,10 @@ export default function Footer() {
         </div>
 
         <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/40">
-          <p>© {new Date().getFullYear()} READY CV. Todos los derechos reservados.</p>
+          <p>© {new Date().getFullYear()} READY CV. {t("rights")}</p>
           <div className="flex gap-4">
-            <Link href="/privacy" className="hover:text-white transition-colors">Privacidad</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">Términos</Link>
+            <Link href="/privacy" className="hover:text-white transition-colors">{t("privacy")}</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">{t("terms")}</Link>
           </div>
         </div>
       </div>

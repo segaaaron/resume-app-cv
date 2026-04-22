@@ -1,8 +1,11 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Star } from "lucide-react"
+import { getTranslations } from "next-intl/server"
 
-export default function Hero() {
+export default async function Hero() {
+  const t = await getTranslations("hero")
+
   return (
     <section className="bg-gradient-to-b from-[#eaf3fc] to-background py-20 px-4 text-center">
       <div className="max-w-4xl mx-auto">
@@ -10,30 +13,29 @@ export default function Hero() {
           {[...Array(5)].map((_, i) => (
             <Star key={i} className="h-4 w-4 fill-yellow-400 text-yellow-400" />
           ))}
-          <span className="ml-2 text-sm text-muted-foreground">4.5/5 · 48,000+ reseñas</span>
+          <span className="ml-2 text-sm text-muted-foreground">{t("rating")}</span>
         </div>
 
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight text-foreground mb-6 leading-tight">
-          Crea tu CV profesional{" "}
-          <span className="text-primary">fácilmente</span>
+          {t("title")}{" "}
+          <span className="text-primary">{t("title_highlight")}</span>
         </h1>
 
         <p className="text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
-          Completa tus datos, elige una plantilla y descarga tu currículum en minutos.
-          Sin experiencia en diseño, sin complicaciones.
+          {t("subtitle")}
         </p>
 
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <Button size="lg" className="px-8 py-6 text-lg" asChild>
-            <Link href="/register">Comenzar gratis</Link>
+            <Link href="/register">{t("cta_primary")}</Link>
           </Button>
           <Button size="lg" variant="outline" className="px-8 py-6 text-lg" asChild>
-            <Link href="/templates">Ver plantillas</Link>
+            <Link href="/templates">{t("cta_secondary")}</Link>
           </Button>
         </div>
 
         <p className="mt-4 text-sm text-muted-foreground">
-          Sin tarjeta de crédito · Descarga inmediata
+          {t("no_credit_card")}
         </p>
 
         {/* Mock resume preview */}
@@ -64,7 +66,7 @@ export default function Hero() {
           </div>
           {/* Floating badge */}
           <div className="absolute -right-4 top-8 bg-white shadow-lg border border-border rounded-xl px-4 py-3 text-sm font-medium text-primary">
-            ✓ PDF descargado
+            {t("pdf_downloaded")}
           </div>
         </div>
       </div>

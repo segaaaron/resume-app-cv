@@ -42,8 +42,8 @@ export default function CoralTemplate() {
             <img
               src={config.photoUrl}
               alt=""
-              className="rounded-full object-cover object-top"
-              style={{ width: 84, height: 84, border: "3px solid rgba(255,255,255,0.5)" }}
+              className="rounded-full object-cover"
+              style={{ width: 84, height: 84, border: "3px solid rgba(255,255,255,0.5)", objectPosition: `center ${config.photoPosition ?? 15}%` }}
             />
           ) : (
             <div

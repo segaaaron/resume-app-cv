@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 interface Props {
   plan: "trial" | "pro"
@@ -12,6 +13,7 @@ interface Props {
 export default function PricingButtons({ plan }: Props) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const t = useTranslations("pricing")
 
   async function handleClick() {
     setLoading(true)
@@ -57,14 +59,14 @@ export default function PricingButtons({ plan }: Props) {
   if (plan === "trial") {
     return (
       <Button variant="secondary" size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-        {loading ? "Redirigiendo..." : "Comenzar prueba"}
+        {loading ? t("btn_trial_loading") : t("btn_trial")}
       </Button>
     )
   }
 
   return (
     <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-      {loading ? "Redirigiendo..." : "Empezar ahora"}
+      {loading ? t("btn_pro_loading") : t("btn_pro")}
     </Button>
   )
 }

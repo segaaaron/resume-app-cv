@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { FONT_OPTIONS } from "@/types/resume"
 import { Label } from "@/components/ui/label"
@@ -10,55 +11,56 @@ import { useRef, useState } from "react"
 import { Camera, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 
-const COLOR_PALETTES: { label: string; colors: { hex: string; name: string }[] }[] = [
+const COLOR_PALETTES: { labelKey: string; colors: { hex: string; nameKey: string }[] }[] = [
   {
-    label: "Profesional",
+    labelKey: "design.palette_professional",
     colors: [
-      { hex: "#2a72d7", name: "Azul" },
-      { hex: "#1e3a5f", name: "Navy" },
-      { hex: "#0891b2", name: "Cyan" },
-      { hex: "#0f766e", name: "Teal" },
-      { hex: "#1d4ed8", name: "Índigo" },
-      { hex: "#475569", name: "Pizarra" },
+      { hex: "#2a72d7", nameKey: "design.color_blue" },
+      { hex: "#1e3a5f", nameKey: "design.color_navy" },
+      { hex: "#0891b2", nameKey: "design.color_cyan" },
+      { hex: "#0f766e", nameKey: "design.color_teal" },
+      { hex: "#1d4ed8", nameKey: "design.color_indigo" },
+      { hex: "#475569", nameKey: "design.color_slate" },
     ],
   },
   {
-    label: "Vibrante",
+    labelKey: "design.palette_vibrant",
     colors: [
-      { hex: "#9333ea", name: "Morado" },
-      { hex: "#ec4899", name: "Rosa" },
-      { hex: "#dc2626", name: "Rojo" },
-      { hex: "#ea580c", name: "Naranja" },
-      { hex: "#ca8a04", name: "Ámbar" },
-      { hex: "#16a34a", name: "Verde" },
+      { hex: "#9333ea", nameKey: "design.color_purple" },
+      { hex: "#ec4899", nameKey: "design.color_pink" },
+      { hex: "#dc2626", nameKey: "design.color_red" },
+      { hex: "#ea580c", nameKey: "design.color_orange" },
+      { hex: "#ca8a04", nameKey: "design.color_amber" },
+      { hex: "#16a34a", nameKey: "design.color_green" },
     ],
   },
   {
-    label: "Oscuro",
+    labelKey: "design.palette_dark",
     colors: [
-      { hex: "#111827", name: "Negro" },
-      { hex: "#1d1d20", name: "Carbón" },
-      { hex: "#1e293b", name: "Slate" },
-      { hex: "#312e81", name: "Índigo O" },
-      { hex: "#4a1942", name: "Ciruela" },
-      { hex: "#292524", name: "Piedra" },
+      { hex: "#111827", nameKey: "design.color_black" },
+      { hex: "#1d1d20", nameKey: "design.color_charcoal" },
+      { hex: "#1e293b", nameKey: "design.color_slate_dark" },
+      { hex: "#312e81", nameKey: "design.color_indigo_dark" },
+      { hex: "#4a1942", nameKey: "design.color_plum" },
+      { hex: "#292524", nameKey: "design.color_stone" },
     ],
   },
   {
-    label: "Suave",
+    labelKey: "design.palette_soft",
     colors: [
-      { hex: "#6366f1", name: "Violeta" },
-      { hex: "#8b5cf6", name: "Lila" },
-      { hex: "#06b6d4", name: "Celeste" },
-      { hex: "#10b981", name: "Esmeralda" },
-      { hex: "#f59e0b", name: "Dorado" },
-      { hex: "#64748b", name: "Gris" },
+      { hex: "#6366f1", nameKey: "design.color_violet" },
+      { hex: "#8b5cf6", nameKey: "design.color_lilac" },
+      { hex: "#06b6d4", nameKey: "design.color_sky" },
+      { hex: "#10b981", nameKey: "design.color_emerald" },
+      { hex: "#f59e0b", nameKey: "design.color_gold" },
+      { hex: "#64748b", nameKey: "design.color_gray" },
     ],
   },
 ]
 
 export default function DesignPanel() {
-  const { config, resumeId, setColor, setFont, setFontSize, setSpacing, setPhoto } = useResumeStore()
+  const t = useTranslations("editor")
+  const { config, resumeId, setColor, setFont, setFontSize, setSpacing, setPhoto, setPhotoPosition } = useResumeStore()
   const colorInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
@@ -73,11 +75,11 @@ export default function DesignPanel() {
       form.append("photo", file)
       const res = await fetch(`/api/resumes/${resumeId}/photo`, { method: "POST", body: form })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? "Error al subir la foto")
+      if (!res.ok) throw new Error(data.error ?? t("photo_upload_error"))
       setPhoto(data.photoUrl)
-      toast.success("Foto actualizada")
+      toast.success(t("photo_updated"))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Error al subir la foto")
+      toast.error(err instanceof Error ? err.message : t("photo_upload_error"))
     } finally {
       setUploadingPhoto(false)
       e.target.value = ""
@@ -89,9 +91,9 @@ export default function DesignPanel() {
     try {
       await fetch(`/api/resumes/${resumeId}/photo`, { method: "DELETE" })
       setPhoto(null)
-      toast.success("Foto eliminada")
+      toast.success(t("photo_deleted"))
     } catch {
-      toast.error("Error al eliminar la foto")
+      toast.error(t("photo_delete_error"))
     }
   }
 
@@ -101,7 +103,7 @@ export default function DesignPanel() {
       {/* ── Foto de perfil ─────────────────────────────────── */}
       <section className="px-5 py-5 space-y-4">
         <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Foto de perfil
+          {t("design.photo_section")}
         </h3>
         <div className="flex items-center gap-4">
           <div
@@ -111,7 +113,7 @@ export default function DesignPanel() {
           >
             {config.photoUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={config.photoUrl} alt="" className="w-full h-full object-cover object-top" />
+              <img src={config.photoUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
             ) : (
               <Camera className="h-8 w-8 text-muted-foreground/60" />
             )}
@@ -123,7 +125,7 @@ export default function DesignPanel() {
               className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2.5 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50"
             >
               <Upload className="h-3.5 w-3.5" />
-              {uploadingPhoto ? "Subiendo..." : config.photoUrl ? "Cambiar foto" : "Subir foto"}
+              {uploadingPhoto ? t("design.uploading") : config.photoUrl ? t("design.change_photo") : t("design.upload_photo")}
             </button>
             {config.photoUrl && (
               <button
@@ -131,12 +133,35 @@ export default function DesignPanel() {
                 className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors"
               >
                 <Trash2 className="h-3.5 w-3.5" />
-                Eliminar foto
+                {t("design.remove_photo")}
               </button>
             )}
           </div>
         </div>
-        <p className="text-[10px] text-muted-foreground/70">JPG, PNG o WebP · máx. 2 MB</p>
+        {config.photoUrl && (
+          <div className="space-y-2 pt-1">
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                {t("design.photo_position")}
+              </Label>
+              <span className="text-[10px] font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
+                {config.photoPosition ?? 15}%
+              </span>
+            </div>
+            <Slider
+              min={0}
+              max={100}
+              step={5}
+              value={config.photoPosition ?? 15}
+              onValueChange={(v) => setPhotoPosition(Array.isArray(v) ? v[0] : v)}
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
+              <span>{t("design.photo_top")}</span>
+              <span>{t("design.photo_bottom")}</span>
+            </div>
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground/70">{t("design.photo_hint")}</p>
         <input
           ref={photoInputRef}
           type="file"
@@ -149,20 +174,20 @@ export default function DesignPanel() {
       {/* ── Color principal ────────────────────────────────── */}
       <section className="px-5 py-5 space-y-4">
         <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Color principal
+          {t("design.color_section")}
         </h3>
 
         <div className="space-y-4">
           {COLOR_PALETTES.map((palette) => (
-            <div key={palette.label}>
+            <div key={palette.labelKey}>
               <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest mb-2">
-                {palette.label}
+                {t(palette.labelKey)}
               </p>
               <div className="grid grid-cols-6 gap-2">
-                {palette.colors.map(({ hex, name }) => (
+                {palette.colors.map(({ hex, nameKey }) => (
                   <button
                     key={hex}
-                    title={name}
+                    title={t(nameKey)}
                     onClick={() => setColor(hex)}
                     className={cn(
                       "h-8 w-full rounded-lg border-2 transition-all hover:scale-105 hover:shadow-md",
@@ -188,7 +213,7 @@ export default function DesignPanel() {
             style={{ backgroundColor: config.colorScheme }}
           />
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold">Color personalizado</p>
+            <p className="text-xs font-semibold">{t("design.custom_color")}</p>
             <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{config.colorScheme.toUpperCase()}</p>
           </div>
           <input
@@ -198,14 +223,14 @@ export default function DesignPanel() {
             onChange={(e) => setColor(e.target.value)}
             className="sr-only"
           />
-          <span className="text-[10px] font-medium text-primary">Editar</span>
+          <span className="text-[10px] font-medium text-primary">{t("design.edit_color")}</span>
         </div>
       </section>
 
       {/* ── Tipografía ─────────────────────────────────────── */}
       <section className="px-5 py-5 space-y-3">
         <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          Tipografía
+          {t("design.typography_section")}
         </h3>
         <Select value={config.fontFamily} onValueChange={(v) => { if (v) setFont(v) }}>
           <SelectTrigger className="h-10 rounded-xl">
@@ -226,7 +251,7 @@ export default function DesignPanel() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Tamaño de letra
+              {t("design.font_size_section")}
             </h3>
             <span className="text-xs font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
               {config.fontSize}px
@@ -248,7 +273,7 @@ export default function DesignPanel() {
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Espaciado
+              {t("design.spacing_section")}
             </h3>
             <span className="text-xs font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
               {config.spacing.toFixed(1)}×
@@ -262,8 +287,8 @@ export default function DesignPanel() {
             onValueChange={(v) => setSpacing(Array.isArray(v) ? v[0] : v)}
           />
           <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-            <span>Compacto</span>
-            <span>Espacioso</span>
+            <span>{t("spacing_compact")}</span>
+            <span>{t("spacing_spacious")}</span>
           </div>
         </div>
       </section>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import type { ResumeSection } from "@/types/resume"
 import PersonalDetailsSection from "@/components/resume/sections/PersonalDetails"
 import SummarySection from "@/components/resume/sections/Summary"
@@ -14,6 +15,7 @@ import ReferencesSection from "@/components/resume/sections/References"
 import HobbiesSection from "@/components/resume/sections/Hobbies"
 
 export default function SectionContent({ section }: { section: ResumeSection }) {
+  const t = useTranslations("editor")
   switch (section.type) {
     case "personalDetails": return <PersonalDetailsSection />
     case "summary": return <SummarySection />
@@ -26,6 +28,6 @@ export default function SectionContent({ section }: { section: ResumeSection }) 
     case "volunteer": return <VolunteerSection />
     case "references": return <ReferencesSection />
     case "hobbies": return <HobbiesSection />
-    default: return <p className="text-sm text-muted-foreground">Sección no disponible</p>
+    default: return <p className="text-sm text-muted-foreground">{t("section.not_available")}</p>
   }
 }

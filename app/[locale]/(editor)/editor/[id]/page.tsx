@@ -7,7 +7,7 @@ import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 
 export default async function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth()
-  if (!session?.user) redirect("/login")
+  if (!session?.user) redirect("/es/login")
 
   const plan = session.user.plan ?? "FREE"
   const subscriptionStatus = session.user.subscriptionStatus ?? "NONE"
@@ -48,6 +48,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
     fontSize: resume.fontSize,
     spacing: resume.spacing,
     photoUrl: resume.photoUrl,
+    photoPosition: resume.photoPosition ?? 15,
     language: (resume.language as ResumeConfig["language"]) ?? "es",
   }
 

@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import { useState } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
@@ -18,6 +19,7 @@ import { cn } from "@/lib/utils"
 import SectionContent from "./SectionContent"
 
 export default function SectionBlock({ section }: { section: ResumeSection }) {
+  const t = useTranslations("editor")
   const [open, setOpen] = useState(section.type === "personalDetails")
   const { toggleSection, togglePageBreak, moveSectionToColumn } = useResumeStore()
 
@@ -75,18 +77,18 @@ export default function SectionBlock({ section }: { section: ResumeSection }) {
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => toggleSection(section.id)}>
               {section.visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {section.visible ? "Ocultar sección" : "Mostrar sección"}
+              {section.visible ? t("section.hide") : t("section.show")}
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => togglePageBreak(section.id)}>
               <Scissors className="h-3.5 w-3.5" />
-              {section.pageBreakBefore ? "Quitar salto de página" : "Salto de página aquí"}
+              {section.pageBreakBefore ? t("section.remove_page_break") : t("section.add_page_break")}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => moveSectionToColumn(section.id, "main")}>
-              Mover a columna principal
+              {t("section.move_to_main")}
             </DropdownMenuItem>
             <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => moveSectionToColumn(section.id, "side")}>
-              Mover a columna lateral
+              {t("section.move_to_side")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,16 +1,19 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { TEMPLATES } from "@/types/resume"
+import { getTranslations } from "next-intl/server"
 
 const showcaseTemplates = TEMPLATES.slice(0, 6)
 
-export default function TemplateGallery() {
+export default async function TemplateGallery() {
+  const t = await getTranslations("template_gallery")
+
   return (
     <section className="py-20 px-4 bg-white">
       <div className="max-w-6xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-4">12 Plantillas profesionales</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">{t("title")}</h2>
         <p className="text-center text-muted-foreground mb-12">
-          Cambia de plantilla en cualquier momento sin perder tu contenido
+          {t("subtitle")}
         </p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
@@ -45,7 +48,7 @@ export default function TemplateGallery() {
 
         <div className="text-center">
           <Button variant="outline" asChild>
-            <Link href="/templates">Ver todas las plantillas</Link>
+            <Link href="/templates">{t("see_all")}</Link>
           </Button>
         </div>
       </div>

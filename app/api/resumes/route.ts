@@ -24,7 +24,7 @@ export async function GET() {
   return NextResponse.json(resumes)
 }
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -41,6 +41,12 @@ export async function POST() {
     }
   }
 
+  let templateId: string | undefined
+  try {
+    const body = await request.json()
+    if (body?.templateId) templateId = body.templateId
+  } catch {}
+
   const defaultData = ResumeSectionsSchema.parse({})
 
   const resume = await db.resume.create({
@@ -49,6 +55,7 @@ export async function POST() {
       title: "Mi CV",
       sections: DEFAULT_SECTIONS as object[],
       personalDetails: defaultData as object,
+      ...(templateId ? { templateId } : {}),
     },
   })
 

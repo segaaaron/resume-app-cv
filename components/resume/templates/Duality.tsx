@@ -96,7 +96,7 @@ export default function DualityTemplate() {
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", border: `3px solid ${cyan}`, position: "relative" }}>
             {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} alt="" />
+              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
             ) : (
               <svg width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#253554" /><circle cx="40" cy="30" r="14" fill="#ffffff44" /><ellipse cx="40" cy="68" rx="22" ry="18" fill="#ffffff44" /></svg>
             )}

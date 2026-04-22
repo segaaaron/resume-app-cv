@@ -6,41 +6,26 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
-
-const faqs = [
-  {
-    question: "¿Es gratuito READY CV?",
-    answer: "Puedes comenzar gratis. Para acceso completo a todas las plantillas y descarga en PDF, ofrecemos un plan premium desde $9.99/mes o una prueba de 14 días por $0.99.",
-  },
-  {
-    question: "¿Puedo cambiar de plantilla sin perder mis datos?",
-    answer: "Sí. Tus datos están separados de la plantilla. Puedes cambiar entre las 12 plantillas en cualquier momento y tu contenido se adaptará automáticamente.",
-  },
-  {
-    question: "¿En qué formatos puedo descargar mi CV?",
-    answer: "Actualmente puedes descargar en PDF de alta resolución, optimizado para impresión y para envío electrónico.",
-  },
-  {
-    question: "¿Puedo crear más de un CV?",
-    answer: "Sí. Con el plan premium puedes crear CVs ilimitados, lo que te permite adaptar tu currículum a diferentes puestos o industrias.",
-  },
-  {
-    question: "¿Puedo importar mi CV existente?",
-    answer: "Sí. Puedes importar tu CV en formato PDF o Word (.docx) y el sistema extraerá automáticamente tu información para poblar el editor.",
-  },
-  {
-    question: "¿Mis datos están seguros?",
-    answer: "Absolutamente. Usamos encriptación de nivel bancario y nunca compartimos tus datos con terceros. Puedes eliminar tu cuenta y todos tus datos en cualquier momento.",
-  },
-]
+import { useTranslations } from "next-intl"
 
 export default function FAQ() {
+  const t = useTranslations("faq")
+
+  const faqs = [
+    { question: t("q1"), answer: t("a1") },
+    { question: t("q2"), answer: t("a2") },
+    { question: t("q3"), answer: t("a3") },
+    { question: t("q4"), answer: t("a4") },
+    { question: t("q5"), answer: t("a5") },
+    { question: t("q6"), answer: t("a6") },
+  ]
+
   return (
     <section id="faq" className="py-20 px-4 bg-white">
       <div className="max-w-3xl mx-auto">
-        <h2 className="text-3xl font-bold text-center mb-4">Preguntas frecuentes</h2>
+        <h2 className="text-3xl font-bold text-center mb-4">{t("title")}</h2>
         <p className="text-center text-muted-foreground mb-12">
-          Todo lo que necesitas saber antes de comenzar
+          {t("subtitle")}
         </p>
 
         <Accordion className="space-y-3">

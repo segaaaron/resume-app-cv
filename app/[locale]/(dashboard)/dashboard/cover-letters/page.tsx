@@ -5,7 +5,7 @@ import CoverLettersDashboard from "@/components/dashboard/CoverLettersDashboard"
 
 export default async function CoverLettersPage() {
   const session = await auth()
-  if (!session?.user?.id) redirect("/login")
+  if (!session?.user?.id) redirect("/es/login")
 
   const letters = await db.coverLetter.findMany({
     where: { userId: session.user.id },

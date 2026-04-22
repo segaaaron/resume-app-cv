@@ -34,7 +34,28 @@
       "Bash(psql:*)",
       "Bash(grep:*)",
       "Bash(pg_isready -h localhost -p 5432)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(ls -la /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/middleware*)",
+      "Bash(awk '{if \\(NF\\) print}')",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(d.get\\('version'\\)\\); print\\(list\\(d.get\\('exports', {}\\).keys\\(\\)\\)[:20]\\)\")",
+      "Bash(kill 14216)",
+      "Bash(ls *.ts)",
+      "Read(//tmp/**)",
+      "Read(//private/tmp/**)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -m json.tool messages/es.json)",
+      "Bash(python3 -m json.tool messages/en.json)",
+      "Bash(python3:*)",
+      "Bash(git mv:*)",
+      "Bash(find components/resume/templates/ -name \"*.tsx\" -exec sed -i '' 's/object-top/object-center/g' {} \\\\;)",
+      "Bash(find components/resume/templates/ -name \"*.tsx\" -exec sed -i '' \"s/objectPosition: \\\\\"top center\\\\\"/objectPosition: \\\\\"center\\\\\"/g\" {} \\\\;)",
+      "Bash(find components/resume/templates/ -name \"*.tsx\" -exec sed -i '' \"s/objectPosition: \\\\\"top\\\\\"/objectPosition: \\\\\"center\\\\\"/g\" {} \\\\;)",
+      "Bash(perl -i -pe 's/object-cover object-center/object-cover/g' __TRACKED_VAR__/__TRACKED_VAR__)",
+      "Bash(perl -i -pe 's/object-cover object-center/object-cover/g' __TRACKED_VAR__/Sharp.tsx)",
+      "Bash(perl -i -pe 's/objectFit: \"cover\" \\\\}/objectFit: \"cover\", objectPosition: `center \\\\${config.photoPosition ?? 15}%` }/g' components/resume/templates/__TRACKED_VAR__)",
+      "Bash(perl -i -pe 's|\\(className=\"[^\"]*object-cover[^\"]*\"\\)\\(\\\\s*\\\\/>\\)|\\\\1 style={{ objectPosition: `center \\\\${config.photoPosition ?? 15}%` }}\\\\2|g' components/resume/templates/__TRACKED_VAR__)",
+      "Bash(perl:*)",
+      "Bash(xargs -I{} basename {})"
     ]
   }
 }

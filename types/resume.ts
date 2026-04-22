@@ -208,6 +208,7 @@ export interface ResumeConfig {
   fontSize: number
   spacing: number
   photoUrl: string | null
+  photoPosition: number   // 0 = top, 50 = center, 100 = bottom (maps to objectPosition Y%)
   language: "es" | "en"
 }
 

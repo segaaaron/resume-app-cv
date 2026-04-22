@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { es, enUS } from "date-fns/locale"
 import { Plus, Mail, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -34,6 +35,9 @@ interface LetterCard {
 }
 
 export default function CoverLettersDashboard({ initialLetters }: { initialLetters: LetterCard[] }) {
+  const t = useTranslations("dashboard.cover_letters")
+  const locale = useLocale()
+  const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -44,9 +48,9 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     try {
       const res = await fetch("/api/cover-letters", { method: "POST" })
       const data = await res.json()
-      router.push(`/cover-letter/${data.id}`)
+      router.push(`/${locale}/cover-letter/${data.id}`)
     } catch {
-      toast.error("Error al crear la carta")
+      toast.error(t("create_error"))
       setCreating(false)
     }
   }
@@ -55,21 +59,21 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     await fetch(`/api/cover-letters/${id}`, { method: "DELETE" })
     setLetters((prev) => prev.filter((l) => l.id !== id))
     setDeleteId(null)
-    toast.success("Carta eliminada")
+    toast.success(t("delete_success"))
   }
 
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Cartas de Presentación</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {letters.length} {letters.length === 1 ? "carta" : "cartas"}
+            {letters.length} {letters.length === 1 ? t("count_one") : t("count_other")}
           </p>
         </div>
         <Button onClick={createLetter} disabled={creating} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
-          Nueva carta
+          {t("new")}
         </Button>
       </div>
 
@@ -78,18 +82,15 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
           <div className="h-20 w-20 rounded-2xl bg-[#eaf3fc] flex items-center justify-center mb-4">
             <Mail className="h-10 w-10 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">Crea tu primera carta</h2>
-          <p className="text-muted-foreground mb-6 max-w-sm">
-            Escribe cartas de presentación personalizadas y profesionales para cada oferta de trabajo.
-          </p>
+          <h2 className="text-xl font-semibold mb-2">{t("empty_title")}</h2>
+          <p className="text-muted-foreground mb-6 max-w-sm">{t("empty_subtitle")}</p>
           <Button onClick={createLetter} disabled={creating} size="lg" className="gap-2">
             <Plus className="h-4 w-4" />
-            Crear carta
+            {t("new")}
           </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {/* Create new card */}
           <button
             onClick={createLetter}
             disabled={creating}
@@ -98,14 +99,14 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
             <div className="h-12 w-12 rounded-xl border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
               <Plus className="h-6 w-6" />
             </div>
-            <span className="text-sm font-medium">Nueva carta</span>
+            <span className="text-sm font-medium">{t("new")}</span>
           </button>
 
           {letters.map((letter) => (
             <div key={letter.id} className="group relative">
               <button
                 className="aspect-[3/4] w-full bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all text-left"
-                onClick={() => router.push(`/cover-letter/${letter.id}`)}
+                onClick={() => router.push(`/${locale}/cover-letter/${letter.id}`)}
               >
                 <div className="h-10 w-full" style={{ backgroundColor: letter.colorScheme }} />
                 <div className="p-4 space-y-2">
@@ -123,7 +124,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{letter.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(letter.updatedAt), "d MMM yyyy", { locale: es })}
+                    {format(new Date(letter.updatedAt), "d MMM yyyy", { locale: dateLocale })}
                   </p>
                 </div>
 
@@ -132,15 +133,15 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                     <MoreHorizontal className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem className="gap-2" onClick={() => router.push(`/cover-letter/${letter.id}`)}>
-                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    <DropdownMenuItem className="gap-2" onClick={() => router.push(`/${locale}/cover-letter/${letter.id}`)}>
+                      <Pencil className="h-3.5 w-3.5" /> {t("edit")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive gap-2 cursor-pointer"
                       onClick={() => setDeleteId(letter.id)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                      <Trash2 className="h-3.5 w-3.5" /> {t("delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -153,18 +154,16 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar esta carta?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. La carta y todos sus datos serán eliminados permanentemente.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("delete_description")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => deleteId && deleteLetter(deleteId)}
             >
-              Eliminar
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

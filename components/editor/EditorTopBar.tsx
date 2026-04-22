@@ -4,18 +4,35 @@ import Link from "next/link"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Save, Download, Loader2, Check } from "lucide-react"
+import { ArrowLeft, Save, Download, Loader2, Check, Lock } from "lucide-react"
 import { useState } from "react"
+import { useLocale, useTranslations } from "next-intl"
+import { toast } from "sonner"
 
-export default function EditorTopBar() {
+interface Props {
+  hasAccess: boolean
+}
+
+export default function EditorTopBar({ hasAccess }: Props) {
   const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId } = useResumeStore()
   const [editing, setEditing] = useState(false)
+  const locale = useLocale()
+  const t = useTranslations("editor")
+
+  function handleLockedClick() {
+    toast.error(t("pro_required"), {
+      action: {
+        label: t("see_plans"),
+        onClick: () => { window.location.href = `/${locale}/pricing` },
+      },
+    })
+  }
 
   return (
     <header className="h-12 bg-white border-b border-border flex items-center justify-between px-4 gap-4 shrink-0">
       <div className="flex items-center gap-3 min-w-0">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-          <Link href="/dashboard/resumes">
+          <Link href={`/${locale}/dashboard/resumes`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
@@ -44,28 +61,42 @@ export default function EditorTopBar() {
         <span className="text-xs text-muted-foreground hidden sm:block">
           {isSaving ? (
             <span className="flex items-center gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" /> Guardando...
+              <Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}
             </span>
           ) : isDirty ? (
-            "Sin guardar"
+            t("unsaved")
           ) : lastSaved ? (
             <span className="flex items-center gap-1">
-              <Check className="h-3 w-3 text-green-500" /> Guardado
+              <Check className="h-3 w-3 text-green-500" /> {t("saved")}
             </span>
           ) : null}
         </span>
 
-        <Button variant="outline" size="sm" onClick={() => save()} disabled={isSaving} className="gap-1.5">
-          <Save className="h-3.5 w-3.5" />
-          Guardar
-        </Button>
+        {hasAccess ? (
+          <Button variant="outline" size="sm" onClick={() => save()} disabled={isSaving} className="gap-1.5">
+            <Save className="h-3.5 w-3.5" />
+            {t("save")}
+          </Button>
+        ) : (
+          <Button variant="outline" size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
+            <Lock className="h-3.5 w-3.5" />
+            {t("save")}
+          </Button>
+        )}
 
-        <Button size="sm" className="gap-1.5" disabled={!resumeId} asChild>
-          <a href={resumeId ? `/resume/${resumeId}/print` : "#"} target="_blank">
-            <Download className="h-3.5 w-3.5" />
+        {hasAccess ? (
+          <Button size="sm" className="gap-1.5" disabled={!resumeId} asChild>
+            <a href={resumeId ? `/${locale}/resume/${resumeId}/print` : "#"} target="_blank">
+              <Download className="h-3.5 w-3.5" />
+              PDF
+            </a>
+          </Button>
+        ) : (
+          <Button size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
+            <Lock className="h-3.5 w-3.5" />
             PDF
-          </a>
-        </Button>
+          </Button>
+        )}
       </div>
     </header>
   )

@@ -3,11 +3,11 @@
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { es, enUS } from "date-fns/locale"
 import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import ImportResumeButton from "./ImportResumeButton"
 import {
   DropdownMenu,
@@ -39,6 +39,9 @@ interface ResumeCard {
 }
 
 export default function ResumesDashboard({ initialResumes }: { initialResumes: ResumeCard[] }) {
+  const t = useTranslations("dashboard.resumes")
+  const locale = useLocale()
+  const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -49,9 +52,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     try {
       const res = await fetch("/api/resumes", { method: "POST" })
       const data = await res.json()
-      router.push(`/editor/${data.id}`)
+      router.push(`/${locale}/editor/${data.id}`)
     } catch {
-      toast.error("Error al crear el CV")
+      toast.error(t("create_error"))
       setCreating(false)
     }
   }
@@ -60,7 +63,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     await fetch(`/api/resumes/${id}`, { method: "DELETE" })
     setResumes((prev) => prev.filter((r) => r.id !== id))
     setDeleteId(null)
-    toast.success("CV eliminado")
+    toast.success(t("delete_success"))
   }
 
   async function duplicateResume(id: string) {
@@ -68,27 +71,27 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     if (res.ok) {
       const copy = await res.json()
       setResumes((prev) => [copy, ...prev])
-      toast.success("CV duplicado")
+      toast.success(t("duplicate_success"))
     }
   }
 
   const templateName = (id: string) =>
-    TEMPLATES.find((t) => t.id === id)?.name ?? "Clásico"
+    TEMPLATES.find((tmpl) => tmpl.id === id)?.name ?? t("default_template")
 
   return (
     <div>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Mis CVs</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {resumes.length} {resumes.length === 1 ? "currículum" : "currículums"}
+            {resumes.length} {resumes.length === 1 ? t("count_one") : t("count_other")}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <ImportResumeButton />
           <Button onClick={createResume} disabled={creating} className="gap-2 flex-1 sm:flex-none">
             <Plus className="h-4 w-4" />
-            Nuevo CV
+            {t("new")}
           </Button>
         </div>
       </div>
@@ -98,22 +101,19 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           <div className="h-20 w-20 rounded-2xl bg-[#eaf3fc] flex items-center justify-center mb-4">
             <FileText className="h-10 w-10 text-primary" />
           </div>
-          <h2 className="text-xl font-semibold mb-2">Crea tu primer CV</h2>
-          <p className="text-muted-foreground mb-6 max-w-sm">
-            Completa tus datos, elige una plantilla y descarga tu CV profesional en minutos.
-          </p>
+          <h2 className="text-xl font-semibold mb-2">{t("empty_title")}</h2>
+          <p className="text-muted-foreground mb-6 max-w-sm">{t("empty_subtitle")}</p>
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <Button onClick={createResume} disabled={creating} size="lg" className="gap-2">
               <Plus className="h-4 w-4" />
-              Crear desde cero
+              {t("create_from_scratch")}
             </Button>
-            <span className="text-xs text-muted-foreground">o</span>
+            <span className="text-xs text-muted-foreground">{t("or")}</span>
             <ImportResumeButton />
           </div>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          {/* Create new card */}
           <button
             onClick={createResume}
             disabled={creating}
@@ -122,20 +122,14 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             <div className="h-12 w-12 rounded-xl border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
               <Plus className="h-6 w-6" />
             </div>
-            <span className="text-sm font-medium">Nuevo CV</span>
+            <span className="text-sm font-medium">{t("new")}</span>
           </button>
 
           {resumes.map((resume) => (
             <div key={resume.id} className="group relative">
-              {/* Resume preview card */}
-              <Link href={`/editor/${resume.id}`} className="block">
+              <Link href={`/${locale}/editor/${resume.id}`} className="block">
                 <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all">
-                  {/* Template color bar */}
-                  <div
-                    className="h-10 w-full"
-                    style={{ backgroundColor: resume.colorScheme }}
-                  />
-                  {/* Mock content lines */}
+                  <div className="h-10 w-full" style={{ backgroundColor: resume.colorScheme }} />
                   <div className="p-4 space-y-2">
                     <div className="h-2.5 bg-gray-200 rounded w-3/4" />
                     <div className="h-2 bg-gray-100 rounded w-1/2 mb-4" />
@@ -146,12 +140,11 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                 </div>
               </Link>
 
-              {/* Card footer */}
               <div className="mt-2 flex items-start justify-between">
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{resume.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {templateName(resume.templateId)} · {format(new Date(resume.updatedAt), "d MMM yyyy", { locale: es })}
+                    {templateName(resume.templateId)} · {format(new Date(resume.updatedAt), "d MMM yyyy", { locale: dateLocale })}
                   </p>
                 </div>
 
@@ -160,21 +153,21 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                     <MoreHorizontal className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem className="gap-2" onClick={() => router.push(`/editor/${resume.id}`)}>
-                      <Pencil className="h-3.5 w-3.5" /> Editar
+                    <DropdownMenuItem className="gap-2" onClick={() => router.push(`/${locale}/editor/${resume.id}`)}>
+                      <Pencil className="h-3.5 w-3.5" /> {t("edit")}
                     </DropdownMenuItem>
                     <DropdownMenuItem className="gap-2" onClick={() => duplicateResume(resume.id)}>
-                      <Copy className="h-3.5 w-3.5" /> Duplicar
+                      <Copy className="h-3.5 w-3.5" /> {t("duplicate")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2" onClick={() => window.open(`/resume/${resume.id}/print`, "_blank")}>
-                      <Download className="h-3.5 w-3.5" /> Descargar PDF
+                    <DropdownMenuItem className="gap-2" onClick={() => window.open(`/${locale}/resume/${resume.id}/print`, "_blank")}>
+                      <Download className="h-3.5 w-3.5" /> {t("download_pdf")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem
                       className="text-destructive focus:text-destructive gap-2 cursor-pointer"
                       onClick={() => setDeleteId(resume.id)}
                     >
-                      <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                      <Trash2 className="h-3.5 w-3.5" /> {t("delete")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
@@ -187,18 +180,16 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Eliminar este CV?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta acción no se puede deshacer. El CV y todos sus datos serán eliminados permanentemente.
-            </AlertDialogDescription>
+            <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("delete_description")}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive hover:bg-destructive/90"
               onClick={() => deleteId && deleteResume(deleteId)}
             >
-              Eliminar
+              {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
