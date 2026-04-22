@@ -32,7 +32,9 @@
       "Bash(ls /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/app/api/resumes/[id]/)",
       "Bash(grep -A10 \"export async function PATCH\" /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/app/api/resumes/[id]/route.ts)",
       "Bash(psql:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(pg_isready -h localhost -p 5432)",
+      "Bash(xargs sed:*)"
     ]
   }
 }

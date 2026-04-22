@@ -9,7 +9,7 @@ import {
 
 const faqs = [
   {
-    question: "¿Es gratuito CVV Pro?",
+    question: "¿Es gratuito READY CV?",
     answer: "Puedes comenzar gratis. Para acceso completo a todas las plantillas y descarga en PDF, ofrecemos un plan premium desde $9.99/mes o una prueba de 14 días por $0.99.",
   },
   {

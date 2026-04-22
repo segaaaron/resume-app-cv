@@ -46,6 +46,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const dbUser = await db.user.findUnique({ where: { id: user.id } })
         if (dbUser) {
           token.plan = dbUser.plan
+          token.subscriptionStatus = dbUser.subscriptionStatus
+          token.subscriptionEndsAt = dbUser.subscriptionEndsAt?.toISOString() ?? null
+          token.role = dbUser.role
         }
       }
       return token
@@ -54,6 +57,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (token) {
         session.user.id = token.id as string
         session.user.plan = token.plan as string
+        session.user.subscriptionStatus = token.subscriptionStatus as string | undefined
+        session.user.subscriptionEndsAt = token.subscriptionEndsAt as string | null | undefined
+        session.user.role = token.role as string | undefined
       }
       return session
     },

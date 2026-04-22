@@ -30,45 +30,102 @@ export async function POST(req: Request) {
         const userId = session.metadata?.userId
         if (!userId) break
 
-        // Determine plan from price ID
-        const priceId = (session as Stripe.Checkout.Session & { subscription: Stripe.Subscription })
-          ?.subscription?.toString()
-
         const isTrial = session.line_items?.data[0]?.price?.id === process.env.STRIPE_PRICE_ID_TRIAL
+        const subscriptionId = typeof session.subscription === "string"
+          ? session.subscription
+          : (session.subscription as Stripe.Subscription | null)?.id ?? null
 
         await db.user.update({
           where: { id: userId },
           data: {
             plan: isTrial ? "TRIAL" : "PRO",
             trialEndsAt: isTrial ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null,
+            subscriptionId: subscriptionId ?? undefined,
+            subscriptionStatus: "ACTIVE",
+            // subscriptionEndsAt will be set when invoice.paid fires
           },
         })
         break
       }
 
       case "invoice.paid": {
+        // period_end gives us when the current paid period ends
+        const invoice = event.data.object as Stripe.Invoice
+        const customerId = invoice.customer as string
+        const user = await db.user.findFirst({ where: { stripeCustomerId: customerId } })
+        if (!user) break
+
+        await db.user.update({
+          where: { id: user.id },
+          data: {
+            plan: "PRO",
+            trialEndsAt: null,
+            // period_end is the end of the invoice period (subscription renewal date)
+            subscriptionEndsAt: new Date(invoice.period_end * 1000),
+            subscriptionStatus: "ACTIVE",
+          },
+        })
+        break
+      }
+
+      case "customer.subscription.updated": {
+        const sub = event.data.object as Stripe.Subscription
+        const customerId = sub.customer as string
+        const user = await db.user.findFirst({ where: { stripeCustomerId: customerId } })
+        if (!user) break
+
+        if (sub.cancel_at_period_end) {
+          // Cancellation scheduled — user keeps access until subscriptionEndsAt (set by invoice.paid)
+          // If Stripe provides an explicit cancel_at, use it; otherwise keep existing subscriptionEndsAt
+          const cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000) : undefined
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              subscriptionStatus: "CANCELED",
+              ...(cancelAt ? { subscriptionEndsAt: cancelAt } : {}),
+            },
+          })
+        } else if (sub.status === "active") {
+          // Cancellation reversed or subscription renewed
+          await db.user.update({
+            where: { id: user.id },
+            data: { subscriptionStatus: "ACTIVE" },
+          })
+        }
+        break
+      }
+
+      case "customer.subscription.deleted": {
+        const sub = event.data.object as Stripe.Subscription
+        const customerId = sub.customer as string
+        const user = await db.user.findFirst({ where: { stripeCustomerId: customerId } })
+        if (user) {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              plan: "FREE",
+              trialEndsAt: null,
+              subscriptionId: null,
+              subscriptionEndsAt: null,
+              subscriptionStatus: "EXPIRED",
+            },
+          })
+        }
+        break
+      }
+
+      case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
         const user = await db.user.findFirst({ where: { stripeCustomerId: customerId } })
         if (user) {
           await db.user.update({
             where: { id: user.id },
-            data: { plan: "PRO", trialEndsAt: null },
-          })
-        }
-        break
-      }
-
-      case "customer.subscription.deleted":
-      case "invoice.payment_failed": {
-        const obj = event.data.object as Stripe.Subscription | Stripe.Invoice
-        const customerId = (obj as Stripe.Subscription).customer as string
-          ?? (obj as Stripe.Invoice).customer as string
-        const user = await db.user.findFirst({ where: { stripeCustomerId: customerId } })
-        if (user) {
-          await db.user.update({
-            where: { id: user.id },
-            data: { plan: "FREE", trialEndsAt: null },
+            data: {
+              plan: "FREE",
+              trialEndsAt: null,
+              subscriptionStatus: "EXPIRED",
+            },
           })
         }
         break

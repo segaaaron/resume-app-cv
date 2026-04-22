@@ -13,9 +13,14 @@ interface Props {
   sections: ResumeSection[]
   sectionData: ResumeSections
   config: ResumeConfig
+  plan: string
+  subscriptionStatus?: string | null
+  subscriptionEndsAt?: string | null
+  trialEndsAt?: string | null
+  role?: string
 }
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config }: Props) {
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
   const init = useResumeStore((s) => s.init)
   // Use a ref so we always call init with the latest server-provided data,
   // even if the same resumeId is re-mounted after navigating away and back.
@@ -32,7 +37,13 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
       <EditorTopBar />
       <div className="flex flex-1 overflow-hidden">
         <FormPanel />
-        <PreviewPanel />
+        <PreviewPanel
+          plan={plan}
+          subscriptionStatus={subscriptionStatus}
+          subscriptionEndsAt={subscriptionEndsAt}
+          trialEndsAt={trialEndsAt}
+          role={role}
+        />
       </div>
     </div>
   )

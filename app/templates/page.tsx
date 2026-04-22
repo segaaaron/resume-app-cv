@@ -6,8 +6,35 @@ import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Plantillas de CV — CVV Pro",
-  description: "24 plantillas profesionales para crear tu currículum vitae. Elige la que más se adapte a tu estilo.",
+  title: "Plantillas de Curriculum Vitae Profesionales — 29 Diseños",
+  description:
+    "Explora 29 plantillas de curriculum vitae profesionales y modernas. Diseños para todos los sectores: tecnología, finanzas, diseño, salud y más. Cambia de plantilla sin perder tu contenido.",
+  keywords: [
+    "plantillas de curriculum",
+    "plantillas cv profesionales",
+    "modelos de curriculum vitae",
+    "diseños de cv",
+    "plantillas resume",
+    "plantillas cv gratis",
+    "curriculum vitae moderno",
+    "plantillas ats",
+  ],
+  alternates: {
+    canonical: "https://readycv.app/templates",
+  },
+  openGraph: {
+    title: "Plantillas de Curriculum Vitae Profesionales — READY CV",
+    description:
+      "29 plantillas de CV profesionales y modernas. Elige el diseño perfecto para tu sector y descarga en PDF.",
+    url: "https://readycv.app/templates",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Plantillas de Curriculum Vitae Profesionales — READY CV",
+    description:
+      "29 plantillas de CV profesionales y modernas. Elige el diseño perfecto para tu sector y descarga en PDF.",
+  },
 }
 
 // Visual config per template — drives the mini-preview
@@ -235,7 +262,7 @@ export default function TemplatesPage() {
           {(() => {
             const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
             const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
-            const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id) && t.id !== "vitae")
+            const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
 
             const TemplateCard = ({ template }: { template: typeof TEMPLATES[number] }) => {
               const visual = TEMPLATE_VISUALS[template.id] ?? {

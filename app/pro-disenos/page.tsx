@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Pro Diseños — CVV Pro",
+  title: "Pro Diseños — READY CV",
   description: "Plantillas premium con SVG personalizados y diseños únicos para destacar.",
 }
 

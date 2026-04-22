@@ -5,7 +5,19 @@ import type { Metadata } from "next"
 import PricingButtons from "@/components/marketing/PricingButtons"
 
 export const metadata: Metadata = {
-  title: "Precios — CVV Pro",
+  title: "Precios — Plan Gratis y Pro desde $10/mes",
+  description:
+    "READY CV es gratis para siempre. Desbloquea todas las plantillas premium, CV ilimitados y funciones avanzadas con el plan Pro por solo $10 al mes.",
+  alternates: {
+    canonical: "https://readycv.app/pricing",
+  },
+  openGraph: {
+    title: "Precios — READY CV | Plan Gratis y Pro desde $10/mes",
+    description:
+      "Crea CVs profesionales gratis. Desbloquea todo con el plan Pro por solo $10/mes.",
+    url: "https://readycv.app/pricing",
+    type: "website",
+  },
 }
 
 const features = [

@@ -2,7 +2,15 @@ import LoginForm from "@/components/auth/LoginForm"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Iniciar sesión — CVV Pro",
+  title: "Iniciar Sesión",
+  description: "Accede a tu cuenta de READY CV para continuar creando y editando tu currículum vitae profesional.",
+  robots: {
+    index: false,
+    follow: false,
+  },
+  alternates: {
+    canonical: "https://readycv.app/login",
+  },
 }
 
 export default function LoginPage() {

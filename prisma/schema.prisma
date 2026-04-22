@@ -15,8 +15,12 @@ model User {
   password         String?
   plan             Plan          @default(FREE)
   trialEndsAt      DateTime?
-  stripeCustomerId String?       @unique
-  accounts         Account[]
+  role               Role               @default(USER)
+  stripeCustomerId   String?            @unique
+  subscriptionId     String?            @unique
+  subscriptionEndsAt DateTime?
+  subscriptionStatus SubscriptionStatus @default(NONE)
+  accounts           Account[]
   sessions         Session[]
   resumes          Resume[]
   coverLetters     CoverLetter[]
@@ -111,10 +115,22 @@ model Application {
   @@index([userId])
 }
 
+enum Role {
+  USER
+  SUPER_ADMIN
+}
+
 enum Plan {
   FREE
   TRIAL
   PRO
+}
+
+enum SubscriptionStatus {
+  NONE
+  ACTIVE
+  CANCELED
+  EXPIRED
 }
 
 enum AppStatus {

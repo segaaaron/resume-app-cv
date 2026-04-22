@@ -9,7 +9,7 @@ export default async function SettingsPage() {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, image: true, plan: true, createdAt: true },
+    select: { id: true, name: true, email: true, image: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, createdAt: true },
   })
 
   if (!user) redirect("/login")

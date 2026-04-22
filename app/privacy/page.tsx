@@ -3,7 +3,7 @@ import Footer from "@/components/marketing/Footer"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Política de Privacidad — CVV Pro",
+  title: "Política de Privacidad — READY CV",
 }
 
 export default function PrivacyPage() {
@@ -17,8 +17,8 @@ export default function PrivacyPage() {
 
           <h2>1. Responsable del Tratamiento</h2>
           <p>
-            CVV Pro es responsable del tratamiento de los datos personales que recopila a través de su plataforma.
-            Puedes contactarnos en <a href="mailto:soporte@cvvpro.com">soporte@cvvpro.com</a>.
+            READY CV es responsable del tratamiento de los datos personales que recopila a través de su plataforma.
+            Puedes contactarnos en <a href="mailto:soporte@readycv.app">soporte@readycv.app</a>.
           </p>
 
           <h2>2. Datos que Recopilamos</h2>
@@ -32,7 +32,7 @@ export default function PrivacyPage() {
               (experiencia, educación, habilidades, foto, etc.).
             </li>
             <li>
-              <strong>Datos de pago:</strong> procesados exclusivamente por Stripe; CVV Pro no almacena datos de
+              <strong>Datos de pago:</strong> procesados exclusivamente por Stripe; READY CV no almacena datos de
               tarjetas de crédito.
             </li>
             <li>
@@ -43,7 +43,7 @@ export default function PrivacyPage() {
           <h2>3. Finalidad del Tratamiento</h2>
           <p>Utilizamos tus datos para:</p>
           <ul>
-            <li>Prestar y mejorar el servicio de CVV Pro.</li>
+            <li>Prestar y mejorar el servicio de READY CV.</li>
             <li>Gestionar tu cuenta y suscripción.</li>
             <li>Enviarte comunicaciones transaccionales (confirmaciones, alertas de cuenta).</li>
             <li>Cumplir con obligaciones legales.</li>
@@ -69,7 +69,7 @@ export default function PrivacyPage() {
 
           <h2>7. Tus Derechos</h2>
           <p>Tienes derecho a acceder, rectificar, suprimir, portar y oponerte al tratamiento de tus datos.
-          Para ejercer estos derechos, escríbenos a <a href="mailto:soporte@cvvpro.com">soporte@cvvpro.com</a>.</p>
+          Para ejercer estos derechos, escríbenos a <a href="mailto:soporte@readycv.app">soporte@readycv.app</a>.</p>
 
           <h2>8. Seguridad</h2>
           <p>

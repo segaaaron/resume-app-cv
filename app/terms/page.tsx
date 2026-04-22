@@ -3,7 +3,7 @@ import Footer from "@/components/marketing/Footer"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Términos de Servicio — CVV Pro",
+  title: "Términos de Servicio — READY CV",
 }
 
 export default function TermsPage() {
@@ -17,13 +17,13 @@ export default function TermsPage() {
 
           <h2>1. Aceptación de los Términos</h2>
           <p>
-            Al acceder y utilizar CVV Pro, aceptas quedar vinculado por estos Términos de Servicio. Si no estás de
+            Al acceder y utilizar READY CV, aceptas quedar vinculado por estos Términos de Servicio. Si no estás de
             acuerdo con alguno de los términos, no debes utilizar el servicio.
           </p>
 
           <h2>2. Descripción del Servicio</h2>
           <p>
-            CVV Pro es una plataforma en línea que permite a los usuarios crear, editar y descargar currículums
+            READY CV es una plataforma en línea que permite a los usuarios crear, editar y descargar currículums
             vitae y cartas de presentación. El servicio se ofrece bajo modalidad de suscripción.
           </p>
 
@@ -36,7 +36,7 @@ export default function TermsPage() {
 
           <h2>4. Planes y Pagos</h2>
           <p>
-            CVV Pro ofrece planes gratuitos y de pago. Los pagos se procesan de forma segura a través de Stripe.
+            READY CV ofrece planes gratuitos y de pago. Los pagos se procesan de forma segura a través de Stripe.
             Los planes de pago se renuevan automáticamente a menos que canceles antes de la fecha de renovación.
             No se realizan reembolsos salvo en los casos exigidos por la ley aplicable.
           </p>
@@ -52,13 +52,13 @@ export default function TermsPage() {
 
           <h2>6. Propiedad Intelectual</h2>
           <p>
-            Todo el contenido, diseños y código de CVV Pro son propiedad de sus respectivos titulares. Los
-            documentos que crees pertenecen a ti; CVV Pro no reclama derechos sobre tu contenido.
+            Todo el contenido, diseños y código de READY CV son propiedad de sus respectivos titulares. Los
+            documentos que crees pertenecen a ti; READY CV no reclama derechos sobre tu contenido.
           </p>
 
           <h2>7. Limitación de Responsabilidad</h2>
           <p>
-            CVV Pro se proporciona &quot;tal cual&quot;. No garantizamos que el servicio sea ininterrumpido o libre de
+            READY CV se proporciona &quot;tal cual&quot;. No garantizamos que el servicio sea ininterrumpido o libre de
             errores. En ningún caso seremos responsables de daños indirectos, incidentales o consecuentes.
           </p>
 
@@ -71,7 +71,7 @@ export default function TermsPage() {
           <h2>9. Contacto</h2>
           <p>
             Si tienes preguntas sobre estos Términos, puedes contactarnos en{" "}
-            <a href="mailto:soporte@cvvpro.com">soporte@cvvpro.com</a>.
+            <a href="mailto:soporte@readycv.app">soporte@readycv.app</a>.
           </p>
         </div>
       </main>

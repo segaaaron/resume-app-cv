@@ -7,7 +7,15 @@ import { ZoomIn, ZoomOut } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useState } from "react"
 
-export default function PreviewPanel() {
+interface Props {
+  plan: string
+  subscriptionStatus?: string | null
+  subscriptionEndsAt?: string | null
+  trialEndsAt?: string | null
+  role?: string
+}
+
+export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
   const [scale, setScale] = useState(0.65)
 
   return (
@@ -46,9 +54,14 @@ export default function PreviewPanel() {
         </div>
       </div>
 
-      {/* <div className="mb-8"></div> */}
       {/* Template switcher — static at bottom */}
-      <TemplateSwitcher />
+      <TemplateSwitcher
+        plan={plan}
+        subscriptionStatus={subscriptionStatus}
+        subscriptionEndsAt={subscriptionEndsAt}
+        trialEndsAt={trialEndsAt}
+        role={role}
+      />
     </div>
   )
 }

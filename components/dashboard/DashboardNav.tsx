@@ -34,7 +34,7 @@ export default function DashboardNav({ user }: Props) {
         <div className="flex items-center min-w-0 flex-1">
           <Link href="/" className="flex items-center gap-1.5 font-bold text-primary mr-3 sm:mr-4 shrink-0">
             <FileText className="h-5 w-5" />
-            <span className="hidden sm:block">CVV Pro</span>
+            <span className="hidden sm:block">READY CV</span>
           </Link>
 
           <nav className="flex overflow-x-auto scrollbar-hide">

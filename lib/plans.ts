@@ -6,6 +6,12 @@
  */
 
 export type Plan = "FREE" | "TRIAL" | "PRO"
+export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED"
+export type Role = "USER" | "SUPER_ADMIN"
+
+export function isSuperAdmin(role?: string | null): boolean {
+  return role === "SUPER_ADMIN"
+}
 
 export const PLAN_LIMITS = {
   FREE: {
@@ -32,9 +38,20 @@ export function isPro(plan: string): boolean {
   return plan === "PRO"
 }
 
-export function isActive(plan: string, trialEndsAt: Date | null): boolean {
-  if (plan === "PRO") return true
+export function isActive(
+  plan: string,
+  trialEndsAt: Date | null,
+  subscriptionEndsAt?: Date | null,
+  subscriptionStatus?: string | null
+): boolean {
   if (plan === "TRIAL" && trialEndsAt && new Date() < trialEndsAt) return true
+  if (plan === "PRO") {
+    // Canceled or expired subscriptions lose access
+    if (subscriptionStatus === "CANCELED" || subscriptionStatus === "EXPIRED") return false
+    // If we have an explicit end date, check it hasn't passed
+    if (subscriptionEndsAt && new Date() > subscriptionEndsAt) return false
+    return subscriptionStatus === "ACTIVE"
+  }
   return false
 }
 

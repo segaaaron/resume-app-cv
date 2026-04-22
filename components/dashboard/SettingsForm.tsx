@@ -4,11 +4,21 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { User, Mail, Calendar, Crown } from "lucide-react"
+import { User, Mail, Calendar, Crown, AlertCircle } from "lucide-react"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -18,6 +28,8 @@ interface UserData {
   email: string
   image: string | null
   plan: string
+  subscriptionStatus: string
+  subscriptionEndsAt: Date | null
   createdAt: Date
 }
 
@@ -25,6 +37,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const [name, setName] = useState(user.name ?? "")
   const [saving, setSaving] = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
+  const [cancelLoading, setCancelLoading] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscriptionStatus)
 
   async function handleManageSubscription() {
     setPortalLoading(true)
@@ -40,6 +54,24 @@ export default function SettingsForm({ user }: { user: UserData }) {
       toast.error("Error de conexión")
     } finally {
       setPortalLoading(false)
+    }
+  }
+
+  async function handleCancelSubscription() {
+    setCancelLoading(true)
+    try {
+      const res = await fetch("/api/stripe/cancel", { method: "POST" })
+      const data = await res.json()
+      if (res.ok && data.success) {
+        setSubscriptionStatus("CANCELED")
+        toast.success("Suscripción cancelada. Mantienes acceso hasta el vencimiento del período actual.")
+      } else {
+        toast.error(data.error ?? "Error al cancelar suscripción")
+      }
+    } catch {
+      toast.error("Error de conexión")
+    } finally {
+      setCancelLoading(false)
     }
   }
 
@@ -66,6 +98,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
   const planLabel = user.plan === "PRO" ? "Pro" : user.plan === "TRIAL" ? "Trial" : "Gratis"
   const planColor = user.plan === "PRO" ? "bg-amber-100 text-amber-700" : user.plan === "TRIAL" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+
+  const isCanceled = subscriptionStatus === "CANCELED"
+  const isActive = subscriptionStatus === "ACTIVE"
+  const hasSubscription = user.plan !== "FREE" && subscriptionStatus !== "NONE"
 
   return (
     <div className="space-y-6">
@@ -129,23 +165,90 @@ export default function SettingsForm({ user }: { user: UserData }) {
           <div>
             <p className="text-sm font-medium">Plan actual</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {user.plan === "FREE" ? "Acceso a funcionalidades básicas" : user.plan === "TRIAL" ? "Prueba de 7 días activa" : "Acceso completo a todas las funcionalidades"}
+              {user.plan === "FREE"
+                ? "Acceso a funcionalidades básicas"
+                : user.plan === "TRIAL"
+                  ? "Prueba activa"
+                  : "Acceso completo a todas las funcionalidades"}
             </p>
           </div>
           <span className={`text-xs font-semibold px-3 py-1 rounded-full ${planColor}`}>{planLabel}</span>
         </div>
 
-        {user.plan !== "PRO" && (
-          <Button variant="outline" size="sm" onClick={() => window.location.href = "/pricing"} className="gap-2">
-            <Crown className="h-3.5 w-3.5" />
-            Mejorar a Pro
-          </Button>
+        {/* Subscription status banners */}
+        {isCanceled && user.subscriptionEndsAt && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <p className="text-amber-800">
+              Suscripción cancelada — sin renovación automática. Mantienes acceso hasta el{" "}
+              <span className="font-semibold">
+                {format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: es })}
+              </span>
+              .
+            </p>
+          </div>
         )}
-        {user.plan !== "FREE" && (
-          <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={portalLoading} className="gap-2">
-            {portalLoading ? "Cargando..." : "Gestionar suscripción"}
-          </Button>
+
+        {isActive && user.subscriptionEndsAt && (
+          <p className="text-xs text-muted-foreground">
+            Suscripción mensual · próxima renovación:{" "}
+            <span className="font-medium text-foreground">
+              {format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: es })}
+            </span>
+          </p>
         )}
+
+        <div className="flex flex-wrap gap-2">
+          {user.plan !== "PRO" && (
+            <Button variant="outline" size="sm" onClick={() => window.location.href = "/pricing"} className="gap-2">
+              <Crown className="h-3.5 w-3.5" />
+              Mejorar a Pro
+            </Button>
+          )}
+
+          {hasSubscription && (
+            <Button variant="outline" size="sm" onClick={handleManageSubscription} disabled={portalLoading}>
+              {portalLoading ? "Cargando..." : "Gestionar suscripción"}
+            </Button>
+          )}
+
+          {isActive && (
+            <AlertDialog>
+              <AlertDialogTrigger>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-destructive/40 text-destructive hover:bg-destructive/5"
+                  disabled={cancelLoading}
+                  type="button"
+                >
+                  {cancelLoading ? "Cancelando..." : "Cancelar suscripción"}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>¿Cancelar suscripción?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tu suscripción no se renovará automáticamente.
+                    {user.subscriptionEndsAt && (
+                      <> Mantendrás acceso completo hasta el <strong>{format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: es })}</strong>.</>
+                    )}
+                    {" "}Después tu cuenta pasará al plan gratuito.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Mantener suscripción</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleCancelSubscription}
+                    className="bg-destructive text-white hover:bg-destructive/90"
+                  >
+                    Sí, cancelar
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
 
         <Separator />
 
