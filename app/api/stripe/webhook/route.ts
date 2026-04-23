@@ -31,6 +31,7 @@ export async function POST(req: Request) {
         if (!userId) break
 
         const isTrial = session.line_items?.data[0]?.price?.id === process.env.STRIPE_PRICE_ID_TRIAL
+        // STRIPE_PRICE_ID_TRIAL is a server-only env var (no NEXT_PUBLIC_ prefix)
         const subscriptionId = typeof session.subscription === "string"
           ? session.subscription
           : (session.subscription as Stripe.Subscription | null)?.id ?? null

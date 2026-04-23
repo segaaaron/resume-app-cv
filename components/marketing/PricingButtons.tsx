@@ -18,25 +18,19 @@ export default function PricingButtons({ plan }: Props) {
   async function handleClick() {
     setLoading(true)
     try {
-      const priceId =
-        plan === "trial"
-          ? process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_TRIAL
-          : process.env.NEXT_PUBLIC_STRIPE_PRICE_ID_PRO
-
-      if (!priceId) {
-        // Stripe not configured — redirect to register
-        router.push("/register")
-        return
-      }
-
       const res = await fetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ plan }),
       })
 
       if (res.status === 401) {
         router.push("/login")
+        return
+      }
+
+      if (res.status === 503) {
+        router.push("/register")
         return
       }
 

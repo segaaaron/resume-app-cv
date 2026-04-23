@@ -5,8 +5,13 @@ import { stripe, stripeEnabled } from "@/lib/stripe"
 import { z } from "zod"
 
 const schema = z.object({
-  priceId: z.string().min(1),
+  plan: z.enum(["trial", "pro"]),
 })
+
+const PRICE_IDS: Record<string, string | undefined> = {
+  trial: process.env.STRIPE_PRICE_ID_TRIAL,
+  pro: process.env.STRIPE_PRICE_ID_PRO,
+}
 
 export async function POST(req: Request) {
   if (!stripeEnabled() || !stripe) {
@@ -26,6 +31,11 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  }
+
+  const priceId = PRICE_IDS[parsed.data.plan]
+  if (!priceId) {
+    return NextResponse.json({ error: "Plan not configured" }, { status: 503 })
   }
 
   const user = await db.user.findUnique({
@@ -54,7 +64,7 @@ export async function POST(req: Request) {
     customer: customerId,
     mode: "subscription",
     payment_method_types: ["card"],
-    line_items: [{ price: parsed.data.priceId, quantity: 1 }],
+    line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/dashboard/resumes?upgraded=true`,
     cancel_url: `${appUrl}/pricing`,
     metadata: { userId: user.id },
