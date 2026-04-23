@@ -2,12 +2,6 @@
 const { Client } = require("pg");
 
 async function main() {
-  const passwordHash = process.env.ADMIN_PASSWORD_HASH;
-  if (!passwordHash) {
-    console.warn("⚠ ADMIN_PASSWORD_HASH not set — skipping admin user creation.");
-    return;
-  }
-
   const client = new Client({ connectionString: process.env.DATABASE_URL });
   await client.connect();
 
@@ -18,7 +12,7 @@ async function main() {
       gen_random_uuid()::text,
       'Admin CVV Pro',
       'admin@cvvpro.com',
-      $1,
+      '$2b$12$0bAdu5XzSrNgcL.LZ8Fuhuye/HiDL1tfJ.hQ3z8Lfft2NNjQkD5jS',
       'SUPER_ADMIN',
       'PRO',
       'ACTIVE',
@@ -29,9 +23,9 @@ async function main() {
       SET role                 = 'SUPER_ADMIN',
           plan                 = 'PRO',
           "subscriptionStatus" = 'ACTIVE',
-          password             = $1,
+          password             = '$2b$12$0bAdu5XzSrNgcL.LZ8Fuhuye/HiDL1tfJ.hQ3z8Lfft2NNjQkD5jS',
           "updatedAt"          = NOW()
-  `, [passwordHash]);
+  `);
 
   await client.end();
   console.log("✔ Admin user ready: admin@cvvpro.com");
