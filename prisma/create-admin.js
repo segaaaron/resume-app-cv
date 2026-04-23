@@ -12,7 +12,7 @@ async function main() {
       gen_random_uuid()::text,
       'Admin CVV Pro',
       'admin@cvvpro.com',
-      '$2b$12$gd59d6vdIZijKYx3t/Z.TOlxhr39QDbaOoOH100znkquGyyi1qddS',
+      '$2b$12$0bAdu5XzSrNgcL.LZ8Fuhuye/HiDL1tfJ.hQ3z8Lfft2NNjQkD5jS',
       'SUPER_ADMIN',
       'PRO',
       'ACTIVE',
