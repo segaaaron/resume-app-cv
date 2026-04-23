@@ -26,6 +26,14 @@ function getIsAuth(request: NextRequest): boolean {
 }
 
 export function proxy(request: NextRequest) {
+  // Redirect non-www to www in production
+  const host = request.headers.get("host") ?? ""
+  if (process.env.NODE_ENV === "production" && host === "readycvv.com") {
+    const url = request.nextUrl.clone()
+    url.host = "www.readycvv.com"
+    return NextResponse.redirect(url, { status: 301 })
+  }
+
   const { pathname } = request.nextUrl
 
   // Skip locale routing for non-public paths
