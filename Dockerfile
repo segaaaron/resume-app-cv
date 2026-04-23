@@ -19,9 +19,13 @@ RUN npx prisma generate
 
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# NEXT_PUBLIC_* vars are needed at build time
+# Build-time vars
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+
+# DATABASE_URL is needed at build time because Next.js imports lib/db.ts during page data collection
+ARG DATABASE_URL
+ENV DATABASE_URL=$DATABASE_URL
 
 RUN npm run build
 
