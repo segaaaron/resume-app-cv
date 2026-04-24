@@ -19,7 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { User, Mail, Calendar, Crown, AlertCircle } from "lucide-react"
+import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock } from "lucide-react"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 
@@ -31,6 +31,7 @@ interface UserData {
   plan: string
   subscriptionStatus: string
   subscriptionEndsAt: Date | null
+  planInterval: string | null
   createdAt: Date
 }
 
@@ -100,7 +101,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
     }
   }
 
-  const planLabel = user.plan === "PRO" ? "Pro" : user.plan === "TRIAL" ? "Trial" : t("plan_free")
+  const intervalLabel = user.planInterval === "annual" ? "Anual" : user.planInterval === "monthly" ? "Mensual" : null
+  const planLabel = user.plan === "PRO"
+    ? `Pro ${intervalLabel ? `· ${intervalLabel}` : ""}`
+    : user.plan === "TRIAL" ? "Trial" : t("plan_free")
   const planColor = user.plan === "PRO" ? "bg-amber-100 text-amber-700" : user.plan === "TRIAL" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
 
   const isCanceled = subscriptionStatus === "CANCELED"
@@ -164,17 +168,26 @@ export default function SettingsForm({ user }: { user: UserData }) {
         </form>
       </div>
 
-      {/* Account Info */}
-      <div className="border border-border rounded-xl p-6 space-y-4">
+      {/* Plan Card */}
+      <div className={`rounded-xl p-6 space-y-4 border-2 ${isActive ? "border-primary/30 bg-primary/5" : "border-border"}`}>
         <h2 className="font-semibold flex items-center gap-2">
           <Crown className="h-4 w-4" />
           {t("plan_section")}
         </h2>
 
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">{t("current_plan")}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
+        {/* Plan status hero */}
+        <div className="flex items-center gap-4">
+          <div className={`h-12 w-12 rounded-xl flex items-center justify-center shrink-0 ${isActive ? "bg-primary text-white" : "bg-muted text-muted-foreground"}`}>
+            {isActive ? <BadgeCheck className="h-6 w-6" /> : <Zap className="h-6 w-6" />}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-base">{planLabel}</p>
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${planColor}`}>
+                {isActive ? "Activo" : isCanceled ? "Cancelado" : "Gratuito"}
+              </span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-0.5">
               {user.plan === "FREE"
                 ? t("plan_free_desc")
                 : user.plan === "TRIAL"
@@ -182,33 +195,39 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   : t("plan_pro_desc")}
             </p>
           </div>
-          <span className={`text-xs font-semibold px-3 py-1 rounded-full ${planColor}`}>{planLabel}</span>
         </div>
 
-        {isCanceled && user.subscriptionEndsAt && (
-          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5 text-sm">
-            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-            <p className="text-amber-800">
-              {t("canceled_notice")}{" "}
-              <span className="font-semibold">
-                {format(new Date(user.subscriptionEndsAt), "d MMMM yyyy", { locale: dateLocale })}
-              </span>.
-            </p>
+        {/* Renewal / expiry date */}
+        {isActive && user.subscriptionEndsAt && (
+          <div className="flex items-center gap-2 bg-white border border-primary/20 rounded-lg px-4 py-3">
+            <Clock className="h-4 w-4 text-primary shrink-0" />
+            <div>
+              <p className="text-xs text-muted-foreground">{t("renewal_notice")}</p>
+              <p className="text-sm font-semibold text-foreground">
+                {format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}
+              </p>
+            </div>
           </div>
         )}
 
-        {isActive && user.subscriptionEndsAt && (
-          <p className="text-xs text-muted-foreground">
-            {t("renewal_notice")}{" "}
-            <span className="font-medium text-foreground">
-              {format(new Date(user.subscriptionEndsAt), "d MMMM yyyy", { locale: dateLocale })}
-            </span>
-          </p>
+        {isCanceled && user.subscriptionEndsAt && (
+          <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-xs text-amber-700 font-medium">Suscripción cancelada</p>
+              <p className="text-sm text-amber-800">
+                {t("canceled_notice")}{" "}
+                <span className="font-semibold">
+                  {format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}
+                </span>
+              </p>
+            </div>
+          </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 pt-1">
           {user.plan !== "PRO" && (
-            <Button variant="outline" size="sm" onClick={() => window.location.href = `/${locale}/pricing`} className="gap-2">
+            <Button size="sm" onClick={() => window.location.href = `/${locale}/pricing`} className="gap-2">
               <Crown className="h-3.5 w-3.5" />
               {t("upgrade_button")}
             </Button>
@@ -241,7 +260,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   <AlertDialogDescription>
                     {t("cancel_dialog_desc")}
                     {user.subscriptionEndsAt && (
-                      <> <strong>{format(new Date(user.subscriptionEndsAt), "d MMMM yyyy", { locale: dateLocale })}</strong>.</>
+                      <> <strong>{format(new Date(user.subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}</strong>.</>
                     )}
                     {" "}{t("cancel_dialog_after")}
                   </AlertDialogDescription>

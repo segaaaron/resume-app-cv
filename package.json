@@ -5,8 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "npx prisma migrate deploy && next start",
+    "lint": "eslint",
+    "migration:create": "bash scripts/create-migration.sh"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",
@@ -47,6 +48,7 @@
     "react-dom": "19.2.4",
     "react-hook-form": "^7.72.1",
     "react-image-crop": "^11.0.10",
+    "resend": "^6.12.2",
     "shadcn": "^4.2.0",
     "sonner": "^2.0.7",
     "stripe": "^22.0.1",

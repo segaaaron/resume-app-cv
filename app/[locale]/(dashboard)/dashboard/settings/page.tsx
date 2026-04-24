@@ -10,7 +10,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, image: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, createdAt: true },
+    select: { id: true, name: true, email: true, image: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, createdAt: true },
   })
 
   if (!user) redirect(`/${locale}/login`)

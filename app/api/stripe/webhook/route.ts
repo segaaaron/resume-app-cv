@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { db } from "@/lib/db"
+import { resend, emailEnabled } from "@/lib/resend"
+import { subscriptionConfirmationHtml, subscriptionConfirmationText } from "@/lib/emails/subscriptionConfirmation"
 import type Stripe from "stripe"
 
 export async function POST(req: Request) {
@@ -34,11 +36,18 @@ export async function POST(req: Request) {
           ? session.subscription
           : (session.subscription as Stripe.Subscription | null)?.id ?? null
 
+        // Determine interval from price ID
+        const priceId = session.line_items?.data[0]?.price?.id
+        const planInterval =
+          priceId === process.env.STRIPE_PRICE_ID_ANNUAL ? "annual" :
+          priceId === process.env.STRIPE_PRICE_ID_MONTHLY ? "monthly" : "monthly"
+
         await db.user.update({
           where: { id: userId },
           data: {
             plan: "PRO",
             trialEndsAt: null,
+            planInterval,
             subscriptionId: subscriptionId ?? undefined,
             subscriptionStatus: "ACTIVE",
             // subscriptionEndsAt will be set when invoice.paid fires
@@ -48,22 +57,49 @@ export async function POST(req: Request) {
       }
 
       case "invoice.paid": {
-        // period_end gives us when the current paid period ends
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
-        const user = await db.user.findFirst({ where: { stripeCustomerId: customerId } })
+        const user = await db.user.findFirst({
+          where: { stripeCustomerId: customerId },
+          select: { id: true, name: true, email: true, planInterval: true },
+        })
         if (!user) break
+
+        const renewalDate = new Date(invoice.period_end * 1000)
 
         await db.user.update({
           where: { id: user.id },
           data: {
             plan: "PRO",
             trialEndsAt: null,
-            // period_end is the end of the invoice period (subscription renewal date)
-            subscriptionEndsAt: new Date(invoice.period_end * 1000),
+            subscriptionEndsAt: renewalDate,
             subscriptionStatus: "ACTIVE",
           },
         })
+
+        // Send confirmation email
+        if (emailEnabled() && resend && user.email) {
+          const planInterval = (user.planInterval ?? "monthly") as "monthly" | "annual"
+          await resend.emails.send({
+            from: "READY CV <no-reply@readycvv.com>",
+            to: user.email,
+            subject: "¡Tu suscripción Pro está activa! 🎉",
+            html: subscriptionConfirmationHtml({
+              userName: user.name ?? "Usuario",
+              userEmail: user.email,
+              planInterval,
+              renewalDate,
+            }),
+            text: subscriptionConfirmationText({
+              userName: user.name ?? "Usuario",
+              userEmail: user.email,
+              planInterval,
+              renewalDate,
+            }),
+          }).catch((err) => {
+            console.error("[resend] failed to send subscription email:", err)
+          })
+        }
         break
       }
 

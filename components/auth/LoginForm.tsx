@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -10,7 +10,7 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Eye, EyeOff } from "lucide-react"
+import { Loader2, Eye, EyeOff, Zap } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
 
@@ -18,6 +18,8 @@ export default function LoginForm() {
   const t = useTranslations("auth.login")
   const router = useRouter()
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const planParam = searchParams.get("plan")
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -44,19 +46,32 @@ export default function LoginForm() {
     if (result?.error) {
       toast.error(t("error"))
     } else {
-      router.push(`/${locale}/dashboard/resumes`)
+      if (planParam) {
+        router.push(`/${locale}/checkout?plan=${planParam}`)
+      } else {
+        router.push(`/${locale}/dashboard/resumes`)
+      }
       router.refresh()
     }
   }
 
   async function loginWithGoogle() {
     setGoogleLoading(true)
-    await signIn("google", { callbackUrl: `/${locale}/dashboard/resumes` })
+    const callbackUrl = planParam
+      ? `/${locale}/checkout?plan=${planParam}`
+      : `/${locale}/dashboard/resumes`
+    await signIn("google", { callbackUrl })
   }
 
   return (
     <div className="w-full max-w-md">
       <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
+        {planParam && (
+          <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-xl px-4 py-3 mb-5 text-sm font-medium">
+            <Zap className="h-4 w-4 shrink-0" />
+            Un paso más para activar tu Plan Pro
+          </div>
+        )}
         <h1 className="text-2xl font-bold text-center mb-6">{t("title")}</h1>
 
         <Button
@@ -131,7 +146,10 @@ export default function LoginForm() {
 
         <p className="text-center text-sm text-muted-foreground mt-4">
           {t("no_account")}{" "}
-          <Link href="/register" className="text-primary font-medium hover:underline">
+          <Link
+            href={planParam ? `/register?plan=${planParam}` : "/register"}
+            className="text-primary font-medium hover:underline"
+          >
             {t("register_link")}
           </Link>
         </p>

@@ -25,12 +25,12 @@ export default function PricingButtons({ plan }: Props) {
       })
 
       if (res.status === 401) {
-        router.push("/login")
+        router.push(`/register?plan=${plan}`)
         return
       }
 
       if (res.status === 503) {
-        router.push("/register")
+        router.push(`/register?plan=${plan}`)
         return
       }
 

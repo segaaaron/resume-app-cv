@@ -19,7 +19,8 @@ model User {
   stripeCustomerId   String?            @unique
   subscriptionId     String?            @unique
   subscriptionEndsAt DateTime?
-  subscriptionStatus SubscriptionStatus @default(NONE)
+  subscriptionStatus   SubscriptionStatus @default(NONE)
+  planInterval         String?
   accounts           Account[]
   sessions         Session[]
   resumes          Resume[]

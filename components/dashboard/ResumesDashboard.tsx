@@ -1,12 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
-import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal } from "lucide-react"
+import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import {
@@ -43,9 +43,21 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get("upgraded") === "true") {
+      setShowUpgradeBanner(true)
+      // Clean URL without reload
+      const url = new URL(window.location.href)
+      url.searchParams.delete("upgraded")
+      window.history.replaceState({}, "", url.toString())
+    }
+  }, [searchParams])
 
   async function createResume() {
     setCreating(true)
@@ -80,6 +92,20 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
   return (
     <div>
+      {showUpgradeBanner && (
+        <div className="flex items-center justify-between bg-primary text-white rounded-2xl px-5 py-4 mb-6 shadow-lg">
+          <div className="flex items-center gap-3">
+            <PartyPopper className="h-5 w-5 shrink-0" />
+            <div>
+              <p className="font-semibold text-sm">¡Bienvenido a Pro!</p>
+              <p className="text-xs text-white/80">Ya tienes acceso completo a todas las plantillas y funciones.</p>
+            </div>
+          </div>
+          <button onClick={() => setShowUpgradeBanner(false)} className="p-1 rounded hover:bg-white/20 transition-colors">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>

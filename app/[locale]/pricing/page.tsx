@@ -1,10 +1,16 @@
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
-import { Check } from "lucide-react"
+import { Check, BadgeCheck } from "lucide-react"
 import type { Metadata } from "next"
 import PricingButtons from "@/components/marketing/PricingButtons"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
+import { auth } from "@/lib/auth"
+import { db } from "@/lib/db"
+import { isActive } from "@/lib/plans"
+import Link from "next/link"
+import { format } from "date-fns"
+import { es, enUS } from "date-fns/locale"
 
 export async function generateMetadata({
   params,
@@ -37,6 +43,22 @@ export default async function PricingPage({
   const { locale } = await params
   setRequestLocale(locale)
   const t = await getTranslations("pricing")
+  const dateLocale = locale === "es" ? es : enUS
+
+  const session = await auth()
+  let userIsPro = false
+  let subscriptionEndsAt: Date | null = null
+
+  if (session?.user?.id) {
+    const dbUser = await db.user.findUnique({
+      where: { id: session.user.id },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true },
+    })
+    if (dbUser) {
+      userIsPro = isActive(dbUser.plan, dbUser.trialEndsAt, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus)
+      subscriptionEndsAt = dbUser.subscriptionEndsAt
+    }
+  }
 
   const features = [
     t("feature1"),
@@ -58,6 +80,28 @@ export default async function PricingPage({
           <p className="text-muted-foreground text-base sm:text-lg mb-8 sm:mb-12">
             {t("subtitle")}
           </p>
+
+          {userIsPro && (
+            <div className="max-w-2xl mx-auto w-full mb-8 bg-primary/10 border border-primary/20 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 text-left">
+                <BadgeCheck className="h-8 w-8 text-primary shrink-0" />
+                <div>
+                  <p className="font-bold text-foreground">Ya eres miembro Pro</p>
+                  <p className="text-sm text-muted-foreground">
+                    {subscriptionEndsAt
+                      ? `Tu plan se renueva el ${format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}`
+                      : "Tu suscripción está activa"}
+                  </p>
+                </div>
+              </div>
+              <Link
+                href="/api/stripe/portal"
+                className="shrink-0 inline-flex items-center justify-center rounded-xl bg-primary text-white text-sm font-medium px-5 py-2.5 hover:bg-primary/90 transition-colors"
+              >
+                Gestionar suscripción
+              </Link>
+            </div>
+          )}
 
           <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
             {/* Monthly */}

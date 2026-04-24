@@ -1,12 +1,13 @@
 "use client"
 
+import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { TEMPLATES } from "@/types/resume"
 import { cn } from "@/lib/utils"
 import { Lock } from "lucide-react"
-import { toast } from "sonner"
 import { isActive, isSuperAdmin } from "@/lib/plans"
+import UpgradeModal from "./UpgradeModal"
 
 const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
 const ULTRA_IDS = ["rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
@@ -26,6 +27,7 @@ interface Props {
 export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
   const t = useTranslations("editor")
   const { config, setTemplate } = useResumeStore()
+  const [upgradeOpen, setUpgradeOpen] = useState(false)
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
@@ -34,14 +36,8 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
     subscriptionStatus
   )
 
-
   function handleLockedTemplate() {
-    toast.error(t("pro_required"), {
-      action: {
-        label: "Ver planes",
-        onClick: () => { window.location.href = "/pricing" },
-      },
-    })
+    setUpgradeOpen(true)
   }
 
   const TemplateThumb = ({
@@ -96,6 +92,8 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
   )
 
   return (
+    <>
+    <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
     <div className="shrink-0 bg-white/95 backdrop-blur border-t border-border px-4 py-3">
       <div className="flex flex-col gap-3">
 
@@ -131,5 +129,6 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
         </div>
       </div>
     </div>
+    </>
   )
 }
