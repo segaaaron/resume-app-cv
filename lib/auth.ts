@@ -43,7 +43,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
-        const dbUser = await db.user.findUnique({ where: { id: user.id } })
+      }
+      const userId = (token.id ?? user?.id) as string | undefined
+      if (userId) {
+        const dbUser = await db.user.findUnique({
+          where: { id: userId },
+          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+        })
         if (dbUser) {
           token.plan = dbUser.plan
           token.subscriptionStatus = dbUser.subscriptionStatus
