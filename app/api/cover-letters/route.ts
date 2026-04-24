@@ -3,17 +3,24 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { getLimits } from "@/lib/plans"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100)
+  const cursor = searchParams.get("cursor") ?? undefined
 
   const letters = await db.coverLetter.findMany({
     where: { userId: session.user.id },
     orderBy: { updatedAt: "desc" },
+    take: limit,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     select: { id: true, title: true, colorScheme: true, updatedAt: true, createdAt: true },
   })
 
-  return NextResponse.json(letters)
+  const nextCursor = letters.length === limit ? letters[letters.length - 1].id : null
+  return NextResponse.json({ data: letters, nextCursor })
 }
 
 export async function POST() {

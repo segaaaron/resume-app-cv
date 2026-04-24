@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { z } from "zod"
+
+const schema = z.object({
+  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(255).trim(),
+})
 
 export async function PATCH(req: Request) {
   const session = await auth()
@@ -12,14 +17,15 @@ export async function PATCH(req: Request) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
-  const { name } = body as Record<string, unknown>
-  if (typeof name !== "string" || name.trim().length === 0) {
+
+  const parsed = schema.safeParse(body)
+  if (!parsed.success) {
     return NextResponse.json({ error: "Invalid name" }, { status: 400 })
   }
 
   await db.user.update({
     where: { id: session.user.id },
-    data: { name: name.trim() },
+    data: { name: parsed.data.name },
   })
 
   return NextResponse.json({ success: true })

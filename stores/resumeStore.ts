@@ -10,6 +10,31 @@ import {
   ResumeSectionsSchema,
 } from "@/types/resume"
 
+/** Parse a free-text date like "04/2023", "2023", "2021 - 2022" → numeric value for sorting */
+function parseDateValue(d: string): number {
+  if (!d) return 0
+  const clean = d.trim().split(/[\s–\-→]+/)[0] // take first part if range
+  const parts = clean.split("/")
+  if (parts.length === 2) {
+    const [month, year] = parts
+    return parseInt(year) * 12 + parseInt(month)
+  }
+  return parseInt(clean) * 12
+}
+
+/** Sort work experience and education chronologically (oldest first) */
+function sortChronological<T extends { startDate?: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => parseDateValue(a.startDate ?? "") - parseDateValue(b.startDate ?? ""))
+}
+
+export function applySectionOrder(data: ResumeSections): ResumeSections {
+  return {
+    ...data,
+    workExperience: sortChronological(data.workExperience ?? []),
+    education:      sortChronological(data.education ?? []),
+  }
+}
+
 interface ResumeState {
   resumeId: string | null
   title: string
@@ -52,6 +77,12 @@ const defaultConfig: ResumeConfig = {
 }
 
 const defaultSectionData: ResumeSections = ResumeSectionsSchema.parse({})
+
+/** Hook for templates: returns sectionData sorted chronologically */
+export function useTemplateSectionData() {
+  const raw = useResumeStore((s) => s.sectionData)
+  return applySectionOrder(raw)
+}
 
 export const useResumeStore = create<ResumeState & ResumeActions>()(
   devtools(

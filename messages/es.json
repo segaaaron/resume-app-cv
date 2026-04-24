@@ -185,7 +185,7 @@
       "email": "Email",
       "email_placeholder": "tu@email.com",
       "password": "Contraseña",
-      "password_placeholder": "••••••••",
+      "password_placeholder": "Ingresa tu contraseña",
       "submit": "Iniciar sesión",
       "no_account": "¿No tienes cuenta?",
       "register_link": "Regístrate gratis",

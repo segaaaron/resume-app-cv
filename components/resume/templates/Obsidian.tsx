@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function ObsidianTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -13,7 +14,10 @@ export default function ObsidianTemplate() {
   const title = pd.jobTitle || "Community Manager"
   const email = pd.email || "michael@email.com"
   const phone = pd.phone || "+46 70 123 4567"
-  const addr = pd.city || pd.address || "Stockholm, Sweden"
+  const addr    = pd.city || pd.address || "Stockholm, Sweden"
+  const website = pd.website
+  const linkedin = pd.linkedin
+  const github  = pd.github
   const sum = summary || "Experienced community manager with a passion for building engaged online communities. Expert in social media strategy, content creation, and analytics."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Community Manager", employer: "SocialBrand", startDate: "2020", endDate: "", currentlyWorking: true, city: "", description: "Managing communities of 500K+ members across multiple platforms. Grew engagement by 120%." },
@@ -68,6 +72,9 @@ export default function ObsidianTemplate() {
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={blue} />{phone}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={blue} />{email}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><MapPin size={10} color={blue} />{addr}</span>
+              {website  && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Globe  size={10} color={blue} />{website}</span>}
+              {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Link2  size={10} color={blue} />{linkedin}</span>}
+              {github   && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><GitFork size={10} color={blue} />{github}</span>}
             </div>
           </DarkSection>
 

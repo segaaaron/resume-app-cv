@@ -6,7 +6,7 @@
  * Ideal para ingenieros, devs, data scientists, perfiles técnicos.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const DARK  = "#0d1117"
@@ -34,7 +34,8 @@ function RingProgress({ pct, color, size = 30 }: { pct: number; color: string; s
 }
 
 export default function HelixTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, hobbies, volunteer,

@@ -40,7 +40,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 422 })
+    return NextResponse.json({ error: "Invalid data" }, { status: 422 })
   }
 
   const existing = await db.coverLetter.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })

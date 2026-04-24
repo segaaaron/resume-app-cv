@@ -4,13 +4,19 @@ import { db } from "@/lib/db"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import { getLimits } from "@/lib/plans"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  const { searchParams } = new URL(req.url)
+  const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100)
+  const cursor = searchParams.get("cursor") ?? undefined
 
   const resumes = await db.resume.findMany({
     where: { userId: session.user.id },
     orderBy: { updatedAt: "desc" },
+    take: limit,
+    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
     select: {
       id: true,
       title: true,
@@ -21,7 +27,8 @@ export async function GET() {
     },
   })
 
-  return NextResponse.json(resumes)
+  const nextCursor = resumes.length === limit ? resumes[resumes.length - 1].id : null
+  return NextResponse.json({ data: resumes, nextCursor })
 }
 
 export async function POST(request: Request) {

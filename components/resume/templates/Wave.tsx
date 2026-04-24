@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function WaveTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -14,7 +15,10 @@ export default function WaveTemplate() {
   const title = pd.jobTitle || "Ingeniero de Software"
   const email = pd.email || "carlos.ruiz@email.com"
   const phone = pd.phone || "+52 55 4321 9876"
-  const addr = pd.city || pd.address || "Guadalajara, MX"
+  const addr    = pd.city || pd.address || "Guadalajara, MX"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Ingeniero de software con 6 años de experiencia en desarrollo full-stack, especializado en React, Node.js y arquitecturas cloud."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Senior Software Engineer", employer: "TechGlobal", startDate: "2021", endDate: "", currentlyWorking: true, city: "", description: "Desarrollo de microservicios y liderazgo técnico de equipo de 5 desarrolladores." },
@@ -76,7 +80,14 @@ export default function WaveTemplate() {
 
       {/* Contact badges */}
       <div style={{ display: "flex", justifyContent: "center", gap: 20, padding: "12px 20px 8px", flexWrap: "wrap" }}>
-        {[{ icon: <Phone size={10} />, text: phone }, { icon: <Mail size={10} />, text: email }, { icon: <MapPin size={10} />, text: addr }].map((item, i) => (
+        {[
+          { icon: <Phone size={10} />, text: phone },
+          { icon: <Mail size={10} />, text: email },
+          { icon: <MapPin size={10} />, text: addr },
+          ...(website  ? [{ icon: <Globe  size={10} />, text: website  }] : []),
+          ...(linkedin ? [{ icon: <Link2  size={10} />, text: linkedin }] : []),
+          ...(github   ? [{ icon: <GitFork size={10} />, text: github   }] : []),
+        ].map((item, i) => (
           <div key={i} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9.5, color: headerDark, padding: "4px 12px", borderRadius: 99, backgroundColor: cyan + "18" }}>
             {item.icon}{item.text}
           </div>

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { nanoid } from "nanoid"
+import { getLimits } from "@/lib/plans"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -10,11 +10,25 @@ export async function POST(_req: Request, { params }: Params) {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const { id } = await params
-  const original = await db.resume.findFirst({
-    where: { id, userId: session.user.id },
-  })
+
+  const [original, user] = await Promise.all([
+    db.resume.findFirst({ where: { id, userId: session.user.id } }),
+    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } }),
+  ])
 
   if (!original) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  // Enforce plan limit before duplicating
+  const limits = getLimits(user?.plan ?? "FREE")
+  if (limits.maxResumes !== Infinity) {
+    const count = await db.resume.count({ where: { userId: session.user.id } })
+    if (count >= limits.maxResumes) {
+      return NextResponse.json(
+        { error: `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.` },
+        { status: 403 }
+      )
+    }
+  }
 
   const copy = await db.resume.create({
     data: {

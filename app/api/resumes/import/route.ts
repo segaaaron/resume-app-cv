@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { buildSections, ResumeSectionsSchema } from "@/types/resume"
+import { getLimits, isSuperAdmin } from "@/lib/plans"
 import mammoth from "mammoth"
 import { parseResumeText, detectLanguage } from "@/lib/parseResumeText"
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -11,17 +12,36 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, role: true } })
+  if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!isSuperAdmin(dbUser.role) && !getLimits(dbUser.plan).canImport) {
+    return NextResponse.json({ error: "Upgrade your plan to import resumes" }, { status: 403 })
+  }
+
   const formData = await req.formData()
   const file = formData.get("file") as File | null
   if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
 
+  const ALLOWED_MIME = [
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/msword",
+  ]
   const ext = file.name.split(".").pop()?.toLowerCase()
-  if (!["pdf", "docx", "doc"].includes(ext ?? "")) {
+  if (!["pdf", "docx", "doc"].includes(ext ?? "") || !ALLOWED_MIME.includes(file.type)) {
     return NextResponse.json({ error: "Formato no soportado. Usa PDF o DOCX." }, { status: 400 })
   }
 
   if (file.size > 5 * 1024 * 1024) {
     return NextResponse.json({ error: "El archivo no puede superar 5 MB" }, { status: 400 })
+  }
+
+  // Validate magic bytes: PDF starts with %PDF, DOCX/DOC starts with PK (ZIP)
+  const header = Buffer.from(await file.slice(0, 4).arrayBuffer())
+  const isPdf  = header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46
+  const isZip  = header[0] === 0x50 && header[1] === 0x4b
+  if (!isPdf && !isZip) {
+    return NextResponse.json({ error: "Formato no soportado. Usa PDF o DOCX." }, { status: 400 })
   }
 
   // ── 1. Extract raw text ──────────────────────────────────────────────────

@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function VertexTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -13,7 +14,10 @@ export default function VertexTemplate() {
   const title = pd.jobTitle || "Graphic Designer"
   const email = pd.email || "kathlyn@email.com"
   const phone = pd.phone || "+1 555 987 6543"
-  const addr = pd.city || pd.address || "Los Angeles, USA"
+  const addr    = pd.city || pd.address || "Los Angeles, USA"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Creative and detail-oriented graphic designer with a strong portfolio in branding, editorial design, and digital illustration. Passionate about clean, impactful visuals."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Senior Graphic Designer", employer: "VisualArts Studio", startDate: "2020", endDate: "", currentlyWorking: true, city: "", description: "Leading brand identity projects for clients in fashion, tech, and hospitality." },
@@ -126,6 +130,9 @@ export default function VertexTemplate() {
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={9} color={gold} />{phone}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={9} color={gold} />{email}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}><MapPin size={9} color={gold} />{addr}</span>
+              {website  && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Globe  size={9} color={gold} />{website}</span>}
+              {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Link2  size={9} color={gold} />{linkedin}</span>}
+              {github   && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><GitFork size={9} color={gold} />{github}</span>}
             </div>
           </div>
 

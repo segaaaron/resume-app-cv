@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function PrestigeTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -14,7 +15,10 @@ export default function PrestigeTemplate() {
   const title = pd.jobTitle || "Graphic & Web Designer"
   const email = pd.email || "kevin@email.com"
   const phone = pd.phone || "+1 555 234 5678"
-  const addr = pd.city || pd.address || "Miami, USA"
+  const addr    = pd.city || pd.address || "Miami, USA"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Versatile designer with expertise in both print and digital media. Skilled in creating cohesive brand experiences across all touchpoints."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Lead Designer", employer: "DigitalCraft", startDate: "2020", endDate: "", currentlyWorking: true, city: "", description: "Directing design for web and mobile products. Managing a team of 4 designers." },
@@ -69,6 +73,9 @@ export default function PrestigeTemplate() {
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={9} color={copper} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={9} color={copper} />{email}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={9} color={copper} />{addr}</span>
+            {website  && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Globe  size={9} color={copper} />{website}</span>}
+            {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Link2  size={9} color={copper} />{linkedin}</span>}
+            {github   && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GitFork size={9} color={copper} />{github}</span>}
           </div>
         </div>
         <div style={{ width: 90, height: 90, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${copper}`, position: "relative" }}>

@@ -15,7 +15,10 @@ const patchSchema = z.object({
     fontFamily:  z.string().max(100).optional(),
     fontSize:    z.number().int().min(8).max(24).optional(),
     spacing:     z.number().min(0.5).max(3).optional(),
-    photoUrl:      z.string().nullable().optional(),
+    photoUrl:      z.string().refine(
+      (v) => v.startsWith("data:image/") || /^https?:\/\//.test(v),
+      "Invalid photo URL"
+    ).nullable().optional(),
     photoPosition: z.number().int().min(0).max(100).optional(),
     language:      z.enum(["es", "en"]).optional(),
   }).optional(),
@@ -49,7 +52,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 422 })
+    return NextResponse.json({ error: "Invalid data" }, { status: 422 })
   }
 
   const { title, sections, sectionData, config } = parsed.data

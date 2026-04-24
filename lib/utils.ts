@@ -6,8 +6,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /** Normalize a job/edu description for safe HTML rendering.
- *  Converts plain newlines to <br> so manually-typed multi-line
- *  descriptions display correctly alongside parsed ones. */
+ *  Escapes HTML entities first, then converts newlines to <br>.
+ *  This prevents XSS from user-supplied content. */
 export function fmtDesc(text: string): string {
-  return text.replace(/\n/g, "<br>")
+  const escaped = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;")
+  return escaped.replace(/\n/g, "<br>")
 }

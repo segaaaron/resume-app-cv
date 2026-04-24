@@ -22,9 +22,12 @@ function checkRateLimit(ip: string): boolean {
 }
 
 const schema = z.object({
-  name: z.string().min(2),
-  email: z.string().email(),
-  password: z.string().min(8),
+  name:     z.string().min(2).max(255),
+  email:    z.string().email(),
+  password: z.string().min(8).max(128)
+    .regex(/[A-Z]/, "Debe contener al menos una mayúscula")
+    .regex(/[a-z]/, "Debe contener al menos una minúscula")
+    .regex(/[0-9]/, "Debe contener al menos un número"),
 })
 
 export async function POST(req: Request) {
@@ -42,7 +45,8 @@ export async function POST(req: Request) {
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
-      return NextResponse.json({ error: "Ya existe una cuenta con ese email" }, { status: 409 })
+      // Generic message to prevent email enumeration
+      return NextResponse.json({ success: true }, { status: 201 })
     }
 
     const hashed = await bcrypt.hash(password, 12)
