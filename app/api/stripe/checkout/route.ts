@@ -8,11 +8,6 @@ const schema = z.object({
   plan: z.enum(["monthly", "annual"]),
 })
 
-const PRICE_IDS: Record<string, string | undefined> = {
-  monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
-  annual: process.env.STRIPE_PRICE_ID_ANNUAL,
-}
-
 export async function POST(req: Request) {
   if (!stripeEnabled() || !stripe) {
     return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
@@ -31,6 +26,11 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  }
+
+  const PRICE_IDS: Record<string, string | undefined> = {
+    monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
+    annual: process.env.STRIPE_PRICE_ID_ANNUAL,
   }
 
   const priceId = PRICE_IDS[parsed.data.plan]
