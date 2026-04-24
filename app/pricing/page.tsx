@@ -5,16 +5,16 @@ import type { Metadata } from "next"
 import PricingButtons from "@/components/marketing/PricingButtons"
 
 export const metadata: Metadata = {
-  title: "Precios — Plan Gratis y Pro desde $10/mes",
+  title: "Precios — Plan Pro desde $15/mes — READY CV",
   description:
-    "READY CV es gratis para siempre. Desbloquea todas las plantillas premium, CV ilimitados y funciones avanzadas con el plan Pro por solo $10 al mes.",
+    "Desbloquea todas las plantillas premium, CV ilimitados y funciones avanzadas. Plan mensual a $15/mes o anual a $144/año (ahorra 20%).",
   alternates: {
     canonical: "https://readycv.app/pricing",
   },
   openGraph: {
-    title: "Precios — READY CV | Plan Gratis y Pro desde $10/mes",
+    title: "Precios — READY CV | Plan Pro desde $15/mes",
     description:
-      "Crea CVs profesionales gratis. Desbloquea todo con el plan Pro por solo $10/mes.",
+      "Crea CVs profesionales. Plan mensual $15/mes o anual $144/año. Ahorra 20% con el plan anual.",
     url: "https://readycv.app/pricing",
     type: "website",
   },
@@ -43,32 +43,12 @@ export default function PricingPage() {
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
-            {/* Trial */}
-            <div className="bg-primary text-white rounded-2xl p-8 text-left">
-              <div className="mb-6">
-                <p className="text-sm font-medium text-white/70 mb-1">Prueba</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">$0.99</span>
-                  <span className="text-white/70">/ 14 días</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-8">
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-white/90">
-                    <Check className="h-4 w-4 shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <PricingButtons plan="trial" />
-              <p className="text-xs text-white/60 text-center mt-2">Cancela en cualquier momento</p>
-            </div>
-
             {/* Monthly */}
             <div className="bg-white border-2 border-border rounded-2xl p-8 text-left">
               <div className="mb-6">
                 <p className="text-sm font-medium text-muted-foreground mb-1">Mensual</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">$9.99</span>
+                  <span className="text-4xl font-bold">$15</span>
                   <span className="text-muted-foreground">/ mes</span>
                 </div>
               </div>
@@ -79,8 +59,32 @@ export default function PricingPage() {
                   </li>
                 ))}
               </ul>
-              <PricingButtons plan="pro" />
+              <PricingButtons plan="monthly" />
               <p className="text-xs text-muted-foreground text-center mt-2">Cancela en cualquier momento</p>
+            </div>
+
+            {/* Annual */}
+            <div className="bg-primary text-white rounded-2xl p-8 text-left">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-medium text-white/70">Anual</p>
+                  <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">Ahorra 20%</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">$144</span>
+                  <span className="text-white/70">/ año</span>
+                </div>
+                <p className="text-xs text-white/60 mt-1">$12 / mes · ahorras $36 al año</p>
+              </div>
+              <ul className="space-y-2 mb-8">
+                {features.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-white/90">
+                    <Check className="h-4 w-4 shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <PricingButtons plan="annual" />
+              <p className="text-xs text-white/60 text-center mt-2">Cancela en cualquier momento</p>
             </div>
           </div>
         </div>

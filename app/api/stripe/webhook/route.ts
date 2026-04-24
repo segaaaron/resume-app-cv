@@ -30,8 +30,6 @@ export async function POST(req: Request) {
         const userId = session.metadata?.userId
         if (!userId) break
 
-        const isTrial = session.line_items?.data[0]?.price?.id === process.env.STRIPE_PRICE_ID_TRIAL
-        // STRIPE_PRICE_ID_TRIAL is a server-only env var (no NEXT_PUBLIC_ prefix)
         const subscriptionId = typeof session.subscription === "string"
           ? session.subscription
           : (session.subscription as Stripe.Subscription | null)?.id ?? null
@@ -39,8 +37,8 @@ export async function POST(req: Request) {
         await db.user.update({
           where: { id: userId },
           data: {
-            plan: isTrial ? "TRIAL" : "PRO",
-            trialEndsAt: isTrial ? new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) : null,
+            plan: "PRO",
+            trialEndsAt: null,
             subscriptionId: subscriptionId ?? undefined,
             subscriptionStatus: "ACTIVE",
             // subscriptionEndsAt will be set when invoice.paid fires

@@ -60,32 +60,12 @@ export default async function PricingPage({
           </p>
 
           <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
-            {/* Trial */}
-            <div className="bg-primary text-white rounded-2xl p-8 text-left">
-              <div className="mb-6">
-                <p className="text-sm font-medium text-white/70 mb-1">{t("trial_label")}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">$0.99</span>
-                  <span className="text-white/70">{t("trial_period")}</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-8">
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-white/90">
-                    <Check className="h-4 w-4 shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <PricingButtons plan="trial" />
-              <p className="text-xs text-white/60 text-center mt-2">{t("cancel_anytime")}</p>
-            </div>
-
             {/* Monthly */}
             <div className="bg-white border-2 border-border rounded-2xl p-8 text-left">
               <div className="mb-6">
                 <p className="text-sm font-medium text-muted-foreground mb-1">{t("monthly_label")}</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">$9.99</span>
+                  <span className="text-4xl font-bold">$15</span>
                   <span className="text-muted-foreground">{t("monthly_period")}</span>
                 </div>
               </div>
@@ -96,8 +76,32 @@ export default async function PricingPage({
                   </li>
                 ))}
               </ul>
-              <PricingButtons plan="pro" />
+              <PricingButtons plan="monthly" />
               <p className="text-xs text-muted-foreground text-center mt-2">{t("cancel_anytime")}</p>
+            </div>
+
+            {/* Annual */}
+            <div className="bg-primary text-white rounded-2xl p-8 text-left">
+              <div className="mb-6">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm font-medium text-white/70">{t("annual_label")}</p>
+                  <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">{t("annual_badge")}</span>
+                </div>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-4xl font-bold">$144</span>
+                  <span className="text-white/70">{t("annual_period")}</span>
+                </div>
+                <p className="text-xs text-white/60 mt-1">{t("annual_equiv")}</p>
+              </div>
+              <ul className="space-y-2 mb-8">
+                {features.map((f) => (
+                  <li key={f} className="flex items-center gap-2 text-sm text-white/90">
+                    <Check className="h-4 w-4 shrink-0" /> {f}
+                  </li>
+                ))}
+              </ul>
+              <PricingButtons plan="annual" />
+              <p className="text-xs text-white/60 text-center mt-2">{t("cancel_anytime")}</p>
             </div>
           </div>
         </div>

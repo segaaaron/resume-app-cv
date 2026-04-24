@@ -133,10 +133,12 @@
   "pricing": {
     "title": "One price, everything included",
     "subtitle": "No confusing tiers. No hidden features. Everything available from day one.",
-    "trial_label": "Trial",
-    "trial_period": "/ 14 days",
     "monthly_label": "Monthly",
     "monthly_period": "/ month",
+    "annual_label": "Annual",
+    "annual_period": "/ year",
+    "annual_badge": "Save 20%",
+    "annual_equiv": "$12 / month · save $36 per year",
     "cancel_anytime": "Cancel anytime",
     "feature1": "Unlimited CVs",
     "feature2": "29 professional templates",
@@ -146,10 +148,8 @@
     "feature6": "Template switching without losing data",
     "feature7": "PDF/Word import",
     "feature8": "Priority support",
-    "btn_trial_loading": "Redirecting...",
-    "btn_trial": "Start trial",
-    "btn_pro_loading": "Redirecting...",
-    "btn_pro": "Get started now"
+    "btn_loading": "Redirecting...",
+    "btn_start": "Get started now"
   },
   "templates_page": {
     "badge": "29 templates",

@@ -5,12 +5,12 @@ import { stripe, stripeEnabled } from "@/lib/stripe"
 import { z } from "zod"
 
 const schema = z.object({
-  plan: z.enum(["trial", "pro"]),
+  plan: z.enum(["monthly", "annual"]),
 })
 
 const PRICE_IDS: Record<string, string | undefined> = {
-  trial: process.env.STRIPE_PRICE_ID_TRIAL,
-  pro: process.env.STRIPE_PRICE_ID_PRO,
+  monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
+  annual: process.env.STRIPE_PRICE_ID_ANNUAL,
 }
 
 export async function POST(req: Request) {
@@ -43,11 +43,6 @@ export async function POST(req: Request) {
     select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true },
   })
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
-
-  // Prevent re-purchasing a trial if already used
-  if (parsed.data.plan === "trial" && (user.plan === "TRIAL" || user.plan === "PRO")) {
-    return NextResponse.json({ error: "Trial already used" }, { status: 400 })
-  }
 
   // Block checkout if already has active subscription
   if (user.subscriptionStatus === "ACTIVE") {

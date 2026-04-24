@@ -7,7 +7,7 @@ import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 
 interface Props {
-  plan: "trial" | "pro"
+  plan: "monthly" | "annual"
 }
 
 export default function PricingButtons({ plan }: Props) {
@@ -50,17 +50,9 @@ export default function PricingButtons({ plan }: Props) {
     }
   }
 
-  if (plan === "trial") {
-    return (
-      <Button variant="secondary" size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-        {loading ? t("btn_trial_loading") : t("btn_trial")}
-      </Button>
-    )
-  }
-
   return (
     <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-      {loading ? t("btn_pro_loading") : t("btn_pro")}
+      {loading ? t("btn_loading") : t("btn_start")}
     </Button>
   )
 }

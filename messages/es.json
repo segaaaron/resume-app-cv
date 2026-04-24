@@ -133,10 +133,12 @@
   "pricing": {
     "title": "Un precio, todo incluido",
     "subtitle": "Sin niveles confusos. Sin funciones ocultas. Todo disponible desde el primer día.",
-    "trial_label": "Prueba",
-    "trial_period": "/ 14 días",
     "monthly_label": "Mensual",
     "monthly_period": "/ mes",
+    "annual_label": "Anual",
+    "annual_period": "/ año",
+    "annual_badge": "Ahorra 20%",
+    "annual_equiv": "$12 / mes · ahorras $36 al año",
     "cancel_anytime": "Cancela en cualquier momento",
     "feature1": "CVs ilimitados",
     "feature2": "29 plantillas profesionales",
@@ -146,10 +148,8 @@
     "feature6": "Cambio de plantilla sin perder datos",
     "feature7": "Import PDF/Word",
     "feature8": "Soporte prioritario",
-    "btn_trial_loading": "Redirigiendo...",
-    "btn_trial": "Comenzar prueba",
-    "btn_pro_loading": "Redirigiendo...",
-    "btn_pro": "Empezar ahora"
+    "btn_loading": "Redirigiendo...",
+    "btn_start": "Empezar ahora"
   },
   "templates_page": {
     "badge": "29 plantillas",
