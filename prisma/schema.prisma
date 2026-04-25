@@ -65,24 +65,36 @@ model VerificationToken {
 }
 
 model Resume {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title           String   @default("Mi CV")
-  templateId      String   @default("classic")
-  colorScheme     String   @default("#2a72d7")
-  fontFamily      String   @default("Poppins")
-  fontSize        Int      @default(14)
-  spacing         Float    @default(1.0)
-  sections        Json     @default("[]")
-  personalDetails Json     @default("{}")
-  photoUrl        String?  @db.Text
-  photoPosition   Int      @default(15)
-  language        String   @default("es")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String          @default("Mi CV")
+  templateId      String          @default("classic")
+  colorScheme     String          @default("#2a72d7")
+  fontFamily      String          @default("Poppins")
+  fontSize        Int             @default(14)
+  spacing         Float           @default(1.0)
+  sections        Json            @default("[]")
+  personalDetails Json            @default("{}")
+  photoUrl        String?         @db.Text
+  photoPosition   Int             @default(15)
+  language        String          @default("es")
+  versions        ResumeVersion[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([userId])
+}
+
+model ResumeVersion {
+  id        String   @id @default(cuid())
+  resumeId  String
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  label     String?
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@index([resumeId])
 }
 
 model CoverLetter {

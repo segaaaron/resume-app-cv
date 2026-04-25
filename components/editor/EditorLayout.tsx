@@ -21,10 +21,14 @@ interface Props {
   role?: string
 }
 
+const AUTOSAVE_DELAY = 2500 // ms after last change
+
 export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
   const init = useResumeStore((s) => s.init)
-  // Use a ref so we always call init with the latest server-provided data,
-  // even if the same resumeId is re-mounted after navigating away and back.
+  const isDirty = useResumeStore((s) => s.isDirty)
+  const isSaving = useResumeStore((s) => s.isSaving)
+  const save = useResumeStore((s) => s.save)
+
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
 
@@ -32,6 +36,13 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
+
+  // Autosave: debounce 2.5s after last change
+  useEffect(() => {
+    if (!isDirty || isSaving) return
+    const timer = setTimeout(() => { save() }, AUTOSAVE_DELAY)
+    return () => clearTimeout(timer)
+  }, [isDirty, isSaving, save])
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
