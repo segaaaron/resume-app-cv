@@ -68,13 +68,31 @@ export async function POST(req: Request) {
   })
 
   const lastInvoice = invoices.data[0]
-  if (!lastInvoice?.charge || typeof lastInvoice.charge !== "string") {
+  if (!lastInvoice) {
     return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+  }
+
+  // Obtener el payment_intent para luego recuperar el charge
+  const paymentIntentId = typeof lastInvoice.payment_intent === "string"
+    ? lastInvoice.payment_intent
+    : lastInvoice.payment_intent?.id
+
+  if (!paymentIntentId) {
+    return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+  }
+
+  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
+  const chargeId = typeof paymentIntent.latest_charge === "string"
+    ? paymentIntent.latest_charge
+    : paymentIntent.latest_charge?.id
+
+  if (!chargeId) {
+    return NextResponse.json({ error: "No se encontró el cargo asociado al pago" }, { status: 400 })
   }
 
   // Emitir reembolso completo en Stripe
   const refund = await stripe.refunds.create({
-    charge: lastInvoice.charge,
+    charge: chargeId,
     reason: reason === "duplicate_charge" ? "duplicate" : "requested_by_customer",
     metadata: { userId, reason, details: details ?? "" },
   })
@@ -95,7 +113,7 @@ export async function POST(req: Request) {
     data: {
       userId,
       action: "REFUND_ISSUED",
-      metadata: { refundId: refund.id, chargeId: lastInvoice.charge, reason, details: details ?? "" },
+      metadata: { refundId: refund.id, chargeId, reason, details: details ?? "" },
     },
   })
 
