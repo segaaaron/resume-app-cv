@@ -2,9 +2,9 @@
   "metadata": {
     "home": {
       "title": "Create Your Professional CV Online — READY CV",
-      "description": "Professional CV creator — Build your unique resume in minutes. +10K CVs created. Start for free! Easy and fast design to stand out in your job search. Instant PDF download.",
-      "og_title": "Create Your Professional CV Online for Free — READY CV",
-      "og_description": "The best online CV generator. Create your professional resume for free with 29 modern templates. Instant PDF download."
+      "description": "Professional CV creator — Build your unique resume in minutes. +10K CVs created. Easy and fast design to stand out in your job search. Instant PDF download.",
+      "og_title": "Create Your Professional CV Online — READY CV",
+      "og_description": "The best online CV generator. Create your professional resume with 29 modern templates. Instant PDF download."
     },
     "templates": {
       "title": "Professional Resume Templates — 29 Designs",
@@ -13,10 +13,10 @@
       "og_description": "29 professional and modern CV templates. Choose the perfect design for your industry and download as PDF."
     },
     "pricing": {
-      "title": "Pricing — Free & Pro Plan from $10/month",
-      "description": "READY CV is free forever. Unlock all premium templates, unlimited CVs and advanced features with the Pro plan for just $10 per month.",
-      "og_title": "Pricing — READY CV | Free & Pro Plan from $10/month",
-      "og_description": "Create professional CVs for free. Unlock everything with the Pro plan for just $10/month."
+      "title": "Pricing — Pro Plan from $15/month",
+      "description": "Access all premium templates, unlimited CVs and advanced features with the Pro plan.",
+      "og_title": "Pricing — READY CV | Pro Plan from $15/month",
+      "og_description": "Create professional CVs and cover letters. Unlock everything with the Pro plan."
     },
     "pro_designs": {
       "title": "Pro Designs — READY CV",
@@ -33,8 +33,8 @@
       "description": "Sign in to your READY CV account to continue creating and editing your professional resume."
     },
     "register": {
-      "title": "Create Free Account",
-      "description": "Sign up for free on READY CV and start creating your professional resume today. No credit card, no commitments."
+      "title": "Create Account",
+      "description": "Sign up on READY CV and start creating your professional resume today."
     }
   },
   "nav": {
@@ -43,17 +43,17 @@
     "pricing": "Pricing",
     "faq": "FAQ",
     "login": "Sign in",
-    "register": "Create CV for free",
+    "register": "Create CV",
     "dashboard": "My Dashboard"
   },
   "hero": {
-    "rating": "4.5/5 · 48,000+ reviews",
+    "rating": "Trusted by thousands of professionals",
     "title": "Create your professional CV",
     "title_highlight": "easily",
     "subtitle": "Fill in your details, choose a template and download your resume in minutes. No design experience, no complications.",
-    "cta_primary": "Get started for free",
+    "cta_primary": "Get started",
     "cta_secondary": "View templates",
-    "no_credit_card": "No credit card · Instant download",
+    "no_credit_card": "Instant download · Professional templates",
     "pdf_downloaded": "✓ PDF downloaded"
   },
   "how_it_works": {
@@ -68,15 +68,15 @@
   },
   "features": {
     "title": "Everything you need",
-    "subtitle": "A complete platform for your job search",
+    "subtitle": "A complete platform to create your CV and cover letter",
     "cv_title": "Professional CV",
     "cv_desc": "Create unlimited CVs and edit them anytime with our real-time editor.",
     "cover_letter_title": "Cover Letters",
     "cover_letter_desc": "Write professional cover letters that complement your CV.",
-    "jobs_title": "Job Offers",
-    "jobs_desc": "Find relevant job opportunities for your profile directly on the platform.",
-    "kanban_title": "Application Tracking",
-    "kanban_desc": "Organize and track your job applications with an intuitive Kanban board."
+    "jobs_title": "Premium Templates",
+    "jobs_desc": "Choose from 29 professional designs optimized for every industry and level.",
+    "ai_title": "Integrated AI",
+    "ai_desc": "Improve your CV with AI: summaries, bullets and ATS analysis."
   },
   "template_gallery": {
     "title": "12 Professional templates",
@@ -85,7 +85,7 @@
   },
   "social_proof": {
     "rating": "4.5/5",
-    "based_on": "Based on over 48,000 reviews",
+    "based_on": "Trusted by thousands of professionals",
     "testimonial1_text": "Amazing tool. In less than 30 minutes I had my CV ready and professional. I got interviews the next day.",
     "testimonial1_name": "María García",
     "testimonial1_role": "UX Designer",
@@ -99,26 +99,24 @@
   "faq": {
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know before getting started",
-    "q1": "Is READY CV free?",
-    "a1": "You can get started for free. For full access to all templates and PDF downloads, we offer a premium plan from $9.99/month or a 14-day trial for $0.99.",
+    "q1": "What does the Pro plan include?",
+    "a1": "The Pro plan includes full access to all 29 templates, unlimited CVs, PDF and Word export, AI-powered cover letters, ATS analysis and priority support.",
     "q2": "Can I change templates without losing my data?",
     "a2": "Yes. Your data is separated from the template. You can switch between the 12 templates at any time and your content will adapt automatically.",
     "q3": "In what formats can I download my CV?",
     "a3": "You can currently download as high-resolution PDF, optimized for printing and electronic submission.",
     "q4": "Can I create more than one CV?",
-    "a4": "Yes. With the premium plan you can create unlimited CVs, allowing you to tailor your resume for different positions or industries.",
+    "a4": "Yes. With the Pro plan you can create unlimited CVs, allowing you to tailor your resume for different positions or industries.",
     "q5": "Can I import my existing CV?",
     "a5": "Yes. You can import your CV in PDF or Word (.docx) format and the system will automatically extract your information to populate the editor.",
     "q6": "Is my data secure?",
     "a6": "Absolutely. We use bank-level encryption and never share your data with third parties. You can delete your account and all your data at any time."
   },
   "footer": {
-    "description": "The most complete platform to create your professional resume and manage your job search.",
+    "description": "The most complete platform to create your professional resume and cover letter.",
     "tools": "Tools",
     "cv_builder": "CV Builder",
     "cover_letter": "Cover Letter",
-    "job_offers": "Job Offers",
-    "applications": "My Applications",
     "resources": "Resources",
     "cv_templates": "CV Templates",
     "cv_examples": "CV Examples",
@@ -144,7 +142,7 @@
     "feature2": "29 professional templates",
     "feature3": "PDF download",
     "feature4": "Cover letters",
-    "feature5": "Application tracking",
+    "feature5": "Word (.docx) export",
     "feature6": "Template switching without losing data",
     "feature7": "PDF/Word import",
     "feature8": "Priority support",
@@ -160,8 +158,8 @@
     "all_templates": "All templates",
     "use_template": "Use template",
     "cta_title": "Ready to stand out?",
-    "cta_subtitle": "Create your professional CV in minutes. Free forever.",
-    "cta_button": "Start for free",
+    "cta_subtitle": "Create your professional CV in minutes with premium templates.",
+    "cta_button": "Get started",
     "create_error": "Error creating CV",
     "upgrade_label": "Unlock with Pro",
     "ultra_label": "Ultra Designs"
@@ -170,11 +168,11 @@
     "exclusive": "✦ Exclusive Collection",
     "title": "Pro Designs",
     "subtitle": "Templates with custom SVGs, unique effects and designs that stand out. Each one handcrafted to make an unforgettable first impression.",
-    "cta_start": "Start for free",
+    "cta_start": "Get started",
     "pro_badge": "Pro",
     "use_template": "Use this template →",
     "cta_title": "Ready to stand out with a unique design?",
-    "cta_subtitle": "Create your CV with any of these premium templates. Free forever.",
+    "cta_subtitle": "Create your CV with any of these premium templates.",
     "cta_button": "Create my CV now"
   },
   "auth": {
@@ -188,13 +186,13 @@
       "password_placeholder": "Enter password",
       "submit": "Sign in",
       "no_account": "Don't have an account?",
-      "register_link": "Sign up for free",
+      "register_link": "Sign up",
       "error": "Incorrect email or password",
       "email_invalid": "Invalid email",
       "password_required": "Password is required"
     },
     "register": {
-      "title": "Create your free account",
+      "title": "Create your account",
       "subtitle": "Start building your professional CV today",
       "google": "Continue with Google",
       "or": "or with email",
@@ -204,7 +202,7 @@
       "email_placeholder": "you@email.com",
       "password": "Password",
       "password_placeholder": "Minimum 8 characters",
-      "submit": "Create free account",
+      "submit": "Create account",
       "have_account": "Already have an account?",
       "login_link": "Sign in",
       "terms_prefix": "By signing up you agree to our",
@@ -214,7 +212,13 @@
       "error": "Error creating account",
       "name_short": "Name is too short",
       "email_invalid": "Invalid email",
-      "password_min": "Minimum 8 characters"
+      "password_min": "Minimum 8 characters",
+      "consent_text": "I accept the",
+      "consent_ai": "I understand that AI-generated content must be manually reviewed before use.",
+      "consent_required": "You must accept the terms to continue",
+      "age_consent": "I confirm that I am 16 years of age or older.",
+      "age_required": "You must confirm you are 16 or older to continue",
+      "marketing_consent": "I agree to receive emails about updates and offers from READY CV. You can unsubscribe at any time."
     }
   },
   "privacy_page": {
@@ -293,8 +297,8 @@
       "saving": "Saving...",
       "save_button": "Save changes",
       "current_plan": "Current plan",
-      "plan_free": "Free",
-      "plan_free_desc": "Access to basic features",
+      "plan_free": "Basic",
+      "plan_free_desc": "Limited access",
       "plan_trial_desc": "Active trial",
       "plan_pro_desc": "Full access to all features",
       "canceled_notice": "Subscription cancelled — no automatic renewal. You keep access until",
@@ -306,7 +310,7 @@
       "cancel_subscription": "Cancel subscription",
       "cancel_dialog_title": "Cancel subscription?",
       "cancel_dialog_desc": "Your subscription will not renew automatically. You will keep full access until",
-      "cancel_dialog_after": "After that, your account will switch to the free plan.",
+      "cancel_dialog_after": "After that, your Pro access will be deactivated.",
       "confirm_cancel": "Yes, cancel",
       "member_since": "Member since",
       "danger_zone": "Danger zone",
@@ -330,7 +334,8 @@
     "form": {
       "content_tab": "Content",
       "design_tab": "Design",
-      "hidden_sections": "Hidden sections"
+      "hidden_sections": "Hidden sections",
+      "ats_tab": "ATS"
     },
     "section": {
       "hide": "Hide section",
@@ -385,6 +390,70 @@
       "color_emerald": "Emerald",
       "color_gold": "Gold",
       "color_gray": "Gray"
+    },
+    "ai": {
+      "generate_summary": "Generate with AI",
+      "generating": "Generating...",
+      "choose_version": "Choose a generated version",
+      "use_version": "Use this version →",
+      "cancel": "Cancel",
+      "summary_applied": "Summary applied",
+      "improve_bullet": "Improve with AI",
+      "pro_only": "This feature is exclusive to the Pro plan",
+      "not_enough_data_summary": "Add experience, education or skills before generating a summary",
+      "off_topic_summary": "I can only generate summaries about professional experience and profiles",
+      "off_topic_bullet": "I can only improve professional work experience descriptions",
+      "error_summary": "Error generating summary with AI",
+      "error_bullet": "Error improving text with AI"
+    },
+    "history": {
+      "button": "History",
+      "title": "Version history",
+      "save_version": "Save version",
+      "saving": "Saving...",
+      "saved": "Version saved",
+      "error": "Error saving version",
+      "restore_success": "Version restored — reloading...",
+      "restore_error": "Error restoring version",
+      "empty": "No saved versions.",
+      "empty_hint": "Click \"Save version\" to create one.",
+      "max_note": "Max 10 versions · Oldest are deleted automatically",
+      "pro_only": "This feature is exclusive to the Pro plan"
+    },
+    "share": {
+      "button": "Share",
+      "public": "Public",
+      "copy_link": "Copy link",
+      "enabled": "Link copied to clipboard! Now public.",
+      "disabled": "CV is no longer public",
+      "copied": "Link copied",
+      "error": "Error changing visibility"
+    },
+    "print": {
+      "back": "Back to editor",
+      "print_pdf": "Print / Save PDF",
+      "export_word": "Word (.docx)",
+      "error_word": "Error exporting Word",
+      "pro_only_word": "Word export is exclusive to the Pro plan"
+    },
+    "ats": {
+      "tab": "ATS",
+      "title": "ATS Score",
+      "pro_badge": "Pro",
+      "description": "Paste the job description you want to apply for and analyze how compatible your CV is.",
+      "placeholder": "Paste the job description here...",
+      "analyze": "Analyze compatibility",
+      "analyzing": "Analyzing...",
+      "pro_only": "ATS analysis is exclusive to the Pro plan",
+      "not_enough_data": "Add more information to your CV before analyzing",
+      "off_topic": "I can only analyze real job descriptions",
+      "error": "Error analyzing ATS compatibility",
+      "short_description": "Paste the job description (minimum 20 characters)",
+      "strengths": "Strengths",
+      "gaps": "Gaps",
+      "missing_keywords": "Missing keywords",
+      "suggestions": "Suggestions",
+      "clear": "Clear result"
     },
     "sections_form": {
       "add": "Add",
@@ -480,5 +549,43 @@
         "email": "Email"
       }
     }
+  },
+  "kanban": {
+    "page_title": "My Applications",
+    "add_button": "Add application",
+    "dialog_title": "New application",
+    "job_title_label": "Job title",
+    "job_title_placeholder": "e.g. Frontend Developer",
+    "company_label": "Company",
+    "company_placeholder": "e.g. Acme Corp",
+    "add": "Add",
+    "create_success": "Application added",
+    "create_error": "Error creating application",
+    "status_wishlist": "Wishlist",
+    "status_applied": "Applied",
+    "status_interview": "Interview",
+    "status_offer": "Offer",
+    "status_rejected": "Rejected"
+  },
+  "cover_letter_editor": {
+    "ai_title": "Generate with AI",
+    "ai_pro_badge": "Pro",
+    "ai_resume_label": "Reference CV (optional)",
+    "ai_resume_none": "No CV (form data only)",
+    "ai_tone_label": "Tone",
+    "ai_tone_formal": "Formal",
+    "ai_tone_balanced": "Balanced",
+    "ai_tone_creative": "Creative",
+    "ai_generate": "Generate body",
+    "ai_generating": "Generating...",
+    "ai_success": "Cover letter generated with AI",
+    "ai_pro_only": "This feature is exclusive to the Pro plan",
+    "ai_off_topic": "I can only generate professional cover letters",
+    "ai_missing_company": "Enter the company name before generating",
+    "ai_error": "Error generating cover letter with AI"
+  },
+  "public_cv": {
+    "shared_via": "CV shared via",
+    "create_cta": "Start building your CV →"
   }
 }

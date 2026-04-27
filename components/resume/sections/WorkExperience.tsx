@@ -15,6 +15,7 @@ import { toast } from "sonner"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
+  const ai = useTranslations("editor.ai")
   const { sectionData, updateSectionData } = useResumeStore()
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(jobs[0]?.id ?? null)
@@ -23,7 +24,7 @@ export default function WorkExperienceSection() {
 
   async function handleImprove(job: WorkExperienceItem) {
     if (!job.description.trim()) {
-      toast.error("Escribe una descripción antes de mejorarla con IA")
+      toast.error(ai("off_topic_bullet"))
       return
     }
     setImprovingId(job.id)
@@ -34,15 +35,13 @@ export default function WorkExperienceSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle }),
       })
-      if (res.status === 403) {
-        toast.error("Esta función es exclusiva del plan Pro")
-        return
-      }
+      if (res.status === 403) { toast.error(ai("pro_only")); return }
+      if (res.status === 422) { toast.error(ai("off_topic_bullet")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setAiVersions({ jobId: job.id, versions: data.versions })
     } catch {
-      toast.error("Error al mejorar el texto con IA")
+      toast.error(ai("error_bullet"))
     } finally {
       setImprovingId(null)
     }
@@ -54,7 +53,7 @@ export default function WorkExperienceSection() {
       jobs.map((j) => (j.id === jobId ? { ...j, description: version } : j))
     )
     setAiVersions(null)
-    toast.success("Descripción actualizada")
+    toast.success(ai("summary_applied"))
   }
 
   function addJob() {
@@ -135,8 +134,8 @@ export default function WorkExperienceSection() {
                     className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 transition-colors"
                   >
                     {improvingId === job.id
-                      ? <><Loader2 className="h-3 w-3 animate-spin" /> Mejorando...</>
-                      : <><Sparkles className="h-3 w-3" /> Mejorar con IA</>
+                      ? <><Loader2 className="h-3 w-3 animate-spin" /> {ai("generating")}</>
+                      : <><Sparkles className="h-3 w-3" /> {ai("improve_bullet")}</>
                     }
                   </button>
                 </div>
@@ -151,7 +150,7 @@ export default function WorkExperienceSection() {
                 {aiVersions?.jobId === job.id && (
                   <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
                     <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" /> Elige una versión mejorada
+                      <Sparkles className="h-3 w-3" /> {ai("choose_version")}
                     </p>
                     {aiVersions.versions.map((v, i) => (
                       <div key={i} className="rounded-md bg-white border border-indigo-100 p-2.5 space-y-1.5">
@@ -161,7 +160,7 @@ export default function WorkExperienceSection() {
                           onClick={() => applyVersion(job.id, v)}
                           className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
                         >
-                          Usar esta versión →
+                          {ai("use_version")}
                         </button>
                       </div>
                     ))}
@@ -170,7 +169,7 @@ export default function WorkExperienceSection() {
                       onClick={() => setAiVersions(null)}
                       className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Cancelar
+                      {ai("cancel")}
                     </button>
                   </div>
                 )}

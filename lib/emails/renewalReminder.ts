@@ -15,6 +15,7 @@ function formatDate(date: Date): string {
 
 export function renewalReminderHtml({
   userName,
+  userEmail,
   planInterval,
   renewalDate,
 }: RenewalReminderProps): string {
@@ -135,6 +136,9 @@ export function renewalReminderHtml({
 
                     <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;line-height:1.6;">
                       Si cancelas antes del <strong style="color:#374151;">${renewalDateStr}</strong>, no se realizará ningún cobro adicional.
+                    </p>
+                    <p style="font-size:12px;color:#9ca3af;margin-top:32px;text-align:center;">
+                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(userEmail)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
                     </p>
 
                   </td>

@@ -27,6 +27,9 @@ export default function RegisterForm() {
     name: z.string().min(2, t("name_short")),
     email: z.string().email(t("email_invalid")),
     password: z.string().min(8, t("password_min")),
+    consent: z.boolean().refine((v) => v === true, { message: t("consent_required") }),
+    ageConsent: z.boolean().refine((v) => v === true, { message: t("age_required") }),
+    marketingConsent: z.boolean().optional(),
   })
 
   type FormData = z.infer<typeof schema>
@@ -35,7 +38,7 @@ export default function RegisterForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<FormData>({ resolver: zodResolver(schema) })
+  } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { consent: false, ageConsent: false, marketingConsent: false } })
 
   async function onSubmit(data: FormData) {
     const res = await fetch("/api/auth/register", {
@@ -148,6 +151,57 @@ export default function RegisterForm() {
             {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
           </div>
 
+          <div className="space-y-3">
+            <div className="space-y-1">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-border accent-primary shrink-0"
+                  {...register("consent")}
+                />
+                <span className="text-xs text-muted-foreground leading-relaxed">
+                  {t("consent_text")}{" "}
+                  <Link href={`/${locale}/terms`} className="underline text-foreground font-medium" target="_blank">
+                    {t("terms")}
+                  </Link>{" "}
+                  {t("and")}{" "}
+                  <Link href={`/${locale}/privacy`} className="underline text-foreground font-medium" target="_blank">
+                    {t("privacy")}
+                  </Link>
+                  {". "}{t("consent_ai")}
+                </span>
+              </label>
+              {errors.consent && (
+                <p className="text-xs text-destructive ml-6">{errors.consent.message}</p>
+              )}
+            </div>
+            <div className="space-y-1">
+              <label className="flex items-start gap-2.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-0.5 h-4 w-4 rounded border-border accent-primary shrink-0"
+                  {...register("ageConsent")}
+                />
+                <span className="text-xs text-muted-foreground leading-relaxed">
+                  {t("age_consent")}
+                </span>
+              </label>
+              {errors.ageConsent && (
+                <p className="text-xs text-destructive ml-6">{errors.ageConsent.message}</p>
+              )}
+            </div>
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-border accent-primary shrink-0"
+                {...register("marketingConsent")}
+              />
+              <span className="text-xs text-muted-foreground leading-relaxed">
+                {t("marketing_consent")}
+              </span>
+            </label>
+          </div>
+
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {t("submit")}
@@ -162,13 +216,6 @@ export default function RegisterForm() {
           >
             {t("login_link")}
           </Link>
-        </p>
-
-        <p className="text-center text-xs text-muted-foreground mt-3">
-          {t("terms_prefix")}{" "}
-          <Link href="/terms" className="underline">{t("terms")}</Link>{" "}
-          {t("and")}{" "}
-          <Link href="/privacy" className="underline">{t("privacy")}</Link>
         </p>
       </div>
     </div>

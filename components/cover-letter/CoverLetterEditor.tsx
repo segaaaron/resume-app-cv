@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { ArrowLeft, Save, Printer, Loader2, Check } from "lucide-react"
+import { ArrowLeft, Save, Printer, Loader2, Check, Sparkles } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 interface Content {
   recipientName: string
@@ -27,12 +28,57 @@ interface Props {
 }
 
 export default function CoverLetterEditor({ id, title: initialTitle, colorScheme, content: initialContent }: Props) {
+  const t = useTranslations("cover_letter_editor")
   const [title, setTitle] = useState(initialTitle)
   const [editingTitle, setEditingTitle] = useState(false)
   const [content, setContent] = useState<Content>(initialContent)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [dirty, setDirty] = useState(false)
+
+  // AI generation state
+  const [generating, setGenerating] = useState(false)
+  const [resumes, setResumes] = useState<{ id: string; title: string }[]>([])
+  const [selectedResumeId, setSelectedResumeId] = useState("")
+  const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
+
+  useEffect(() => {
+    fetch("/api/resumes")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setResumes(data.map((r: { id: string; title: string }) => ({ id: r.id, title: r.title })))
+      })
+      .catch(() => {})
+  }, [])
+
+  async function handleGenerateAI() {
+    setGenerating(true)
+    try {
+      const res = await fetch("/api/ai/generate-cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          resumeId: selectedResumeId || undefined,
+          recipientName: content.recipientName,
+          recipientTitle: content.recipientTitle,
+          company: content.company,
+          jobTitle: title,
+          tone: aiTone,
+        }),
+      })
+      if (res.status === 403) { toast.error(t("ai_pro_only")); return }
+      if (res.status === 422) { toast.error(t("ai_off_topic")); return }
+      if (res.status === 400) { toast.error(t("ai_missing_company")); return }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      update("body", data.body)
+      toast.success(t("ai_success"))
+    } catch {
+      toast.error(t("ai_error"))
+    } finally {
+      setGenerating(false)
+    }
+  }
 
   function update(field: keyof Content, value: string) {
     setContent((prev) => ({ ...prev, [field]: value }))
@@ -140,6 +186,62 @@ export default function CoverLetterEditor({ id, title: initialTitle, colorScheme
               value={content.company}
               onChange={(e) => update("company", e.target.value)}
             />
+          </div>
+
+          <Separator />
+
+          {/* AI generation */}
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2.5">
+            <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
+              <Sparkles className="h-3 w-3" /> {t("ai_title")}
+              <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{t("ai_pro_badge")}</span>
+            </p>
+
+            {resumes.length > 0 && (
+              <div className="space-y-1">
+                <Label className="text-[11px] text-muted-foreground">{t("ai_resume_label")}</Label>
+                <select
+                  value={selectedResumeId}
+                  onChange={(e) => setSelectedResumeId(e.target.value)}
+                  className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 text-sm"
+                >
+                  <option value="">{t("ai_resume_none")}</option>
+                  {resumes.map((r) => (
+                    <option key={r.id} value={r.id}>{r.title}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <Label className="text-[11px] text-muted-foreground">{t("ai_tone_label")}</Label>
+              <div className="flex gap-1.5">
+                {([["formal", t("ai_tone_formal")], ["balanced", t("ai_tone_balanced")], ["creative", t("ai_tone_creative")]] as const).map(([v, l]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setAiTone(v)}
+                    className={`flex-1 text-[10px] py-1 rounded border transition-colors ${
+                      aiTone === v
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white text-muted-foreground border-input hover:border-indigo-400"
+                    }`}
+                  >
+                    {l}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <Button
+              size="sm"
+              className="w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={handleGenerateAI}
+              disabled={generating}
+            >
+              {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {generating ? t("ai_generating") : t("ai_generate")}
+            </Button>
           </div>
 
           <Separator />

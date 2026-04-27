@@ -22,12 +22,13 @@ function checkRateLimit(ip: string): boolean {
 }
 
 const schema = z.object({
-  name:     z.string().min(2).max(255),
-  email:    z.string().email(),
-  password: z.string().min(8).max(128)
+  name:              z.string().min(2).max(255),
+  email:             z.string().email(),
+  password:          z.string().min(8).max(128)
     .regex(/[A-Z]/, "Debe contener al menos una mayúscula")
     .regex(/[a-z]/, "Debe contener al menos una minúscula")
     .regex(/[0-9]/, "Debe contener al menos un número"),
+  marketingConsent:  z.boolean().optional(),
 })
 
 export async function POST(req: Request) {
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { name, email, password } = schema.parse(body)
+    const { name, email, password, marketingConsent } = schema.parse(body)
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
 
     const hashed = await bcrypt.hash(password, 12)
     await db.user.create({
-      data: { name, email, password: hashed },
+      data: { name, email, password: hashed, marketingConsent: marketingConsent ?? false },
     })
 
     return NextResponse.json({ success: true }, { status: 201 })

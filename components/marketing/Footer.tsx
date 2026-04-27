@@ -9,18 +9,13 @@ export default async function Footer() {
     [t("tools")]: [
       { label: t("cv_builder"), href: "/dashboard/resumes" },
       { label: t("cover_letter"), href: "/dashboard/cover-letters" },
-      { label: t("job_offers"), href: "/dashboard/jobs" },
-      { label: t("applications"), href: "/dashboard/applications" },
     ],
     [t("resources")]: [
       { label: t("cv_templates"), href: "/templates" },
-      { label: t("cv_examples"), href: "/examples" },
-      { label: t("articles"), href: "/articles" },
     ],
     [t("support")]: [
       { label: "FAQ", href: "/#faq" },
       { label: t("pricing"), href: "/pricing" },
-      { label: t("contact"), href: "/contact" },
       { label: t("privacy"), href: "/privacy" },
       { label: t("terms"), href: "/terms" },
     ],

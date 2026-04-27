@@ -19,7 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw } from "lucide-react"
+import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw, Download, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 
@@ -43,6 +43,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const [saving, setSaving] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscriptionStatus)
+  const [exportLoading, setExportLoading] = useState(false)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   async function handleCancelSubscription() {
     setCancelLoading(true)
@@ -59,6 +61,46 @@ export default function SettingsForm({ user }: { user: UserData }) {
       toast.error(t("connection_error"))
     } finally {
       setCancelLoading(false)
+    }
+  }
+
+  async function handleDataExport() {
+    setExportLoading(true)
+    try {
+      const res = await fetch("/api/user/data-export")
+      if (!res.ok) {
+        toast.error("Error al exportar los datos")
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = "readycv-data-export.json"
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error("Error al exportar los datos")
+    } finally {
+      setExportLoading(false)
+    }
+  }
+
+  async function handleDeleteAccount() {
+    setDeleteLoading(true)
+    try {
+      const res = await fetch("/api/user/delete", { method: "DELETE" })
+      if (res.ok) {
+        // Sign out and redirect to home
+        const { signOut } = await import("next-auth/react")
+        await signOut({ callbackUrl: `/${locale}/` })
+      } else {
+        toast.error("Error al eliminar la cuenta")
+      }
+    } catch {
+      toast.error("Error al eliminar la cuenta")
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -441,18 +483,65 @@ export default function SettingsForm({ user }: { user: UserData }) {
         )
       })()}
 
+      {/* Data Export */}
+      <div className="border border-border rounded-xl p-6 space-y-3">
+        <h2 className="font-semibold flex items-center gap-2">
+          <Download className="h-4 w-4" />
+          Descargar mis datos / Export my data
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Descarga una copia de toda tu información personal almacenada en READY CV (cuenta, CVs y cartas de presentación).
+        </p>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleDataExport}
+          disabled={exportLoading}
+          className="gap-2"
+        >
+          <Download className="h-4 w-4" />
+          {exportLoading ? "Exportando..." : "Descargar mis datos / Export my data"}
+        </Button>
+      </div>
+
       {/* Danger Zone */}
       <div className="border border-destructive/30 rounded-xl p-6 space-y-3">
         <h2 className="font-semibold text-destructive">{t("danger_zone")}</h2>
         <p className="text-sm text-muted-foreground">{t("danger_desc")}</p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="border-destructive/50 text-destructive hover:bg-destructive/5"
-          onClick={() => toast.error(t("contact_support"))}
-        >
-          {t("delete_account")}
-        </Button>
+
+        <AlertDialog>
+          <AlertDialogTrigger
+            render={
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-destructive/50 text-destructive hover:bg-destructive/5 gap-2"
+                disabled={deleteLoading}
+                type="button"
+              />
+            }
+          >
+            <Trash2 className="h-4 w-4" />
+            {deleteLoading ? "Eliminando..." : t("delete_account")}
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>¿Eliminar tu cuenta permanentemente?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Esta acción es <strong>irreversible</strong>. Se eliminarán tu cuenta, todos tus CVs, cartas de presentación y candidaturas. No podrás recuperar estos datos.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDeleteAccount}
+                className="bg-destructive text-white hover:bg-destructive/90"
+              >
+                Sí, eliminar mi cuenta
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   )

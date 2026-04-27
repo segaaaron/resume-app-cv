@@ -1,13 +1,15 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import ResumePreview from "./ResumePreview"
 import { Button } from "@/components/ui/button"
-import { Printer, ArrowLeft } from "lucide-react"
+import { Printer, ArrowLeft, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { useTranslations } from "next-intl"
+import { toast } from "sonner"
 
 interface Props {
   resumeId: string
@@ -20,6 +22,8 @@ interface Props {
 export default function PrintLayout({ resumeId, title, sections, sectionData, config }: Props) {
   const init = useResumeStore((s) => s.init)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
+  const [downloadingDocx, setDownloadingDocx] = useState(false)
+  const t = useTranslations("editor.print")
   propsRef.current = { resumeId, title, sections, sectionData, config }
   const searchParams = useSearchParams()
 
@@ -36,6 +40,29 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
     }
   }, [searchParams])
 
+  async function handleDownloadDocx() {
+    setDownloadingDocx(true)
+    try {
+      const res = await fetch(`/api/export/docx?id=${resumeId}`)
+      if (res.status === 403) {
+        toast.error(t("pro_only_word"))
+        return
+      }
+      if (!res.ok) throw new Error()
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${title}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error(t("error_word"))
+    } finally {
+      setDownloadingDocx(false)
+    }
+  }
+
   return (
     <>
       {/* Print toolbar — hidden when printing */}
@@ -43,15 +70,21 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/editor/${resumeId}`}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Volver al editor
+              <ArrowLeft className="h-4 w-4 mr-1" /> {t("back")}
             </Link>
           </Button>
           <span className="text-sm text-muted-foreground">{title}</span>
         </div>
-        <Button onClick={() => window.print()} size="sm" className="gap-2">
-          <Printer className="h-4 w-4" />
-          Imprimir / Guardar PDF
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadDocx} disabled={downloadingDocx}>
+            {downloadingDocx ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
+            {t("export_word")}
+          </Button>
+          <Button onClick={() => window.print()} size="sm" className="gap-2">
+            <Printer className="h-4 w-4" />
+            {t("print_pdf")}
+          </Button>
+        </div>
       </div>
 
       {/* Resume — centered on screen, full width when printing */}

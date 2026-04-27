@@ -1,9 +1,11 @@
 import KanbanBoard from "@/components/kanban/Board"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { getTranslations } from "next-intl/server"
 
 export default async function ApplicationsPage() {
   const session = await auth()
+  const t = await getTranslations("kanban")
   const applications = await db.application.findMany({
     where: { userId: session!.user!.id },
     orderBy: { createdAt: "desc" },
@@ -11,7 +13,7 @@ export default async function ApplicationsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold mb-6">Mis Candidaturas</h1>
+      <h1 className="text-2xl font-bold mb-6">{t("page_title")}</h1>
       <KanbanBoard initialApplications={applications.map(a => ({
         id: a.id,
         jobTitle: a.jobTitle,

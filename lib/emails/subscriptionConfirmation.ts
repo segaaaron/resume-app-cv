@@ -15,6 +15,7 @@ function formatDate(date: Date): string {
 
 export function subscriptionConfirmationHtml({
   userName,
+  userEmail,
   planInterval,
   renewalDate,
 }: SubscriptionConfirmationProps): string {
@@ -155,6 +156,9 @@ export function subscriptionConfirmationHtml({
                     <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;line-height:1.6;">
                       Puedes gestionar o cancelar tu suscripción en cualquier momento desde
                       <a href="https://www.readycvv.com/dashboard/settings" style="color:#2a72d7;text-decoration:none;">Configuración</a>.
+                    </p>
+                    <p style="font-size:12px;color:#9ca3af;margin-top:32px;text-align:center;">
+                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(userEmail)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
                     </p>
 
                   </td>
