@@ -60,35 +60,18 @@ export async function POST(req: Request) {
     )
   }
 
-  // Buscar el último invoice pagado del cliente en Stripe
-  const invoices = await stripe.invoices.list({
+  // Buscar el último charge exitoso del cliente directamente
+  const charges = await stripe.charges.list({
     customer: user.stripeCustomerId,
     limit: 1,
-    status: "paid",
   })
 
-  const lastInvoice = invoices.data[0]
-  if (!lastInvoice) {
+  const lastCharge = charges.data.find((c) => c.paid && !c.refunded)
+  if (!lastCharge) {
     return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
   }
 
-  // Obtener el payment_intent para luego recuperar el charge
-  const paymentIntentId = typeof lastInvoice.payment_intent === "string"
-    ? lastInvoice.payment_intent
-    : lastInvoice.payment_intent?.id
-
-  if (!paymentIntentId) {
-    return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
-  }
-
-  const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId)
-  const chargeId = typeof paymentIntent.latest_charge === "string"
-    ? paymentIntent.latest_charge
-    : paymentIntent.latest_charge?.id
-
-  if (!chargeId) {
-    return NextResponse.json({ error: "No se encontró el cargo asociado al pago" }, { status: 400 })
-  }
+  const chargeId = lastCharge.id
 
   // Emitir reembolso completo en Stripe
   const refund = await stripe.refunds.create({
@@ -113,7 +96,7 @@ export async function POST(req: Request) {
     data: {
       userId,
       action: "REFUND_ISSUED",
-      metadata: { refundId: refund.id, chargeId, reason, details: details ?? "" },
+      metadata: { refundId: refund.id, chargeId: lastCharge.id, reason, details: details ?? "" },
     },
   })
 
