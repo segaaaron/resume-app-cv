@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import OpenAI from "openai"
 import { validateAIInput } from "@/lib/ai-safety"
 
-const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+function getOpenAI() { return new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) }
 
 // Simple in-memory rate limiter: 20 requests per IP per hour
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -117,7 +117,7 @@ Instrucciones para la carta:
 Responde ÚNICAMENTE con un JSON: {"body": "<cuerpo de la carta>"}`
 
   try {
-    const response = await client.chat.completions.create({
+    const response = await getOpenAI().chat.completions.create({
       model: "gpt-4o-mini",
       max_tokens: 1000,
       response_format: { type: "json_object" },
