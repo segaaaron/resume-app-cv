@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Linkedin, Globe, Calendar, Building2 } from "lucide-react"
+import { Mail, Phone, MapPin, Link2, Globe, Calendar, Building2 } from "lucide-react"
 import type { TemplateProps } from "./types"
 
 export default function ExecutiveBoldTemplate({ content, candidate, colorScheme }: TemplateProps) {
