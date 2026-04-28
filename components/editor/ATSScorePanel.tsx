@@ -127,6 +127,9 @@ export default function ATSScorePanel() {
             placeholder={t("placeholder")}
             className="text-xs min-h-[100px] resize-none"
           />
+          <p className="text-[10px] text-muted-foreground leading-relaxed">
+            💡 {t("hint")}
+          </p>
 
           <Button size="sm" className="w-full gap-2" onClick={handleAnalyze} disabled={loading}>
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}

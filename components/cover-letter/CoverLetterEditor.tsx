@@ -42,6 +42,10 @@ export default function CoverLetterEditor({ id, title: initialTitle, colorScheme
   const [selectedResumeId, setSelectedResumeId] = useState("")
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
 
+  // AI improve state
+  const [improving, setImproving] = useState(false)
+  const [improveVersions, setImproveVersions] = useState<string[]>([])
+
   useEffect(() => {
     fetch("/api/resumes")
       .then((r) => r.json())
@@ -78,6 +82,42 @@ export default function CoverLetterEditor({ id, title: initialTitle, colorScheme
     } finally {
       setGenerating(false)
     }
+  }
+
+  async function handleImproveAI() {
+    if (content.body.trim().length < 20) {
+      toast.error(t("improve_short"))
+      return
+    }
+    setImproving(true)
+    setImproveVersions([])
+    try {
+      const res = await fetch("/api/ai/improve-cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          body: content.body,
+          company: content.company,
+          jobTitle: title,
+          recipientTitle: content.recipientTitle,
+        }),
+      })
+      if (res.status === 403) { toast.error(t("ai_pro_only")); return }
+      if (res.status === 422) { toast.error(t("improve_off_topic")); return }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      setImproveVersions(data.versions)
+    } catch {
+      toast.error(t("improve_error"))
+    } finally {
+      setImproving(false)
+    }
+  }
+
+  function applyImprovedVersion(v: string) {
+    update("body", v)
+    setImproveVersions([])
+    toast.success(t("improve_success"))
   }
 
   function update(field: keyof Content, value: string) {
@@ -247,14 +287,56 @@ export default function CoverLetterEditor({ id, title: initialTitle, colorScheme
           <Separator />
 
           <div className="space-y-1.5">
-            <Label className="text-xs">Cuerpo de la carta</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs">Cuerpo de la carta</Label>
+              <button
+                type="button"
+                onClick={handleImproveAI}
+                disabled={improving}
+                className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
+              >
+                {improving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
+                {improving ? t("improve_loading") : t("improve_button")}
+              </button>
+            </div>
             <Textarea
               placeholder="Escribe el contenido principal de tu carta de presentación..."
               value={content.body}
-              onChange={(e) => update("body", e.target.value)}
+              onChange={(e) => { update("body", e.target.value); setImproveVersions([]) }}
               rows={12}
               className="text-sm resize-none"
             />
+
+            {/* AI improve versions panel */}
+            {improveVersions.length > 0 && (
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
+                <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
+                  <Sparkles className="h-3 w-3" /> {t("improve_choose")}
+                </p>
+                {improveVersions.map((v, i) => (
+                  <div key={i} className="rounded-md bg-white border border-indigo-100 p-2.5 space-y-1.5">
+                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{v}</p>
+                    <button
+                      type="button"
+                      onClick={() => applyImprovedVersion(v)}
+                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                    >
+                      {t("improve_use")}
+                    </button>
+                  </div>
+                ))}
+                <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-relaxed">
+                  ⚠ {t("improve_metrics_disclaimer")}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setImproveVersions([])}
+                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {t("improve_cancel")}
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-1.5">

@@ -444,7 +444,8 @@
       "title": "ATS Score",
       "pro_badge": "Pro",
       "description": "Most companies use automated filters to screen CVs before a human ever sees them. Paste the job description and we'll tell you exactly how compatible your CV is — and how to improve it to get through.",
-      "placeholder": "Paste the job description here...",
+      "placeholder": "Paste the full job posting here (job title, responsibilities, requirements, skills)...",
+      "hint": "Copy and paste the job listing text as it appears on LinkedIn, Indeed, or another job board.",
       "analyze": "Analyze compatibility",
       "analyzing": "Analyzing...",
       "pro_only": "ATS analysis is exclusive to the Pro plan",
@@ -598,7 +599,17 @@
     "ai_pro_only": "This feature is exclusive to the Pro plan",
     "ai_off_topic": "I can only generate professional cover letters",
     "ai_missing_company": "Enter the company name before generating",
-    "ai_error": "Error generating cover letter with AI"
+    "ai_error": "Error generating cover letter with AI",
+    "improve_button": "Improve with AI",
+    "improve_loading": "Improving...",
+    "improve_choose": "Choose an improved version",
+    "improve_use": "Use this version",
+    "improve_cancel": "Cancel",
+    "improve_success": "Version applied",
+    "improve_off_topic": "The text does not appear to be a professional cover letter",
+    "improve_error": "Error improving the cover letter",
+    "improve_short": "Write at least 20 characters before improving",
+    "improve_metrics_disclaimer": "Numbers in brackets like [X%] are placeholders. Replace them with your real data."
   },
   "public_cv": {
     "shared_via": "CV shared via",

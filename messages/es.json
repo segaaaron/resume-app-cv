@@ -444,7 +444,8 @@
       "title": "ATS Score",
       "pro_badge": "Pro",
       "description": "La mayoría de empresas filtran CVs automáticamente antes de que un humano los vea. Pega la descripción del puesto y te diremos exactamente qué tan compatible es tu CV — y cómo mejorarlo para pasar ese filtro.",
-      "placeholder": "Pega aquí la descripción del trabajo (job description)...",
+      "placeholder": "Pega aquí el texto completo de la vacante (título del puesto, responsabilidades, requisitos, habilidades)...",
+      "hint": "Copia y pega el texto de la oferta de empleo tal como aparece en LinkedIn, Indeed u otro portal.",
       "analyze": "Analizar compatibilidad",
       "analyzing": "Analizando...",
       "pro_only": "El análisis ATS es exclusivo del plan Pro",
@@ -598,7 +599,17 @@
     "ai_pro_only": "Esta función es exclusiva del plan Pro",
     "ai_off_topic": "Solo puedo generar cartas de presentación laborales",
     "ai_missing_company": "Ingresa el nombre de la empresa antes de generar",
-    "ai_error": "Error al generar la carta con IA"
+    "ai_error": "Error al generar la carta con IA",
+    "improve_button": "Mejorar con IA",
+    "improve_loading": "Mejorando...",
+    "improve_choose": "Elige una versión mejorada",
+    "improve_use": "Usar esta versión",
+    "improve_cancel": "Cancelar",
+    "improve_success": "Versión aplicada",
+    "improve_off_topic": "El texto no parece una carta de presentación laboral",
+    "improve_error": "Error al mejorar la carta",
+    "improve_short": "Escribe al menos 20 caracteres antes de mejorar",
+    "improve_metrics_disclaimer": "Los números entre corchetes como [X%] son marcadores de posición. Sustitúyelos con tus datos reales."
   },
   "public_cv": {
     "shared_via": "CV compartido via",
