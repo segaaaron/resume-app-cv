@@ -9,13 +9,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2 } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2, Lock } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
+import { useEditorPro } from "@/components/editor/EditorContext"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
+  const { isPro, openUpgrade } = useEditorPro()
   const { sectionData, updateSectionData } = useResumeStore()
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(jobs[0]?.id ?? null)
@@ -129,13 +131,15 @@ export default function WorkExperienceSection() {
                   <Label className="text-xs text-muted-foreground">{t("description")}</Label>
                   <button
                     type="button"
-                    onClick={() => handleImprove(job)}
+                    onClick={isPro ? () => handleImprove(job) : openUpgrade}
                     disabled={improvingId === job.id}
                     className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 transition-colors"
                   >
-                    {improvingId === job.id
-                      ? <><Loader2 className="h-3 w-3 animate-spin" /> {ai("generating")}</>
-                      : <><Sparkles className="h-3 w-3" /> {ai("improve_bullet")}</>
+                    {!isPro
+                      ? <><Lock className="h-3 w-3" /> {ai("improve_bullet")}</>
+                      : improvingId === job.id
+                        ? <><Loader2 className="h-3 w-3 animate-spin" /> {ai("generating")}</>
+                        : <><Sparkles className="h-3 w-3" /> {ai("improve_bullet")}</>
                     }
                   </button>
                 </div>

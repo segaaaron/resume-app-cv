@@ -1,5 +1,7 @@
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
+import { resend, emailEnabled } from "@/lib/resend"
+import { referralRewardHtml, referralRewardText } from "@/lib/emails/referralReward"
 
 /**
  * Referral reward tiers — based on paid referrals in the CURRENT cycle.
@@ -41,6 +43,8 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
       where: { id: newUser.referredBy },
       select: {
         id: true,
+        name: true,
+        email: true,
         referralRewardTier: true,
         referralCycleOffset: true,
         stripeCustomerId: true,
@@ -83,7 +87,9 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
       }
     }
 
-    if (newTier === 3) {
+    const isCycleComplete = newTier === 3
+
+    if (isCycleComplete) {
       // Cycle complete — reset for next round
       await db.user.update({
         where: { id: referrer.id },
@@ -100,8 +106,90 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
       })
       console.log(`[referral-rewards] Referrer ${referrer.id} reached tier ${newTier} (cycle count: ${cycleCount})`)
     }
+
+    // Send reward notification email
+    await sendReferralRewardEmail({
+      referrer,
+      newTier,
+      currentTier,
+      cycleCount,
+      isCycleComplete,
+    })
   } catch (err) {
     console.error("[referral-rewards] error applying reward:", err)
+  }
+}
+
+interface ReferrerSnapshot {
+  id: string
+  name: string | null
+  email: string | null
+  stripeCustomerId: string | null
+  referralRewardTier: number
+  referralCycleOffset: number
+}
+
+async function sendReferralRewardEmail({
+  referrer,
+  newTier,
+  currentTier,
+  cycleCount,
+  isCycleComplete,
+}: {
+  referrer: ReferrerSnapshot
+  newTier: number
+  currentTier: number
+  cycleCount: number
+  isCycleComplete: boolean
+}): Promise<void> {
+  if (!emailEnabled() || !resend || !referrer.email) return
+
+  // Calculate credit amounts for the email
+  const tiersApplied = REFERRAL_TIERS.filter(
+    (t) => t.tier > currentTier && t.tier <= newTier
+  )
+  const newCreditCents = tiersApplied.reduce((sum, t) => sum + t.creditCents, 0)
+  const totalCreditCents = REFERRAL_TIERS.filter((t) => t.tier <= newTier).reduce(
+    (sum, t) => sum + t.creditCents,
+    0
+  )
+
+  const highestTier = REFERRAL_TIERS.find((t) => t.tier === newTier)
+  if (!highestTier) return
+
+  const fmt = (cents: number) => `$${(cents / 100).toFixed(2)}`
+
+  try {
+    await resend.emails.send({
+      from: "READY CV <no-reply@readycvv.com>",
+      to: referrer.email,
+      subject: isCycleComplete
+        ? "🏆 ¡1 mes gratis! Completaste tu ciclo de referidos"
+        : `🎉 Nivel ${newTier} de referidos alcanzado — ${highestTier.label}`,
+      html: referralRewardHtml({
+        userName: referrer.name ?? referrer.email,
+        userEmail: referrer.email,
+        tier: newTier,
+        tierLabel: highestTier.label,
+        creditAmount: fmt(newCreditCents),
+        totalCredit: fmt(totalCreditCents),
+        cycleCount,
+        isCycleComplete,
+      }),
+      text: referralRewardText({
+        userName: referrer.name ?? referrer.email,
+        userEmail: referrer.email,
+        tier: newTier,
+        tierLabel: highestTier.label,
+        creditAmount: fmt(newCreditCents),
+        totalCredit: fmt(totalCreditCents),
+        cycleCount,
+        isCycleComplete,
+      }),
+    })
+    console.log(`[referral-rewards] Reward email sent → ${referrer.email} (tier ${newTier})`)
+  } catch (err) {
+    console.error("[referral-rewards] Failed to send reward email:", err)
   }
 }
 

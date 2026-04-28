@@ -43,7 +43,7 @@ export default async function RootLayout({
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
         <SessionProvider session={session}>
           {children}
-          <Toaster position="bottom-right" />
+          <Toaster position="top-center" />
         </SessionProvider>
       </body>
     </html>

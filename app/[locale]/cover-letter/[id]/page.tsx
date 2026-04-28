@@ -1,19 +1,62 @@
 import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isActive, isSuperAdmin } from "@/lib/plans"
 import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor"
 
 export default async function CoverLetterPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
   const session = await auth()
   const { id, locale } = await params
   if (!session?.user) redirect(`/${locale}/login`)
-  const letter = await db.coverLetter.findFirst({
-    where: { id, userId: session.user.id },
-  })
+
+  const [letter, user, latestResume] = await Promise.all([
+    db.coverLetter.findFirst({ where: { id, userId: session.user.id } }),
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true, role: true },
+    }),
+    db.resume.findFirst({
+      where: { userId: session.user.id },
+      orderBy: { updatedAt: "desc" },
+      select: { personalDetails: true },
+    }),
+  ])
 
   if (!letter) notFound()
 
+  const isPro = isSuperAdmin(user?.role) || isActive(
+    user?.plan ?? "FREE",
+    user?.trialEndsAt ?? null,
+    user?.subscriptionEndsAt ?? null,
+    user?.subscriptionStatus ?? null,
+  )
+
   const content = (letter.content as Record<string, string>) ?? {}
+
+  // Extract candidate data from latest resume, but don't overwrite existing saved candidate data
+  const pd = (latestResume?.personalDetails as Record<string, string> | null) ?? {}
+  const candidateFromResume = {
+    name: pd.name ?? pd.fullName ?? "",
+    jobTitle: pd.jobTitle ?? pd.title ?? "",
+    email: pd.email ?? "",
+    phone: pd.phone ?? "",
+    address: pd.address ?? pd.location ?? "",
+    photo: pd.photoUrl ?? pd.photo ?? "",
+    linkedin: pd.linkedin ?? "",
+    website: pd.website ?? pd.portfolioUrl ?? "",
+  }
+
+  // Respect existing candidate data if the user already edited it
+  const initialCandidate = {
+    name: content.candidateName ?? candidateFromResume.name,
+    jobTitle: content.candidateJobTitle ?? candidateFromResume.jobTitle,
+    email: content.candidateEmail ?? candidateFromResume.email,
+    phone: content.candidatePhone ?? candidateFromResume.phone,
+    address: content.candidateAddress ?? candidateFromResume.address,
+    photo: content.candidatePhoto ?? candidateFromResume.photo,
+    linkedin: content.candidateLinkedin ?? candidateFromResume.linkedin,
+    website: content.candidateWebsite ?? candidateFromResume.website,
+  }
 
   return (
     <CoverLetterEditor
@@ -21,6 +64,8 @@ export default async function CoverLetterPage({ params }: { params: Promise<{ id
       title={letter.title}
       colorScheme={letter.colorScheme}
       fontFamily={letter.fontFamily}
+      templateId={letter.templateId ?? "classic"}
+      isPro={isPro}
       content={{
         recipientName: content.recipientName ?? "",
         recipientTitle: content.recipientTitle ?? "",
@@ -28,6 +73,7 @@ export default async function CoverLetterPage({ params }: { params: Promise<{ id
         body: content.body ?? "",
         closing: content.closing ?? "",
       }}
+      initialCandidate={initialCandidate}
     />
   )
 }

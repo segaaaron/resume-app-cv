@@ -24,6 +24,8 @@
     "@stripe/stripe-js": "^9.1.0",
     "@tiptap/extension-bullet-list": "^3.22.3",
     "@tiptap/extension-ordered-list": "^3.22.3",
+    "@tiptap/extension-text-align": "^3.22.4",
+    "@tiptap/extension-underline": "^3.22.4",
     "@tiptap/react": "^3.22.3",
     "@tiptap/starter-kit": "^3.22.3",
     "@types/bcryptjs": "^2.4.6",

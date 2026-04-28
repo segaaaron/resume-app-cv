@@ -10,6 +10,7 @@ const patchSchema = z.object({
   content:     z.record(z.string(), z.unknown()).optional(),
   colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   fontFamily:  z.string().max(100).optional(),
+  templateId:  z.string().max(50).optional(),
 })
 
 export async function GET(_req: Request, { params }: Params) {
@@ -53,6 +54,7 @@ export async function PATCH(req: Request, { params }: Params) {
       content:     parsed.data.content ? (parsed.data.content as object) : undefined,
       colorScheme: parsed.data.colorScheme ?? undefined,
       fontFamily:  parsed.data.fontFamily ?? undefined,
+      templateId:  parsed.data.templateId ?? undefined,
     },
   })
 

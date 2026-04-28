@@ -6,6 +6,7 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
+import { EditorProvider } from "./EditorContext"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 
 interface Props {
@@ -52,18 +53,20 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   )
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <EditorTopBar hasAccess={hasAccess} />
-      <div className="flex flex-1 overflow-hidden">
-        <FormPanel />
-        <PreviewPanel
-          plan={plan}
-          subscriptionStatus={subscriptionStatus}
-          subscriptionEndsAt={subscriptionEndsAt}
-          trialEndsAt={trialEndsAt}
-          role={role}
-        />
+    <EditorProvider isPro={hasAccess}>
+      <div className="h-screen flex flex-col overflow-hidden bg-background">
+        <EditorTopBar hasAccess={hasAccess} />
+        <div className="flex flex-1 overflow-hidden">
+          <FormPanel />
+          <PreviewPanel
+            plan={plan}
+            subscriptionStatus={subscriptionStatus}
+            subscriptionEndsAt={subscriptionEndsAt}
+            trialEndsAt={trialEndsAt}
+            role={role}
+          />
+        </div>
       </div>
-    </div>
+    </EditorProvider>
   )
 }

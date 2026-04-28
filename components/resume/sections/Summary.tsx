@@ -3,13 +3,15 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useEditorPro } from "@/components/editor/EditorContext"
 import { Textarea } from "@/components/ui/textarea"
-import { Sparkles, Loader2 } from "lucide-react"
+import { Sparkles, Loader2, Lock } from "lucide-react"
 import { toast } from "sonner"
 
 export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
+  const { isPro, openUpgrade } = useEditorPro()
   const { sectionData, updateSectionData } = useResumeStore()
   const [generating, setGenerating] = useState(false)
   const [versions, setVersions] = useState<string[]>([])
@@ -52,13 +54,15 @@ export default function SummarySection() {
         <p className="text-xs text-muted-foreground">{t("summary_placeholder")}</p>
         <button
           type="button"
-          onClick={handleGenerate}
+          onClick={isPro ? handleGenerate : openUpgrade}
           disabled={generating}
           className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 transition-colors"
         >
-          {generating
-            ? <><Loader2 className="h-3 w-3 animate-spin" /> {ai("generating")}</>
-            : <><Sparkles className="h-3 w-3" /> {ai("generate_summary")}</>
+          {!isPro
+            ? <><Lock className="h-3 w-3" /> {ai("generate_summary")}</>
+            : generating
+              ? <><Loader2 className="h-3 w-3 animate-spin" /> {ai("generating")}</>
+              : <><Sparkles className="h-3 w-3" /> {ai("generate_summary")}</>
           }
         </button>
       </div>
