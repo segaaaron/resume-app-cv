@@ -631,8 +631,8 @@ export default function CoverLetterEditor({
         {/* Right: preview */}
         <div className="flex-1 overflow-auto bg-gray-100 flex justify-center py-8 print:py-0 print:bg-white">
           <div
-            className="bg-white shadow-2xl print:shadow-none overflow-hidden"
-            style={{ width: "210mm", minHeight: "297mm" }}
+            className="bg-white shadow-2xl print:shadow-none overflow-hidden print:min-h-[297mm]"
+            style={{ width: "210mm" }}
           >
             {activeTemplate === "sidebar" && (
               <SidebarTemplate content={content} candidate={candidate} colorScheme={colorScheme} />
