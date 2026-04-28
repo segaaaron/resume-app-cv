@@ -14,8 +14,7 @@ import UpgradeModal from "@/components/editor/UpgradeModal"
 import SidebarTemplate from "./templates/SidebarTemplate"
 import ElegantTemplate from "./templates/ElegantTemplate"
 import SplitTemplate from "./templates/SplitTemplate"
-import dynamic from "next/dynamic"
-const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
+import RichTextEditor from "./RichTextEditor"
 import type { CandidateData, CoverLetterContent } from "./templates/types"
 
 type TemplateId = "classic" | "sidebar" | "elegant" | "split"

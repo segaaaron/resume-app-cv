@@ -65,6 +65,7 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
       Underline,
       TextAlign.configure({ types: ["paragraph", "heading"] }),
     ],
+    immediatelyRender: false,
     content: value || `<p></p>`,
     editorProps: {
       attributes: {
