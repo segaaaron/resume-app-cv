@@ -20,11 +20,12 @@ interface Props {
   subscriptionEndsAt?: string | null
   trialEndsAt?: string | null
   role?: string
+  isNew?: boolean
 }
 
 const AUTOSAVE_DELAY = 2500 // ms after last change
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const isDirty = useResumeStore((s) => s.isDirty)
   const isSaving = useResumeStore((s) => s.isSaving)
@@ -33,10 +34,24 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
 
+  const isDirtyRef = useRef(isDirty)
+  useEffect(() => { isDirtyRef.current = isDirty }, [isDirty])
+
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
+
+  // Delete resume on unmount if it was just created and user never made changes
+  useEffect(() => {
+    if (!isNew) return
+    return () => {
+      if (!isDirtyRef.current) {
+        fetch(`/api/resumes/${resumeId}`, { method: "DELETE", keepalive: true }).catch(() => {})
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Autosave: debounce 2.5s after last change
   useEffect(() => {

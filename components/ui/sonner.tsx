@@ -12,7 +12,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       duration={2000}
-      pauseWhenPageIsHidden={false}
       icons={{
         success: <CircleCheckIcon className="size-4 text-green-700" />,
         info: <InfoIcon className="size-4 text-blue-700" />,

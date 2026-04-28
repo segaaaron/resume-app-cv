@@ -64,7 +64,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     try {
       const res = await fetch("/api/resumes", { method: "POST" })
       const data = await res.json()
-      router.push(`/${locale}/editor/${data.id}`)
+      router.push(`/${locale}/editor/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))
       setCreating(false)

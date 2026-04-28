@@ -48,7 +48,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     try {
       const res = await fetch("/api/cover-letters", { method: "POST" })
       const data = await res.json()
-      router.push(`/${locale}/cover-letter/${data.id}`)
+      router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))
       setCreating(false)

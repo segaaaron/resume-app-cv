@@ -4,9 +4,11 @@ import { db } from "@/lib/db"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor"
 
-export default async function CoverLetterPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
+export default async function CoverLetterPage({ params, searchParams }: { params: Promise<{ id: string; locale: string }>; searchParams: Promise<{ new?: string }> }) {
   const session = await auth()
   const { id, locale } = await params
+  const { new: isNewParam } = await searchParams
+  const isNew = isNewParam === "1"
   if (!session?.user) redirect(`/${locale}/login`)
 
   const [letter, user, latestResume] = await Promise.all([
@@ -62,6 +64,7 @@ export default async function CoverLetterPage({ params }: { params: Promise<{ id
     <CoverLetterEditor
       id={letter.id}
       title={letter.title}
+      isNew={isNew}
       colorScheme={letter.colorScheme}
       fontFamily={letter.fontFamily}
       templateId={letter.templateId ?? "classic"}

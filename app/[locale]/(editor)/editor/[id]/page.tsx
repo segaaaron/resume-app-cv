@@ -5,9 +5,11 @@ import EditorLayout from "@/components/editor/EditorLayout"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 
-export default async function EditorPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
+export default async function EditorPage({ params, searchParams }: { params: Promise<{ id: string; locale: string }>; searchParams: Promise<{ new?: string }> }) {
   const session = await auth()
   const { id, locale } = await params
+  const { new: isNewParam } = await searchParams
+  const isNew = isNewParam === "1"
   if (!session?.user) redirect(`/${locale}/login`)
 
   const plan = session.user.plan ?? "FREE"
@@ -56,6 +58,7 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
     <EditorLayout
       resumeId={resume.id}
       title={resume.title}
+      isNew={isNew}
       sections={sections}
       sectionData={sectionData}
       config={config}

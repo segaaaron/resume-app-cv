@@ -29,6 +29,7 @@ interface Props {
   initialCandidate: CandidateData
   isPro?: boolean
   language?: string
+  isNew?: boolean
 }
 
 const TEMPLATES: { id: TemplateId; labelKey: "template_sidebar" | "template_elegant" | "template_split" | "template_label" }[] = [
@@ -122,6 +123,7 @@ export default function CoverLetterEditor({
   initialCandidate,
   isPro = false,
   language = "es",
+  isNew = false,
 }: Props) {
   const t = useTranslations("cover_letter_editor")
   const [title, setTitle] = useState(initialTitle)
@@ -166,6 +168,20 @@ export default function CoverLetterEditor({
         if (Array.isArray(data)) setResumes(data.map((r: { id: string; title: string }) => ({ id: r.id, title: r.title })))
       })
       .catch(() => {})
+  }, [])
+
+  // Delete record on unmount if it was just created and user never added content
+  const dirtyRef = useRef(dirty)
+  useEffect(() => { dirtyRef.current = dirty }, [dirty])
+
+  useEffect(() => {
+    if (!isNew) return
+    return () => {
+      if (!dirtyRef.current) {
+        fetch(`/api/cover-letters/${id}`, { method: "DELETE", keepalive: true }).catch(() => {})
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleGenerateAI() {
