@@ -20,7 +20,7 @@ export default async function CoverLetterPage({ params, searchParams }: { params
     db.resume.findFirst({
       where: { userId: session.user.id },
       orderBy: { updatedAt: "desc" },
-      select: { personalDetails: true },
+      select: { personalDetails: true, photoUrl: true },
     }),
   ])
 
@@ -35,15 +35,17 @@ export default async function CoverLetterPage({ params, searchParams }: { params
 
   const content = (letter.content as Record<string, string>) ?? {}
 
-  // Extract candidate data from latest resume, but don't overwrite existing saved candidate data
-  const pd = (latestResume?.personalDetails as Record<string, string> | null) ?? {}
+  // personalDetails DB field stores the full sectionData object — dig into the nested personalDetails key
+  const sectionData = (latestResume?.personalDetails as Record<string, unknown> | null) ?? {}
+  const pd = (sectionData.personalDetails as Record<string, string> | null) ?? {}
   const candidateFromResume = {
     name: pd.name ?? pd.fullName ?? "",
     jobTitle: pd.jobTitle ?? pd.title ?? "",
     email: pd.email ?? "",
     phone: pd.phone ?? "",
     address: pd.address ?? pd.location ?? "",
-    photo: pd.photoUrl ?? pd.photo ?? "",
+    // resume.photoUrl (top-level column) takes priority, fall back to personalDetails field
+    photo: latestResume?.photoUrl ?? pd.photoUrl ?? pd.photo ?? "",
     linkedin: pd.linkedin ?? "",
     website: pd.website ?? pd.portfolioUrl ?? "",
   }
