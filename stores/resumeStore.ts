@@ -176,9 +176,12 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             body: JSON.stringify({ title, sections, sectionData, config }),
           })
           if (!res.ok) {
-            const err = await res.json().catch(() => ({}))
-            console.error("[save] server error:", res.status, err)
-            set((state) => { state.isSaving = false })
+            await res.json().catch(() => ({}))
+            set((state) => {
+              state.isSaving = false
+              // Resume deleted or forbidden — stop autosave loop
+              if (res.status === 404 || res.status === 403) state.isDirty = false
+            })
             return
           }
           set((state) => {
@@ -186,8 +189,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             state.lastSaved = new Date()
             state.isDirty = false
           })
-        } catch (err) {
-          console.error("[save] network error:", err)
+        } catch {
           set((state) => { state.isSaving = false })
         }
       },

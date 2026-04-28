@@ -121,7 +121,7 @@ export default function ResumePreview() {
       <style>{`@import url('${buildFontUrl(config.fontFamily)}');`}</style>
 
       <div
-        className="bg-white shadow-2xl resume-pages"
+        className="bg-white shadow-2xl print:shadow-none resume-pages"
         style={{
           // zoom scales everything including Tailwind rem classes and inline px styles
           zoom: scale,

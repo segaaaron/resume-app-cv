@@ -53,7 +53,6 @@ export function proxy(request: NextRequest) {
   // ── Rate limiting on API routes ──────────────────────────────────────────
   if (pathname.startsWith("/api/auth")) {
     if (!checkLimit(authLimits, ip, 10, 15 * 60 * 1000)) {
-      console.warn(`[ratelimit] auth blocked ip=${ip} path=${pathname}`)
       return NextResponse.json(
         { error: "Demasiados intentos. Espera antes de intentarlo de nuevo." },
         { status: 429 }
@@ -61,7 +60,6 @@ export function proxy(request: NextRequest) {
     }
   } else if (pathname.startsWith("/api/")) {
     if (!checkLimit(apiLimits, ip, 60, 60 * 1000)) {
-      console.warn(`[ratelimit] api blocked ip=${ip} path=${pathname}`)
       return NextResponse.json(
         { error: "Demasiadas peticiones. Intenta de nuevo en un momento." },
         { status: 429 }

@@ -56,7 +56,6 @@ export async function POST(req: Request) {
       rawText = result.value
     }
   } catch (err) {
-    console.error("[import] text extraction failed:", err)
     return NextResponse.json({ error: "No se pudo leer el archivo. Asegúrate de que no esté protegido con contraseña." }, { status: 422 })
   }
 

@@ -5,7 +5,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import ResumePreview from "./ResumePreview"
 import { Button } from "@/components/ui/button"
-import { Printer, ArrowLeft, FileText, Loader2 } from "lucide-react"
+import { Download, ArrowLeft, FileText, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
@@ -24,6 +24,7 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   const init = useResumeStore((s) => s.init)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   const [downloadingDocx, setDownloadingDocx] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const t = useTranslations("editor.print")
   propsRef.current = { resumeId, title, sections, sectionData, config }
   const searchParams = useSearchParams()
@@ -35,11 +36,68 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
 
   useEffect(() => {
     if (searchParams.get("auto") === "true") {
-      // Wait for fonts/images to load before printing
-      const timer = setTimeout(() => window.print(), 800)
-      return () => clearTimeout(timer)
+      handleDownloadPdf()
     }
-  }, [searchParams])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true)
+    try {
+      const html2canvas = (await import("html2canvas")).default
+      const { jsPDF } = await import("jspdf")
+
+      const resumeEl = document.querySelector(".resume-pages") as HTMLElement
+      if (!resumeEl) throw new Error("No resume element found")
+
+      // Wait for fonts/images
+      await new Promise((r) => setTimeout(r, 600))
+
+      const canvas = await html2canvas(resumeEl, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+      })
+
+      const imgData = canvas.toDataURL("image/jpeg", 0.95)
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+
+      const pageWidth = 210
+      const pageHeight = 297
+      const canvasAspect = canvas.height / canvas.width
+      const imgHeightMm = pageWidth * canvasAspect
+
+      let yOffset = 0
+      let remainingHeight = imgHeightMm
+
+      while (remainingHeight > 0) {
+        if (yOffset > 0) pdf.addPage()
+        const srcY = (yOffset / imgHeightMm) * canvas.height
+        const srcH = Math.min((pageHeight / imgHeightMm) * canvas.height, canvas.height - srcY)
+
+        const pageCanvas = document.createElement("canvas")
+        pageCanvas.width = canvas.width
+        pageCanvas.height = srcH
+        const ctx = pageCanvas.getContext("2d")!
+        ctx.drawImage(canvas, 0, srcY, canvas.width, srcH, 0, 0, canvas.width, srcH)
+
+        const sliceImgData = pageCanvas.toDataURL("image/jpeg", 0.95)
+        const sliceHeightMm = (srcH / canvas.height) * imgHeightMm
+        pdf.addImage(sliceImgData, "JPEG", 0, 0, pageWidth, sliceHeightMm)
+
+        yOffset += pageHeight
+        remainingHeight -= pageHeight
+      }
+
+      pdf.save(`${title}.pdf`)
+    } catch {
+      toast.error(t("error_pdf") || "Error al generar el PDF")
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
 
   async function handleDownloadDocx() {
     setDownloadingDocx(true)
@@ -81,8 +139,8 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
             {downloadingDocx ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
             {t("export_word")}
           </Button>
-          <Button onClick={() => window.print()} size="sm" className="gap-2">
-            <Printer className="h-4 w-4" />
+          <Button onClick={handleDownloadPdf} size="sm" className="gap-2" disabled={downloadingPdf}>
+            {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {t("print_pdf")}
           </Button>
         </div>

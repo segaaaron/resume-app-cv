@@ -3,6 +3,37 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
 import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, buildResumeContext } from "@/lib/ai-client"
+import { z } from "zod"
+
+const SUGGESTION_FIELDS = [
+  "summary",
+  "personalDetails.jobTitle",
+  "skills",
+  "workExperience.description",
+  "workExperience.jobTitle",
+  "languages",
+  "certifications",
+] as const
+
+const SuggestionSchema = z.object({
+  field: z.enum(SUGGESTION_FIELDS),
+  type: z.enum(["replace", "append"]),
+  preview: z.string().min(1).max(1000),
+  reason: z.string().max(120),
+  targetId: z.string().optional(),
+})
+
+const ReviewItemSchema = z.object({
+  text: z.string().min(1),
+  suggestion: SuggestionSchema.optional(),
+})
+
+const ReviewResponseSchema = z.object({
+  summary: z.string(),
+  strengths: z.array(ReviewItemSchema).max(5),
+  improvements: z.array(ReviewItemSchema).max(5),
+  answer: z.string(),
+})
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
@@ -33,7 +64,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "not_enough_data" }, { status: 400 })
   }
 
-  // Validate optional question
   if (question) {
     const validation = validateAIInput(String(question), 300)
     if (!validation.valid && validation.error === "injection_detected") {
@@ -54,33 +84,51 @@ ${resumeContext}
 ${userQuestion}
 
 INSTRUCCIONES:
-1. Analiza el CV completo considerando: claridad, impacto, estructura, keywords ATS, coherencia y completitud.
-2. Responde directamente a la pregunta del candidato si es específica.
-3. Sé concreto y accionable — no genérico. Menciona secciones o datos reales del CV.
+1. Analiza el CV completo: claridad, impacto, estructura, keywords ATS, coherencia, completitud.
+2. Responde directamente a la pregunta si es específica.
+3. Sé concreto — menciona secciones o datos reales del CV.
 4. Tono: consultor profesional, directo y constructivo.
 5. Idioma: mismo idioma que el CV.
 
-Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown):
+Para cada item de strengths e improvements, evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
+- field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
+- type: "replace" (reemplazar el contenido actual) o "append" (agregar al contenido actual)
+- preview: el texto final sugerido, SIN markdown, SIN asteriscos, SIN HTML. Máximo 500 caracteres.
+- reason: máximo 12 palabras explicando el cambio
+- targetId: solo si la mejora aplica a un item específico de un array (usa el id del item del CV)
+
+NO incluyas suggestion si:
+- La mejora requiere datos que la IA no tiene (fechas, nombres de empresas, métricas reales)
+- La mejora es un consejo general ("busca referencias", "consigue más experiencia")
+- El campo no está en la lista de fields permitidos
+- No estás seguro del valor final
+
+Responde ÚNICAMENTE con JSON válido (sin markdown):
 {
   "summary": "<diagnóstico general en 2-3 oraciones>",
-  "strengths": ["<fortaleza 1>", "<fortaleza 2>", "<fortaleza 3>"],
-  "improvements": ["<mejora concreta 1>", "<mejora concreta 2>", "<mejora concreta 3>"],
+  "strengths": [
+    { "text": "<fortaleza>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } }
+  ],
+  "improvements": [
+    { "text": "<mejora>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } },
+    { "text": "<mejora sin acción automatizable>" }
+  ],
   "answer": "<respuesta directa a la pregunta del candidato, o cadena vacía si fue revisión general>"
 }`
 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 900,
+      max_tokens: 1200,
       temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "Eres un Consultor de Carrera de Élite especializado en revisión y optimización de CVs para procesos de selección. " +
-            "SOLO respondes preguntas relacionadas con el CV del candidato, su perfil profesional, experiencia laboral o búsqueda de empleo. " +
-            "Si la pregunta no tiene relación con el CV o el empleo, responde únicamente con: " +
+            "Eres un Consultor de Carrera de Élite especializado en revisión y optimización de CVs. " +
+            "SOLO respondes sobre el CV del candidato, perfil profesional, experiencia laboral o búsqueda de empleo. " +
+            "Si la pregunta no tiene relación, responde únicamente con: " +
             "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} sin texto adicional.",
         },
         { role: "user", content: prompt },
@@ -94,18 +142,40 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown):
       return NextResponse.json({ error: "off_topic" }, { status: 422 })
     }
 
-    if (!parsed.summary || !Array.isArray(parsed.strengths) || !Array.isArray(parsed.improvements)) {
-      throw new Error("Invalid response format")
+    // Validate and sanitize with Zod — filter out invalid suggestions silently
+    const validated = ReviewResponseSchema.safeParse(parsed)
+    if (!validated.success) {
+      // Fallback: return without suggestions if structure is wrong
+      return NextResponse.json({
+        summary: parsed.summary ?? "",
+        strengths: (parsed.strengths ?? []).slice(0, 5).map((s: unknown) =>
+          typeof s === "string" ? { text: s } : { text: (s as { text?: string }).text ?? "" }
+        ),
+        improvements: (parsed.improvements ?? []).slice(0, 5).map((s: unknown) =>
+          typeof s === "string" ? { text: s } : { text: (s as { text?: string }).text ?? "" }
+        ),
+        answer: parsed.answer ?? "",
+      })
     }
 
-    return NextResponse.json({
-      summary: parsed.summary,
-      strengths: parsed.strengths.slice(0, 5),
-      improvements: parsed.improvements.slice(0, 5),
-      answer: parsed.answer ?? "",
+    // Sanitize previews: strip markdown characters
+    const sanitizePreview = (text: string) =>
+      text.replace(/[*_`#>]/g, "").replace(/\n{3,}/g, "\n\n").trim()
+
+    const sanitizeItem = (item: z.infer<typeof ReviewItemSchema>) => ({
+      ...item,
+      suggestion: item.suggestion
+        ? { ...item.suggestion, preview: sanitizePreview(item.suggestion.preview) }
+        : undefined,
     })
-  } catch (err) {
-    console.error("[ai/review-cv] error:", err)
+
+    return NextResponse.json({
+      summary: validated.data.summary,
+      strengths: validated.data.strengths.map(sanitizeItem),
+      improvements: validated.data.improvements.map(sanitizeItem),
+      answer: validated.data.answer,
+    })
+  } catch {
     return NextResponse.json({ error: "Error al revisar el CV" }, { status: 500 })
   }
 }

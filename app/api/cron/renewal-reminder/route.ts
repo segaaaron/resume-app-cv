@@ -68,7 +68,5 @@ export async function GET(req: Request) {
   const sent = results.filter((r) => r.status === "fulfilled").length
   const failed = results.filter((r) => r.status === "rejected").length
 
-  console.log(`[cron/renewal-reminder] sent=${sent} failed=${failed}`)
-
   return NextResponse.json({ sent, failed, total: users.length })
 }

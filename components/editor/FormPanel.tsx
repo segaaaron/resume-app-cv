@@ -19,8 +19,8 @@ import {
 import SectionBlock from "./SectionBlock"
 import DesignPanel from "./DesignPanel"
 import ATSScorePanel from "./ATSScorePanel"
-import CVReviewPanel from "./CVReviewPanel"
 import AIProGate from "./AIProGate"
+import AIProfileFillPanel from "./AIProfileFillPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LayoutTemplate, Settings2, Target } from "lucide-react"
 
@@ -79,6 +79,11 @@ export default function FormPanel() {
               ))}
             </div>
           )}
+
+          {/* AI Profile Fill — at the bottom of content tab */}
+          <div className="pt-2">
+            <AIProGate><AIProfileFillPanel /></AIProGate>
+          </div>
         </TabsContent>
 
         <TabsContent value="design" className="flex-1 min-h-0 overflow-y-auto mt-0 data-[state=inactive]:hidden">
@@ -87,7 +92,6 @@ export default function FormPanel() {
 
         <TabsContent value="ats" className="flex-1 min-h-0 overflow-y-auto mt-0 p-4 space-y-4 data-[state=inactive]:hidden">
           <AIProGate><ATSScorePanel /></AIProGate>
-          <AIProGate><CVReviewPanel /></AIProGate>
         </TabsContent>
       </Tabs>
     </aside>

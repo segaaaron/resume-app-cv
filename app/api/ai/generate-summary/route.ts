@@ -93,8 +93,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     }
 
     return NextResponse.json({ versions: parsed.versions.slice(0, 3) })
-  } catch (err) {
-    console.error("[ai/generate-summary] error:", err)
+  } catch {
     return NextResponse.json({ error: "Error al generar el resumen" }, { status: 500 })
   }
 }

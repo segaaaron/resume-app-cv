@@ -98,13 +98,11 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
           referralCycleOffset: totalPaid, // next cycle starts from here
         },
       })
-      console.log(`[referral-rewards] Referrer ${referrer.id} completed cycle (${cycleCount} refs) — reset to 0`)
     } else {
       await db.user.update({
         where: { id: referrer.id },
         data: { referralRewardTier: newTier },
       })
-      console.log(`[referral-rewards] Referrer ${referrer.id} reached tier ${newTier} (cycle count: ${cycleCount})`)
     }
 
     // Send reward notification email
@@ -115,8 +113,8 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
       cycleCount,
       isCycleComplete,
     })
-  } catch (err) {
-    console.error("[referral-rewards] error applying reward:", err)
+  } catch {
+    // silently ignore
   }
 }
 
@@ -187,9 +185,8 @@ async function sendReferralRewardEmail({
         isCycleComplete,
       }),
     })
-    console.log(`[referral-rewards] Reward email sent → ${referrer.email} (tier ${newTier})`)
-  } catch (err) {
-    console.error("[referral-rewards] Failed to send reward email:", err)
+  } catch {
+    // silently ignore
   }
 }
 
@@ -206,9 +203,8 @@ async function applyStripeCredit(
       currency: "usd",
       description: `Recompensa por referidos — Tier ${tier} (${label})`,
     })
-    console.log(`[referral-rewards] $${amountCents / 100} credit → ${stripeCustomerId} (tier ${tier})`)
-  } catch (err) {
-    console.error(`[referral-rewards] Stripe credit failed for ${stripeCustomerId}:`, err)
+  } catch {
+    // silently ignore
   }
 }
 

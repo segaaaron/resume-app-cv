@@ -19,7 +19,5 @@ export async function GET(req: Request) {
     },
   })
 
-  console.log(`[cron/data-cleanup] Deleted ${deleted.count} users past 90-day retention window`)
-
   return NextResponse.json({ deleted: deleted.count })
 }

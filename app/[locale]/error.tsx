@@ -11,7 +11,6 @@ export default function LocaleError({
   reset: () => void
 }) {
   useEffect(() => {
-    console.error("[locale-error]", error.digest ?? "no-digest")
   }, [error])
 
   return (

@@ -200,7 +200,7 @@ function stripDates(line: string): string {
     .replace(new RegExp(`([a-záéíóúüñA-Z]+\\.?\\s+\\d{4})\\s*[-–—]\\s*([a-záéíóúüñA-Z]+\\.?\\s+\\d{4}|${CURRENT_ALT})`, "gi"), "")
     .replace(new RegExp(`\\d{1,2}\\/\\d{4}\\s*[-–—]\\s*(\\d{1,2}\\/\\d{4}|${CURRENT_ALT})`, "gi"), "")
     .replace(new RegExp(`\\b\\d{4}\\s*[-–—]\\s*(\\d{4}|${CURRENT_ALT})\\b`, "gi"), "")
-    .replace(/\b(20\d{2}|19\d{2})\b/g, "")
+    .replace(/\b(20\d{2}|19\d{2})\b/g, " ")
     .replace(/[|,·\-–]\s*$/, "").replace(/^\s*[|,·\-–]\s*/, "")
     .replace(/\s+/g, " ").trim()
 }
@@ -225,7 +225,7 @@ function stripDates(line: string): string {
  */
 function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
   /** Lines with more words than this are likely description text, not titles. */
-  const MAX_TITLE_WORDS = 5
+  const MAX_TITLE_WORDS = 8
 
   const isShortTitleLine = (line: string) =>
     line.split(/\s+/).length <= MAX_TITLE_WORDS &&
@@ -317,8 +317,23 @@ function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
 // Keywords that strongly suggest a line is a job role/title (not a company name)
 const ROLE_KEYWORDS = /\b(developer|engineer|manager|designer|director|lead|senior|junior|intern|analyst|consultant|architect|scientist|specialist|coordinator|executive|officer|head|vp|cto|ceo|coo|cfo|devops|fullstack|frontend|backend|mobile|ios|android|qa|tester|scrum|agile|product|project|software|web|data|cloud|security|network|system|support|recruiter|hr|marketing|sales|account)\b/i
 
+// ─── Merge wrapped lines (PDF word-wrap continuation) ────────────────────────
+function mergeWrappedLines(lines: string[]): string[] {
+  const result: string[] = []
+  for (const line of lines) {
+    const prev = result[result.length - 1]
+    if (prev !== undefined && /^[a-z]/.test(line) && !isBullet(line)) {
+      result[result.length - 1] = prev + " " + line
+    } else {
+      result.push(line)
+    }
+  }
+  return result
+}
+
 // ─── Parse a single work experience block ─────────────────────────────────────
 function parseWorkBlock(block: string[], id: string) {
+  block = mergeWrappedLines(block)
   const job = {
     id,
     jobTitle: "",
@@ -417,7 +432,9 @@ function parseWorkBlock(block: string[], id: string) {
       } else if (!job.city && parts.length === 1) {
         job.city = parts[0]
       } else if (job.startDate) {
-        descLines.push(line)
+        const wordCount = line.trim().split(/\s+/).length
+        const looksLikeLeakedSidebarItem = wordCount <= 3 && line.length <= 25 && !/[.,]$/.test(line) && descLines.length > 0
+        if (!looksLikeLeakedSidebarItem) descLines.push(line)
       }
       continue
     }
@@ -428,7 +445,7 @@ function parseWorkBlock(block: string[], id: string) {
     }
   }
 
-  job.description = descLines.slice(0, 8).map(d => `• ${d}`).join("<br>")
+  job.description = descLines.slice(0, 20).map(d => `• ${d}`).join("\n")
   return job
 }
 
@@ -594,7 +611,7 @@ export function parseResumeText(rawText: string): ParsedResume {
   // ── Summary ───────────────────────────────────────────────────────────
   const summarySection = get("summary")
   if (summarySection) {
-    result.summary = summarySection.lines.join(" ").slice(0, 1000).trim()
+    result.summary = summarySection.lines.join(" ").slice(0, 2500).trim()
   }
 
   // ── Work Experience (block-based) ─────────────────────────────────────
@@ -670,9 +687,29 @@ export function parseResumeText(rawText: string): ParsedResume {
       }
     }
   }
-  result.skills = Array.from(skillNames).slice(0, 35).map((name, i) => ({
+  result.skills = Array.from(skillNames).slice(0, 60).map((name, i) => ({
     id: `sk${i + 1}`, name, level: "intermediate",
   }))
+
+  // ── Skill rescue: collect short tokens from non-work sections that look like tech skills ──
+  // Sidebar PDFs often split the skills column across multiple text blocks
+  const existingSkillNames = new Set(result.skills.map(s => s.name.toLowerCase()))
+  for (const sec of sections) {
+    if (["skills", "header", "summary", "work", "education", "languages", "certifications", "projects", "volunteer", "hobbies"].includes(sec.type)) continue
+    for (const line of sec.lines) {
+      if (line.length > 35 || line.endsWith(".") || line.endsWith(",")) continue
+      if (/\d{4}/.test(line)) continue
+      if (isBullet(line)) continue
+      if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+      for (const part of line.split(/[,|•·\t\/]/)) {
+        const s = clean(part)
+        if (s.length > 1 && s.length < 35 && !/^\d+$/.test(s) && !existingSkillNames.has(s.toLowerCase()) && result.skills.length < 60) {
+          result.skills.push({ id: `sk${result.skills.length + 1}`, name: s, level: "intermediate" })
+          existingSkillNames.add(s.toLowerCase())
+        }
+      }
+    }
+  }
 
   // ── Languages ─────────────────────────────────────────────────────────
   const LANG_LEVEL_MAP: Record<string, string> = {

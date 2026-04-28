@@ -21,8 +21,7 @@ export async function POST(req: Request) {
   let event: Stripe.Event
   try {
     event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
-  } catch (err) {
-    console.error("[stripe webhook] signature verification failed:", err)
+  } catch {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
@@ -106,9 +105,7 @@ export async function POST(req: Request) {
               planInterval,
               renewalDate,
             }),
-          }).catch((err) => {
-            console.error("[resend] failed to send subscription email:", err)
-          })
+          }).catch(() => {})
         }
         break
       }
@@ -218,23 +215,18 @@ export async function POST(req: Request) {
 <p style="font-size:12px;color:#9ca3af;margin-top:32px;">Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(user.email)}">cancela tu suscripción a emails aquí</a>.</p>
 </td></tr></table></body></html>`,
               text: `Hola ${firstName},\n\nNo pudimos procesar el pago de tu suscripción a READY CV. Tienes 3 días para actualizar tu método de pago.\n\nActualiza en: https://www.readycvv.com/dashboard/settings\n\n© ${new Date().getFullYear()} READY CV`,
-            }).catch((err) => {
-              console.error("[resend] failed to send payment failed email:", err)
-            })
+            }).catch(() => {})
           }
         }
         break
       }
     }
-  } catch (err) {
-    console.error("[stripe webhook] handler error:", err)
+  } catch {
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
   }
 
   // Persist processed event ID to prevent duplicate processing on retry/restart
-  await db.stripeEvent.create({ data: { id: event.id } }).catch((err) => {
-    console.error("[stripe webhook] failed to persist event ID:", err)
-  })
+  await db.stripeEvent.create({ data: { id: event.id } }).catch(() => {})
 
   return NextResponse.json({ received: true })
 }

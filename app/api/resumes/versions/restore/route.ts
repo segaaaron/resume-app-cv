@@ -24,7 +24,6 @@ export async function POST(req: Request) {
   // Validate snapshot against schema before writing back to DB
   const parsed = snapshotSchema.safeParse(version.snapshot)
   if (!parsed.success) {
-    console.error("[versions/restore] invalid snapshot shape:", parsed.error.flatten())
     return NextResponse.json({ error: "Snapshot data is corrupted and cannot be restored" }, { status: 422 })
   }
 

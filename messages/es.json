@@ -76,7 +76,9 @@
     "jobs_title": "Plantillas Premium",
     "jobs_desc": "Elige entre 29 diseños profesionales optimizados para cada industria y nivel.",
     "ai_title": "IA Integrada",
-    "ai_desc": "Mejora tu CV con inteligencia artificial: resúmenes, bullets y análisis ATS."
+    "ai_desc": "Mejora tu CV con inteligencia artificial: resúmenes, bullets y análisis ATS.",
+    "kanban_title": "Tracker de Candidaturas",
+    "kanban_desc": "Gestiona tus postulaciones con un tablero visual: de aplicado a oferta en un solo lugar."
   },
   "template_gallery": {
     "title": "12 Plantillas profesionales",
@@ -437,9 +439,10 @@
     },
     "print": {
       "back": "Volver al editor",
-      "print_pdf": "Imprimir / Guardar PDF",
+      "print_pdf": "Descargar PDF",
       "export_word": "Word (.docx)",
       "error_word": "Error al exportar Word",
+      "error_pdf": "Error al generar el PDF",
       "pro_only_word": "La exportación Word es exclusiva del plan Pro",
       "watermark_text": "readycvv.com",
       "watermark_upgrade": "Actualiza a Pro para eliminar esta marca de agua"
@@ -481,7 +484,35 @@
       "strengths_label": "Fortalezas",
       "improvements_label": "Áreas de mejora",
       "answer_label": "Respuesta a tu pregunta",
-      "clear": "Limpiar"
+      "clear": "Limpiar",
+      "apply_button": "Aplicar",
+      "applying": "Aplicando...",
+      "applied": "Aplicado",
+      "diff_title": "Cambio sugerido",
+      "diff_before": "Actual",
+      "diff_after": "Sugerido",
+      "diff_confirm": "Confirmar cambio",
+      "diff_cancel": "Cancelar"
+    },
+    "ai_profile_fill": {
+      "title": "Ayúdate con la IA",
+      "pro_badge": "Pro",
+      "description": "Describe tu perfil profesional con tus palabras y la IA generará tu resumen, título y habilidades sugeridas.",
+      "placeholder": "Ej: Soy desarrollador React con 5 años de experiencia en startups, especializado en performance y accesibilidad.",
+      "generate": "Generar con IA",
+      "generating": "Generando...",
+      "pro_only": "Esta función es exclusiva del plan Pro",
+      "off_topic": "Solo puedo generar contenido a partir de descripciones profesionales reales",
+      "error": "Error al generar el perfil",
+      "disclaimer": "Revisa cada sugerencia antes de aplicar. Puedes aplicarlas de forma independiente.",
+      "summary_label": "Resumen profesional",
+      "job_title_label": "Título del puesto",
+      "skills_label": "Habilidades sugeridas",
+      "apply": "Aplicar",
+      "replace": "Reemplazar",
+      "applied": "Aplicado",
+      "add_selected": "Agregar seleccionadas",
+      "skills_hint": "Selecciona las habilidades que quieres agregar a tu CV."
     },
     "sections_form": {
       "add": "Agregar",

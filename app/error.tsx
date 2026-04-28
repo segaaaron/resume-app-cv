@@ -11,8 +11,6 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
-    // Log to server-side monitoring without exposing details to client
-    console.error("[app-error]", error.digest ?? "no-digest")
   }, [error])
 
   return (

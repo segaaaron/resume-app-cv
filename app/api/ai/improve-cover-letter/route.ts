@@ -87,8 +87,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     if (parsed.versions.length === 0) return NextResponse.json({ error: "off_topic" }, { status: 422 })
 
     return NextResponse.json({ versions: parsed.versions.slice(0, 3) })
-  } catch (err) {
-    console.error("[ai/improve-cover-letter] error:", err)
+  } catch {
     return NextResponse.json({ error: "Error al mejorar la carta" }, { status: 500 })
   }
 }

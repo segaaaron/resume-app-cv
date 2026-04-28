@@ -97,8 +97,7 @@ Rules:
       }))
 
     return NextResponse.json({ skills })
-  } catch (err) {
-    console.error("[suggest-skills] OpenAI error:", err)
+  } catch {
     return NextResponse.json({ error: "AI service unavailable" }, { status: 503 })
   }
 }

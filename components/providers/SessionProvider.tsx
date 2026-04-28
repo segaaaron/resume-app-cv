@@ -1,7 +1,25 @@
 "use client"
 
-import { SessionProvider as NextAuthSessionProvider } from "next-auth/react"
+import { SessionProvider as NextAuthSessionProvider, useSession, signOut } from "next-auth/react"
 import type { Session } from "next-auth"
+import { useEffect } from "react"
+
+function SessionWatcher() {
+  const { status } = useSession()
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      sessionStorage.setItem("wasAuthenticated", "1")
+      return
+    }
+    if (status === "unauthenticated" && sessionStorage.getItem("wasAuthenticated")) {
+      sessionStorage.removeItem("wasAuthenticated")
+      signOut({ redirect: true, callbackUrl: "/login" })
+    }
+  }, [status])
+
+  return null
+}
 
 export default function SessionProvider({
   children,
@@ -12,6 +30,7 @@ export default function SessionProvider({
 }) {
   return (
     <NextAuthSessionProvider session={session}>
+      <SessionWatcher />
       {children}
     </NextAuthSessionProvider>
   )

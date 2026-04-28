@@ -76,7 +76,9 @@
     "jobs_title": "Premium Templates",
     "jobs_desc": "Choose from 29 professional designs optimized for every industry and level.",
     "ai_title": "Integrated AI",
-    "ai_desc": "Improve your CV with AI: summaries, bullets and ATS analysis."
+    "ai_desc": "Improve your CV with AI: summaries, bullets and ATS analysis.",
+    "kanban_title": "Application Tracker",
+    "kanban_desc": "Manage your job applications with a visual board: from applied to offer in one place."
   },
   "template_gallery": {
     "title": "12 Professional templates",
@@ -437,9 +439,10 @@
     },
     "print": {
       "back": "Back to editor",
-      "print_pdf": "Print / Save PDF",
+      "print_pdf": "Download PDF",
       "export_word": "Word (.docx)",
       "error_word": "Error exporting Word",
+      "error_pdf": "Error generating PDF",
       "pro_only_word": "Word export is exclusive to the Pro plan",
       "watermark_text": "readycvv.com",
       "watermark_upgrade": "Upgrade to Pro to remove this watermark"
@@ -481,7 +484,35 @@
       "strengths_label": "Strengths",
       "improvements_label": "Areas for improvement",
       "answer_label": "Answer to your question",
-      "clear": "Clear"
+      "clear": "Clear",
+      "apply_button": "Apply",
+      "applying": "Applying...",
+      "applied": "Applied",
+      "diff_title": "Suggested change",
+      "diff_before": "Current",
+      "diff_after": "Suggested",
+      "diff_confirm": "Confirm change",
+      "diff_cancel": "Cancel"
+    },
+    "ai_profile_fill": {
+      "title": "AI Assistant",
+      "pro_badge": "Pro",
+      "description": "Describe your professional profile in your own words and the AI will generate your summary, title, and suggested skills.",
+      "placeholder": "E.g.: I'm a React developer with 5 years of experience in startups, specialized in performance and accessibility.",
+      "generate": "Generate with AI",
+      "generating": "Generating...",
+      "pro_only": "This feature is exclusive to the Pro plan",
+      "off_topic": "I can only generate content from real professional profile descriptions",
+      "error": "Error generating profile",
+      "disclaimer": "Review each suggestion before applying. You can apply them independently.",
+      "summary_label": "Professional summary",
+      "job_title_label": "Job title",
+      "skills_label": "Suggested skills",
+      "apply": "Apply",
+      "replace": "Replace",
+      "applied": "Applied",
+      "add_selected": "Add selected",
+      "skills_hint": "Select the skills you want to add to your CV."
     },
     "sections_form": {
       "add": "Add",

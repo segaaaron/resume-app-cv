@@ -92,8 +92,7 @@ Reglas:
     }
 
     return NextResponse.json(parsed)
-  } catch (err) {
-    console.error("[ai/ats-score] error:", err)
+  } catch {
     return NextResponse.json({ error: "Error al analizar compatibilidad ATS" }, { status: 500 })
   }
 }

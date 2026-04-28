@@ -67,11 +67,9 @@ export async function GET(req: Request) {
 
       sent++
     } catch (err) {
-      console.error(`[cron/application-reminders] Failed for application ${app.id}:`, err)
       failed++
     }
   }
 
-  console.log(`[cron/application-reminders] Sent: ${sent}, Failed: ${failed}`)
   return NextResponse.json({ sent, failed })
 }

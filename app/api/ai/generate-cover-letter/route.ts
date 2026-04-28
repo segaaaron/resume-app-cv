@@ -111,8 +111,7 @@ Responde ÚNICAMENTE con un JSON: {"body": "<cuerpo de la carta>"}`
     }
 
     return NextResponse.json({ body: parsed.body })
-  } catch (err) {
-    console.error("[ai/generate-cover-letter] error:", err)
+  } catch {
     return NextResponse.json({ error: "Error al generar la carta" }, { status: 500 })
   }
 }
