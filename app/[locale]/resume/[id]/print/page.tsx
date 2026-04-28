@@ -9,9 +9,10 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
   const session = await auth()
   const { id, locale } = await params
   if (!session?.user) redirect(`/${locale}/login`)
-  const resume = await db.resume.findFirst({
-    where: { id, userId: session.user.id },
-  })
+  const [resume, user] = await Promise.all([
+    db.resume.findFirst({ where: { id, userId: session.user.id } }),
+    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true } }),
+  ])
 
   if (!resume) notFound()
 
@@ -29,6 +30,8 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
     language: (resume.language as ResumeConfig["language"]) ?? "es",
   }
 
+  const isPro = user?.plan === "PRO" && user?.subscriptionStatus === "ACTIVE"
+
   return (
     <PrintLayout
       resumeId={resume.id}
@@ -36,6 +39,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
       sections={sections}
       sectionData={sectionData}
       config={config}
+      isPro={isPro}
     />
   )
 }

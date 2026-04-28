@@ -164,6 +164,9 @@ export default function WorkExperienceSection() {
                         </button>
                       </div>
                     ))}
+                    <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-relaxed">
+                      ⚠ {ai("metrics_disclaimer")}
+                    </p>
                     <button
                       type="button"
                       onClick={() => setAiVersions(null)}

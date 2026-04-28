@@ -1,25 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import OpenAI from "openai"
 import { validateAIInput } from "@/lib/ai-safety"
-
-function getOpenAI() { return new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) }
-
-// Simple in-memory rate limiter: 20 requests per IP per hour
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 })
-    return true
-  }
-  if (entry.count >= 20) return false
-  entry.count++
-  return true
-}
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit } from "@/lib/ai-client"
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
@@ -32,7 +15,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  // Only Pro users
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: { plan: true, subscriptionStatus: true },
@@ -42,7 +24,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { text, jobTitle } = await req.json()
+  const { text, jobTitle, employer, industry } = await req.json()
 
   if (!text || typeof text !== "string" || text.trim().length < 5) {
     return NextResponse.json({ error: "Text is required" }, { status: 400 })
@@ -53,35 +35,45 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
 
-  const prompt = `Eres un experto en redacción de CVs profesionales.
-Tu tarea es mejorar la siguiente descripción de experiencia laboral para que sea más impactante, concisa y orientada a logros.
+  const context = [
+    jobTitle ? `Puesto: ${jobTitle}` : "",
+    employer ? `Empresa: ${employer}` : "",
+    industry ? `Industria: ${industry}` : "",
+  ].filter(Boolean).join(" | ")
 
-Puesto: ${jobTitle || "No especificado"}
+  const prompt = `TAREA: Transforma la siguiente descripción de experiencia laboral en 3 versiones de alto impacto orientadas a logros.
+
+${context ? `Contexto: ${context}` : ""}
 Descripción actual:
 ${text}
 
-Genera 3 versiones mejoradas. Cada versión debe:
-- Comenzar con verbos de acción fuertes (Lideré, Desarrollé, Optimicé, Implementé, etc.)
-- Incluir métricas o resultados cuando sea posible (inferidos del contexto)
-- Ser concisa y directa
-- Estar en el mismo idioma que el texto original
-- Mantener la esencia de lo que el usuario hizo
+REGLAS DE ORO (aplica todas):
+1. Fórmula de logro: "Verbo de acción + [qué se logró] + medido por [métrica] + haciendo [cómo]".
+2. Verbos de acción fuertes: Lideré, Desarrollé, Optimicé, Incrementé, Implementé, Diseñé, Reduje, Automaticé. NUNCA uses "Responsable de" o "Encargado de".
+3. Métricas: cuando el texto original no tenga números, usa PLACEHOLDERS explícitos entre corchetes como [X%], [N usuarios], [$Z], [X horas/semana]. NUNCA inventes cifras reales.
+4. Sin pronombres personales: no uses "Yo", "Mi", "Nosotros". Empieza directo con el verbo.
+5. ATS-Friendly: integra palabras clave del sector de forma natural.
+6. Longitud: máximo 2 oraciones por versión. Conciso y directo.
+7. Idioma: mismo idioma que el texto original.
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_MODEL,
       max_tokens: 600,
+      temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "Eres un asistente especializado EXCLUSIVAMENTE en redacción de currículums vitae (CVs) y experiencia laboral profesional. " +
-            "Solo debes responder solicitudes relacionadas con CVs, experiencia laboral, habilidades profesionales, educación o perfiles de empleo. " +
-            "Si el contenido recibido no tiene relación con un CV o carrera profesional, responde únicamente con este JSON: {\"versions\": []} sin ningún texto adicional.",
+            "Eres un Consultor de Carrera de Élite y experto en optimización de ATS (Applicant Tracking Systems). " +
+            "Tu especialidad es transformar descripciones de experiencia laboral ordinarias en logros de alto impacto usando la fórmula de Google: Logré [X] medido por [Y], haciendo [Z]. " +
+            "SOLO respondes solicitudes relacionadas con CVs, experiencia laboral y perfiles de empleo. " +
+            "Cuando el original no tiene métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N], [$Z]) — NUNCA inventas cifras reales. " +
+            "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"versions\": []} sin texto adicional.",
         },
         { role: "user", content: prompt },
       ],

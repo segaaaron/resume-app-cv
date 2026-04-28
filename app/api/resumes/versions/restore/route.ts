@@ -1,13 +1,15 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { snapshotSchema } from "@/app/api/resumes/versions/route"
 
 // POST /api/resumes/versions/restore — restore a version snapshot into the resume
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const { versionId } = await req.json()
+  const body = await req.json().catch(() => null)
+  const { versionId } = body ?? {}
   if (!versionId) return NextResponse.json({ error: "versionId required" }, { status: 400 })
 
   const version = await db.resumeVersion.findFirst({
@@ -19,22 +21,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  const snap = version.snapshot as Record<string, unknown>
+  // Validate snapshot against schema before writing back to DB
+  const parsed = snapshotSchema.safeParse(version.snapshot)
+  if (!parsed.success) {
+    console.error("[versions/restore] invalid snapshot shape:", parsed.error.flatten())
+    return NextResponse.json({ error: "Snapshot data is corrupted and cannot be restored" }, { status: 422 })
+  }
+
+  const snap = parsed.data
 
   await db.resume.update({
     where: { id: version.resumeId },
     data: {
-      title:           (snap.title as string) ?? undefined,
-      sections:        (snap.sections as object[]) ?? undefined,
-      personalDetails: (snap.sectionData as object) ?? undefined,
-      templateId:      (snap.config as Record<string, unknown>)?.templateId as string ?? undefined,
-      colorScheme:     (snap.config as Record<string, unknown>)?.colorScheme as string ?? undefined,
-      fontFamily:      (snap.config as Record<string, unknown>)?.fontFamily as string ?? undefined,
-      fontSize:        (snap.config as Record<string, unknown>)?.fontSize as number ?? undefined,
-      spacing:         (snap.config as Record<string, unknown>)?.spacing as number ?? undefined,
-      photoUrl:        (snap.config as Record<string, unknown>)?.photoUrl as string ?? undefined,
-      photoPosition:   (snap.config as Record<string, unknown>)?.photoPosition as number ?? undefined,
-      language:        (snap.config as Record<string, unknown>)?.language as string ?? undefined,
+      ...(snap.title       !== undefined ? { title: snap.title }                                        : {}),
+      ...(snap.sections    !== undefined ? { sections: snap.sections as object[] }                      : {}),
+      ...(snap.sectionData !== undefined ? { personalDetails: snap.sectionData as object }              : {}),
+      ...(snap.config?.templateId    !== undefined ? { templateId: snap.config.templateId }             : {}),
+      ...(snap.config?.colorScheme   !== undefined ? { colorScheme: snap.config.colorScheme }           : {}),
+      ...(snap.config?.fontFamily    !== undefined ? { fontFamily: snap.config.fontFamily }             : {}),
+      ...(snap.config?.fontSize      !== undefined ? { fontSize: snap.config.fontSize }                 : {}),
+      ...(snap.config?.spacing       !== undefined ? { spacing: snap.config.spacing }                   : {}),
+      ...(snap.config?.photoUrl      !== undefined ? { photoUrl: snap.config.photoUrl ?? null }         : {}),
+      ...(snap.config?.photoPosition !== undefined ? { photoPosition: snap.config.photoPosition }       : {}),
+      ...(snap.config?.language      !== undefined ? { language: snap.config.language }                 : {}),
     },
   })
 

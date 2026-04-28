@@ -404,7 +404,8 @@
       "off_topic_summary": "I can only generate summaries about professional experience and profiles",
       "off_topic_bullet": "I can only improve professional work experience descriptions",
       "error_summary": "Error generating summary with AI",
-      "error_bullet": "Error improving text with AI"
+      "error_bullet": "Error improving text with AI",
+      "metrics_disclaimer": "Metrics in [brackets] are placeholders — replace them with your real data before publishing your CV."
     },
     "history": {
       "button": "History",
@@ -434,19 +435,23 @@
       "print_pdf": "Print / Save PDF",
       "export_word": "Word (.docx)",
       "error_word": "Error exporting Word",
-      "pro_only_word": "Word export is exclusive to the Pro plan"
+      "pro_only_word": "Word export is exclusive to the Pro plan",
+      "watermark_text": "readycvv.com",
+      "watermark_upgrade": "Upgrade to Pro to remove this watermark"
     },
     "ats": {
       "tab": "ATS",
       "title": "ATS Score",
       "pro_badge": "Pro",
-      "description": "Paste the job description you want to apply for and analyze how compatible your CV is.",
+      "description": "Most companies use automated filters to screen CVs before a human ever sees them. Paste the job description and we'll tell you exactly how compatible your CV is — and how to improve it to get through.",
       "placeholder": "Paste the job description here...",
       "analyze": "Analyze compatibility",
       "analyzing": "Analyzing...",
       "pro_only": "ATS analysis is exclusive to the Pro plan",
       "not_enough_data": "Add more information to your CV before analyzing",
       "off_topic": "I can only analyze real job descriptions",
+      "off_topic_title": "Invalid input",
+      "off_topic_description": "The pasted text does not appear to be a real job description. Include the job title, responsibilities, and requirements to get an accurate analysis.",
       "error": "Error analyzing ATS compatibility",
       "short_description": "Paste the job description (minimum 20 characters)",
       "strengths": "Strengths",
@@ -471,6 +476,12 @@
       "add_experience": "Add experience",
       "add_education": "Add education",
       "add_skill": "Add skill",
+      "suggest_skills": "Suggest with AI",
+      "suggest_skills_loading": "Finding skills...",
+      "suggest_skills_added": "Skills added",
+      "suggest_skills_empty": "No suggestions found for this role",
+      "suggest_skills_error": "Error fetching suggestions",
+      "suggest_skills_job_title_hint": "Fill in your job title in Personal Details to get better suggestions",
       "add_language": "Add language",
       "add_certification": "Add certification",
       "add_project": "Add project",
@@ -565,7 +576,12 @@
     "status_applied": "Applied",
     "status_interview": "Interview",
     "status_offer": "Offer",
-    "status_rejected": "Rejected"
+    "status_rejected": "Rejected",
+    "follow_up_label": "Reminder",
+    "follow_up_placeholder": "Follow-up date",
+    "follow_up_set": "Reminder saved",
+    "follow_up_removed": "Reminder removed",
+    "follow_up_error": "Error saving reminder"
   },
   "cover_letter_editor": {
     "ai_title": "Generate with AI",
@@ -587,5 +603,28 @@
   "public_cv": {
     "shared_via": "CV shared via",
     "create_cta": "Start building your CV →"
+  },
+  "referral": {
+    "title": "Referral Program",
+    "description": "Share your link and earn rewards when your friends subscribe to the Pro plan.",
+    "total_referred": "Registered",
+    "paid_referrals": "Converted to Pro",
+    "your_link": "Your referral link",
+    "copy": "Copy",
+    "copied": "Link copied!",
+    "copied_short": "Copied",
+    "how_it_works_title": "How it works",
+    "how_step_1": "Share your unique link with friends or on social media.",
+    "how_step_2": "They sign up using your link.",
+    "how_step_3": "When they activate Pro, it counts as a conversion.",
+    "rewards_title": "Rewards",
+    "cycle_count": "Pro referrals (cycle)",
+    "reward_tier_1": "30% discount",
+    "reward_tier_2": "50% discount",
+    "reward_tier_3": "1 free month (100%)",
+    "rewards_title": "Rewards per cycle",
+    "max_tier": "You've reached the highest level!",
+    "reward_applied": "The credit is automatically applied to your next invoice.",
+    "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again."
   }
 }

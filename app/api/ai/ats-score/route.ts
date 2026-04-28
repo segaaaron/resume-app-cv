@@ -1,25 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import OpenAI from "openai"
 import { validateAIInput } from "@/lib/ai-safety"
-
-function getOpenAI() { return new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) }
-
-// Simple in-memory rate limiter: 20 requests per IP per hour
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 })
-    return true
-  }
-  if (entry.count >= 20) return false
-  entry.count++
-  return true
-}
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, buildResumeContext } from "@/lib/ai-client"
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
@@ -50,21 +33,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
 
-  const { personalDetails, workExperience, education, skills, summary } = sectionData ?? {}
-
-  const resumeText = [
-    personalDetails?.jobTitle ? `Puesto actual: ${personalDetails.jobTitle}` : "",
-    summary ? `Resumen: ${summary}` : "",
-    (workExperience ?? []).map((j: { jobTitle?: string; employer?: string; description?: string }) =>
-      `Experiencia: ${j.jobTitle ?? ""} en ${j.employer ?? ""}${j.description ? ` — ${j.description}` : ""}`
-    ).join("\n"),
-    (education ?? []).map((e: { degree?: string; school?: string; institution?: string }) =>
-      `Educación: ${e.degree ?? ""} en ${e.institution ?? e.school ?? ""}`
-    ).join("\n"),
-    (skills ?? []).map((s: { name?: string }) => s.name).filter(Boolean).join(", ")
-      ? `Habilidades: ${(skills ?? []).map((s: { name?: string }) => s.name).filter(Boolean).join(", ")}`
-      : "",
-  ].filter(Boolean).join("\n")
+  const resumeText = buildResumeContext(sectionData ?? {})
 
   if (!resumeText.trim()) {
     return NextResponse.json({ error: "Not enough resume data" }, { status: 400 })
@@ -93,13 +62,14 @@ Evalúa y devuelve los resultados en JSON con este formato exacto:
 Reglas:
 - score 80-100 = Excelente, 60-79 = Bueno, 40-59 = Regular, 0-39 = Bajo
 - missingKeywords: palabras clave del puesto que NO aparecen en el CV (máximo 8)
-- suggestions: acciones concretas para mejorar la compatibilidad
+- suggestions: acciones concretas y específicas para mejorar la compatibilidad (menciona secciones del CV donde aplicar cada mejora)
 - Responde ÚNICAMENTE con el JSON, sin markdown ni explicaciones`
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_MODEL,
       max_tokens: 800,
+      temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {

@@ -6,11 +6,12 @@ import { z } from "zod"
 type Params = { params: Promise<{ id: string }> }
 
 const patchSchema = z.object({
-  status:    z.enum(["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]).optional(),
-  notes:     z.string().max(5000).optional(),
-  url:       z.string().url().optional().or(z.literal("")),
-  salary:    z.string().max(100).optional(),
-  appliedAt: z.string().datetime().optional(),
+  status:     z.enum(["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]).optional(),
+  notes:      z.string().max(5000).optional(),
+  url:        z.string().url().optional().or(z.literal("")),
+  salary:     z.string().max(100).optional(),
+  appliedAt:  z.string().datetime().optional(),
+  followUpAt: z.string().datetime().optional().nullable(),
 })
 
 export async function PATCH(req: Request, { params }: Params) {
@@ -37,11 +38,16 @@ export async function PATCH(req: Request, { params }: Params) {
   await db.application.update({
     where: { id },
     data: {
-      status:    parsed.data.status ?? undefined,
-      notes:     parsed.data.notes ?? undefined,
-      url:       parsed.data.url ?? undefined,
-      salary:    parsed.data.salary ?? undefined,
-      appliedAt: parsed.data.appliedAt ? new Date(parsed.data.appliedAt) : undefined,
+      status:     parsed.data.status ?? undefined,
+      notes:      parsed.data.notes ?? undefined,
+      url:        parsed.data.url ?? undefined,
+      salary:     parsed.data.salary ?? undefined,
+      appliedAt:  parsed.data.appliedAt ? new Date(parsed.data.appliedAt) : undefined,
+      followUpAt: parsed.data.followUpAt === null ? null
+                : parsed.data.followUpAt ? new Date(parsed.data.followUpAt)
+                : undefined,
+      // Reset reminderSentAt when followUpAt changes so reminder fires again
+      ...(parsed.data.followUpAt !== undefined ? { reminderSentAt: null } : {}),
     },
   })
 

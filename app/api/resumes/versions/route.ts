@@ -1,8 +1,30 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { z } from "zod"
 
 const MAX_VERSIONS = 10
+
+// Snapshot schema — mirrors the Resume fields saved by EditorLayout autosave
+export const snapshotConfigSchema = z.object({
+  templateId:    z.string().optional(),
+  colorScheme:   z.string().optional(),
+  fontFamily:    z.string().optional(),
+  fontSize:      z.number().optional(),
+  spacing:       z.number().optional(),
+  photoUrl:      z.string().optional().nullable(),
+  photoPosition: z.number().optional(),
+  language:      z.string().optional(),
+}).optional()
+
+export const snapshotSchema = z.object({
+  title:       z.string().optional(),
+  sections:    z.array(z.record(z.string(), z.unknown())).optional(),
+  sectionData: z.record(z.string(), z.unknown()).optional(),
+  config:      snapshotConfigSchema,
+})
+
+export type ResumeSnapshot = z.infer<typeof snapshotSchema>
 
 // GET /api/resumes/versions?resumeId=xxx — list versions
 export async function GET(req: Request) {
@@ -40,16 +62,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { resumeId, label, snapshot } = await req.json()
-  if (!resumeId || !snapshot) return NextResponse.json({ error: "resumeId and snapshot required" }, { status: 400 })
+  const body = await req.json().catch(() => null)
+  if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+
+  const { resumeId, label } = body
+
+  if (!resumeId || typeof resumeId !== "string") {
+    return NextResponse.json({ error: "resumeId required" }, { status: 400 })
+  }
+
+  // Validate snapshot shape before persisting
+  const parsed = snapshotSchema.safeParse(body.snapshot)
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Invalid snapshot format", details: parsed.error.flatten() }, { status: 400 })
+  }
 
   // Verify ownership
   const resume = await db.resume.findFirst({ where: { id: resumeId, userId: session.user.id } })
   if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  // Create the new version
+  // Create the new version (cast to satisfy Prisma Json type)
   const version = await db.resumeVersion.create({
-    data: { resumeId, label: label || null, snapshot },
+    data: { resumeId, label: typeof label === "string" ? label : null, snapshot: parsed.data as object },
   })
 
   // Keep only the last MAX_VERSIONS — delete oldest ones

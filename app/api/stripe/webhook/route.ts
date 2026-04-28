@@ -3,10 +3,8 @@ import { stripe, stripeEnabled } from "@/lib/stripe"
 import { db } from "@/lib/db"
 import { resend, emailEnabled } from "@/lib/resend"
 import { subscriptionConfirmationHtml, subscriptionConfirmationText } from "@/lib/emails/subscriptionConfirmation"
+import { checkAndApplyReferralReward } from "@/lib/referral-rewards"
 import type Stripe from "stripe"
-
-// Idempotency: track processed event IDs in memory
-const processedEvents = new Set<string>()
 
 export async function POST(req: Request) {
   if (!stripeEnabled() || !stripe) {
@@ -28,8 +26,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  // Idempotency check — skip already-processed events
-  if (processedEvents.has(event.id)) {
+  // Idempotency check — skip already-processed events using persistent DB storage
+  const alreadyProcessed = await db.stripeEvent.findUnique({ where: { id: event.id } })
+  if (alreadyProcessed) {
     return NextResponse.json({ received: true })
   }
 
@@ -61,6 +60,9 @@ export async function POST(req: Request) {
             // subscriptionEndsAt will be set when invoice.paid fires
           },
         })
+
+        // Check if this new Pro user was referred — apply reward to referrer if tier crossed
+        await checkAndApplyReferralReward(userId)
         break
       }
 
@@ -119,7 +121,6 @@ export async function POST(req: Request) {
 
         if (sub.cancel_at_period_end) {
           // Cancellation scheduled — user keeps access until subscriptionEndsAt (set by invoice.paid)
-          // If Stripe provides an explicit cancel_at, use it; otherwise keep existing subscriptionEndsAt
           const cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000) : undefined
           await db.user.update({
             where: { id: user.id },
@@ -195,14 +196,12 @@ export async function POST(req: Request) {
         })
         if (user) {
           // Grace period: set PAST_DUE instead of immediately downgrading to FREE.
-          // Stripe will retry the charge; subscription.deleted fires if all retries fail.
           await db.user.update({
             where: { id: user.id },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          data: { subscriptionStatus: "PAST_DUE" as any },
+            data: { subscriptionStatus: "PAST_DUE" as any },
           })
 
-          // Send payment failure warning email
           if (emailEnabled() && resend && user.email) {
             const firstName = user.name?.split(" ")[0] ?? "Usuario"
             await resend.emails.send({
@@ -232,8 +231,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
   }
 
-  // Mark event as processed after successful handling
-  processedEvents.add(event.id)
+  // Persist processed event ID to prevent duplicate processing on retry/restart
+  await db.stripeEvent.create({ data: { id: event.id } }).catch((err) => {
+    console.error("[stripe webhook] failed to persist event ID:", err)
+  })
 
   return NextResponse.json({ received: true })
 }

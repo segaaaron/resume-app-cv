@@ -46,12 +46,32 @@ function ScoreRing({ score }: { score: number }) {
   )
 }
 
+interface ATSErrorBlockProps {
+  title: string
+  description: string
+}
+
+function ATSErrorBlock({ title, description }: ATSErrorBlockProps) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-6 text-center">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+        <AlertCircle className="h-5 w-5 text-red-600" />
+      </div>
+      <div className="space-y-1">
+        <p className="text-sm font-semibold text-red-800">{title}</p>
+        <p className="text-xs text-red-600 leading-relaxed">{description}</p>
+      </div>
+    </div>
+  )
+}
+
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
   const { sectionData } = useResumeStore()
   const [jobDescription, setJobDescription] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<ATSResult | null>(null)
+  const [offTopic, setOffTopic] = useState(false)
   const [expanded, setExpanded] = useState(true)
 
   async function handleAnalyze() {
@@ -61,6 +81,7 @@ export default function ATSScorePanel() {
     }
     setLoading(true)
     setResult(null)
+    setOffTopic(false)
     try {
       const res = await fetch("/api/ai/ats-score", {
         method: "POST",
@@ -69,7 +90,7 @@ export default function ATSScorePanel() {
       })
       if (res.status === 403) { toast.error(t("pro_only")); return }
       if (res.status === 400) { toast.error(t("not_enough_data")); return }
-      if (res.status === 422) { toast.error(t("off_topic")); return }
+      if (res.status === 422) { setOffTopic(true); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setResult(data)
@@ -98,7 +119,7 @@ export default function ATSScorePanel() {
 
       {expanded && (
         <div className="px-4 pb-4 space-y-3 bg-white border-t border-border">
-          <p className="text-[11px] text-muted-foreground pt-3">{t("description")}</p>
+          <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">{t("description")}</p>
 
           <Textarea
             value={jobDescription}
@@ -111,6 +132,14 @@ export default function ATSScorePanel() {
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Target className="h-3.5 w-3.5" />}
             {loading ? t("analyzing") : t("analyze")}
           </Button>
+
+          {/* Off-topic error */}
+          {offTopic && (
+            <ATSErrorBlock
+              title={t("off_topic_title")}
+              description={t("off_topic_description")}
+            />
+          )}
 
           {/* Results */}
           {result && (

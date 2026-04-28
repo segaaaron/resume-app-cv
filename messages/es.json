@@ -404,7 +404,8 @@
       "off_topic_summary": "Solo puedo generar resúmenes sobre experiencia y perfil profesional",
       "off_topic_bullet": "Solo puedo mejorar descripciones de experiencia laboral profesional",
       "error_summary": "Error al generar el resumen con IA",
-      "error_bullet": "Error al mejorar el texto con IA"
+      "error_bullet": "Error al mejorar el texto con IA",
+      "metrics_disclaimer": "Las métricas entre [corchetes] son estimaciones — reemplázalas con tus datos reales antes de publicar tu CV."
     },
     "history": {
       "button": "Historial",
@@ -434,19 +435,23 @@
       "print_pdf": "Imprimir / Guardar PDF",
       "export_word": "Word (.docx)",
       "error_word": "Error al exportar Word",
-      "pro_only_word": "La exportación Word es exclusiva del plan Pro"
+      "pro_only_word": "La exportación Word es exclusiva del plan Pro",
+      "watermark_text": "readycvv.com",
+      "watermark_upgrade": "Actualiza a Pro para eliminar esta marca de agua"
     },
     "ats": {
       "tab": "ATS",
       "title": "ATS Score",
       "pro_badge": "Pro",
-      "description": "Pega la descripción del puesto al que quieres aplicar y analiza qué tan compatible es tu CV.",
+      "description": "La mayoría de empresas filtran CVs automáticamente antes de que un humano los vea. Pega la descripción del puesto y te diremos exactamente qué tan compatible es tu CV — y cómo mejorarlo para pasar ese filtro.",
       "placeholder": "Pega aquí la descripción del trabajo (job description)...",
       "analyze": "Analizar compatibilidad",
       "analyzing": "Analizando...",
       "pro_only": "El análisis ATS es exclusivo del plan Pro",
       "not_enough_data": "Agrega más información al CV antes de analizar",
       "off_topic": "Solo puedo analizar descripciones de puestos de trabajo reales",
+      "off_topic_title": "Texto no válido",
+      "off_topic_description": "El texto pegado no parece una descripción de puesto real. Incluye el título del cargo, responsabilidades y requisitos para obtener un análisis preciso.",
       "error": "Error al analizar compatibilidad ATS",
       "short_description": "Pega la descripción del puesto (mínimo 20 caracteres)",
       "strengths": "Fortalezas",
@@ -471,6 +476,12 @@
       "add_experience": "Añadir experiencia",
       "add_education": "Añadir educación",
       "add_skill": "Añadir habilidad",
+      "suggest_skills": "Sugerir con IA",
+      "suggest_skills_loading": "Buscando habilidades...",
+      "suggest_skills_added": "Habilidades agregadas",
+      "suggest_skills_empty": "No se encontraron sugerencias para este rol",
+      "suggest_skills_error": "Error al obtener sugerencias",
+      "suggest_skills_job_title_hint": "Completa el cargo en Información Personal para obtener mejores sugerencias",
       "add_language": "Añadir idioma",
       "add_certification": "Añadir certificación",
       "add_project": "Añadir proyecto",
@@ -565,7 +576,12 @@
     "status_applied": "Postulados",
     "status_interview": "Entrevista",
     "status_offer": "Oferta",
-    "status_rejected": "Rechazado"
+    "status_rejected": "Rechazado",
+    "follow_up_label": "Recordatorio",
+    "follow_up_placeholder": "Fecha de seguimiento",
+    "follow_up_set": "Recordatorio guardado",
+    "follow_up_removed": "Recordatorio eliminado",
+    "follow_up_error": "Error al guardar recordatorio"
   },
   "cover_letter_editor": {
     "ai_title": "Generar con IA",
@@ -587,5 +603,28 @@
   "public_cv": {
     "shared_via": "CV compartido via",
     "create_cta": "Empieza creando tu CV →"
+  },
+  "referral": {
+    "title": "Programa de referidos",
+    "description": "Comparte tu link y gana recompensas cuando tus amigos se suscriban al plan Pro.",
+    "total_referred": "Registrados",
+    "paid_referrals": "Convertidos a Pro",
+    "your_link": "Tu link de referido",
+    "copy": "Copiar",
+    "copied": "¡Link copiado!",
+    "copied_short": "Copiado",
+    "how_it_works_title": "¿Cómo funciona?",
+    "how_step_1": "Comparte tu link único con amigos o en redes.",
+    "how_step_2": "Se registran usando tu link.",
+    "how_step_3": "Cuando activan Pro, se cuenta como conversión.",
+    "rewards_title": "Recompensas",
+    "cycle_count": "Referidos Pro (ciclo)",
+    "reward_tier_1": "30% de descuento",
+    "reward_tier_2": "50% de descuento",
+    "reward_tier_3": "1 mes gratis (100%)",
+    "rewards_title": "Recompensas por ciclo",
+    "max_tier": "¡Alcanzaste el máximo nivel!",
+    "reward_applied": "El crédito se aplica automáticamente en tu próxima factura.",
+    "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas."
   }
 }

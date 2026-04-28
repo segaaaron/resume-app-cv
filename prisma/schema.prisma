@@ -29,6 +29,12 @@ model User {
   marketingConsent Boolean       @default(false)
   deletedAt        DateTime?
   auditLogs        AuditLog[]
+  referralCode      String?       @unique
+  referredBy        String?
+  referredUsers     User[]        @relation("Referrals")
+  referrer          User?         @relation("Referrals", fields: [referredBy], references: [id])
+  referralRewardTier  Int          @default(0)
+  referralCycleOffset Int          @default(0)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 }
@@ -127,11 +133,21 @@ model Application {
   notes     String?   @db.Text
   url       String?
   salary    String?
-  appliedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  appliedAt      DateTime?
+  followUpAt     DateTime?
+  reminderSentAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([userId])
+  @@index([followUpAt])
+}
+
+model StripeEvent {
+  id          String   @id // Stripe event ID (e.g. evt_xxx)
+  processedAt DateTime @default(now())
+
+  @@index([processedAt])
 }
 
 model AuditLog {

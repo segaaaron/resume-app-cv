@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs"
 import { z } from "zod"
 import { db } from "@/lib/db"
 import { DEFAULT_SECTIONS } from "@/types/resume"
+import { nanoid } from "nanoid"
 
 // Simple in-memory rate limiter: max 5 attempts per IP per 15 minutes
 const attempts = new Map<string, { count: number; resetAt: number }>()
@@ -22,13 +23,14 @@ function checkRateLimit(ip: string): boolean {
 }
 
 const schema = z.object({
-  name:              z.string().min(2).max(255),
-  email:             z.string().email(),
-  password:          z.string().min(8).max(128)
+  name:             z.string().min(2).max(255),
+  email:            z.string().email(),
+  password:         z.string().min(8).max(128)
     .regex(/[A-Z]/, "Debe contener al menos una mayúscula")
     .regex(/[a-z]/, "Debe contener al menos una minúscula")
     .regex(/[0-9]/, "Debe contener al menos un número"),
-  marketingConsent:  z.boolean().optional(),
+  marketingConsent: z.boolean().optional(),
+  referralCode:     z.string().max(20).optional(),
 })
 
 export async function POST(req: Request) {
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { name, email, password, marketingConsent } = schema.parse(body)
+    const { name, email, password, marketingConsent, referralCode } = schema.parse(body)
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
@@ -50,9 +52,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true }, { status: 201 })
     }
 
+    // Resolve referrer if a valid code was provided
+    let referrerId: string | undefined
+    if (referralCode) {
+      const referrer = await db.user.findUnique({
+        where: { referralCode },
+        select: { id: true },
+      })
+      if (referrer) referrerId = referrer.id
+    }
+
     const hashed = await bcrypt.hash(password, 12)
     await db.user.create({
-      data: { name, email, password: hashed, marketingConsent: marketingConsent ?? false },
+      data: {
+        name,
+        email,
+        password: hashed,
+        marketingConsent: marketingConsent ?? false,
+        referralCode: nanoid(8), // every user gets their own code on signup
+        ...(referrerId ? { referredBy: referrerId } : {}),
+      },
     })
 
     return NextResponse.json({ success: true }, { status: 201 })

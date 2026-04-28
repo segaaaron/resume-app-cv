@@ -20,6 +20,7 @@ export default function RegisterForm() {
   const locale = useLocale()
   const searchParams = useSearchParams()
   const planParam = searchParams.get("plan")
+  const refParam = searchParams.get("ref")
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -44,7 +45,7 @@ export default function RegisterForm() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ ...data, referralCode: refParam ?? undefined }),
     })
 
     if (!res.ok) {

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import SettingsForm from "@/components/dashboard/SettingsForm"
+import ReferralCard from "@/components/dashboard/ReferralCard"
 
 export default async function SettingsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
@@ -16,8 +17,9 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   if (!user) redirect(`/${locale}/login`)
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-2xl space-y-6">
       <SettingsForm user={user} />
+      <ReferralCard />
     </div>
   )
 }

@@ -1,25 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import OpenAI from "openai"
 import { validateAIInput } from "@/lib/ai-safety"
-
-function getOpenAI() { return new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) }
-
-// Simple in-memory rate limiter: 20 requests per IP per hour
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 })
-    return true
-  }
-  if (entry.count >= 20) return false
-  entry.count++
-  return true
-}
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, buildResumeContext } from "@/lib/ai-client"
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
@@ -41,76 +24,58 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { personalDetails, jobTitle, workExperience, education, skills } = await req.json()
+  const body = await req.json()
 
-  const name = personalDetails?.firstName
-    ? `${personalDetails.firstName} ${personalDetails.lastName ?? ""}`.trim()
-    : null
+  // Accept either a full sectionData object or individual fields
+  const sectionData = body.sectionData ?? body
+  const resumeContext = buildResumeContext(sectionData)
 
-  const experienceLines = (workExperience ?? [])
-    .slice(0, 3)
-    .map((j: { jobTitle?: string; employer?: string; startDate?: string; endDate?: string }) =>
-      `- ${j.jobTitle ?? ""} en ${j.employer ?? ""} (${j.startDate ?? ""} - ${j.endDate ?? "Presente"})`
-    )
-    .join("\n")
-
-  const educationLines = (education ?? [])
-    .slice(0, 2)
-    .map((e: { degree?: string; school?: string }) => `- ${e.degree ?? ""} en ${e.school ?? ""}`)
-    .join("\n")
-
-  const skillNames = (skills ?? [])
-    .slice(0, 8)
-    .map((s: { name?: string }) => s.name)
-    .filter(Boolean)
-    .join(", ")
-
-  if (!experienceLines && !educationLines && !skillNames) {
+  if (!resumeContext.trim()) {
     return NextResponse.json({ error: "Not enough data" }, { status: 400 })
   }
 
   // Validate free-text inputs for prompt injection
-  const textToValidate = [jobTitle, experienceLines, educationLines, skillNames].filter(Boolean).join(" ")
-  if (textToValidate.trim().length > 0) {
-    const validation = validateAIInput(textToValidate, 5000)
-    if (!validation.valid && validation.error === "injection_detected") {
-      return NextResponse.json({ error: "invalid_input" }, { status: 400 })
-    }
+  const validation = validateAIInput(resumeContext, 5000)
+  if (!validation.valid && validation.error === "injection_detected") {
+    return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
 
-  const prompt = `Eres un experto en redacción de CVs profesionales.
-Genera un resumen profesional conciso y atractivo para un CV, basado en los siguientes datos del candidato.
+  const prompt = `TAREA: Genera 3 versiones de resumen profesional de alto impacto para un CV, basadas en los siguientes datos del candidato.
 
-${name ? `Nombre: ${name}` : ""}
-${jobTitle ? `Puesto objetivo: ${jobTitle}` : ""}
-${experienceLines ? `Experiencia laboral:\n${experienceLines}` : ""}
-${educationLines ? `Educación:\n${educationLines}` : ""}
-${skillNames ? `Habilidades: ${skillNames}` : ""}
+${resumeContext}
 
-El resumen debe:
-- Tener entre 2 y 4 oraciones
-- Ser en primera persona o tercera persona (elige la más natural)
-- Destacar los puntos fuertes del candidato
-- Ser impactante, profesional y orientado a resultados
-- Estar en el idioma que predomina en los datos (español o inglés)
+REGLAS DE ORO (aplica todas):
+1. Fórmula de posicionamiento: "[Título profesional] con [X años/logro clave] especializado en [área]. Ha [verbo de logro] [resultado medible] mediante [diferenciador único]."
+2. Verbos de logro: Lideró, Desarrolló, Impulsó, Optimizó, Transformó. NUNCA uses "Responsable de" o "Con experiencia en".
+3. Métricas: si los datos no incluyen cifras, usa placeholders explícitos entre corchetes ([X años], [N equipos], [X%]). NUNCA inventes números reales.
+4. Sin pronombres personales: no uses "Yo", "Mi", "Soy". El resumen habla del candidato en tercera persona o de forma impersonal.
+5. ATS-Friendly: incluye palabras clave del sector del candidato de forma natural.
+6. Longitud: 2 a 4 oraciones máximo. Denso en valor, sin relleno.
+7. Idioma: mismo idioma que predomina en los datos.
 
-Genera 3 versiones del resumen, de más formal a más creativa.
+Genera exactamente 3 versiones con estos tonos:
+- Versión 1: Formal y ejecutiva
+- Versión 2: Equilibrada y directa
+- Versión 3: Dinámica y orientada al impacto
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_MODEL,
       max_tokens: 800,
+      temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "Eres un asistente especializado EXCLUSIVAMENTE en redacción de currículums vitae (CVs) y perfiles profesionales. " +
-            "Solo debes generar resúmenes relacionados con experiencia laboral, habilidades y trayectoria profesional. " +
-            "Si los datos recibidos no corresponden a un perfil profesional real, responde únicamente con este JSON: {\"versions\": []} sin texto adicional.",
+            "Eres un Consultor de Carrera de Élite y experto en optimización de ATS (Applicant Tracking Systems). " +
+            "Tu especialidad es crear resúmenes profesionales de alto impacto que posicionan al candidato como la opción ideal para su industria. " +
+            "Usas la fórmula: [Título] con [logro clave] especializado en [área], que ha [verbo de logro] [resultado] mediante [diferenciador]. " +
+            "SOLO respondes con perfiles profesionales reales. Cuando no hay métricas, usas placeholders explícitos entre corchetes ([X años], [X%]). NUNCA inventas cifras. " +
+            "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional.",
         },
         { role: "user", content: prompt },
       ],

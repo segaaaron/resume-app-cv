@@ -1,25 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import OpenAI from "openai"
 import { validateAIInput } from "@/lib/ai-safety"
-
-function getOpenAI() { return new OpenAI({ apiKey: process.env.OPENAI_API_KEY }) }
-
-// Simple in-memory rate limiter: 20 requests per IP per hour
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 })
-    return true
-  }
-  if (entry.count >= 20) return false
-  entry.count++
-  return true
-}
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, buildResumeContext } from "@/lib/ai-client"
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
@@ -57,37 +40,23 @@ export async function POST(req: Request) {
   if (resumeId) {
     const resume = await db.resume.findFirst({
       where: { id: resumeId, userId: session.user.id },
-      select: { personalDetails: true, title: true },
+      select: { personalDetails: true, sections: true },
     })
-    if (resume?.personalDetails) {
+    if (resume) {
+      // Merge personalDetails + sections into sectionData format for buildResumeContext
       const pd = resume.personalDetails as Record<string, unknown>
-      const sections = pd as {
-        personalDetails?: { firstName?: string; lastName?: string; jobTitle?: string; email?: string }
-        workExperience?: Array<{ jobTitle?: string; employer?: string; startDate?: string; endDate?: string; description?: string }>
-        education?: Array<{ degree?: string; institution?: string }>
-        skills?: Array<{ name?: string }>
-        summary?: string
+      const sections = Array.isArray(resume.sections) ? resume.sections as Array<{ type: string; items?: unknown[] }> : []
+
+      const sectionMap: Record<string, unknown> = { personalDetails: pd }
+      for (const sec of sections) {
+        if (sec.type && Array.isArray(sec.items)) {
+          sectionMap[sec.type] = sec.items
+        }
       }
+      // summary may be a top-level string field on personalDetails or a section
+      if (typeof pd.summary === "string") sectionMap.summary = pd.summary
 
-      const name = sections.personalDetails?.firstName
-        ? `${sections.personalDetails.firstName} ${sections.personalDetails.lastName ?? ""}`.trim()
-        : ""
-      const currentRole = sections.personalDetails?.jobTitle ?? ""
-      const summaryText = typeof sections.summary === "string" ? sections.summary : ""
-
-      const expLines = (sections.workExperience ?? []).slice(0, 3).map(
-        (j) => `- ${j.jobTitle ?? ""} en ${j.employer ?? ""} (${j.startDate ?? ""} - ${j.endDate ?? "Presente"})`
-      ).join("\n")
-
-      const skillNames = (sections.skills ?? []).slice(0, 8).map((s) => s.name).filter(Boolean).join(", ")
-
-      resumeContext = [
-        name ? `Nombre del candidato: ${name}` : "",
-        currentRole ? `Puesto actual/objetivo: ${currentRole}` : "",
-        summaryText ? `Resumen profesional: ${summaryText}` : "",
-        expLines ? `Experiencia laboral:\n${expLines}` : "",
-        skillNames ? `Habilidades: ${skillNames}` : "",
-      ].filter(Boolean).join("\n")
+      resumeContext = buildResumeContext(sectionMap)
     }
   }
 
@@ -108,7 +77,7 @@ Instrucciones para la carta:
 - Entre 3 y 4 párrafos concisos
 - Párrafo 1: por qué el candidato está interesado en esta empresa/puesto específico
 - Párrafo 2: logros y experiencia más relevante para el puesto
-- Párrafo 3: qué valor aportaría al equipo
+- Párrafo 3: qué valor concreto aportaría al equipo
 - Párrafo 4 (opcional): cierre motivador con llamada a la acción
 - Usa el mismo idioma que los datos del candidato (español o inglés)
 - Sé específico, evita clichés genéricos
@@ -118,8 +87,9 @@ Responde ÚNICAMENTE con un JSON: {"body": "<cuerpo de la carta>"}`
 
   try {
     const response = await getOpenAI().chat.completions.create({
-      model: "gpt-4o-mini",
+      model: AI_MODEL,
       max_tokens: 1000,
+      temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {
