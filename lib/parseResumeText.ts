@@ -691,19 +691,66 @@ export function parseResumeText(rawText: string): ParsedResume {
     id: `sk${i + 1}`, name, level: "intermediate",
   }))
 
-  // ── Skill rescue: collect short tokens from non-work sections that look like tech skills ──
-  // Sidebar PDFs often split the skills column across multiple text blocks
+  // ── Skill rescue: collect short tokens from sidebar overflow in any section ──
+  // 2-column PDFs split the skills sidebar across work/education blocks.
+  // We restore rescue for all sections but blocklist employer names, cities, and
+  // job titles already parsed from work experience to prevent those from leaking in.
+  const workBlocklist = new Set<string>()
+
+  // From parsed work experience
+  for (const job of result.workExperience) {
+    if (job.employer) workBlocklist.add(job.employer.toLowerCase().trim())
+    if (job.city) workBlocklist.add(job.city.toLowerCase().trim())
+    if (job.jobTitle) {
+      workBlocklist.add(job.jobTitle.toLowerCase().trim())
+      for (const part of job.jobTitle.split(/[&,]/)) workBlocklist.add(part.toLowerCase().trim())
+    }
+  }
+
+  // From education institutions (e.g. "Catalica University")
+  for (const edu of result.education) {
+    if (edu.institution) workBlocklist.add(edu.institution.toLowerCase().trim())
+    if (edu.city) workBlocklist.add(edu.city.toLowerCase().trim())
+  }
+
+  // Personal location
+  if (result.personalDetails.city) workBlocklist.add(result.personalDetails.city.toLowerCase().trim())
+  if (result.personalDetails.country) workBlocklist.add(result.personalDetails.country.toLowerCase().trim())
+  if (result.personalDetails.jobTitle) workBlocklist.add(result.personalDetails.jobTitle.toLowerCase().trim())
+
+  // Scan raw work/education lines for "Company, City" patterns the parser may have missed
+  // Only comma-split lines — avoids blocking single-token skill names
+  for (const sec of sections) {
+    if (!["work", "education"].includes(sec.type)) continue
+    for (const line of sec.lines) {
+      if (line.length > 50 || isBullet(line) || /\d{4}/.test(line) || line.endsWith(".")) continue
+      if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+      const commaIdx = line.indexOf(",")
+      if (commaIdx > 0) {
+        workBlocklist.add(line.slice(0, commaIdx).toLowerCase().trim())
+        workBlocklist.add(line.slice(commaIdx + 1).toLowerCase().trim())
+      }
+    }
+  }
+
   const existingSkillNames = new Set(result.skills.map(s => s.name.toLowerCase()))
   for (const sec of sections) {
-    if (["skills", "header", "summary", "work", "education", "languages", "certifications", "projects", "volunteer", "hobbies"].includes(sec.type)) continue
+    if (["skills", "header", "summary", "languages", "hobbies"].includes(sec.type)) continue
     for (const line of sec.lines) {
       if (line.length > 35 || line.endsWith(".") || line.endsWith(",")) continue
       if (/\d{4}/.test(line)) continue
       if (isBullet(line)) continue
       if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
-      for (const part of line.split(/[,|•·\t\/]/)) {
+      // Don't split on "/" — preserves tokens like "CI/CD", "iOS back-end services"
+      for (const part of line.split(/[,|•·\t]/)) {
         const s = clean(part)
-        if (s.length > 1 && s.length < 35 && !/^\d+$/.test(s) && !existingSkillNames.has(s.toLowerCase()) && result.skills.length < 60) {
+        if (
+          s.length > 1 && s.length < 35 &&
+          !/^\d+$/.test(s) &&
+          !existingSkillNames.has(s.toLowerCase()) &&
+          !workBlocklist.has(s.toLowerCase().trim()) &&
+          result.skills.length < 60
+        ) {
           result.skills.push({ id: `sk${result.skills.length + 1}`, name: s, level: "intermediate" })
           existingSkillNames.add(s.toLowerCase())
         }
