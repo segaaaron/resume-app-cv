@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Link2 } from "lucide-react"
+import { Mail, Phone, MapPin, Link2, Globe } from "lucide-react"
 import type { TemplateProps } from "./types"
 
 export default function SidebarTemplate({ content, candidate, colorScheme }: TemplateProps) {
@@ -7,16 +7,10 @@ export default function SidebarTemplate({ content, candidate, colorScheme }: Tem
   return (
     <div className="flex print:min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Sidebar */}
-      <div
-        className="w-[52mm] shrink-0 px-5 pt-8 pb-6 flex flex-col gap-3"
-        style={{ backgroundColor: colorScheme }}
-      >
+      <div className="w-[52mm] shrink-0 px-5 pt-8 pb-6 flex flex-col gap-3" style={{ backgroundColor: colorScheme }}>
         {candidate.photo && (
-          <img
-            src={candidate.photo}
-            alt={candidate.name}
-            className="w-18 h-18 rounded-full object-cover border-[3px] border-white/30 mx-auto"
-          />
+          <img src={candidate.photo} alt={candidate.name}
+            className="w-20 h-20 rounded-full object-cover border-[3px] border-white/30 mx-auto" />
         )}
         {candidate.name && (
           <p className="text-[12px] font-bold text-white text-center mt-2">{candidate.name}</p>
@@ -24,30 +18,35 @@ export default function SidebarTemplate({ content, candidate, colorScheme }: Tem
         {candidate.jobTitle && (
           <p className="text-[8.5px] text-white/60 uppercase tracking-[0.18em] text-center">{candidate.jobTitle}</p>
         )}
-
-        <div className="flex flex-col gap-1.5 mt-1">
+        <div className="flex flex-col gap-2 mt-2">
           {candidate.email && (
-            <div className="flex items-center gap-1.5">
-              <Mail className="h-2.5 w-2.5 text-white/75 shrink-0" />
+            <div className="flex items-start gap-1.5">
+              <Mail className="h-2.5 w-2.5 text-white/75 shrink-0 mt-0.5" />
               <span className="text-[8.5px] text-white/75 break-all">{candidate.email}</span>
             </div>
           )}
           {candidate.phone && (
-            <div className="flex items-center gap-1.5">
-              <Phone className="h-2.5 w-2.5 text-white/75 shrink-0" />
+            <div className="flex items-start gap-1.5">
+              <Phone className="h-2.5 w-2.5 text-white/75 shrink-0 mt-0.5" />
               <span className="text-[8.5px] text-white/75">{candidate.phone}</span>
             </div>
           )}
           {candidate.address && (
-            <div className="flex items-center gap-1.5">
-              <MapPin className="h-2.5 w-2.5 text-white/75 shrink-0" />
+            <div className="flex items-start gap-1.5">
+              <MapPin className="h-2.5 w-2.5 text-white/75 shrink-0 mt-0.5" />
               <span className="text-[8.5px] text-white/75">{candidate.address}</span>
             </div>
           )}
           {candidate.linkedin && (
-            <div className="flex items-center gap-1.5">
-              <Link2 className="h-2.5 w-2.5 text-white/75 shrink-0" />
+            <div className="flex items-start gap-1.5">
+              <Link2 className="h-2.5 w-2.5 text-white/75 shrink-0 mt-0.5" />
               <span className="text-[8.5px] text-white/75 break-all">{candidate.linkedin}</span>
+            </div>
+          )}
+          {candidate.website && (
+            <div className="flex items-start gap-1.5">
+              <Globe className="h-2.5 w-2.5 text-white/75 shrink-0 mt-0.5" />
+              <span className="text-[8.5px] text-white/75 break-all">{candidate.website}</span>
             </div>
           )}
         </div>
@@ -58,7 +57,6 @@ export default function SidebarTemplate({ content, candidate, colorScheme }: Tem
         <p className="text-[9.5px] tracking-[0.3em] uppercase font-semibold mb-4" style={{ color: colorScheme }}>
           Carta de Presentación
         </p>
-
         <p className="text-[10px] text-gray-500 mb-3">{today}</p>
 
         {(content.recipientName || content.recipientTitle || content.company) && (
@@ -69,20 +67,27 @@ export default function SidebarTemplate({ content, candidate, colorScheme }: Tem
           </div>
         )}
 
-        <p className="text-[11px] mb-4">
+        {content.subject && (
+          <p className="text-[11px] font-semibold mb-4">
+            <span className="text-gray-500 font-normal">Asunto: </span>{content.subject}
+          </p>
+        )}
+
+        <p className="text-[11px] mb-3">
           {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
         </p>
 
         {content.body
-          ? <div className="text-[11px] text-gray-800 leading-[1.6] mb-4 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
+          ? <div className="text-[11px] text-gray-800 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-6 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
           : <p className="text-[11px] text-gray-300 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
         }
 
-        {content.closing && <p className="text-[11px] mb-5">{content.closing},</p>}
+        {content.closing && <p className="text-[11px] mb-8">{content.closing},</p>}
 
-        <div className="mt-6">
+        <div className="mt-2">
           <div className="h-px w-28" style={{ backgroundColor: colorScheme }} />
           {candidate.name && <p className="text-[11px] font-semibold mt-1.5">{candidate.name}</p>}
+          {candidate.jobTitle && <p className="text-[10px] text-gray-500">{candidate.jobTitle}</p>}
         </div>
       </div>
     </div>

@@ -74,6 +74,7 @@ export default async function CoverLetterPage({ params, searchParams }: { params
         recipientName: content.recipientName ?? "",
         recipientTitle: content.recipientTitle ?? "",
         company: content.company ?? "",
+        subject: content.subject ?? "",
         body: content.body ?? "",
         closing: content.closing ?? "",
       }}

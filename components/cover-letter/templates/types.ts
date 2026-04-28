@@ -13,6 +13,7 @@ export interface CoverLetterContent {
   recipientName: string
   recipientTitle: string
   company: string
+  subject: string
   body: string
   closing: string
   candidateName?: string

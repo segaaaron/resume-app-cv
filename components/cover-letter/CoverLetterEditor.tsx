@@ -14,10 +14,20 @@ import UpgradeModal from "@/components/editor/UpgradeModal"
 import SidebarTemplate from "./templates/SidebarTemplate"
 import ElegantTemplate from "./templates/ElegantTemplate"
 import SplitTemplate from "./templates/SplitTemplate"
+import ExecutiveBoldTemplate from "./templates/ExecutiveBoldTemplate"
+import MaterialCardTemplate from "./templates/MaterialCardTemplate"
+import GradientHorizonTemplate from "./templates/GradientHorizonTemplate"
+import MinimalLineTemplate from "./templates/MinimalLineTemplate"
+import TwoToneTemplate from "./templates/TwoToneTemplate"
+import TimelineTemplate from "./templates/TimelineTemplate"
+import MonogramTemplate from "./templates/MonogramTemplate"
+import ArchitectTemplate from "./templates/ArchitectTemplate"
+import DiagonalTemplate from "./templates/DiagonalTemplate"
+import NewspaperTemplate from "./templates/NewspaperTemplate"
 import RichTextEditor from "./RichTextEditor"
 import type { CandidateData, CoverLetterContent } from "./templates/types"
 
-type TemplateId = "classic" | "sidebar" | "elegant" | "split"
+type TemplateId = "classic" | "sidebar" | "elegant" | "split" | "executive" | "material" | "gradient" | "minimal" | "twotone" | "timeline" | "monogram" | "architect" | "diagonal" | "newspaper"
 
 interface Props {
   id: string
@@ -32,10 +42,20 @@ interface Props {
   isNew?: boolean
 }
 
-const TEMPLATES: { id: TemplateId; labelKey: "template_sidebar" | "template_elegant" | "template_split" | "template_label" }[] = [
-  { id: "sidebar", labelKey: "template_sidebar" },
+const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
   { id: "elegant", labelKey: "template_elegant" },
-  { id: "split", labelKey: "template_split" },
+  { id: "sidebar", labelKey: "template_sidebar", pro: true },
+  { id: "split", labelKey: "template_split", pro: true },
+  { id: "executive", labelKey: "template_executive", pro: true },
+  { id: "material", labelKey: "template_material", pro: true },
+  { id: "gradient", labelKey: "template_gradient", pro: true },
+  { id: "twotone", labelKey: "template_twotone", pro: true },
+  { id: "timeline", labelKey: "template_timeline", pro: true },
+  { id: "minimal", labelKey: "template_minimal", pro: true },
+  { id: "monogram", labelKey: "template_monogram", pro: true },
+  { id: "architect", labelKey: "template_architect", pro: true },
+  { id: "diagonal", labelKey: "template_diagonal", pro: true },
+  { id: "newspaper", labelKey: "template_newspaper", pro: true },
 ]
 
 // SVG thumbnails schematically representing each template
@@ -107,10 +127,243 @@ function SplitThumb({ color }: { color: string }) {
   )
 }
 
+function ExecutiveThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#f9fafb" />
+      <rect x="0" y="0" width="80" height="3" fill={color} />
+      <rect x="8" y="10" width="40" height="4" rx="1" fill="#1f2937" />
+      <rect x="8" y="16" width="22" height="2" rx="1" fill={color} opacity="0.7" />
+      <rect x="8" y="22" width="64" height="0.8" fill="#e5e7eb" />
+      <rect x="8" y="28" width="50" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="32" width="60" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="36" width="55" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="43" width="60" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="47" width="50" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="51" width="58" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="58" width="60" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="62" width="45" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="46" y="90" width="26" height="0.8" fill={color} opacity="0.7" />
+      <rect x="46" y="93" width="18" height="1.5" rx="0.75" fill="#374151" />
+    </svg>
+  )
+}
+
+function MaterialThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#f3f4f6" />
+      <rect x="6" y="6" width="68" height="98" rx="4" fill="white" />
+      <rect x="6" y="6" width="68" height="22" rx="4" fill={color} opacity="0.9" />
+      <rect x="6" y="20" width="68" height="8" fill={color} opacity="0.9" />
+      <circle cx="40" cy="32" r="7" fill="white" />
+      <circle cx="40" cy="32" r="5" fill={color} opacity="0.4" />
+      <rect x="18" y="44" width="44" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="22" y="48" width="36" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="12" y="55" width="56" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="12" y="59" width="50" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="12" y="63" width="56" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="12" y="70" width="50" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="12" y="74" width="56" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="12" y="90" width="22" height="2" rx="1" fill={color} opacity="0.7" />
+      <rect x="12" y="94" width="16" height="0.8" fill={color} opacity="0.4" />
+    </svg>
+  )
+}
+
+function GradientThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#f9fafb" />
+      <defs>
+        <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={color} stopOpacity="1" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.5" />
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="80" height="32" fill="url(#grad)" rx="0" />
+      <rect x="0" y="22" width="80" height="10" fill="url(#grad)" />
+      <ellipse cx="80" cy="32" rx="80" ry="8" fill="#f9fafb" />
+      <rect x="10" y="8" width="32" height="3" rx="1.5" fill="white" opacity="0.9" />
+      <rect x="10" y="13" width="20" height="2" rx="1" fill="white" opacity="0.6" />
+      <rect x="10" y="40" width="55" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="10" y="44" width="60" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="10" y="51" width="60" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="10" y="55" width="48" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="10" y="62" width="60" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="10" y="90" width="20" height="2" rx="1" fill={color} opacity="0.7" />
+    </svg>
+  )
+}
+
+function TwoToneThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <rect x="0" y="0" width="28" height="110" fill={color} opacity="0.9" />
+      <circle cx="14" cy="20" r="8" fill="white" opacity="0.35" />
+      <rect x="3" y="31" width="22" height="2" rx="1" fill="white" opacity="0.6" />
+      <rect x="5" y="35" width="18" height="1.5" rx="0.75" fill="white" opacity="0.35" />
+      <rect x="3" y="41" width="10" height="1" rx="0.5" fill="white" opacity="0.35" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="white" opacity="0.35" />
+      <rect x="3" y="49" width="12" height="1" rx="0.5" fill="white" opacity="0.35" />
+      <rect x="33" y="10" width="40" height="1.2" rx="0.6" fill="#d1d5db" />
+      <rect x="33" y="14" width="34" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="33" y="22" width="40" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="33" y="26" width="36" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="33" y="30" width="40" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="33" y="37" width="40" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="33" y="41" width="30" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="33" y="90" width="20" height="2" rx="1" fill={color} opacity="0.7" />
+    </svg>
+  )
+}
+
+function TimelineThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <line x1="16" y1="0" x2="16" y2="110" stroke={color} strokeWidth="1.5" opacity="0.2" />
+      <circle cx="16" cy="16" r="7" fill={color} opacity="0.3" />
+      <circle cx="16" cy="16" r="4" fill={color} opacity="0.6" />
+      <rect x="5" y="27" width="8" height="1" rx="0.5" fill={color} opacity="0.3" />
+      <rect x="5" y="32" width="6" height="1" rx="0.5" fill={color} opacity="0.3" />
+      <rect x="5" y="37" width="8" height="1" rx="0.5" fill={color} opacity="0.3" />
+      <rect x="26" y="8" width="30" height="3" rx="1.5" fill="#374151" />
+      <rect x="26" y="13" width="18" height="2" rx="1" fill={color} opacity="0.6" />
+      <rect x="26" y="22" width="48" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="26" y="26" width="44" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="26" y="33" width="48" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="26" y="37" width="40" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="26" y="44" width="48" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="26" y="90" width="16" height="0.8" fill={color} opacity="0.6" />
+    </svg>
+  )
+}
+
+function MinimalThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <rect x="8" y="10" width="38" height="4" rx="1" fill="#9ca3af" />
+      <rect x="8" y="17" width="22" height="1.5" fill={color} opacity="0.7" />
+      <rect x="8" y="22" width="50" height="1" rx="0.5" fill="#f3f4f6" />
+      <rect x="8" y="38" width="52" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="44" width="56" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="50" width="52" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="58" width="56" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="8" y="64" width="48" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="8" y="72" width="56" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="8" y="90" width="20" height="1.2" rx="0.6" fill="#6b7280" />
+    </svg>
+  )
+}
+
+function MonogramThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <rect x="8" y="8" width="14" height="14" rx="3" fill={color} opacity="0.9" />
+      <rect x="11" y="12" width="8" height="6" rx="1" fill="white" opacity="0.6" />
+      <rect x="26" y="10" width="28" height="3.5" rx="1" fill="#374151" />
+      <rect x="26" y="16" width="16" height="2" rx="1" fill="#9ca3af" />
+      <rect x="8" y="26" width="64" height="0.8" fill="#e5e7eb" />
+      <rect x="8" y="33" width="44" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="37" width="36" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="8" y="44" width="56" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="48" width="48" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="55" width="56" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="8" y="90" width="24" height="0.8" fill={color} opacity="0.7" />
+      <rect x="68" y="96" width="6" height="1" fill={color} opacity="0.5" />
+      <rect x="74" y="90" width="1" height="7" fill={color} opacity="0.5" />
+    </svg>
+  )
+}
+
+function ArchitectThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <rect x="0" y="0" width="80" height="110" fill="none" stroke="#e5e7eb" strokeWidth="1.5" />
+      <rect x="0" y="0" width="80" height="22" fill="#f9fafb" />
+      <line x1="40" y1="0" x2="40" y2="22" stroke="#e5e7eb" strokeWidth="0.8" />
+      <rect x="5" y="6" width="28" height="3" rx="1" fill="#374151" />
+      <rect x="5" y="11" width="16" height="2" rx="1" fill={color} opacity="0.7" />
+      <rect x="44" y="7" width="3" height="3" rx="0.5" fill={color} opacity="0.5" />
+      <rect x="49" y="8" width="18" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="44" y="13" width="3" height="3" rx="0.5" fill={color} opacity="0.5" />
+      <rect x="49" y="14" width="14" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="30" width="56" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="34" width="48" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="41" width="56" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="8" y="45" width="44" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <rect x="8" y="52" width="56" height="1.5" rx="0.75" fill="#f3f4f6" />
+      <line x1="0" y1="98" x2="80" y2="98" stroke="#e5e7eb" strokeWidth="0.8" />
+      <rect x="8" y="101" width="20" height="1.5" rx="0.75" fill="#374151" />
+      <rect x="60" y="100" width="12" height="0.8" fill={color} opacity="0.6" />
+    </svg>
+  )
+}
+
+function DiagonalThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <polygon points="0,0 80,0 80,26 0,36" fill={color} opacity="0.9" />
+      <rect x="8" y="6" width="28" height="3" rx="1" fill="white" opacity="0.9" />
+      <rect x="8" y="11" width="18" height="2" rx="1" fill="white" opacity="0.6" />
+      <rect x="8" y="16" width="40" height="1" rx="0.5" fill="white" opacity="0.3" />
+      <rect x="8" y="46" width="56" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="50" width="48" height="1.5" rx="0.75" fill="#d1d5db" />
+      <rect x="8" y="57" width="56" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="61" width="44" height="1.5" rx="0.75" fill="#e5e7eb" />
+      <rect x="8" y="90" width="20" height="2" rx="1" fill={color} opacity="0.7" />
+      <rect x="74" y="55" width="2" height="16" fill={color} opacity="0.25" />
+    </svg>
+  )
+}
+
+function NewspaperThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="white" />
+      <rect x="8" y="8" width="64" height="4" rx="1" fill="#374151" opacity="0.9" />
+      <rect x="8" y="14" width="64" height="0.8" fill="#374151" opacity="0.9" />
+      <rect x="8" y="16" width="64" height="0.4" fill="#9ca3af" opacity="0.7" />
+      <rect x="8" y="20" width="35" height="1.2" rx="0.6" fill="#9ca3af" />
+      <rect x="50" y="20" width="22" height="1.2" rx="0.6" fill="#9ca3af" />
+      <rect x="8" y="24" width="64" height="0.8" fill="#374151" opacity="0.9" />
+      <rect x="8" y="26" width="64" height="0.4" fill="#9ca3af" opacity="0.7" />
+      <rect x="8" y="32" width="34" height="1.2" rx="0.6" fill="#d1d5db" />
+      <rect x="8" y="36" width="34" height="1.2" rx="0.6" fill="#d1d5db" />
+      <rect x="8" y="40" width="30" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="8" y="44" width="34" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="8" y="48" width="28" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="47" y="32" width="25" height="1.2" rx="0.6" fill="#d1d5db" />
+      <rect x="47" y="36" width="25" height="1.2" rx="0.6" fill="#d1d5db" />
+      <rect x="47" y="40" width="22" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="47" y="44" width="25" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <rect x="47" y="48" width="20" height="1.2" rx="0.6" fill="#e5e7eb" />
+      <line x1="44" y1="30" x2="44" y2="55" stroke="#e5e7eb" strokeWidth="0.8" />
+      <rect x="8" y="90" width="24" height="0.8" fill={color} opacity="0.7" />
+    </svg>
+  )
+}
+
 function TemplateThumbnail({ id, color }: { id: TemplateId; color: string }) {
   if (id === "sidebar") return <SidebarThumb color={color} />
-  if (id === "elegant") return <ElegantThumb color={color} />
+  if (id === "elegant" || id === "classic") return <ElegantThumb color={color} />
   if (id === "split") return <SplitThumb color={color} />
+  if (id === "executive") return <ExecutiveThumb color={color} />
+  if (id === "material") return <MaterialThumb color={color} />
+  if (id === "gradient") return <GradientThumb color={color} />
+  if (id === "twotone") return <TwoToneThumb color={color} />
+  if (id === "timeline") return <TimelineThumb color={color} />
+  if (id === "minimal") return <MinimalThumb color={color} />
+  if (id === "monogram") return <MonogramThumb color={color} />
+  if (id === "architect") return <ArchitectThumb color={color} />
+  if (id === "diagonal") return <DiagonalThumb color={color} />
+  if (id === "newspaper") return <NewspaperThumb color={color} />
   return <ElegantThumb color={color} />
 }
 
@@ -317,9 +570,19 @@ export default function CoverLetterEditor({
 
   const templateLabels: Record<TemplateId, string> = {
     classic: t("template_elegant"),
-    sidebar: t("template_sidebar"),
     elegant: t("template_elegant"),
+    sidebar: t("template_sidebar"),
     split: t("template_split"),
+    executive: t("template_executive"),
+    material: t("template_material"),
+    gradient: t("template_gradient"),
+    twotone: t("template_twotone"),
+    timeline: t("template_timeline"),
+    minimal: t("template_minimal"),
+    monogram: t("template_monogram"),
+    architect: t("template_architect"),
+    diagonal: t("template_diagonal"),
+    newspaper: t("template_newspaper"),
   }
 
   return (
@@ -377,26 +640,34 @@ export default function CoverLetterEditor({
           {/* Template selector */}
           <div className="space-y-2">
             <p className="text-xs font-semibold">{t("template_label")}</p>
-            <div className="grid grid-cols-3 gap-2">
-              {TEMPLATES.map((tpl) => (
-                <button
-                  key={tpl.id}
-                  type="button"
-                  onClick={() => selectTemplate(tpl.id)}
-                  className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-1.5 transition-all ${
-                    activeTemplate === tpl.id
-                      ? "border-primary ring-2 ring-primary/20"
-                      : "border-border hover:border-primary/40"
-                  }`}
-                >
-                  <div className="w-full aspect-[0.73] rounded overflow-hidden bg-gray-50">
-                    <TemplateThumbnail id={tpl.id} color={colorScheme} />
-                  </div>
-                  <span className="text-[10px] text-center leading-tight text-muted-foreground font-medium">
-                    {templateLabels[tpl.id]}
-                  </span>
-                </button>
-              ))}
+            <div className="grid grid-cols-4 gap-1.5">
+              {TEMPLATES.map((tpl) => {
+                const locked = tpl.pro && !isPro
+                return (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    onClick={() => locked ? setUpgradeOpen(true) : selectTemplate(tpl.id)}
+                    className={`relative flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-all ${
+                      activeTemplate === tpl.id
+                        ? "border-primary ring-2 ring-primary/20"
+                        : "border-border hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="w-full aspect-[0.73] rounded overflow-hidden bg-gray-50 relative">
+                      <TemplateThumbnail id={tpl.id} color={colorScheme} />
+                      {locked && (
+                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
+                          <Lock className="h-3.5 w-3.5 text-primary" />
+                        </div>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-center leading-tight text-muted-foreground font-medium truncate w-full">
+                      {templateLabels[tpl.id]}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
 
@@ -512,6 +783,15 @@ export default function CoverLetterEditor({
               placeholder={t("company_placeholder")}
               value={content.company}
               onChange={(e) => updateContent("company", e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs">{t("subject_label")}</Label>
+            <Input
+              placeholder={t("subject_placeholder")}
+              value={content.subject ?? ""}
+              onChange={(e) => updateContent("subject", e.target.value)}
             />
           </div>
 
@@ -652,20 +932,24 @@ export default function CoverLetterEditor({
         </div>
 
         {/* Right: preview */}
-        <div className="flex-1 overflow-auto bg-gray-100 flex justify-center py-8 print:py-0 print:bg-white">
+        <div className="flex-1 overflow-auto bg-[#e8e8e8] flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0">
           <div
-            className="bg-white shadow-2xl print:shadow-none overflow-hidden print:min-h-[297mm]"
-            style={{ width: "210mm" }}
+            className="bg-white shadow-2xl print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"
+            style={{ width: "210mm", minHeight: "297mm" }}
           >
-            {activeTemplate === "sidebar" && (
-              <SidebarTemplate content={content} candidate={candidate} colorScheme={colorScheme} />
-            )}
-            {activeTemplate === "split" && (
-              <SplitTemplate content={content} candidate={candidate} colorScheme={colorScheme} />
-            )}
-            {(activeTemplate === "elegant" || activeTemplate === "classic") && (
-              <ElegantTemplate content={content} candidate={candidate} colorScheme={colorScheme} />
-            )}
+            {(activeTemplate === "elegant" || activeTemplate === "classic") && <ElegantTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "sidebar" && <SidebarTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "split" && <SplitTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "executive" && <ExecutiveBoldTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "material" && <MaterialCardTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "gradient" && <GradientHorizonTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "twotone" && <TwoToneTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "timeline" && <TimelineTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "minimal" && <MinimalLineTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "monogram" && <MonogramTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "architect" && <ArchitectTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "diagonal" && <DiagonalTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {activeTemplate === "newspaper" && <NewspaperTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
           </div>
         </div>
       </div>
