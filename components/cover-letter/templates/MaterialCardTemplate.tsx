@@ -10,20 +10,20 @@ export default function MaterialCardTemplate({ content, candidate, colorScheme }
   return (
     <div className="print:min-h-[297mm] bg-gray-50" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Card */}
-      <div className="mx-[12mm] my-[10mm] bg-white rounded-2xl shadow-xl overflow-hidden">
-        {/* Card header */}
-        <div className="relative px-8 pt-8 pb-10 text-center" style={{ backgroundColor: colorScheme }}>
+      <div className="mx-[12mm] my-[10mm] bg-white rounded-2xl shadow-xl">
+        {/* Card header — extra pb makes room for the avatar overlap */}
+        <div className="relative px-8 pt-8 pb-14 text-center rounded-t-2xl overflow-hidden" style={{ backgroundColor: colorScheme }}>
           <h1 className="text-[22px] font-bold text-white leading-tight">{candidate.name || "Tu Nombre"}</h1>
           {candidate.jobTitle && <p className="text-[10px] text-white/75 mt-1 tracking-wide">{candidate.jobTitle}</p>}
         </div>
 
-        {/* Avatar — overlapping card header */}
-        <div className="flex justify-center -mt-9">
+        {/* Avatar — overlapping header/body boundary, outside overflow-hidden */}
+        <div className="flex justify-center -mt-9 relative z-10">
           {candidate.photo ? (
             <img src={candidate.photo} alt={candidate.name}
-              className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-md" />
+              className="w-16 h-16 rounded-full object-cover border-4 border-white shadow-lg" />
           ) : (
-            <div className="w-16 h-16 rounded-full border-4 border-white shadow-md flex items-center justify-center text-white text-xl font-bold"
+            <div className="w-16 h-16 rounded-full border-4 border-white shadow-lg flex items-center justify-center text-white text-xl font-bold"
               style={{ backgroundColor: colorScheme }}>
               {initials}
             </div>
