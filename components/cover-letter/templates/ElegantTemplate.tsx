@@ -1,4 +1,4 @@
-import { Mail, Phone, MapPin, Linkedin, Globe, Calendar } from "lucide-react"
+import { Mail, Phone, MapPin, Link2, Globe, Calendar } from "lucide-react"
 import type { TemplateProps } from "./types"
 
 export default function ElegantTemplate({ content, candidate, colorScheme }: TemplateProps) {
@@ -8,7 +8,7 @@ export default function ElegantTemplate({ content, candidate, colorScheme }: Tem
     { icon: Mail, value: candidate.email },
     { icon: Phone, value: candidate.phone },
     { icon: MapPin, value: candidate.address },
-    { icon: Linkedin, value: candidate.linkedin },
+    { icon: Link2, value: candidate.linkedin },
     { icon: Globe, value: candidate.website },
   ].filter((c) => c.value)
 

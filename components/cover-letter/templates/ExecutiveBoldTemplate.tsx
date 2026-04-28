@@ -8,7 +8,7 @@ export default function ExecutiveBoldTemplate({ content, candidate, colorScheme 
     { icon: Mail, value: candidate.email },
     { icon: Phone, value: candidate.phone },
     { icon: MapPin, value: candidate.address },
-    { icon: Linkedin, value: candidate.linkedin },
+    { icon: Link2, value: candidate.linkedin },
     { icon: Globe, value: candidate.website },
   ].filter((c) => c.value)
 
