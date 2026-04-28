@@ -49,7 +49,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { prompt, sectionData } = await req.json()
+  const { prompt, sectionData, language: rawLanguage } = await req.json()
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   if (!prompt || typeof prompt !== "string" || prompt.trim().length < 10) {
     return NextResponse.json({ error: "Describe tu perfil (mínimo 10 caracteres)" }, { status: 400 })
@@ -142,7 +144,8 @@ Reglas:
             "Eres un redactor experto en CVs profesionales. Tu trabajo es tomar instrucciones del candidato y traducirlas en contenido profesional concreto para cada sección de su CV. " +
             "Respetas y amplías lo que el candidato menciona — nunca inventas información no derivada de su descripción. " +
             "SOLO procesas instrucciones relacionadas con perfil laboral real. " +
-            "Si el texto no tiene relación profesional, responde con: {} sin texto adicional.",
+            "Si el texto no tiene relación profesional, responde con: {} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: userPrompt },
       ],

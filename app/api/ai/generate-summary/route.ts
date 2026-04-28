@@ -25,6 +25,8 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json()
+  const language = body.language === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   // Accept either a full sectionData object or individual fields
   const sectionData = body.sectionData ?? body
@@ -75,7 +77,8 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
             "Tu especialidad es crear resúmenes profesionales de alto impacto que posicionan al candidato como la opción ideal para su industria. " +
             "Usas la fórmula: [Título] con [logro clave] especializado en [área], que ha [verbo de logro] [resultado] mediante [diferenciador]. " +
             "SOLO respondes con perfiles profesionales reales. Cuando no hay métricas, usas placeholders explícitos entre corchetes ([X años], [X%]). NUNCA inventas cifras. " +
-            "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional.",
+            "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: prompt },
       ],

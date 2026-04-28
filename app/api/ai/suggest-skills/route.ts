@@ -9,6 +9,7 @@ const schema = z.object({
   jobTitle: z.string().min(1).max(200),
   industry: z.string().max(100).optional(),
   existingSkills: z.array(z.string()).max(50).optional(),
+  language: z.enum(["es", "en"]).optional(),
 })
 
 export async function POST(req: Request) {
@@ -37,7 +38,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid input" }, { status: 400 })
   }
 
-  const { jobTitle, industry, existingSkills = [] } = parsed.data
+  const { jobTitle, industry, existingSkills = [], language: rawLanguage } = parsed.data
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   const validation = validateAIInput(jobTitle)
   if (!validation.valid) {
@@ -75,7 +78,7 @@ Rules:
       messages: [
         {
           role: "system",
-          content: "You are a career coach. Only suggest skills relevant to professional CV/resume contexts. If the input is off-topic or nonsensical, return { \"skills\": [] }.",
+          content: "You are a career coach. Only suggest skills relevant to professional CV/resume contexts. If the input is off-topic or nonsensical, return { \"skills\": [] }. " + langInstruction,
         },
         { role: "user", content: prompt },
       ],

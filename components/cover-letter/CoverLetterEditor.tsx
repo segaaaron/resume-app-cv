@@ -14,7 +14,8 @@ import UpgradeModal from "@/components/editor/UpgradeModal"
 import SidebarTemplate from "./templates/SidebarTemplate"
 import ElegantTemplate from "./templates/ElegantTemplate"
 import SplitTemplate from "./templates/SplitTemplate"
-import RichTextEditor from "./RichTextEditor"
+import dynamic from "next/dynamic"
+const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
 import type { CandidateData, CoverLetterContent } from "./templates/types"
 
 type TemplateId = "classic" | "sidebar" | "elegant" | "split"
@@ -28,6 +29,7 @@ interface Props {
   content: CoverLetterContent
   initialCandidate: CandidateData
   isPro?: boolean
+  language?: string
 }
 
 const TEMPLATES: { id: TemplateId; labelKey: "template_sidebar" | "template_elegant" | "template_split" | "template_label" }[] = [
@@ -120,6 +122,7 @@ export default function CoverLetterEditor({
   content: initialContent,
   initialCandidate,
   isPro = false,
+  language = "es",
 }: Props) {
   const t = useTranslations("cover_letter_editor")
   const [title, setTitle] = useState(initialTitle)
@@ -179,6 +182,7 @@ export default function CoverLetterEditor({
           company: content.company,
           jobTitle: title,
           tone: aiTone,
+          language,
         }),
       })
       if (res.status === 403) { toast.error(t("ai_pro_only")); return }
@@ -210,6 +214,7 @@ export default function CoverLetterEditor({
           company: content.company,
           jobTitle: title,
           recipientTitle: content.recipientTitle,
+          language,
         }),
       })
       if (res.status === 403) { toast.error(t("ai_pro_only")); return }
@@ -275,6 +280,9 @@ export default function CoverLetterEditor({
         setSaved(true)
         setDirty(false)
         toast.success(t("save_success"))
+      } else if (res.status === 404 || res.status === 403) {
+        // Cover letter deleted or no longer accessible — stop silently
+        setDirty(false)
       } else {
         toast.error(t("save_error"))
       }

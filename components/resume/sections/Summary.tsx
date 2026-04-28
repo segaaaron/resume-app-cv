@@ -12,7 +12,7 @@ export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore()
   const [generating, setGenerating] = useState(false)
   const [versions, setVersions] = useState<string[]>([])
 
@@ -26,7 +26,7 @@ export default function SummarySection() {
       const res = await fetch("/api/ai/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personalDetails, jobTitle, workExperience, education, skills }),
+        body: JSON.stringify({ personalDetails, jobTitle, workExperience, education, skills, language: config.language }),
       })
       if (res.status === 403) { toast.error(ai("pro_only")); return }
       if (res.status === 400) { toast.error(ai("not_enough_data_summary")); return }

@@ -22,7 +22,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { body, company, jobTitle, recipientTitle } = await req.json()
+  const { body, company, jobTitle, recipientTitle, language: rawLanguage } = await req.json()
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   if (!body || typeof body !== "string" || body.trim().length < 20) {
     return NextResponse.json({ error: "Body text is required" }, { status: 400 })
@@ -63,8 +65,8 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 1500,
-      temperature: AI_TEMPERATURE,
+      max_tokens: 2000,
+      temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -74,7 +76,8 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
             "Tu especialidad es transformar cartas genéricas en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
             "SOLO trabajas con cartas de presentación laborales. " +
             "Cuando no hay métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N proyectos]) — NUNCA inventas cifras reales. " +
-            "Si el contenido no es una carta de presentación laboral, responde únicamente con: {\"versions\": []} sin texto adicional.",
+            "Si el contenido no es una carta de presentación laboral, responde únicamente con: {\"versions\": []} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: prompt },
       ],

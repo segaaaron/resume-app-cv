@@ -22,7 +22,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { jobDescription, sectionData } = await req.json()
+  const { jobDescription, sectionData, language: rawLanguage } = await req.json()
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   if (!jobDescription || typeof jobDescription !== "string" || jobDescription.trim().length < 20) {
     return NextResponse.json({ error: "Job description too short" }, { status: 400 })
@@ -78,7 +80,8 @@ Reglas:
             "Eres un asistente especializado EXCLUSIVAMENTE en análisis de compatibilidad entre currículums vitae (CVs) y descripciones de puestos de trabajo (job descriptions). " +
             "Solo debes analizar contenido relacionado con empleo, habilidades profesionales, experiencia laboral y requisitos de puestos. " +
             "Si el contenido recibido no corresponde a un CV o a una descripción de empleo real, responde únicamente con este JSON: " +
-            "{\"score\": 0, \"label\": \"off_topic\", \"summary\": \"\", \"strengths\": [], \"gaps\": [], \"missingKeywords\": [], \"suggestions\": []} sin texto adicional.",
+            "{\"score\": 0, \"label\": \"off_topic\", \"summary\": \"\", \"strengths\": [], \"gaps\": [], \"missingKeywords\": [], \"suggestions\": []} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: prompt },
       ],

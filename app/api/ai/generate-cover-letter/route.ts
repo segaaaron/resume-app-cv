@@ -22,7 +22,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { resumeId, recipientName, recipientTitle, company, jobTitle, tone } = await req.json()
+  const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage } = await req.json()
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   // Validate free-text inputs for prompt injection
   const userText = [company, jobTitle, recipientName, recipientTitle].filter(Boolean).join(" ")
@@ -31,61 +33,88 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
 
-  // Load resume data if provided
+  // Load resume data — personalDetails field stores the full sectionData object
   let resumeContext = ""
   if (resumeId) {
     const resume = await db.resume.findFirst({
       where: { id: resumeId, userId: session.user.id },
-      select: { personalDetails: true, sections: true },
+      select: { personalDetails: true },
     })
-    if (resume) {
-      // Merge personalDetails + sections into sectionData format for buildResumeContext
-      const pd = resume.personalDetails as Record<string, unknown>
-      const sections = Array.isArray(resume.sections) ? resume.sections as Array<{ type: string; items?: unknown[] }> : []
-
-      const sectionMap: Record<string, unknown> = { personalDetails: pd }
-      for (const sec of sections) {
-        if (sec.type && Array.isArray(sec.items)) {
-          sectionMap[sec.type] = sec.items
-        }
-      }
-      // summary may be a top-level string field on personalDetails or a section
-      if (typeof pd.summary === "string") sectionMap.summary = pd.summary
-
-      resumeContext = buildResumeContext(sectionMap)
+    if (resume?.personalDetails) {
+      resumeContext = buildResumeContext(resume.personalDetails as Record<string, unknown>)
     }
   }
 
-  const toneLabel = tone === "formal" ? "formal y profesional" : tone === "creative" ? "creativo y dinámico" : "equilibrado y cercano"
+  const toneMap = {
+    formal: language === "en" ? "formal and professional" : "formal y profesional",
+    creative: language === "en" ? "dynamic, confident and creative" : "dinámico, seguro y creativo",
+    balanced: language === "en" ? "warm, professional and conversational" : "equilibrado, cercano y profesional",
+  }
+  const toneLabel = toneMap[(tone as keyof typeof toneMap)] ?? toneMap.balanced
 
-  const prompt = `Eres un experto en redacción de cartas de presentación profesionales para procesos de selección de personal.
+  const prompt = language === "en"
+    ? `You are a senior career coach and professional writer specializing in cover letters that get interviews at top companies.
 
-Genera el cuerpo de una carta de presentación en tono ${toneLabel} para el siguiente candidato y puesto.
+Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
 
-${resumeContext ? `=== DATOS DEL CANDIDATO ===\n${resumeContext}\n` : ""}
-=== PUESTO AL QUE APLICA ===
+${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}
+=== TARGET POSITION ===
+${company ? `Company: ${company}` : ""}
+${jobTitle ? `Role: ${jobTitle}` : ""}
+${recipientName ? `Hiring Manager: ${recipientName}${recipientTitle ? `, ${recipientTitle}` : ""}` : ""}
+
+Tone: ${toneLabel}
+
+Write 4 strong paragraphs:
+1. HOOK — Open with a specific, compelling reason why this candidate wants THIS role at THIS company. Reference something concrete about the company or the role. No generic openers like "I am writing to apply...".
+2. EXPERIENCE & ACHIEVEMENTS — Highlight 2–3 specific accomplishments from the candidate's background that are directly relevant to this role. Use concrete details from the resume (technologies, companies, impact). Quantify where possible.
+3. VALUE PROPOSITION — Explain exactly what the candidate brings to the team that others don't. Connect their unique skills and experience to the company's likely challenges or goals.
+4. CLOSING CTA — End with a confident, warm call to action. Express genuine enthusiasm and invite next steps.
+
+Rules:
+- Write ONLY the body (no salutation, no date, no signature block)
+- Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
+- Do NOT invent facts, metrics, or experiences not present in the candidate profile
+- Use [X%] only if the candidate mentions achievements without specific numbers
+- Avoid clichés: "passionate", "team player", "hard worker", "I believe", "I am excited to..."
+- Each paragraph must be 3–5 sentences, substantive and specific
+- The letter must feel written by a human, not AI
+
+Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using \\n\\n>"}`
+    : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
+
+Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
+
+${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}
+=== PUESTO OBJETIVO ===
 ${company ? `Empresa: ${company}` : ""}
 ${jobTitle ? `Puesto: ${jobTitle}` : ""}
-${recipientName ? `Destinatario: ${recipientName}${recipientTitle ? `, ${recipientTitle}` : ""}` : ""}
+${recipientName ? `Responsable de selección: ${recipientName}${recipientTitle ? `, ${recipientTitle}` : ""}` : ""}
 
-Instrucciones para la carta:
-- Escribe SOLO el cuerpo de la carta (sin saludo, sin despedida, sin fecha)
-- Entre 3 y 4 párrafos concisos
-- Párrafo 1: por qué el candidato está interesado en esta empresa/puesto específico
-- Párrafo 2: logros y experiencia más relevante para el puesto
-- Párrafo 3: qué valor concreto aportaría al equipo
-- Párrafo 4 (opcional): cierre motivador con llamada a la acción
-- Usa el mismo idioma que los datos del candidato (español o inglés)
-- Sé específico, evita clichés genéricos
-- No inventes datos que no están en el CV
+Tono: ${toneLabel}
 
-Responde ÚNICAMENTE con un JSON: {"body": "<cuerpo de la carta>"}`
+Escribe 4 párrafos sólidos:
+1. GANCHO — Abre con una razón específica y convincente de por qué este candidato quiere ESTE puesto en ESTA empresa. Referencia algo concreto del rol o la empresa. Nada genérico como "Me dirijo a usted para...".
+2. EXPERIENCIA Y LOGROS — Destaca 2–3 logros concretos del perfil del candidato directamente relevantes para este puesto. Usa detalles reales del CV (tecnologías, empresas, impacto). Cuantifica donde sea posible.
+3. PROPUESTA DE VALOR — Explica exactamente qué aporta este candidato que otros no tienen. Conecta sus habilidades únicas con los desafíos u objetivos probables de la empresa.
+4. CIERRE Y CTA — Cierra con una llamada a la acción segura y cálida. Expresa entusiasmo genuino e invita a dar los próximos pasos.
+
+Reglas:
+- Escribe SOLO el cuerpo (sin saludo, sin fecha, sin bloque de firma)
+- NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
+- NO inventes datos, métricas ni experiencias que no estén en el perfil del candidato
+- Usa [X%] solo si el candidato menciona logros sin cifras concretas
+- Evita clichés: "apasionado", "trabajo en equipo", "me motiva", "creo firmemente", "estoy emocionado de..."
+- Cada párrafo debe tener 3–5 oraciones, sustanciales y específicas
+- La carta debe sonar escrita por un humano, no por IA
+
+Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo usando \\n\\n>"}`
 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 1000,
-      temperature: AI_TEMPERATURE,
+      max_tokens: 1500,
+      temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -93,7 +122,8 @@ Responde ÚNICAMENTE con un JSON: {"body": "<cuerpo de la carta>"}`
           content:
             "Eres un asistente especializado EXCLUSIVAMENTE en redacción de cartas de presentación profesionales para búsqueda de empleo. " +
             "Solo debes generar contenido relacionado con candidaturas laborales y experiencia profesional. " +
-            "Si la solicitud no corresponde a una carta de presentación laboral real, responde únicamente con: {\"body\": \"\"} sin texto adicional.",
+            "Si la solicitud no corresponde a una carta de presentación laboral real, responde únicamente con: {\"body\": \"\"} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: prompt },
       ],

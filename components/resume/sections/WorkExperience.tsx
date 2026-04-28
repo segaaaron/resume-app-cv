@@ -18,7 +18,7 @@ export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore()
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(jobs[0]?.id ?? null)
   const [improvingId, setImprovingId] = useState<string | null>(null)
@@ -35,7 +35,7 @@ export default function WorkExperienceSection() {
       const res = await fetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle }),
+        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: config.language }),
       })
       if (res.status === 403) { toast.error(ai("pro_only")); return }
       if (res.status === 422) { toast.error(ai("off_topic_bullet")); return }

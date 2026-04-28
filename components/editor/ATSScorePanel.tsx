@@ -111,7 +111,7 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
 
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore()
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
@@ -142,7 +142,7 @@ export default function ATSScorePanel() {
         const res = await fetch("/api/ai/review-cv", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectionData, question: text }),
+          body: JSON.stringify({ sectionData, question: text, language: config.language }),
         })
         if (res.status === 403) { toast.error(t("pro_only")); return }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
@@ -154,7 +154,7 @@ export default function ATSScorePanel() {
         const res = await fetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobDescription: text, sectionData }),
+          body: JSON.stringify({ jobDescription: text, sectionData, language: config.language }),
         })
         if (res.status === 403) { toast.error(t("pro_only")); return }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }

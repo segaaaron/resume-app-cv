@@ -53,7 +53,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { sectionData, question } = await req.json()
+  const { sectionData, question, language: rawLanguage } = await req.json()
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   if (!sectionData || typeof sectionData !== "object") {
     return NextResponse.json({ error: "CV data required" }, { status: 400 })
@@ -129,7 +131,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             "Eres un Consultor de Carrera de Élite especializado en revisión y optimización de CVs. " +
             "SOLO respondes sobre el CV del candidato, perfil profesional, experiencia laboral o búsqueda de empleo. " +
             "Si la pregunta no tiene relación, responde únicamente con: " +
-            "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} sin texto adicional.",
+            "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: prompt },
       ],

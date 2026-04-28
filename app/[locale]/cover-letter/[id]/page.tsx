@@ -66,6 +66,7 @@ export default async function CoverLetterPage({ params }: { params: Promise<{ id
       fontFamily={letter.fontFamily}
       templateId={letter.templateId ?? "classic"}
       isPro={isPro}
+      language={locale}
       content={{
         recipientName: content.recipientName ?? "",
         recipientTitle: content.recipientTitle ?? "",

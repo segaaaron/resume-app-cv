@@ -103,7 +103,7 @@ function SectionUpdateBlock({
 }
 
 export default function AIProfileFillPanel() {
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore()
   const [expanded, setExpanded] = useState(false)
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)
@@ -135,7 +135,7 @@ export default function AIProfileFillPanel() {
       const res = await fetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), sectionData }),
+        body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: config.language }),
       })
       if (res.status === 403) { toast.error("Esta función es exclusiva del plan Pro"); return }
       if (res.status === 400) { toast.error("Describe tu perfil con más detalle"); return }

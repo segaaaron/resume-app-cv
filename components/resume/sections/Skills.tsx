@@ -13,7 +13,7 @@ import { toast } from "sonner"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore()
   const skills = sectionData.skills
   const [suggesting, setSuggesting] = useState(false)
 
@@ -50,7 +50,7 @@ export default function SkillsSection() {
       const res = await fetch("/api/ai/suggest-skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobTitle, existingSkills }),
+        body: JSON.stringify({ jobTitle, existingSkills, language: config.language }),
       })
 
       if (res.status === 403) {

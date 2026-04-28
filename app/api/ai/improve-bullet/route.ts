@@ -24,7 +24,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { text, jobTitle, employer, industry } = await req.json()
+  const { text, jobTitle, employer, industry, language: rawLanguage } = await req.json()
+  const language = rawLanguage === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   if (!text || typeof text !== "string" || text.trim().length < 5) {
     return NextResponse.json({ error: "Text is required" }, { status: 400 })
@@ -73,7 +75,8 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
             "Tu especialidad es transformar descripciones de experiencia laboral ordinarias en logros de alto impacto usando la fórmula de Google: Logré [X] medido por [Y], haciendo [Z]. " +
             "SOLO respondes solicitudes relacionadas con CVs, experiencia laboral y perfiles de empleo. " +
             "Cuando el original no tiene métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N], [$Z]) — NUNCA inventas cifras reales. " +
-            "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"versions\": []} sin texto adicional.",
+            "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"versions\": []} sin texto adicional. " +
+            langInstruction,
         },
         { role: "user", content: prompt },
       ],
