@@ -167,3 +167,11 @@
     page-break-after: avoid;
   }
 }
+
+/* Disable Sonner toast hover lift/expand effect */
+[data-sonner-toaster] [data-sonner-toast]:hover {
+  transform: none !important;
+}
+[data-sonner-toaster] [data-lifted="true"] {
+  transform: none !important;
+}
