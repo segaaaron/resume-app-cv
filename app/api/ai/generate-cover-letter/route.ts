@@ -24,10 +24,6 @@ export async function POST(req: Request) {
 
   const { resumeId, recipientName, recipientTitle, company, jobTitle, tone } = await req.json()
 
-  if (!company) {
-    return NextResponse.json({ error: "Company name is required" }, { status: 400 })
-  }
-
   // Validate free-text inputs for prompt injection
   const userText = [company, jobTitle, recipientName, recipientTitle].filter(Boolean).join(" ")
   const validation = validateAIInput(userText, 2000)
@@ -68,7 +64,7 @@ Genera el cuerpo de una carta de presentación en tono ${toneLabel} para el sigu
 
 ${resumeContext ? `=== DATOS DEL CANDIDATO ===\n${resumeContext}\n` : ""}
 === PUESTO AL QUE APLICA ===
-Empresa: ${company}
+${company ? `Empresa: ${company}` : ""}
 ${jobTitle ? `Puesto: ${jobTitle}` : ""}
 ${recipientName ? `Destinatario: ${recipientName}${recipientTitle ? `, ${recipientTitle}` : ""}` : ""}
 

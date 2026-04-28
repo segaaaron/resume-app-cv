@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useRef } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
-import { ArrowLeft, Save, Printer, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp } from "lucide-react"
+import { ArrowLeft, Save, Printer, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp, Camera, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import UpgradeModal from "@/components/editor/UpgradeModal"
 import SidebarTemplate from "./templates/SidebarTemplate"
@@ -134,6 +134,18 @@ export default function CoverLetterEditor({
     (initialTemplateId as TemplateId) === "classic" ? "elegant" : (initialTemplateId as TemplateId) ?? "elegant"
   )
   const [candidateOpen, setCandidateOpen] = useState(false)
+  const photoInputRef = useRef<HTMLInputElement>(null)
+
+  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string
+      updateCandidate("photo", result)
+    }
+    reader.readAsDataURL(file)
+  }
 
   // AI generation state
   const [generating, setGenerating] = useState(false)
@@ -171,7 +183,6 @@ export default function CoverLetterEditor({
       })
       if (res.status === 403) { toast.error(t("ai_pro_only")); return }
       if (res.status === 422) { toast.error(t("ai_off_topic")); return }
-      if (res.status === 400) { toast.error(t("ai_missing_company")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       updateContent("body", data.body)
@@ -381,6 +392,50 @@ export default function CoverLetterEditor({
 
             {candidateOpen && (
               <div className="space-y-2.5 pt-1">
+                {/* Photo upload */}
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-muted-foreground">{t("candidate_photo")}</Label>
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-14 h-14 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-muted/30 shrink-0 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+                      onClick={() => photoInputRef.current?.click()}
+                    >
+                      {candidate.photo ? (
+                        <img src={candidate.photo} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <Camera className="h-5 w-5 text-muted-foreground" />
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => photoInputRef.current?.click()}
+                      >
+                        {candidate.photo ? t("candidate_photo_change") : t("candidate_photo_add")}
+                      </Button>
+                      {candidate.photo && (
+                        <button
+                          type="button"
+                          onClick={() => { updateCandidate("photo", ""); if (photoInputRef.current) photoInputRef.current.value = "" }}
+                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="h-3 w-3" /> {t("candidate_photo_remove")}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handlePhotoUpload}
+                  />
+                </div>
+
                 {(
                   [
                     ["name", "candidate_name", "text"],
