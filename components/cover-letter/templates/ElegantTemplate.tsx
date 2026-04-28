@@ -1,14 +1,26 @@
+import { Mail, Phone, MapPin, Linkedin, Globe, Calendar } from "lucide-react"
 import type { TemplateProps } from "./types"
 
 export default function ElegantTemplate({ content, candidate, colorScheme }: TemplateProps) {
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
-  const contactParts = [candidate.email, candidate.phone, candidate.address, candidate.linkedin, candidate.website].filter(Boolean)
+  const contacts = [
+    { icon: Mail, value: candidate.email },
+    { icon: Phone, value: candidate.phone },
+    { icon: MapPin, value: candidate.address },
+    { icon: Linkedin, value: candidate.linkedin },
+    { icon: Globe, value: candidate.website },
+  ].filter((c) => c.value)
 
   return (
     <div className="px-[25mm] pt-[14mm] pb-[14mm] print:min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Header */}
       <div className="text-center mb-2">
+        {candidate.photo && (
+          <img src={candidate.photo} alt={candidate.name}
+            className="w-16 h-16 rounded-full object-cover mx-auto mb-3 border-2"
+            style={{ borderColor: colorScheme }} />
+        )}
         {candidate.name && (
           <h1 className="font-light tracking-[0.15em] uppercase text-[26px]" style={{ color: colorScheme }}>
             {candidate.name}
@@ -17,8 +29,17 @@ export default function ElegantTemplate({ content, candidate, colorScheme }: Tem
         {candidate.jobTitle && (
           <p className="text-[10px] tracking-[0.1em] uppercase text-gray-500 mt-0.5">{candidate.jobTitle}</p>
         )}
-        {contactParts.length > 0 && (
-          <p className="text-[9px] text-gray-400 mt-1.5">{contactParts.join("  ·  ")}</p>
+
+        {/* Contact row with icons */}
+        {contacts.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2">
+            {contacts.map(({ icon: Icon, value }, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <Icon className="h-2.5 w-2.5 shrink-0" style={{ color: colorScheme }} />
+                <span className="text-[9px] text-gray-500">{value}</span>
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
@@ -29,8 +50,11 @@ export default function ElegantTemplate({ content, candidate, colorScheme }: Tem
         <div className="h-px flex-1" style={{ backgroundColor: colorScheme }} />
       </div>
 
-      {/* Date right-aligned */}
-      <p className="text-[10px] text-gray-500 mb-4 text-right">{today}</p>
+      {/* Date */}
+      <div className="flex items-center justify-end gap-1 mb-4">
+        <Calendar className="h-2.5 w-2.5 text-gray-400" />
+        <p className="text-[10px] text-gray-500">{today}</p>
+      </div>
 
       {/* Recipient block */}
       {(content.recipientName || content.recipientTitle || content.company) && (
@@ -41,25 +65,21 @@ export default function ElegantTemplate({ content, candidate, colorScheme }: Tem
         </div>
       )}
 
-      {/* Subject */}
       {content.subject && (
         <p className="text-[11px] font-semibold mb-4">
           <span className="text-gray-500 font-normal">Asunto: </span>{content.subject}
         </p>
       )}
 
-      {/* Salutation */}
       <p className="text-[11px] mb-3">
         {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
       </p>
 
-      {/* Body */}
       {content.body
         ? <div className="text-[11px] text-gray-800 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-6 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
         : <p className="text-[11px] text-gray-300 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
       }
 
-      {/* Closing */}
       {content.closing && <p className="text-[11px] mb-8">{content.closing},</p>}
 
       <div className="mt-2">

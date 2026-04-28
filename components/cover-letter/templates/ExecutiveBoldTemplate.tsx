@@ -1,8 +1,16 @@
+import { Mail, Phone, MapPin, Linkedin, Globe, Calendar, Building2 } from "lucide-react"
 import type { TemplateProps } from "./types"
 
 export default function ExecutiveBoldTemplate({ content, candidate, colorScheme }: TemplateProps) {
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
-  const contactParts = [candidate.email, candidate.phone, candidate.address, candidate.linkedin].filter(Boolean)
+
+  const contacts = [
+    { icon: Mail, value: candidate.email },
+    { icon: Phone, value: candidate.phone },
+    { icon: MapPin, value: candidate.address },
+    { icon: Linkedin, value: candidate.linkedin },
+    { icon: Globe, value: candidate.website },
+  ].filter((c) => c.value)
 
   return (
     <div className="print:min-h-[297mm]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
@@ -11,26 +19,51 @@ export default function ExecutiveBoldTemplate({ content, candidate, colorScheme 
 
       {/* Header */}
       <div className="px-[20mm] pt-8 pb-6 border-b border-gray-200">
-        {candidate.name && (
-          <h1 className="text-[36px] font-bold tracking-tight text-gray-900 leading-none">{candidate.name}</h1>
-        )}
-        {candidate.jobTitle && (
-          <p className="text-[14px] font-medium mt-1.5" style={{ color: colorScheme }}>{candidate.jobTitle}</p>
-        )}
-        {contactParts.length > 0 && (
-          <p className="text-[9px] text-gray-400 mt-3 tracking-wide">{contactParts.join("  ·  ")}</p>
+        <div className="flex items-start gap-5">
+          {candidate.photo && (
+            <img src={candidate.photo} alt={candidate.name}
+              className="w-16 h-16 rounded-lg object-cover shrink-0 border border-gray-200" />
+          )}
+          <div className="flex-1">
+            {candidate.name && (
+              <h1 className="text-[36px] font-bold tracking-tight text-gray-900 leading-none">{candidate.name}</h1>
+            )}
+            {candidate.jobTitle && (
+              <p className="text-[14px] font-medium mt-1.5" style={{ color: colorScheme }}>{candidate.jobTitle}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Contact row with icons */}
+        {contacts.length > 0 && (
+          <div className="flex flex-wrap gap-x-5 gap-y-1 mt-3">
+            {contacts.map(({ icon: Icon, value }, i) => (
+              <span key={i} className="flex items-center gap-1">
+                <Icon className="h-2.5 w-2.5 shrink-0 text-gray-400" />
+                <span className="text-[9px] text-gray-500 tracking-wide">{value}</span>
+              </span>
+            ))}
+          </div>
         )}
       </div>
 
       {/* Body */}
       <div className="px-[20mm] pt-8 pb-10">
-        <p className="text-[10px] text-gray-400 mb-5 text-right italic">{today}</p>
+        <div className="flex items-center justify-end gap-1.5 mb-5">
+          <Calendar className="h-3 w-3 text-gray-300" />
+          <p className="text-[10px] text-gray-400 italic">{today}</p>
+        </div>
 
         {(content.recipientName || content.recipientTitle || content.company) && (
           <div className="mb-5">
             {content.recipientName && <p className="text-[12px] font-semibold text-gray-800">{content.recipientName}</p>}
-            {content.recipientTitle && <p className="text-[11px] text-gray-500">{content.recipientTitle}</p>}
-            {content.company && <p className="text-[11px] text-gray-500">{content.company}</p>}
+            {content.recipientTitle && (
+              <div className="flex items-center gap-1">
+                <Building2 className="h-2.5 w-2.5 text-gray-300" />
+                <p className="text-[11px] text-gray-500">{content.recipientTitle}</p>
+              </div>
+            )}
+            {content.company && <p className="text-[11px] text-gray-500 pl-3.5">{content.company}</p>}
           </div>
         )}
 

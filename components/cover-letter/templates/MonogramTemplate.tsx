@@ -1,3 +1,4 @@
+import { Mail, Phone, MapPin, Linkedin, Globe, Calendar } from "lucide-react"
 import type { TemplateProps } from "./types"
 
 export default function MonogramTemplate({ content, candidate, colorScheme }: TemplateProps) {
@@ -5,34 +6,57 @@ export default function MonogramTemplate({ content, candidate, colorScheme }: Te
   const initials = candidate.name
     ? candidate.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
     : "?"
-  const contactParts = [candidate.email, candidate.phone, candidate.address, candidate.linkedin].filter(Boolean)
+
+  const contacts = [
+    { icon: Mail, value: candidate.email },
+    { icon: Phone, value: candidate.phone },
+    { icon: MapPin, value: candidate.address },
+    { icon: Linkedin, value: candidate.linkedin },
+    { icon: Globe, value: candidate.website },
+  ].filter((c) => c.value)
 
   return (
     <div className="px-[20mm] pt-[14mm] pb-[14mm] print:min-h-[297mm]"
       style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Header row: Monogram stamp + name */}
       <div className="flex items-center gap-5 mb-2">
-        <div
-          className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-sm"
-          style={{ backgroundColor: colorScheme }}
-        >
-          {initials}
-        </div>
+        {candidate.photo ? (
+          <img src={candidate.photo} alt={candidate.name}
+            className="w-16 h-16 rounded-xl object-cover shrink-0 shadow-sm border-2"
+            style={{ borderColor: colorScheme }} />
+        ) : (
+          <div
+            className="w-16 h-16 rounded-xl flex items-center justify-center text-white text-2xl font-bold shrink-0 shadow-sm"
+            style={{ backgroundColor: colorScheme }}
+          >
+            {initials}
+          </div>
+        )}
         <div>
           {candidate.name && <h1 className="text-[22px] font-bold text-gray-800 leading-tight">{candidate.name}</h1>}
           {candidate.jobTitle && <p className="text-[10px] text-gray-400 mt-0.5">{candidate.jobTitle}</p>}
         </div>
       </div>
 
-      {/* Contact line */}
-      {contactParts.length > 0 && (
-        <p className="text-[9px] text-gray-400 mb-1">{contactParts.join("  ·  ")}</p>
+      {/* Contact row with icons */}
+      {contacts.length > 0 && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 mb-1">
+          {contacts.map(({ icon: Icon, value }, i) => (
+            <span key={i} className="flex items-center gap-1">
+              <Icon className="h-2.5 w-2.5 shrink-0" style={{ color: colorScheme }} />
+              <span className="text-[9px] text-gray-500">{value}</span>
+            </span>
+          ))}
+        </div>
       )}
 
       {/* Separator */}
       <div className="h-px bg-gray-200 my-4" />
 
-      <p className="text-[10px] text-gray-400 mb-5 text-right">{today}</p>
+      <div className="flex items-center justify-end gap-1.5 mb-5">
+        <Calendar className="h-2.5 w-2.5 text-gray-300" />
+        <p className="text-[10px] text-gray-400">{today}</p>
+      </div>
 
       {(content.recipientName || content.recipientTitle || content.company) && (
         <div className="mb-4">
@@ -65,7 +89,6 @@ export default function MonogramTemplate({ content, candidate, colorScheme }: Te
           {candidate.name && <p className="text-[11px] font-semibold text-gray-800">{candidate.name}</p>}
           <div className="mt-1 h-0.5 w-24" style={{ backgroundColor: colorScheme }} />
         </div>
-        {/* Decorative corner bracket */}
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
           <path d="M24 0 L24 8 M24 24 L16 24" stroke={colorScheme} strokeWidth="2" strokeLinecap="round" />
         </svg>
