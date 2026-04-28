@@ -262,8 +262,7 @@ export default function AIProfileFillPanel() {
                     suggestedDescription={u.description}
                     applied={appliedWork.has(u.id)}
                     accentClass="border-violet-300 text-violet-700 hover:bg-violet-50"
-                    onApply={() => applyItemUpdate(u.id, "workExperience", u.description, appliedWork, setAppliedWork,
-                      i => i.employer ?? i.jobTitle ?? "Experiencia")}
+                    onApply={() => applyItemUpdate(u.id, "workExperience", u.description, appliedWork, setAppliedWork, job.employer ?? job.jobTitle ?? "Experiencia")}
                   />
                 )
               })}
@@ -280,8 +279,7 @@ export default function AIProfileFillPanel() {
                     suggestedDescription={u.description}
                     applied={appliedEdu.has(u.id)}
                     accentClass="border-blue-300 text-blue-700 hover:bg-blue-50"
-                    onApply={() => applyItemUpdate(u.id, "education", u.description, appliedEdu, setAppliedEdu,
-                      i => i.degree ?? i.institution ?? "Educación")}
+                    onApply={() => applyItemUpdate(u.id, "education", u.description, appliedEdu, setAppliedEdu, edu.degree ?? edu.institution ?? "Educación")}
                   />
                 )
               })}
@@ -298,8 +296,7 @@ export default function AIProfileFillPanel() {
                     suggestedDescription={u.description}
                     applied={appliedProj.has(u.id)}
                     accentClass="border-amber-300 text-amber-700 hover:bg-amber-50"
-                    onApply={() => applyItemUpdate(u.id, "projects", u.description, appliedProj, setAppliedProj,
-                      i => i.name ?? "Proyecto")}
+                    onApply={() => applyItemUpdate(u.id, "projects", u.description, appliedProj, setAppliedProj, proj.name ?? "Proyecto")}
                   />
                 )
               })}
@@ -316,8 +313,7 @@ export default function AIProfileFillPanel() {
                     suggestedDescription={u.description}
                     applied={appliedVol.has(u.id)}
                     accentClass="border-rose-300 text-rose-700 hover:bg-rose-50"
-                    onApply={() => applyItemUpdate(u.id, "volunteer", u.description, appliedVol, setAppliedVol,
-                      i => i.organization ?? i.role ?? "Voluntariado")}
+                    onApply={() => applyItemUpdate(u.id, "volunteer", u.description, appliedVol, setAppliedVol, vol.organization ?? vol.role ?? "Voluntariado")}
                   />
                 )
               })}
