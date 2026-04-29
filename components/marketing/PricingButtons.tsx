@@ -44,7 +44,7 @@ export default function PricingButtons({ plan }: Props) {
         window.location.href = data.url
       }
     } catch {
-      toast.error("Error de conexión")
+      toast.error(t("toast_connection_error"))
     } finally {
       setLoading(false)
     }

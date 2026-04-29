@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
-import { useLocale } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { Check, Zap, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,6 +28,7 @@ const features = [
 ]
 
 export default function UpgradeModal({ open, onClose }: Props) {
+  const t = useTranslations("editor.upgrade")
   const [loading, setLoading] = useState<"monthly" | "annual" | null>(null)
   const router = useRouter()
   const locale = useLocale()
@@ -54,7 +55,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
       if (data.url) window.location.href = data.url
     } catch {
-      toast.error("Error de conexión")
+      toast.error(t("toast_connection_error"))
     } finally {
       setLoading(null)
     }

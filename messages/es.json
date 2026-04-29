@@ -149,7 +149,8 @@
     "feature7": "Import PDF/Word",
     "feature8": "Soporte prioritario",
     "btn_loading": "Redirigiendo...",
-    "btn_start": "Empezar ahora"
+    "btn_start": "Empezar ahora",
+    "toast_connection_error": "Error de conexión"
   },
   "templates_page": {
     "badge": "29 plantillas",
@@ -467,7 +468,11 @@
       "gaps": "Brechas",
       "missing_keywords": "Keywords faltantes",
       "suggestions": "Sugerencias",
-      "clear": "Limpiar resultado"
+      "clear": "Limpiar resultado",
+      "toast_empty_input": "Escribe una pregunta o pega la descripción del puesto",
+      "toast_update_languages": "Actualiza tus idiomas en la sección correspondiente del editor",
+      "toast_update_certifications": "Actualiza tus certificaciones en la sección correspondiente del editor",
+      "toast_keywords_already": "Todas las keywords ya están en tus habilidades"
     },
     "cv_review": {
       "title": "Revisión IA del CV",
@@ -512,7 +517,13 @@
       "replace": "Reemplazar",
       "applied": "Aplicado",
       "add_selected": "Agregar seleccionadas",
-      "skills_hint": "Selecciona las habilidades que quieres agregar a tu CV."
+      "skills_hint": "Selecciona las habilidades que quieres agregar a tu CV.",
+      "toast_min_chars": "Describe tu perfil (mínimo 10 caracteres)",
+      "toast_pro_only": "Esta función es exclusiva del plan Pro",
+      "toast_more_detail": "Describe tu perfil con más detalle",
+      "toast_skills_already": "Las habilidades seleccionadas ya están en tu CV",
+      "toast_languages_already": "Los idiomas seleccionados ya están en tu CV",
+      "toast_job_title_updated": "Título del puesto actualizado"
     },
     "sections_form": {
       "add": "Agregar",
@@ -614,7 +625,11 @@
         "company": "Empresa",
         "phone": "Teléfono",
         "email": "Email"
-      }
+      },
+      "toast_pro_only": "Esta función requiere plan Pro"
+    },
+    "upgrade": {
+      "toast_connection_error": "Error de conexión"
     }
   },
   "kanban": {
@@ -735,12 +750,11 @@
     "how_step_1": "Comparte tu link único con amigos o en redes.",
     "how_step_2": "Se registran usando tu link.",
     "how_step_3": "Cuando activan Pro, se cuenta como conversión.",
-    "rewards_title": "Recompensas",
+    "rewards_title": "Recompensas por ciclo",
     "cycle_count": "Referidos Pro (ciclo)",
     "reward_tier_1": "30% de descuento",
     "reward_tier_2": "50% de descuento",
     "reward_tier_3": "1 mes gratis (100%)",
-    "rewards_title": "Recompensas por ciclo",
     "max_tier": "¡Alcanzaste el máximo nivel!",
     "reward_applied": "El crédito se aplica automáticamente en tu próxima factura.",
     "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas."

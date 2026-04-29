@@ -127,7 +127,7 @@ export default function ATSScorePanel() {
   async function handleSubmit() {
     const text = input.trim()
     if (text.length < 5) {
-      toast.error("Escribe una pregunta o pega la descripción del puesto")
+      toast.error(t("toast_empty_input"))
       return
     }
     setLoading(true)
@@ -212,13 +212,13 @@ export default function ATSScorePanel() {
         }
 
       } else if (field === "languages") {
-        toast.info("Actualiza tus idiomas en la sección correspondiente del editor")
+        toast.info(t("toast_update_languages"))
         setAppliedItems((prev) => new Set(prev).add(itemKey))
         setModal(null)
         return
 
       } else if (field === "certifications") {
-        toast.info("Actualiza tus certificaciones en la sección correspondiente del editor")
+        toast.info(t("toast_update_certifications"))
         setAppliedItems((prev) => new Set(prev).add(itemKey))
         setModal(null)
         return
@@ -256,7 +256,7 @@ export default function ATSScorePanel() {
     const missing = (atsResult?.missingKeywords ?? []).filter(
       (kw) => !existing.some((s) => s.name.toLowerCase() === kw.toLowerCase())
     )
-    if (missing.length === 0) { toast.info("Todas las keywords ya están en tus habilidades"); return }
+    if (missing.length === 0) { toast.info(t("toast_keywords_already")); return }
     updateSectionData("skills", [
       ...(existing as SkillItem[]),
       ...missing.map((kw): SkillItem => ({ id: nanoid(), name: kw, level: "intermediate" })),

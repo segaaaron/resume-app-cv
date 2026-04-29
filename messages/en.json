@@ -149,7 +149,8 @@
     "feature7": "PDF/Word import",
     "feature8": "Priority support",
     "btn_loading": "Redirecting...",
-    "btn_start": "Get started now"
+    "btn_start": "Get started now",
+    "toast_connection_error": "Connection error"
   },
   "templates_page": {
     "badge": "29 templates",
@@ -467,7 +468,11 @@
       "gaps": "Gaps",
       "missing_keywords": "Missing keywords",
       "suggestions": "Suggestions",
-      "clear": "Clear result"
+      "clear": "Clear result",
+      "toast_empty_input": "Enter a question or paste the job description",
+      "toast_update_languages": "Update your languages in the corresponding editor section",
+      "toast_update_certifications": "Update your certifications in the corresponding editor section",
+      "toast_keywords_already": "All keywords are already in your skills"
     },
     "cv_review": {
       "title": "AI CV Review",
@@ -512,7 +517,13 @@
       "replace": "Replace",
       "applied": "Applied",
       "add_selected": "Add selected",
-      "skills_hint": "Select the skills you want to add to your CV."
+      "skills_hint": "Select the skills you want to add to your CV.",
+      "toast_min_chars": "Describe your profile (minimum 10 characters)",
+      "toast_pro_only": "This feature is exclusive to the Pro plan",
+      "toast_more_detail": "Describe your profile in more detail",
+      "toast_skills_already": "Selected skills are already in your CV",
+      "toast_languages_already": "Selected languages are already in your CV",
+      "toast_job_title_updated": "Job title updated"
     },
     "sections_form": {
       "add": "Add",
@@ -614,7 +625,11 @@
         "company": "Company",
         "phone": "Phone",
         "email": "Email"
-      }
+      },
+      "toast_pro_only": "This feature requires a Pro plan"
+    },
+    "upgrade": {
+      "toast_connection_error": "Connection error"
     }
   },
   "kanban": {
@@ -735,12 +750,11 @@
     "how_step_1": "Share your unique link with friends or on social media.",
     "how_step_2": "They sign up using your link.",
     "how_step_3": "When they activate Pro, it counts as a conversion.",
-    "rewards_title": "Rewards",
+    "rewards_title": "Rewards per cycle",
     "cycle_count": "Pro referrals (cycle)",
     "reward_tier_1": "30% discount",
     "reward_tier_2": "50% discount",
     "reward_tier_3": "1 free month (100%)",
-    "rewards_title": "Rewards per cycle",
     "max_tier": "You've reached the highest level!",
     "reward_applied": "The credit is automatically applied to your next invoice.",
     "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again."

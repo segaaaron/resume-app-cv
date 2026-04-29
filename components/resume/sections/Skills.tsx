@@ -54,7 +54,7 @@ export default function SkillsSection() {
       })
 
       if (res.status === 403) {
-        toast.error("Esta función requiere plan Pro")
+        toast.error(t("toast_pro_only"))
         return
       }
       if (res.status === 422 || !res.ok) {

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type {
   PersonalDetails, SkillItem, WorkExperienceItem,
@@ -103,6 +104,7 @@ function SectionUpdateBlock({
 }
 
 export default function AIProfileFillPanel() {
+  const t = useTranslations("editor.ai_profile_fill")
   const { sectionData, updateSectionData, config } = useResumeStore()
   const [expanded, setExpanded] = useState(false)
   const [prompt, setPrompt] = useState("")
@@ -123,7 +125,7 @@ export default function AIProfileFillPanel() {
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set())
 
   async function handleGenerate() {
-    if (prompt.trim().length < 10) { toast.error("Describe tu perfil (mínimo 10 caracteres)"); return }
+    if (prompt.trim().length < 10) { toast.error(t("toast_min_chars")); return }
     setLoading(true)
     setResult(null)
     setAppliedSummary(false); setAppliedJobTitle(false); setAppliedHobbies(false)
@@ -137,8 +139,8 @@ export default function AIProfileFillPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: config.language }),
       })
-      if (res.status === 403) { toast.error("Esta función es exclusiva del plan Pro"); return }
-      if (res.status === 400) { toast.error("Describe tu perfil con más detalle"); return }
+      if (res.status === 403) { toast.error(t("toast_pro_only")); return }
+      if (res.status === 400) { toast.error(t("toast_more_detail")); return }
       if (res.status === 422) { toast.error("Solo puedo generar contenido a partir de descripciones profesionales reales"); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
@@ -156,7 +158,7 @@ export default function AIProfileFillPanel() {
   function applySkills() {
     const existing = (sectionData.skills ?? []) as SkillItem[]
     const toAdd = [...selectedSkills].filter(n => !existing.some(e => e.name.toLowerCase() === n.toLowerCase()))
-    if (!toAdd.length) { toast.info("Las habilidades seleccionadas ya están en tu CV"); return }
+    if (!toAdd.length) { toast.info(t("toast_skills_already")); return }
     updateSectionData("skills", [...existing, ...toAdd.map((n): SkillItem => ({ id: nanoid(), name: n, level: "intermediate" }))])
     setAppliedSkills(true)
     toast.success(`${toAdd.length} habilidad${toAdd.length > 1 ? "es" : ""} agregada${toAdd.length > 1 ? "s" : ""}`)
@@ -166,7 +168,7 @@ export default function AIProfileFillPanel() {
     const existing = (sectionData.languages ?? []) as LanguageItem[]
     const suggestions = (result?.suggestedLanguages ?? []).filter(l => selectedLanguages.has(l.name))
     const toAdd = suggestions.filter(l => !existing.some(e => e.name.toLowerCase() === l.name.toLowerCase()))
-    if (!toAdd.length) { toast.info("Los idiomas seleccionados ya están en tu CV"); return }
+    if (!toAdd.length) { toast.info(t("toast_languages_already")); return }
     const validLevels = ["elementary", "limited", "professional", "full_professional", "native"]
     updateSectionData("languages", [
       ...existing,
@@ -348,7 +350,7 @@ export default function AIProfileFillPanel() {
                     const pd = (sectionData.personalDetails ?? {}) as PersonalDetails
                     updateSectionData("personalDetails", { ...pd, jobTitle: result!.jobTitle! })
                     setAppliedJobTitle(true)
-                    toast.success("Título del puesto actualizado")
+                    toast.success(t("toast_job_title_updated"))
                   }}
                 />
               )}
