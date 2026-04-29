@@ -5,6 +5,7 @@ export interface CandidateData {
   phone: string
   address: string
   photo: string
+  photoPosition?: number
   linkedin: string
   website: string
 }
@@ -24,6 +25,7 @@ export interface CoverLetterContent {
   candidatePhoto?: string
   candidateLinkedin?: string
   candidateWebsite?: string
+  candidatePhotoPosition?: number
 }
 
 export interface TemplateProps {

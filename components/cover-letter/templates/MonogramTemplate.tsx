@@ -4,7 +4,7 @@ import { Mail, Phone, MapPin, Link2, Globe, Calendar } from "lucide-react"
 import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-
+export default function MonogramTemplate({ content, colorScheme, candidate }: TemplateProps) {
   const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
   const initials = candidate.name

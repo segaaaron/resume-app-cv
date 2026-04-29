@@ -4,7 +4,7 @@ import { Mail, Phone, MapPin, Link2, Globe, Calendar, Building2 } from "lucide-r
 import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-
+export default function ExecutiveBoldTemplate({ content, colorScheme, candidate }: TemplateProps) {
   const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 

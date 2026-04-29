@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-
+export default function NewspaperTemplate({ content, colorScheme, candidate }: TemplateProps) {
   const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
   const contactParts = [candidate.email, candidate.phone, candidate.linkedin].filter(Boolean)
