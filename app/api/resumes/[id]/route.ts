@@ -7,8 +7,8 @@ type Params = { params: Promise<{ id: string }> }
 
 const patchSchema = z.object({
   title:       z.string().min(1).max(200).optional(),
-  sections:    z.array(z.record(z.string(), z.unknown())).optional(),
-  sectionData: z.record(z.string(), z.unknown()).optional(),
+  sections:    z.array(z.any()).optional(),
+  sectionData: z.any().optional(),
   config: z.object({
     templateId:  z.string().optional(),
     colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),

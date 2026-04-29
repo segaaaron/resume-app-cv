@@ -22,13 +22,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage } = await req.json()
+  const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt } = await req.json()
   const language = rawLanguage === "en" ? "en" : "es"
   const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
   // Validate free-text inputs for prompt injection
-  const userText = [company, jobTitle, recipientName, recipientTitle].filter(Boolean).join(" ")
-  const validation = validateAIInput(userText, 2000)
+  const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt].filter(Boolean).join(" ")
+  const validation = validateAIInput(userText, 3000)
   if (!validation.valid && validation.error === "injection_detected") {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
@@ -57,7 +57,7 @@ export async function POST(req: Request) {
 
 Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
 
-${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}
+${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${userPrompt ? `=== CANDIDATE DESCRIPTION (use this as primary context) ===\n${userPrompt}\n` : ""}
 === TARGET POSITION ===
 ${company ? `Company: ${company}` : ""}
 ${jobTitle ? `Role: ${jobTitle}` : ""}
@@ -85,7 +85,7 @@ Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using 
 
 Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
 
-${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}
+${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${userPrompt ? `=== DESCRIPCIÓN DEL CANDIDATO (usa esto como contexto principal) ===\n${userPrompt}\n` : ""}
 === PUESTO OBJETIVO ===
 ${company ? `Empresa: ${company}` : ""}
 ${jobTitle ? `Puesto: ${jobTitle}` : ""}
@@ -140,7 +140,13 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       return NextResponse.json({ error: "off_topic" }, { status: 422 })
     }
 
-    return NextResponse.json({ body: parsed.body })
+    // Convert \n\n paragraph breaks to HTML <p> tags for Tiptap RichTextEditor
+    const html = parsed.body
+      .split(/\n\n+/)
+      .map((p: string) => `<p>${p.replace(/\n/g, "<br>").trim()}</p>`)
+      .join("")
+
+    return NextResponse.json({ body: html })
   } catch {
     return NextResponse.json({ error: "Error al generar la carta" }, { status: 500 })
   }

@@ -42,16 +42,6 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
 
-  // Delete resume on unmount if it was just created and user never made changes
-  useEffect(() => {
-    if (!isNew) return
-    return () => {
-      if (!isDirtyRef.current) {
-        fetch(`/api/resumes/${resumeId}`, { method: "DELETE", keepalive: true }).catch(() => {})
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   // Autosave: debounce 2.5s after last change
   useEffect(() => {

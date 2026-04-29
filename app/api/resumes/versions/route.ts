@@ -19,8 +19,8 @@ export const snapshotConfigSchema = z.object({
 
 export const snapshotSchema = z.object({
   title:       z.string().optional(),
-  sections:    z.array(z.record(z.string(), z.unknown())).optional(),
-  sectionData: z.record(z.string(), z.unknown()).optional(),
+  sections:    z.array(z.any()).optional(),
+  sectionData: z.any().optional(),
   config:      snapshotConfigSchema,
 })
 

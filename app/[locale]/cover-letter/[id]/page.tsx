@@ -58,6 +58,7 @@ export default async function CoverLetterPage({ params, searchParams }: { params
     phone: content.candidatePhone ?? candidateFromResume.phone,
     address: content.candidateAddress ?? candidateFromResume.address,
     photo: content.candidatePhoto ?? candidateFromResume.photo,
+    photoPosition: typeof content.candidatePhotoPosition === "number" ? content.candidatePhotoPosition : 50,
     linkedin: content.candidateLinkedin ?? candidateFromResume.linkedin,
     website: content.candidateWebsite ?? candidateFromResume.website,
   }
