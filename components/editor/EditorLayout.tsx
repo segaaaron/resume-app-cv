@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
+import { toast } from "sonner"
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
@@ -29,6 +30,7 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   const init = useResumeStore((s) => s.init)
   const isDirty = useResumeStore((s) => s.isDirty)
   const isSaving = useResumeStore((s) => s.isSaving)
+  const lastSaved = useResumeStore((s) => s.lastSaved)
   const save = useResumeStore((s) => s.save)
 
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
@@ -49,6 +51,15 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     const timer = setTimeout(() => { save() }, AUTOSAVE_DELAY)
     return () => clearTimeout(timer)
   }, [isDirty, isSaving, save])
+
+  // Toast on successful autosave
+  const prevLastSaved = useRef<Date | null>(null)
+  useEffect(() => {
+    if (!lastSaved) return
+    if (prevLastSaved.current?.getTime() === lastSaved.getTime()) return
+    prevLastSaved.current = lastSaved
+    toast.success("CV guardado", { id: "autosave", duration: 2000 })
+  }, [lastSaved])
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,

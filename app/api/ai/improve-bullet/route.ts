@@ -43,28 +43,35 @@ export async function POST(req: Request) {
     industry ? `Industria: ${industry}` : "",
   ].filter(Boolean).join(" | ")
 
-  const prompt = `TAREA: Transforma la siguiente descripción de experiencia laboral en 3 versiones de alto impacto orientadas a logros.
+  const prompt = `TAREA: Revisa y mejora TODOS los bullets de esta descripción de experiencia laboral. Devuelve 3 versiones completas mejoradas.
 
 ${context ? `Contexto: ${context}` : ""}
 Descripción actual:
 ${text}
 
-REGLAS DE ORO (aplica todas):
-1. Fórmula de logro: "Verbo de acción + [qué se logró] + medido por [métrica] + haciendo [cómo]".
-2. Verbos de acción fuertes: Lideré, Desarrollé, Optimicé, Incrementé, Implementé, Diseñé, Reduje, Automaticé. NUNCA uses "Responsable de" o "Encargado de".
-3. Métricas: cuando el texto original no tenga números, usa PLACEHOLDERS explícitos entre corchetes como [X%], [N usuarios], [$Z], [X horas/semana]. NUNCA inventes cifras reales.
-4. Sin pronombres personales: no uses "Yo", "Mi", "Nosotros". Empieza directo con el verbo.
-5. ATS-Friendly: integra palabras clave del sector de forma natural.
-6. Longitud: máximo 2 oraciones por versión. Conciso y directo.
-7. Idioma: mismo idioma que el texto original.
+INSTRUCCIONES PARA CADA VERSIÓN:
+1. Mejora CADA bullet existente: verbo de acción fuerte al inicio, orientado a logros, ATS-friendly.
+2. Agrega 2-3 bullets nuevos y relevantes si enriquecen el perfil para el puesto.
+3. Elimina bullets débiles, repetitivos o irrelevantes para un CV profesional.
+4. Métricas: usa PLACEHOLDERS como [X%], [N usuarios], [$Z] cuando no hay cifras reales. NUNCA inventes números.
+5. Sin pronombres personales. Empieza cada bullet directo con el verbo.
+6. Verbos fuertes: Desarrollé, Implementé, Optimicé, Lideré, Diseñé, Reduje, Automaticé, Colaboré, Entregué.
+7. Mantén el mismo idioma que el texto original.
 
-Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
-{"versions": ["version1", "version2", "version3"]}`
+LAS 3 VERSIONES DEBEN DIFERENCIARSE ASÍ:
+- Versión 1: enfoque técnico — resalta stack, arquitectura y soluciones técnicas.
+- Versión 2: enfoque en logros — cuantifica impacto, métricas y resultados de negocio.
+- Versión 3: enfoque en liderazgo y colaboración — resalta trabajo en equipo, mentoring y entrega ágil.
+
+Cada versión es una cadena con todos los bullets separados por \\n, cada uno empezando con "• ".
+
+Responde ÚNICAMENTE con JSON válido (sin markdown):
+{"versions": ["bullets_version1", "bullets_version2", "bullets_version3"]}`
 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 600,
+      max_tokens: 2000,
       temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
@@ -72,7 +79,8 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
           role: "system",
           content:
             "Eres un Consultor de Carrera de Élite y experto en optimización de ATS (Applicant Tracking Systems). " +
-            "Tu especialidad es transformar descripciones de experiencia laboral ordinarias en logros de alto impacto usando la fórmula de Google: Logré [X] medido por [Y], haciendo [Z]. " +
+            "Tu especialidad es revisar descripciones de experiencia laboral bullet por bullet: mejorar los existentes, agregar nuevos relevantes y eliminar los débiles. " +
+            "Devuelves siempre 3 versiones completas de la descripción mejorada con todos sus bullets. " +
             "SOLO respondes solicitudes relacionadas con CVs, experiencia laboral y perfiles de empleo. " +
             "Cuando el original no tiene métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N], [$Z]) — NUNCA inventas cifras reales. " +
             "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"versions\": []} sin texto adicional. " +

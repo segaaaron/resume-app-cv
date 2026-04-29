@@ -91,9 +91,12 @@ export default function WorkExperienceSection() {
     <div className="space-y-2">
       {jobs.map((job) => (
         <div key={job.id} className="border border-border rounded-lg overflow-hidden">
-          <button
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors"
+          <div
+            role="button"
+            tabIndex={0}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
             onClick={() => setOpenId(openId === job.id ? null : job.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenId(openId === job.id ? null : job.id) }}
           >
             <span className="font-medium truncate text-left">
               {job.jobTitle || job.employer || t("new_experience")}
@@ -107,7 +110,7 @@ export default function WorkExperienceSection() {
               </button>
               {openId === job.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </div>
-          </button>
+          </div>
 
           {openId === job.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">

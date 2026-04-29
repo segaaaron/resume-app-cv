@@ -18,6 +18,15 @@ import { nanoid } from "nanoid"
 
 interface ItemUpdate { id: string; description: string }
 interface SuggestedLanguage { name: string; level: string }
+interface NewWorkExperience {
+  jobTitle: string
+  employer: string
+  city?: string
+  startDate?: string
+  endDate?: string
+  currentlyWorking?: boolean
+  description: string
+}
 
 interface FillProfileResult {
   summary?: string | null
@@ -26,6 +35,7 @@ interface FillProfileResult {
   suggestedSkills?: string[]
   suggestedLanguages?: SuggestedLanguage[]
   workExperienceUpdates?: ItemUpdate[]
+  workExperienceNew?: NewWorkExperience[]
   educationUpdates?: ItemUpdate[]
   projectUpdates?: ItemUpdate[]
   volunteerUpdates?: ItemUpdate[]
@@ -124,6 +134,7 @@ export default function AIProfileFillPanel() {
   const [appliedSkills, setAppliedSkills] = useState(false)
   const [appliedLanguages, setAppliedLanguages] = useState(false)
   const [appliedWork, setAppliedWork] = useState<Set<string>>(new Set())
+  const [appliedNewWork, setAppliedNewWork] = useState<Set<number>>(new Set())
   const [appliedEdu, setAppliedEdu] = useState<Set<string>>(new Set())
   const [appliedProj, setAppliedProj] = useState<Set<string>>(new Set())
   const [appliedVol, setAppliedVol] = useState<Set<string>>(new Set())
@@ -136,8 +147,8 @@ export default function AIProfileFillPanel() {
     setResult(null)
     setAppliedSummary(false); setAppliedJobTitle(false); setAppliedHobbies(false)
     setAppliedSkills(false); setAppliedLanguages(false)
-    setAppliedWork(new Set()); setAppliedEdu(new Set())
-    setAppliedProj(new Set()); setAppliedVol(new Set())
+    setAppliedWork(new Set()); setAppliedNewWork(new Set())
+    setAppliedEdu(new Set()); setAppliedProj(new Set()); setAppliedVol(new Set())
     setSelectedSkills(new Set()); setSelectedLanguages(new Set())
     try {
       const res = await fetch("/api/ai/fill-profile", {
@@ -216,7 +227,7 @@ export default function AIProfileFillPanel() {
   const hasAnyResult = result && (
     result.summary || result.jobTitle || result.hobbies ||
     result.suggestedSkills?.length || result.suggestedLanguages?.length ||
-    result.workExperienceUpdates?.length || result.educationUpdates?.length ||
+    result.workExperienceUpdates?.length || result.workExperienceNew?.length || result.educationUpdates?.length ||
     result.projectUpdates?.length || result.volunteerUpdates?.length
   )
 
@@ -276,6 +287,51 @@ export default function AIProfileFillPanel() {
                   />
                 )
               })}
+
+              {/* New work experience entries */}
+              {result!.workExperienceNew?.map((entry, i) => (
+                <div key={i} className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
+                      <Briefcase className="h-3 w-3 text-violet-600" />
+                      {entry.jobTitle} — {entry.employer}
+                      <span className="text-[9px] bg-violet-100 text-violet-600 px-1 py-0.5 rounded ml-1">Nueva</span>
+                    </p>
+                    {!appliedNewWork.has(i) ? (
+                      <Button size="sm" variant="outline"
+                        className="h-6 text-[10px] px-2 gap-1 border-violet-300 text-violet-700 hover:bg-violet-50"
+                        onClick={() => {
+                          const existing = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+                          const newEntry: WorkExperienceItem = {
+                            id: nanoid(),
+                            jobTitle: entry.jobTitle,
+                            employer: entry.employer,
+                            city: entry.city ?? "",
+                            startDate: entry.startDate ?? "",
+                            endDate: entry.endDate ?? "",
+                            currentlyWorking: entry.currentlyWorking ?? false,
+                            description: entry.description,
+                          }
+                          updateSectionData("workExperience", [...existing, newEntry])
+                          setAppliedNewWork(prev => new Set(prev).add(i))
+                          toast.success(t("toast_item_updated", { label: entry.employer }))
+                        }}>
+                        <Sparkles className="h-2.5 w-2.5" /> {t("btn_apply")}
+                      </Button>
+                    ) : (
+                      <span className="flex items-center gap-1 text-[10px] text-green-700"><Check className="h-3 w-3" /> {t("applied")}</span>
+                    )}
+                  </div>
+                  <div className="rounded border border-violet-200 bg-violet-50/50 px-2 py-1.5 text-[10px] text-foreground leading-relaxed whitespace-pre-line">
+                    {entry.description}
+                  </div>
+                  {(entry.city || entry.startDate) && (
+                    <p className="text-[9px] text-muted-foreground">
+                      {[entry.city, entry.startDate && `${entry.startDate}${entry.endDate ? ` – ${entry.endDate}` : entry.currentlyWorking ? " – Actual" : ""}`].filter(Boolean).join(" · ")}
+                    </p>
+                  )}
+                </div>
+              ))}
 
               {/* Education */}
               {result!.educationUpdates?.map(u => {

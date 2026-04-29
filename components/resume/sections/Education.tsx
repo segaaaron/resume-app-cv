@@ -40,9 +40,12 @@ export default function EducationSection() {
     <div className="space-y-2">
       {items.map((item) => (
         <div key={item.id} className="border border-border rounded-lg overflow-hidden">
-          <button
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors"
+          <div
+            role="button"
+            tabIndex={0}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
             onClick={() => setOpenId(openId === item.id ? null : item.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenId(openId === item.id ? null : item.id) }}
           >
             <span className="font-medium truncate text-left">
               {item.degree || item.institution || t("new_education")}
@@ -53,7 +56,7 @@ export default function EducationSection() {
               </button>
               {openId === item.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </div>
-          </button>
+          </div>
 
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">

@@ -108,8 +108,8 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
       )}
 
       {/* Resume — centered on screen, full width when printing */}
-      <div className="print:p-0 flex justify-center bg-gray-100 min-h-screen print:bg-white py-8">
-        <div className="print:shadow-none relative">
+      <div className="print:p-0 flex justify-center bg-gray-100 min-h-screen print:bg-white py-8 print:block print:min-h-0">
+        <div className="print:shadow-none relative print:w-full">
           <ResumePreview />
           {/* Watermark — only shown in print for free users */}
           {!isPro && (
@@ -163,6 +163,17 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
         @media print {
           body {
             margin: 0;
+          }
+          .resume-pages {
+            zoom: 1 !important;
+            width: 210mm !important;
+            min-height: 0 !important;
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+          }
+          .resume-pages * {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
           }
         }
       `}</style>

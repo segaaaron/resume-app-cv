@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Save, Download, Loader2, Check, Lock, History, RotateCcw, Trash2, Share2, Copy } from "lucide-react"
+import { ArrowLeft, Save, Download, Loader2, Lock, History, RotateCcw, Trash2, Share2, Copy } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
@@ -165,20 +165,12 @@ export default function EditorTopBar({ hasAccess }: Props) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Save status */}
-        <span className="text-xs text-muted-foreground hidden sm:block">
-          {isSaving ? (
-            <span className="flex items-center gap-1">
-              <Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}
-            </span>
-          ) : isDirty ? (
-            t("unsaved")
-          ) : lastSaved ? (
-            <span className="flex items-center gap-1">
-              <Check className="h-3 w-3 text-green-500" /> {t("saved")}
-            </span>
-          ) : null}
-        </span>
+        {/* Save status — only show while actively saving */}
+        {isSaving && (
+          <span className="text-xs text-muted-foreground hidden sm:flex items-center gap-1">
+            <Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}
+          </span>
+        )}
 
         {/* History button — Pro only */}
         {hasAccess && (

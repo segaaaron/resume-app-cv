@@ -413,7 +413,11 @@
       "off_topic_bullet": "Solo puedo mejorar descripciones de experiencia laboral profesional",
       "error_summary": "Error al generar el resumen con IA",
       "error_bullet": "Error al mejorar el texto con IA",
-      "metrics_disclaimer": "Las métricas entre [corchetes] son estimaciones — reemplázalas con tus datos reales antes de publicar tu CV."
+      "metrics_disclaimer": "Las métricas entre [corchetes] son estimaciones — reemplázalas con tus datos reales antes de publicar tu CV.",
+      "improve_summary": "Mejorar con IA",
+      "improve_summary_hint": "Opcional: describe tu perfil o indica qué quieres mejorar. Si lo dejas vacío, la IA mejora el resumen actual.",
+      "improve_summary_placeholder": "Ej: Soy desarrollador iOS con 7 años, especializado en SwiftUI y arquitectura VIPER...",
+      "improve_summary_empty": "Escribe un resumen o describe tu perfil para que la IA pueda mejorarlo"
     },
     "history": {
       "button": "Historial",

@@ -10,6 +10,16 @@ const ItemUpdateSchema = z.object({
   description: z.string().min(1),
 })
 
+const NewWorkExperienceSchema = z.object({
+  jobTitle: z.string().min(1),
+  employer: z.string().min(1),
+  city: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  currentlyWorking: z.boolean().optional(),
+  description: z.string().min(1),
+})
+
 const FillProfileResponseSchema = z.object({
   summary: z.string().nullable().optional(),
   jobTitle: z.string().nullable().optional(),
@@ -17,6 +27,7 @@ const FillProfileResponseSchema = z.object({
   suggestedSkills: z.array(z.string()).max(10).optional(),
   suggestedLanguages: z.array(z.object({ name: z.string(), level: z.string() })).max(5).optional(),
   workExperienceUpdates: z.array(ItemUpdateSchema).max(5).optional(),
+  workExperienceNew: z.array(NewWorkExperienceSchema).max(3).optional(),
   educationUpdates: z.array(ItemUpdateSchema).max(5).optional(),
   projectUpdates: z.array(ItemUpdateSchema).max(5).optional(),
   volunteerUpdates: z.array(ItemUpdateSchema).max(5).optional(),
@@ -102,7 +113,8 @@ ${sd.hobbies ? `Intereses actuales: ${sd.hobbies}` : ""}
 
 TAREA: Analiza la instrucción y determina qué secciones del CV deben mejorar. Aplica los cambios donde corresponda:
 
-- Si menciona una empresa, rol o proyecto → mejora la descripción de esa entrada usando su id exacto
+- Si menciona una empresa o rol que ya existe en el CV → mejora la descripción de esa entrada usando su id exacto en workExperienceUpdates
+- Si menciona una empresa o rol que NO existe en el CV actual → créala en workExperienceNew con jobTitle, employer, city, startDate, endDate, currentlyWorking y description (viñetas • sin markdown). Máximo 3 entradas nuevas.
 - Si habla de su perfil general → mejora el resumen (summary) y/o título (jobTitle)
 - Si menciona habilidades → agrégalas a suggestedSkills (SOLO habilidades técnicas o blandas reales: frameworks, lenguajes, herramientas, metodologías; NUNCA nombres de empresas, empleadores, puestos de trabajo, ciudades ni ubicaciones)
 - Si menciona idiomas → agrégalos a suggestedLanguages con nivel apropiado
@@ -120,6 +132,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
   "suggestedSkills": ["<skill nuevo>"],
   "suggestedLanguages": [{ "name": "<idioma>", "level": "elementary|limited|professional|full_professional|native" }],
   "workExperienceUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada con viñetas •, sin markdown>" }],
+  "workExperienceNew": [{ "jobTitle": "<puesto>", "employer": "<empresa>", "city": "<ciudad opcional>", "startDate": "<MM/YYYY opcional>", "endDate": "<MM/YYYY opcional>", "currentlyWorking": false, "description": "<bullets •>" }],
   "educationUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada>" }],
   "projectUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada con viñetas •>" }],
   "volunteerUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada>" }]
@@ -157,8 +170,8 @@ Reglas:
     // Off-topic: empty object or all fields empty
     const hasContent = parsed.summary || parsed.jobTitle || parsed.hobbies ||
       parsed.suggestedSkills?.length || parsed.suggestedLanguages?.length ||
-      parsed.workExperienceUpdates?.length || parsed.educationUpdates?.length ||
-      parsed.projectUpdates?.length || parsed.volunteerUpdates?.length
+      parsed.workExperienceUpdates?.length || parsed.workExperienceNew?.length ||
+      parsed.educationUpdates?.length || parsed.projectUpdates?.length || parsed.volunteerUpdates?.length
 
     if (!hasContent) {
       return NextResponse.json({ error: "off_topic" }, { status: 422 })
@@ -182,6 +195,7 @@ Reglas:
         .slice(0, 8),
       suggestedLanguages: (data.suggestedLanguages ?? []).slice(0, 5),
       workExperienceUpdates: (data.workExperienceUpdates ?? []).filter((u: { id: string }) => validWorkIds.has(u.id)),
+      workExperienceNew: (data.workExperienceNew ?? []).slice(0, 3),
       educationUpdates: (data.educationUpdates ?? []).filter((u: { id: string }) => validEduIds.has(u.id)),
       projectUpdates: (data.projectUpdates ?? []).filter((u: { id: string }) => validProjIds.has(u.id)),
       volunteerUpdates: (data.volunteerUpdates ?? []).filter((u: { id: string }) => validVolIds.has(u.id)),
