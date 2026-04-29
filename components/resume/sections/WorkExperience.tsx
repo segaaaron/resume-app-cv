@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { WorkExperienceItem } from "@/types/resume"
@@ -20,7 +20,8 @@ export default function WorkExperienceSection() {
   const { isPro, openUpgrade } = useEditorPro()
   const { sectionData, updateSectionData, config } = useResumeStore()
   const jobs = sectionData.workExperience
-  const [openId, setOpenId] = useState<string | null>(jobs[0]?.id ?? null)
+  const [openId, setOpenId] = useState<string | null>(null)
+  useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [])
   const [improvingId, setImprovingId] = useState<string | null>(null)
   const [aiVersions, setAiVersions] = useState<{ jobId: string; versions: string[] } | null>(null)
 

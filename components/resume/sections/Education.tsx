@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { EducationItem } from "@/types/resume"
@@ -15,7 +15,8 @@ export default function EducationSection() {
   const t = useTranslations("editor.sections_form")
   const { sectionData, updateSectionData } = useResumeStore()
   const items = sectionData.education
-  const [openId, setOpenId] = useState<string | null>(items[0]?.id ?? null)
+  const [openId, setOpenId] = useState<string | null>(null)
+  useEffect(() => { if (items[0]?.id) setOpenId(items[0].id) }, [])
 
   function add() {
     const newItem: EducationItem = {
