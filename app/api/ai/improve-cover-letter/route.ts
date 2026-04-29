@@ -57,7 +57,7 @@ REGLAS DE ORO (aplica todas):
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
 6. Idioma: mismo idioma que el texto original.
-7. Máximo 4 párrafos por versión. Denso en valor, sin relleno.
+7. Máximo 4 párrafos por versión. Cada versión máximo 200 palabras. Denso en valor, sin relleno.
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
@@ -65,7 +65,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 2000,
+      max_tokens: 1000,
       temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [

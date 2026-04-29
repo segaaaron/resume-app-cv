@@ -30,10 +30,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Job description too short" }, { status: 400 })
   }
 
-  const validation = validateAIInput(jobDescription, 5000)
+  const validation = validateAIInput(jobDescription, 6000)
   if (!validation.valid && validation.error === "injection_detected") {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
+
+  // Truncate to 6000 chars — covers 95%+ of real job descriptions without quality loss
+  const jobDescriptionTruncated = jobDescription.slice(0, 6000)
 
   const resumeText = buildResumeContext(sectionData ?? {})
 
@@ -48,7 +51,7 @@ Analiza la compatibilidad entre el CV y la descripción del puesto de trabajo.
 ${resumeText}
 
 === DESCRIPCIÓN DEL PUESTO ===
-${jobDescription}
+${jobDescriptionTruncated}
 
 Evalúa y devuelve los resultados en JSON con este formato exacto:
 {

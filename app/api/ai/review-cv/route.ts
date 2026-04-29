@@ -121,7 +121,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 1200,
+      max_tokens: 900,
       temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [

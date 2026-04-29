@@ -113,7 +113,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 1500,
+      max_tokens: 900,
       temperature: 0.7,
       response_format: { type: "json_object" },
       messages: [

@@ -147,7 +147,7 @@ Reglas:
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 1200,
+      max_tokens: 700,
       temperature: 0.5,
       response_format: { type: "json_object" },
       messages: [

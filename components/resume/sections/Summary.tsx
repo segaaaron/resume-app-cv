@@ -93,12 +93,12 @@ export default function SummarySection() {
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">{t("summary_placeholder")}</p>
         <div className="flex items-center gap-3 shrink-0">
-          {/* Mejorar con IA */}
+          {/* Mejorar con IA — solo si hay contenido */}
           <button
             type="button"
             onClick={isPro ? () => { setShowImproveInput(v => !v); setVersions([]) } : openUpgrade}
-            disabled={improving}
-            className="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:text-violet-700 disabled:opacity-50 transition-colors"
+            disabled={improving || (isPro && !sectionData.summary?.toString().trim())}
+            className="flex items-center gap-1 text-[11px] font-medium text-violet-600 hover:text-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {!isPro
               ? <><Lock className="h-3 w-3" /> {ai("improve_summary")}</>
@@ -107,12 +107,12 @@ export default function SummarySection() {
                 : <><Wand2 className="h-3 w-3" /> {ai("improve_summary")}</>
             }
           </button>
-          {/* Generar desde CV */}
+          {/* Generar desde CV — solo si NO hay contenido */}
           <button
             type="button"
             onClick={isPro ? handleGenerate : openUpgrade}
-            disabled={generating}
-            className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 transition-colors"
+            disabled={generating || (isPro && !!sectionData.summary?.toString().trim())}
+            className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {!isPro
               ? <><Lock className="h-3 w-3" /> {ai("generate_summary")}</>

@@ -66,7 +66,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 800,
+      max_tokens: 500,
       temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
