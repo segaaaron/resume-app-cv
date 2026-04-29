@@ -45,6 +45,26 @@ import DualityTemplate from "./templates/Duality"
 import ObsidianTemplate from "./templates/Obsidian"
 import VertexTemplate from "./templates/Vertex"
 import PrestigeTemplate from "./templates/Prestige"
+import OsloTemplate from "./templates/Oslo"
+import KyotoTemplate from "./templates/Kyoto"
+import GenevaTemplate from "./templates/Geneva"
+import WindsorTemplate from "./templates/Windsor"
+import MilanTemplate from "./templates/Milan"
+import ZurichTemplate from "./templates/Zurich"
+import LisbonTemplate from "./templates/Lisbon"
+import PortoTemplate from "./templates/Porto"
+import BarcelonaTemplate from "./templates/Barcelona"
+import ViennaTemplate from "./templates/Vienna"
+import BerlinTemplate from "./templates/Berlin"
+import StockholmTemplate from "./templates/Stockholm"
+import DublinTemplate from "./templates/Dublin"
+import HelsinkiTemplate from "./templates/Helsinki"
+import HavanaTemplate from "./templates/Havana"
+import LagosTemplate from "./templates/Lagos"
+import SeoulTemplate from "./templates/Seoul"
+import CopenhagenTemplate from "./templates/Copenhagen"
+import GenevanoirTemplate from "./templates/GenevaNoir"
+import ReykjavikTemplate from "./templates/Reykjavik"
 
 const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   classic: ClassicTemplate,
@@ -91,6 +111,26 @@ const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   obsidian: ObsidianTemplate,
   vertex: VertexTemplate,
   prestige: PrestigeTemplate,
+  oslo: OsloTemplate,
+  kyoto: KyotoTemplate,
+  geneva: GenevaTemplate,
+  windsor: WindsorTemplate,
+  milan: MilanTemplate,
+  zurich: ZurichTemplate,
+  lisbon: LisbonTemplate,
+  porto: PortoTemplate,
+  barcelona: BarcelonaTemplate,
+  vienna: ViennaTemplate,
+  berlin: BerlinTemplate,
+  stockholm: StockholmTemplate,
+  dublin: DublinTemplate,
+  helsinki: HelsinkiTemplate,
+  havana: HavanaTemplate,
+  lagos: LagosTemplate,
+  seoul: SeoulTemplate,
+  copenhagen: CopenhagenTemplate,
+  genevanoir: GenevanoirTemplate,
+  reykjavik: ReykjavikTemplate,
 }
 
 // Google Fonts dynamic loader

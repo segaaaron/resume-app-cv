@@ -341,10 +341,53 @@ Objetivo: justificar y aumentar el valor percibido del plan Pro ($15/mo · $144/
   - `getOpenAI()` — cliente lazy (nunca a nivel de módulo)
   - `AI_MODEL = "gpt-4o-mini"` — modelo único para todo el proyecto
   - `AI_TEMPERATURE = 0.4` — temperatura estándar (balance determinismo/creatividad)
-  - `checkRateLimit(ip, limit?)` — rate limiter en memoria (20 req/IP/hr por defecto)
+  - `checkRateLimit(ip, limit?)` — rate limiter en memoria (20 req/IP/hr por defecto). **Limitación conocida:** se resetea en cada deploy (in-memory). Migrar a BD por `userId` antes de 500 usuarios Pro activos.
   - `buildResumeContext(sectionData)` — extrae texto plano del CV completo (incluye idiomas, certificaciones, proyectos) para enviar al prompt
 - Todos los endpoints de IA usan este módulo — **nunca duplicar `getOpenAI()` o `checkRateLimit()` en los routes**
 - `improve-bullet` acepta campos adicionales opcionales: `employer` e `industry` para dar más contexto al prompt
+
+## IA — Configuración de tokens por endpoint
+
+Optimizado 2026-04-28. Valores calibrados para eliminar tokens de output desperdiciados sin impacto en calidad.
+
+| Endpoint | max_tokens | Razón |
+|----------|------------|-------|
+| `improve-bullet` | 600 | 3 bullets × 30 words ≈ 150 tokens reales. 600 = 4x headroom. |
+| `generate-summary` | 500 | 3 resúmenes × 80 words ≈ 300 tokens + JSON overhead. |
+| `improve-summary` | 700 | Igual que generate-summary + contexto adicional del usuario. |
+| `generate-cover-letter` | 900 | 1 carta × 250 words ≈ 325 tokens + JSON. |
+| `improve-cover-letter` | 1000 | 3 cartas × 200 words ≈ 780 tokens + JSON. Prompt incluye "máx 200 palabras/versión". |
+| `ats-score` | 800 | Output JSON estructurado: score + 3-5 items por campo ≈ 600-700 tokens. |
+| `review-cv` | 900 | JSON estructurado con strengths/improvements/answer ≈ 700 tokens. |
+| `fill-profile` | 700 | summary + jobTitle + 8 skills + section updates ≈ 500 tokens. |
+| `suggest-skills` | 400 | 10 skills con niveles ≈ 150 tokens. 400 = 2.5x headroom. |
+
+**Regla:** No subir `max_tokens` sin justificación en PR. El modelo no genera más calidad con más tokens — solo más relleno.
+
+**`ats-score` — truncado server-side:** el input `jobDescription` se trunca a **6,000 chars** antes de enviarse al modelo. Cubre el 95%+ de job descriptions reales sin pérdida de calidad (las secciones descartadas son disclaimers legales y "About Our Culture", no requisitos). La validación `validateAIInput` acepta hasta 6,000 chars.
+
+## IA — Costos estimados por llamada (GPT-4o-mini, abril 2026)
+
+Pricing: $0.15/1M input tokens · $0.60/1M output tokens
+
+| Endpoint | Costo/llamada | Costo 10x/mes |
+|----------|---------------|---------------|
+| `improve-bullet` | ~$0.00040 | $0.0040 |
+| `generate-summary` | ~$0.00043 | $0.0043 |
+| `improve-summary` | ~$0.00055 | $0.0055 |
+| `ats-score` | ~$0.00099 | $0.0099 |
+| `generate-cover-letter` | ~$0.00070 | $0.0070 |
+| `improve-cover-letter` | ~$0.00076 | $0.0076 |
+| `review-cv` | ~$0.00063 | $0.0063 |
+| `fill-profile` | ~$0.00052 | $0.0052 |
+| `suggest-skills` | ~$0.00033 | $0.0033 |
+
+**Costo por usuario/mes:** casual $0.003 · regular $0.009 · power user $0.027. A 1,000 usuarios Pro: ~$13/mes en IA vs $15,000 MRR. Costo no es el problema hoy.
+
+**Deuda técnica pendiente (en orden de prioridad):**
+1. Migrar rate limiter de IP → `userId` en BD (antes de 500 usuarios Pro activos)
+2. Agregar tabla `UsageLog` en Prisma para visibilidad por usuario/endpoint
+3. Revisar si `ats-score` necesita bajar `max_tokens` de 800 → 600 tras datos reales
 
 ---
 

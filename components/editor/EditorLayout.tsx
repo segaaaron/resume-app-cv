@@ -3,7 +3,6 @@
 import { useEffect, useRef } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
-import { toast } from "sonner"
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
@@ -24,42 +23,16 @@ interface Props {
   isNew?: boolean
 }
 
-const AUTOSAVE_DELAY = 2500 // ms after last change
 
 export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
-  const isDirty = useResumeStore((s) => s.isDirty)
-  const isSaving = useResumeStore((s) => s.isSaving)
-  const lastSaved = useResumeStore((s) => s.lastSaved)
-  const save = useResumeStore((s) => s.save)
-
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
-
-  const isDirtyRef = useRef(isDirty)
-  useEffect(() => { isDirtyRef.current = isDirty }, [isDirty])
 
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
-
-
-  // Autosave: debounce 2.5s after last change
-  useEffect(() => {
-    if (!isDirty || isSaving) return
-    const timer = setTimeout(() => { save() }, AUTOSAVE_DELAY)
-    return () => clearTimeout(timer)
-  }, [isDirty, isSaving, save])
-
-  // Toast on successful autosave
-  const prevLastSaved = useRef<Date | null>(null)
-  useEffect(() => {
-    if (!lastSaved) return
-    if (prevLastSaved.current?.getTime() === lastSaved.getTime()) return
-    prevLastSaved.current = lastSaved
-    toast.success("CV guardado", { id: "autosave", duration: 2000 })
-  }, [lastSaved])
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,

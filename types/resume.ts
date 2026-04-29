@@ -200,6 +200,26 @@ export type TemplateId =
   | "obsidian"
   | "vertex"
   | "prestige"
+  | "oslo"
+  | "kyoto"
+  | "geneva"
+  | "windsor"
+  | "milan"
+  | "zurich"
+  | "lisbon"
+  | "porto"
+  | "barcelona"
+  | "vienna"
+  | "berlin"
+  | "stockholm"
+  | "dublin"
+  | "helsinki"
+  | "havana"
+  | "lagos"
+  | "seoul"
+  | "copenhagen"
+  | "genevanoir"
+  | "reykjavik"
 
 export interface ResumeConfig {
   templateId: TemplateId
@@ -277,6 +297,26 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "obsidian", name: "Obsidian ⚡", description: "Fondo oscuro con panel blanco curvo SVG a la derecha, estilo premium", columns: "double", hasPhoto: true },
   { id: "vertex",   name: "Vertex ⚡",   description: "Triángulos decorativos en esquinas, gauges circulares SVG para idiomas", columns: "double", hasPhoto: true },
   { id: "prestige", name: "Prestige ⚡", description: "Fondo crema con bloque navy para resumen, acento cobre/bronce elegante", columns: "double", hasPhoto: true },
+  { id: "oslo", name: "Oslo ✦", description: "Minimalismo tipográfico puro con iconos geométricos SVG por sección", columns: "single", hasPhoto: false },
+  { id: "kyoto", name: "Kyoto ✦", description: "Sidebar off-white con marco cuadrado para foto e iconos brushstroke", columns: "double", hasPhoto: true },
+  { id: "geneva", name: "Geneva ✦", description: "Nombre centrado en mayúsculas, divisores SVG punteados con icono", columns: "single", hasPhoto: false },
+  { id: "windsor", name: "Windsor ✦", description: "Banda navy ejecutiva con nombre blanco y título dorado, foto con marco dorado", columns: "single", hasPhoto: true },
+  { id: "milan", name: "Milán ✦", description: "Sidebar derecho carbón con iconos blancos, acento rojo bajo el nombre", columns: "double", hasPhoto: false },
+  { id: "zurich", name: "Zürich ✦", description: "Numeración editorial (01 02 03) detrás de cada sección, acento cobre", columns: "single", hasPhoto: false },
+  { id: "lisbon", name: "Lisboa ✦", description: "Header degradado, foto hexagonal clip-path, iconos SVG geométricos por sección", columns: "double", hasPhoto: true },
+  { id: "porto", name: "Porto ✦", description: "Header diagonal con split de color SVG, nombre a caballo entre dos tonos", columns: "single", hasPhoto: false },
+  { id: "barcelona", name: "Barcelona ✦", description: "Skills como chips en grid, iconos iOS-style filled, nombre ultra-bold", columns: "double", hasPhoto: false },
+  { id: "vienna", name: "Viena ✦", description: "Monograma faint de fondo, línea acento lateral en cada sección", columns: "single", hasPhoto: true },
+  { id: "berlin", name: "Berlín ✦", description: "Estética monospace con prefijo › en secciones, chips de skills con borde", columns: "single", hasPhoto: false },
+  { id: "stockholm", name: "Estocolmo ✦", description: "Sidebar gris claro con barras de progreso etiquetadas, iconos sky blue", columns: "double", hasPhoto: true },
+  { id: "dublin", name: "Dublín ✦", description: "Máxima densidad de contenido, headers en versalitas, divisores SVG lineales", columns: "single", hasPhoto: false },
+  { id: "helsinki", name: "Helsinki ✦", description: "Timeline SVG de skills en sidebar estrecho, proyectos con chips de tecnologías", columns: "double", hasPhoto: false },
+  { id: "havana", name: "Habana ✦", description: "Sidebar terracota ancho con foto circular, banda nombre full-width sobre columnas", columns: "double", hasPhoto: true },
+  { id: "lagos", name: "Lagos ✦", description: "Sidebar verde bosque con foto y borde blanco, línea acento lateral en body", columns: "double", hasPhoto: true },
+  { id: "seoul", name: "Seúl ✦", description: "Sidebar oscuro con textura SVG de puntos, indicadores de color por contacto", columns: "double", hasPhoto: true },
+  { id: "copenhagen", name: "Copenhague ✦", description: "Secciones con fondos tintados alternos, foto con marco redondeado, editorial suave", columns: "single", hasPhoto: true },
+  { id: "genevanoir", name: "Geneva Noir ✦", description: "Header negro, nombre blanco tracking amplio, badges oscuros en secciones, acento eléctrico", columns: "single", hasPhoto: false },
+  { id: "reykjavik", name: "Reikiavik ✦", description: "Labels de sección rotados 90° en margen izquierdo, layout asimétrico distintivo", columns: "double", hasPhoto: false },
 ]
 
 export const FONT_OPTIONS = [
