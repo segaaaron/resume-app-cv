@@ -1,6 +1,10 @@
+"use client"
+
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function NewspaperTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
   const contactParts = [candidate.email, candidate.phone, candidate.linkedin].filter(Boolean)
 
@@ -40,7 +44,7 @@ export default function NewspaperTemplate({ content, candidate, colorScheme }: T
       {/* Recipient + subject in right-column inset */}
       <div className="grid grid-cols-[1fr_auto] gap-5 mt-4 mb-2">
         <p className="text-[11px] text-gray-700">
-          {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+          {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
         </p>
         {(content.recipientName || content.company) && (
           <div className="border-l-4 pl-3 text-[10px] italic text-gray-500 min-w-[100px]" style={{ borderColor: colorScheme }}>
@@ -64,7 +68,7 @@ export default function NewspaperTemplate({ content, candidate, colorScheme }: T
           dangerouslySetInnerHTML={{ __html: bodyHtml }}
         />
       ) : (
-        <p className="text-[11px] text-gray-200 italic">El cuerpo de la carta aparecerá aquí...</p>
+        <p className="text-[11px] text-gray-200 italic">{t("body_placeholder_template")}</p>
       )}
 
       {content.closing && <p className="text-[11px] mt-4 text-gray-700">{content.closing},</p>}

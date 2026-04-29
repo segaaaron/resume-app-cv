@@ -1,7 +1,11 @@
+"use client"
+
 import { Mail, Phone, MapPin, Link2, Globe, Calendar, Building2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function ExecutiveBoldTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
   const contacts = [
@@ -22,7 +26,7 @@ export default function ExecutiveBoldTemplate({ content, candidate, colorScheme 
         <div className="flex items-start gap-5">
           {candidate.photo && (
             <img src={candidate.photo} alt={candidate.name}
-              className="w-16 h-16 rounded-lg object-cover shrink-0 border border-gray-200" />
+              className="w-16 h-16 rounded-lg object-cover shrink-0 border border-gray-200" style={{ objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
           )}
           <div className="flex-1">
             {candidate.name && (
@@ -74,12 +78,12 @@ export default function ExecutiveBoldTemplate({ content, candidate, colorScheme 
         )}
 
         <p className="text-[12px] mb-4 font-medium text-gray-700">
-          {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+          {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
         </p>
 
         {content.body
           ? <div className="text-[11.5px] text-gray-700 leading-[1.7] mb-5 [&>p]:mb-4 [&>p]:text-justify [&>ul]:mb-4 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:mb-4 [&>ol]:list-decimal [&>ol]:pl-6 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-          : <p className="text-[11.5px] text-gray-200 italic mb-5">El cuerpo de la carta aparecerá aquí...</p>
+          : <p className="text-[11.5px] text-gray-200 italic mb-5">{t("body_placeholder_template")}</p>
         }
 
         {content.closing && <p className="text-[12px] mb-10 text-gray-700">{content.closing},</p>}

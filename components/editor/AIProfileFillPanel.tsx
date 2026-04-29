@@ -33,7 +33,7 @@ interface FillProfileResult {
 
 // ── Reusable diff block ────────────────────────────────────────────────────────
 function DiffBlock({
-  icon, label, currentValue, suggestedValue, applied, accentClass, onApply,
+  icon, label, currentValue, suggestedValue, applied, accentClass, onApply, applyLabel, appliedLabel,
 }: {
   icon: React.ReactNode
   label: string
@@ -42,6 +42,8 @@ function DiffBlock({
   applied: boolean
   accentClass: string
   onApply: () => void
+  applyLabel: string
+  appliedLabel: string
 }) {
   if (!suggestedValue) return null
   return (
@@ -55,11 +57,11 @@ function DiffBlock({
             className={`h-6 text-[10px] px-2 gap-1 ${accentClass}`}
             onClick={onApply}>
             <Sparkles className="h-2.5 w-2.5" />
-            {currentValue ? "Reemplazar" : "Aplicar"}
+            {applyLabel}
           </Button>
         ) : (
           <span className="flex items-center gap-1 text-[10px] text-green-700">
-            <Check className="h-3 w-3" /> Aplicado
+            <Check className="h-3 w-3" /> {appliedLabel}
           </span>
         )}
       </div>
@@ -80,7 +82,7 @@ function DiffBlock({
 
 // ── Section update blocks (workExp, education, projects, volunteer) ────────────
 function SectionUpdateBlock({
-  icon, label, currentDescription, suggestedDescription, applied, accentClass, onApply,
+  icon, label, currentDescription, suggestedDescription, applied, accentClass, onApply, applyLabel, appliedLabel,
 }: {
   icon: React.ReactNode
   label: string
@@ -89,6 +91,8 @@ function SectionUpdateBlock({
   applied: boolean
   accentClass: string
   onApply: () => void
+  applyLabel: string
+  appliedLabel: string
 }) {
   return (
     <DiffBlock
@@ -99,6 +103,8 @@ function SectionUpdateBlock({
       applied={applied}
       accentClass={accentClass}
       onApply={onApply}
+      applyLabel={applyLabel}
+      appliedLabel={appliedLabel}
     />
   )
 }
@@ -141,14 +147,14 @@ export default function AIProfileFillPanel() {
       })
       if (res.status === 403) { toast.error(t("toast_pro_only")); return }
       if (res.status === 400) { toast.error(t("toast_more_detail")); return }
-      if (res.status === 422) { toast.error("Solo puedo generar contenido a partir de descripciones profesionales reales"); return }
+      if (res.status === 422) { toast.error(t("toast_off_topic")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setResult(data)
       setSelectedSkills(new Set(data.suggestedSkills ?? []))
       setSelectedLanguages(new Set((data.suggestedLanguages ?? []).map((l: SuggestedLanguage) => l.name)))
     } catch {
-      toast.error("Error al generar el perfil")
+      toast.error(t("toast_generate_error"))
     } finally {
       setLoading(false)
     }
@@ -161,7 +167,7 @@ export default function AIProfileFillPanel() {
     if (!toAdd.length) { toast.info(t("toast_skills_already")); return }
     updateSectionData("skills", [...existing, ...toAdd.map((n): SkillItem => ({ id: nanoid(), name: n, level: "intermediate" }))])
     setAppliedSkills(true)
-    toast.success(`${toAdd.length} habilidad${toAdd.length > 1 ? "es" : ""} agregada${toAdd.length > 1 ? "s" : ""}`)
+    toast.success(t("toast_skills_added", { count: toAdd.length }))
   }
 
   function applyLanguages() {
@@ -179,7 +185,7 @@ export default function AIProfileFillPanel() {
       })),
     ])
     setAppliedLanguages(true)
-    toast.success(`${toAdd.length} idioma${toAdd.length > 1 ? "s" : ""} agregado${toAdd.length > 1 ? "s" : ""}`)
+    toast.success(t("toast_languages_added", { count: toAdd.length }))
   }
 
   function applyItemUpdate(
@@ -195,7 +201,7 @@ export default function AIProfileFillPanel() {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     updateSectionData(field, updated as any)
     setApplied(new Set(appliedSet).add(updateId))
-    toast.success(`"${label}" actualizado`)
+    toast.success(t("toast_item_updated", { label }))
   }
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -220,7 +226,7 @@ export default function AIProfileFillPanel() {
         className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-muted/30 transition-colors">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-violet-600" />
-          <span className="text-sm font-semibold">Ayúdate con la IA</span>
+          <span className="text-sm font-semibold">{t("title")}</span>
           <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Pro</span>
         </div>
         {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -229,13 +235,13 @@ export default function AIProfileFillPanel() {
       {expanded && (
         <div className="px-4 pb-4 space-y-3 bg-white border-t border-border">
           <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">
-            Cuéntale a la IA qué quieres mejorar: un trabajo específico, tus estudios, proyectos, habilidades, idiomas o tu perfil general. Aplica cada cambio de forma independiente.
+            {t("description")}
           </p>
 
           <Textarea
             value={prompt}
             onChange={e => setPrompt(e.target.value)}
-            placeholder={`Ej: "En IA Interactive usé SwiftUI y TCA, rediseñé UIKit. Agrégalo."\n\nO: "Soy dev React con 5 años, especializado en performance y a11y."`}
+            placeholder={t("placeholder")}
             className="text-xs min-h-[90px] resize-none"
             maxLength={500}
           />
@@ -243,13 +249,13 @@ export default function AIProfileFillPanel() {
 
           <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white" onClick={handleGenerate} disabled={loading}>
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {loading ? "Generando..." : "Generar con IA"}
+            {loading ? t("btn_generating") : t("btn_generate")}
           </Button>
 
           {hasAnyResult && (
             <div className="space-y-4 pt-2 border-t border-border">
               <p className="text-[10px] text-muted-foreground pt-1">
-                Revisa cada sugerencia y aplícala de forma independiente.
+                {t("review_hint")}
               </p>
 
               {/* Work experience */}
@@ -265,6 +271,8 @@ export default function AIProfileFillPanel() {
                     applied={appliedWork.has(u.id)}
                     accentClass="border-violet-300 text-violet-700 hover:bg-violet-50"
                     onApply={() => applyItemUpdate(u.id, "workExperience", u.description, appliedWork, setAppliedWork, job.employer ?? job.jobTitle ?? "Experiencia")}
+                    applyLabel={job.description ? t("btn_replace") : t("btn_apply")}
+                    appliedLabel={t("applied")}
                   />
                 )
               })}
@@ -282,6 +290,8 @@ export default function AIProfileFillPanel() {
                     applied={appliedEdu.has(u.id)}
                     accentClass="border-blue-300 text-blue-700 hover:bg-blue-50"
                     onApply={() => applyItemUpdate(u.id, "education", u.description, appliedEdu, setAppliedEdu, edu.degree ?? edu.institution ?? "Educación")}
+                    applyLabel={edu.description ? t("btn_replace") : t("btn_apply")}
+                    appliedLabel={t("applied")}
                   />
                 )
               })}
@@ -299,6 +309,8 @@ export default function AIProfileFillPanel() {
                     applied={appliedProj.has(u.id)}
                     accentClass="border-amber-300 text-amber-700 hover:bg-amber-50"
                     onApply={() => applyItemUpdate(u.id, "projects", u.description, appliedProj, setAppliedProj, proj.name ?? "Proyecto")}
+                    applyLabel={proj.description ? t("btn_replace") : t("btn_apply")}
+                    appliedLabel={t("applied")}
                   />
                 )
               })}
@@ -316,6 +328,8 @@ export default function AIProfileFillPanel() {
                     applied={appliedVol.has(u.id)}
                     accentClass="border-rose-300 text-rose-700 hover:bg-rose-50"
                     onApply={() => applyItemUpdate(u.id, "volunteer", u.description, appliedVol, setAppliedVol, vol.organization ?? vol.role ?? "Voluntariado")}
+                    applyLabel={vol.description ? t("btn_replace") : t("btn_apply")}
+                    appliedLabel={t("applied")}
                   />
                 )
               })}
@@ -324,15 +338,17 @@ export default function AIProfileFillPanel() {
               {result!.summary && (
                 <DiffBlock
                   icon={<span className="text-[10px]">📝</span>}
-                  label="Resumen profesional"
+                  label={t("label_summary")}
                   currentValue={currentSummary}
                   suggestedValue={result!.summary}
                   applied={appliedSummary}
                   accentClass="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  applyLabel={currentSummary ? t("btn_replace") : t("btn_apply")}
+                  appliedLabel={t("applied")}
                   onApply={() => {
                     updateSectionData("summary", result!.summary!)
                     setAppliedSummary(true)
-                    toast.success("Resumen profesional actualizado")
+                    toast.success(t("toast_summary_updated"))
                   }}
                 />
               )}
@@ -341,11 +357,13 @@ export default function AIProfileFillPanel() {
               {result!.jobTitle && (
                 <DiffBlock
                   icon={<span className="text-[10px]">🏷️</span>}
-                  label="Título del puesto"
+                  label={t("label_job_title")}
                   currentValue={currentJobTitle}
                   suggestedValue={result!.jobTitle}
                   applied={appliedJobTitle}
                   accentClass="border-indigo-300 text-indigo-700 hover:bg-indigo-50"
+                  applyLabel={currentJobTitle ? t("btn_replace") : t("btn_apply")}
+                  appliedLabel={t("applied")}
                   onApply={() => {
                     const pd = (sectionData.personalDetails ?? {}) as PersonalDetails
                     updateSectionData("personalDetails", { ...pd, jobTitle: result!.jobTitle! })
@@ -359,15 +377,17 @@ export default function AIProfileFillPanel() {
               {result!.hobbies && (
                 <DiffBlock
                   icon={<span className="text-[10px]">🎯</span>}
-                  label="Intereses"
+                  label={t("label_hobbies")}
                   currentValue={currentHobbies}
                   suggestedValue={result!.hobbies}
                   applied={appliedHobbies}
                   accentClass="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+                  applyLabel={currentHobbies ? t("btn_replace") : t("btn_apply")}
+                  appliedLabel={t("applied")}
                   onApply={() => {
                     updateSectionData("hobbies", result!.hobbies!)
                     setAppliedHobbies(true)
-                    toast.success("Intereses actualizados")
+                    toast.success(t("toast_hobbies_updated"))
                   }}
                 />
               )}
@@ -376,15 +396,15 @@ export default function AIProfileFillPanel() {
               {(result!.suggestedSkills?.length ?? 0) > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <p className="text-[11px] font-semibold text-foreground">Habilidades sugeridas</p>
+                    <p className="text-[11px] font-semibold text-foreground">{t("label_suggested_skills")}</p>
                     {!appliedSkills ? (
                       <Button size="sm" variant="outline"
                         className="h-6 text-[10px] px-2 gap-1 border-indigo-300 text-indigo-700 hover:bg-indigo-50"
                         onClick={applySkills} disabled={selectedSkills.size === 0}>
-                        <Sparkles className="h-2.5 w-2.5" /> Agregar ({selectedSkills.size})
+                        <Sparkles className="h-2.5 w-2.5" /> {t("btn_add_count", { count: selectedSkills.size })}
                       </Button>
                     ) : (
-                      <span className="flex items-center gap-1 text-[10px] text-green-700"><Check className="h-3 w-3" /> Aplicado</span>
+                      <span className="flex items-center gap-1 text-[10px] text-green-700"><Check className="h-3 w-3" /> {t("applied")}</span>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1">
@@ -408,16 +428,16 @@ export default function AIProfileFillPanel() {
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
-                      <Globe className="h-3 w-3 text-emerald-600" /> Idiomas sugeridos
+                      <Globe className="h-3 w-3 text-emerald-600" /> {t("label_suggested_languages")}
                     </p>
                     {!appliedLanguages ? (
                       <Button size="sm" variant="outline"
                         className="h-6 text-[10px] px-2 gap-1 border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                         onClick={applyLanguages} disabled={selectedLanguages.size === 0}>
-                        <Sparkles className="h-2.5 w-2.5" /> Agregar ({selectedLanguages.size})
+                        <Sparkles className="h-2.5 w-2.5" /> {t("btn_add_count", { count: selectedLanguages.size })}
                       </Button>
                     ) : (
-                      <span className="flex items-center gap-1 text-[10px] text-green-700"><Check className="h-3 w-3" /> Aplicado</span>
+                      <span className="flex items-center gap-1 text-[10px] text-green-700"><Check className="h-3 w-3" /> {t("applied")}</span>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-1">

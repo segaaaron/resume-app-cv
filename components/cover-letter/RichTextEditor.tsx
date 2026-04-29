@@ -5,6 +5,7 @@ import StarterKit from "@tiptap/starter-kit"
 import Underline from "@tiptap/extension-underline"
 import TextAlign from "@tiptap/extension-text-align"
 import { useEffect } from "react"
+import { useTranslations } from "next-intl"
 import {
   Bold,
   Italic,
@@ -56,6 +57,7 @@ function Divider() {
 }
 
 export default function RichTextEditor({ value, onChange, placeholder }: RichTextEditorProps) {
+  const t = useTranslations("cover_letter_editor")
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
@@ -98,21 +100,21 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
-          title="Negrita (Ctrl+B)"
+          title={t("toolbar_bold")}
         >
           <Bold className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleItalic().run()}
           active={editor.isActive("italic")}
-          title="Cursiva (Ctrl+I)"
+          title={t("toolbar_italic")}
         >
           <Italic className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleUnderline().run()}
           active={editor.isActive("underline")}
-          title="Subrayado (Ctrl+U)"
+          title={t("toolbar_underline")}
         >
           <UnderlineIcon className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -122,14 +124,14 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive("bulletList")}
-          title="Lista con viñetas"
+          title={t("toolbar_bullets")}
         >
           <List className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().toggleOrderedList().run()}
           active={editor.isActive("orderedList")}
-          title="Lista numerada"
+          title={t("toolbar_numbered")}
         >
           <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarButton>
@@ -139,21 +141,21 @@ export default function RichTextEditor({ value, onChange, placeholder }: RichTex
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign("left").run()}
           active={editor.isActive({ textAlign: "left" })}
-          title="Alinear a la izquierda"
+          title={t("toolbar_align_left")}
         >
           <AlignLeft className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign("center").run()}
           active={editor.isActive({ textAlign: "center" })}
-          title="Centrar"
+          title={t("toolbar_align_center")}
         >
           <AlignCenter className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
           onClick={() => editor.chain().focus().setTextAlign("justify").run()}
           active={editor.isActive({ textAlign: "justify" })}
-          title="Justificar"
+          title={t("toolbar_align_justify")}
         >
           <AlignJustify className="h-3.5 w-3.5" />
         </ToolbarButton>

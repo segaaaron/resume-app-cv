@@ -1,21 +1,25 @@
+"use client"
+
 import { Mail, Phone, MapPin, Link2, Globe, Briefcase } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function TwoToneTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
   const initials = candidate.name
     ? candidate.name.split(" ").slice(0, 2).map((w: string) => w[0]).join("").toUpperCase()
     : "?"
 
   return (
-    <div className="flex print:min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+    <div className="flex min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Left panel — 35% */}
       <div className="w-[35%] shrink-0 px-6 py-8 flex flex-col items-center gap-3" style={{ backgroundColor: colorScheme }}>
         {/* Photo / Initials */}
         <div className="mt-2">
           {candidate.photo ? (
             <img src={candidate.photo} alt={candidate.name}
-              className="w-20 h-20 rounded-full object-cover border-[3px] border-white shadow-md" />
+              className="w-20 h-20 rounded-full object-cover border-[3px] border-white shadow-md" style={{ objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
           ) : (
             <div className="w-20 h-20 rounded-full border-[3px] border-white shadow-md flex items-center justify-center text-white text-2xl font-bold bg-white/20">
               {initials}
@@ -89,12 +93,12 @@ export default function TwoToneTemplate({ content, candidate, colorScheme }: Tem
         )}
 
         <p className="text-[11px] mb-3 text-gray-700">
-          {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+          {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
         </p>
 
         {content.body
           ? <div className="text-[11px] text-gray-700 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-5 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-          : <p className="text-[11px] text-gray-200 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
+          : <p className="text-[11px] text-gray-200 italic mb-4">{t("body_placeholder_template")}</p>
         }
 
         {content.closing && <p className="text-[11px] mb-8 text-gray-700">{content.closing},</p>}

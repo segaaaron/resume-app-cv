@@ -660,7 +660,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
           </Button>
           <div className="relative" ref={downloadRef}>
             <Button size="sm" className="gap-1.5" onClick={() => setDownloadOpen((v) => !v)}>
-              <Download className="h-3.5 w-3.5" /> Descargar <ChevronDown className="h-3 w-3 ml-0.5" />
+              <Download className="h-3.5 w-3.5" /> {t("download")} <ChevronDown className="h-3 w-3 ml-0.5" />
             </Button>
             {downloadOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl min-w-[180px] overflow-hidden">
@@ -672,7 +672,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                   {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <FileDown className="h-4 w-4 text-red-500 shrink-0" />}
                   <div className="flex flex-col items-start">
                     <span className="font-medium">PDF</span>
-                    <span className="text-[10px] text-muted-foreground">Con diseño completo</span>
+                    <span className="text-[10px] text-muted-foreground">{t("export_with_design")}</span>
                   </div>
                 </button>
                 <button
@@ -683,7 +683,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                   {downloadingWord ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <FileText className="h-4 w-4 text-blue-500 shrink-0" />}
                   <div className="flex flex-col items-start">
                     <span className="font-medium">Word (.docx)</span>
-                    <span className="text-[10px] text-muted-foreground">Versión editable, sin diseño</span>
+                    <span className="text-[10px] text-muted-foreground">{t("export_plain")}</span>
                   </div>
                 </button>
               </div>

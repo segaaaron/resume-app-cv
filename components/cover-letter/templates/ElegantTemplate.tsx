@@ -1,7 +1,11 @@
+"use client"
+
 import { Mail, Phone, MapPin, Link2, Globe, Calendar } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function ElegantTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
   const contacts = [
@@ -19,7 +23,7 @@ export default function ElegantTemplate({ content, candidate, colorScheme }: Tem
         {candidate.photo && (
           <img src={candidate.photo} alt={candidate.name}
             className="w-16 h-16 rounded-full object-cover mx-auto mb-3 border-2"
-            style={{ borderColor: colorScheme }} />
+            style={{ borderColor: colorScheme, objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
         )}
         {candidate.name && (
           <h1 className="font-light tracking-[0.15em] uppercase text-[26px]" style={{ color: colorScheme }}>
@@ -72,12 +76,12 @@ export default function ElegantTemplate({ content, candidate, colorScheme }: Tem
       )}
 
       <p className="text-[11px] mb-3">
-        {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+        {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
       </p>
 
       {content.body
         ? <div className="text-[11px] text-gray-800 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-6 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-        : <p className="text-[11px] text-gray-300 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
+        : <p className="text-[11px] text-gray-300 italic mb-4">{t("body_placeholder_template")}</p>
       }
 
       {content.closing && <p className="text-[11px] mb-8">{content.closing},</p>}

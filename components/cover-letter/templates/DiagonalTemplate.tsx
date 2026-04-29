@@ -1,7 +1,11 @@
+"use client"
+
 import { Mail, Phone, MapPin, Link2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function DiagonalTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
   return (
@@ -17,7 +21,7 @@ export default function DiagonalTemplate({ content, candidate, colorScheme }: Te
         <div className="flex items-center gap-5">
           {candidate.photo && (
             <img src={candidate.photo} alt={candidate.name}
-              className="w-14 h-14 rounded-full object-cover border-2 border-white/50 shrink-0" />
+              className="w-14 h-14 rounded-full object-cover border-2 border-white/50 shrink-0" style={{ objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
           )}
           <div>
             {candidate.name && <h1 className="text-[24px] font-bold text-white leading-tight">{candidate.name}</h1>}
@@ -74,14 +78,14 @@ export default function DiagonalTemplate({ content, candidate, colorScheme }: Te
         )}
 
         <p className="text-[11px] mb-3 text-gray-700">
-          {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+          {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
         </p>
 
         <div className="flex gap-4">
           <div className="flex-1">
             {content.body
               ? <div className="text-[11px] text-gray-700 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-5 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-              : <p className="text-[11px] text-gray-200 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
+              : <p className="text-[11px] text-gray-200 italic mb-4">{t("body_placeholder_template")}</p>
             }
           </div>
           {/* Right accent line */}

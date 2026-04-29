@@ -1,7 +1,11 @@
+"use client"
+
 import { Mail, Phone, MapPin, Link2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function SplitTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
   return (
@@ -10,7 +14,7 @@ export default function SplitTemplate({ content, candidate, colorScheme }: Templ
       <div className="w-full flex items-center gap-5 px-10 py-6" style={{ backgroundColor: colorScheme }}>
         {candidate.photo && (
           <img src={candidate.photo} alt={candidate.name}
-            className="w-16 h-16 rounded-full object-cover border-2 border-white/40 shrink-0" />
+            className="w-16 h-16 rounded-full object-cover border-2 border-white/40 shrink-0" style={{ objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
         )}
         <div className="flex-1 min-w-0">
           {candidate.name && <p className="text-[18px] font-bold text-white">{candidate.name}</p>}
@@ -63,12 +67,12 @@ export default function SplitTemplate({ content, candidate, colorScheme }: Templ
         )}
 
         <p className="text-[11px] mb-3">
-          {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+          {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
         </p>
 
         {content.body
           ? <div className="text-[11px] text-gray-800 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-6 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-          : <p className="text-[11px] text-gray-300 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
+          : <p className="text-[11px] text-gray-300 italic mb-4">{t("body_placeholder_template")}</p>
         }
 
         {content.closing && <p className="text-[11px] mb-8">{content.closing},</p>}

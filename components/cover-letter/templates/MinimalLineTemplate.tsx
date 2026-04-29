@@ -1,6 +1,10 @@
+"use client"
+
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function MinimalLineTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
   const contactParts = [candidate.email, candidate.phone, candidate.address, candidate.linkedin, candidate.website].filter(Boolean)
 
@@ -44,12 +48,12 @@ export default function MinimalLineTemplate({ content, candidate, colorScheme }:
       )}
 
       <p className="text-[11px] mb-5 text-gray-700">
-        {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+        {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
       </p>
 
       {content.body
         ? <div className="text-[11px] text-gray-700 leading-[2] mb-5 [&>p]:mb-5 [&>p]:text-justify [&>ul]:mb-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-5 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-        : <p className="text-[11px] text-gray-200 italic mb-5">El cuerpo de la carta aparecerá aquí...</p>
+        : <p className="text-[11px] text-gray-200 italic mb-5">{t("body_placeholder_template")}</p>
       }
 
       {content.closing && <p className="text-[11px] mb-10 text-gray-700">{content.closing},</p>}

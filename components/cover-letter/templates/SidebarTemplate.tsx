@@ -1,16 +1,20 @@
+"use client"
+
 import { Mail, Phone, MapPin, Link2, Globe } from "lucide-react"
+import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
-export default function SidebarTemplate({ content, candidate, colorScheme }: TemplateProps) {
+
+  const t = useTranslations("cover_letter_editor")
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
   return (
-    <div className="flex print:min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
+    <div className="flex min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
       {/* Sidebar */}
       <div className="w-[52mm] shrink-0 px-5 pt-8 pb-6 flex flex-col gap-3" style={{ backgroundColor: colorScheme }}>
         {candidate.photo && (
           <img src={candidate.photo} alt={candidate.name}
-            className="w-20 h-20 rounded-full object-cover border-[3px] border-white/30 mx-auto" />
+            className="w-20 h-20 rounded-full object-cover border-[3px] border-white/30 mx-auto" style={{ objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
         )}
         {candidate.name && (
           <p className="text-[12px] font-bold text-white text-center mt-2">{candidate.name}</p>
@@ -74,12 +78,12 @@ export default function SidebarTemplate({ content, candidate, colorScheme }: Tem
         )}
 
         <p className="text-[11px] mb-3">
-          {content.recipientName ? `Estimado/a ${content.recipientName}:` : "Estimado/a responsable de selección:"}
+          {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
         </p>
 
         {content.body
           ? <div className="text-[11px] text-gray-800 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-6 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-          : <p className="text-[11px] text-gray-300 italic mb-4">El cuerpo de la carta aparecerá aquí...</p>
+          : <p className="text-[11px] text-gray-300 italic mb-4">{t("body_placeholder_template")}</p>
         }
 
         {content.closing && <p className="text-[11px] mb-8">{content.closing},</p>}
