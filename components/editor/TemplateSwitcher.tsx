@@ -9,12 +9,10 @@ import { Lock } from "lucide-react"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import UpgradeModal from "./UpgradeModal"
 
-const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
-const ULTRA_IDS = ["rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
+const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul", "rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
 
 const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
-const ultraTemplates   = TEMPLATES.filter((t) => ULTRA_IDS.includes(t.id))
-const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id) && !ULTRA_IDS.includes(t.id))
+const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
 
 interface Props {
   plan: string
@@ -113,19 +111,6 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
             </span>
           </div>
           {proTemplates.map((t) => <TemplateThumb key={t.id} template={t} locked={!hasAccess} />)}
-        </div>
-
-        {/* ── Ultra Diseños ── */}
-        <div className="flex items-center gap-3 pt-2 border-t border-border overflow-x-auto pb-1 scrollbar-hide">
-          <div className="shrink-0 flex flex-col items-center gap-0.5">
-            <span className="text-[8px] font-extrabold uppercase tracking-widest bg-gradient-to-r from-amber-500 to-orange-400 bg-clip-text text-transparent whitespace-nowrap">
-              Ultra
-            </span>
-            <span className="text-[8px] font-extrabold uppercase tracking-widest bg-gradient-to-r from-amber-500 to-orange-400 bg-clip-text text-transparent whitespace-nowrap">
-              Diseños
-            </span>
-          </div>
-          {ultraTemplates.map((t) => <TemplateThumb key={t.id} template={t} locked={!hasAccess} />)}
         </div>
       </div>
     </div>

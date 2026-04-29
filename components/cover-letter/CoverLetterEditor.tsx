@@ -7,8 +7,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
+import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
-import { ArrowLeft, Save, Printer, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp, Camera, X } from "lucide-react"
+import { compressImage } from "@/lib/compressImage"
+import { ArrowLeft, Save, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp, Camera, X, Download, FileText, FileDown } from "lucide-react"
 import { useTranslations } from "next-intl"
 import UpgradeModal from "@/components/editor/UpgradeModal"
 import SidebarTemplate from "./templates/SidebarTemplate"
@@ -391,17 +393,27 @@ export default function CoverLetterEditor({
     (initialTemplateId as TemplateId) === "classic" ? "elegant" : (initialTemplateId as TemplateId) ?? "elegant"
   )
   const [candidateOpen, setCandidateOpen] = useState(false)
+  const [downloadOpen, setDownloadOpen] = useState(false)
+  const [downloadingWord, setDownloadingWord] = useState(false)
+  const [photoPosition, setPhotoPosition] = useState<number>(
+    typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
+  )
   const photoInputRef = useRef<HTMLInputElement>(null)
 
-  function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = (ev) => {
-      const result = ev.target?.result as string
-      updateCandidate("photo", result)
+    try {
+      const compressed = await compressImage(file)
+      updateCandidate("photo", compressed)
+    } catch {
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string
+        updateCandidate("photo", result)
+      }
+      reader.readAsDataURL(file)
     }
-    reader.readAsDataURL(file)
   }
 
   // AI generation state
@@ -410,9 +422,6 @@ export default function CoverLetterEditor({
   const [selectedResumeId, setSelectedResumeId] = useState("")
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
 
-  // AI improve state
-  const [improving, setImproving] = useState(false)
-  const [improveVersions, setImproveVersions] = useState<string[]>([])
 
   useEffect(() => {
     fetch("/api/resumes")
@@ -423,19 +432,8 @@ export default function CoverLetterEditor({
       .catch(() => {})
   }, [])
 
-  // Delete record on unmount if it was just created and user never added content
   const dirtyRef = useRef(dirty)
   useEffect(() => { dirtyRef.current = dirty }, [dirty])
-
-  useEffect(() => {
-    if (!isNew) return
-    return () => {
-      if (!dirtyRef.current) {
-        fetch(`/api/cover-letters/${id}`, { method: "DELETE", keepalive: true }).catch(() => {})
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   async function handleGenerateAI() {
     setGenerating(true)
@@ -451,6 +449,9 @@ export default function CoverLetterEditor({
           jobTitle: title,
           tone: aiTone,
           language,
+          userPrompt: content.body
+            ? content.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+            : undefined,
         }),
       })
       if (res.status === 403) { toast.error(t("ai_pro_only")); return }
@@ -466,44 +467,7 @@ export default function CoverLetterEditor({
     }
   }
 
-  async function handleImproveAI() {
-    if (content.body.trim().length < 20) {
-      toast.error(t("improve_short"))
-      return
-    }
-    setImproving(true)
-    setImproveVersions([])
-    try {
-      const res = await fetch("/api/ai/improve-cover-letter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          body: content.body,
-          company: content.company,
-          jobTitle: title,
-          recipientTitle: content.recipientTitle,
-          language,
-        }),
-      })
-      if (res.status === 403) { toast.error(t("ai_pro_only")); return }
-      if (res.status === 422) { toast.error(t("improve_off_topic")); return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setImproveVersions(data.versions)
-    } catch {
-      toast.error(t("improve_error"))
-    } finally {
-      setImproving(false)
-    }
-  }
-
-  function applyImprovedVersion(v: string) {
-    updateContent("body", v)
-    setImproveVersions([])
-    toast.success(t("improve_success"))
-  }
-
-  function updateContent(field: keyof CoverLetterContent, value: string) {
+function updateContent(field: keyof CoverLetterContent, value: string) {
     setContent((prev) => ({ ...prev, [field]: value }))
     setDirty(true)
     setSaved(false)
@@ -531,6 +495,7 @@ export default function CoverLetterEditor({
       candidatePhone: candidate.phone,
       candidateAddress: candidate.address,
       candidatePhoto: candidate.photo,
+      candidatePhotoPosition: photoPosition,
       candidateLinkedin: candidate.linkedin,
       candidateWebsite: candidate.website,
     }
@@ -560,7 +525,74 @@ export default function CoverLetterEditor({
       setSaving(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, title, content, candidate, activeTemplate])
+  }, [id, title, content, candidate, activeTemplate, photoPosition])
+
+  const downloadRef = useRef<HTMLDivElement>(null)
+  const templateRef = useRef<HTMLDivElement>(null)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  useEffect(() => {
+    if (!downloadOpen) return
+    const close = (e: MouseEvent) => {
+      if (downloadRef.current && !downloadRef.current.contains(e.target as Node)) {
+        setDownloadOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", close)
+    return () => document.removeEventListener("mousedown", close)
+  }, [downloadOpen])
+
+  const downloadPDF = useCallback(async () => {
+    if (!templateRef.current) return
+    setDownloadingPdf(true)
+    setDownloadOpen(false)
+    try {
+      const html2canvas = (await import("html2canvas")).default
+      const { jsPDF } = await import("jspdf")
+      const canvas = await html2canvas(templateRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: "#ffffff",
+      })
+      const imgData = canvas.toDataURL("image/jpeg", 0.95)
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
+      const pageW = pdf.internal.pageSize.getWidth()
+      const pageH = pdf.internal.pageSize.getHeight()
+      const imgH = (canvas.height * pageW) / canvas.width
+      let y = 0
+      let remaining = imgH
+      while (remaining > 0) {
+        pdf.addImage(imgData, "JPEG", 0, -y, pageW, imgH)
+        remaining -= pageH
+        if (remaining > 0) { pdf.addPage(); y += pageH }
+      }
+      pdf.save(`${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.pdf`)
+    } catch {
+      toast.error("Error al generar el PDF")
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }, [title])
+
+  const downloadWord = useCallback(async () => {
+    setDownloadingWord(true)
+    try {
+      const res = await fetch(`/api/export/cover-letter-docx?id=${id}`)
+      if (!res.ok) { toast.error("Error al generar el archivo Word"); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.docx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error("Error al descargar el archivo Word")
+    } finally {
+      setDownloadingWord(false)
+      setDownloadOpen(false)
+    }
+  }, [id, title])
 
   const toneOptions = [
     ["formal", t("ai_tone_formal")],
@@ -626,9 +658,37 @@ export default function CoverLetterEditor({
           <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
             <Save className="h-3.5 w-3.5" /> {t("save")}
           </Button>
-          <Button size="sm" className="gap-1.5" onClick={() => window.print()}>
-            <Printer className="h-3.5 w-3.5" /> {t("print")}
-          </Button>
+          <div className="relative" ref={downloadRef}>
+            <Button size="sm" className="gap-1.5" onClick={() => setDownloadOpen((v) => !v)}>
+              <Download className="h-3.5 w-3.5" /> Descargar <ChevronDown className="h-3 w-3 ml-0.5" />
+            </Button>
+            {downloadOpen && (
+              <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl min-w-[180px] overflow-hidden">
+                <button
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-sm hover:bg-muted/60 transition-colors disabled:opacity-50"
+                  onClick={downloadPDF}
+                  disabled={downloadingPdf}
+                >
+                  {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <FileDown className="h-4 w-4 text-red-500 shrink-0" />}
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">PDF</span>
+                    <span className="text-[10px] text-muted-foreground">Con diseño completo</span>
+                  </div>
+                </button>
+                <button
+                  className="flex items-center gap-2.5 w-full px-4 py-3 text-sm hover:bg-muted/60 transition-colors disabled:opacity-50"
+                  onClick={downloadWord}
+                  disabled={downloadingWord}
+                >
+                  {downloadingWord ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <FileText className="h-4 w-4 text-blue-500 shrink-0" />}
+                  <div className="flex flex-col items-start">
+                    <span className="font-medium">Word (.docx)</span>
+                    <span className="text-[10px] text-muted-foreground">Versión editable, sin diseño</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -687,40 +747,79 @@ export default function CoverLetterEditor({
             {candidateOpen && (
               <div className="space-y-2.5 pt-1">
                 {/* Photo upload */}
-                <div className="space-y-1">
+                <div className="space-y-2">
                   <Label className="text-[11px] text-muted-foreground">{t("candidate_photo")}</Label>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-4">
                     <div
-                      className="w-14 h-14 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-muted/30 shrink-0 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
+                      className="w-20 h-20 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-muted/30 shrink-0 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
                       onClick={() => photoInputRef.current?.click()}
                     >
                       {candidate.photo ? (
-                        <img src={candidate.photo} alt="" className="w-full h-full object-cover" />
+                        <img
+                          src={candidate.photo}
+                          alt=""
+                          className="w-full h-full object-cover"
+                          style={{ objectPosition: `center ${photoPosition}%` }}
+                        />
+                      ) : candidate.name ? (
+                        <span className="text-lg font-bold text-muted-foreground select-none">
+                          {candidate.name.trim().split(/\s+/).slice(0, 2).map((w: string) => w[0].toUpperCase()).join("")}
+                        </span>
                       ) : (
-                        <Camera className="h-5 w-5 text-muted-foreground" />
+                        <Camera className="h-6 w-6 text-muted-foreground" />
                       )}
                     </div>
-                    <div className="flex flex-col gap-1.5">
-                      <Button
+                    <div className="flex flex-col gap-2 flex-1">
+                      <button
                         type="button"
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs"
                         onClick={() => photoInputRef.current?.click()}
+                        className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
                       >
+                        <Camera className="h-3.5 w-3.5" />
                         {candidate.photo ? t("candidate_photo_change") : t("candidate_photo_add")}
-                      </Button>
+                      </button>
                       {candidate.photo && (
                         <button
                           type="button"
                           onClick={() => { updateCandidate("photo", ""); if (photoInputRef.current) photoInputRef.current.value = "" }}
-                          className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-destructive transition-colors"
+                          className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors"
                         >
-                          <X className="h-3 w-3" /> {t("candidate_photo_remove")}
+                          <X className="h-3.5 w-3.5" /> {t("candidate_photo_remove")}
                         </button>
                       )}
                     </div>
                   </div>
+
+                  {/* Position slider — only when photo is loaded */}
+                  {candidate.photo && (
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                          {t("candidate_photo_position")}
+                        </Label>
+                        <span className="text-[10px] font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
+                          {photoPosition}%
+                        </span>
+                      </div>
+                      <Slider
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={photoPosition}
+                        onValueChange={(v) => {
+                          const val = Array.isArray(v) ? v[0] : v
+                          setPhotoPosition(val)
+                          setDirty(true)
+                          setSaved(false)
+                        }}
+                      />
+                      <div className="flex justify-between text-[10px] text-muted-foreground/60">
+                        <span>{t("candidate_photo_top")}</span>
+                        <span>{t("candidate_photo_bottom")}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <input
                     ref={photoInputRef}
                     type="file"
@@ -797,63 +896,66 @@ export default function CoverLetterEditor({
 
           <Separator />
 
-          {/* AI generation */}
-          {!isPro ? (
-            <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-4 py-5 flex flex-col items-center gap-3 text-center">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Lock className="h-4 w-4 text-primary" />
+          {/* Body + AI unified */}
+          <div className="space-y-2">
+            <Label className="text-xs">{t("body_label")}</Label>
+
+            {isPro ? (
+              <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2.5">
+                {resumes.length > 0 && (
+                  <div className="space-y-1">
+                    <Label className="text-[11px] text-muted-foreground">{t("ai_resume_label")}</Label>
+                    <select
+                      value={selectedResumeId}
+                      onChange={(e) => setSelectedResumeId(e.target.value)}
+                      className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5"
+                    >
+                      <option value="">{t("ai_resume_none")}</option>
+                      {resumes.map((r) => (
+                        <option key={r.id} value={r.id}>{r.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                <div className="space-y-1">
+                  <Label className="text-[11px] text-muted-foreground">{t("ai_tone_label")}</Label>
+                  <div className="flex gap-1.5">
+                    {toneOptions.map(([v, l]) => (
+                      <button
+                        key={v}
+                        type="button"
+                        onClick={() => setAiTone(v)}
+                        className={`flex-1 text-[10px] py-1 rounded border transition-colors ${
+                          aiTone === v
+                            ? "bg-indigo-600 text-white border-indigo-600"
+                            : "bg-white text-muted-foreground border-input hover:border-indigo-400"
+                        }`}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
-              <div className="space-y-1">
+            ) : (
+              <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-4 py-4 flex flex-col items-center gap-2 text-center">
+                <Lock className="h-4 w-4 text-primary" />
                 <p className="text-xs font-semibold text-foreground">{t("pro_upgrade_title")}</p>
                 <p className="text-[11px] text-muted-foreground leading-relaxed">{t("pro_upgrade_desc")}</p>
+                <Button size="sm" className="gap-1.5 mt-1" onClick={() => setUpgradeOpen(true)}>
+                  <Sparkles className="h-3.5 w-3.5" /> {t("pro_upgrade_cta")}
+                </Button>
               </div>
-              <Button size="sm" className="gap-1.5 mt-1" onClick={() => setUpgradeOpen(true)}>
-                <Sparkles className="h-3.5 w-3.5" /> {t("pro_upgrade_cta")}
-              </Button>
-            </div>
-          ) : (
-            <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2.5">
-              <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
-                <Sparkles className="h-3 w-3" /> {t("ai_title")}
-                <span className="ml-auto text-[10px] bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded font-medium">{t("ai_pro_badge")}</span>
-              </p>
+            )}
 
-              {resumes.length > 0 && (
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">{t("ai_resume_label")}</Label>
-                  <select
-                    value={selectedResumeId}
-                    onChange={(e) => setSelectedResumeId(e.target.value)}
-                    className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 text-sm"
-                  >
-                    <option value="">{t("ai_resume_none")}</option>
-                    {resumes.map((r) => (
-                      <option key={r.id} value={r.id}>{r.title}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
+            <RichTextEditor
+              value={content.body}
+              onChange={(html) => updateContent("body", html)}
+              placeholder={t("body_placeholder")}
+            />
 
-              <div className="space-y-1">
-                <Label className="text-[11px] text-muted-foreground">{t("ai_tone_label")}</Label>
-                <div className="flex gap-1.5">
-                  {toneOptions.map(([v, l]) => (
-                    <button
-                      key={v}
-                      type="button"
-                      onClick={() => setAiTone(v)}
-                      className={`flex-1 text-[10px] py-1 rounded border transition-colors ${
-                        aiTone === v
-                          ? "bg-indigo-600 text-white border-indigo-600"
-                          : "bg-white text-muted-foreground border-input hover:border-indigo-400"
-                      }`}
-                    >
-                      {l}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+            {isPro && (
               <Button
                 size="sm"
                 className="w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
@@ -863,61 +965,6 @@ export default function CoverLetterEditor({
                 {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
                 {generating ? t("ai_generating") : t("ai_generate")}
               </Button>
-            </div>
-          )}
-
-          <Separator />
-
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs">{t("body_label")}</Label>
-              {isPro && (
-                <button
-                  type="button"
-                  onClick={handleImproveAI}
-                  disabled={improving}
-                  className="flex items-center gap-1 text-[10px] font-semibold text-indigo-600 hover:text-indigo-800 disabled:opacity-50 transition-colors"
-                >
-                  {improving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                  {improving ? t("improve_loading") : t("improve_button")}
-                </button>
-              )}
-            </div>
-            <RichTextEditor
-              value={content.body}
-              onChange={(html) => { updateContent("body", html); setImproveVersions([]) }}
-              placeholder={t("body_placeholder")}
-            />
-
-            {/* AI improve versions panel */}
-            {improveVersions.length > 0 && (
-              <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
-                <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> {t("improve_choose")}
-                </p>
-                {improveVersions.map((v, i) => (
-                  <div key={i} className="rounded-md bg-white border border-indigo-100 p-2.5 space-y-1.5">
-                    <p className="text-xs text-foreground leading-relaxed whitespace-pre-wrap">{v}</p>
-                    <button
-                      type="button"
-                      onClick={() => applyImprovedVersion(v)}
-                      className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-                    >
-                      {t("improve_use")}
-                    </button>
-                  </div>
-                ))}
-                <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-relaxed">
-                  ⚠ {t("improve_metrics_disclaimer")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setImproveVersions([])}
-                  className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {t("improve_cancel")}
-                </button>
-              </div>
             )}
           </div>
 
@@ -934,22 +981,28 @@ export default function CoverLetterEditor({
         {/* Right: preview */}
         <div className="flex-1 overflow-auto bg-[#e8e8e8] flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0">
           <div
+            ref={templateRef}
             className="bg-white shadow-2xl print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"
             style={{ width: "210mm", minHeight: "297mm" }}
           >
-            {(activeTemplate === "elegant" || activeTemplate === "classic") && <ElegantTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "sidebar" && <SidebarTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "split" && <SplitTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "executive" && <ExecutiveBoldTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "material" && <MaterialCardTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "gradient" && <GradientHorizonTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "twotone" && <TwoToneTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "timeline" && <TimelineTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "minimal" && <MinimalLineTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "monogram" && <MonogramTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "architect" && <ArchitectTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "diagonal" && <DiagonalTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
-            {activeTemplate === "newspaper" && <NewspaperTemplate content={content} candidate={candidate} colorScheme={colorScheme} />}
+            {(() => {
+              const candidateWithPosition = { ...candidate, photoPosition }
+              return <>
+                {(activeTemplate === "elegant" || activeTemplate === "classic") && <ElegantTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "sidebar" && <SidebarTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "split" && <SplitTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "executive" && <ExecutiveBoldTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "material" && <MaterialCardTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "gradient" && <GradientHorizonTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "twotone" && <TwoToneTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "timeline" && <TimelineTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "minimal" && <MinimalLineTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "monogram" && <MonogramTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "architect" && <ArchitectTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "diagonal" && <DiagonalTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+                {activeTemplate === "newspaper" && <NewspaperTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
+              </>
+            })()}
           </div>
         </div>
       </div>
@@ -958,7 +1011,9 @@ export default function CoverLetterEditor({
         @media print {
           header, .w-80 { display: none !important; }
           @page { size: A4; margin: 0; }
-          body { margin: 0; }
+          body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          svg { overflow: visible !important; }
         }
       `}</style>
 

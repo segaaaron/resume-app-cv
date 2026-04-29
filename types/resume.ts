@@ -49,7 +49,7 @@ export const SkillItemSchema = z.object({
 export const LanguageItemSchema = z.object({
   id: z.string(),
   name: z.string().default(""),
-  level: z.enum(["elementary", "limited", "professional", "full_professional", "native"]).default("professional"),
+  level: z.enum(["a1", "a2", "b1", "b2", "c1", "c2", "native"]).catch("b1"),
 })
 
 export const CertificationItemSchema = z.object({

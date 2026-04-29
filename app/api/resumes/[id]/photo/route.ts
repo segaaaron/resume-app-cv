@@ -20,9 +20,9 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Solo se permiten imágenes JPEG, PNG, WebP o GIF" }, { status: 400 })
   }
 
-  // Limit: 1 MB (base64 añade ~33% — 1 MB → ~1.33 MB en BD)
-  if (file.size > 1 * 1024 * 1024) {
-    return NextResponse.json({ error: "La imagen no puede superar 1 MB" }, { status: 400 })
+  // Limit: 300 KB — compressImage client-side reduce a ~40-80KB a 600px/88%; límite es red de seguridad
+  if (file.size > 300 * 1024) {
+    return NextResponse.json({ error: "La imagen no puede superar 300 KB" }, { status: 400 })
   }
 
   let buffer: Buffer

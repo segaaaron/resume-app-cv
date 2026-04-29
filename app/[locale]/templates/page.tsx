@@ -272,12 +272,10 @@ export default async function TemplatesPage({
       )
     : false
 
-  const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
-  const ULTRA_IDS = ["rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
+  const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul", "rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
 
   const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
-  const ultraTemplates   = TEMPLATES.filter((t) => ULTRA_IDS.includes(t.id))
-  const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id) && !ULTRA_IDS.includes(t.id))
+  const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
 
   const TemplateCard = ({ template, locked = false }: { template: typeof TEMPLATES[number]; locked?: boolean }) => {
     const visual = TEMPLATE_VISUALS[template.id] ?? {
@@ -376,23 +374,6 @@ export default async function TemplatesPage({
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
               {proTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
-            </div>
-          </div>
-
-          {/* Ultra Diseños */}
-          <div className="mb-12">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px bg-border" />
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold tracking-tight">{t("ultra_label")}</span>
-                <span className="text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-amber-500 to-orange-400 text-white px-2.5 py-0.5 rounded-full">
-                  Ultra
-                </span>
-              </div>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-              {ultraTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
             </div>
           </div>
 

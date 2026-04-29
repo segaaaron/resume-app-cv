@@ -25,7 +25,7 @@ export default function VogueTemplate() {
     beginner: "●○○○○", intermediate: "●●●○○", advanced: "●●●●○", expert: "●●●●●",
   }
   const LANG_LABEL: Record<string, string> = {
-    elementary: "A1", limited: "A2-B1", professional: "B2", full_professional: "C1", native: "Nativo",
+    a1: "A1", a2: "A2", b1: "B1", b2: "B2", c1: "C1", c2: "C2", native: "Nativo",
   }
 
   return (

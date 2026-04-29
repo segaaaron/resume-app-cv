@@ -87,7 +87,7 @@ export default function VerticalTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between text-xs">
                   <span className="font-medium">{lang.name}</span>
-                  <span className="text-gray-500 capitalize text-[10px]">{lang.level.replace("_", " ")}</span>
+                  <span className="text-gray-500 text-[10px]">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </div>

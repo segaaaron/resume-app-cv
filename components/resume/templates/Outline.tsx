@@ -123,7 +123,7 @@ export default function OutlineTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id}>
                     <p className="text-xs font-bold text-gray-800">{lang.name}</p>
-                    <p className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</p>
+                    <p className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</p>
                   </div>
                 ))}
               </div>

@@ -139,7 +139,7 @@ export default function ClassicTemplate() {
             {languages.map((lang) => (
               <div key={lang.id} className="flex justify-between items-center text-xs">
                 <span className="font-medium text-gray-800">{lang.name}</span>
-                <span className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</span>
+                <span className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</span>
               </div>
             ))}
           </div>

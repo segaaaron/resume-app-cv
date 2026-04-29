@@ -25,7 +25,7 @@ export default function CoralTemplate() {
     beginner: 1, intermediate: 2, advanced: 3, expert: 4,
   }
   const LANG_DOTS: Record<string, number> = {
-    elementary: 1, limited: 2, professional: 3, full_professional: 4, native: 5,
+    a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5,
   }
 
   return (

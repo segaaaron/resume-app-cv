@@ -22,7 +22,7 @@ const SKILL_W: Record<string, string> = {
   beginner: "25%", intermediate: "52%", advanced: "76%", expert: "100%",
 }
 const LANG_W: Record<string, string> = {
-  elementary: "18%", limited: "38%", professional: "58%", full_professional: "80%", native: "100%",
+  a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%",
 }
 
 export default function VitaeTemplate() {

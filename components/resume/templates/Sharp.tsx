@@ -135,7 +135,7 @@ export default function SharpTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between text-xs mb-1">
                   <span className="font-medium">{lang.name}</span>
-                  <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                  <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </SharpSection>

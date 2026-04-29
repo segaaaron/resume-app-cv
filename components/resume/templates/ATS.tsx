@@ -90,7 +90,7 @@ export default function ATSTemplate() {
       {visible("languages") && languages.length > 0 && (
         <ATSSection title={label("languages")} color={color}>
           <p className="text-sm text-gray-700">
-            {languages.map((l) => `${l.name} (${l.level.replace("_", " ")})`).join(" · ")}
+            {languages.map((l) => `${l.name} (${l.level.toUpperCase()})`).join(" · ")}
           </p>
         </ATSSection>
       )}

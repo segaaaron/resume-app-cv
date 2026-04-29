@@ -24,7 +24,7 @@ export default function RivieraTemplate() {
     beginner: "25%", intermediate: "55%", advanced: "78%", expert: "100%",
   }
   const LANG_WIDTH: Record<string, string> = {
-    elementary: "20%", limited: "40%", professional: "60%", full_professional: "80%", native: "100%",
+    a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%",
   }
 
   return (

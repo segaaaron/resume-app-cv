@@ -108,7 +108,7 @@ export default function NeonTemplate() {
             {languages.map((lang) => (
               <div key={lang.id} className="flex justify-between text-xs mb-1.5 border-b border-dashed border-gray-200 pb-1">
                 <span className="font-black uppercase text-gray-900">{lang.name}</span>
-                <span className="font-mono text-gray-500 text-[10px] uppercase">{lang.level.replace("_", " ")}</span>
+                <span className="font-mono text-gray-500 text-[10px]">{lang.level.toUpperCase()}</span>
               </div>
             ))}
           </NeonBlock>

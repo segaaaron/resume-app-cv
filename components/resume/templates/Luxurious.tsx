@@ -129,7 +129,7 @@ export default function LuxuriousTemplate() {
                   {languages.map((lang) => (
                     <div key={lang.id} className="flex justify-between items-center text-xs">
                       <span className="font-medium text-gray-800">{lang.name}</span>
-                      <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                      <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                     </div>
                   ))}
                 </div>

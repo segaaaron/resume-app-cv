@@ -10,7 +10,7 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 52, advanced: 76, expert: 100 }
-const LANG_W:  Record<string, number> = { elementary: 18, limited: 38, professional: 58, full_professional: 80, native: 100 }
+const LANG_W:  Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 /* Art Deco ornamental divider SVG */
 function OrnamentDivider({ color, width = 380 }: { color: string; width?: number }) {

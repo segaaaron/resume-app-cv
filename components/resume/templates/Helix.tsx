@@ -13,7 +13,7 @@ const DARK  = "#0d1117"
 const DARK2 = "#161b22"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 52, advanced: 76, expert: 100 }
-const LANG_PCT:  Record<string, number> = { elementary: 18, limited: 38, professional: 58, full_professional: 80, native: 100 }
+const LANG_PCT:  Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 /* SVG circular progress ring */
 function RingProgress({ pct, color, size = 30 }: { pct: number; color: string; size?: number }) {

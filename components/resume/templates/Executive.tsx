@@ -134,7 +134,7 @@ export default function ExecutiveTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="mb-2">
                   <p className="text-xs font-semibold text-gray-800">{lang.name}</p>
-                  <p className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</p>
+                  <p className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</p>
                 </div>
               ))}
             </ExecSection>

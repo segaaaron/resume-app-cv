@@ -54,12 +54,12 @@ export default function ProfessionalTemplate() {
                   <div key={lang.id}>
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-medium text-gray-700">{lang.name}</span>
-                      <span className="text-gray-400 capitalize text-[10px]">{lang.level.replace("_", " ")}</span>
+                      <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                     </div>
                     <div className="h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
                       <div className="h-full rounded-full" style={{
                         backgroundColor: color,
-                        width: lang.level === "native" ? "100%" : lang.level === "full_professional" ? "85%" : lang.level === "professional" ? "70%" : lang.level === "limited" ? "50%" : "35%"
+                        width: ({ a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%" } as Record<string, string>)[lang.level] ?? "50%"
                       }} />
                     </div>
                   </div>

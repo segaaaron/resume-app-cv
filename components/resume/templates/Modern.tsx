@@ -81,7 +81,7 @@ export default function ModernTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center">
                   <span className="text-[11px] text-white/90 font-medium">{lang.name}</span>
-                  <span className="text-[10px] text-white/55 capitalize">{lang.level.replace("_", " ")}</span>
+                  <span className="text-[10px] text-white/55">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </div>

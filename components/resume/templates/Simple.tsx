@@ -103,7 +103,7 @@ export default function SimpleTemplate() {
         {visible("languages") && languages.length > 0 && (
           <Block title={label("languages")} color={color}>
             <p className="text-xs text-gray-700 leading-relaxed">
-              {languages.map((l) => `${l.name} (${l.level.replace("_", " ")})`).join(" · ")}
+              {languages.map((l) => `${l.name} (${l.level.toUpperCase()})`).join(" · ")}
             </p>
           </Block>
         )}

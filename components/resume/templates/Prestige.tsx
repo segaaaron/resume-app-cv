@@ -44,7 +44,7 @@ export default function PrestigeTemplate() {
   const copper = "#b87333"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-  const LANG_PCT: Record<string, number> = { elementary: 20, limited: 40, professional: 60, full_professional: 80, native: 100 }
+  const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   const CircleGauge = ({ pct, label }: { pct: number; label: string }) => {
     const r = 14, c = 2 * Math.PI * r, offset = c - (pct / 100) * c

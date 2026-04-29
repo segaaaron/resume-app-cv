@@ -43,7 +43,7 @@ export default function WaveTemplate() {
   const cyan = "#00bcd4"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_STARS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
-  const LANG_STARS: Record<string, number> = { elementary: 1, limited: 2, professional: 3, full_professional: 4, native: 5 }
+  const LANG_STARS: Record<string, number> = { a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5 }
 
   const Stars = ({ filled, total }: { filled: number; total: number }) => (
     <div style={{ display: "flex", gap: 2 }}>

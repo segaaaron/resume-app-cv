@@ -13,8 +13,8 @@ const SKILL_W: Record<string, string> = {
   beginner: "22%", intermediate: "50%", advanced: "75%", expert: "100%",
 }
 const LANG_W: Record<string, string> = {
-  elementary: "18%", limited: "36%", professional: "56%",
-  full_professional: "78%", native: "100%",
+  a1: "17%", a2: "33%", b1: "50%",
+  b2: "67%", c1: "83%", c2: "100%", native: "100%",
 }
 
 export default function ConsulTemplate() {

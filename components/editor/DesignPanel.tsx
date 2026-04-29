@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { useRef, useState } from "react"
 import { Camera, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
+import { compressImage } from "@/lib/compressImage"
 
 const COLOR_PALETTES: { labelKey: string; colors: { hex: string; nameKey: string }[] }[] = [
   {
@@ -71,8 +72,16 @@ export default function DesignPanel() {
 
     setUploadingPhoto(true)
     try {
+      let uploadTarget: Blob = file
+      try {
+        const compressed = await compressImage(file)
+        const r = await fetch(compressed)
+        uploadTarget = await r.blob()
+      } catch {
+        // fallback to original if compression fails
+      }
       const form = new FormData()
-      form.append("photo", file)
+      form.append("photo", uploadTarget, "photo.jpg")
       const res = await fetch(`/api/resumes/${resumeId}/photo`, { method: "POST", body: form })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? t("photo_upload_error"))

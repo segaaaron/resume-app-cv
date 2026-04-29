@@ -147,7 +147,7 @@ export default function SparkTemplate() {
                   <div className="h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
                     <div className="h-full rounded-full" style={{
                       backgroundColor: color,
-                      width: lang.level === "native" ? "100%" : lang.level === "full_professional" ? "85%" : lang.level === "professional" ? "70%" : lang.level === "limited" ? "50%" : "30%"
+                      width: ({ a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%" } as Record<string, string>)[lang.level] ?? "50%"
                     }} />
                   </div>
                 </div>

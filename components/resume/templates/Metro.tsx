@@ -107,7 +107,7 @@ export default function MetroTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id}>
                     <p className="text-xs font-semibold text-gray-800">{lang.name}</p>
-                    <p className="text-[10px] text-gray-500 capitalize">{lang.level.replace("_", " ")}</p>
+                    <p className="text-[10px] text-gray-500">{lang.level.toUpperCase()}</p>
                   </div>
                 ))}
               </div>

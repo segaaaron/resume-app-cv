@@ -109,7 +109,7 @@ export default function StripeTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between gap-2">
                     <span className="text-[11px] text-gray-700">{lang.name}</span>
-                    <span className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</span>
+                    <span className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</span>
                   </div>
                 ))}
               </div>

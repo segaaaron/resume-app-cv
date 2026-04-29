@@ -39,7 +39,7 @@ export default function MinimalTemplate() {
   const navy = "#1a2744"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
-  const LANG_DOTS: Record<string, number> = { elementary: 1, limited: 2, professional: 3, full_professional: 4, native: 5 }
+  const LANG_DOTS: Record<string, number> = { a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5 }
 
   const Dots = ({ filled, total }: { filled: number; total: number }) => (
     <div style={{ display: "flex", gap: 3 }}>
