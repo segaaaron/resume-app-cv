@@ -1,2 +1,0 @@
-- [Design system tokens — READY CV](project_design_system.md) — Color tokens OKLCH, fuente Jakarta Sans, radius, Tailwind v4 sin config file
-- [Template architecture](template_architecture.md) — Patrón de templates: inline styles, stores, SVG thumbnails, registro en 3 archivos
