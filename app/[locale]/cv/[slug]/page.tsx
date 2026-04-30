@@ -17,6 +17,9 @@ export default async function PublicCVPage({
 
   if (!resume) notFound()
 
+  // Fire-and-forget view tracking
+  db.cVView.create({ data: { resumeId: resume.id } }).catch(() => {})
+
   const sections = (resume.sections as unknown as ResumeSection[]) ?? DEFAULT_SECTIONS
   const sectionData: ResumeSections = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
 

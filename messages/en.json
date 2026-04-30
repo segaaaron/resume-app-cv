@@ -553,7 +553,8 @@
       "enabled": "Link copied to clipboard! Now public.",
       "disabled": "CV is no longer public",
       "copied": "Link copied",
-      "error": "Error changing visibility"
+      "error": "Error changing visibility",
+      "views_tooltip": "{total} total views"
     },
     "print": {
       "back": "Back to editor",

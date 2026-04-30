@@ -41,8 +41,8 @@ Estado auditado del roadmap a 2026-04-27.
 
 ## Pendientes compliance por prioridad legal
 
-1. Stripe refund handler — riesgo de chargebacks inmediato
-2. Cron borrado de datos 90 dias post-cancelacion — obligacion GDPR, falta configurar en Dokploy
+1. ~~Stripe refund handler~~ ✅ en webhook
+2. ~~Cron borrado datos 90d post-cancelacion~~ ✅ configurado en Dokploy
 3. Age gate (16+) — pendiente decision del cliente
 4. Audit log Prisma — compliance interno, no urgente
 

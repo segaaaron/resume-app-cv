@@ -27,6 +27,7 @@ model User {
   coverLetters     CoverLetter[]
   applications     Application[]
   marketingConsent Boolean       @default(false)
+  ageVerified      Boolean       @default(false)
   deletedAt        DateTime?
   auditLogs        AuditLog[]
   referralCode      String?       @unique
@@ -91,6 +92,7 @@ model Resume {
   isPublic        Boolean         @default(false)
   publicSlug      String?         @unique
   versions        ResumeVersion[]
+  views           CVView[]
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
@@ -141,6 +143,16 @@ model Application {
 
   @@index([userId])
   @@index([followUpAt])
+}
+
+model CVView {
+  id        String   @id @default(cuid())
+  resumeId  String
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@index([resumeId])
+  @@index([viewedAt])
 }
 
 model AIRateLimit {

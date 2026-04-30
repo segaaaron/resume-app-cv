@@ -39,13 +39,13 @@ export async function POST(req: Request) {
   if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   if (resume.isPublic) {
-    // Disable sharing — keep slug so the link just stops working
     await db.resume.update({ where: { id: resumeId }, data: { isPublic: false } })
+    await db.auditLog.create({ data: { userId: session.user.id, action: "TOGGLE_PUBLIC_CV", metadata: { resumeId, isPublic: false } } })
     return NextResponse.json({ isPublic: false, publicSlug: resume.publicSlug })
   } else {
-    // Enable sharing — generate slug if not present
     const slug = resume.publicSlug ?? nanoid(10)
     await db.resume.update({ where: { id: resumeId }, data: { isPublic: true, publicSlug: slug } })
+    await db.auditLog.create({ data: { userId: session.user.id, action: "TOGGLE_PUBLIC_CV", metadata: { resumeId, isPublic: true, slug } } })
     return NextResponse.json({ isPublic: true, publicSlug: slug })
   }
 }

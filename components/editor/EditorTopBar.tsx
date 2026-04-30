@@ -4,7 +4,7 @@ import Link from "next/link"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Save, Download, Loader2, Lock, History, RotateCcw, Trash2, Share2, Copy } from "lucide-react"
+import { ArrowLeft, Save, Download, Loader2, Lock, History, RotateCcw, Trash2, Share2, Copy, Eye } from "lucide-react"
 import { useState, useEffect, useCallback } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
@@ -27,6 +27,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const [isPublic, setIsPublic] = useState(false)
   const [publicSlug, setPublicSlug] = useState<string | null>(null)
   const [togglingShare, setTogglingShare] = useState(false)
+  const [viewStats, setViewStats] = useState<{ total: number; last7d: number } | null>(null)
   const locale = useLocale()
   const t = useTranslations("editor")
 
@@ -58,6 +59,14 @@ export default function EditorTopBar({ hasAccess }: Props) {
       })
       .catch(() => {})
   }, [resumeId])
+
+  useEffect(() => {
+    if (!resumeId || !isPublic) return
+    fetch(`/api/resumes/views?resumeId=${resumeId}`)
+      .then((r) => r.json())
+      .then((data) => setViewStats({ total: data.total ?? 0, last7d: data.last7d ?? 0 }))
+      .catch(() => {})
+  }, [resumeId, isPublic])
 
   async function handleSaveVersion() {
     if (!resumeId) return
@@ -202,6 +211,12 @@ export default function EditorTopBar({ hasAccess }: Props) {
               <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyLink} title={t("share.copy_link")}>
                 <Copy className="h-3.5 w-3.5" />
               </Button>
+            )}
+            {isPublic && viewStats !== null && (
+              <span className="flex items-center gap-1 text-xs text-muted-foreground px-1" title={t("share.views_tooltip", { total: viewStats.total })}>
+                <Eye className="h-3 w-3" />
+                {viewStats.last7d}
+              </span>
             )}
           </div>
         )}

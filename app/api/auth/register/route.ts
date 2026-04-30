@@ -30,6 +30,7 @@ const schema = z.object({
     .regex(/[a-z]/, "Debe contener al menos una minúscula")
     .regex(/[0-9]/, "Debe contener al menos un número"),
   marketingConsent: z.boolean().optional(),
+  ageConsent:       z.boolean().refine((v) => v === true, { message: "Debes confirmar que tienes 16 años o más" }),
   referralCode:     z.string().max(20).optional(),
 })
 
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
 
   try {
     const body = await req.json()
-    const { name, email, password, marketingConsent, referralCode } = schema.parse(body)
+    const { name, email, password, marketingConsent, ageConsent, referralCode } = schema.parse(body)
 
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
@@ -69,6 +70,7 @@ export async function POST(req: Request) {
         email,
         password: hashed,
         marketingConsent: marketingConsent ?? false,
+        ageVerified: ageConsent === true,
         referralCode: nanoid(8), // every user gets their own code on signup
         ...(referrerId ? { referredBy: referrerId } : {}),
       },

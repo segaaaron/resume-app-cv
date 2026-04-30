@@ -553,7 +553,8 @@
       "enabled": "¡Enlace copiado al portapapeles! Ahora es público.",
       "disabled": "El CV ya no es público",
       "copied": "Enlace copiado",
-      "error": "Error al cambiar visibilidad"
+      "error": "Error al cambiar visibilidad",
+      "views_tooltip": "{total} visitas totales"
     },
     "print": {
       "back": "Volver al editor",

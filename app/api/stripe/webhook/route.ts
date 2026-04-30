@@ -126,6 +126,7 @@ export async function POST(req: Request) {
               ...(cancelAt ? { subscriptionEndsAt: cancelAt } : {}),
             },
           })
+          await db.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { cancelAt: cancelAt?.toISOString() } } })
         } else if (sub.status === "active") {
           // Cancellation reversed or subscription renewed
           await db.user.update({
@@ -151,6 +152,7 @@ export async function POST(req: Request) {
               subscriptionStatus: "EXPIRED",
             },
           })
+          await db.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { reason: "subscription_deleted" } } })
         }
         break
       }
