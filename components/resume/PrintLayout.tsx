@@ -1,15 +1,14 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-// pdf via window.print() — no html2canvas/jsPDF needed
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import ResumePreview from "./ResumePreview"
 import { Button } from "@/components/ui/button"
-import { Download, ArrowLeft, FileText, Loader2 } from "lucide-react"
+import { Download, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { toast } from "sonner"
 
 interface Props {
@@ -24,8 +23,9 @@ interface Props {
 export default function PrintLayout({ resumeId, title, sections, sectionData, config, isPro = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
-  const [downloadingDocx, setDownloadingDocx] = useState(false)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const t = useTranslations("editor.print")
+  const locale = useLocale()
   propsRef.current = { resumeId, title, sections, sectionData, config }
   const searchParams = useSearchParams()
 
@@ -41,30 +41,22 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  function handleDownloadPdf() {
-    window.print()
-  }
-
-  async function handleDownloadDocx() {
-    setDownloadingDocx(true)
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true)
     try {
-      const res = await fetch(`/api/export/docx?id=${resumeId}`)
-      if (res.status === 403) {
-        toast.error(t("pro_only_word"))
-        return
-      }
-      if (!res.ok) throw new Error()
+      const res = await fetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
+      if (!res.ok) { toast.error(t("error_pdf")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = `${title}.docx`
+      a.download = `${title}.pdf`
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      toast.error(t("error_word"))
+      toast.error(t("error_pdf"))
     } finally {
-      setDownloadingDocx(false)
+      setDownloadingPdf(false)
     }
   }
 
@@ -81,12 +73,8 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
           <span className="text-sm text-muted-foreground">{title}</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="gap-2" onClick={handleDownloadDocx} disabled={downloadingDocx}>
-            {downloadingDocx ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />}
-            {t("export_word")}
-          </Button>
-          <Button onClick={handleDownloadPdf} size="sm" className="gap-2">
-            <Download className="h-4 w-4" />
+          <Button onClick={handleDownloadPdf} size="sm" className="gap-2" disabled={downloadingPdf}>
+            {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {t("print_pdf")}
           </Button>
         </div>
@@ -155,9 +143,6 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
       <style>{`
         @page {
           size: A4;
-          margin: 6mm 0 0 0;
-        }
-        @page :first {
           margin: 0;
         }
         @media print {
@@ -176,6 +161,8 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
           .resume-pages > div {
             min-height: 0 !important;
             height: auto !important;
+            box-decoration-break: clone !important;
+            -webkit-box-decoration-break: clone !important;
           }
           .resume-pages * {
             break-inside: auto !important;

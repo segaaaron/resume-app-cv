@@ -2173,7 +2173,6 @@ function ProcessFlowThumb({ color }: { color: string }) {
         </g>
       ))}
       <rect x="52" y="45" width="24" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <div />
       {[0,1,2,3,4].map((i) => (
         <rect key={i} x="52" y={50 + i * 6} width="22" height="1.5" rx="0.5" fill="#1c1c1c" opacity={0.4 - i * 0.05} />
       ))}
