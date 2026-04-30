@@ -19,9 +19,13 @@ function escapeHtml(s: string): string {
  *  Continuation lines (no bullet prefix) are merged into the previous bullet
  *  so mid-bullet Enter presses don't produce orphaned lines. */
 export function fmtDesc(text: string): string {
-  const normalized = text.replace(/<br\s*\/?>/gi, "\n")
+  // Normalize <br> tags to newlines
+  let normalized = text.replace(/<br\s*\/?>/gi, "\n")
+  // Split inline bullets: "text • text • text" → each bullet on its own line
+  // Only split on • that are preceded by non-whitespace (mid-sentence bullets)
+  normalized = normalized.replace(/([^\n])\s*•\s+/g, "$1\n• ")
   const lines = normalized.split("\n")
-  const hasBullets = lines.some((l) => /^[•\-]\s/.test(l.trim()))
+  const hasBullets = lines.some((l) => /^[•\-]/.test(l.trim()))
 
   if (!hasBullets) {
     return lines.map((l) => escapeHtml(l)).join("<br>")
@@ -31,7 +35,7 @@ export function fmtDesc(text: string): string {
   for (const raw of lines) {
     const line = raw.trim()
     if (!line) continue
-    if (/^[•\-]\s/.test(line)) {
+    if (/^[•\-]/.test(line)) {
       bullets.push(escapeHtml(line.replace(/^[•\-]\s*/, "")))
     } else if (bullets.length > 0) {
       bullets[bullets.length - 1] += " " + escapeHtml(line)
@@ -40,5 +44,5 @@ export function fmtDesc(text: string): string {
     }
   }
 
-  return `<ul style="list-style-type:disc;padding-left:1.1em;margin:0">${bullets.map((b) => `<li style="margin-bottom:0.15em">${b}</li>`).join("")}</ul>`
+  return `<ul style="list-style-type:disc;padding-left:1.2em;margin:4px 0 0">${bullets.map((b) => `<li style="margin-bottom:4px;line-height:1.55">${b}</li>`).join("")}</ul>`
 }

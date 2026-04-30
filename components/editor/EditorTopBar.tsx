@@ -207,7 +207,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
         )}
 
         {hasAccess ? (
-          <Button variant="outline" size="sm" onClick={() => save()} disabled={isSaving} className="gap-1.5">
+          <Button variant="outline" size="sm" onClick={async () => { await save(); toast.success(t("saved")) }} disabled={isSaving} className="gap-1.5">
             <Save className="h-3.5 w-3.5" />
             {t("save")}
           </Button>

@@ -95,7 +95,7 @@ export default function GenevanoirTemplate() {
                     {job.employer}{job.city ? `, ${job.city}` : ""}
                   </p>
                   {job.description && (
-                    <div style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.65 }}
+                    <div className="resume-desc" style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.65 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>

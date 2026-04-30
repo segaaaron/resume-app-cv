@@ -9,24 +9,24 @@ const BASE_URL = "https://readycv.app"
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "READY CV — Crear CV Profesional Online Gratis",
+    default: "READY CV — Constructor de CV Profesional con IA",
     template: "%s | READY CV",
   },
   description:
-    "Crea tu currículum vitae profesional online en minutos. Elige entre 29 plantillas modernas, completa tus datos y descarga tu CV en PDF. ¡Gratis para siempre!",
+    "Constructor de CV con IA y análisis ATS. 128 plantillas profesionales, 7 herramientas de inteligencia artificial y tracker de candidaturas.",
   keywords: [
     "crear cv profesional online",
-    "hacer curriculum vitae gratis",
+    "constructor de cv con ia",
     "resume builder",
     "cv online profesional",
     "plantillas de curriculum",
-    "crear cv gratis",
     "generador de cv",
     "cv para trabajo",
     "curriculum vitae",
     "CV online",
     "hacer cv",
     "plantillas cv profesionales",
+    "ats score cv",
   ],
   authors: [{ name: "READY CV", url: BASE_URL }],
   creator: "READY CV",
@@ -54,23 +54,23 @@ export const metadata: Metadata = {
     locale: "es_ES",
     url: BASE_URL,
     siteName: "READY CV",
-    title: "READY CV — Crear CV Profesional Online Gratis",
+    title: "READY CV — Constructor de CV Profesional con IA",
     description:
-      "Crea tu currículum vitae profesional online en minutos. 29 plantillas modernas, descarga en PDF. ¡Gratis!",
+      "128 plantillas profesionales, análisis ATS con IA, carta de presentación automática y tracker de candidaturas.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "READY CV — Generador de CV Profesional Online",
+        alt: "READY CV — Constructor de CV Profesional con IA",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "READY CV — Crear CV Profesional Online Gratis",
+    title: "READY CV — Constructor de CV Profesional con IA",
     description:
-      "Crea tu currículum vitae profesional online en minutos. 29 plantillas modernas, descarga en PDF. ¡Gratis!",
+      "128 plantillas profesionales, análisis ATS con IA, carta de presentación automática y tracker de candidaturas.",
     images: ["/og-image.png"],
     creator: "@readycv",
     site: "@readycv",

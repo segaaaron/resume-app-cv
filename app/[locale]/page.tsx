@@ -4,6 +4,9 @@ import Navbar from "@/components/marketing/Navbar"
 import Hero from "@/components/marketing/Hero"
 import HowItWorks from "@/components/marketing/HowItWorks"
 import FeatureCards from "@/components/marketing/FeatureCards"
+import AIFeatures from "@/components/marketing/AIFeatures"
+import ATSSection from "@/components/marketing/ATSSection"
+import CVExamples from "@/components/marketing/CVExamples"
 import TemplateGallery from "@/components/marketing/TemplateGallery"
 import SocialProof from "@/components/marketing/SocialProof"
 import FAQ from "@/components/marketing/FAQ"
@@ -70,30 +73,27 @@ const jsonLd = {
   name: "READY CV",
   url: "https://readycv.app",
   description:
-    "Generador de CV profesional online. Crea tu currículum vitae con plantillas modernas y descarga en PDF gratis.",
+    "Constructor de CV con IA y análisis ATS. 128 plantillas profesionales, carta de presentación automática y tracker de candidaturas.",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   offers: [
     {
       "@type": "Offer",
-      price: "0",
+      price: "15",
       priceCurrency: "USD",
-      description: "Plan gratuito con plantillas básicas",
-    },
-    {
-      "@type": "Offer",
-      price: "10",
-      priceCurrency: "USD",
-      description: "Plan Pro con todas las plantillas y funciones avanzadas",
+      description: "Plan Pro con 128 plantillas, 7 herramientas de IA y análisis ATS",
       billingIncrement: "P1M",
     },
   ],
   featureList: [
-    "29 plantillas profesionales",
-    "Descarga en PDF",
-    "Editor en tiempo real",
-    "Cartas de presentación",
-    "Gestión de candidaturas",
+    "128 plantillas profesionales",
+    "Análisis ATS con IA",
+    "Mejora de bullets con IA",
+    "Generador de resumen profesional",
+    "Carta de presentación con IA",
+    "Tracker de candidaturas",
+    "Exportación PDF y Word",
+    "CV público compartible",
   ],
   inLanguage: "es",
   screenshot: "https://readycv.app/og-image.png",
@@ -134,6 +134,9 @@ export default async function HomePage({
         <Hero />
         <HowItWorks />
         <FeatureCards />
+        <AIFeatures />
+        <ATSSection />
+        <CVExamples />
         <TemplateGallery />
         <SocialProof />
         <FAQ />

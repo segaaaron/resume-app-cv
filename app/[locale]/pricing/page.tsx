@@ -69,6 +69,10 @@ export default async function PricingPage({
     t("feature6"),
     t("feature7"),
     t("feature8"),
+    t("feature9"),
+    t("feature10"),
+    t("feature11"),
+    t("feature12"),
   ]
 
   return (
@@ -86,11 +90,11 @@ export default async function PricingPage({
               <div className="flex items-center gap-3 text-left">
                 <BadgeCheck className="h-8 w-8 text-primary shrink-0" />
                 <div>
-                  <p className="font-bold text-foreground">Ya eres miembro Pro</p>
+                  <p className="font-bold text-foreground">{t("pro_member_title")}</p>
                   <p className="text-sm text-muted-foreground">
                     {subscriptionEndsAt
-                      ? `Tu plan se renueva el ${format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}`
-                      : "Tu suscripción está activa"}
+                      ? `${t("pro_member_renews")} ${format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}`
+                      : t("pro_member_active")}
                   </p>
                 </div>
               </div>
@@ -98,7 +102,7 @@ export default async function PricingPage({
                 href="/api/stripe/portal"
                 className="shrink-0 inline-flex items-center justify-center rounded-xl bg-primary text-white text-sm font-medium px-5 py-2.5 hover:bg-primary/90 transition-colors"
               >
-                Gestionar suscripción
+                {t("pro_member_manage")}
               </Link>
             </div>
           )}

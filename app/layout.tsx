@@ -16,11 +16,11 @@ const BASE_URL = "https://readycv.app"
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "READY CV — Crear CV Profesional Online Gratis",
+    default: "READY CV — Constructor de CV Profesional con IA",
     template: "%s | READY CV",
   },
   description:
-    "Crea tu currículum vitae profesional online en minutos. Elige entre 29 plantillas modernas, completa tus datos y descarga tu CV en PDF. ¡Gratis para siempre!",
+    "Constructor de CV con IA y análisis ATS. 128 plantillas profesionales, 7 herramientas de inteligencia artificial y tracker de candidaturas.",
 }
 
 export default async function RootLayout({

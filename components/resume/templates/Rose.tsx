@@ -141,7 +141,7 @@ export default function RoseTemplate() {
                   <span style={{ fontSize: 9, color: "#aaa", flexShrink: 0 }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                 </div>
                 <p style={{ fontSize: 10, fontWeight: 600, color: accent }}>{job.employer}</p>
-                {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 3 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 3 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
               </div>
             ))}
           </>

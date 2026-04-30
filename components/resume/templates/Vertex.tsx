@@ -72,8 +72,8 @@ export default function VertexTemplate() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ paddingTop: 24 }}>
-            <h1 style={{ fontSize: 30, fontWeight: 900, color: navy, lineHeight: 1.1 }}>{name}</h1>
-            <p style={{ fontSize: 12, color: "#888", fontWeight: 500, marginTop: 4 }}>{title}</p>
+            <h1 style={{ fontSize: 30, fontWeight: 900, color: gold, lineHeight: 1.1 }}>{name}</h1>
+            <p style={{ fontSize: 12, color: gold, fontWeight: 600, marginTop: 4, opacity: 0.8 }}>{title}</p>
           </div>
           <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${gold}`, position: "relative" }}>
             {config.photoUrl ? (
@@ -148,7 +148,7 @@ export default function VertexTemplate() {
                       <span style={{ fontSize: 9, color: "#aaa" }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                     </div>
                     <p style={{ fontSize: 10, fontWeight: 600, color: navy }}>{job.employer}</p>
-                    {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                    {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                   </div>
                 ))}
               </div>

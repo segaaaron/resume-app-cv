@@ -205,7 +205,7 @@ export default function ConsulTemplate() {
                   {job.description && (
                     <div style={{ display: "flex", gap: 6 }}>
                       <span style={{ color: accent, flexShrink: 0, fontWeight: 700 }}>•</span>
-                      <div style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.65 }}
+                      <div className="resume-desc" style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.65 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     </div>
                   )}

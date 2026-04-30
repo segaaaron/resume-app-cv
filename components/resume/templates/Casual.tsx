@@ -77,7 +77,7 @@ export default function CasualTemplate() {
                   </div>
                   <p className="text-xs font-medium mt-0.5 mb-1.5" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                   {job.description && (
-                    <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}

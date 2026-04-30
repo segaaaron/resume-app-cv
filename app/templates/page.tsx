@@ -6,16 +6,16 @@ import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Plantillas de Curriculum Vitae Profesionales — 29 Diseños",
+  title: "Plantillas de Curriculum Vitae Profesionales — 128 Diseños",
   description:
-    "Explora 29 plantillas de curriculum vitae profesionales y modernas. Diseños para todos los sectores: tecnología, finanzas, diseño, salud y más. Cambia de plantilla sin perder tu contenido.",
+    "Explora 128 plantillas de curriculum vitae profesionales para todos los sectores: tecnología, finanzas, diseño, salud y más. Cambia de plantilla sin perder tu contenido.",
   keywords: [
     "plantillas de curriculum",
     "plantillas cv profesionales",
     "modelos de curriculum vitae",
     "diseños de cv",
     "plantillas resume",
-    "plantillas cv gratis",
+    "plantillas cv profesionales premium",
     "curriculum vitae moderno",
     "plantillas ats",
   ],
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Plantillas de Curriculum Vitae Profesionales — READY CV",
     description:
-      "29 plantillas de CV profesionales y modernas. Elige el diseño perfecto para tu sector y descarga en PDF.",
+      "128 plantillas de CV profesionales. Elige el diseño perfecto para tu sector y descarga en PDF.",
     url: "https://readycv.app/templates",
     type: "website",
   },
@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Plantillas de Curriculum Vitae Profesionales — READY CV",
     description:
-      "29 plantillas de CV profesionales y modernas. Elige el diseño perfecto para tu sector y descarga en PDF.",
+      "128 plantillas de CV profesionales. Elige el diseño perfecto para tu sector y descarga en PDF.",
   },
 }
 
@@ -247,7 +247,7 @@ export default function TemplatesPage() {
           {/* Hero */}
           <div className="text-center mb-10 sm:mb-16">
             <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">
-              29 plantillas
+              128 plantillas
             </span>
             <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
               Elige tu diseño perfecto
@@ -338,9 +338,9 @@ export default function TemplatesPage() {
           {/* CTA */}
           <div className="mt-20 text-center bg-muted/40 rounded-2xl py-12 px-6">
             <h2 className="text-2xl font-bold mb-2">¿Listo para destacar?</h2>
-            <p className="text-muted-foreground mb-6">Crea tu CV profesional en minutos. Gratis para siempre.</p>
+            <p className="text-muted-foreground mb-6">128 plantillas profesionales, 7 herramientas de IA y análisis ATS.</p>
             <Button size="lg" asChild>
-              <Link href="/register">Empezar gratis</Link>
+              <Link href="/register">Crear mi CV</Link>
             </Button>
           </div>
         </div>

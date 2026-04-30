@@ -274,7 +274,7 @@ export default function HelixTemplate() {
                     {job.employer}{job.city ? ` · ${job.city}` : ""}
                   </p>
                   {job.description && (
-                    <div
+                    <div className="resume-desc"
                       style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                     />

@@ -60,7 +60,7 @@ export default function FormPanel() {
 
         {/* Scrollable content */}
         <TabsContent value="content" className="flex-1 min-h-0 overflow-y-auto mt-0 p-4 space-y-2 data-[state=inactive]:hidden">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext id="form-panel-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={visibleSections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
               {visibleSections.map((section) => (
                 <SectionBlock key={section.id} section={section} />

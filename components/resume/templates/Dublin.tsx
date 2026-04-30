@@ -88,7 +88,7 @@ export default function DublinTemplate() {
                   {job.employer}{job.city ? `, ${job.city}` : ""}
                 </p>
                 {job.description && (
-                  <div style={{ fontSize: "8.5px", color: "#4b5563", lineHeight: 1.5 }}
+                  <div className="resume-desc" style={{ fontSize: "8.5px", color: "#4b5563", lineHeight: 1.5 }}
                     dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>

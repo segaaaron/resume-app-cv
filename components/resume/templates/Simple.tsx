@@ -49,7 +49,7 @@ export default function SimpleTemplate() {
                 </div>
                 <p className="text-xs text-gray-500">{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                 {job.description && (
-                  <div className="text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                  <div className="resume-desc text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>
             ))}

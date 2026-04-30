@@ -38,7 +38,68 @@ export default async function TermsPage({
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto px-4 py-12 space-y-2">
+        <div className="max-w-5xl mx-auto px-4 py-12">
+          <div className="flex gap-12 items-start">
+
+          {/* Sticky sidebar TOC — desktop only */}
+          <aside className="hidden lg:block w-52 shrink-0">
+            <div className="sticky top-8 space-y-1">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">
+                {locale === "en" ? "Contents" : "Contenido"}
+              </p>
+              {(locale === "en" ? [
+                [1, "Acceptance"],
+                [2, "Service"],
+                [3, "Accounts"],
+                [4, "Payments"],
+                [5, "AI Disclaimer"],
+                [6, "Employment"],
+                [7, "IP"],
+                [8, "Privacy"],
+                [9, "Acceptable Use"],
+                [10, "Availability"],
+                [11, "Liability"],
+                [12, "Indemnification"],
+                [13, "Third Parties"],
+                [14, "Modifications"],
+                [15, "Termination"],
+                [16, "Governing Law"],
+                [17, "General"],
+                [18, "Contact"],
+              ] : [
+                [1, "Aceptación"],
+                [2, "Servicio"],
+                [3, "Cuentas"],
+                [4, "Pagos"],
+                [5, "Disclaimer IA"],
+                [6, "Empleo"],
+                [7, "Propiedad Int."],
+                [8, "Privacidad"],
+                [9, "Uso Aceptable"],
+                [10, "Disponibilidad"],
+                [11, "Responsabilidad"],
+                [12, "Indemnización"],
+                [13, "Terceros"],
+                [14, "Modificaciones"],
+                [15, "Rescisión"],
+                [16, "Ley Aplicable"],
+                [17, "General"],
+                [18, "Contacto"],
+              ]).map(([num, label]) => (
+                <a
+                  key={num}
+                  href={`#terms-${num}`}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors py-1 pl-2 rounded hover:bg-muted/50"
+                >
+                  <span className="w-4 text-right shrink-0 text-primary/60 font-medium">{num}.</span>
+                  <span className="truncate">{label}</span>
+                </a>
+              ))}
+            </div>
+          </aside>
+
+          {/* Content */}
+          <div className="flex-1 min-w-0 max-w-[680px] space-y-2">
 
           {locale === "en" ? (
             <>
@@ -53,7 +114,7 @@ export default async function TermsPage({
               </div>
 
               {/* Section */}
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-1" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
                   Acceptance of Terms
@@ -65,7 +126,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-2" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
                   Description of Service
@@ -91,7 +152,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-3" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
                   User Accounts
@@ -104,7 +165,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-4">
+              <section id="terms-4" className="rounded-xl border bg-card p-6 space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">4</span>
                   Plans, Payments &amp; Subscriptions
@@ -143,7 +204,7 @@ export default async function TermsPage({
               </section>
 
               {/* AI Disclaimer — highlighted */}
-              <section className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 p-6 space-y-4">
+              <section id="terms-5" className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 p-6 space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">5</span>
                   Artificial Intelligence — Disclaimer
@@ -187,7 +248,7 @@ export default async function TermsPage({
               </section>
 
               {/* Employment disclaimer — highlighted */}
-              <section className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-6 space-y-3">
+              <section id="terms-6" className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold">6</span>
                   No Guarantee of Employment Outcomes
@@ -202,7 +263,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-7" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">7</span>
                   Intellectual Property
@@ -222,7 +283,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-8" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">8</span>
                   Personal Data &amp; Privacy
@@ -240,7 +301,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-9" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">9</span>
                   Acceptable Use Policy
@@ -269,7 +330,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-10" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">10</span>
                   Service Availability
@@ -281,7 +342,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-11" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">11</span>
                   Limitation of Liability
@@ -306,7 +367,7 @@ export default async function TermsPage({
                 </ul>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-12" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">12</span>
                   Indemnification
@@ -320,7 +381,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-13" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">13</span>
                   Third-Party Services
@@ -332,7 +393,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-14" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">14</span>
                   Modifications to Terms
@@ -344,7 +405,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-15" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">15</span>
                   Termination
@@ -357,7 +418,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-16" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">16</span>
                   Governing Law &amp; Dispute Resolution
@@ -372,7 +433,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-17" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">17</span>
                   General Provisions
@@ -387,7 +448,7 @@ export default async function TermsPage({
               </section>
 
               {/* Contact card */}
-              <section className="rounded-xl border bg-primary/5 border-primary/20 p-6 space-y-3">
+              <section id="terms-18" className="rounded-xl border bg-primary/5 border-primary/20 p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">18</span>
                   Contact
@@ -412,7 +473,7 @@ export default async function TermsPage({
                 </p>
               </div>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-1" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">1</span>
                   Aceptación de los Términos
@@ -425,7 +486,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-2" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">2</span>
                   Descripción del Servicio
@@ -451,7 +512,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-3" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">3</span>
                   Cuentas de Usuario
@@ -465,7 +526,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-4">
+              <section id="terms-4" className="rounded-xl border bg-card p-6 space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">4</span>
                   Planes, Pagos y Suscripciones
@@ -506,7 +567,7 @@ export default async function TermsPage({
               </section>
 
               {/* IA Disclaimer ES */}
-              <section className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 p-6 space-y-4">
+              <section id="terms-5" className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 p-6 space-y-4">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-bold">5</span>
                   Inteligencia Artificial — Descargo de Responsabilidad
@@ -550,7 +611,7 @@ export default async function TermsPage({
               </section>
 
               {/* Resultados laborales ES */}
-              <section className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-6 space-y-3">
+              <section id="terms-6" className="rounded-xl border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-red-500/20 text-red-600 dark:text-red-400 text-xs font-bold">6</span>
                   Exoneración de Responsabilidad por Resultados Laborales
@@ -567,7 +628,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-7" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">7</span>
                   Propiedad Intelectual
@@ -587,7 +648,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-8" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">8</span>
                   Datos Personales y Privacidad
@@ -605,7 +666,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-9" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">9</span>
                   Política de Uso Aceptable
@@ -634,7 +695,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-10" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">10</span>
                   Disponibilidad del Servicio
@@ -647,7 +708,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-11" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">11</span>
                   Limitación de Responsabilidad
@@ -671,7 +732,7 @@ export default async function TermsPage({
                 </ul>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-12" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">12</span>
                   Indemnización
@@ -685,7 +746,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-13" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">13</span>
                   Servicios de Terceros
@@ -698,7 +759,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-14" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">14</span>
                   Modificaciones a los Términos
@@ -711,7 +772,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-15" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">15</span>
                   Terminación
@@ -725,7 +786,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-16" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">16</span>
                   Ley Aplicable y Resolución de Disputas
@@ -740,7 +801,7 @@ export default async function TermsPage({
                 </p>
               </section>
 
-              <section className="rounded-xl border bg-card p-6 space-y-3">
+              <section id="terms-17" className="rounded-xl border bg-card p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">17</span>
                   Disposiciones Generales
@@ -755,7 +816,7 @@ export default async function TermsPage({
               </section>
 
               {/* Contacto ES */}
-              <section className="rounded-xl border bg-primary/5 border-primary/20 p-6 space-y-3">
+              <section id="terms-18" className="rounded-xl border bg-primary/5 border-primary/20 p-6 space-y-3">
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold">18</span>
                   Contacto
@@ -768,6 +829,8 @@ export default async function TermsPage({
               </section>
             </>
           )}
+          </div>{/* end content column */}
+          </div>{/* end flex */}
         </div>
       </main>
       <Footer />

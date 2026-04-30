@@ -247,7 +247,7 @@ export default function VitaeTemplate() {
                       {job.employer}{job.city ? `, ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div
+                      <div className="resume-desc"
                         style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                       />

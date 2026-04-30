@@ -73,7 +73,7 @@ export default function SharpTemplate() {
                       {job.startDate}{job.currentlyWorking ? "→NOW" : job.endDate ? `→${job.endDate}` : ""}
                     </span>
                   </div>
-                  {job.description && <div className="text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </SharpSection>

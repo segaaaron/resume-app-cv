@@ -35,7 +35,7 @@ export default async function Hero() {
         </div>
 
         <p className="mt-4 text-sm text-muted-foreground">
-          {t("no_credit_card")}
+          {t("cancel_anytime")}
         </p>
 
         {/* Mock resume preview */}

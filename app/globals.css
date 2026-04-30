@@ -132,6 +132,12 @@
   }
 }
 
+/* ── Resume description rich text (all templates) ───────────────────────────── */
+.resume-desc ul, .cc-desc ul { display: block !important; list-style: disc !important; margin: 6px 0 0 18px !important; padding: 0 !important; }
+.resume-desc ol, .cc-desc ol { display: block !important; list-style: decimal !important; margin: 6px 0 0 18px !important; padding: 0 !important; }
+.resume-desc li, .cc-desc li { display: list-item !important; margin-bottom: 5px !important; line-height: 1.6 !important; }
+.resume-desc p, .cc-desc p  { display: block !important; margin: 0 0 4px !important; }
+
 /* ── Resume page layout ──────────────────────────────────────────────────────── */
 
 /* Resume preview — single white sheet */

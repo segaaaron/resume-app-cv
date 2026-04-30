@@ -1,22 +1,22 @@
 {
   "metadata": {
     "home": {
-      "title": "Crea tu CV Profesional Online — READY CV",
-      "description": "Creador de CV profesionales — Haz tu currículum único en minutos. +10K CVs creados. Diseño fácil y rápido para destacar en tu búsqueda de empleo. Descarga en PDF al instante.",
-      "og_title": "Crear CV Profesional Online — READY CV",
-      "og_description": "El mejor generador de CV online. Crea tu currículum vitae profesional con 29 plantillas modernas. Descarga en PDF al instante."
+      "title": "Crea el CV que consigue la entrevista — READY CV",
+      "description": "Constructor de CV con IA y análisis ATS. Más de 40 plantillas profesionales, 7 herramientas de inteligencia artificial y tracker de candidaturas.",
+      "og_title": "Crea el CV que consigue la entrevista — READY CV",
+      "og_description": "128 plantillas profesionales, análisis ATS con IA, carta de presentación automática y tracker de candidaturas. Un plan Pro para conseguir el trabajo."
     },
     "templates": {
-      "title": "Plantillas de Curriculum Vitae Profesionales — 29 Diseños",
-      "description": "Explora 29 plantillas de curriculum vitae profesionales y modernas. Diseños para todos los sectores: tecnología, finanzas, diseño, salud y más. Cambia de plantilla sin perder tu contenido.",
-      "og_title": "Plantillas de Curriculum Vitae Profesionales — READY CV",
-      "og_description": "29 plantillas de CV profesionales y modernas. Elige el diseño perfecto para tu sector y descarga en PDF."
+      "title": "Plantillas de CV Profesionales — 128 Diseños para todos los sectores",
+      "description": "Explora más de 40 plantillas de currículum profesionales. Creative, Business, Legal, Salud, Ingeniería, Hostelería, Arte y clásicas. Cambia de plantilla en cualquier momento sin perder tu contenido.",
+      "og_title": "128 Plantillas de CV Profesionales — READY CV",
+      "og_description": "Más de 40 plantillas de CV para todos los sectores y estilos. Diseños únicos, listos en minutos, descarga en PDF."
     },
     "pricing": {
-      "title": "Precios — Plan Pro desde $15/mes",
-      "description": "Accede a todas las plantillas premium, CVs ilimitados y funciones avanzadas con el plan Pro.",
-      "og_title": "Precios — READY CV | Plan Pro desde $15/mes",
-      "og_description": "Crea CVs profesionales y cartas de presentación. Desbloquea todo con el plan Pro."
+      "title": "Precios — Plan Pro desde $15/mes | READY CV",
+      "description": "128 plantillas premium, CVs ilimitados, 7 herramientas de IA, análisis ATS, carta de presentación con IA y tracker de candidaturas. Todo en un plan Pro.",
+      "og_title": "Precios — READY CV | Todo incluido desde $15/mes",
+      "og_description": "Un plan Pro para conseguir el trabajo: plantillas, IA, ATS Score, cartas de presentación y más. Cancela cuando quieras."
     },
     "pro_designs": {
       "title": "Pro Diseños — READY CV",
@@ -27,6 +27,26 @@
     },
     "terms": {
       "title": "Términos de Servicio — READY CV"
+    },
+    "blog_index": {
+      "title": "Blog — Consejos de CV y búsqueda de empleo | READY CV",
+      "description": "Guías prácticas sobre cómo optimizar tu CV, pasar filtros ATS, redactar bullets de impacto y conseguir entrevistas más rápido."
+    },
+    "blog_ats": {
+      "title": "¿Qué es ATS y por qué rechaza tu CV? — READY CV",
+      "description": "El 75% de los CVs son rechazados antes de llegar a un recruiter. Aprende qué es un sistema ATS, cómo funciona y qué debes cambiar para pasar el filtro."
+    },
+    "blog_bullets": {
+      "title": "Cómo escribir bullets de CV que consiguen entrevistas — READY CV",
+      "description": "Guía práctica con ejemplos reales para redactar bullets de experiencia con verbos de acción, métricas y lenguaje orientado a resultados."
+    },
+    "blog_free_vs_paid": {
+      "title": "Constructores de CV gratuitos vs de pago: ¿qué importa realmente? — READY CV",
+      "description": "Comparativa honesta de herramientas de CV gratuitas y de pago. Qué funciones cambian el resultado y cuándo vale la pena pagar."
+    },
+    "blog_cover_letter": {
+      "title": "Carta de presentación en 2026: ¿todavía importa? — READY CV",
+      "description": "¿Necesitas carta de presentación en 2026? Datos reales, cuándo incluirla y cómo escribir una que funcione con IA integrada."
     },
     "login": {
       "title": "Iniciar Sesión",
@@ -48,40 +68,41 @@
   },
   "hero": {
     "rating": "Confiado por miles de profesionales",
-    "title": "Crea tu CV profesional",
-    "title_highlight": "fácilmente",
-    "subtitle": "Completa tus datos, elige una plantilla y descarga tu currículum en minutos. Sin experiencia en diseño, sin complicaciones.",
-    "cta_primary": "Comenzar",
+    "title": "Crea el CV que consigue",
+    "title_highlight": "la entrevista",
+    "subtitle": "READY CV combina 128 plantillas profesionales con 7 herramientas de IA y análisis ATS para que tu currículum llegue a manos humanas, no solo a algoritmos.",
+    "cta_primary": "Crear mi CV",
     "cta_secondary": "Ver plantillas",
-    "no_credit_card": "Descarga inmediata · Plantillas profesionales",
+    "no_credit_card": "Sin tarjeta de crédito requerida",
+    "cancel_anytime": "Cancela cuando quieras · Tus CVs siempre son tuyos",
     "pdf_downloaded": "✓ PDF descargado"
   },
   "how_it_works": {
     "title": "¿Cómo funciona?",
-    "subtitle": "Tres pasos simples para tener tu CV listo",
+    "subtitle": "Tres pasos para tener tu CV listo y optimizado",
     "step1_title": "Ingresa tus datos",
-    "step1_desc": "Completa las secciones relevantes: experiencia, educación, habilidades y más.",
+    "step1_desc": "Completa las secciones relevantes: experiencia, educación, habilidades y más. La IA te ayuda a redactar cada parte.",
     "step2_title": "Elige tu plantilla",
-    "step2_desc": "Personaliza con una de nuestras 12 plantillas profesionales según tu estilo.",
+    "step2_desc": "Personaliza con una de nuestras 128 plantillas profesionales para tu sector y estilo.",
     "step3_title": "Descarga tu CV",
-    "step3_desc": "Exporta en PDF de alta calidad y edítalo cuando quieras."
+    "step3_desc": "Exporta en PDF o Word, analiza tu compatibilidad ATS y aplica con confianza."
   },
   "features": {
-    "title": "Todo lo que necesitas",
-    "subtitle": "Una plataforma completa para crear tu CV y carta de presentación",
+    "title": "Todo lo que necesitas para conseguir el trabajo",
+    "subtitle": "Editor, IA, análisis ATS, plantillas premium y tracker de candidaturas en una sola plataforma",
     "cv_title": "CV Profesional",
-    "cv_desc": "Crea CVs ilimitados y edítalos en cualquier momento con nuestro editor en tiempo real.",
-    "cover_letter_title": "Cartas de Presentación",
-    "cover_letter_desc": "Escribe cartas de presentación profesionales que complementen tu CV.",
-    "jobs_title": "Plantillas Premium",
-    "jobs_desc": "Elige entre 29 diseños profesionales optimizados para cada industria y nivel.",
-    "ai_title": "IA Integrada",
-    "ai_desc": "Mejora tu CV con inteligencia artificial: resúmenes, bullets y análisis ATS.",
+    "cv_desc": "Crea CVs ilimitados con nuestro editor en tiempo real. Cambia de plantilla sin perder ni un dato.",
+    "cover_letter_title": "Carta de Presentación con IA",
+    "cover_letter_desc": "Genera cartas de presentación personalizadas en 30 segundos. La IA usa los datos de tu CV.",
+    "jobs_title": "128 Plantillas Premium",
+    "jobs_desc": "Diseños profesionales para todos los sectores: creative, business, legal, salud, ingeniería y más.",
+    "ai_title": "7 Herramientas de IA",
+    "ai_desc": "Mejora bullets, genera resúmenes, analiza ATS, sugiere habilidades y revisa tu CV completo.",
     "kanban_title": "Tracker de Candidaturas",
-    "kanban_desc": "Gestiona tus postulaciones con un tablero visual: de aplicado a oferta en un solo lugar."
+    "kanban_desc": "Gestiona tus postulaciones con un tablero visual Kanban: de wishlist a oferta en un solo lugar."
   },
   "template_gallery": {
-    "title": "12 Plantillas profesionales",
+    "title": "128 Plantillas profesionales",
     "subtitle": "Cambia de plantilla en cualquier momento sin perder tu contenido",
     "see_all": "Ver todas las plantillas"
   },
@@ -102,11 +123,11 @@
     "title": "Preguntas frecuentes",
     "subtitle": "Todo lo que necesitas saber antes de comenzar",
     "q1": "¿Qué incluye el plan Pro?",
-    "a1": "El plan Pro incluye acceso completo a las 29 plantillas, CVs ilimitados, exportación en PDF y Word, cartas de presentación con IA, análisis ATS y soporte prioritario.",
+    "a1": "El plan Pro incluye: 128 plantillas profesionales, CVs ilimitados, 7 herramientas de IA (bullets, resumen, ATS Score, habilidades, revisión, relleno de perfil, carta de presentación), exportación PDF y Word, tracker de candidaturas, CV público compartible e historial de versiones.",
     "q2": "¿Puedo cambiar de plantilla sin perder mis datos?",
-    "a2": "Sí. Tus datos están separados de la plantilla. Puedes cambiar entre las 12 plantillas en cualquier momento y tu contenido se adaptará automáticamente.",
+    "a2": "Sí. Tus datos están separados de la plantilla. Puedes cambiar entre las 128 plantillas en cualquier momento y tu contenido se mantiene intacto.",
     "q3": "¿En qué formatos puedo descargar mi CV?",
-    "a3": "Actualmente puedes descargar en PDF de alta resolución, optimizado para impresión y para envío electrónico.",
+    "a3": "Puedes descargar en PDF de alta resolución o en Word (.docx), listo para editar. Ambos formatos incluidos en el plan Pro.",
     "q4": "¿Puedo crear más de un CV?",
     "a4": "Sí. Con el plan Pro puedes crear CVs ilimitados, lo que te permite adaptar tu currículum a diferentes puestos o industrias.",
     "q5": "¿Puedo importar mi CV existente?",
@@ -139,23 +160,31 @@
     "annual_period": "/ año",
     "annual_badge": "Ahorra 20%",
     "annual_equiv": "$12 / mes · ahorras $36 al año",
-    "cancel_anytime": "Cancela en cualquier momento",
-    "feature1": "CVs ilimitados",
-    "feature2": "29 plantillas profesionales",
-    "feature3": "Descarga en PDF",
-    "feature4": "Cartas de presentación",
-    "feature5": "Exportación Word (.docx)",
-    "feature6": "Cambio de plantilla sin perder datos",
-    "feature7": "Import PDF/Word",
-    "feature8": "Soporte prioritario",
+    "cancel_anytime": "Cancela cuando quieras · Tus CVs siempre son tuyos",
+    "pro_member_title": "Ya eres miembro Pro",
+    "pro_member_renews": "Tu plan se renueva el",
+    "pro_member_active": "Tu suscripción está activa",
+    "pro_member_manage": "Gestionar suscripción",
+    "feature1": "CVs ilimitados — adapta tu CV a cada puesto",
+    "feature2": "128 plantillas para todos los sectores",
+    "feature3": "Exportación PDF en alta calidad",
+    "feature4": "Carta de presentación con IA en 30 segundos",
+    "feature5": "Exportación Word (.docx) lista para enviar",
+    "feature6": "ATS Score — mide tu compatibilidad antes de aplicar",
+    "feature7": "7 herramientas de IA para redactar y mejorar",
+    "feature8": "Tracker de candidaturas con tablero Kanban",
+    "feature9": "Historial de versiones del CV",
+    "feature10": "CV público compartible con enlace",
+    "feature11": "Import PDF/Word",
+    "feature12": "Historial de versiones — restaura cualquier versión anterior",
     "btn_loading": "Redirigiendo...",
     "btn_start": "Empezar ahora",
     "toast_connection_error": "Error de conexión"
   },
   "templates_page": {
-    "badge": "29 plantillas",
-    "title": "Elige tu diseño perfecto",
-    "subtitle": "Diseños modernos para cada industria y nivel profesional. Cambia de plantilla en cualquier momento sin perder tu contenido.",
+    "badge": "128 plantillas",
+    "title": "Encuentra la plantilla de tu sector",
+    "subtitle": "128 diseños profesionales para creative, business, legal, salud, ingeniería, hostelería, artes y clásicos. Cambia de plantilla en cualquier momento sin perder tu contenido.",
     "pro_label": "Pro Diseños",
     "premium_badge": "Premium",
     "all_templates": "Todas las plantillas",
@@ -223,6 +252,77 @@
       "age_required": "Debes confirmar que tienes 16 años o más para continuar",
       "marketing_consent": "Acepto recibir correos sobre novedades y ofertas de READY CV. Puedes darte de baja en cualquier momento."
     }
+  },
+  "ai_features": {
+    "section_title": "Tu coach de carrera con IA, integrado en cada CV",
+    "section_subtitle": "7 herramientas de inteligencia artificial exclusivas del plan Pro para escribir mejor, vencer los algoritmos y conseguir la oferta",
+    "pro_badge": "Pro",
+    "cta_title": "Todos los features de IA son exclusivos del plan Pro.",
+    "cta_desc": "Una suscripción, siete herramientas, cero compromisos.",
+    "cta_btn": "Ver plan Pro",
+    "cluster1_title": "Escribe mejor, más rápido",
+    "cluster2_title": "Vence el algoritmo",
+    "cluster3_title": "Consigue la oferta",
+    "bullet_title": "Convierte responsabilidades en logros",
+    "bullet_desc": "Pega cualquier bullet de experiencia y la IA lo reescribe con lenguaje de impacto: verbos de acción, métricas y orientado a resultados.",
+    "summary_title": "Di adiós al resumen en blanco",
+    "summary_desc": "Describe tu perfil en lenguaje natural y READY CV genera tres versiones de resumen profesional en segundos. Elige, edita y listo.",
+    "fill_title": "De cero a completo en un solo prompt",
+    "fill_desc": "Escribe algo como \"Soy diseñadora UX con 5 años en fintech\" y rellenamos tu cargo, resumen y habilidades clave al instante.",
+    "ats_title": "Descubre por qué rechazan tu CV",
+    "ats_desc": "Pega la oferta de empleo y obtén un score de compatibilidad en segundos. READY CV te muestra exactamente qué keywords faltan y cómo añadirlas.",
+    "skills_title": "No pierdas ninguna habilidad que filtran los recruiters",
+    "skills_desc": "Según tu puesto objetivo, sugerimos las habilidades exactas que los seleccionadores usan como filtro para que aparezcas primero.",
+    "coverletter_title": "Carta personalizada para cada oferta, en 30 segundos",
+    "coverletter_desc": "Pega la oferta, elige el tono (formal, equilibrado o dinámico) y READY CV redacta una carta que usa datos reales de tu CV.",
+    "review_title": "Feedback honesto antes que el recruiter",
+    "review_desc": "Pregúntale cualquier cosa a READY CV sobre tu CV — ¿Mi resumen es suficientemente sólido? ¿Qué falta para un rol de PM? — y obtén respuestas accionables."
+  },
+  "ats_section": {
+    "title": "Descubre por qué el 75% de los CVs son rechazados antes de llegar a Recursos Humanos",
+    "subtitle": "La mayoría de empresas usan sistemas ATS para filtrar candidatos automáticamente. Si tu CV no coincide con las keywords de la oferta, nunca llega a un humano — sin importar lo cualificado que estés.",
+    "step1": "Aplicas",
+    "step2": "El ATS escanea keywords",
+    "step3": "Solo los que coinciden llegan",
+    "solution_title": "READY CV te dice exactamente dónde estás antes de aplicar",
+    "solution_desc": "Pega el texto de la oferta. Obtén un score de 0 a 100. Ve qué keywords te faltan. Corrígelas en el editor. Aplica con confianza.",
+    "payoff": "Deja de adivinar. Empieza a conseguir entrevistas.",
+    "cta": "Probar ATS Score — función Pro"
+  },
+  "comparison_table": {
+    "title": "Free vs Pro",
+    "subtitle": "Todo lo que incluye cada plan",
+    "feature_col": "Función",
+    "free_col": "Free",
+    "pro_col": "Pro",
+    "row_cvs": "Documentos CV",
+    "val_cvs_free": "1",
+    "val_cvs_pro": "Ilimitados",
+    "row_templates": "Plantillas",
+    "val_templates_free": "5 clásicas",
+    "val_templates_pro": "128 profesionales",
+    "row_pdf": "Exportación PDF",
+    "val_pdf_free": "Con marca de agua",
+    "val_pdf_pro": "Sin marca de agua",
+    "row_word": "Exportación Word (.docx)",
+    "row_ai_bullet": "IA: mejora bullets",
+    "row_ai_summary": "IA: generador de resumen",
+    "row_ats": "ATS Score",
+    "row_skills": "Sugerencia de habilidades con IA",
+    "row_review": "Revisión completa del CV con IA",
+    "row_cover": "Carta de presentación con IA",
+    "row_tracker": "Tracker de candidaturas",
+    "row_share": "CV público compartible",
+    "row_history": "Historial de versiones",
+    "cta": "Empezar con Pro — $15/mes"
+  },
+  "blog": {
+    "back": "← Volver al blog",
+    "published": "Publicado",
+    "reading_time": "min de lectura",
+    "cta_title": "Crea tu CV profesional con ReadyCV",
+    "cta_desc": "Más de 40 plantillas, 7 herramientas de IA y análisis ATS.",
+    "cta_btn": "Crear mi CV"
   },
   "privacy_page": {
     "title": "Política de Privacidad",
@@ -300,8 +400,8 @@
       "saving": "Guardando...",
       "save_button": "Guardar cambios",
       "current_plan": "Plan actual",
-      "plan_free": "Básico",
-      "plan_free_desc": "Acceso limitado",
+      "plan_free": "Sin plan activo",
+      "plan_free_desc": "Actualiza para acceder a todas las funciones",
       "plan_trial_desc": "Prueba activa",
       "plan_pro_desc": "Acceso completo a todas las funcionalidades",
       "canceled_notice": "Suscripción cancelada — sin renovación automática. Mantienes acceso hasta el",
@@ -328,6 +428,10 @@
     "spacing_compact": "Compacto",
     "spacing_spacious": "Espacioso",
     "pro_required": "Esta plantilla requiere un plan Pro o Trial activo.",
+    "regular_designs_label": "Diseños",
+    "regular_designs_label2": "Regulares",
+    "pro_designs_label": "Pro",
+    "pro_designs_label2": "Diseños",
     "saving": "Guardando...",
     "unsaved": "Sin guardar",
     "saved": "Guardado",
@@ -450,7 +554,7 @@
       "error_pdf": "Error al generar el PDF",
       "pro_only_word": "La exportación Word es exclusiva del plan Pro",
       "watermark_text": "readycvv.com",
-      "watermark_upgrade": "Actualiza a Pro para eliminar esta marca de agua"
+      "watermark_upgrade": "Activa tu plan Pro en readycv.app"
     },
     "ats": {
       "tab": "ATS",
@@ -586,7 +690,8 @@
         "website": "Sitio web",
         "job_title": "Cargo actual",
         "linkedin": "LinkedIn",
-        "github": "GitHub"
+        "github": "GitHub",
+        "years_of_experience": "Años de experiencia para el puesto"
       },
       "work": {
         "job_title": "Cargo",
@@ -794,5 +899,15 @@
     "max_tier": "¡Alcanzaste el máximo nivel!",
     "reward_applied": "El crédito se aplica automáticamente en tu próxima factura.",
     "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas."
+  },
+  "cv_examples": {
+    "title": "Tu CV podría verse así",
+    "subtitle": "Ejemplos reales creados con ReadyCV — elige el estilo que mejor te representa.",
+    "badge_tech": "Tecnología",
+    "badge_design": "Diseño",
+    "badge_legal": "Legal / Finanzas",
+    "badge_health": "Salud",
+    "badge_hospitality": "Hostelería",
+    "cta": "Crear mi CV"
   }
 }

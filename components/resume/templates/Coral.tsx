@@ -103,7 +103,7 @@ export default function CoralTemplate() {
                       {job.employer}{job.city ? `, ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div className="text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}

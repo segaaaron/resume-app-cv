@@ -64,7 +64,7 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
                   <h4 className="font-semibold text-[13px] text-gray-900">{job.jobTitle}</h4>
                   <p className="text-xs font-medium mb-1.5" style={{ color }}>{job.employer}{job.city ? `, ${job.city}` : ""}</p>
                   {job.description && (
-                    <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               </div>

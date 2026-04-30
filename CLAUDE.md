@@ -169,6 +169,58 @@ Cuando necesites agregar un campo nuevo al schema de Prisma:
 
 ---
 
+### Sesión 2026-04-29 — 40 nuevas plantillas Pro + fixes de calidad
+
+#### Templates eliminados (irrelevantes)
+9 templates Pro removidos del sistema: `helix`, `prism`, `nautical`, `cobalt`, `duality`, `obsidian`, `lisbon`, `havana`, `tokyo`.
+Archivos afectados: `types/resume.ts` (TemplateId union + TEMPLATES array), `components/resume/ResumePreview.tsx` (imports + TEMPLATE_MAP), `components/editor/TemplateSwitcher.tsx` (PRO_IDS + thumbs + switch cases).
+
+#### Fixes en templates existentes
+
+| Fix | Archivos |
+|-----|---------|
+| Eliminar barras decorativas de metadatos (`VOL. 26 · NO. 04`, etc.) | `DataDriven.tsx`, `SwissGrid.tsx`, `MagazineSpread.tsx`, `EditorialSerif.tsx` |
+| CharcoalClassic: sidebar oscuro → crema claro (fondo `ink` eliminado, texto dark) | `CharcoalClassic.tsx` |
+| CharcoalClassic: añadir sección hobbies + bullets con `fmtDesc` + clase `.cc-desc` | `CharcoalClassic.tsx`, `app/globals.css` |
+| Bullets inline (•) no se mostraban como lista: fix en `fmtDesc` (regex + globals CSS) | `lib/utils.ts`, `app/globals.css` |
+| DataDriven: añadir bullets `fmtDesc` + alinear año/barra con título (`alignItems: "flex-start"`) | `DataDriven.tsx` |
+| MagazineSpread: mostrar todos los bullets (eliminado `.slice(0, 120)`) | `MagazineSpread.tsx` |
+| IOSAppCV: cálculo incorrecto de años (`.slice(0,4)` en `"04/2015"` → `parseInt`=4) → fix con `.match(/\d{4}/)` | `IOSAppCV.tsx` |
+| IOSAppCV: añadir bullets `fmtDesc` en experiencia | `IOSAppCV.tsx` |
+| Slider crash: `thumbIndex` → `index` (base-ui v1.3) | `components/ui/slider.tsx` |
+| DndContext hydration mismatch: `id="form-panel-dnd"` fijo | `components/editor/FormPanel.tsx` |
+| 8 templates nuevos sin `fmtDesc`: añadido en SwissGrid, SageBotanical, NeoBrutalist, NavyExecutive, EditorialSerif, CoralSidebar, ClassicMono, BoldBlock | múltiples `*.tsx` |
+
+**Fix crítico `fmtDesc` (`lib/utils.ts`):**
+- Bullets inline `"texto • item1 • item2"` en una sola línea no se convertían a `<ul><li>`
+- Nuevo regex: `normalized.replace(/([^\n])\s*•\s+/g, "$1\n• ")` — split inline bullets antes de parsear
+- CSS `globals.css` con `!important` necesario — Tailwind preflight sobreescribía `list-style: none`
+
+**Regla para TODOS los templates:** usar `fmtDesc(job.description)` con `dangerouslySetInnerHTML` y clase `resume-desc` (o alias) en descriptions. Nunca renderizar `job.description` directamente.
+
+#### 40 nuevas plantillas Pro implementadas
+
+8 packs de 5 templates cada uno. Todos en `components/resume/templates/`. Todos registrados en `types/resume.ts`, `ResumePreview.tsx` y `TemplateSwitcher.tsx` con SVG thumbnail único.
+
+| Pack | IDs |
+|------|-----|
+| Creative | `risodesigner`, `uxtokens`, `sketchbookillustrator`, `blueprintcv`, `contactsheet` |
+| Business | `annualreport`, `financeterminal`, `campaignposter`, `salespitch`, `ledgercv` |
+| Health | `medicalchart`, `vitalsigns`, `vetcv`, `notebookcv`, `fieldjournal` |
+| Legal/Edu | `legalbrief`, `engraved`, `chalkboard`, `academiccv`, `psychologist` |
+| Hospitality | `chefmenu`, `sommelier`, `hotelcv`, `bartendercv`, `postcardcv` |
+| Engineering | `codeeditor`, `civileng`, `mechanical`, `devopsterminal`, `processflow` |
+| Arts | `frontpage`, `vinylcv`, `callsheet`, `copywritermag`, `animatorcv` |
+| Other | `pilotlog`, `onboardingform`, `athletecard`, `translatorcv`, `herbariumcv` |
+
+**Fixes post-registro:**
+- `AnnualReport.tsx`: `job.country` no existe en tipo WorkExperience → removido, queda `job.city`
+- `TemplateSwitcher.tsx`: 4 thumb functions usaban `<>` fragment en `.map()` sin key → error "Rendered more hooks than during the previous render". Fix: reemplazado `<>` por `<g key={i}>` (SVG group) en `AnnualReportThumb`, `FinanceTerminalThumb`, `SalesPitchThumb`, `LedgerCVThumb`
+
+**Total plantillas Pro activas tras sesión:** 71 (anteriores) + 40 nuevas = ~111 plantillas (incluyendo las básicas Free)
+
+---
+
 ### Sesión 2026-04-28 — Mejoras de calidad y UX
 
 | Cambio | Archivos clave |
@@ -433,3 +485,181 @@ Features por complejidad:
 | CV completo desde cero con entrevista guiada | Alta | Muy alto | Mes 5+ |
 
 **Activar solo para usuarios Pro** — refuerza el valor de la suscripción directamente.
+
+---
+
+## Sesión 2026-04-29 — Website Marketing Overhaul (Sprint 1–3)
+
+### Objetivo
+Actualizar todo el copy del sitio para reflejar la realidad del producto: 40+ plantillas, 7 herramientas de IA, análisis ATS. Tres sprints completos (33 story points).
+
+---
+
+### Sprint 1 — Conversión (16 pts)
+
+#### SEO metadata actualizada
+Archivos: `messages/es.json`, `messages/en.json`
+
+| Página | Cambio clave |
+|--------|-------------|
+| Home | "29 plantillas" → "40+ plantillas + IA + ATS" en title/description/og |
+| Templates | "29 Diseños" → "40+ Diseños para todos los sectores" |
+| Pricing | Feature list en beneficios, menciona IA y ATS Score |
+
+#### Hero rewrite
+- ES: "Crea el CV que consigue **la entrevista**"
+- EN: "Build the CV that gets **the interview**"
+- Subtitle menciona 40+ plantillas + 7 herramientas de IA + análisis ATS
+- CTA primario: "Empezar gratis" / "Start free"
+- `no_credit_card`: "Gratis para empezar · Sin tarjeta de crédito"
+
+#### Nuevo componente: `components/marketing/AIFeatures.tsx`
+- Sección con 7 herramientas de IA en 3 clusters: "Escribe mejor" · "Vence el algoritmo" · "Consigue la oferta"
+- Badge "Pro" en cada card
+- CTA al final → `/pricing`
+- Wired en `app/[locale]/page.tsx` después de `FeatureCards`
+- i18n: namespace `ai_features` (30 claves, es + en)
+
+#### Nuevo componente: `components/marketing/ATSSection.tsx`
+- Sección educativa ATS: "75% de CVs rechazados antes de llegar a un recruiter"
+- Flujo visual 3 pasos: Aplicas → ATS escanea → Solo coincidencias llegan
+- SVG mockup del ring ATS (score 72/100)
+- CTA → `/pricing` con anchor `#ats-score`
+- Wired en `app/[locale]/page.tsx` después de `AIFeatures`
+- i18n: namespace `ats_section` (8 claves, es + en)
+
+#### Pricing page restructure
+- Features extendidas de 8 → 12 items, todas reescritas en lenguaje de beneficios
+- `cancel_anytime`: "Cancela cuando quieras · Tus CVs siempre son tuyos"
+- Nuevo `feature9` → `feature12`: historial versiones, CV compartible, import, cancel note
+- `components/marketing/ComparisonTable.tsx` añadido al final de la página de precios
+
+#### Nuevo componente: `components/marketing/ComparisonTable.tsx`
+- Tabla Free vs Pro con 13 filas
+- Checkmarks para Pro, guiones para Free (nunca ❌)
+- Valores especiales para CVs (1 vs Unlimited), Templates (5 vs 40+), PDF (watermark vs clean)
+- i18n: namespace `comparison_table` (21 claves, es + en)
+
+#### JSON-LD homepage actualizado
+- `featureList`: 8 items actualizados (40+ plantillas, ATS, IA, etc.)
+- Precio oferta Pro: $10 → $15
+- Descripción con IA + ATS
+
+#### Features section (FeatureCards)
+- 5 cards actualizadas: AI card → "7 Herramientas de IA", Templates → "40+", cover letter → "con IA"
+- `how_it_works`: steps actualizados para mencionar IA y ATS
+
+---
+
+### Sprint 2 — Galería + T&C (11 pts)
+
+#### Template gallery restructure (`app/[locale]/templates/page.tsx`)
+- `PRO_IDS` corregido: 77 templates Pro (estaba con lista obsoleta de 15 IDs — incluía helix, prism, nautical, cobalt, duality, obsidian que fueron eliminados)
+- Templates agrupados por 10 categorías dentro de la sección Pro:
+
+| Categoría | IDs incluidos |
+|-----------|--------------|
+| Destacados | aurora, lumiere, consul, rose, minimal, wave, banner, vertex, prestige, apex, nova, cascade, onyx, mosaic, larsson, thompson, classicmono, editorialserif, boldblock, timelinevertical, swissgrid |
+| Ciudad | kyoto, geneva, windsor, vienna, berlin, seoul, copenhagen, genevanoir, reykjavik |
+| Creative | risodesigner, uxtokens, sketchbookillustrator, blueprintcv, contactsheet, charcoalclassic, navyexecutive, coralsidebar, neobrutalist, sagebotanical |
+| Business | annualreport, financeterminal, campaignposter, salespitch, ledgercv, datadriven, boardingpass, magazinespread, terminalcv, iosappcv |
+| Health & Science | medicalchart, vitalsigns, vetcv, fieldjournal |
+| Legal & Academia | legalbrief, engraved, chalkboard, academiccv, psychologist |
+| Hostelería | chefmenu, sommelier, hotelcv, bartendercv, postcardcv |
+| Ingeniería & Tech | codeeditor, civileng, mechanical, devopsterminal, processflow, neon, sharp, bauhaus |
+| Artes & Medios | frontpage, vinylcv, callsheet, copywritermag, animatorcv |
+| Otros | pilotlog, onboardingform, athletecard, translatorcv, herbariumcv |
+
+- Badge de categoría: `text-xs font-semibold uppercase tracking-widest` separador horizontal entre grupos
+- `templates_page.badge`: "29 plantillas" → "40+ plantillas"
+- `templates_page.title/subtitle`: actualizados con listado de sectores
+
+#### T&C visual redesign (`app/[locale]/terms/page.tsx`)
+- Layout dos columnas desktop: sidebar TOC (w-52, sticky top-8) + contenido (max-w-[680px])
+- Container: `max-w-3xl` → `max-w-5xl` con flex gap-12
+- Sidebar TOC en inglés y español: 18 secciones con anchor links `#terms-N`
+- `id="terms-1"` ... `id="terms-18"` en todas las secciones, ambos idiomas
+- Mobile: sidebar oculto (`hidden lg:block`), single-column como antes
+- Cero cambios al contenido legal — solo layout
+
+---
+
+### Sprint 3 — SEO Blog (4 pts)
+
+#### Blog index (`app/[locale]/blog/page.tsx`)
+- Lista de 4 artículos con tag, tiempo de lectura, título y descripción por idioma
+- Metadata SEO: namespace `metadata.blog_index`
+
+#### 4 artículos SEO completos
+
+| Artículo | URL | Keywords objetivo |
+|----------|-----|------------------|
+| ATS | `/blog/que-es-ats-y-por-que-rechaza-tu-cv` | "ats resume", "que es ats" |
+| Bullets | `/blog/como-escribir-bullets-de-cv` | "bullets cv", "como escribir cv" |
+| Free vs Paid | `/blog/constructores-de-cv-gratuitos-vs-pago` | "mejor constructor cv gratis vs pago" |
+| Cover Letter | `/blog/carta-de-presentacion-2026` | "carta de presentacion 2026" |
+
+Cada artículo tiene:
+- Metadata SEO completa (title < 60 chars, description < 155 chars, OG, canonical)
+- Contenido real (no placeholder) — 5-6 secciones por artículo, ~800-1000 palabras
+- Bilingüe (es + en) en el mismo componente con flag `isEn`
+- CTA al final → `/register` o `/pricing` según el ángulo del artículo
+- Breadcrumb "← Volver al blog"
+- `getTranslations("blog")` para textos UI (back, cta)
+
+#### i18n nuevas claves en metadata
+- `metadata.blog_index`, `metadata.blog_ats`, `metadata.blog_bullets`, `metadata.blog_free_vs_paid`, `metadata.blog_cover_letter` — en es.json y en.json
+- Namespace `blog` (6 claves: back, published, reading_time, cta_title, cta_desc, cta_btn) — en es.json y en.json
+
+---
+
+### Regla: PRO_IDS en templates/page.tsx debe mantenerse sincronizada con TemplateSwitcher.tsx
+
+La lista de IDs Pro está duplicada en dos archivos:
+- `components/editor/TemplateSwitcher.tsx` — fuente de verdad (línea ~2533)
+- `app/[locale]/templates/page.tsx` — copia que debe mantenerse igual
+
+Si se añaden o eliminan templates Pro, actualizar ambos.
+
+---
+
+## Sesión 2026-04-29 — CV Examples showcase + limpieza de "Free"
+
+### Limpieza de referencias a plan Free/Gratis
+
+App es solo Pro ($15/mo · $144/yr) — no existe plan gratuito. Eliminadas todas las referencias:
+
+| Archivo | Cambio |
+|---------|--------|
+| `components/marketing/ComparisonTable.tsx` | Eliminado (tabla Free vs Pro) |
+| `app/[locale]/pricing/page.tsx` | Removida import + render de ComparisonTable |
+| `app/[locale]/page.tsx` JSON-LD | Eliminada offer "price: 0" / "Plan gratuito" |
+| `app/[locale]/templates/page.tsx` | `"plantillas cv gratis"` → `"plantillas cv profesionales"` |
+| `es/en.json` hero CTA | `"Empezar gratis"/"Start free"` → `"Crear mi CV"/"Create my CV"` |
+| `es/en.json` no_credit_card | Removido "Gratis para empezar" |
+| `es/en.json` blog CTA | Removido "Gratis para empezar" del desc + btn |
+| `es/en.json` plan_free | `"Básico"` → `"Sin plan activo"` |
+| `es/en.json` feature3 | `"PDF sin marca de agua"` → `"Exportación PDF en alta calidad"` |
+| `es/en.json` watermark_upgrade | Removida referencia a plan Free |
+| `es/en.json` metadata.home.description | Removido "Gratis para empezar" |
+
+### CV Examples showcase
+
+Nuevo componente `components/marketing/CVExamples.tsx` en la homepage entre `ATSSection` y `TemplateGallery`.
+
+**Arquitectura:**
+- Server component. Usa `next/image` con imágenes estáticas en `public/examples/`.
+- 5 ejemplos: tech (Nova), diseño (EditorialSerif), legal (Consul), salud (ClassicMono), hostelería (ChefMenu).
+- Grid responsive: 2 cols mobile → 3 cols sm → 5 cols lg.
+- CTA al final → `/register`.
+- i18n: namespace `cv_examples` (7 claves: title, subtitle, 5 badges, cta).
+
+**Screenshots pendientes (tarea del usuario):**
+Los archivos de imagen deben crearse manualmente en el editor y guardarse como WebP optimizado en `public/examples/`:
+- `cv-example-tech.webp`
+- `cv-example-design.webp`
+- `cv-example-legal.webp`
+- `cv-example-health.webp`
+- `cv-example-hospitality.webp`
+
+Hasta que existan los archivos, el componente está listo pero no muestra imágenes.

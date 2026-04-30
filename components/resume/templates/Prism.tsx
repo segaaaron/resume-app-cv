@@ -304,7 +304,7 @@ export default function PrismTemplate() {
                         {job.employer}{job.city ? `, ${job.city}` : ""}
                       </p>
                       {job.description && (
-                        <div
+                        <div className="resume-desc"
                           style={{ fontSize: "10px", color: "#6a7588", lineHeight: 1.65 }}
                           dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                         />

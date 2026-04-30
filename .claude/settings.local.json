@@ -93,7 +93,15 @@
       "Bash(git commit *)",
       "Bash(npm test *)",
       "Bash(git -C .claude/worktrees/agent-af559157 diff --stat HEAD)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(awk '/^function NotebookCVThumb/,/^function [A-Z]/' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/components/editor/TemplateSwitcher.tsx)",
+      "mcp__project-memory__set_active_project",
+      "Bash(sed -n '315,325p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/es.json)",
+      "Bash(sed -n '315,325p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/en.json)",
+      "Bash(sed -n '394,405p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/es.json)",
+      "Bash(sed -n '394,405p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/en.json)",
+      "Bash(sed -n '548,556p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/es.json)",
+      "Bash(sed -n '548,556p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/en.json)"
     ]
   }
 }

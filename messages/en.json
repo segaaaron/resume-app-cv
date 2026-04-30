@@ -1,22 +1,22 @@
 {
   "metadata": {
     "home": {
-      "title": "Create Your Professional CV Online — READY CV",
-      "description": "Professional CV creator — Build your unique resume in minutes. +10K CVs created. Easy and fast design to stand out in your job search. Instant PDF download.",
-      "og_title": "Create Your Professional CV Online — READY CV",
-      "og_description": "The best online CV generator. Create your professional resume with 29 modern templates. Instant PDF download."
+      "title": "Build the CV That Gets the Interview — READY CV",
+      "description": "AI-powered CV builder with ATS analysis. 128 professional templates, 7 AI tools, and application tracker.",
+      "og_title": "Build the CV That Gets the Interview — READY CV",
+      "og_description": "128 professional templates, AI-powered ATS analysis, automatic cover letters, and application tracker. One Pro plan to get hired."
     },
     "templates": {
-      "title": "Professional Resume Templates — 29 Designs",
-      "description": "Explore 29 professional and modern resume templates. Designs for all industries: technology, finance, design, healthcare and more. Change templates anytime without losing your content.",
-      "og_title": "Professional Resume Templates — READY CV",
-      "og_description": "29 professional and modern CV templates. Choose the perfect design for your industry and download as PDF."
+      "title": "Professional CV Templates — 128 Designs for Every Industry",
+      "description": "Explore 128 professional resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
+      "og_title": "128 Professional CV Templates — READY CV",
+      "og_description": "Over 40 CV templates for every industry and style. Unique designs, ready in minutes, download as PDF."
     },
     "pricing": {
-      "title": "Pricing — Pro Plan from $15/month",
-      "description": "Access all premium templates, unlimited CVs and advanced features with the Pro plan.",
-      "og_title": "Pricing — READY CV | Pro Plan from $15/month",
-      "og_description": "Create professional CVs and cover letters. Unlock everything with the Pro plan."
+      "title": "Pricing — Pro Plan from $15/month | READY CV",
+      "description": "128 premium templates, unlimited CVs, 7 AI tools, ATS Score, AI cover letters and application tracker. Everything in one Pro plan.",
+      "og_title": "Pricing — READY CV | Everything from $15/month",
+      "og_description": "One Pro plan to get hired: templates, AI, ATS Score, cover letters and more. Cancel anytime."
     },
     "pro_designs": {
       "title": "Pro Designs — READY CV",
@@ -27,6 +27,26 @@
     },
     "terms": {
       "title": "Terms of Service — READY CV"
+    },
+    "blog_index": {
+      "title": "Blog — CV Tips and Job Search Advice | READY CV",
+      "description": "Practical guides on optimizing your resume, passing ATS filters, writing impactful bullets and getting more interviews."
+    },
+    "blog_ats": {
+      "title": "What is ATS and Why is It Rejecting Your Resume? — READY CV",
+      "description": "75% of resumes are rejected before reaching a recruiter. Learn what ATS is, how it works and what to change to pass the filter."
+    },
+    "blog_bullets": {
+      "title": "How to Write CV Bullet Points That Get Interviews — READY CV",
+      "description": "Practical guide with real examples to write experience bullets with action verbs, metrics and results-oriented language."
+    },
+    "blog_free_vs_paid": {
+      "title": "Free vs Paid CV Builders: What Actually Matters — READY CV",
+      "description": "Honest comparison of free and paid CV tools. Which features change outcomes and when is it worth paying."
+    },
+    "blog_cover_letter": {
+      "title": "Cover Letter in 2026: Does It Still Matter? — READY CV",
+      "description": "Do you need a cover letter in 2026? Real data, when to include one and how to write one that works with AI."
     },
     "login": {
       "title": "Sign In",
@@ -48,40 +68,41 @@
   },
   "hero": {
     "rating": "Trusted by thousands of professionals",
-    "title": "Create your professional CV",
-    "title_highlight": "easily",
-    "subtitle": "Fill in your details, choose a template and download your resume in minutes. No design experience, no complications.",
-    "cta_primary": "Get started",
+    "title": "Build the CV that gets",
+    "title_highlight": "the interview",
+    "subtitle": "READY CV combines 128 professional templates with 7 AI tools and ATS analysis so your resume reaches real humans — not just algorithms.",
+    "cta_primary": "Create my CV",
     "cta_secondary": "View templates",
-    "no_credit_card": "Instant download · Professional templates",
+    "no_credit_card": "No credit card required",
+    "cancel_anytime": "Cancel anytime · Your CVs are always yours",
     "pdf_downloaded": "✓ PDF downloaded"
   },
   "how_it_works": {
     "title": "How does it work?",
-    "subtitle": "Three simple steps to have your CV ready",
+    "subtitle": "Three steps to have your CV ready and optimized",
     "step1_title": "Enter your details",
-    "step1_desc": "Fill in the relevant sections: experience, education, skills and more.",
+    "step1_desc": "Fill in the relevant sections: experience, education, skills and more. AI helps you write every part.",
     "step2_title": "Choose your template",
-    "step2_desc": "Customize with one of our 12 professional templates to match your style.",
+    "step2_desc": "Customize with one of our 128 professional templates for your industry and style.",
     "step3_title": "Download your CV",
-    "step3_desc": "Export as a high-quality PDF and edit it whenever you want."
+    "step3_desc": "Export as PDF or Word, analyze your ATS compatibility, and apply with confidence."
   },
   "features": {
-    "title": "Everything you need",
-    "subtitle": "A complete platform to create your CV and cover letter",
+    "title": "Everything you need to get hired",
+    "subtitle": "Editor, AI tools, ATS analysis, premium templates and application tracker in one platform",
     "cv_title": "Professional CV",
-    "cv_desc": "Create unlimited CVs and edit them anytime with our real-time editor.",
-    "cover_letter_title": "Cover Letters",
-    "cover_letter_desc": "Write professional cover letters that complement your CV.",
-    "jobs_title": "Premium Templates",
-    "jobs_desc": "Choose from 29 professional designs optimized for every industry and level.",
-    "ai_title": "Integrated AI",
-    "ai_desc": "Improve your CV with AI: summaries, bullets and ATS analysis.",
+    "cv_desc": "Create unlimited CVs with our real-time editor. Switch templates anytime without losing a single data point.",
+    "cover_letter_title": "AI Cover Letters",
+    "cover_letter_desc": "Generate personalized cover letters in 30 seconds. The AI uses your actual CV data.",
+    "jobs_title": "128 Premium Templates",
+    "jobs_desc": "Professional designs for every industry: creative, business, legal, health, engineering and more.",
+    "ai_title": "7 AI Tools",
+    "ai_desc": "Improve bullets, generate summaries, analyze ATS compatibility, suggest skills and review your full CV.",
     "kanban_title": "Application Tracker",
-    "kanban_desc": "Manage your job applications with a visual board: from applied to offer in one place."
+    "kanban_desc": "Manage your applications with a Kanban board: from wishlist to offer in one place."
   },
   "template_gallery": {
-    "title": "12 Professional templates",
+    "title": "128 Professional templates",
     "subtitle": "Change templates anytime without losing your content",
     "see_all": "View all templates"
   },
@@ -102,11 +123,11 @@
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know before getting started",
     "q1": "What does the Pro plan include?",
-    "a1": "The Pro plan includes full access to all 29 templates, unlimited CVs, PDF and Word export, AI-powered cover letters, ATS analysis and priority support.",
+    "a1": "The Pro plan includes: 128 professional templates, unlimited CVs, 7 AI tools (bullet improvement, summary generator, ATS Score, skill suggestions, CV review, profile fill, cover letter), PDF and Word export, application tracker, public shareable CV and version history.",
     "q2": "Can I change templates without losing my data?",
-    "a2": "Yes. Your data is separated from the template. You can switch between the 12 templates at any time and your content will adapt automatically.",
+    "a2": "Yes. Your data is separated from the template. You can switch between 128 templates at any time and your content stays intact.",
     "q3": "In what formats can I download my CV?",
-    "a3": "You can currently download as high-resolution PDF, optimized for printing and electronic submission.",
+    "a3": "You can download as high-resolution PDF or Word (.docx), ready to edit. Both formats included in the Pro plan.",
     "q4": "Can I create more than one CV?",
     "a4": "Yes. With the Pro plan you can create unlimited CVs, allowing you to tailor your resume for different positions or industries.",
     "q5": "Can I import my existing CV?",
@@ -139,23 +160,31 @@
     "annual_period": "/ year",
     "annual_badge": "Save 20%",
     "annual_equiv": "$12 / month · save $36 per year",
-    "cancel_anytime": "Cancel anytime",
-    "feature1": "Unlimited CVs",
-    "feature2": "29 professional templates",
-    "feature3": "PDF download",
-    "feature4": "Cover letters",
-    "feature5": "Word (.docx) export",
-    "feature6": "Template switching without losing data",
-    "feature7": "PDF/Word import",
-    "feature8": "Priority support",
+    "cancel_anytime": "Cancel anytime · Your CVs are always yours",
+    "pro_member_title": "You're already a Pro member",
+    "pro_member_renews": "Your plan renews on",
+    "pro_member_active": "Your subscription is active",
+    "pro_member_manage": "Manage subscription",
+    "feature1": "Unlimited CVs — tailor your resume for every role",
+    "feature2": "128 templates for every industry",
+    "feature3": "High-quality PDF export",
+    "feature4": "AI cover letter in 30 seconds",
+    "feature5": "Word (.docx) export ready to send",
+    "feature6": "ATS Score — check compatibility before you apply",
+    "feature7": "7 AI tools to write and improve your CV",
+    "feature8": "Application tracker with Kanban board",
+    "feature9": "CV version history",
+    "feature10": "Public shareable CV link",
+    "feature11": "PDF/Word import",
+    "feature12": "Version history — restore any previous version",
     "btn_loading": "Redirecting...",
     "btn_start": "Get started now",
     "toast_connection_error": "Connection error"
   },
   "templates_page": {
-    "badge": "29 templates",
-    "title": "Choose your perfect design",
-    "subtitle": "Modern designs for every industry and professional level. Change templates anytime without losing your content.",
+    "badge": "128 templates",
+    "title": "Find the template for your industry",
+    "subtitle": "Over 40 professional designs for creative, business, legal, health, engineering, hospitality, arts and classic. Change templates anytime without losing your content.",
     "pro_label": "Pro Designs",
     "premium_badge": "Premium",
     "all_templates": "All templates",
@@ -223,6 +252,77 @@
       "age_required": "You must confirm you are 16 or older to continue",
       "marketing_consent": "I agree to receive emails about updates and offers from READY CV. You can unsubscribe at any time."
     }
+  },
+  "ai_features": {
+    "section_title": "Your AI career coach, built into every CV",
+    "section_subtitle": "7 artificial intelligence tools exclusive to the Pro plan to write better, beat the algorithms and land the offer",
+    "pro_badge": "Pro",
+    "cta_title": "All AI features are exclusive to the Pro plan.",
+    "cta_desc": "One subscription, seven tools, zero compromises.",
+    "cta_btn": "See Pro plan",
+    "cluster1_title": "Write better, faster",
+    "cluster2_title": "Beat the algorithm",
+    "cluster3_title": "Land the offer",
+    "bullet_title": "Turn job duties into achievement statements",
+    "bullet_desc": "Paste any experience bullet and the AI rewrites it with impact language: action verbs, metrics and results-oriented framing.",
+    "summary_title": "Stop staring at a blank summary field",
+    "summary_desc": "Describe your background in plain language and READY CV generates three polished summary versions in seconds. Pick one, edit freely.",
+    "fill_title": "Go from nothing to complete in one prompt",
+    "fill_desc": "Type something like 'I'm a UX designer with 5 years in fintech' and we populate your job title, summary and key skills instantly.",
+    "ats_title": "Find out why your CV keeps getting rejected",
+    "ats_desc": "Paste any job posting and get a compatibility score in seconds. READY CV shows you exactly which keywords are missing and how to add them.",
+    "skills_title": "Never miss a skill recruiters are screening for",
+    "skills_desc": "Based on your target role, we suggest the exact skills hiring managers filter by — so you rank higher before a human reads your name.",
+    "coverletter_title": "A personalized cover letter for every application in 30 seconds",
+    "coverletter_desc": "Paste the job description, choose your tone (formal, balanced or dynamic) and READY CV writes a letter using your actual CV data.",
+    "review_title": "Get honest feedback before a recruiter does",
+    "review_desc": "Ask READY CV anything about your CV — 'Is my summary strong enough?' 'What's missing for a PM role?' — and get actionable answers, not generic tips."
+  },
+  "ats_section": {
+    "title": "75% of CVs are rejected before a recruiter sees them",
+    "subtitle": "Most companies use Applicant Tracking Systems (ATS) to filter candidates automatically. If your CV doesn't match the job posting's keywords, it never reaches a human — no matter how qualified you are.",
+    "step1": "You apply",
+    "step2": "ATS scans for keywords",
+    "step3": "Only matches reach recruiters",
+    "solution_title": "READY CV tells you exactly where you stand before you apply",
+    "solution_desc": "Paste the job posting. Get a score from 0 to 100. See which keywords you're missing. Fix them in the editor. Apply with confidence.",
+    "payoff": "Stop guessing. Start getting interviews.",
+    "cta": "Try ATS Score — Pro feature"
+  },
+  "comparison_table": {
+    "title": "Free vs Pro",
+    "subtitle": "Everything included in each plan",
+    "feature_col": "Feature",
+    "free_col": "Free",
+    "pro_col": "Pro",
+    "row_cvs": "CV documents",
+    "val_cvs_free": "1",
+    "val_cvs_pro": "Unlimited",
+    "row_templates": "Templates",
+    "val_templates_free": "5 classic",
+    "val_templates_pro": "128 professional",
+    "row_pdf": "PDF export",
+    "val_pdf_free": "With watermark",
+    "val_pdf_pro": "No watermark",
+    "row_word": "Word (.docx) export",
+    "row_ai_bullet": "AI: bullet improvement",
+    "row_ai_summary": "AI: summary generator",
+    "row_ats": "ATS Score",
+    "row_skills": "AI skill suggestions",
+    "row_review": "Full AI CV review",
+    "row_cover": "AI cover letter",
+    "row_tracker": "Application tracker",
+    "row_share": "Public shareable CV",
+    "row_history": "Version history",
+    "cta": "Start with Pro — $15/month"
+  },
+  "blog": {
+    "back": "← Back to blog",
+    "published": "Published",
+    "reading_time": "min read",
+    "cta_title": "Build your professional CV with ReadyCV",
+    "cta_desc": "128 templates, 7 AI tools and ATS analysis.",
+    "cta_btn": "Create my CV"
   },
   "privacy_page": {
     "title": "Privacy Policy",
@@ -300,8 +400,8 @@
       "saving": "Saving...",
       "save_button": "Save changes",
       "current_plan": "Current plan",
-      "plan_free": "Basic",
-      "plan_free_desc": "Limited access",
+      "plan_free": "No active plan",
+      "plan_free_desc": "Upgrade to access all features",
       "plan_trial_desc": "Active trial",
       "plan_pro_desc": "Full access to all features",
       "canceled_notice": "Subscription cancelled — no automatic renewal. You keep access until",
@@ -328,6 +428,10 @@
     "spacing_compact": "Compact",
     "spacing_spacious": "Spacious",
     "pro_required": "This template requires an active Pro or Trial plan.",
+    "regular_designs_label": "Regular",
+    "regular_designs_label2": "Designs",
+    "pro_designs_label": "Pro",
+    "pro_designs_label2": "Designs",
     "saving": "Saving...",
     "unsaved": "Unsaved",
     "saved": "Saved",
@@ -450,7 +554,7 @@
       "error_pdf": "Error generating PDF",
       "pro_only_word": "Word export is exclusive to the Pro plan",
       "watermark_text": "readycvv.com",
-      "watermark_upgrade": "Upgrade to Pro to remove this watermark"
+      "watermark_upgrade": "Activate your Pro plan at readycv.app"
     },
     "ats": {
       "tab": "ATS",
@@ -586,7 +690,8 @@
         "website": "Website",
         "job_title": "Job title",
         "linkedin": "LinkedIn",
-        "github": "GitHub"
+        "github": "GitHub",
+        "years_of_experience": "Years of experience for the position"
       },
       "work": {
         "job_title": "Job title",
@@ -794,5 +899,15 @@
     "max_tier": "You've reached the highest level!",
     "reward_applied": "The credit is automatically applied to your next invoice.",
     "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again."
+  },
+  "cv_examples": {
+    "title": "Your CV could look like this",
+    "subtitle": "Real examples built with ReadyCV — pick the style that represents you best.",
+    "badge_tech": "Technology",
+    "badge_design": "Design",
+    "badge_legal": "Legal / Finance",
+    "badge_health": "Healthcare",
+    "badge_hospitality": "Hospitality",
+    "cta": "Create my CV"
   }
 }

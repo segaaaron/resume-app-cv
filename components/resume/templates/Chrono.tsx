@@ -156,7 +156,7 @@ function TimelineItem({
       <h4 className="font-semibold text-[13px] text-gray-900">{title}</h4>
       <p className="text-xs font-medium mb-1" style={{ color }}>{subtitle}</p>
       {description && (
-        <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(description) }} />
+        <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(description) }} />
       )}
     </div>
   )

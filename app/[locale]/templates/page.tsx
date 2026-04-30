@@ -28,7 +28,7 @@ export async function generateMetadata({
       "modelos de curriculum vitae",
       "diseños de cv",
       "plantillas resume",
-      "plantillas cv gratis",
+      "plantillas cv profesionales",
       "curriculum vitae moderno",
       "plantillas ats",
     ],
@@ -272,7 +272,20 @@ export default async function TemplatesPage({
       )
     : false
 
-  const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul", "rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
+  const PRO_IDS = ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical","terminalcv","iosappcv","datadriven","boardingpass","magazinespread","legalbrief","engraved","chalkboard","academiccv","psychologist","chefmenu","sommelier","hotelcv","bartendercv","postcardcv","frontpage","vinylcv","callsheet","copywritermag","animatorcv","codeeditor","civileng","mechanical","devopsterminal","processflow","pilotlog","onboardingform","athletecard","translatorcv","herbariumcv","risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","annualreport","financeterminal","campaignposter","salespitch","ledgercv","neon","medicalchart","vitalsigns","vetcv","fieldjournal","sharp","bauhaus"]
+
+  const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
+    { key: "featured", label: "Destacados", ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid"] },
+    { key: "city", label: "Ciudad", ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
+    { key: "creative", label: "Creative", ids: ["risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical"] },
+    { key: "business", label: "Business", ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","boardingpass","magazinespread","terminalcv","iosappcv"] },
+    { key: "health", label: "Health & Science", ids: ["medicalchart","vitalsigns","vetcv","fieldjournal"] },
+    { key: "legal", label: "Legal & Academia", ids: ["legalbrief","engraved","chalkboard","academiccv","psychologist"] },
+    { key: "hospitality", label: "Hostelería", ids: ["chefmenu","sommelier","hotelcv","bartendercv","postcardcv"] },
+    { key: "engineering", label: "Ingeniería & Tech", ids: ["codeeditor","civileng","mechanical","devopsterminal","processflow","neon","sharp","bauhaus"] },
+    { key: "arts", label: "Artes & Medios", ids: ["frontpage","vinylcv","callsheet","copywritermag","animatorcv"] },
+    { key: "other", label: "Otros", ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
+  ]
 
   const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
   const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
@@ -362,7 +375,7 @@ export default async function TemplatesPage({
 
           {/* Pro Diseños */}
           <div className="mb-12">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-8">
               <div className="flex-1 h-px bg-border" />
               <div className="flex items-center gap-2">
                 <span className="text-lg font-extrabold tracking-tight">{t("pro_label")}</span>
@@ -372,9 +385,23 @@ export default async function TemplatesPage({
               </div>
               <div className="flex-1 h-px bg-border" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-              {proTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
-            </div>
+
+            {CATEGORIES.map((cat) => {
+              const catTemplates = proTemplates.filter((tmpl) => cat.ids.includes(tmpl.id))
+              if (catTemplates.length === 0) return null
+              return (
+                <div key={cat.key} className="mb-10">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+                    <span className="h-px flex-1 bg-border" />
+                    {cat.label}
+                    <span className="h-px flex-1 bg-border" />
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+                    {catTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           {/* Divider */}

@@ -88,7 +88,7 @@ export default function BerlinTemplate() {
                   {job.employer}{job.city ? `, ${job.city}` : ""}
                 </p>
                 {job.description && (
-                  <div style={{ fontFamily: mono, fontSize: "9px", color: "#4b5563", lineHeight: 1.7 }}
+                  <div className="resume-desc" style={{ fontFamily: mono, fontSize: "9px", color: "#4b5563", lineHeight: 1.7 }}
                     dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>
