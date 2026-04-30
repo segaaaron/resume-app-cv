@@ -6,7 +6,7 @@
  */
 
 export type Plan = "FREE" | "TRIAL" | "PRO"
-export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED"
+export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED" | "PAST_DUE"
 export type Role = "USER" | "SUPER_ADMIN"
 
 export function isSuperAdmin(role?: string | null): boolean {

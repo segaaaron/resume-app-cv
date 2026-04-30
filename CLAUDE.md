@@ -365,6 +365,7 @@ Todos los features de IA son exclusivos del plan Pro. No existe ningún feature 
 | Configurar cron job en Dokploy `0 9 * * *` → `/api/cron/renewal-reminder` | ✅ Listo |
 | Configurar cron job en Dokploy `0 8 * * *` → `/api/cron/application-reminders` | ✅ Listo |
 | Reenviar evento `invoice.paid` en Stripe para setear `subscriptionEndsAt` | ✅ Listo |
+| Configurar cron job en Dokploy `0 3 * * 0` → `/api/cron/purge-stripe-events` (domingo 3am, limpia StripeEvent > 90 días) | ⏳ Pendiente |
 
 ---
 

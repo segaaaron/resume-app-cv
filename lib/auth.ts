@@ -5,6 +5,17 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 
+interface UserPlanCacheEntry {
+  plan: string
+  subscriptionStatus: string
+  subscriptionEndsAt: Date | null
+  role: string
+  expiresAt: number
+}
+
+const userPlanCache = new Map<string, UserPlanCacheEntry>()
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
   session: { strategy: "jwt" },
@@ -43,18 +54,35 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id
+        // Invalidate cache on new login so stale data is never used
+        if (user.id) userPlanCache.delete(user.id)
       }
       const userId = (token.id ?? user?.id) as string | undefined
       if (userId) {
-        const dbUser = await db.user.findUnique({
-          where: { id: userId },
-          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
-        })
-        if (dbUser) {
-          token.plan = dbUser.plan
-          token.subscriptionStatus = dbUser.subscriptionStatus
-          token.subscriptionEndsAt = dbUser.subscriptionEndsAt?.toISOString() ?? null
-          token.role = dbUser.role
+        const cached = userPlanCache.get(userId)
+        if (cached && cached.expiresAt > Date.now()) {
+          token.plan = cached.plan
+          token.subscriptionStatus = cached.subscriptionStatus
+          token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
+          token.role = cached.role
+        } else {
+          const dbUser = await db.user.findUnique({
+            where: { id: userId },
+            select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+          })
+          if (dbUser) {
+            userPlanCache.set(userId, {
+              plan: dbUser.plan,
+              subscriptionStatus: dbUser.subscriptionStatus,
+              subscriptionEndsAt: dbUser.subscriptionEndsAt,
+              role: dbUser.role,
+              expiresAt: Date.now() + CACHE_TTL_MS,
+            })
+            token.plan = dbUser.plan
+            token.subscriptionStatus = dbUser.subscriptionStatus
+            token.subscriptionEndsAt = dbUser.subscriptionEndsAt?.toISOString() ?? null
+            token.role = dbUser.role
+          }
         }
       }
       return token

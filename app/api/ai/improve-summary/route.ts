@@ -14,10 +14,16 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
 
-  if (user?.plan !== "PRO" || user?.subscriptionStatus !== "ACTIVE") {
+  const now = new Date()
+  const hasActiveAccess =
+    user?.plan === "PRO" &&
+    user?.subscriptionStatus === "ACTIVE" &&
+    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
+
+  if (!hasActiveAccess) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

@@ -197,8 +197,7 @@ export async function POST(req: Request) {
           // Grace period: set PAST_DUE instead of immediately downgrading to FREE.
           await db.user.update({
             where: { id: user.id },
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            data: { subscriptionStatus: "PAST_DUE" as any },
+              data: { subscriptionStatus: "PAST_DUE" },
           })
 
           if (emailEnabled() && resend && user.email) {
