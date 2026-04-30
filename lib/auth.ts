@@ -42,6 +42,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         })
 
         if (!user || !user.password) return null
+        if (user.deletedAt !== null) return null
 
         const valid = await bcrypt.compare(credentials.password as string, user.password)
         if (!valid) return null
@@ -68,9 +69,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         } else {
           const dbUser = await db.user.findUnique({
             where: { id: userId },
-            select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+            select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, deletedAt: true },
           })
           if (dbUser) {
+            if (dbUser.deletedAt !== null) return null
             userPlanCache.set(userId, {
               plan: dbUser.plan,
               subscriptionStatus: dbUser.subscriptionStatus,

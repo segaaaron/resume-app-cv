@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { z } from "zod"
+import { checkOrigin } from "@/lib/csrf"
 
 // Causales de reembolso aceptadas según T&C (Sección 4)
 const VALID_REASONS = ["technical_issue", "duplicate_charge", "service_not_as_described"] as const
@@ -21,6 +22,8 @@ export async function POST(req: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)

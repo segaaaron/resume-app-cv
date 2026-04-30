@@ -25,10 +25,12 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
   }
 
-  // Idempotency check — skip already-processed events using persistent DB storage
-  const alreadyProcessed = await db.stripeEvent.findUnique({ where: { id: event.id } })
-  if (alreadyProcessed) {
-    return NextResponse.json({ received: true })
+  try {
+    await db.stripeEvent.create({ data: { id: event.id } })
+  } catch (e: unknown) {
+    const code = (e as { code?: string })?.code
+    if (code === "P2002") return NextResponse.json({ received: true })
+    throw e
   }
 
   try {
@@ -225,9 +227,6 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ error: "Webhook handler failed" }, { status: 500 })
   }
-
-  // Persist processed event ID to prevent duplicate processing on retry/restart
-  await db.stripeEvent.create({ data: { id: event.id } }).catch(() => {})
 
   return NextResponse.json({ received: true })
 }

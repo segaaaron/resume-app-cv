@@ -145,10 +145,12 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       return NextResponse.json({ error: "off_topic" }, { status: 422 })
     }
 
-    // Convert \n\n paragraph breaks to HTML <p> tags for Tiptap RichTextEditor
+    function escapeHtml(str: string): string {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;")
+    }
     const html = parsed.body
       .split(/\n\n+/)
-      .map((p: string) => `<p>${p.replace(/\n/g, "<br>").trim()}</p>`)
+      .map((p: string) => `<p>${p.split(/\n/).map(escapeHtml).join("<br>").trim()}</p>`)
       .join("")
 
     logAIUsage(session.user.id, "generate-cover-letter")
