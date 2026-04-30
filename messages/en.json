@@ -523,6 +523,15 @@
       "improve_summary_placeholder": "E.g. I'm an iOS developer with 7 years, specialized in SwiftUI and VIPER architecture...",
       "improve_summary_empty": "Write a summary or describe your profile so the AI can improve it"
     },
+    "template_switch": {
+      "title": "Preview: {name}",
+      "subtitle": "This is how your CV would look with this template. Your content is fully preserved.",
+      "warn_columns": "Sidebar sections will be moved to the main column.",
+      "warn_photo": "This template doesn't show a photo, but your image will be saved.",
+      "info_double": "Sections will be distributed across two columns according to the template layout.",
+      "confirm": "Apply template",
+      "cancel": "Cancel"
+    },
     "history": {
       "button": "History",
       "title": "Version history",

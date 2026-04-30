@@ -523,6 +523,15 @@
       "improve_summary_placeholder": "Ej: Soy desarrollador iOS con 7 años, especializado en SwiftUI y arquitectura VIPER...",
       "improve_summary_empty": "Escribe un resumen o describe tu perfil para que la IA pueda mejorarlo"
     },
+    "template_switch": {
+      "title": "Vista previa: {name}",
+      "subtitle": "Así quedaría tu CV con esta plantilla. Tu contenido se conserva al completo.",
+      "warn_columns": "Las secciones del panel lateral se moverán a la columna principal.",
+      "warn_photo": "Esta plantilla no muestra foto, pero tu imagen quedará guardada.",
+      "info_double": "Las secciones se distribuirán en dos columnas según el diseño de la plantilla.",
+      "confirm": "Aplicar plantilla",
+      "cancel": "Cancelar"
+    },
     "history": {
       "button": "Historial",
       "title": "Historial de versiones",

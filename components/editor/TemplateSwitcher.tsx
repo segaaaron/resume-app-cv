@@ -3,9 +3,10 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
-import { TEMPLATES } from "@/types/resume"
+import { TEMPLATES, TemplateId } from "@/types/resume"
 import { cn } from "@/lib/utils"
 import { Lock } from "lucide-react"
+import TemplateSwitchModal from "./TemplateSwitchModal"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import UpgradeModal from "./UpgradeModal"
 
@@ -2546,8 +2547,9 @@ interface Props {
 
 export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
   const t = useTranslations("editor")
-  const { config, setTemplate } = useResumeStore()
+  const { config, setTemplateWithAdapt } = useResumeStore()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null)
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
@@ -2572,8 +2574,8 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
       onClick={() => {
         if (locked) {
           handleLockedTemplate()
-        } else {
-          setTemplate(template.id)
+        } else if (template.id !== config.templateId) {
+          setPendingTemplate(template.id)
         }
       }}
       className="shrink-0 flex flex-col items-center gap-1 group"
@@ -2609,6 +2611,11 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
   return (
     <>
     <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+    <TemplateSwitchModal
+      pendingTemplateId={pendingTemplate}
+      onConfirm={() => { if (pendingTemplate) { setTemplateWithAdapt(pendingTemplate); setPendingTemplate(null) } }}
+      onCancel={() => setPendingTemplate(null)}
+    />
     <div className="shrink-0 bg-white/95 backdrop-blur border-t border-border px-4 py-3">
       <div className="flex flex-col gap-3">
 

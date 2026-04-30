@@ -253,9 +253,10 @@ function buildFontUrl(family: string) {
 // Compensate dimensions so the visual A4 size stays 210×297mm.
 const BASE_FONT = 14
 
-export default function ResumePreview() {
+export default function ResumePreview({ overrideTemplateId }: { overrideTemplateId?: string }) {
   const { config } = useResumeStore()
-  const Template = TEMPLATE_MAP[config.templateId] ?? ClassicTemplate
+  const effectiveTemplateId = overrideTemplateId ?? config.templateId
+  const Template = TEMPLATE_MAP[effectiveTemplateId as keyof typeof TEMPLATE_MAP] ?? ClassicTemplate
 
   const scale = config.fontSize / BASE_FONT
   // Compensated dimensions: visually always 210×297mm regardless of zoom
