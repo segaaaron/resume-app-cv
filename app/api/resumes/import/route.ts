@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { checkOrigin } from "@/lib/csrf"
 import { buildSections, ResumeSectionsSchema } from "@/types/resume"
 import { getLimits, isSuperAdmin } from "@/lib/plans"
 import mammoth from "mammoth"
@@ -20,6 +21,8 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, role: true } })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

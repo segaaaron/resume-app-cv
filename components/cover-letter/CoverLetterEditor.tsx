@@ -454,6 +454,7 @@ export default function CoverLetterEditor({
             : undefined,
         }),
       })
+      if (res.status === 429) { toast.error(t("ai_rate_limit")); return }
       if (res.status === 403) { toast.error(t("ai_pro_only")); return }
       if (res.status === 422) { toast.error(t("ai_off_topic")); return }
       const data = await res.json()

@@ -38,6 +38,7 @@ export default function WorkExperienceSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: config.language }),
       })
+      if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }
       if (res.status === 422) { toast.error(ai("off_topic_bullet")); return }
       const data = await res.json()

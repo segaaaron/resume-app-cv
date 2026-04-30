@@ -63,6 +63,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     setCreating(true)
     try {
       const res = await fetch("/api/resumes", { method: "POST" })
+      if (!res.ok) { toast.error(t("create_error")); return }
       const data = await res.json()
       router.push(`/${locale}/editor/${data.id}?new=1`)
     } catch {
@@ -97,8 +98,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           <div className="flex items-center gap-3">
             <PartyPopper className="h-5 w-5 shrink-0" />
             <div>
-              <p className="font-semibold text-sm">¡Bienvenido a Pro!</p>
-              <p className="text-xs text-white/80">Ya tienes acceso completo a todas las plantillas y funciones.</p>
+              <p className="font-semibold text-sm">{t("welcome_pro_title")}</p>
+              <p className="text-xs text-white/80">{t("welcome_pro_subtitle")}</p>
             </div>
           </div>
           <button onClick={() => setShowUpgradeBanner(false)} className="p-1 rounded hover:bg-white/20 transition-colors">

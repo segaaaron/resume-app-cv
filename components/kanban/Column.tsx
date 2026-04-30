@@ -22,18 +22,30 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
   const [editingReminder, setEditingReminder] = useState<string | null>(null)
 
   async function handleMove(id: string, status: AppStatus) {
+    const prev = applications.find((a) => a.id === id)?.status
     moveApplication(id, status)
-    await fetch(`/api/applications/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    })
+    try {
+      const res = await fetch(`/api/applications/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error()
+    } catch {
+      if (prev) moveApplication(id, prev)
+      toast.error(t("move_error"))
+    }
   }
 
   async function handleDelete(id: string) {
     deleteApplication(id)
-    await fetch(`/api/applications/${id}`, { method: "DELETE" })
-    toast.success("Candidatura eliminada")
+    try {
+      const res = await fetch(`/api/applications/${id}`, { method: "DELETE" })
+      if (!res.ok) throw new Error()
+      toast.success(t("delete_success"))
+    } catch {
+      toast.error(t("delete_error"))
+    }
   }
 
   async function handleFollowUp(id: string, date: string | null) {
@@ -55,11 +67,11 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
 
   const STATUSES: AppStatus[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]
   const STATUS_LABELS: Record<AppStatus, string> = {
-    WISHLIST: "Deseado",
-    APPLIED: "Postulado",
-    INTERVIEW: "Entrevista",
-    OFFER: "Oferta",
-    REJECTED: "Rechazado",
+    WISHLIST: t("status_wishlist"),
+    APPLIED: t("status_applied"),
+    INTERVIEW: t("status_interview"),
+    OFFER: t("status_offer"),
+    REJECTED: t("status_rejected"),
   }
 
   return (
@@ -133,7 +145,7 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
 
             {app.url && (
               <a href={app.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary mt-1.5 hover:underline">
-                <ExternalLink className="h-3 w-3" /> Ver oferta
+                <ExternalLink className="h-3 w-3" /> {t("view_offer")}
               </a>
             )}
 

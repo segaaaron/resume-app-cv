@@ -362,7 +362,9 @@
       "cancel": "Cancel",
       "create_error": "Error creating CV",
       "delete_success": "CV deleted",
-      "duplicate_success": "CV duplicated"
+      "duplicate_success": "CV duplicated",
+      "welcome_pro_title": "Welcome to Pro!",
+      "welcome_pro_subtitle": "You now have full access to all templates and features."
     },
     "cover_letters": {
       "title": "Cover Letters",
@@ -524,7 +526,8 @@
       "improve_summary": "Improve with AI",
       "improve_summary_hint": "Optional: describe your profile or what you want to improve. Leave empty to let AI improve your current summary.",
       "improve_summary_placeholder": "E.g. I'm an iOS developer with 7 years, specialized in SwiftUI and VIPER architecture...",
-      "improve_summary_empty": "Write a summary or describe your profile so the AI can improve it"
+      "improve_summary_empty": "Write a summary or describe your profile so the AI can improve it",
+      "rate_limit_exceeded": "You've reached the hourly AI usage limit. Please try again later."
     },
     "template_switch": {
       "title": "Preview: {name}",
@@ -609,7 +612,8 @@
       "toast_change_applied": "Change applied to CV",
       "toast_change_error": "Could not apply change",
       "label_respuesta": "Answer",
-      "label_areas_mejora": "Areas to improve"
+      "label_areas_mejora": "Areas to improve",
+      "rate_limit_exceeded": "You've reached the hourly analysis limit. Please try again later."
     },
     "cv_review": {
       "title": "AI CV Review",
@@ -671,6 +675,7 @@
       "toast_job_title_updated": "Job title updated",
       "toast_off_topic": "I can only generate content from real professional descriptions",
       "toast_generate_error": "Error generating profile",
+      "toast_rate_limit": "You've reached the hourly AI usage limit. Please try again later.",
       "toast_skills_added": "{count} skills added",
       "toast_languages_added": "{count} languages added",
       "toast_item_updated": "\"{label}\" updated",
@@ -790,6 +795,7 @@
         "phone": "Phone",
         "email": "Email"
       },
+      "suggest_skills_rate_limit": "You've reached the hourly suggestions limit. Please try again later.",
       "toast_pro_only": "This feature requires a Pro plan"
     },
     "upgrade": {
@@ -816,7 +822,11 @@
     "follow_up_placeholder": "Follow-up date",
     "follow_up_set": "Reminder saved",
     "follow_up_removed": "Reminder removed",
-    "follow_up_error": "Error saving reminder"
+    "follow_up_error": "Error saving reminder",
+    "delete_success": "Application deleted",
+    "delete_error": "Error deleting application",
+    "move_error": "Error moving application",
+    "view_offer": "View offer"
   },
   "cover_letter_editor": {
     "ai_title": "Generate with AI",
@@ -834,6 +844,7 @@
     "ai_off_topic": "I can only generate professional cover letters",
     "ai_missing_company": "Enter the company name before generating",
     "ai_error": "Error generating cover letter with AI",
+    "ai_rate_limit": "You've reached the hourly generation limit. Please try again later.",
     "improve_button": "Improve with AI",
     "improve_loading": "Improving...",
     "improve_choose": "Choose an improved version",
@@ -936,6 +947,12 @@
     "max_tier": "You've reached the highest level!",
     "reward_applied": "The credit is automatically applied to your next invoice.",
     "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again."
+  },
+  "checkout": {
+    "loading": "Preparing your payment...",
+    "redirect_hint": "You will be redirected to Stripe in a moment.",
+    "error_message": "An error occurred while initiating payment.",
+    "back_to_pricing": "Back to pricing"
   },
   "cv_examples": {
     "title": "Your CV could look like this",

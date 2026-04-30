@@ -53,6 +53,10 @@ export default function SkillsSection() {
         body: JSON.stringify({ jobTitle, existingSkills, language: config.language }),
       })
 
+      if (res.status === 429) {
+        toast.error(t("suggest_skills_rate_limit"))
+        return
+      }
       if (res.status === 403) {
         toast.error(t("toast_pro_only"))
         return

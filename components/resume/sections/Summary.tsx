@@ -28,6 +28,7 @@ export default function SummarySection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, language: config.language }),
       })
+      if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }
       if (res.status === 400) { toast.error(ai("not_enough_data_summary")); return }
       if (res.status === 422) { toast.error(ai("off_topic_summary")); return }
@@ -64,6 +65,7 @@ export default function SummarySection() {
           language: config.language,
         }),
       })
+      if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }
       if (res.status === 400) { toast.error(ai("improve_summary_empty")); return }
       if (res.status === 422) { toast.error(ai("off_topic_summary")); return }

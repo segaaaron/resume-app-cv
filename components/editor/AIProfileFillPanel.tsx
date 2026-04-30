@@ -156,6 +156,7 @@ export default function AIProfileFillPanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: config.language }),
       })
+      if (res.status === 429) { toast.error(t("toast_rate_limit")); return }
       if (res.status === 403) { toast.error(t("toast_pro_only")); return }
       if (res.status === 400) { toast.error(t("toast_more_detail")); return }
       if (res.status === 422) { toast.error(t("toast_off_topic")); return }

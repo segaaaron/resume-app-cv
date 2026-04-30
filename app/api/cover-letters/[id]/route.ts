@@ -72,7 +72,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error("[cover-letters PATCH] Unhandled error", err)
+    console.error("[cover-letters PATCH] Unhandled error", err instanceof Error ? err.message : "unknown")
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }

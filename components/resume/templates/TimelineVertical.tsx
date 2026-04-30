@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { fmtDesc } from "@/lib/utils"
 
 export default function TimelineVerticalTemplate() {
   const { config, sections } = useResumeStore()
@@ -22,7 +23,7 @@ export default function TimelineVerticalTemplate() {
       year: job.startDate?.match(/\d{4}/)?.[0] || "",
       head: job.jobTitle,
       sub: job.employer + (job.city ? `, ${job.city}` : ""),
-      body: job.description || "",
+      body: fmtDesc(job.description || ""),
       isHtml: true,
     })),
     ...education.map((edu) => ({

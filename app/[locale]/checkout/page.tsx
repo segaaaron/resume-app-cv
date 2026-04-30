@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
+import { useTranslations } from "next-intl"
 
 export default function CheckoutRedirectPage() {
+  const t = useTranslations("checkout")
   const params = useSearchParams()
   const plan = params.get("plan")
   const [error, setError] = useState(false)
@@ -34,8 +36,8 @@ export default function CheckoutRedirectPage() {
   if (error) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
-        <p className="text-lg font-semibold">Ocurrió un error al iniciar el pago.</p>
-        <a href="/pricing" className="text-primary underline text-sm">Volver a precios</a>
+        <p className="text-lg font-semibold">{t("error_message")}</p>
+        <a href="/pricing" className="text-primary underline text-sm">{t("back_to_pricing")}</a>
       </div>
     )
   }
@@ -43,8 +45,8 @@ export default function CheckoutRedirectPage() {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
       <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      <p className="text-lg font-semibold">Preparando tu pago...</p>
-      <p className="text-sm text-muted-foreground">Serás redirigido a Stripe en un momento.</p>
+      <p className="text-lg font-semibold">{t("loading")}</p>
+      <p className="text-sm text-muted-foreground">{t("redirect_hint")}</p>
     </div>
   )
 }

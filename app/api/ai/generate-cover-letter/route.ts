@@ -37,7 +37,7 @@ export async function POST(req: Request) {
   // Validate free-text inputs for prompt injection
   const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt].filter(Boolean).join(" ")
   const validation = validateAIInput(userText, 3000)
-  if (!validation.valid && validation.error === "injection_detected") {
+  if (!validation.valid) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
 

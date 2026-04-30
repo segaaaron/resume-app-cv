@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
 import { ResumeSectionsSchema } from "@/types/resume"
+import { checkOrigin } from "@/lib/csrf"
 
 const MAX_VERSIONS = 10
 
@@ -53,6 +54,8 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },

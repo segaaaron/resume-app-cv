@@ -41,7 +41,7 @@ interface ReviewResult {
 function isQuestion(text: string): boolean {
   const trimmed = text.trim()
   if (trimmed.endsWith("?")) return true
-  if (trimmed.length < 120) return true
+  if (trimmed.length < 50) return true
   return false
 }
 
@@ -144,6 +144,7 @@ export default function ATSScorePanel() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sectionData, question: text, language: config.language }),
         })
+        if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
         if (res.status === 403) { toast.error(t("pro_only")); return }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
         if (res.status === 422) { setOffTopic(true); return }
@@ -156,6 +157,7 @@ export default function ATSScorePanel() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jobDescription: text, sectionData, language: config.language }),
         })
+        if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
         if (res.status === 403) { toast.error(t("pro_only")); return }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
         if (res.status === 422) { setOffTopic(true); return }

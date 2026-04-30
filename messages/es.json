@@ -362,7 +362,9 @@
       "cancel": "Cancelar",
       "create_error": "Error al crear el CV",
       "delete_success": "CV eliminado",
-      "duplicate_success": "CV duplicado"
+      "duplicate_success": "CV duplicado",
+      "welcome_pro_title": "¡Bienvenido a Pro!",
+      "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones."
     },
     "cover_letters": {
       "title": "Cartas de Presentación",
@@ -524,7 +526,8 @@
       "improve_summary": "Mejorar con IA",
       "improve_summary_hint": "Opcional: describe tu perfil o indica qué quieres mejorar. Si lo dejas vacío, la IA mejora el resumen actual.",
       "improve_summary_placeholder": "Ej: Soy desarrollador iOS con 7 años, especializado en SwiftUI y arquitectura VIPER...",
-      "improve_summary_empty": "Escribe un resumen o describe tu perfil para que la IA pueda mejorarlo"
+      "improve_summary_empty": "Escribe un resumen o describe tu perfil para que la IA pueda mejorarlo",
+      "rate_limit_exceeded": "Has alcanzado el límite de uso de IA por hora. Intenta de nuevo más tarde."
     },
     "template_switch": {
       "title": "Vista previa: {name}",
@@ -609,7 +612,8 @@
       "toast_change_applied": "Cambio aplicado al CV",
       "toast_change_error": "No se pudo aplicar el cambio",
       "label_respuesta": "Respuesta",
-      "label_areas_mejora": "Áreas de mejora"
+      "label_areas_mejora": "Áreas de mejora",
+      "rate_limit_exceeded": "Has alcanzado el límite de análisis por hora. Intenta de nuevo más tarde."
     },
     "cv_review": {
       "title": "Revisión IA del CV",
@@ -671,6 +675,7 @@
       "toast_job_title_updated": "Título del puesto actualizado",
       "toast_off_topic": "Solo puedo generar contenido a partir de descripciones profesionales reales",
       "toast_generate_error": "Error al generar el perfil",
+      "toast_rate_limit": "Has alcanzado el límite de uso de IA por hora. Intenta de nuevo más tarde.",
       "toast_skills_added": "{count} habilidades agregadas",
       "toast_languages_added": "{count} idiomas agregados",
       "toast_item_updated": "\"{label}\" actualizado",
@@ -790,6 +795,7 @@
         "phone": "Teléfono",
         "email": "Email"
       },
+      "suggest_skills_rate_limit": "Has alcanzado el límite de sugerencias por hora. Intenta de nuevo más tarde.",
       "toast_pro_only": "Esta función requiere plan Pro"
     },
     "upgrade": {
@@ -816,7 +822,11 @@
     "follow_up_placeholder": "Fecha de seguimiento",
     "follow_up_set": "Recordatorio guardado",
     "follow_up_removed": "Recordatorio eliminado",
-    "follow_up_error": "Error al guardar recordatorio"
+    "follow_up_error": "Error al guardar recordatorio",
+    "delete_success": "Candidatura eliminada",
+    "delete_error": "Error al eliminar candidatura",
+    "move_error": "Error al mover candidatura",
+    "view_offer": "Ver oferta"
   },
   "cover_letter_editor": {
     "ai_title": "Generar con IA",
@@ -834,6 +844,7 @@
     "ai_off_topic": "Solo puedo generar cartas de presentación laborales",
     "ai_missing_company": "Ingresa el nombre de la empresa antes de generar",
     "ai_error": "Error al generar la carta con IA",
+    "ai_rate_limit": "Has alcanzado el límite de generación por hora. Intenta de nuevo más tarde.",
     "improve_button": "Mejorar con IA",
     "improve_loading": "Mejorando...",
     "improve_choose": "Elige una versión mejorada",
@@ -936,6 +947,12 @@
     "max_tier": "¡Alcanzaste el máximo nivel!",
     "reward_applied": "El crédito se aplica automáticamente en tu próxima factura.",
     "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas."
+  },
+  "checkout": {
+    "loading": "Preparando tu pago...",
+    "redirect_hint": "Serás redirigido a Stripe en un momento.",
+    "error_message": "Ocurrió un error al iniciar el pago.",
+    "back_to_pricing": "Volver a precios"
   },
   "cv_examples": {
     "title": "Tu CV podría verse así",

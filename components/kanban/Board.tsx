@@ -40,6 +40,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle, company }),
       })
+      if (!res.ok) { toast.error(t("create_error")); return }
       const data: ApplicationCard = await res.json()
       addApplication(data)
       setOpen(false)
