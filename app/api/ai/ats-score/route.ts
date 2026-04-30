@@ -3,10 +3,13 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
 import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
+import { checkOrigin } from "@/lib/csrf"
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const [allowed, user] = await Promise.all([
     checkRateLimit(session.user.id, "ats-score"),

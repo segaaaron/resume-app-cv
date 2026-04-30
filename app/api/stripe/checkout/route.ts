@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
+import { checkOrigin } from "@/lib/csrf"
 import { z } from "zod"
 
 const schema = z.object({
@@ -15,6 +16,8 @@ export async function POST(req: Request) {
 
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   let body: unknown
   try {

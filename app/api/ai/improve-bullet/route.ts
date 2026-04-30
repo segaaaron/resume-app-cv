@@ -2,13 +2,16 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
-import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage } from "@/lib/ai-client"
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE_CREATIVE, checkRateLimit, logAIUsage } from "@/lib/ai-client"
+import { checkOrigin } from "@/lib/csrf"
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const [allowed, user] = await Promise.all([
     checkRateLimit(session.user.id, "improve-bullet"),
@@ -74,7 +77,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
       max_tokens: 600,
-      temperature: AI_TEMPERATURE,
+      temperature: AI_TEMPERATURE_CREATIVE,
       response_format: { type: "json_object" },
       messages: [
         {

@@ -8,6 +8,7 @@ declare module "next-auth" {
       subscriptionStatus?: string
       subscriptionEndsAt?: string | null
       role?: string
+      emailVerified?: string | null
     } & DefaultSession["user"]
   }
 }
@@ -19,5 +20,6 @@ declare module "next-auth/jwt" {
     subscriptionStatus?: string
     subscriptionEndsAt?: string | null
     role?: string
+    emailVerified?: string | null
   }
 }

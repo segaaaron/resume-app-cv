@@ -1,5 +1,6 @@
 "use client"
 
+import { useTranslations } from "next-intl"
 import {
   Dialog,
   DialogContent,
@@ -35,17 +36,14 @@ interface SuggestionDiffModalProps {
   currentValue: string
 }
 
-function fieldLabel(field: SuggestionField): string {
-  const labels: Record<SuggestionField, string> = {
-    "summary": "Resumen profesional",
-    "personalDetails.jobTitle": "Título del puesto",
-    "skills": "Habilidades",
-    "workExperience.description": "Descripción de experiencia",
-    "workExperience.jobTitle": "Cargo",
-    "languages": "Idiomas",
-    "certifications": "Certificaciones",
-  }
-  return labels[field]
+const FIELD_KEYS: Record<SuggestionField, string> = {
+  "summary": "field_summary",
+  "personalDetails.jobTitle": "field_job_title",
+  "skills": "field_skills",
+  "workExperience.description": "field_work_description",
+  "workExperience.jobTitle": "field_work_job_title",
+  "languages": "field_languages",
+  "certifications": "field_certifications",
 }
 
 export default function SuggestionDiffModal({
@@ -55,6 +53,8 @@ export default function SuggestionDiffModal({
   suggestion,
   currentValue,
 }: SuggestionDiffModalProps) {
+  const t = useTranslations("editor.cv_review")
+
   const afterValue = suggestion.type === "append"
     ? [currentValue, suggestion.preview].filter(Boolean).join(" ")
     : suggestion.preview
@@ -64,7 +64,7 @@ export default function SuggestionDiffModal({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="text-sm font-semibold">
-            Cambio sugerido — {fieldLabel(suggestion.field)}
+            {t("diff_title")} — {t(FIELD_KEYS[suggestion.field])}
           </DialogTitle>
           <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
         </DialogHeader>
@@ -72,9 +72,9 @@ export default function SuggestionDiffModal({
         <div className="space-y-3 py-1">
           {/* Before */}
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Actual</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("diff_before")}</p>
             <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground leading-relaxed min-h-[48px]">
-              {currentValue || <span className="italic">— vacío —</span>}
+              {currentValue || <span className="italic">{t("diff_empty")}</span>}
             </div>
           </div>
 
@@ -84,7 +84,7 @@ export default function SuggestionDiffModal({
 
           {/* After */}
           <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">Sugerido</p>
+            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">{t("diff_after")}</p>
             <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2.5 text-xs text-foreground leading-relaxed min-h-[48px]">
               {afterValue}
             </div>
@@ -92,9 +92,9 @@ export default function SuggestionDiffModal({
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>Cancelar</Button>
+          <Button variant="ghost" size="sm" onClick={onClose}>{t("diff_cancel")}</Button>
           <Button size="sm" onClick={onConfirm} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-            Confirmar cambio
+            {t("diff_confirm")}
           </Button>
         </DialogFooter>
       </DialogContent>

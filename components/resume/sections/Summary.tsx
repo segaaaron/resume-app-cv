@@ -20,16 +20,13 @@ export default function SummarySection() {
   const [improveDescription, setImproveDescription] = useState("")
 
   async function handleGenerate() {
-    const { personalDetails, workExperience, education, skills } = sectionData
-    const jobTitle = workExperience?.[0]?.jobTitle ?? ""
-
     setGenerating(true)
     setVersions([])
     try {
       const res = await fetch("/api/ai/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personalDetails, jobTitle, workExperience, education, skills, language: config.language }),
+        body: JSON.stringify({ sectionData, language: config.language }),
       })
       if (res.status === 403) { toast.error(ai("pro_only")); return }
       if (res.status === 400) { toast.error(ai("not_enough_data_summary")); return }

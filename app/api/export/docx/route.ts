@@ -23,10 +23,16 @@ export async function GET(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
 
-  if (user?.plan !== "PRO" || user?.subscriptionStatus !== "ACTIVE") {
+  const now = new Date()
+  const hasActiveAccess =
+    user?.plan === "PRO" &&
+    user?.subscriptionStatus === "ACTIVE" &&
+    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
+
+  if (!hasActiveAccess) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
@@ -39,6 +45,26 @@ export async function GET(req: Request) {
 
   const data = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
   const pd = data.personalDetails
+  const lang = (resume.language as string) === "en" ? "en" : "es"
+
+  const SECTION_LABELS: Record<string, Record<"es" | "en", string>> = {
+    summary: { es: "Perfil Profesional", en: "Professional Summary" },
+    workExperience: { es: "Experiencia Laboral", en: "Work Experience" },
+    education: { es: "Educación", en: "Education" },
+    skills: { es: "Habilidades", en: "Skills" },
+    languages: { es: "Idiomas", en: "Languages" },
+    certifications: { es: "Certificaciones", en: "Certifications" },
+    projects: { es: "Proyectos", en: "Projects" },
+  }
+
+  const LEVEL_LABELS: Record<"es" | "en", Record<string, string>> = {
+    es: { elementary: "Básico", limited: "Limitado", professional: "Profesional", full_professional: "Avanzado", native: "Nativo" },
+    en: { elementary: "Basic", limited: "Limited", professional: "Professional", full_professional: "Advanced", native: "Native" },
+  }
+
+  const label = (key: string) => SECTION_LABELS[key]?.[lang] ?? key
+  const levelLabel = (level: string) => LEVEL_LABELS[lang][level] ?? level
+  const presentLabel = lang === "en" ? "Present" : "Presente"
 
   const paragraphs: Paragraph[] = []
 
@@ -89,7 +115,7 @@ export async function GET(req: Request) {
 
   // ── Summary ───────────────────────────────────────────────────────────────
   if (data.summary) {
-    paragraphs.push(sectionHeading("Perfil Profesional"))
+    paragraphs.push(sectionHeading(label("summary")))
     paragraphs.push(
       new Paragraph({ text: data.summary, spacing: { after: 120 } })
     )
@@ -97,7 +123,7 @@ export async function GET(req: Request) {
 
   // ── Work Experience ───────────────────────────────────────────────────────
   if (data.workExperience?.length) {
-    paragraphs.push(sectionHeading("Experiencia Laboral"))
+    paragraphs.push(sectionHeading(label("workExperience")))
     for (const job of data.workExperience) {
       paragraphs.push(
         new Paragraph({
@@ -108,7 +134,7 @@ export async function GET(req: Request) {
           spacing: { before: 120, after: 40 },
         })
       )
-      const dateStr = [job.startDate, job.currentlyWorking ? "Presente" : job.endDate].filter(Boolean).join(" – ")
+      const dateStr = [job.startDate, job.currentlyWorking ? presentLabel : job.endDate].filter(Boolean).join(" – ")
       if (dateStr || job.city) {
         paragraphs.push(
           new Paragraph({
@@ -127,7 +153,7 @@ export async function GET(req: Request) {
 
   // ── Education ─────────────────────────────────────────────────────────────
   if (data.education?.length) {
-    paragraphs.push(sectionHeading("Educación"))
+    paragraphs.push(sectionHeading(label("education")))
     for (const edu of data.education) {
       paragraphs.push(
         new Paragraph({
@@ -138,7 +164,7 @@ export async function GET(req: Request) {
           spacing: { before: 120, after: 40 },
         })
       )
-      const dateStr = [edu.startDate, edu.currentlyStudying ? "Presente" : edu.endDate].filter(Boolean).join(" – ")
+      const dateStr = [edu.startDate, edu.currentlyStudying ? presentLabel : edu.endDate].filter(Boolean).join(" – ")
       if (dateStr) {
         paragraphs.push(
           new Paragraph({
@@ -152,24 +178,20 @@ export async function GET(req: Request) {
 
   // ── Skills ────────────────────────────────────────────────────────────────
   if (data.skills?.length) {
-    paragraphs.push(sectionHeading("Habilidades"))
+    paragraphs.push(sectionHeading(label("skills")))
     const skillNames = data.skills.map((s) => s.name).filter(Boolean).join("   ·   ")
     paragraphs.push(new Paragraph({ text: skillNames, spacing: { after: 120 } }))
   }
 
   // ── Languages ─────────────────────────────────────────────────────────────
   if (data.languages?.length) {
-    paragraphs.push(sectionHeading("Idiomas"))
-    const levelLabels: Record<string, string> = {
-      elementary: "Básico", limited: "Limitado", professional: "Profesional",
-      full_professional: "Avanzado", native: "Nativo",
-    }
-    for (const lang of data.languages) {
+    paragraphs.push(sectionHeading(label("languages")))
+    for (const langEntry of data.languages) {
       paragraphs.push(
         new Paragraph({
           children: [
-            new TextRun({ text: lang.name, bold: true }),
-            new TextRun({ text: `  —  ${levelLabels[lang.level] ?? lang.level}`, color: "555555" }),
+            new TextRun({ text: langEntry.name, bold: true }),
+            new TextRun({ text: `  —  ${levelLabel(langEntry.level)}`, color: "555555" }),
           ],
           bullet: { level: 0 },
           spacing: { after: 40 },
@@ -180,7 +202,7 @@ export async function GET(req: Request) {
 
   // ── Certifications ────────────────────────────────────────────────────────
   if (data.certifications?.length) {
-    paragraphs.push(sectionHeading("Certificaciones"))
+    paragraphs.push(sectionHeading(label("certifications")))
     for (const cert of data.certifications) {
       paragraphs.push(
         new Paragraph({
@@ -198,7 +220,7 @@ export async function GET(req: Request) {
 
   // ── Projects ──────────────────────────────────────────────────────────────
   if (data.projects?.length) {
-    paragraphs.push(sectionHeading("Proyectos"))
+    paragraphs.push(sectionHeading(label("projects")))
     for (const proj of data.projects) {
       paragraphs.push(
         new Paragraph({

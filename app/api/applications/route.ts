@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
+import { checkOrigin } from "@/lib/csrf"
 
 const createSchema = z.object({
   jobTitle: z.string().min(1).max(255),
@@ -34,6 +35,19 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
+  const user = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
+  })
+  const now = new Date()
+  const proAccess =
+    user?.plan === "PRO" &&
+    (user?.subscriptionStatus === "ACTIVE" || user?.subscriptionStatus === "PAST_DUE") &&
+    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
+  if (!proAccess) return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
 
   let body: unknown
   try {

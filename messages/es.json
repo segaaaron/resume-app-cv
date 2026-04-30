@@ -594,7 +594,22 @@
       "toast_empty_input": "Escribe una pregunta o pega la descripción del puesto",
       "toast_update_languages": "Actualiza tus idiomas en la sección correspondiente del editor",
       "toast_update_certifications": "Actualiza tus certificaciones en la sección correspondiente del editor",
-      "toast_keywords_already": "Todas las keywords ya están en tus habilidades"
+      "toast_keywords_already": "Todas las keywords ya están en tus habilidades",
+      "panel_description": "Pega la descripción de un puesto para calcular tu ATS Score, o escribe una pregunta sobre tu CV.",
+      "badge_consulta": "Consulta",
+      "badge_ats": "ATS",
+      "button_consultar": "Consultar",
+      "button_add_all": "+ Agregar todas",
+      "keyword_hint": "Haz clic en una keyword para agregarla a tus Habilidades.",
+      "keyword_already_added": "\"{keyword}\" ya está en tus habilidades",
+      "keyword_added": "\"{keyword}\" agregado a Habilidades",
+      "keywords_added": "{count} keywords agregadas a Habilidades",
+      "apply_button": "Aplicar",
+      "applied": "Aplicado",
+      "toast_change_applied": "Cambio aplicado al CV",
+      "toast_change_error": "No se pudo aplicar el cambio",
+      "label_respuesta": "Respuesta",
+      "label_areas_mejora": "Áreas de mejora"
     },
     "cv_review": {
       "title": "Revisión IA del CV",
@@ -619,7 +634,15 @@
       "diff_before": "Actual",
       "diff_after": "Sugerido",
       "diff_confirm": "Confirmar cambio",
-      "diff_cancel": "Cancelar"
+      "diff_cancel": "Cancelar",
+      "diff_empty": "— vacío —",
+      "field_summary": "Resumen profesional",
+      "field_job_title": "Título del puesto",
+      "field_skills": "Habilidades",
+      "field_work_description": "Descripción de experiencia",
+      "field_work_job_title": "Cargo",
+      "field_languages": "Idiomas",
+      "field_certifications": "Certificaciones"
     },
     "ai_profile_fill": {
       "title": "Ayúdate con la IA",

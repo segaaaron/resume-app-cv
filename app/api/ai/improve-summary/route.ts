@@ -3,10 +3,13 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
 import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
+import { checkOrigin } from "@/lib/csrf"
 
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   if (!await checkRateLimit(session.user.id, "improve-summary")) {
     return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
@@ -40,14 +43,14 @@ export async function POST(req: Request) {
 
   if (hasSummary) {
     const validation = validateAIInput(summary, 3000)
-    if (!validation.valid && validation.error === "injection_detected") {
+    if (!validation.valid) {
       return NextResponse.json({ error: "invalid_input" }, { status: 400 })
     }
   }
 
   if (hasDescription) {
     const validation = validateAIInput(userDescription, 500)
-    if (!validation.valid && validation.error === "injection_detected") {
+    if (!validation.valid) {
       return NextResponse.json({ error: "invalid_input" }, { status: 400 })
     }
   }

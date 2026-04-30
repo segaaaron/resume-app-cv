@@ -50,7 +50,8 @@ export function isActive(
     if (subscriptionStatus === "CANCELED" || subscriptionStatus === "EXPIRED") return false
     // If we have an explicit end date, check it hasn't passed
     if (subscriptionEndsAt && new Date() > subscriptionEndsAt) return false
-    return subscriptionStatus === "ACTIVE"
+    // PAST_DUE gets a grace period: access allowed until subscriptionEndsAt (set to now+3d by webhook)
+    return subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE"
   }
   return false
 }

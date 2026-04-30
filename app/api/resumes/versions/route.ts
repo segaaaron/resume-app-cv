@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
+import { ResumeSectionsSchema } from "@/types/resume"
 
 const MAX_VERSIONS = 10
 
@@ -20,7 +21,7 @@ export const snapshotConfigSchema = z.object({
 export const snapshotSchema = z.object({
   title:       z.string().optional(),
   sections:    z.array(z.any()).optional(),
-  sectionData: z.any().optional(),
+  sectionData: ResumeSectionsSchema.optional(),
   config:      snapshotConfigSchema,
 })
 
@@ -55,10 +56,16 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
 
-  if (user?.plan !== "PRO" || user?.subscriptionStatus !== "ACTIVE") {
+  const now = new Date()
+  const hasActiveAccess =
+    user?.plan === "PRO" &&
+    user?.subscriptionStatus === "ACTIVE" &&
+    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
+
+  if (!hasActiveAccess) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

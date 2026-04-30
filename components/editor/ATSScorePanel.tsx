@@ -225,9 +225,9 @@ export default function ATSScorePanel() {
       }
 
       setAppliedItems((prev) => new Set(prev).add(itemKey))
-      toast.success("Cambio aplicado al CV")
+      toast.success(t("toast_change_applied"))
     } catch {
-      toast.error("No se pudo aplicar el cambio")
+      toast.error(t("toast_change_error"))
     } finally {
       setModal(null)
     }
@@ -239,7 +239,7 @@ export default function ATSScorePanel() {
       (s) => s.name.toLowerCase() === keyword.toLowerCase()
     )
     if (alreadyExists) {
-      toast.info(`"${keyword}" ya está en tus habilidades`)
+      toast.info(t("keyword_already_added", { keyword }))
       setAddedKeywords((prev) => new Set(prev).add(keyword))
       return
     }
@@ -248,7 +248,7 @@ export default function ATSScorePanel() {
       { id: nanoid(), name: keyword, level: "intermediate" as const },
     ])
     setAddedKeywords((prev) => new Set(prev).add(keyword))
-    toast.success(`"${keyword}" agregado a Habilidades`)
+    toast.success(t("keyword_added", { keyword }))
   }
 
   function addAllKeywords() {
@@ -262,7 +262,7 @@ export default function ATSScorePanel() {
       ...missing.map((kw): SkillItem => ({ id: nanoid(), name: kw, level: "intermediate" })),
     ])
     setAddedKeywords((prev) => { const next = new Set(prev); missing.forEach((kw) => next.add(kw)); return next })
-    toast.success(`${missing.length} keyword${missing.length > 1 ? "s" : ""} agregada${missing.length > 1 ? "s" : ""} a Habilidades`)
+    toast.success(t("keywords_added", { count: missing.length }))
   }
 
   function ReviewItemRow({ item, itemKey, icon, iconColor }: {
@@ -282,12 +282,12 @@ export default function ATSScorePanel() {
             onClick={() => openDiffModal(item, itemKey)}
             className="shrink-0 flex items-center gap-0.5 text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded px-1.5 py-0.5 transition-colors"
           >
-            <Wand2 className="h-2.5 w-2.5" /> Aplicar
+            <Wand2 className="h-2.5 w-2.5" /> {t("apply_button")}
           </button>
         )}
         {applied && (
           <span className="shrink-0 flex items-center gap-0.5 text-[10px] bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">
-            <Check className="h-2.5 w-2.5" /> Aplicado
+            <Check className="h-2.5 w-2.5" /> {t("applied")}
           </span>
         )}
       </li>
@@ -316,21 +316,21 @@ export default function ATSScorePanel() {
         {expanded && (
           <div className="px-4 pb-4 space-y-3 bg-white border-t border-border">
             <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">
-              Pega la descripción de un puesto para calcular tu ATS Score, o escribe una pregunta sobre tu CV.
+              {t("panel_description")}
             </p>
 
             <div className="relative">
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder={`Ej: "Software Engineer… Requirements: 3+ years React…"\n\nO: "¿Mi resumen profesional es convincente?"`}
+                placeholder={t("placeholder")}
                 className="text-xs min-h-[110px] resize-none"
               />
               {input.trim().length > 0 && (
                 <span className={`absolute bottom-2 right-2 text-[9px] px-1.5 py-0.5 rounded font-medium ${
                   inputIsQuestion ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
                 }`}>
-                  {inputIsQuestion ? "Consulta" : "ATS"}
+                  {inputIsQuestion ? t("badge_consulta") : t("badge_ats")}
                 </span>
               )}
             </div>
@@ -345,7 +345,7 @@ export default function ATSScorePanel() {
                 : inputIsQuestion && input.trim().length > 0
                   ? <MessageSquare className="h-3.5 w-3.5" />
                   : <Target className="h-3.5 w-3.5" />}
-              {loading ? t("analyzing") : inputIsQuestion && input.trim().length > 0 ? "Consultar" : t("analyze")}
+              {loading ? t("analyzing") : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
             </Button>
 
             {offTopic && (
@@ -403,7 +403,7 @@ export default function ATSScorePanel() {
                       </p>
                       <button type="button" onClick={addAllKeywords}
                         className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
-                        + Agregar todas
+                        {t("button_add_all")}
                       </button>
                     </div>
                     <div className="flex flex-wrap gap-1">
@@ -422,7 +422,7 @@ export default function ATSScorePanel() {
                       })}
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-1.5">
-                      Haz clic en una keyword para agregarla a tus Habilidades.
+                      {t("keyword_hint")}
                     </p>
                   </div>
                 )}
@@ -450,7 +450,7 @@ export default function ATSScorePanel() {
                 {reviewResult.answer && (
                   <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
                     <p className="text-[11px] font-semibold text-indigo-700 mb-1.5 flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" /> Respuesta
+                      <MessageSquare className="h-3 w-3" /> {t("label_respuesta")}
                     </p>
                     <p className="text-xs text-foreground leading-relaxed">{reviewResult.answer}</p>
                   </div>
@@ -465,7 +465,7 @@ export default function ATSScorePanel() {
                 {reviewResult.strengths?.length > 0 && (
                   <div>
                     <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1 mb-1.5">
-                      <CheckCircle2 className="h-3 w-3" /> Fortalezas
+                      <CheckCircle2 className="h-3 w-3" /> {t("strengths")}
                     </p>
                     <ul className="space-y-2">
                       {reviewResult.strengths.map((item, i) => (
@@ -484,7 +484,7 @@ export default function ATSScorePanel() {
                 {reviewResult.improvements?.length > 0 && (
                   <div>
                     <p className="text-[11px] font-semibold text-amber-700 flex items-center gap-1 mb-1.5">
-                      <TrendingUp className="h-3 w-3" /> Áreas de mejora
+                      <TrendingUp className="h-3 w-3" /> {t("label_areas_mejora")}
                     </p>
                     <ul className="space-y-2">
                       {reviewResult.improvements.map((item, i) => (

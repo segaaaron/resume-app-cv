@@ -594,7 +594,22 @@
       "toast_empty_input": "Enter a question or paste the job description",
       "toast_update_languages": "Update your languages in the corresponding editor section",
       "toast_update_certifications": "Update your certifications in the corresponding editor section",
-      "toast_keywords_already": "All keywords are already in your skills"
+      "toast_keywords_already": "All keywords are already in your skills",
+      "panel_description": "Paste a job description to calculate your ATS Score, or ask a question about your CV.",
+      "badge_consulta": "Question",
+      "badge_ats": "ATS",
+      "button_consultar": "Ask",
+      "button_add_all": "+ Add all",
+      "keyword_hint": "Click a keyword to add it to your Skills.",
+      "keyword_already_added": "\"{keyword}\" is already in your skills",
+      "keyword_added": "\"{keyword}\" added to Skills",
+      "keywords_added": "{count} keywords added to Skills",
+      "apply_button": "Apply",
+      "applied": "Applied",
+      "toast_change_applied": "Change applied to CV",
+      "toast_change_error": "Could not apply change",
+      "label_respuesta": "Answer",
+      "label_areas_mejora": "Areas to improve"
     },
     "cv_review": {
       "title": "AI CV Review",
@@ -619,7 +634,15 @@
       "diff_before": "Current",
       "diff_after": "Suggested",
       "diff_confirm": "Confirm change",
-      "diff_cancel": "Cancel"
+      "diff_cancel": "Cancel",
+      "diff_empty": "— empty —",
+      "field_summary": "Professional summary",
+      "field_job_title": "Job title",
+      "field_skills": "Skills",
+      "field_work_description": "Work experience description",
+      "field_work_job_title": "Job position",
+      "field_languages": "Languages",
+      "field_certifications": "Certifications"
     },
     "ai_profile_fill": {
       "title": "AI Assistant",

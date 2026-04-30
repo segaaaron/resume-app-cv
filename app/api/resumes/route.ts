@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import { getLimits } from "@/lib/plans"
+import { checkOrigin } from "@/lib/csrf"
 
 export async function GET(req: Request) {
   const session = await auth()
@@ -34,6 +35,8 @@ export async function GET(req: Request) {
 export async function POST(request: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   // Plan limit check
   const user = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } })

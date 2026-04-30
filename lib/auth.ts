@@ -10,6 +10,7 @@ interface UserPlanCacheEntry {
   subscriptionStatus: string
   subscriptionEndsAt: Date | null
   role: string
+  emailVerified: Date | null
   expiresAt: number
 }
 
@@ -66,10 +67,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.subscriptionStatus = cached.subscriptionStatus
           token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
           token.role = cached.role
+          token.emailVerified = cached.emailVerified?.toISOString() ?? null
         } else {
           const dbUser = await db.user.findUnique({
             where: { id: userId },
-            select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, deletedAt: true },
+            select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, deletedAt: true, emailVerified: true },
           })
           if (dbUser) {
             if (dbUser.deletedAt !== null) return null
@@ -78,12 +80,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               subscriptionStatus: dbUser.subscriptionStatus,
               subscriptionEndsAt: dbUser.subscriptionEndsAt,
               role: dbUser.role,
+              emailVerified: dbUser.emailVerified,
               expiresAt: Date.now() + CACHE_TTL_MS,
             })
             token.plan = dbUser.plan
             token.subscriptionStatus = dbUser.subscriptionStatus
             token.subscriptionEndsAt = dbUser.subscriptionEndsAt?.toISOString() ?? null
             token.role = dbUser.role
+            token.emailVerified = dbUser.emailVerified?.toISOString() ?? null
           }
         }
       }
@@ -96,6 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.subscriptionStatus = token.subscriptionStatus as string | undefined
         session.user.subscriptionEndsAt = token.subscriptionEndsAt as string | null | undefined
         session.user.role = token.role as string | undefined
+        session.user.emailVerified = token.emailVerified as string | null | undefined
       }
       return session
     },

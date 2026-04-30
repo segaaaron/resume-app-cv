@@ -61,7 +61,7 @@ export async function POST(req: Request) {
       const data = await withTimeout(pdfParse(buffer), 10_000)
       rawText = data.text
     } else {
-      const result = await mammoth.extractRawText({ buffer })
+      const result = await withTimeout(mammoth.extractRawText({ buffer }), 10_000)
       rawText = result.value
     }
   } catch (err) {

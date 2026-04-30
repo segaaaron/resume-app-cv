@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
+import { randomBytes } from "crypto"
 import { z } from "zod"
 import { db } from "@/lib/db"
 import { DEFAULT_SECTIONS } from "@/types/resume"
 import { nanoid } from "nanoid"
+import { resend, emailEnabled } from "@/lib/resend"
+import { verifyEmailHtml, verifyEmailText } from "@/lib/emails/verifyEmail"
 
 // Simple in-memory rate limiter: max 5 attempts per IP per 15 minutes
 const attempts = new Map<string, { count: number; resetAt: number }>()
@@ -64,17 +67,39 @@ export async function POST(req: Request) {
     }
 
     const hashed = await bcrypt.hash(password, 12)
-    await db.user.create({
+    const user = await db.user.create({
       data: {
         name,
         email,
         password: hashed,
         marketingConsent: marketingConsent ?? false,
         ageVerified: ageConsent === true,
-        referralCode: nanoid(8), // every user gets their own code on signup
+        referralCode: nanoid(8),
         ...(referrerId ? { referredBy: referrerId } : {}),
       },
     })
+
+    // Generate email verification token (24h expiry)
+    const verifyToken = randomBytes(32).toString("hex")
+    await db.verificationToken.create({
+      data: {
+        identifier: email,
+        token: verifyToken,
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      },
+    })
+
+    if (emailEnabled() && resend) {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://readycvv.com"
+      const verifyUrl = `${appUrl}/es/verify-email?token=${verifyToken}`
+      await resend.emails.send({
+        from: "READY CV <no-reply@readycvv.com>",
+        to: email,
+        subject: "Verifica tu email en READY CV",
+        html: verifyEmailHtml({ userName: user.name ?? name, verifyUrl }),
+        text: verifyEmailText({ userName: user.name ?? name, verifyUrl }),
+      }).catch(() => {})
+    }
 
     return NextResponse.json({ success: true }, { status: 201 })
   } catch (error) {

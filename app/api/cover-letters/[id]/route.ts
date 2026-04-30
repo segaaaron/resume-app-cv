@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
+import { checkOrigin } from "@/lib/csrf"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -30,6 +31,8 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     const session = await auth()
     if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+    if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
     const { id } = await params
 
@@ -74,9 +77,11 @@ export async function PATCH(req: Request, { params }: Params) {
   }
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id } = await params
   const existing = await db.coverLetter.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })

@@ -166,6 +166,18 @@ export async function POST(req: Request) {
           select: { id: true },
         })
         if (user) {
+          // Partial refund: log only, do not downgrade
+          if (charge.amount_refunded < charge.amount) {
+            await db.auditLog.create({
+              data: {
+                userId: user.id,
+                action: "PARTIAL_REFUND",
+                metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded, totalAmount: charge.amount },
+              },
+            })
+            break
+          }
+          // Full refund: downgrade to FREE
           await db.user.update({
             where: { id: user.id },
             data: {
@@ -194,10 +206,11 @@ export async function POST(req: Request) {
           select: { id: true, name: true, email: true },
         })
         if (user) {
-          // Grace period: set PAST_DUE instead of immediately downgrading to FREE.
+          // Grace period: set PAST_DUE + extend subscriptionEndsAt 3 days so isActive() allows access
+          const gracePeriodEnd = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
           await db.user.update({
             where: { id: user.id },
-              data: { subscriptionStatus: "PAST_DUE" },
+            data: { subscriptionStatus: "PAST_DUE", subscriptionEndsAt: gracePeriodEnd },
           })
 
           if (emailEnabled() && resend && user.email) {

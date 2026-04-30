@@ -21,7 +21,9 @@ export default async function PublicCVPage({
   db.cVView.create({ data: { resumeId: resume.id } }).catch(() => {})
 
   const sections = (resume.sections as unknown as ResumeSection[]) ?? DEFAULT_SECTIONS
-  const sectionData: ResumeSections = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
+  const parsed = ResumeSectionsSchema.safeParse((resume.personalDetails as object) ?? {})
+  if (!parsed.success) notFound()
+  const sectionData: ResumeSections = parsed.data
 
   const config: ResumeConfig = {
     templateId: (resume.templateId as ResumeConfig["templateId"]) ?? "classic",

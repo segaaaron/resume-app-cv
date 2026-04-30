@@ -84,7 +84,7 @@ export function buildResumeContext(sectionData: Record<string, unknown>): string
     workExperience.slice(0, 5).forEach((j) => {
       const period = [j.startDate, j.endDate ?? "Presente"].filter(Boolean).join(" - ")
       lines.push(`  - ${j.jobTitle ?? ""} en ${j.employer ?? ""} (${period})`)
-      if (j.description) lines.push(`    ${j.description.slice(0, 200)}`)
+      if (j.description) lines.push(`    ${j.description.slice(0, 500)}`)
     })
   }
 
