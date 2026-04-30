@@ -218,6 +218,7 @@ enum AuditAction {
   TOGGLE_PUBLIC_CV
   DATA_EXPORT
   REFUND_ISSUED
+  PARTIAL_REFUND
 }
 
 enum Role {
