@@ -35,7 +35,7 @@ import { POST } from "@/app/api/stripe/webhook/route"
 import { stripe } from "@/lib/stripe"
 import { db } from "@/lib/db"
 
-const mockConstructEvent = (stripe as { webhooks: { constructEvent: ReturnType<typeof vi.fn> } }).webhooks.constructEvent
+const mockConstructEvent = (stripe as unknown as { webhooks: { constructEvent: ReturnType<typeof vi.fn> } }).webhooks.constructEvent
 const mockStripeEventCreate = db.stripeEvent.create as ReturnType<typeof vi.fn>
 const mockUserFindFirst = db.user.findFirst as ReturnType<typeof vi.fn>
 const mockUserUpdate = db.user.update as ReturnType<typeof vi.fn>
