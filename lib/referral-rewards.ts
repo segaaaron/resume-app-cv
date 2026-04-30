@@ -175,7 +175,7 @@ async function sendReferralRewardEmail({
         : `🎉 Nivel ${newTier} de referidos alcanzado — ${highestTier.label}`,
       html: referralRewardHtml({
         userName: referrer.name ?? referrer.email,
-        userEmail: referrer.email,
+        userId: referrer.id,
         tier: newTier,
         tierLabel: highestTier.label,
         creditAmount: fmt(newCreditCents),
@@ -185,7 +185,7 @@ async function sendReferralRewardEmail({
       }),
       text: referralRewardText({
         userName: referrer.name ?? referrer.email,
-        userEmail: referrer.email,
+        userId: referrer.id,
         tier: newTier,
         tierLabel: highestTier.label,
         creditAmount: fmt(newCreditCents),

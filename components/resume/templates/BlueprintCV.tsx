@@ -89,7 +89,7 @@ export default function BlueprintCVTemplate() {
                     year={`${job.startDate?.match(/\d{4}/)?.[0] ?? ""}${job.currentlyWorking ? `—${present}` : job.endDate?.match(/\d{4}/)?.[0] ? `—${job.endDate.match(/\d{4}/)?.[0]}` : ""}`}
                     heading={job.employer || ""}
                     sub={job.jobTitle || ""}
-                    desc={job.description}
+                    desc={job.description ? fmtDesc(job.description) : undefined}
                     white={white} subdue={subdue} faint={faint}
                   />
                 ))}

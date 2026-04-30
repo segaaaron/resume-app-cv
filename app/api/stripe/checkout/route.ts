@@ -73,7 +73,7 @@ export async function POST(req: Request) {
     line_items: [{ price: priceId, quantity: 1 }],
     success_url: `${appUrl}/dashboard/resumes?upgraded=true`,
     cancel_url: `${appUrl}/pricing`,
-    metadata: { userId: user.id },
+    metadata: { userId: user.id, planInterval: parsed.data.plan },
     subscription_data: {
       metadata: { userId: user.id, planInterval: parsed.data.plan },
     },

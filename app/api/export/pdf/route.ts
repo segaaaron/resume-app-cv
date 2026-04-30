@@ -16,11 +16,5 @@ export async function GET(req: Request) {
 
   if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  // For now, return a placeholder response
-  // Full PDF generation with @react-pdf/renderer will be implemented in Phase 2
-  return NextResponse.json({
-    message: "PDF generation endpoint — Phase 2 implementation",
-    resumeId: id,
-    title: resume.title,
-  })
+  return NextResponse.json({ error: "Not implemented — use window.print() via /resume/[id]/print" }, { status: 501 })
 }

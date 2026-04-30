@@ -52,13 +52,13 @@ export async function GET(req: Request) {
         subject: "Tu plan se renueva en 2 días ⏰",
         html: renewalReminderHtml({
           userName: user.name ?? "Usuario",
-          userEmail: user.email,
+          userId: user.id,
           planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
           renewalDate: user.subscriptionEndsAt!,
         }),
         text: renewalReminderText({
           userName: user.name ?? "Usuario",
-          userEmail: user.email,
+          userId: user.id,
           planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
           renewalDate: user.subscriptionEndsAt!,
         }),

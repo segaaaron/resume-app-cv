@@ -39,14 +39,11 @@ export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  if (!await checkRateLimit(session.user.id, "review-cv")) {
-    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
-  }
-
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
-  })
+  const [allowed, user] = await Promise.all([
+    checkRateLimit(session.user.id, "review-cv"),
+    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true } }),
+  ])
+  if (!allowed) return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
 
   const now = new Date()
   const hasActiveAccess =
@@ -153,6 +150,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // Validate and sanitize with Zod — filter out invalid suggestions silently
     const validated = ReviewResponseSchema.safeParse(parsed)
     if (!validated.success) {
+      console.warn("[review-cv] Zod validation failed, returning without suggestions:", validated.error.flatten())
       // Fallback: return without suggestions if structure is wrong
       return NextResponse.json({
         summary: parsed.summary ?? "",

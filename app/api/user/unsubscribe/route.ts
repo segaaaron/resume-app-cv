@@ -1,15 +1,17 @@
 import { db } from "@/lib/db"
+import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
-  const email = searchParams.get("email")
+  const userId = searchParams.get("uid")
+  const token = searchParams.get("t")
 
-  if (!email) {
-    return new Response("Missing email parameter.", { status: 400, headers: { "Content-Type": "text/plain" } })
+  if (!userId || !token || !verifyUnsubscribeToken(userId, token)) {
+    return new Response("Link inválido o expirado.", { status: 400, headers: { "Content-Type": "text/plain" } })
   }
 
-  await db.user.updateMany({
-    where: { email },
+  await db.user.update({
+    where: { id: userId },
     data: { emailOptOut: true },
   })
 

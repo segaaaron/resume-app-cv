@@ -98,11 +98,15 @@ export default function EditorTopBar({ hasAccess }: Props) {
     })
     if (!res.ok) { toast.error(t("history.restore_error")); return }
     toast.success(t("history.restore_success"))
-    setTimeout(() => window.location.reload(), 800)
+    window.location.reload()
   }
 
   async function handleDeleteVersion(id: string) {
-    await fetch(`/api/resumes/versions?id=${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/resumes/versions?id=${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      toast.error(t("history.delete_error"))
+      return
+    }
     setVersions((prev) => prev.filter((v) => v.id !== id))
   }
 
@@ -188,6 +192,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
             size="sm"
             className="gap-1.5 text-muted-foreground hover:text-foreground"
             onClick={() => setShowHistory((v) => !v)}
+            aria-label={t("history.button")}
           >
             <History className="h-3.5 w-3.5" />
             <span className="hidden sm:inline text-xs">{t("history.button")}</span>
@@ -203,6 +208,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
               className={`gap-1.5 ${isPublic ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}`}
               onClick={handleToggleShare}
               disabled={togglingShare || !resumeId}
+              aria-label={isPublic ? t("share.public") : t("share.button")}
             >
               {togglingShare ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
               <span className="hidden sm:inline text-xs">{isPublic ? t("share.public") : t("share.button")}</span>

@@ -1,14 +1,17 @@
 import OpenAI from "openai"
 import { db } from "@/lib/db"
 
-// Lazy client — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
+// Lazy singleton — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
+let _openai: OpenAI | null = null
 export function getOpenAI(): OpenAI {
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  return (_openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY }))
 }
 
 // Shared model config
 export const AI_MODEL = "gpt-4o-mini" as const
 export const AI_TEMPERATURE = 0.4 as const
+export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
+export const AI_TEMPERATURE_BALANCED = 0.5 as const  // profile fill — between deterministic and creative
 
 const RATE_LIMIT_DEFAULT = 20
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour

@@ -1,6 +1,8 @@
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-token"
+
 interface ApplicationReminderProps {
   userName: string
-  userEmail: string
+  userId: string
   jobTitle: string
   company: string
   status: string
@@ -17,7 +19,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 export function applicationReminderHtml({
   userName,
-  userEmail,
+  userId,
   jobTitle,
   company,
   status,
@@ -137,7 +139,7 @@ export function applicationReminderHtml({
                     </table>
 
                     <p style="font-size:12px;color:#9ca3af;margin-top:32px;text-align:center;">
-                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(userEmail)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
+                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(userId)}&t=${generateUnsubscribeToken(userId)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
                     </p>
                   </td>
                 </tr>

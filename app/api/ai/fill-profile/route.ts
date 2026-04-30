@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
-import { getOpenAI, AI_MODEL, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE_BALANCED, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
 import { z } from "zod"
 
 const ItemUpdateSchema = z.object({
@@ -153,7 +153,7 @@ Reglas:
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
       max_tokens: 700,
-      temperature: 0.5,
+      temperature: AI_TEMPERATURE_BALANCED,
       response_format: { type: "json_object" },
       messages: [
         {

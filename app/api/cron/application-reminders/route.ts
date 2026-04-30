@@ -25,7 +25,7 @@ export async function GET(req: Request) {
     },
     include: {
       user: {
-        select: { name: true, email: true },
+        select: { id: true, name: true, email: true },
       },
     },
   })
@@ -44,7 +44,7 @@ export async function GET(req: Request) {
           subject: `Recordatorio: seguimiento a ${app.jobTitle} en ${app.company}`,
           html: applicationReminderHtml({
             userName: app.user.name ?? "Usuario",
-            userEmail: app.user.email,
+            userId: app.user.id,
             jobTitle: app.jobTitle,
             company: app.company,
             status: app.status,
@@ -52,7 +52,7 @@ export async function GET(req: Request) {
           }),
           text: applicationReminderText({
             userName: app.user.name ?? "Usuario",
-            userEmail: app.user.email,
+            userId: app.user.id,
             jobTitle: app.jobTitle,
             company: app.company,
             status: app.status,

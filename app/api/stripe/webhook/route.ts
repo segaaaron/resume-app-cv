@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { resend, emailEnabled } from "@/lib/resend"
 import { subscriptionConfirmationHtml, subscriptionConfirmationText } from "@/lib/emails/subscriptionConfirmation"
 import { checkAndApplyReferralReward } from "@/lib/referral-rewards"
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-token"
 import type Stripe from "stripe"
 
 export async function POST(req: Request) {
@@ -94,13 +95,13 @@ export async function POST(req: Request) {
             subject: "¡Tu suscripción Pro está activa! 🎉",
             html: subscriptionConfirmationHtml({
               userName: user.name ?? "Usuario",
-              userEmail: user.email,
+              userId: user.id,
               planInterval,
               renewalDate,
             }),
             text: subscriptionConfirmationText({
               userName: user.name ?? "Usuario",
-              userEmail: user.email,
+              userId: user.id,
               planInterval,
               renewalDate,
             }),
@@ -212,7 +213,7 @@ export async function POST(req: Request) {
 <p>No pudimos procesar el pago de tu suscripción a READY CV. Tienes <strong>3 días</strong> para actualizar tu método de pago antes de que tu acceso Pro sea suspendido.</p>
 <p><a href="https://www.readycvv.com/dashboard/settings" style="display:inline-block;background:#2a72d7;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Actualizar método de pago</a></p>
 <p style="color:#6b7280;font-size:13px;">Si ya actualizaste tu tarjeta, puedes ignorar este mensaje.</p>
-<p style="font-size:12px;color:#9ca3af;margin-top:32px;">Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(user.email)}">cancela tu suscripción a emails aquí</a>.</p>
+<p style="font-size:12px;color:#9ca3af;margin-top:32px;">Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(user.id)}&t=${generateUnsubscribeToken(user.id)}">cancela tu suscripción a emails aquí</a>.</p>
 </td></tr></table></body></html>`,
               text: `Hola ${firstName},\n\nNo pudimos procesar el pago de tu suscripción a READY CV. Tienes 3 días para actualizar tu método de pago.\n\nActualiza en: https://www.readycvv.com/dashboard/settings\n\n© ${new Date().getFullYear()} READY CV`,
             }).catch(() => {})

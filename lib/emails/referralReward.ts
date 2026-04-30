@@ -1,6 +1,8 @@
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-token"
+
 interface ReferralRewardProps {
   userName: string
-  userEmail: string
+  userId: string
   tier: number
   tierLabel: string
   creditAmount: string   // e.g. "$4.50"
@@ -11,7 +13,7 @@ interface ReferralRewardProps {
 
 export function referralRewardHtml({
   userName,
-  userEmail,
+  userId,
   tier,
   tierLabel,
   creditAmount,
@@ -149,7 +151,7 @@ export function referralRewardHtml({
                       El crédito se descontará automáticamente en tu próxima factura de Stripe.
                     </p>
                     <p style="font-size:12px;color:#9ca3af;margin-top:24px;text-align:center;">
-                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(userEmail)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
+                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(userId)}&t=${generateUnsubscribeToken(userId)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
                     </p>
 
                   </td>

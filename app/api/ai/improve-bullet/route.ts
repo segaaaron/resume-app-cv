@@ -10,14 +10,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (!await checkRateLimit(session.user.id, "improve-bullet")) {
-    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
-  }
-
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
-  })
+  const [allowed, user] = await Promise.all([
+    checkRateLimit(session.user.id, "improve-bullet"),
+    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true } }),
+  ])
+  if (!allowed) return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
 
   const now = new Date()
   const hasActiveAccess =

@@ -418,7 +418,10 @@
       "member_since": "Member since",
       "danger_zone": "Danger zone",
       "danger_desc": "Once your account is deleted, all your data will be permanently erased and cannot be recovered.",
-      "delete_account": "Delete account"
+      "delete_account": "Delete account",
+      "subscription_ends": "Your Pro access ends on",
+      "subscription_ends_note": "After this date your Pro access will become inactive",
+      "days": "days"
     }
   },
   "editor": {
@@ -541,6 +544,7 @@
       "error": "Error saving version",
       "restore_success": "Version restored — reloading...",
       "restore_error": "Error restoring version",
+      "delete_error": "Error deleting version",
       "empty": "No saved versions.",
       "empty_hint": "Click \"Save version\" to create one.",
       "max_note": "Max 10 versions · Oldest are deleted automatically",

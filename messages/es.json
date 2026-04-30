@@ -418,7 +418,10 @@
       "member_since": "Miembro desde",
       "danger_zone": "Zona de peligro",
       "danger_desc": "Una vez eliminada tu cuenta, todos tus datos serán borrados permanentemente y no podrán recuperarse.",
-      "delete_account": "Eliminar cuenta"
+      "delete_account": "Eliminar cuenta",
+      "subscription_ends": "Tu acceso Pro termina el",
+      "subscription_ends_note": "Después de esta fecha tu acceso Pro quedará inactivo",
+      "days": "días"
     }
   },
   "editor": {
@@ -541,6 +544,7 @@
       "error": "Error al guardar versión",
       "restore_success": "Versión restaurada — recargando...",
       "restore_error": "Error al restaurar versión",
+      "delete_error": "Error al eliminar la versión",
       "empty": "Sin versiones guardadas.",
       "empty_hint": "Haz clic en \"Guardar versión\" para crear una.",
       "max_note": "Máximo 10 versiones · Las más antiguas se eliminan automáticamente",

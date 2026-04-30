@@ -1,6 +1,8 @@
+import { generateUnsubscribeToken } from "@/lib/unsubscribe-token"
+
 interface SubscriptionConfirmationProps {
   userName: string
-  userEmail: string
+  userId: string
   planInterval: "monthly" | "annual"
   renewalDate: Date
 }
@@ -15,7 +17,7 @@ function formatDate(date: Date): string {
 
 export function subscriptionConfirmationHtml({
   userName,
-  userEmail,
+  userId,
   planInterval,
   renewalDate,
 }: SubscriptionConfirmationProps): string {
@@ -158,7 +160,7 @@ export function subscriptionConfirmationHtml({
                       <a href="https://www.readycvv.com/dashboard/settings" style="color:#2a72d7;text-decoration:none;">Configuración</a>.
                     </p>
                     <p style="font-size:12px;color:#9ca3af;margin-top:32px;text-align:center;">
-                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?email=${encodeURIComponent(userEmail)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
+                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(userId)}&t=${generateUnsubscribeToken(userId)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
                     </p>
 
                   </td>

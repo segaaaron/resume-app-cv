@@ -379,15 +379,15 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   <div className="rounded-xl bg-white border border-amber-200 shadow-sm px-4 py-4 flex items-center gap-4">
                     <div className="h-12 w-12 rounded-lg bg-amber-100 flex flex-col items-center justify-center shrink-0">
                       <span className="text-xl font-extrabold text-amber-700 leading-none">{daysLeft}</span>
-                      <span className="text-[10px] text-amber-600 font-medium leading-none mt-0.5">días</span>
+                      <span className="text-[10px] text-amber-600 font-medium leading-none mt-0.5">{t("days")}</span>
                     </div>
                     <div>
-                      <p className="text-xs text-amber-700 font-semibold">Tu acceso Pro termina el</p>
+                      <p className="text-xs text-amber-700 font-semibold">{t("subscription_ends")}</p>
                       <p className="text-base font-bold text-amber-800 mt-0.5">
                         {format(endsAt, "d 'de' MMMM yyyy", { locale: dateLocale })}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Después de esta fecha pasarás al plan gratuito
+                        {t("subscription_ends_note")}
                       </p>
                     </div>
                   </div>
