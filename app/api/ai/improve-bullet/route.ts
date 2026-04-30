@@ -76,7 +76,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   try {
     const response = await getOpenAI().chat.completions.create({
       model: AI_MODEL,
-      max_tokens: 600,
+      max_tokens: 1800,
       temperature: AI_TEMPERATURE_CREATIVE,
       response_format: { type: "json_object" },
       messages: [
@@ -96,7 +96,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     })
 
     const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = JSON.parse(raw)
+    let parsed: { versions?: unknown }
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      return NextResponse.json({ error: "Error al mejorar el texto" }, { status: 500 })
+    }
 
     if (!Array.isArray(parsed.versions)) {
       throw new Error("Invalid response format")

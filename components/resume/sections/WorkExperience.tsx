@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2, Lock } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2, Lock, Check } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { useEditorPro } from "@/components/editor/EditorContext"
@@ -24,6 +24,7 @@ export default function WorkExperienceSection() {
   useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [])
   const [improvingId, setImprovingId] = useState<string | null>(null)
   const [aiVersions, setAiVersions] = useState<{ jobId: string; versions: string[] } | null>(null)
+  const [improvedId, setImprovedId] = useState<string | null>(null)
 
   async function handleImprove(job: WorkExperienceItem) {
     if (!job.description.trim()) {
@@ -57,6 +58,7 @@ export default function WorkExperienceSection() {
       jobs.map((j) => (j.id === jobId ? { ...j, description: version } : j))
     )
     setAiVersions(null)
+    setImprovedId(jobId)
     toast.success(ai("summary_applied"))
   }
 
@@ -137,20 +139,29 @@ export default function WorkExperienceSection() {
                   <button
                     type="button"
                     onClick={isPro ? () => handleImprove(job) : openUpgrade}
-                    disabled={improvingId === job.id}
-                    className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 transition-colors"
+                    disabled={improvingId === job.id || improvedId === job.id}
+                    className={`flex items-center gap-1 text-[11px] font-medium disabled:opacity-50 transition-colors ${
+                      improvedId === job.id
+                        ? "text-emerald-600 cursor-default"
+                        : "text-indigo-600 hover:text-indigo-700"
+                    }`}
                   >
                     {!isPro
                       ? <><Lock className="h-3 w-3" /> {ai("improve_bullet")}</>
                       : improvingId === job.id
                         ? <><Loader2 className="h-3 w-3 animate-spin" /> {ai("generating")}</>
-                        : <><Sparkles className="h-3 w-3" /> {ai("improve_bullet")}</>
+                        : improvedId === job.id
+                          ? <><Check className="h-3 w-3" /> {ai("bullet_improved")}</>
+                          : <><Sparkles className="h-3 w-3" /> {ai("improve_bullet")}</>
                     }
                   </button>
                 </div>
                 <Textarea
                   value={job.description}
-                  onChange={(e) => updateJob(job.id, "description", e.target.value)}
+                  onChange={(e) => {
+                    updateJob(job.id, "description", e.target.value)
+                    if (improvedId === job.id) setImprovedId(null)
+                  }}
                   placeholder={t("description_placeholder")}
                   className="text-xs min-h-[80px] resize-none"
                 />

@@ -516,6 +516,7 @@
       "cancel": "Cancel",
       "summary_applied": "Summary applied",
       "improve_bullet": "Improve with AI",
+      "bullet_improved": "Improvement applied",
       "pro_only": "This feature is exclusive to the Pro plan",
       "not_enough_data_summary": "Add experience, education or skills before generating a summary",
       "off_topic_summary": "I can only generate summaries about professional experience and profiles",

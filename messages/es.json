@@ -516,6 +516,7 @@
       "cancel": "Cancelar",
       "summary_applied": "Resumen aplicado",
       "improve_bullet": "Mejorar con IA",
+      "bullet_improved": "Mejora aplicada",
       "pro_only": "Esta función es exclusiva del plan Pro",
       "not_enough_data_summary": "Agrega experiencia, educación o habilidades antes de generar el resumen",
       "off_topic_summary": "Solo puedo generar resúmenes sobre experiencia y perfil profesional",
