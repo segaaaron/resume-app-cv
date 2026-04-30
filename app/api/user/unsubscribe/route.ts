@@ -1,7 +1,5 @@
-import { NextResponse } from "next/server"
+import { db } from "@/lib/db"
 
-// Simple unsubscribe endpoint — for now, just acknowledges the request.
-// A full implementation would store an email opt-out preference in the DB.
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const email = searchParams.get("email")
@@ -10,8 +8,11 @@ export async function GET(req: Request) {
     return new Response("Missing email parameter.", { status: 400, headers: { "Content-Type": "text/plain" } })
   }
 
-  // TODO: persist opt-out to DB when an emailOptOut field is added to the User model
-  // For now, acknowledge with a user-friendly page
+  await db.user.updateMany({
+    where: { email },
+    data: { emailOptOut: true },
+  })
+
   return new Response(
     `<!DOCTYPE html>
 <html lang="es">

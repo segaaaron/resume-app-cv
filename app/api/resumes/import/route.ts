@@ -8,6 +8,15 @@ import { parseResumeText, detectLanguage } from "@/lib/parseResumeText"
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> = require("pdf-parse")
 
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error("pdf_parse_timeout")), ms)
+    ),
+  ])
+}
+
 export async function POST(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -49,14 +58,17 @@ export async function POST(req: Request) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
     if (ext === "pdf") {
-      const data = await pdfParse(buffer)
+      const data = await withTimeout(pdfParse(buffer), 10_000)
       rawText = data.text
     } else {
       const result = await mammoth.extractRawText({ buffer })
       rawText = result.value
     }
   } catch (err) {
-    return NextResponse.json({ error: "No se pudo leer el archivo. Asegúrate de que no esté protegido con contraseña." }, { status: 422 })
+    const msg = err instanceof Error && err.message === "pdf_parse_timeout"
+      ? "El archivo tardó demasiado en procesarse."
+      : "No se pudo leer el archivo. Asegúrate de que no esté protegido con contraseña."
+    return NextResponse.json({ error: msg }, { status: 422 })
   }
 
   if (!rawText.trim()) {

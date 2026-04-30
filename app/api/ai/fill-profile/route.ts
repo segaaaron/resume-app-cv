@@ -74,7 +74,7 @@ export async function POST(req: Request) {
   }
 
   const validation = validateAIInput(prompt, 500)
-  if (!validation.valid && validation.error === "injection_detected") {
+  if (!validation.valid) {
     return NextResponse.json({ error: "invalid_input" }, { status: 400 })
   }
 

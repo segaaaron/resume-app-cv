@@ -81,24 +81,25 @@ export async function POST(req: Request) {
   const resume = await db.resume.findFirst({ where: { id: resumeId, userId: session.user.id } })
   if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  // Create the new version (cast to satisfy Prisma Json type)
-  const version = await db.resumeVersion.create({
-    data: { resumeId, label: typeof label === "string" ? label : null, snapshot: parsed.data as object },
+  // Create the new version and prune old ones atomically
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let version: any
+  await db.$transaction(async (tx) => {
+    version = await tx.resumeVersion.create({
+      data: { resumeId, label: typeof label === "string" ? label : null, snapshot: parsed.data as object },
+    })
+    const all = await tx.resumeVersion.findMany({
+      where: { resumeId },
+      orderBy: { createdAt: "desc" },
+      select: { id: true },
+    })
+    if (all.length > MAX_VERSIONS) {
+      const toDelete = all.slice(MAX_VERSIONS).map((v) => v.id)
+      await tx.resumeVersion.deleteMany({ where: { id: { in: toDelete } } })
+    }
   })
 
-  // Keep only the last MAX_VERSIONS — delete oldest ones
-  const all = await db.resumeVersion.findMany({
-    where: { resumeId },
-    orderBy: { createdAt: "desc" },
-    select: { id: true },
-  })
-
-  if (all.length > MAX_VERSIONS) {
-    const toDelete = all.slice(MAX_VERSIONS).map((v) => v.id)
-    await db.resumeVersion.deleteMany({ where: { id: { in: toDelete } } })
-  }
-
-  return NextResponse.json({ version })
+  return NextResponse.json({ version: version! })
 }
 
 // DELETE /api/resumes/versions?id=xxx — delete a specific version

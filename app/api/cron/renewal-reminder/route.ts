@@ -25,6 +25,7 @@ export async function GET(req: Request) {
     where: {
       plan: "PRO",
       subscriptionStatus: "ACTIVE",
+      emailOptOut: false,
       subscriptionEndsAt: {
         gte: windowStart,
         lte: windowEnd,

@@ -21,6 +21,7 @@ export async function GET(req: Request) {
     where: {
       followUpAt: { lte: endOfDay },
       reminderSentAt: null,
+      user: { emailOptOut: false },
     },
     include: {
       user: {

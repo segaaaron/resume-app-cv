@@ -29,13 +29,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
-  const body = await req.json()
-  const language = body.language === "en" ? "en" : "es"
+  const { sectionData, language: rawLanguage } = await req.json()
+
+  if (sectionData !== undefined && typeof sectionData !== "object") {
+    return NextResponse.json({ error: "Invalid sectionData" }, { status: 400 })
+  }
+
+  const language = rawLanguage === "en" ? "en" : "es"
   const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
-  // Accept either a full sectionData object or individual fields
-  const sectionData = body.sectionData ?? body
-  const resumeContext = buildResumeContext(sectionData)
+  const resumeContext = buildResumeContext(sectionData ?? {})
 
   if (!resumeContext.trim()) {
     return NextResponse.json({ error: "Not enough data" }, { status: 400 })

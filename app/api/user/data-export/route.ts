@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { checkRateLimit } from "@/lib/ai-client"
 
 export async function GET() {
   const session = await auth()
@@ -9,6 +10,11 @@ export async function GET() {
   }
 
   const userId = session.user.id
+
+  const allowed = await checkRateLimit(session.user.id, "data-export", 1)
+  if (!allowed) {
+    return NextResponse.json({ error: "Solo puedes exportar tus datos una vez por hora." }, { status: 429 })
+  }
 
   const user = await db.user.findUnique({
     where: { id: userId },
@@ -39,6 +45,18 @@ export async function GET() {
           updatedAt: true,
         },
       },
+      applications: {
+        select: {
+          id: true, jobTitle: true, company: true, status: true,
+          notes: true, url: true, salary: true, appliedAt: true,
+          followUpAt: true, createdAt: true,
+        },
+      },
+      auditLogs: {
+        select: { action: true, metadata: true, createdAt: true },
+        orderBy: { createdAt: "desc" as const },
+        take: 200,
+      },
     },
   })
 
@@ -47,6 +65,11 @@ export async function GET() {
   }
 
   await db.auditLog.create({ data: { userId, action: "DATA_EXPORT" } })
+
+  const referralConversions = await db.referralConversion.findMany({
+    where: { referrerId: userId },
+    select: { referredId: true, createdAt: true },
+  })
 
   const exportData = {
     exportedAt: new Date().toISOString(),
@@ -62,6 +85,9 @@ export async function GET() {
     },
     resumes: user.resumes,
     coverLetters: user.coverLetters,
+    applications: user.applications,
+    auditLogs: user.auditLogs,
+    referralConversions,
   }
 
   const json = JSON.stringify(exportData, null, 2)

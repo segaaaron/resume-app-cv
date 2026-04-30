@@ -101,7 +101,9 @@
       "Bash(sed -n '394,405p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/es.json)",
       "Bash(sed -n '394,405p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/en.json)",
       "Bash(sed -n '548,556p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/es.json)",
-      "Bash(sed -n '548,556p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/en.json)"
+      "Bash(sed -n '548,556p' /Users/miguelangelsaraviabelmonte/dev-web/cvv-pro-app/messages/en.json)",
+      "mcp__project-memory__get_project_context",
+      "Bash(npm audit *)"
     ]
   }
 }

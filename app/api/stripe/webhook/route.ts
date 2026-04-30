@@ -44,11 +44,8 @@ export async function POST(req: Request) {
           ? session.subscription
           : (session.subscription as Stripe.Subscription | null)?.id ?? null
 
-        // Determine interval from price ID
-        const priceId = session.line_items?.data[0]?.price?.id
-        const planInterval =
-          priceId === process.env.STRIPE_PRICE_ID_ANNUAL ? "annual" :
-          priceId === process.env.STRIPE_PRICE_ID_MONTHLY ? "monthly" : "monthly"
+        // Determine interval from subscription metadata (set at checkout)
+        const planInterval = (session.metadata?.planInterval === "annual" ? "annual" : "monthly") as "monthly" | "annual"
 
         await db.user.update({
           where: { id: userId },

@@ -75,7 +75,7 @@ export async function POST(req: Request) {
     cancel_url: `${appUrl}/pricing`,
     metadata: { userId: user.id },
     subscription_data: {
-      metadata: { userId: user.id },
+      metadata: { userId: user.id, planInterval: parsed.data.plan },
     },
   })
 
