@@ -100,7 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.subscriptionStatus = token.subscriptionStatus as string | undefined
         session.user.subscriptionEndsAt = token.subscriptionEndsAt as string | null | undefined
         session.user.role = token.role as string | undefined
-        session.user.emailVerified = token.emailVerified as string | null | undefined
+        session.user.emailVerified = (token.emailVerified ?? null) as unknown as (Date & string) | null
       }
       return session
     },
