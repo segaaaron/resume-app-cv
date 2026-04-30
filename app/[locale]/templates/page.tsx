@@ -4,12 +4,22 @@ import { TEMPLATES } from "@/types/resume"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
+import Script from "next/script"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import UseTemplateButton from "@/components/marketing/UseTemplateButton"
 import { auth } from "@/lib/auth"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import { Lock } from "lucide-react"
+
+const jsonLdBreadcrumbTemplates = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Inicio", item: "https://readycvv.com" },
+    { "@type": "ListItem", position: 2, name: "Plantillas de CV", item: "https://readycvv.com/templates" },
+  ],
+}
 
 export async function generateMetadata({
   params,
@@ -33,12 +43,12 @@ export async function generateMetadata({
       "plantillas ats",
     ],
     alternates: {
-      canonical: "https://readycv.app/templates",
+      canonical: "https://readycvv.com/templates",
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: "https://readycv.app/templates",
+      url: "https://readycvv.com/templates",
       type: "website",
     },
     twitter: {
@@ -357,6 +367,11 @@ export default async function TemplatesPage({
 
   return (
     <div className="flex flex-col min-h-screen">
+      <Script
+        id="json-ld-breadcrumb-templates"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumbTemplates) }}
+      />
       <Navbar />
       <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-7xl mx-auto">

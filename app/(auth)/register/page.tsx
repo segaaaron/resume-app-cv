@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     follow: false,
   },
   alternates: {
-    canonical: "https://readycv.app/register",
+    canonical: "https://readycvv.com/register",
   },
 }
 

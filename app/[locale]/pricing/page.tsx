@@ -2,6 +2,7 @@ import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import { Check, BadgeCheck } from "lucide-react"
 import type { Metadata } from "next"
+import Script from "next/script"
 import PricingButtons from "@/components/marketing/PricingButtons"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
@@ -11,6 +12,15 @@ import { isActive } from "@/lib/plans"
 import Link from "next/link"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+
+const jsonLdBreadcrumb = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Inicio", item: "https://readycvv.com" },
+    { "@type": "ListItem", position: 2, name: "Precios", item: "https://readycvv.com/pricing" },
+  ],
+}
 
 export async function generateMetadata({
   params,
@@ -24,12 +34,12 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: "https://readycv.app/pricing",
+      canonical: "https://readycvv.com/pricing",
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: "https://readycv.app/pricing",
+      url: "https://readycvv.com/pricing",
       type: "website",
     },
   }
@@ -77,6 +87,11 @@ export default async function PricingPage({
 
   return (
     <div className="flex flex-col min-h-screen">
+      <Script
+        id="json-ld-breadcrumb-pricing"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
+      />
       <Navbar />
       <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-4xl mx-auto text-center">

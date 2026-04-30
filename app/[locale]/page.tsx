@@ -26,16 +26,16 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: "https://readycv.app",
+      canonical: "https://readycvv.com",
       languages: {
-        es: "https://readycv.app/es",
-        en: "https://readycv.app/en",
+        es: "https://readycvv.com/es",
+        en: "https://readycvv.com/en",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: "https://readycv.app",
+      url: "https://readycvv.com",
       type: "website",
     },
   }
@@ -45,12 +45,12 @@ const jsonLdWebsite = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "READY CV",
-  url: "https://readycv.app",
+  url: "https://readycvv.com",
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://readycv.app/templates?q={search_term_string}",
+      urlTemplate: "https://readycvv.com/templates?q={search_term_string}",
     },
     "query-input": "required name=search_term_string",
   },
@@ -59,10 +59,10 @@ const jsonLdWebsite = {
 const jsonLdSitelinks = {
   "@context": "https://schema.org",
   "@type": "SiteLinksSearchBox",
-  url: "https://readycv.app",
+  url: "https://readycvv.com",
   potentialAction: {
     "@type": "SearchAction",
-    target: "https://readycv.app/templates?q={search_term_string}",
+    target: "https://readycvv.com/templates?q={search_term_string}",
     "query-input": "required name=search_term_string",
   },
 }
@@ -71,7 +71,7 @@ const jsonLd = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "READY CV",
-  url: "https://readycv.app",
+  url: "https://readycvv.com",
   description:
     "Constructor de CV con IA y análisis ATS. 128 plantillas profesionales, carta de presentación automática y tracker de candidaturas.",
   applicationCategory: "BusinessApplication",
@@ -96,7 +96,7 @@ const jsonLd = {
     "CV público compartible",
   ],
   inLanguage: "es",
-  screenshot: "https://readycv.app/og-image.png",
+  screenshot: "https://readycvv.com/og-image.png",
   aggregateRating: {
     "@type": "AggregateRating",
     ratingValue: "4.8",

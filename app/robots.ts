@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next"
 
-const BASE_URL = "https://readycv.app"
+const BASE_URL = "https://readycvv.com"
 
 export default function robots(): MetadataRoute.Robots {
   return {

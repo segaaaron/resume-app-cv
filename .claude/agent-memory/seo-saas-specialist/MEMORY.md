@@ -1,0 +1,1 @@
+- [CVV Pro domain and SEO infrastructure](project_domain_and_seo.md) — readycvv.com is the correct domain; sitemap priorities, JSON-LD schemas, and BreadcrumbList state documented
