@@ -11,7 +11,7 @@ function ClassicPreview() {
       height="100%"
       viewBox="0 0 200 280"
       preserveAspectRatio="xMidYMid meet"
-      font-family="system-ui, sans-serif"
+      fontFamily="system-ui, sans-serif"
     >
       <rect width="200" height="280" fill="#ffffff" />
       {/* Header */}
@@ -122,7 +122,7 @@ function ModernPreview() {
       height="100%"
       viewBox="0 0 200 280"
       preserveAspectRatio="xMidYMid meet"
-      font-family="system-ui, sans-serif"
+      fontFamily="system-ui, sans-serif"
     >
       <rect width="200" height="280" fill="#F9FAFB" />
       {/* Header dark */}
@@ -244,7 +244,7 @@ function AuroraPreview() {
       height="100%"
       viewBox="0 0 200 280"
       preserveAspectRatio="xMidYMid meet"
-      font-family="system-ui, sans-serif"
+      fontFamily="system-ui, sans-serif"
     >
       <defs>
         <linearGradient id="auroraGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -365,7 +365,7 @@ function ConsulPreview() {
       height="100%"
       viewBox="0 0 200 280"
       preserveAspectRatio="xMidYMid meet"
-      font-family="Georgia, serif"
+      fontFamily="Georgia, serif"
     >
       <rect width="200" height="280" fill="#F8F7F5" />
       {/* Header */}
@@ -469,7 +469,7 @@ function MinimalPreview() {
       height="100%"
       viewBox="0 0 200 280"
       preserveAspectRatio="xMidYMid meet"
-      font-family="system-ui, sans-serif"
+      fontFamily="system-ui, sans-serif"
     >
       <rect width="200" height="280" fill="#ffffff" />
       {/* Left accent bar */}
@@ -572,7 +572,7 @@ function NovaPreview() {
       height="100%"
       viewBox="0 0 200 280"
       preserveAspectRatio="xMidYMid meet"
-      font-family="system-ui, sans-serif"
+      fontFamily="system-ui, sans-serif"
     >
       <rect width="200" height="280" fill="#ffffff" />
       {/* Sidebar */}
