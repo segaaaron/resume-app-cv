@@ -155,9 +155,6 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
       <style>{`
         @page {
           size: A4;
-          margin: 14mm 0;
-        }
-        @page :first {
           margin: 0;
         }
         @media print {

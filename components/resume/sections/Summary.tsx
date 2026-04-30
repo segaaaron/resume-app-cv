@@ -87,7 +87,7 @@ export default function SummarySection() {
       <div className="flex items-center justify-between gap-2">
         <p className="text-xs text-muted-foreground">{t("summary_placeholder")}</p>
         <div className="flex items-center gap-3 shrink-0">
-          {/* Mejorar con IA */}
+          {/* Mejorar con IA — habilitado cuando ≥ 10 chars */}
           <button
             type="button"
             onClick={isPro ? handleImprove : openUpgrade}
@@ -105,11 +105,11 @@ export default function SummarySection() {
                   : <><Wand2 className="h-3 w-3" /> {ai("improve_summary")}</>
             }
           </button>
-          {/* Generar con IA — requiere mínimo 10 chars */}
+          {/* Generar con IA — habilitado cuando < 10 chars (mutuamente exclusivo con Improve) */}
           <button
             type="button"
             onClick={isPro ? handleGenerate : openUpgrade}
-            disabled={generating || (isPro && (sectionData.summary?.toString().trim().length ?? 0) < 10)}
+            disabled={generating || (isPro && (sectionData.summary?.toString().trim().length ?? 0) > 0)}
             className="flex items-center gap-1 text-[11px] font-medium text-indigo-600 hover:text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {!isPro
