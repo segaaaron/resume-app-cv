@@ -2,17 +2,16 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
-import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit } from "@/lib/ai-client"
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage } from "@/lib/ai-client"
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
-  }
-
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  if (!await checkRateLimit(session.user.id, "improve-bullet")) {
+    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
   }
 
   const user = await db.user.findUnique({
@@ -101,6 +100,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return NextResponse.json({ error: "off_topic" }, { status: 422 })
     }
 
+    logAIUsage(session.user.id, "improve-bullet")
     return NextResponse.json({ versions: parsed.versions.slice(0, 3) })
   } catch {
     return NextResponse.json({ error: "Error al mejorar el texto" }, { status: 500 })

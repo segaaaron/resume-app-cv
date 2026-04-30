@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
-import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, buildResumeContext } from "@/lib/ai-client"
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
 import { z } from "zod"
 
 const SUGGESTION_FIELDS = [
@@ -36,13 +36,12 @@ const ReviewResponseSchema = z.object({
 })
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
-  }
-
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!await checkRateLimit(session.user.id, "review-cv")) {
+    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
+  }
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -172,6 +171,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         : undefined,
     })
 
+    logAIUsage(session.user.id, "review-cv")
     return NextResponse.json({
       summary: validated.data.summary,
       strengths: validated.data.strengths.map(sanitizeItem),

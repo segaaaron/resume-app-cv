@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
-import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit } from "@/lib/ai-client"
+import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage } from "@/lib/ai-client"
 import { z } from "zod"
 
 const schema = z.object({
@@ -13,14 +13,13 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
-  }
-
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  }
+
+  if (!await checkRateLimit(session.user.id, "suggest-skills")) {
+    return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
   }
 
   const user = await db.user.findUnique({
@@ -99,6 +98,7 @@ Rules:
         level: validLevels.has(s.level) ? s.level : "intermediate",
       }))
 
+    logAIUsage(session.user.id, "suggest-skills")
     return NextResponse.json({ skills })
   } catch {
     return NextResponse.json({ error: "AI service unavailable" }, { status: 503 })

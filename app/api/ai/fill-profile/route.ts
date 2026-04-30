@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
-import { getOpenAI, AI_MODEL, checkRateLimit, buildResumeContext } from "@/lib/ai-client"
+import { getOpenAI, AI_MODEL, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
 import { z } from "zod"
 
 const ItemUpdateSchema = z.object({
@@ -43,13 +43,12 @@ function buildSectionContext(label: string, items: { id: string; name?: string; 
 }
 
 export async function POST(req: Request) {
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!checkRateLimit(ip)) {
-    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
-  }
-
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!await checkRateLimit(session.user.id, "fill-profile")) {
+    return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
+  }
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -186,6 +185,7 @@ Reglas:
     const validProjIds = new Set(((sd.projects ?? []) as { id: string }[]).map((p) => p.id))
     const validVolIds = new Set(((sd.volunteer ?? []) as { id: string }[]).map((v) => v.id))
 
+    logAIUsage(session.user.id, "fill-profile")
     return NextResponse.json({
       summary: data.summary ?? null,
       jobTitle: data.jobTitle ?? null,

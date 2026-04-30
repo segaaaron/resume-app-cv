@@ -1,4 +1,5 @@
 import OpenAI from "openai"
+import { db } from "@/lib/db"
 
 // Lazy client — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
 export function getOpenAI(): OpenAI {
@@ -7,21 +8,39 @@ export function getOpenAI(): OpenAI {
 
 // Shared model config
 export const AI_MODEL = "gpt-4o-mini" as const
-export const AI_TEMPERATURE = 0.4 as const // deterministic enough for CV content, creative enough for variety
+export const AI_TEMPERATURE = 0.4 as const
 
-// In-memory rate limiter (per IP, resets hourly)
-const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT_DEFAULT = 20
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
 
-export function checkRateLimit(ip: string, limit = 20): boolean {
-  const now = Date.now()
-  const entry = rateLimitMap.get(ip)
-  if (!entry || now > entry.resetAt) {
-    rateLimitMap.set(ip, { count: 1, resetAt: now + 60 * 60 * 1000 })
+// Rate limit per userId+endpoint stored in DB. Returns true if allowed.
+export async function checkRateLimit(userId: string, endpoint: string, limit = RATE_LIMIT_DEFAULT): Promise<boolean> {
+  const now = new Date()
+  const record = await db.aIRateLimit.findUnique({
+    where: { userId_endpoint: { userId, endpoint } },
+  })
+
+  if (!record || record.resetAt < now) {
+    await db.aIRateLimit.upsert({
+      where: { userId_endpoint: { userId, endpoint } },
+      create: { userId, endpoint, count: 1, resetAt: new Date(now.getTime() + RATE_LIMIT_WINDOW_MS) },
+      update: { count: 1, resetAt: new Date(now.getTime() + RATE_LIMIT_WINDOW_MS) },
+    })
     return true
   }
-  if (entry.count >= limit) return false
-  entry.count++
+
+  if (record.count >= limit) return false
+
+  await db.aIRateLimit.update({
+    where: { userId_endpoint: { userId, endpoint } },
+    data: { count: { increment: 1 } },
+  })
   return true
+}
+
+// Fire-and-forget usage log — never throws
+export function logAIUsage(userId: string, endpoint: string): void {
+  db.aIUsageLog.create({ data: { userId, endpoint } }).catch(() => {})
 }
 
 // Extract plain-text summary of CV data for use in AI prompts

@@ -143,6 +143,31 @@ model Application {
   @@index([followUpAt])
 }
 
+model AIRateLimit {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+  @@index([resetAt])
+}
+
+model AIUsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([endpoint])
+  @@index([createdAt])
+}
+
 model StripeEvent {
   id          String   @id // Stripe event ID (e.g. evt_xxx)
   processedAt DateTime @default(now())
