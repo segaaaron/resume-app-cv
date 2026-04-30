@@ -35,12 +35,25 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
   try {
     const newUser = await db.user.findUnique({
       where: { id: newProUserId },
-      select: { referredBy: true },
+      select: { referredBy: true, emailVerified: true },
     })
     if (!newUser?.referredBy) return
 
+    // H2: only count email-verified users
+    if (newUser.emailVerified === null) return
+
+    const referrerId = newUser.referredBy
+
+    // H1: idempotent — only count each referred user once per referrer
+    try {
+      await db.referralConversion.create({ data: { referrerId, referredId: newProUserId } })
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === "P2002") return // already counted
+      throw e
+    }
+
     const referrer = await db.user.findUnique({
-      where: { id: newUser.referredBy },
+      where: { id: referrerId },
       select: {
         id: true,
         name: true,
@@ -52,13 +65,9 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
     })
     if (!referrer) return
 
-    // Total paid referrals ever
-    const totalPaid = await db.user.count({
-      where: {
-        referredBy: referrer.id,
-        plan: "PRO",
-        subscriptionStatus: "ACTIVE",
-      },
+    // Total paid referrals ever — counted via ReferralConversion for dedup
+    const totalPaid = await db.referralConversion.count({
+      where: { referrerId: referrer.id },
     })
 
     // Current cycle count

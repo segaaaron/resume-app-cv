@@ -15,10 +15,7 @@ const patchSchema = z.object({
     fontFamily:  z.string().max(100).optional(),
     fontSize:    z.number().int().min(8).max(24).optional(),
     spacing:     z.number().min(0.5).max(3).optional(),
-    photoUrl:      z.string().refine(
-      (v) => v.startsWith("data:image/") || /^https?:\/\//.test(v),
-      "Invalid photo URL"
-    ).nullable().optional(),
+    photoUrl:      z.string().regex(/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/).max(500000).optional().nullable(),
     photoPosition: z.number().int().min(0).max(100).optional(),
     language:      z.enum(["es", "en"]).optional(),
   }).optional(),

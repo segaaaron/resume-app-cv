@@ -41,7 +41,6 @@ export async function POST(req: Request) {
       subscriptionStatus: true,
       subscriptionId: true,
       stripeCustomerId: true,
-      createdAt: true,
     },
   })
 
@@ -54,13 +53,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "No se encontró cuenta de pago asociada" }, { status: 400 })
   }
 
-  // Solo se permite reembolso dentro de los primeros 7 días desde la suscripción
-  const daysSinceCreation = (Date.now() - user.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-  if (daysSinceCreation > 7) {
-    return NextResponse.json(
-      { error: "El período de reembolso de 7 días ha expirado" },
-      { status: 400 }
-    )
+  if (!user.subscriptionId) {
+    return NextResponse.json({ error: "No se encontró suscripción activa" }, { status: 400 })
   }
 
   // Buscar el último charge exitoso del cliente directamente
@@ -72,6 +66,18 @@ export async function POST(req: Request) {
   const lastCharge = charges.data.find((c) => c.paid && !c.refunded)
   if (!lastCharge) {
     return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+  }
+
+  // Solo se permite reembolso dentro de los primeros 7 días del período de facturación actual.
+  // Anclar a la fecha del último pago (no a la creación de la cuenta) para que aplique
+  // correctamente tanto en suscripciones nuevas como en renovaciones.
+  const periodStart = new Date(lastCharge.created * 1000)
+  const daysSincePeriodStart = Math.floor((Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24))
+  if (daysSincePeriodStart > 7) {
+    return NextResponse.json(
+      { error: "El período de reembolso de 7 días ha expirado" },
+      { status: 400 }
+    )
   }
 
   const chargeId = lastCharge.id

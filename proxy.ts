@@ -4,27 +4,6 @@ import { type NextRequest, NextResponse } from "next/server"
 
 const intlMiddleware = createMiddleware(routing)
 
-// ── Rate limiting ────────────────────────────────────────────────────────────
-const apiLimits  = new Map<string, { count: number; resetAt: number }>()
-const authLimits = new Map<string, { count: number; resetAt: number }>()
-
-function checkLimit(
-  map: Map<string, { count: number; resetAt: number }>,
-  key: string,
-  max: number,
-  windowMs: number,
-): boolean {
-  const now   = Date.now()
-  const entry = map.get(key)
-  if (!entry || now > entry.resetAt) {
-    map.set(key, { count: 1, resetAt: now + windowMs })
-    return true
-  }
-  if (entry.count >= max) return false
-  entry.count++
-  return true
-}
-
 const skipPaths = [
   "/api/",
   "/_next/",
@@ -48,24 +27,6 @@ function getIsAuth(request: NextRequest): boolean {
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
-  const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-
-  // ── Rate limiting on API routes ──────────────────────────────────────────
-  if (pathname.startsWith("/api/auth")) {
-    if (!checkLimit(authLimits, ip, 10, 15 * 60 * 1000)) {
-      return NextResponse.json(
-        { error: "Demasiados intentos. Espera antes de intentarlo de nuevo." },
-        { status: 429 }
-      )
-    }
-  } else if (pathname.startsWith("/api/")) {
-    if (!checkLimit(apiLimits, ip, 60, 60 * 1000)) {
-      return NextResponse.json(
-        { error: "Demasiadas peticiones. Intenta de nuevo en un momento." },
-        { status: 429 }
-      )
-    }
-  }
 
   // Redirect non-www to www in production
   const host = request.headers.get("host") ?? ""
@@ -99,6 +60,11 @@ export function proxy(request: NextRequest) {
   return intlMiddleware(request)
 }
 
+// NOTE: /api/ routes are intentionally excluded from this middleware.
+// API routes handle their own auth (via `auth()`) and rate limiting
+// (via `checkRateLimit()` in `lib/ai-client.ts`). Including /api/ here
+// would add in-memory middleware rate limiting that resets on each deploy
+// and runs on the Edge, where per-user DB lookups are not feasible.
 export const config = {
   matcher: [
     "/((?!api|_next|.*\\..*).*)",

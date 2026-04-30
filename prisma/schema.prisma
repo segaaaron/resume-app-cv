@@ -36,6 +36,8 @@ model User {
   referrer          User?         @relation("Referrals", fields: [referredBy], references: [id])
   referralRewardTier  Int          @default(0)
   referralCycleOffset Int          @default(0)
+  referrerConversions ReferralConversion[] @relation("ReferrerConversions")
+  referredConversions ReferralConversion[] @relation("ReferredConversions")
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
 }
@@ -178,6 +180,17 @@ model AIUsageLog {
   @@index([userId])
   @@index([endpoint])
   @@index([createdAt])
+}
+
+model ReferralConversion {
+  id          String   @id @default(cuid())
+  referrerId  String
+  referredId  String
+  createdAt   DateTime @default(now())
+  referrer    User     @relation("ReferrerConversions", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred    User     @relation("ReferredConversions", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
 }
 
 model StripeEvent {
