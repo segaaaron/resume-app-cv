@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
+import { checkOrigin } from "@/lib/csrf"
 
 const schema = z.object({
   name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(255).trim(),
@@ -10,6 +11,8 @@ const schema = z.object({
 export async function PATCH(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   let body: unknown
   try {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { checkOrigin } from "@/lib/csrf"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -8,6 +9,8 @@ type Params = { params: Promise<{ id: string }> }
 export async function POST(req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id } = await params
 
@@ -58,6 +61,8 @@ export async function POST(req: Request, { params }: Params) {
 export async function DELETE(_req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(_req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id } = await params
 

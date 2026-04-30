@@ -47,12 +47,12 @@ export async function PATCH(req: Request, { params }: Params) {
     try {
       parsed = patchSchema.safeParse(body)
     } catch (err) {
-      console.error("[cover-letters PATCH] Zod parse error", err)
+      console.error("[cover-letters PATCH] Zod parse error", err instanceof Error ? err.message : "unknown")
       return NextResponse.json({ error: "Validation error" }, { status: 422 })
     }
 
     if (!parsed.success) {
-      console.error("[cover-letters PATCH] Invalid data", parsed.error)
+      console.error("[cover-letters PATCH] Invalid data", parsed.error?.issues?.map((i) => String(i.path.join("."))).join(", "))
       return NextResponse.json({ error: "Invalid data" }, { status: 422 })
     }
 

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { nanoid } from "nanoid"
+import { checkOrigin } from "@/lib/csrf"
 
 // Simple in-memory rate limiter: 60 requests per IP per minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
@@ -27,6 +28,8 @@ export async function POST(req: Request) {
 
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { resumeId } = await req.json()
   if (!resumeId) return NextResponse.json({ error: "Missing resumeId" }, { status: 400 })
