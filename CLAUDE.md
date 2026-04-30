@@ -191,6 +191,26 @@ Todos los features de IA son exclusivos del plan Pro.
 
 ---
 
+## Seguridad — Patrones establecidos (audit 2026-04-29)
+
+**CSRF:** importar `checkOrigin` de `lib/csrf.ts` en todo nuevo endpoint POST/PATCH/DELETE que cambie estado. No aplica a webhooks externos (Stripe verifica firma propia).
+
+**Idempotencia Stripe:** siempre `create` el registro al INICIO del handler. P2002 = duplicado, return 200. Nunca al final.
+
+**Photos/uploads:** solo `data:image/(png|jpeg|webp|gif);base64,...` — regex estricto en schema Zod. Magic-byte validation en endpoint de upload. No URLs http(s).
+
+**AI HTML output:** todo texto de IA que se wrappee en HTML → `escapeHtml()` antes de insertar en `<p>`/`<br>`.
+
+**Auth:** `lib/auth.ts` bloquea `deletedAt !== null` — no agregar lógica duplicada en endpoints.
+
+**Referral rewards:** `ReferralConversion` table es el ledger (P2002 = ya contado). `emailVerified !== null` requerido. Migración: `20260429222951_add_referral_conversion`.
+
+**Proxy/middleware:** `config.matcher` en `proxy.ts` excluye `/api/` intencionalmente — los API routes manejan su propio auth/rate-limit. No agregar lógica de `/api/` en el middleware.
+
+**Pendientes de seguridad:** ver `memory/security_audit.md` para lista de fixes no implementados.
+
+---
+
 ## Marketing — Estado
 
 - Hero, FeatureCards, AIFeatures, ATSSection, CVExamples, blog (4 artículos SEO) — todos implementados
