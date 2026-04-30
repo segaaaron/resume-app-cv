@@ -155,18 +155,27 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
       <style>{`
         @page {
           size: A4;
+          margin: 6mm 0 0 0;
+        }
+        @page :first {
           margin: 0;
         }
         @media print {
-          body {
+          html, body {
             margin: 0;
+            padding: 0;
           }
           .resume-pages {
             zoom: 1 !important;
             width: 210mm !important;
             min-height: 0 !important;
+            height: auto !important;
             break-inside: auto !important;
             page-break-inside: auto !important;
+          }
+          .resume-pages > div {
+            min-height: 0 !important;
+            height: auto !important;
           }
           .resume-pages * {
             break-inside: auto !important;
