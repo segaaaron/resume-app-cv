@@ -40,10 +40,19 @@ export async function setA4Viewport(page: Page): Promise<void> {
  * que colgar el handler indefinidamente.
  */
 export async function waitForFonts(page: Page): Promise<void> {
+  let timedOut = false
   await Promise.race([
     page.evaluate(() => document.fonts.ready),
-    new Promise<void>((resolve) => setTimeout(resolve, FONTS_TIMEOUT_MS)),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        timedOut = true
+        resolve()
+      }, FONTS_TIMEOUT_MS),
+    ),
   ])
+  if (timedOut) {
+    console.warn(`[pdf] fonts not ready after ${FONTS_TIMEOUT_MS}ms — proceeding with fallback font metrics`)
+  }
 }
 
 /**

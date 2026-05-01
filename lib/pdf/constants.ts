@@ -21,11 +21,10 @@ export const A4_HEIGHT_MM = 297
 
 // --- Márgenes -----------------------------------------------------------
 // CVs: margin = 0 en Puppeteer. El espaciado interior lo maneja cada
-// template con su propio CSS (padding en columnas, etc.). No se necesita
-// post-procesamiento (gutter-painter eliminado).
+// template con su propio CSS (padding en columnas, etc.).
 //
-// Cartas de presentación: usan margen físico de 10mm porque no tienen
-// sidebar de color — el espacio en blanco ayuda a la legibilidad.
+// Cartas de presentación: margen físico de 10mm — sin sidebar de color,
+// el espacio en blanco mejora la legibilidad.
 export const COVER_MARGIN_MM = 10
 
 // --- Conversiones -------------------------------------------------------
@@ -33,9 +32,9 @@ export const COVER_MARGIN_MM = 10
 export const MM_TO_PX = 96 / 25.4
 
 // --- Altura útil --------------------------------------------------------
-// Altura utilizable por página para CVs. Con margin=0, es igual a la
-// altura total A4 — cada página del PDF mide exactamente A4_HEIGHT_PX.
-// Los templates manejan su propio padding interno.
+// Altura de referencia por página para CVs (A4 completo a 96dpi).
+// Con Paged.js, la paginación la controla el CSS @page — esta constante
+// sirve como referencia para viewports y otros cálculos.
 export const USABLE_PX_PER_PAGE = A4_HEIGHT_MM * MM_TO_PX
 
 // --- Timeouts -----------------------------------------------------------

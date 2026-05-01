@@ -12,9 +12,9 @@
 
 
 /* 1. TAMAÑO DE PÁGINA
-   Define el papel A4 sin márgenes para window.print() del navegador.
-   Puppeteer usa su propio API (page.pdf margin=0) — esta regla no
-   aplica al flujo de descarga, solo al print manual del navegador. */
+   margin: 0 — cada template maneja su propio padding interno.
+   Puppeteer también recibe margin=0; el CSS lo controla todo. */
+
 @page {
   size: A4;
   margin: 0;
@@ -34,38 +34,41 @@
 
 
 /* 3. WRAPPER DEL CV
-   .resume-pages: contenedor externo. Ancho fijo A4, sin altura mínima
-   (min-height: 0 es crítico — evita que el wrapper infle la medición
-   de Puppeteer y genere páginas en blanco).
-
-   .resume-pages > div: página individual del template. Puppeteer mide
-   este elemento para calcular cuántas páginas A4 necesita el contenido. */
+   .resume-pages: contenedor externo. Ancho fijo A4.
+   NO se toca min-height/height del hijo directo — cada template declara
+   su propio minHeight (ej. 297mm para sidebars full-bleed). El renderer
+   JS (resume.ts) gestiona el snapping exacto a múltiplos de A4. */
 @media print {
   .resume-pages {
     width: 210mm !important;
     min-height: 0 !important;
     height: auto !important;
   }
-
-  .resume-pages > div {
-    min-height: 0 !important;
-    height: auto !important;
-  }
 }
 
 
-/* 4. FLUJO DE CONTENIDO EN PÁGINAS
-   Los templates usan clases Tailwind como `break-inside-avoid` en entradas
-   de trabajo para evitar dividirlas. En layouts de dos columnas (sidebar +
-   main), esto hace que Chrome empuje entradas completas a la siguiente página,
-   dejando un espacio vacío enorme en la columna principal de la página actual.
-
-   Este override fuerza flujo continuo: el contenido se divide naturalmente
-   en el borde de página en vez de saltar completo a la siguiente. */
+/* 4. PAGE BREAK — ENTRADAS Y SECCIONES
+   .resume-entry: nunca cortar un job/education a mitad de página.
+   .resume-section-title: nunca dejar un título solo al final de página
+   sin su primer entry (huérfano de título). */
 @media print {
-  .resume-pages * {
-    break-inside: auto !important;
-    page-break-inside: auto !important;
+  .resume-pages .resume-entry,
+  .resume-pages .resume-section-title {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .resume-pages .resume-section-title {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Mínimo 3 líneas antes/después del corte de página en párrafos */
+  .resume-pages p,
+  .resume-pages .resume-desc,
+  .resume-pages .resume-desc * {
+    orphans: 3;
+    widows: 3;
   }
 }
 
