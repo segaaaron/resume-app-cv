@@ -87,7 +87,7 @@ export async function GET(req: Request, { params }: Params) {
     })
 
     const filename = encodeURIComponent(letter.title || "carta")
-    return new Response(rawPdf, {
+    return new Response(Buffer.from(rawPdf), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}.pdf"`,
