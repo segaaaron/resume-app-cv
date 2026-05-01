@@ -38,7 +38,7 @@ export default function HavanaTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Full-width name band above both columns */}
       <div style={{
         backgroundColor: accent, padding: "14px 0",

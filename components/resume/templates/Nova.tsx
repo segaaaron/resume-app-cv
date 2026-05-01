@@ -44,7 +44,7 @@ export default function NovaTemplate() {
   const SKILL_W: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* HEADER — split layout */}
       <div style={{ display: "flex", alignItems: "stretch" }}>
         {/* Left — white, name */}

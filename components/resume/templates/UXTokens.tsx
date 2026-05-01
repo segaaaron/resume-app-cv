@@ -20,7 +20,7 @@ export default function UXTokensTemplate() {
   const accent = config.colorScheme || "#7cf0bd"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: text,
       fontFamily: "'Inter', sans-serif", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column", gap: 16,

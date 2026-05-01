@@ -54,7 +54,7 @@ export default function WaveTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Header with wave */}
       <div style={{ position: "relative", background: `linear-gradient(135deg, ${headerDark}, ${headerLight})`, paddingBottom: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "28px 30px 0" }}>

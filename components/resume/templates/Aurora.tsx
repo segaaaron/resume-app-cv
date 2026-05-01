@@ -33,7 +33,7 @@ export default function AuroraTemplate() {
   const darker = `rgb(${Math.max(0, rgb.r - 55)},${Math.max(0, rgb.g - 55)},${Math.max(0, rgb.b - 55)})`
 
   return (
-    <div style={{ minHeight: "297mm", backgroundColor: "#fff", fontFamily: "inherit" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", backgroundColor: "#fff", fontFamily: "inherit" }}>
 
       {/* ── HEADER with SVG wave ───────────────────────────────────────────── */}
       <div style={{

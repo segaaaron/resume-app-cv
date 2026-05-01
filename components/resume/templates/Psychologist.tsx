@@ -18,7 +18,7 @@ export default function PsychologistTemplate() {
   const terracotta = "#c97a55"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: cream,
       color: ink,

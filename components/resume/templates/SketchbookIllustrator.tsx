@@ -17,7 +17,7 @@ export default function SketchbookIllustratorTemplate() {
   const red = config.colorScheme || "#cc3a2a"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
       fontFamily: "'Caveat', 'Georgia', cursive", fontSize: 16,
       padding: 48, position: "relative",

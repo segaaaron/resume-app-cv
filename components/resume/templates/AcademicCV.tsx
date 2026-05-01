@@ -18,7 +18,7 @@ export default function AcademicCVTemplate() {
   const grey = "#666"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

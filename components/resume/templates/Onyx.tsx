@@ -52,7 +52,7 @@ export default function OnyxTemplate() {
   )
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", fontFamily: "inherit",
       backgroundColor: bg,
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",

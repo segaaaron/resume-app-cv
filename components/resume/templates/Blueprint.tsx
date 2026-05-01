@@ -26,7 +26,7 @@ export default function BlueprintTemplate() {
   }
 
   return (
-    <div className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
+    <div data-print-layout="single-column" className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <div className="shrink-0 flex flex-col" style={{ width: "195px", backgroundColor: "#fff" }}>

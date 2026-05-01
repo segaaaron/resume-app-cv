@@ -43,7 +43,7 @@ export default function ViennaTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Header with faint monogram */}
       <div style={{ position: "relative", padding: "32px 44px 24px 44px", overflow: "hidden" }}>
         {/* Faint monogram background */}

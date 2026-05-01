@@ -16,7 +16,7 @@ export default function HorizontalTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Full-width top bar with name + contact */}
       <div className="px-10 py-7" style={{ backgroundColor: color }}>
         <div className="flex items-start justify-between">

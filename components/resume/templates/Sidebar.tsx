@@ -21,7 +21,7 @@ export default function SidebarTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div className="flex" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm" }}>
       {/* Left sidebar */}
       <div className="w-56 shrink-0 px-6 pt-9 pb-8 flex flex-col gap-5" style={{ backgroundColor: color }}>
         {/* Photo */}

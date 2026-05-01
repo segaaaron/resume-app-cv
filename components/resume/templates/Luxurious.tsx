@@ -17,7 +17,7 @@ export default function LuxuriousTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ minHeight: "297mm", background: "#1a1a2e" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", background: "#1a1a2e" }}>
       {/* Dark header */}
       <div className="px-10 py-9" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", borderBottom: `2px solid ${color}` }}>
         <div className="flex items-center gap-7">

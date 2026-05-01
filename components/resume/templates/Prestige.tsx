@@ -61,7 +61,7 @@ export default function PrestigeTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: bg }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: bg }}>
       {/* Header */}
       <div style={{ padding: "28px 28px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>

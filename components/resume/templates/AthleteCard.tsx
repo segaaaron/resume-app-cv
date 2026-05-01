@@ -34,7 +34,7 @@ export default function AthleteCardTemplate() {
   const jerseyDisplay = pd.jobTitle ? pd.jobTitle.slice(0, 2).toUpperCase() : "★"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
       fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column",

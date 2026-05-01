@@ -48,7 +48,7 @@ export default function ZurichTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "36px 44px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "36px 44px" }}>
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <h1 style={{

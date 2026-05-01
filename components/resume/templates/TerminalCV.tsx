@@ -36,7 +36,7 @@ export default function TerminalCVTemplate() {
   const jobTitle = pd.jobTitle || "Software Engineer"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: text,
       fontFamily: "'JetBrains Mono', 'Fira Code', ui-monospace, monospace", fontSize: 11.5,
       display: "flex", flexDirection: "column",

@@ -19,7 +19,7 @@ export default function BoldBlockTemplate() {
   const textDark = "#3a3530"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: sand, color: ink,
       fontFamily: "'Archivo', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.5,
       display: "grid", gridTemplateRows: "auto 1fr",

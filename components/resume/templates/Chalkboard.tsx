@@ -18,7 +18,7 @@ export default function ChalkboardTemplate() {
   const pink = "#f4a3b6"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: board,
       color: chalk,

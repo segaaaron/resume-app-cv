@@ -41,7 +41,7 @@ export default function MilanTemplate() {
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-right" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* MAIN LEFT */}
       <div style={{ flex: 1, padding: "32px 28px", display: "flex", flexDirection: "column" }}>
         {/* Header */}

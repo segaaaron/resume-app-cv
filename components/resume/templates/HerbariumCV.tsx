@@ -29,7 +29,7 @@ export default function HerbariumCVTemplate() {
   }
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
       fontFamily: "'EB Garamond', Georgia, serif", fontSize: 11.5,
       padding: 36, position: "relative", display: "flex", flexDirection: "column",

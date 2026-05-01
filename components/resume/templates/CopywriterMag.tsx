@@ -17,7 +17,7 @@ export default function CopywriterMagTemplate() {
   const coral = config.colorScheme || "#ec5b3c"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: cream,
       color: ink,

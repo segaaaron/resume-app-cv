@@ -49,7 +49,7 @@ export default function OnboardingFormTemplate() {
   const formId = `CV-${(pd.firstName?.[0] ?? "X")}${(pd.lastName?.[0] ?? "X")}-${new Date().getFullYear()}`
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
       fontFamily: "'Inter', sans-serif", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column",

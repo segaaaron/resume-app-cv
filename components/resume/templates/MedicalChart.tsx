@@ -38,7 +38,7 @@ export default function MedicalChartTemplate() {
   const location = [pd.city, pd.country].filter(Boolean).join(" · ")
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

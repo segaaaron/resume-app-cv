@@ -16,7 +16,7 @@ export default function ProfessionalTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Header band */}
       <div className="px-10 py-8 text-white" style={{ backgroundColor: color }}>
         <h1 className="text-3xl font-extrabold tracking-tight">{fullName || "Tu Nombre"}</h1>

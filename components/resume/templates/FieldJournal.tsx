@@ -48,7 +48,7 @@ export default function FieldJournalTemplate() {
   const year = new Date().getFullYear()
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

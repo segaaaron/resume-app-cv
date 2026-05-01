@@ -19,7 +19,7 @@ export default function OutlineTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="bg-white px-12 pt-10 pb-10" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white px-12 pt-10 pb-10" style={{ minHeight: "297mm" }}>
       {/* Header — bordered box */}
       <div className="border-2 border-gray-800 p-6 mb-6">
         <div className="flex items-end justify-between gap-4">

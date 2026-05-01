@@ -26,7 +26,7 @@ export default function StripeTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── Full-width Header ─────────────────────────────────────────────── */}
       <div

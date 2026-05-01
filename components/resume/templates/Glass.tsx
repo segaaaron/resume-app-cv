@@ -23,7 +23,7 @@ export default function GlassTemplate() {
   const bgGradient = `linear-gradient(135deg, ${color}1a 0%, ${color}08 50%, ${color}14 100%)`
 
   return (
-    <div style={{ minHeight: "297mm", background: bgGradient }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", background: bgGradient }}>
       {/* Glass header */}
       <div
         className="mx-6 mt-6 rounded-2xl px-8 py-7 border border-white/60"

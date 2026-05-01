@@ -39,7 +39,7 @@ export default function GenevanoirTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Full-width near-black header */}
       <div style={{
         backgroundColor: nearBlack, padding: "28px 40px",

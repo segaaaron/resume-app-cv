@@ -21,7 +21,7 @@ export default function CarbonTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div className="flex" style={{ minHeight: "297mm", backgroundColor: "#111827" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", backgroundColor: "#111827" }}>
       {/* Left sidebar — dark */}
       <div className="w-52 shrink-0 px-5 pt-8 pb-8 flex flex-col gap-5" style={{ backgroundColor: "#0f172a" }}>
         {/* Avatar */}

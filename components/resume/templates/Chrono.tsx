@@ -16,7 +16,7 @@ export default function ChronoTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-10 py-8" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="px-10 py-8" style={{ minHeight: "297mm" }}>
       {/* Header */}
       <div className="flex justify-between items-start mb-6 pb-5 border-b-2" style={{ borderColor: color }}>
         <div>

@@ -26,7 +26,7 @@ export default function PortoTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Diagonal split header */}
       <div style={{ position: "relative", height: "120px", overflow: "hidden" }}>
         {/* Left half accent background */}

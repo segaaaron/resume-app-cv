@@ -18,7 +18,7 @@ export default function LegalBriefTemplate() {
   const gold = "#a07a2c"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

@@ -74,7 +74,7 @@ export default function CascadeTemplate() {
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* SIDEBAR */}
       <div style={{
         width: "33%", flexShrink: 0,

@@ -39,7 +39,7 @@ export default function TranslatorCVTemplate() {
   }
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
       fontFamily: "'EB Garamond', Georgia, serif", fontSize: 11.5,
       padding: 48, display: "flex", flexDirection: "column",

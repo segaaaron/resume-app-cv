@@ -36,7 +36,7 @@ export default function ConsulTemplate() {
   const SW = 210
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ══════════════════════════════════════════════════════════════════
           SIDEBAR

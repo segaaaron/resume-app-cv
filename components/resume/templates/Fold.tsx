@@ -27,7 +27,7 @@ export default function FoldTemplate() {
   const rgb = color.startsWith("#") ? hexToRgb(color) : "42, 114, 215"
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Header band */}
       <div className="px-10 pt-8 pb-6" style={{ backgroundColor: `rgba(${rgb}, 0.07)`, borderBottom: `3px solid rgba(${rgb}, 0.2)` }}>
         <div className="flex items-end justify-between">

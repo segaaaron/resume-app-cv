@@ -26,7 +26,7 @@ export default function CoralSidebarTemplate() {
   const sand = "#efe4d2"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
       fontFamily: "'Manrope', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
       display: "grid", gridTemplateColumns: "1fr 280px",

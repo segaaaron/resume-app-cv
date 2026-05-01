@@ -65,7 +65,7 @@ export default function OsloTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "36px 44px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "36px 44px" }}>
       {/* Header */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{

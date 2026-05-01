@@ -19,7 +19,7 @@ export default function ExecutiveTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="bg-white px-14 pt-12 pb-10" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white px-14 pt-12 pb-10" style={{ minHeight: "297mm" }}>
       {/* Header */}
       <div className="text-center mb-3">
         {fullName && (

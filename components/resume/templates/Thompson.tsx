@@ -132,7 +132,7 @@ export default function ThompsonTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ══ HEADER ═══════════════════════════════════════════════════════════
           Photo LEFT inside dark header · Name RIGHT · Contact strip below

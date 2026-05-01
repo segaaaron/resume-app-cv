@@ -53,7 +53,7 @@ export default function WindsorTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Full-width dark navy header */}
       <div style={{
         backgroundColor: navy, padding: "28px 36px",

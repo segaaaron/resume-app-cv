@@ -17,7 +17,7 @@ export default function ClassicTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-10 py-8" style={{ lineHeight: spacing * 1.5 }}>
+    <div data-print-layout="single-column" className="px-10 py-8" style={{ lineHeight: spacing * 1.5 }}>
       {/* Header */}
       <div className="mb-6">
         {fullName && (

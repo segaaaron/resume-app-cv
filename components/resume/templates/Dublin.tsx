@@ -37,7 +37,7 @@ export default function DublinTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "28px 36px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "28px 36px" }}>
       {/* Header — compact */}
       <div style={{ marginBottom: 16 }}>
         <h1 style={{

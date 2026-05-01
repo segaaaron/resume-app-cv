@@ -102,7 +102,7 @@ export default function DevOpsTerminalTemplate() {
   rows.push(["OK", "ready", config.language === "en" ? "open to new opportunities · remote/hybrid" : "abierto a nuevas oportunidades · remoto/híbrido"])
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: text,
       fontFamily: "'JetBrains Mono', ui-monospace, monospace",
       fontSize: 11, padding: 0, display: "flex", flexDirection: "column",

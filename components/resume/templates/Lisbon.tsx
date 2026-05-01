@@ -84,7 +84,7 @@ export default function LisbonTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Full-width gradient header */}
       <div style={{
         background: `linear-gradient(135deg, ${accent} 0%, ${darkerAccent} 100%)`,

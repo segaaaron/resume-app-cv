@@ -18,7 +18,7 @@ export default function ContactSheetTemplate() {
   const white = "#f5f5f0"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: black, color: white,
       fontFamily: "ui-monospace, monospace", fontSize: 10,
       padding: 36, display: "flex", flexDirection: "column", gap: 14,

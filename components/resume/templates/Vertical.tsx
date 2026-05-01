@@ -17,7 +17,7 @@ export default function VerticalTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div className="flex" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm" }}>
       {/* Left sidebar */}
       <div className="w-[40%] shrink-0 p-8" style={{ backgroundColor: color + "15", borderRight: `3px solid ${color}` }}>
         {/* Photo / Avatar */}

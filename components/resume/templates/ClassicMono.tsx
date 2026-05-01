@@ -24,7 +24,7 @@ export default function ClassicMonoTemplate() {
   const monthStr = String(new Date().getMonth() + 1).padStart(2, "0")
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
       fontFamily: "'Space Grotesk', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
       display: "grid", gridTemplateColumns: "260px 1fr",

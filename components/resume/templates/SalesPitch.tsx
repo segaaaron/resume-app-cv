@@ -49,7 +49,7 @@ export default function SalesPitchTemplate() {
   const dateStr = `${String(now.getMonth() + 1).padStart(2, "0")}·${String(now.getFullYear()).slice(2)}`
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
       fontFamily: "'Inter Tight', sans-serif", fontSize: 11, padding: 0,
       display: "flex", flexDirection: "column",

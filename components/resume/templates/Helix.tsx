@@ -47,7 +47,7 @@ export default function HelixTemplate() {
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── SIDEBAR ────────────────────────────────────────────────────────── */}
       <div style={{ width: "212px", flexShrink: 0, backgroundColor: DARK, position: "relative", overflow: "hidden" }}>

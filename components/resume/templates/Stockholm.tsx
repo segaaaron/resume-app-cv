@@ -58,7 +58,7 @@ export default function StockholmTemplate() {
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* LEFT SIDEBAR */}
       <div style={{
         width: "40%", flexShrink: 0,

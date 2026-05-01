@@ -19,7 +19,7 @@ export default function BauhausTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Header — Bauhaus block */}
       <div className="flex">
         {/* Color rectangle */}

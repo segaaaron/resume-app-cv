@@ -53,7 +53,7 @@ export default function CampaignPosterTemplate() {
   const lastName = pd.lastName || "Last"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: cream,
       fontFamily: "'Archivo Black', sans-serif", padding: 48,
       position: "relative", display: "flex", flexDirection: "column", overflow: "hidden",

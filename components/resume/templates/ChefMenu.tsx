@@ -58,7 +58,7 @@ export default function ChefMenuTemplate() {
   const contactLabel = config.language === "en" ? "Contact" : "Reservas"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: cream,
       color: ink,

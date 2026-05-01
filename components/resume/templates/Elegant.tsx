@@ -15,7 +15,7 @@ export default function ElegantTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-12 py-10" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="px-12 py-10" style={{ minHeight: "297mm" }}>
       {/* Header — centered, elegant */}
       <div className="text-center mb-8">
         {fullName && (

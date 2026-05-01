@@ -44,7 +44,7 @@ export default function NauticalTemplate() {
   const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   return (
-    <div style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Sidebar */}
       <div style={{ width: "28%", backgroundColor: sidebar, padding: "0", flexShrink: 0, color: "#fff" }}>
         {/* Photo area */}

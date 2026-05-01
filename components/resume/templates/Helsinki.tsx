@@ -25,7 +25,7 @@ export default function HelsinkiTemplate() {
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* LEFT SIDEBAR — narrow 25% with skill timeline */}
       <div style={{
         width: "25%", flexShrink: 0,

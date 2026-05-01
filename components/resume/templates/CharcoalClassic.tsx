@@ -39,7 +39,7 @@ export default function CharcoalClassicTemplate() {
   const bg = "#fbfaf6"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
       fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
       padding: "32px 36px", display: "flex", flexDirection: "column",

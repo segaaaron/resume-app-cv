@@ -59,7 +59,7 @@ export default function LumiereTemplate() {
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   return (
-    <div style={{ minHeight: "297mm", backgroundColor: "#faf9f7", fontFamily: "inherit" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", backgroundColor: "#faf9f7", fontFamily: "inherit" }}>
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div style={{

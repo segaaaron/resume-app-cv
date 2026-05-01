@@ -42,7 +42,7 @@ export default function MosaicTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* HEADER */}
       <div style={{ display: "flex", alignItems: "stretch" }}>
         {/* Name block */}

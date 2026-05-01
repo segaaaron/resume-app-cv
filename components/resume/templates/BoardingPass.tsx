@@ -53,7 +53,7 @@ export default function BoardingPassTemplate() {
   const barPattern = Array.from({ length: 22 }, (_, i) => (i * 7 + 3) % 10 > 4 ? 1 : 0)
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: "#e8e3d6", color: ink,
       fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.5,
       padding: 36, display: "flex", flexDirection: "column", gap: 18,

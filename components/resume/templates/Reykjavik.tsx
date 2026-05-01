@@ -44,7 +44,7 @@ export default function ReykjavikTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "32px 32px 32px 0" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "32px 32px 32px 0" }}>
       {/* Header — uses the left 18% for label + 82% for content pattern */}
       <div style={{ display: "flex", gap: 0, marginBottom: 24 }}>
         <div style={{ width: "18%", flexShrink: 0 }} />

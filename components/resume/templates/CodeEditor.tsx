@@ -60,7 +60,7 @@ export default function CodeEditorTemplate() {
   }
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: text,
       fontFamily: "'JetBrains Mono', ui-monospace, monospace",
       fontSize: 11.5, padding: 0, display: "flex", flexDirection: "column",

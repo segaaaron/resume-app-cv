@@ -25,7 +25,7 @@ export default function SageBotanicalTemplate() {
   const accent = "#c2774a"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: dark,
       fontFamily: "'DM Sans', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.6,
       padding: 0, display: "flex", flexDirection: "column",

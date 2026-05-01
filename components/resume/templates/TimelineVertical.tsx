@@ -37,7 +37,7 @@ export default function TimelineVerticalTemplate() {
   ].sort((a, b) => parseInt(b.year) - parseInt(a.year))
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
       fontFamily: "'DM Sans', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
       padding: "48px 56px", display: "flex", flexDirection: "column",

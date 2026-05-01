@@ -21,7 +21,7 @@ export default function SharpTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Angled header */}
       <div className="relative overflow-hidden" style={{ backgroundColor: color }}>
         <div className="flex items-center gap-6 px-10 pt-8 pb-14">

@@ -32,7 +32,7 @@ export default function BartenderCVTemplate() {
   }
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: black,
       color: cream,

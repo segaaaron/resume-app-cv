@@ -21,7 +21,7 @@ export default function CallSheetTemplate() {
   const dateStr = `${String(today.getMonth() + 1).padStart(2, "0")} · ${String(today.getDate()).padStart(2, "0")} · ${today.getFullYear()}`
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

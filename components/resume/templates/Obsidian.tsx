@@ -44,7 +44,7 @@ export default function ObsidianTemplate() {
   const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: darkBg, position: "relative", overflow: "hidden" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: darkBg, position: "relative", overflow: "hidden" }}>
       {/* White curved panel on right */}
       <svg style={{ position: "absolute", top: 0, right: 0, width: "60%", height: "100%", pointerEvents: "none" }} viewBox="0 0 400 1120" preserveAspectRatio="none">
         <path d="M80,0 Q0,560 80,1120 L400,1120 L400,0 Z" fill="#ffffff" />

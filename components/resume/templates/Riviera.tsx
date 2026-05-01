@@ -28,7 +28,7 @@ export default function RivieraTemplate() {
   }
 
   return (
-    <div className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
 
       {/* ── Dark Sidebar ──────────────────────────────────────────────────── */}
       <div

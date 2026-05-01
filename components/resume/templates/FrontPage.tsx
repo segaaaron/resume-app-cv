@@ -17,7 +17,7 @@ export default function FrontPageTemplate() {
   const red = config.colorScheme || "#b22d2d"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

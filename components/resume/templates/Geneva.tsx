@@ -90,7 +90,7 @@ export default function GenevaTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "36px 44px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "36px 44px" }}>
       {/* Header — centered all-caps */}
       <div style={{ textAlign: "center", marginBottom: 24 }}>
         <h1 style={{

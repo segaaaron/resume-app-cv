@@ -41,7 +41,7 @@ export default function DualityTemplate() {
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 
   return (
-    <div style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-right" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Left main content */}
       <div style={{ flex: 1, padding: "28px 22px 32px 28px" }}>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: dark, lineHeight: 1.1, marginBottom: 2 }}>{name}</h1>

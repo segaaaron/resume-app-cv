@@ -45,7 +45,7 @@ export default function SommelierTemplate() {
   const initials = `${pd.firstName?.[0] ?? ""}${pd.lastName?.[0] ?? ""}`.toUpperCase() || "CV"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: cream,
       color: ink,

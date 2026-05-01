@@ -59,7 +59,7 @@ export default function VertexTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", position: "relative", overflow: "hidden" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", position: "relative", overflow: "hidden" }}>
       {/* Corner accents */}
       <svg style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }} width="180" height="180" viewBox="0 0 180 180">
         <polygon points="0,0 180,0 0,180" fill={navy} opacity="0.9" />

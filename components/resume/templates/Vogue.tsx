@@ -29,7 +29,7 @@ export default function VogueTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="relative px-10 pt-8" style={{ borderBottom: `3px solid ${color}` }}>

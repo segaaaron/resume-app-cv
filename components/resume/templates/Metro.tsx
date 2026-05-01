@@ -16,7 +16,7 @@ export default function MetroTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Header tile */}
       <div className="flex" style={{ borderBottom: `4px solid ${color}` }}>
         {/* Color block */}

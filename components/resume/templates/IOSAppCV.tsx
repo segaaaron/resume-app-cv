@@ -40,7 +40,7 @@ export default function IOSAppCVTemplate() {
   })()
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
       fontFamily: "-apple-system, 'SF Pro Display', 'Inter', sans-serif", fontSize: 11,
       display: "flex", flexDirection: "column",

@@ -52,7 +52,7 @@ export default function TokyoTemplate() {
   )
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* SIDEBAR — almost black */}
       <div style={{
         width: sideW, flexShrink: 0,

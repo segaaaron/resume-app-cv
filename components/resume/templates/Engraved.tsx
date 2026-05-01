@@ -20,7 +20,7 @@ export default function EngravedTemplate() {
   const monogram = (pd.lastName || pd.firstName || "C").charAt(0).toUpperCase()
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: paper,
       color: ink,

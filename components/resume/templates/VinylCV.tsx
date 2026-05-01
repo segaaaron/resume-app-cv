@@ -18,7 +18,7 @@ export default function VinylCVTemplate() {
   const red = "#c1352e"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: cream,
       color: black,

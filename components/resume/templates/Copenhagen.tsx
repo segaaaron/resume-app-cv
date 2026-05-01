@@ -44,7 +44,7 @@ export default function CopenhagenTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "28px 32px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "28px 32px" }}>
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         {/* Photo with rounded-rect frame */}

@@ -38,7 +38,7 @@ export default function NeoBrutalistTemplate() {
   const green = "#a8e6a3"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
       fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, lineHeight: 1.5,
       padding: 36, display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 18, alignContent: "start",

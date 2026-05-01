@@ -30,7 +30,7 @@ export default function PilotLogTemplate() {
   }
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
       fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 11,
       display: "flex", flexDirection: "column",

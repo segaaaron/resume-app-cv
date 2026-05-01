@@ -29,7 +29,7 @@ export default function SparkTemplate() {
   const darker = `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Diagonal gradient header */}
       <div
         className="relative px-10 pt-8 pb-8 overflow-hidden"

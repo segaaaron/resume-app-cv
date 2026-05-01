@@ -43,7 +43,7 @@ export default function PrismTemplate() {
   const hobbyList = hobbies ? hobbies.split(/[,\n]+/).map((h) => h.trim()).filter(Boolean) : []
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ══════════════════════════════════════════════════════════════════
           SIDEBAR — 238px, solo foto / contacto / skills / idiomas / hobbies

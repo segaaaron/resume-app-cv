@@ -26,7 +26,7 @@ export default function BlueprintCVTemplate() {
   const contactLabel = config.language === "en" ? "CONTACT" : "CONTACTO"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: blue, color: white,
       fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 10.5,
       padding: 0, position: "relative",

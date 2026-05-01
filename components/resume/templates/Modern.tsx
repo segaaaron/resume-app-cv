@@ -16,7 +16,7 @@ export default function ModernTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="flex" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm" }}>
       {/* Sidebar */}
       <div className="w-[34%] shrink-0 text-white px-6 pt-8 pb-8 flex flex-col gap-6" style={{ backgroundColor: color }}>
         {/* Photo */}

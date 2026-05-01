@@ -29,7 +29,7 @@ export default function BerlinTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: mono, backgroundColor: "#fff", padding: "36px 44px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: mono, backgroundColor: "#fff", padding: "36px 44px" }}>
       {/* Header */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{

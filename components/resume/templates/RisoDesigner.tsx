@@ -17,7 +17,7 @@ export default function RisoDesignerTemplate() {
   const blue = "#1d3557"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: blue,
       fontFamily: "'Space Grotesk', 'Inter', sans-serif", fontSize: 11, padding: 0,
       display: "flex", flexDirection: "column", overflow: "hidden", position: "relative",

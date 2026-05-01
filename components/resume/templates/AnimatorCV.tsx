@@ -28,7 +28,7 @@ export default function AnimatorCVTemplate() {
     : present
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: cream,
       color: ink,

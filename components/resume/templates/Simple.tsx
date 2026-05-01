@@ -15,7 +15,7 @@ export default function SimpleTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="p-10" style={{ minHeight: "297mm", lineHeight: config.spacing * 1.5 }}>
+    <div data-print-layout="single-column" className="p-10" style={{ minHeight: "297mm", lineHeight: config.spacing * 1.5 }}>
       {/* Minimal header */}
       <div className="mb-7">
         {fullName && <h1 className="text-2xl font-bold text-gray-900 mb-0.5">{fullName}</h1>}

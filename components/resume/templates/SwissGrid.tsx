@@ -32,7 +32,7 @@ export default function SwissGridTemplate() {
   const lastName = pd.lastName || "Name"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
       fontFamily: "'Inter Tight', 'Helvetica Neue', 'Inter', sans-serif", fontSize: 10, lineHeight: 1.5,
       padding: 48, display: "flex", flexDirection: "column",

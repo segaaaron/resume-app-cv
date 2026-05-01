@@ -17,7 +17,7 @@ export default function CasualTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Gradient header */}
       <div
         className="relative px-10 pt-9 pb-14 overflow-hidden"

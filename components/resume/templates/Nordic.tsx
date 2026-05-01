@@ -20,7 +20,7 @@ export default function NordicTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Thin color accent line */}
       <div className="h-[3px] w-full" style={{ backgroundColor: color }} />
 

@@ -38,7 +38,7 @@ export default function NavyExecutiveTemplate() {
   const ink = "#1a1a1a"
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: ivory, color: ink,
       fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
       display: "grid", gridTemplateColumns: "260px 1fr",

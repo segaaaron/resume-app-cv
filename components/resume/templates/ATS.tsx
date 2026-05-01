@@ -20,7 +20,7 @@ export default function ATSTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-10 py-9 text-gray-900" style={{ minHeight: "297mm", lineHeight: "1.55" }}>
+    <div data-print-layout="single-column" className="px-10 py-9 text-gray-900" style={{ minHeight: "297mm", lineHeight: "1.55" }}>
       {/* Header */}
       <div className="mb-5">
         {fullName && <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">{fullName}</h1>}

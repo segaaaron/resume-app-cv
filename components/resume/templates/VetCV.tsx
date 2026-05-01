@@ -35,7 +35,7 @@ export default function VetCVTemplate() {
   const location = [pd.city, pd.country].filter(Boolean).join(", ")
 
   return (
-    <div style={{
+    <div data-print-layout="single-column" style={{
       minHeight: "297mm",
       background: sand,
       color: ink,

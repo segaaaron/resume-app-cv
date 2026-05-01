@@ -75,39 +75,54 @@ export async function renderResumePdf(
       const root = children[0]
 
       // --- Sidebar gradient painter ---
-      // Detect sidebar (first or last direct child of root with a solid background).
-      // Move its color to root's background as a linear-gradient so Chrome
-      // repaints it on every page, not just the first.
-      const rootChildren = Array.from(root.children) as HTMLElement[]
-      let sidebarEl: HTMLElement | null = null
-      let sidebarSide: "left" | "right" = "left"
+      // Use data-print-layout for explicit side detection. Fallback to runtime
+      // background-color scan for templates missing the attribute.
+      const layout = root.dataset.printLayout ?? ""
+      const isSidebarLeft = layout === "sidebar-left"
+      const isSidebarRight = layout === "sidebar-right"
+      const isSingleColumn = layout === "single-column"
 
-      for (let i = 0; i < rootChildren.length; i++) {
-        const child = rootChildren[i]
-        const bg = window.getComputedStyle(child).backgroundColor
-        if (
-          bg &&
-          bg !== "rgba(0, 0, 0, 0)" &&
-          bg !== "transparent" &&
-          !bg.endsWith(", 0)")
-        ) {
-          sidebarEl = child
-          sidebarSide = i === 0 ? "left" : "right"
-          break
+      if (!isSingleColumn) {
+        const rootChildren = Array.from(root.children) as HTMLElement[]
+        let sidebarEl: HTMLElement | null = null
+        let sidebarSide: "left" | "right" = "left"
+
+        if (isSidebarRight) {
+          // Explicit right sidebar — pick last colored child.
+          for (let i = rootChildren.length - 1; i >= 0; i--) {
+            const child = rootChildren[i]
+            const bg = window.getComputedStyle(child).backgroundColor
+            if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")) {
+              sidebarEl = child
+              sidebarSide = "right"
+              break
+            }
+          }
+        } else {
+          // sidebar-left or fallback runtime detection — pick first colored child.
+          for (let i = 0; i < rootChildren.length; i++) {
+            const child = rootChildren[i]
+            const bg = window.getComputedStyle(child).backgroundColor
+            if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")) {
+              sidebarEl = child
+              sidebarSide = isSidebarLeft ? "left" : i === 0 ? "left" : "right"
+              break
+            }
+          }
         }
-      }
 
-      if (sidebarEl) {
-        const sidebarWidth = sidebarEl.getBoundingClientRect().width
-        const rootWidth = root.getBoundingClientRect().width
-        if (rootWidth > 0 && sidebarWidth > 0 && sidebarWidth < rootWidth) {
-          const ratio = (sidebarWidth / rootWidth) * 100
-          const sidebarBg = window.getComputedStyle(sidebarEl).backgroundColor
-          const gradient =
-            sidebarSide === "left"
-              ? `linear-gradient(to right, ${sidebarBg} 0%, ${sidebarBg} ${ratio}%, transparent ${ratio}%, transparent 100%)`
-              : `linear-gradient(to left, ${sidebarBg} 0%, ${sidebarBg} ${100 - ratio}%, transparent ${100 - ratio}%, transparent 100%)`
-          root.style.setProperty("background", gradient, "important")
+        if (sidebarEl) {
+          const sidebarWidth = sidebarEl.getBoundingClientRect().width
+          const rootWidth = root.getBoundingClientRect().width
+          if (rootWidth > 0 && sidebarWidth > 0 && sidebarWidth < rootWidth) {
+            const ratio = (sidebarWidth / rootWidth) * 100
+            const sidebarBg = window.getComputedStyle(sidebarEl).backgroundColor
+            const gradient =
+              sidebarSide === "left"
+                ? `linear-gradient(to right, ${sidebarBg} 0%, ${sidebarBg} ${ratio}%, transparent ${ratio}%, transparent 100%)`
+                : `linear-gradient(to left, ${sidebarBg} 0%, ${sidebarBg} ${100 - ratio}%, transparent ${100 - ratio}%, transparent 100%)`
+            root.style.setProperty("background", gradient, "important")
+          }
         }
       }
 

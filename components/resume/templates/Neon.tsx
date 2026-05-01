@@ -19,7 +19,7 @@ export default function NeonTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="p-8 bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="p-8 bg-white" style={{ minHeight: "297mm" }}>
       {/* Hero header — neobrutalist */}
       <div
         className="p-7 mb-6 border-4 border-black"
