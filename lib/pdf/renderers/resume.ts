@@ -137,7 +137,6 @@ export async function renderResumePdf(
 
       // --- Page boundary fixes (straddling + padding-top simulation) ---
       // Identify the main content column (opposite side of sidebar).
-      // For single-column the root itself is the content column.
       let mainCol: HTMLElement = root
       if (isSidebarLeft) {
         mainCol = (root.lastElementChild as HTMLElement) ?? root
@@ -145,40 +144,69 @@ export async function renderResumePdf(
         mainCol = (root.firstElementChild as HTMLElement) ?? root
       }
 
-      // padding-top of the column in CSS px — Chrome only applies it on page 1.
-      const colPaddingTopCss = parseFloat(window.getComputedStyle(mainCol).paddingTop) || 0
+      // padding-top of the content column in CSS px — Chrome only applies it on
+      // page 1. Some templates nest the padding one level deeper (e.g. Riviera),
+      // so we check mainCol AND its first child and take whichever is larger.
+      const _directPadding = parseFloat(window.getComputedStyle(mainCol).paddingTop) || 0
+      const _childPadding  = mainCol.firstElementChild
+        ? parseFloat(window.getComputedStyle(mainCol.firstElementChild as HTMLElement).paddingTop) || 0
+        : 0
+      const colPaddingTopCss = Math.max(_directPadding, _childPadding)
 
-      const entries = Array.from(
-        mainCol.querySelectorAll<HTMLElement>(".resume-entry, .resume-section-title"),
+      // Query both entry-level AND paragraph-level elements.
+      // Paragraph splits are the root cause of the "nce user engagement." overlap:
+      // Chrome splits a <p> at the page boundary even when break-inside:avoid is
+      // on the parent .resume-entry (known Chrome flex pagination bug).
+      const candidates = Array.from(
+        mainCol.querySelectorAll<HTMLElement>(
+          ".resume-entry, .resume-section-title, p, li",
+        ),
       )
-      // Track which pages already got the padding-top simulation.
+      // Track which pages already received the padding-top simulation.
       const pagesHandled = new Set<number>()
 
-      entries.forEach((entry) => {
-        const rect = entry.getBoundingClientRect()
-        const topVp    = (rect.top    - wrapperRect.top) * zoom
-        const bottomVp = (rect.bottom - wrapperRect.top) * zoom
-        const pageAtTop    = Math.floor(topVp    / pagePx)
-        const pageAtBottom = Math.floor(bottomVp / pagePx)
+      candidates.forEach((el) => {
+        const rect    = el.getBoundingClientRect()
+        const topVp   = (rect.top    - wrapperRect.top) * zoom
+        const botVp   = (rect.bottom - wrapperRect.top) * zoom
+        const pageTop = Math.floor(topVp / pagePx)
+        const pageBot = Math.floor(botVp / pagePx)
 
-        let extraMarginCss = 0
+        if (pageBot <= pageTop) return  // fully contained, nothing to do
 
-        // Straddling fix: entry crosses a page boundary → push entirely to next page.
-        if (pageAtBottom > pageAtTop) {
-          const nextPageTopVp = (pageAtTop + 1) * pagePx
-          extraMarginCss += (nextPageTopVp - topVp) / zoom
-        }
+        // Element straddles a boundary → find the closest .resume-entry ancestor
+        // (or the element itself) and push the whole block to the next page.
+        const anchor =
+          (el.closest(".resume-entry") as HTMLElement | null) ?? el
 
-        // Padding-top simulation: first entry landing on page 2+ gets the column's
-        // missing padding-top added as margin-top.
-        const landingPage = pageAtTop + (extraMarginCss > 0 ? 1 : 0)
-        if (landingPage > 0 && !pagesHandled.has(landingPage)) {
-          extraMarginCss += colPaddingTopCss
-          pagesHandled.add(landingPage)
-        }
+        const anchorRect  = anchor.getBoundingClientRect()
+        const anchorTopVp = (anchorRect.top - wrapperRect.top) * zoom
+        const anchorPage  = Math.floor(anchorTopVp / pagePx)
+        const targetPage  = anchorPage + 1
 
-        if (extraMarginCss > 0) {
-          entry.style.setProperty("margin-top", `${extraMarginCss}px`, "important")
+        if (pagesHandled.has(targetPage)) return  // already fixed for this page
+
+        const nextPageTopVp = targetPage * pagePx
+        let extraMarginCss  = (nextPageTopVp - anchorTopVp) / zoom
+
+        // Add the missing column padding-top for this page.
+        extraMarginCss += colPaddingTopCss
+        pagesHandled.add(targetPage)
+
+        anchor.style.setProperty("margin-top", `${extraMarginCss}px`, "important")
+      })
+
+      // Also simulate padding-top for any page 2+ that has NO straddling element
+      // (first entry on that page started cleanly after the boundary).
+      candidates.forEach((el) => {
+        if (!el.matches(".resume-entry, .resume-section-title")) return
+        const rect   = el.getBoundingClientRect()
+        const topVp  = (rect.top - wrapperRect.top) * zoom
+        const pageN  = Math.floor(topVp / pagePx)
+        const offset = topVp % pagePx
+        if (pageN > 0 && !pagesHandled.has(pageN) && offset < colPaddingTopCss + 4) {
+          el.style.setProperty("margin-top", `${colPaddingTopCss}px`, "important")
+          pagesHandled.add(pageN)
         }
       })
     } else {
