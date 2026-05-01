@@ -1,0 +1,92 @@
+/* ============================================================
+   RESUME PRINT STYLES
+   Usado por:
+     - components/resume/PrintLayout.tsx (carga la hoja)
+     - Puppeteer (endpoint /api/resumes/[id]/pdf via /print)
+
+   FILOSOFÍA: estos estilos son mínimos a propósito. Cada template
+   maneja su propio diseño y espaciado interno. Este archivo solo
+   configura el contexto de impresión: tamaño de página, resets
+   básicos y fidelidad de color.
+   ============================================================ */
+
+
+/* 1. TAMAÑO DE PÁGINA
+   Define el papel A4 sin márgenes para window.print() del navegador.
+   Puppeteer usa su propio API (page.pdf margin=0) — esta regla no
+   aplica al flujo de descarga, solo al print manual del navegador. */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+
+/* 2. RESETS BÁSICOS
+   Evita que márgenes default del navegador empujen el contenido. */
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+}
+
+
+/* 3. WRAPPER DEL CV
+   .resume-pages: contenedor externo. Ancho fijo A4, sin altura mínima
+   (min-height: 0 es crítico — evita que el wrapper infle la medición
+   de Puppeteer y genere páginas en blanco).
+
+   .resume-pages > div: página individual del template. Puppeteer mide
+   este elemento para calcular cuántas páginas A4 necesita el contenido. */
+@media print {
+  .resume-pages {
+    width: 210mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+
+  .resume-pages > div {
+    min-height: 0 !important;
+    height: auto !important;
+  }
+}
+
+
+/* 4. FLUJO DE CONTENIDO EN PÁGINAS
+   Los templates usan clases Tailwind como `break-inside-avoid` en entradas
+   de trabajo para evitar dividirlas. En layouts de dos columnas (sidebar +
+   main), esto hace que Chrome empuje entradas completas a la siguiente página,
+   dejando un espacio vacío enorme en la columna principal de la página actual.
+
+   Este override fuerza flujo continuo: el contenido se divide naturalmente
+   en el borde de página en vez de saltar completo a la siguiente. */
+@media print {
+  .resume-pages * {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+}
+
+
+/* 5. FIDELIDAD DE COLOR
+   Sin esta regla, Chrome omite todos los colores de fondo en impresión:
+   sidebars, banners, chips de habilidades, etc. quedan en blanco.
+   Aplicado globalmente dentro del CV para no perder ningún elemento. */
+@media print {
+  .resume-pages,
+  .resume-pages * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+
+/* 6. OCULTAR UI DEL EDITOR
+   El toolbar, botones y paneles del editor no deben aparecer en el PDF. */
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+}

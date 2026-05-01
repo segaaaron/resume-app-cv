@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
 import { compressImage } from "@/lib/compressImage"
 import { ArrowLeft, Save, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp, Camera, X, Download, FileText, FileDown } from "lucide-react"
+import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations } from "next-intl"
 import UpgradeModal from "@/components/editor/UpgradeModal"
 import SidebarTemplate from "./templates/SidebarTemplate"
@@ -393,7 +394,6 @@ export default function CoverLetterEditor({
     (initialTemplateId as TemplateId) === "classic" ? "elegant" : (initialTemplateId as TemplateId) ?? "elegant"
   )
   const [candidateOpen, setCandidateOpen] = useState(false)
-  const [downloadOpen, setDownloadOpen] = useState(false)
   const [downloadingWord, setDownloadingWord] = useState(false)
   const [photoPosition, setPhotoPosition] = useState<number>(
     typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
@@ -528,23 +528,11 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, title, content, candidate, activeTemplate, photoPosition])
 
-  const downloadRef = useRef<HTMLDivElement>(null)
   const templateRef = useRef<HTMLDivElement>(null)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
-  useEffect(() => {
-    if (!downloadOpen) return
-    const close = (e: MouseEvent) => {
-      if (downloadRef.current && !downloadRef.current.contains(e.target as Node)) {
-        setDownloadOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", close)
-    return () => document.removeEventListener("mousedown", close)
-  }, [downloadOpen])
 
   const downloadPDF = useCallback(async () => {
     setDownloadingPdf(true)
-    setDownloadOpen(false)
     try {
       if (dirty) await save()
       const res = await fetch(`/api/cover-letters/${id}/pdf?locale=${language}`)
@@ -574,12 +562,10 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       a.href = url
       a.download = `${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.docx`
       a.click()
-      URL.revokeObjectURL(url)
     } catch {
       toast.error("Error al descargar el archivo Word")
     } finally {
       setDownloadingWord(false)
-      setDownloadOpen(false)
     }
   }, [id, title])
 
@@ -647,39 +633,35 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
           <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
             <Save className="h-3.5 w-3.5" /> {t("save")}
           </Button>
-          <div className="relative" ref={downloadRef}>
-            <Button size="sm" className="gap-1.5" onClick={() => !downloadingPdf && setDownloadOpen((v) => !v)} disabled={downloadingPdf}>
-              {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-              {downloadingPdf ? t("downloading") : t("download")}
-              {!downloadingPdf && <ChevronDown className="h-3 w-3 ml-0.5" />}
-            </Button>
-            {downloadOpen && (
-              <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl min-w-[180px] overflow-hidden">
-                <button
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-sm hover:bg-muted/60 transition-colors disabled:opacity-50"
-                  onClick={downloadPDF}
-                  disabled={downloadingPdf}
-                >
-                  {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <FileDown className="h-4 w-4 text-red-500 shrink-0" />}
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">PDF</span>
-                    <span className="text-[10px] text-muted-foreground">{t("export_with_design")}</span>
-                  </div>
-                </button>
-                <button
-                  className="flex items-center gap-2.5 w-full px-4 py-3 text-sm hover:bg-muted/60 transition-colors disabled:opacity-50"
-                  onClick={downloadWord}
-                  disabled={downloadingWord}
-                >
-                  {downloadingWord ? <Loader2 className="h-4 w-4 animate-spin shrink-0" /> : <FileText className="h-4 w-4 text-blue-500 shrink-0" />}
-                  <div className="flex flex-col items-start">
-                    <span className="font-medium">Word (.docx)</span>
-                    <span className="text-[10px] text-muted-foreground">{t("export_plain")}</span>
-                  </div>
-                </button>
-              </div>
-            )}
-          </div>
+          <DownloadMenu
+            filename={`${(title.replace(/[^a-z0-9]/gi, "_") || "carta")}`}
+            triggerLabel={t("download")}
+            generatingPdfLabel={t("download_generating_pdf")}
+            generatingWordLabel={t("download_generating_word")}
+            successLabel={(f) => t("download_success", { filename: f })}
+            phaseLabels={{
+              preparing: t("download_preparing"),
+              applyingStyles: t("download_applying_styles"),
+              almostDone: t("download_almost_done"),
+            }}
+            options={[
+              {
+                format: "pdf",
+                label: "PDF",
+                sublabel: t("export_with_design"),
+                isLoading: downloadingPdf,
+                onDownload: downloadPDF,
+              },
+              {
+                format: "docx",
+                label: "Word (.docx)",
+                sublabel: t("export_plain"),
+                isLoading: downloadingWord,
+                onDownload: downloadWord,
+              },
+            ]}
+          />
+
         </div>
       </header>
 

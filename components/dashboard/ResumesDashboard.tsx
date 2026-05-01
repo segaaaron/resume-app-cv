@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
-import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X } from "lucide-react"
+import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import {
@@ -48,6 +48,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
+  const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     if (searchParams.get("upgraded") === "true") {
@@ -89,6 +90,12 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   async function downloadPdf(resume: ResumeCard) {
+    if (downloadingIds.has(resume.id)) return
+    setDownloadingIds((prev) => {
+      const next = new Set(prev)
+      next.add(resume.id)
+      return next
+    })
     try {
       const res = await fetch(`/api/resumes/${resume.id}/pdf?locale=${locale}`)
       if (!res.ok) { toast.error(t("pdf_error")); return }
@@ -99,8 +106,15 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       a.download = `${resume.title || "resume"}.pdf`
       a.click()
       URL.revokeObjectURL(url)
+      toast.success(`${resume.title || "resume"}.pdf`)
     } catch {
       toast.error(t("pdf_error"))
+    } finally {
+      setDownloadingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(resume.id)
+        return next
+      })
     }
   }
 
@@ -202,8 +216,23 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                     <DropdownMenuItem className="gap-2" onClick={() => duplicateResume(resume.id)}>
                       <Copy className="h-3.5 w-3.5" /> {t("duplicate")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2" onClick={() => downloadPdf(resume)}>
-                      <Download className="h-3.5 w-3.5" /> {t("download_pdf")}
+                    <DropdownMenuItem
+                      className="gap-2"
+                      disabled={downloadingIds.has(resume.id)}
+                      onSelect={(e) => {
+                        if (downloadingIds.has(resume.id)) {
+                          e.preventDefault()
+                          return
+                        }
+                        downloadPdf(resume)
+                      }}
+                    >
+                      {downloadingIds.has(resume.id) ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      {t("download_pdf")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import "@/styles/print-resume.css"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import ResumePreview from "./ResumePreview"
@@ -140,39 +141,6 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
         </div>
       </div>
 
-      <style>{`
-        @page {
-          size: A4;
-          /* ?pdf=1 → Puppeteer render with 8mm breathing room.
-             No param → browser window.print with zero margin (full bleed). */
-          margin: ${searchParams.get("pdf") === "1" ? "8mm 0" : "0"};
-        }
-        @page :first {
-          margin-top: 0;
-        }
-        @media print {
-          html, body {
-            margin: 0;
-            padding: 0;
-          }
-          .resume-pages {
-            zoom: 1 !important;
-            width: 210mm !important;
-            min-height: 0 !important;
-            height: auto !important;
-            break-inside: auto !important;
-            page-break-inside: auto !important;
-          }
-          .resume-pages > div {
-            min-height: 0 !important;
-            height: auto !important;
-          }
-          .resume-pages * {
-            break-inside: auto !important;
-            page-break-inside: auto !important;
-          }
-        }
-      `}</style>
     </>
   )
 }

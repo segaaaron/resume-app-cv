@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import "@/styles/print-cover-letter.css"
 import { Button } from "@/components/ui/button"
 import { Download, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
@@ -108,16 +109,6 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
         </div>
       </div>
 
-      <style>{`
-        @page {
-          size: A4;
-          margin: ${searchParams.get("pdf") === "1" ? "8mm 0" : "0"};
-        }
-        @page :first { margin-top: 0; }
-        @media print {
-          html, body { margin: 0; padding: 0; }
-        }
-      `}</style>
     </>
   )
 }

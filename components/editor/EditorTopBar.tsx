@@ -6,6 +6,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, Save, Download, Loader2, Lock, History, RotateCcw, Trash2, Share2, Copy, Eye } from "lucide-react"
+import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useState, useEffect, useCallback } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
@@ -277,10 +278,28 @@ export default function EditorTopBar({ hasAccess }: Props) {
         )}
 
         {hasAccess ? (
-          <Button size="sm" className="gap-1.5" disabled={!resumeId || downloadingPdf} onClick={handleDownloadPdf}>
-            {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            {t("print.print_pdf")}
-          </Button>
+          <DownloadMenu
+            filename={`${title || "resume"}.pdf`}
+            triggerLabel={t("print.print_pdf")}
+            generatingPdfLabel={t("download_generating_pdf")}
+            generatingWordLabel={t("download_generating_word")}
+            successLabel={(f) => t("download_success", { filename: f })}
+            phaseLabels={{
+              preparing: t("download_preparing"),
+              applyingStyles: t("download_applying_styles"),
+              almostDone: t("download_almost_done"),
+            }}
+            disabled={!resumeId}
+            options={[
+              {
+                format: "pdf",
+                label: "PDF",
+                sublabel: t("print.export_with_design"),
+                isLoading: downloadingPdf,
+                onDownload: handleDownloadPdf,
+              },
+            ]}
+          />
         ) : (
           <Button size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
             <Lock className="h-3.5 w-3.5" />

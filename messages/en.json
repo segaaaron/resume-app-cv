@@ -573,8 +573,15 @@
       "error_pdf": "Error generating PDF",
       "pro_only_word": "Word export is exclusive to the Pro plan",
       "watermark_text": "readycvv.com",
-      "watermark_upgrade": "Activate your Pro plan at readycv.app"
+      "watermark_upgrade": "Activate your Pro plan at readycv.app",
+      "export_with_design": "With design and colors"
     },
+    "download_generating_pdf": "Generating PDF...",
+    "download_generating_word": "Generating Word...",
+    "download_preparing": "Preparing document...",
+    "download_applying_styles": "Applying styles...",
+    "download_almost_done": "Almost done...",
+    "download_success": "{filename} downloaded",
     "ats": {
       "tab": "ATS",
       "title": "ATS Score",
@@ -923,7 +930,13 @@
     "toolbar_align_center": "Center",
     "toolbar_align_justify": "Justify",
     "download": "Download",
-    "downloading": "Generating..."
+    "downloading": "Generating...",
+    "download_generating_pdf": "Generating PDF...",
+    "download_generating_word": "Generating Word...",
+    "download_preparing": "Preparing document...",
+    "download_applying_styles": "Applying styles...",
+    "download_almost_done": "Almost done...",
+    "download_success": "{filename} downloaded"
   },
   "public_cv": {
     "shared_via": "CV shared via",
