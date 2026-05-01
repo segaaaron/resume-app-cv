@@ -543,37 +543,25 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   }, [downloadOpen])
 
   const downloadPDF = useCallback(async () => {
-    if (!templateRef.current) return
     setDownloadingPdf(true)
     setDownloadOpen(false)
     try {
-      const html2canvas = (await import("html2canvas")).default
-      const { jsPDF } = await import("jspdf")
-      const canvas = await html2canvas(templateRef.current, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: "#ffffff",
-      })
-      const imgData = canvas.toDataURL("image/jpeg", 0.95)
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" })
-      const pageW = pdf.internal.pageSize.getWidth()
-      const pageH = pdf.internal.pageSize.getHeight()
-      const imgH = (canvas.height * pageW) / canvas.width
-      let y = 0
-      let remaining = imgH
-      while (remaining > 0) {
-        pdf.addImage(imgData, "JPEG", 0, -y, pageW, imgH)
-        remaining -= pageH
-        if (remaining > 0) { pdf.addPage(); y += pageH }
-      }
-      pdf.save(`${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.pdf`)
+      if (dirty) await save()
+      const res = await fetch(`/api/cover-letters/${id}/pdf?locale=${language}`)
+      if (!res.ok) { toast.error("Error al generar el PDF"); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
     } catch {
       toast.error("Error al generar el PDF")
     } finally {
       setDownloadingPdf(false)
     }
-  }, [title])
+  }, [id, title, language, dirty, save])
 
   const downloadWord = useCallback(async () => {
     setDownloadingWord(true)
@@ -660,8 +648,10 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
             <Save className="h-3.5 w-3.5" /> {t("save")}
           </Button>
           <div className="relative" ref={downloadRef}>
-            <Button size="sm" className="gap-1.5" onClick={() => setDownloadOpen((v) => !v)}>
-              <Download className="h-3.5 w-3.5" /> {t("download")} <ChevronDown className="h-3 w-3 ml-0.5" />
+            <Button size="sm" className="gap-1.5" onClick={() => !downloadingPdf && setDownloadOpen((v) => !v)} disabled={downloadingPdf}>
+              {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+              {downloadingPdf ? t("downloading") : t("download")}
+              {!downloadingPdf && <ChevronDown className="h-3 w-3 ml-0.5" />}
             </Button>
             {downloadOpen && (
               <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl min-w-[180px] overflow-hidden">

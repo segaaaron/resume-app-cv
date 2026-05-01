@@ -7,40 +7,40 @@ datasource db {
 }
 
 model User {
-  id               String        @id @default(cuid())
-  name             String?
-  email            String        @unique
-  emailVerified    DateTime?
-  image            String?
-  password         String?
-  plan             Plan          @default(FREE)
-  trialEndsAt      DateTime?
-  role               Role               @default(USER)
-  stripeCustomerId   String?            @unique
-  subscriptionId     String?            @unique
-  subscriptionEndsAt DateTime?
-  subscriptionStatus   SubscriptionStatus @default(NONE)
-  planInterval         String?
-  accounts           Account[]
-  sessions         Session[]
-  resumes          Resume[]
-  coverLetters     CoverLetter[]
-  applications     Application[]
-  marketingConsent Boolean       @default(false)
-  ageVerified      Boolean       @default(false)
-  emailOptOut      Boolean       @default(false)
-  deletedAt        DateTime?
-  auditLogs        AuditLog[]
-  referralCode      String?       @unique
-  referredBy        String?
-  referredUsers     User[]        @relation("Referrals")
-  referrer          User?         @relation("Referrals", fields: [referredBy], references: [id])
-  referralRewardTier  Int          @default(0)
-  referralCycleOffset Int          @default(0)
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  plan                Plan                 @default(FREE)
+  trialEndsAt         DateTime?
+  role                Role                 @default(USER)
+  stripeCustomerId    String?              @unique
+  subscriptionId      String?              @unique
+  subscriptionEndsAt  DateTime?
+  subscriptionStatus  SubscriptionStatus   @default(NONE)
+  planInterval        String?
+  accounts            Account[]
+  sessions            Session[]
+  resumes             Resume[]
+  coverLetters        CoverLetter[]
+  applications        Application[]
+  marketingConsent    Boolean              @default(false)
+  ageVerified         Boolean              @default(false)
+  emailOptOut         Boolean              @default(false)
+  deletedAt           DateTime?
+  auditLogs           AuditLog[]
+  referralCode        String?              @unique
+  referredBy          String?
+  referredUsers       User[]               @relation("Referrals")
+  referrer            User?                @relation("Referrals", fields: [referredBy], references: [id])
+  referralRewardTier  Int                  @default(0)
+  referralCycleOffset Int                  @default(0)
   referrerConversions ReferralConversion[] @relation("ReferrerConversions")
   referredConversions ReferralConversion[] @relation("ReferredConversions")
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Account {
@@ -129,15 +129,15 @@ model CoverLetter {
 }
 
 model Application {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle  String
-  company   String
-  status    AppStatus @default(WISHLIST)
-  notes     String?   @db.Text
-  url       String?
-  salary    String?
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle       String
+  company        String
+  status         AppStatus @default(WISHLIST)
+  notes          String?   @db.Text
+  url            String?
+  salary         String?
   appliedAt      DateTime?
   followUpAt     DateTime?
   reminderSentAt DateTime?
@@ -149,10 +149,10 @@ model Application {
 }
 
 model CVView {
-  id        String   @id @default(cuid())
-  resumeId  String
-  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
-  viewedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  resumeId String
+  resume   Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
 
   @@index([resumeId])
   @@index([viewedAt])
@@ -184,12 +184,12 @@ model AIUsageLog {
 }
 
 model ReferralConversion {
-  id          String   @id @default(cuid())
-  referrerId  String
-  referredId  String
-  createdAt   DateTime @default(now())
-  referrer    User     @relation("ReferrerConversions", fields: [referrerId], references: [id], onDelete: Cascade)
-  referred    User     @relation("ReferredConversions", fields: [referredId], references: [id], onDelete: Cascade)
+  id         String   @id @default(cuid())
+  referrerId String
+  referredId String
+  createdAt  DateTime @default(now())
+  referrer   User     @relation("ReferrerConversions", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred   User     @relation("ReferredConversions", fields: [referredId], references: [id], onDelete: Cascade)
 
   @@unique([referrerId, referredId])
 }
@@ -202,12 +202,12 @@ model StripeEvent {
 }
 
 model AuditLog {
-  id        String         @id @default(cuid())
+  id        String      @id @default(cuid())
   userId    String
-  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   action    AuditAction
   metadata  Json?
-  createdAt DateTime       @default(now())
+  createdAt DateTime    @default(now())
 
   @@index([userId])
 }

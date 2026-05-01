@@ -363,6 +363,7 @@
       "create_error": "Error al crear el CV",
       "delete_success": "CV eliminado",
       "duplicate_success": "CV duplicado",
+      "pdf_error": "Error al generar el PDF",
       "welcome_pro_title": "¡Bienvenido a Pro!",
       "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones."
     },
@@ -921,7 +922,8 @@
     "toolbar_align_left": "Alinear a la izquierda",
     "toolbar_align_center": "Centrar",
     "toolbar_align_justify": "Justificar",
-    "download": "Descargar"
+    "download": "Descargar",
+    "downloading": "Generando..."
   },
   "public_cv": {
     "shared_via": "CV compartido via",

@@ -1,6 +1,7 @@
 "use client"
 
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export default function EditorTopBar({ hasAccess }: Props) {
+  const router = useRouter()
   const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, sectionData, sections, config } = useResumeStore()
   const [editing, setEditing] = useState(false)
   const [showHistory, setShowHistory] = useState(false)
@@ -28,6 +30,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const [publicSlug, setPublicSlug] = useState<string | null>(null)
   const [togglingShare, setTogglingShare] = useState(false)
   const [viewStats, setViewStats] = useState<{ total: number; last7d: number } | null>(null)
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
   const locale = useLocale()
   const t = useTranslations("editor")
 
@@ -67,6 +70,21 @@ export default function EditorTopBar({ hasAccess }: Props) {
       .then((data) => setViewStats({ total: data.total ?? 0, last7d: data.last7d ?? 0 }))
       .catch(() => {})
   }, [resumeId, isPublic])
+
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!isDirty) return
+      e.preventDefault()
+      save().catch(() => {})
+    }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
+  }, [isDirty, save])
+
+  async function handleBack() {
+    if (isDirty && hasAccess) await save().catch(() => {})
+    router.push(`/${locale}/dashboard/resumes`)
+  }
 
   async function handleSaveVersion() {
     if (!resumeId) return
@@ -149,13 +167,32 @@ export default function EditorTopBar({ hasAccess }: Props) {
     })
   }
 
+  async function handleDownloadPdf() {
+    if (!resumeId) return
+    setDownloadingPdf(true)
+    try {
+      if (isDirty) await save()
+      const res = await fetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
+      if (!res.ok) { toast.error(t("print.error_pdf")); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${title || "resume"}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error(t("print.error_pdf"))
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
+
   return (
     <header className="h-12 bg-white border-b border-border flex items-center justify-between px-4 gap-4 shrink-0 relative">
       <div className="flex items-center gap-3 min-w-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-          <Link href={`/${locale}/dashboard/resumes`}>
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
+        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
+          <ArrowLeft className="h-4 w-4" />
         </Button>
 
         {editing ? (
@@ -240,16 +277,14 @@ export default function EditorTopBar({ hasAccess }: Props) {
         )}
 
         {hasAccess ? (
-          <Button size="sm" className="gap-1.5" disabled={!resumeId} asChild>
-            <a href={resumeId ? `/${locale}/resume/${resumeId}/print` : "#"} target="_blank">
-              <Download className="h-3.5 w-3.5" />
-              PDF
-            </a>
+          <Button size="sm" className="gap-1.5" disabled={!resumeId || downloadingPdf} onClick={handleDownloadPdf}>
+            {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+            {t("print.print_pdf")}
           </Button>
         ) : (
           <Button size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
             <Lock className="h-3.5 w-3.5" />
-            PDF
+            {t("print.print_pdf")}
           </Button>
         )}
       </div>

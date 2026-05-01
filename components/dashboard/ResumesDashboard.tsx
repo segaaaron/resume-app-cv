@@ -88,6 +88,22 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     }
   }
 
+  async function downloadPdf(resume: ResumeCard) {
+    try {
+      const res = await fetch(`/api/resumes/${resume.id}/pdf?locale=${locale}`)
+      if (!res.ok) { toast.error(t("pdf_error")); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${resume.title || "resume"}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error(t("pdf_error"))
+    }
+  }
+
   const templateName = (id: string) =>
     TEMPLATES.find((tmpl) => tmpl.id === id)?.name ?? t("default_template")
 
@@ -186,7 +202,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                     <DropdownMenuItem className="gap-2" onClick={() => duplicateResume(resume.id)}>
                       <Copy className="h-3.5 w-3.5" /> {t("duplicate")}
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2" onClick={() => window.open(`/${locale}/resume/${resume.id}/print`, "_blank")}>
+                    <DropdownMenuItem className="gap-2" onClick={() => downloadPdf(resume)}>
                       <Download className="h-3.5 w-3.5" /> {t("download_pdf")}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
