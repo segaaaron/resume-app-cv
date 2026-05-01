@@ -41,7 +41,8 @@ RUN apk add --no-cache \
   harfbuzz \
   ca-certificates \
   ttf-freefont \
-  font-noto
+  font-noto-latin \
+  udev
 WORKDIR /app
 
 ENV NODE_ENV=production

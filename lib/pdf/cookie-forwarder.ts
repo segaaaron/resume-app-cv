@@ -47,7 +47,9 @@ const SESSION_COOKIE_NAMES = new Set([
 type ForwardedCookie = {
   name: string
   value: string
-  domain: string
+  domain?: string
+  secure?: boolean
+  path?: string
 }
 
 function parseCookies(cookieHeader: string, hostname: string): ForwardedCookie[] {
@@ -58,7 +60,15 @@ function parseCookies(cookieHeader: string, hostname: string): ForwardedCookie[]
       if (eq < 0) return null
       const name = c.slice(0, eq).trim()
       const value = c.slice(eq + 1).trim()
-      if (!name || !value) return null
+      if (!name) return null
+      // __Host- cookies must NOT have domain per spec — Chrome CDP rejects them otherwise
+      if (name.startsWith("__Host-")) {
+        return { name, value, secure: true, path: "/" }
+      }
+      // __Secure- cookies require secure flag
+      if (name.startsWith("__Secure-")) {
+        return { name, value, domain: hostname, secure: true }
+      }
       return { name, value, domain: hostname }
     })
     .filter((c): c is ForwardedCookie => c !== null)
