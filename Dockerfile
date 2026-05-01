@@ -41,7 +41,6 @@ RUN apk add --no-cache \
   harfbuzz \
   ca-certificates \
   ttf-freefont \
-  font-noto-latin \
   udev
 WORKDIR /app
 
