@@ -4,6 +4,8 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+# Skip Puppeteer's bundled Chrome — we use system Chromium on Alpine instead
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN npm ci
 
 # ─── Stage 2: builder ────────────────────────────────────────────────────────
@@ -31,11 +33,22 @@ RUN npm run build
 
 # ─── Stage 3: runner ─────────────────────────────────────────────────────────
 FROM node:20.19-alpine AS runner
-RUN apk add --no-cache libc6-compat openssl
+RUN apk add --no-cache \
+  libc6-compat openssl \
+  chromium \
+  nss \
+  freetype \
+  harfbuzz \
+  ca-certificates \
+  ttf-freefont \
+  font-noto
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# Point Puppeteer to Alpine's system Chromium (avoids glibc vs musl mismatch)
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
