@@ -71,7 +71,7 @@ function parseCookies(cookieHeader: string, hostname: string): ForwardedCookie[]
       }
       return { name, value, domain: hostname }
     })
-    .filter((c): c is ForwardedCookie => c !== null)
+    .filter((c): c is NonNullable<typeof c> => c !== null)
 }
 
 export async function applyCookies(
