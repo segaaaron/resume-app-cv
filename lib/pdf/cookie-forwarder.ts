@@ -18,27 +18,30 @@
 
 import type { Page } from "puppeteer"
 
-// Nombres exactos de las 3 variantes de NextAuth según entorno:
-//   next-auth.*          → HTTP / desarrollo local
-//   __Secure-next-auth.* → HTTPS (SameSite=Lax, Secure)
-//   __Host-next-auth.*   → HTTPS strict (no domain, path=/)
+// NextAuth v5 (@auth/core) cookie names — fuente: @auth/core/lib/utils/cookie.js
+//
+//   HTTP  (dev, useSecureCookies=false): prefix=""
+//     authjs.session-token, authjs.callback-url, authjs.csrf-token
+//
+//   HTTPS (prod, useSecureCookies=true): prefix="__Secure-", CSRF usa "__Host-"
+//     __Secure-authjs.session-token, __Secure-authjs.callback-url, __Host-authjs.csrf-token
+//
+// NEXT_LOCALE: cookie de i18n de next-intl.
 const ALLOWED_COOKIES = new Set([
-  "next-auth.session-token",
-  "__Secure-next-auth.session-token",
-  "__Host-next-auth.session-token",
-  "next-auth.csrf-token",
-  "__Secure-next-auth.csrf-token",
-  "__Host-next-auth.csrf-token",
-  "next-auth.callback-url",
-  "__Secure-next-auth.callback-url",
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
+  "authjs.csrf-token",
+  "__Host-authjs.csrf-token",
+  "authjs.callback-url",
+  "__Secure-authjs.callback-url",
   "NEXT_LOCALE",
 ])
 
-// Nombres que indican que hay una sesión válida en el header.
+// Subset que confirma que hay sesión activa — si ninguno está presente
+// la whitelist está desactualizada y activamos el fallback.
 const SESSION_COOKIE_NAMES = new Set([
-  "next-auth.session-token",
-  "__Secure-next-auth.session-token",
-  "__Host-next-auth.session-token",
+  "authjs.session-token",
+  "__Secure-authjs.session-token",
 ])
 
 type ForwardedCookie = {
