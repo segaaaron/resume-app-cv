@@ -224,7 +224,7 @@ export async function GET(req: Request, { params }: Params) {
 
     const pdf = await pdfDoc.save()
     const filename = encodeURIComponent(resume.title || "resume")
-    return new Response(pdf, {
+    return new Response(Buffer.from(pdf), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}.pdf"`,
