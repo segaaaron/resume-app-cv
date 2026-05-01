@@ -9,29 +9,30 @@
  *   3. gotoAndWaitForContent    → carga /print, espera el wrapper del template
  *   4. emulateMediaType("print")→ activa @media print
  *   5. waitForFonts             → asegura fuentes custom listas (con log si timeout)
- *   6. fixLayout                → sidebar gradient + height snap + margin reset
+ *   6. fixLayout                → sidebar gradient + height snap + page boundary fixes
  *   7. page.pdf()               → genera PDF; margin=0, el CSS lo controla
  *
  * SIDEBAR GRADIENT PAINTER:
- *   Para templates con sidebar de color (columna lateral), Chrome no repinta
- *   el background del sidebar hijo en cada página — solo en la primera.
- *   Detectamos el color del sidebar y lo movemos al background del root como
- *   linear-gradient. El root al ser el elemento paginado, Chrome pinta su
- *   background en cada hoja automáticamente.
+ *   Chrome no repinta el background del sidebar hijo en cada página.
+ *   Detectamos el color y lo movemos al background del root como linear-gradient.
  *
  * HEIGHT SNAP:
  *   Fija la altura del root a exactamente N páginas A4 completas.
- *   Esto garantiza que el sidebar de color llegue al borde inferior de
- *   la última página y elimina el espacio en blanco por redondeo de zoom.
  *   Si la última página tiene <15% de contenido, recorta a N-1 páginas.
  *
+ * PAGE BOUNDARY FIXES (multi-page, sidebar templates):
+ *   1. Straddling fix: entries que cruzan un page boundary se empujan a la
+ *      página siguiente — evita el overlap visible en página 2+.
+ *   2. Padding-top simulation: la columna principal tiene padding-top que Chrome
+ *      solo aplica al inicio del elemento (página 1). Para página 2+ se calcula
+ *      el padding faltante y se añade como margin-top al primer entry de cada página.
+ *
  * BLANK PAGE GUARD (discrete-page templates):
- *   Templates con múltiples divs hijos (uno por página): oculta el último
- *   si tiene <15% de contenido.
+ *   Oculta el último div si tiene <15% de contenido.
  *
  * MARGIN-TOP RESET:
- *   Neutraliza margin-top de elementos que caen en los primeros 8px de
- *   una página nueva — evita el "gap falso" visible arriba en página 2+.
+ *   Neutraliza margin-top residual de elementos que caen en los primeros 8px de
+ *   una página nueva (aplicado a elementos no cubiertos por el boundary fix).
  */
 
 import type { Page } from "puppeteer"
@@ -65,46 +66,37 @@ export async function renderResumePdf(
     wrapper.style.setProperty("min-height", "0", "important")
 
     const zoom = parseFloat(window.getComputedStyle(wrapper).zoom || "1") || 1
-    // Absorb subpixel rounding from zoom — avoids phantom extra page.
     const FUDGE_PX = 4
+    const wrapperRect = wrapper.getBoundingClientRect()
 
     const children = Array.from(wrapper.querySelectorAll<HTMLElement>(":scope > div"))
     if (children.length === 0) return
 
     if (children.length === 1) {
       const root = children[0]
-
-      // --- Sidebar gradient painter ---
-      // Use data-print-layout for explicit side detection. Fallback to runtime
-      // background-color scan for templates missing the attribute.
       const layout = root.dataset.printLayout ?? ""
       const isSidebarLeft = layout === "sidebar-left"
       const isSidebarRight = layout === "sidebar-right"
       const isSingleColumn = layout === "single-column"
 
+      // --- Sidebar gradient painter ---
       if (!isSingleColumn) {
         const rootChildren = Array.from(root.children) as HTMLElement[]
         let sidebarEl: HTMLElement | null = null
         let sidebarSide: "left" | "right" = "left"
 
         if (isSidebarRight) {
-          // Explicit right sidebar — pick last colored child.
           for (let i = rootChildren.length - 1; i >= 0; i--) {
-            const child = rootChildren[i]
-            const bg = window.getComputedStyle(child).backgroundColor
+            const bg = window.getComputedStyle(rootChildren[i]).backgroundColor
             if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")) {
-              sidebarEl = child
-              sidebarSide = "right"
-              break
+              sidebarEl = rootChildren[i]; sidebarSide = "right"; break
             }
           }
         } else {
-          // sidebar-left or fallback runtime detection — pick first colored child.
           for (let i = 0; i < rootChildren.length; i++) {
-            const child = rootChildren[i]
-            const bg = window.getComputedStyle(child).backgroundColor
+            const bg = window.getComputedStyle(rootChildren[i]).backgroundColor
             if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")) {
-              sidebarEl = child
+              sidebarEl = rootChildren[i]
               sidebarSide = isSidebarLeft ? "left" : i === 0 ? "left" : "right"
               break
             }
@@ -131,21 +123,64 @@ export async function renderResumePdf(
       const numPages = Math.ceil(rawH / pagePx)
       if (numPages <= 1) return
 
-      const lastPageContent = rawH - (numPages - 1) * pagePx
-      const lastFill = lastPageContent / pagePx
-
+      const lastFill = (rawH - (numPages - 1) * pagePx) / pagePx
       if (lastFill < 0.15) {
-        // Last page nearly empty → clip to N-1 complete pages.
         const targetPx = ((numPages - 1) * pagePx) / zoom
         root.style.setProperty("height", `${targetPx}px`, "important")
         root.style.setProperty("min-height", "0", "important")
         root.style.setProperty("overflow", "hidden", "important")
       } else {
-        // Snap to exactly N pages so sidebar gradient fills to bottom edge.
         const targetPx = (numPages * pagePx) / zoom
         root.style.setProperty("height", `${targetPx}px`, "important")
         root.style.setProperty("min-height", `${targetPx}px`, "important")
       }
+
+      // --- Page boundary fixes (straddling + padding-top simulation) ---
+      // Identify the main content column (opposite side of sidebar).
+      // For single-column the root itself is the content column.
+      let mainCol: HTMLElement = root
+      if (isSidebarLeft) {
+        mainCol = (root.lastElementChild as HTMLElement) ?? root
+      } else if (isSidebarRight) {
+        mainCol = (root.firstElementChild as HTMLElement) ?? root
+      }
+
+      // padding-top of the column in CSS px — Chrome only applies it on page 1.
+      const colPaddingTopCss = parseFloat(window.getComputedStyle(mainCol).paddingTop) || 0
+
+      const entries = Array.from(
+        mainCol.querySelectorAll<HTMLElement>(".resume-entry, .resume-section-title"),
+      )
+      // Track which pages already got the padding-top simulation.
+      const pagesHandled = new Set<number>()
+
+      entries.forEach((entry) => {
+        const rect = entry.getBoundingClientRect()
+        const topVp    = (rect.top    - wrapperRect.top) * zoom
+        const bottomVp = (rect.bottom - wrapperRect.top) * zoom
+        const pageAtTop    = Math.floor(topVp    / pagePx)
+        const pageAtBottom = Math.floor(bottomVp / pagePx)
+
+        let extraMarginCss = 0
+
+        // Straddling fix: entry crosses a page boundary → push entirely to next page.
+        if (pageAtBottom > pageAtTop) {
+          const nextPageTopVp = (pageAtTop + 1) * pagePx
+          extraMarginCss += (nextPageTopVp - topVp) / zoom
+        }
+
+        // Padding-top simulation: first entry landing on page 2+ gets the column's
+        // missing padding-top added as margin-top.
+        const landingPage = pageAtTop + (extraMarginCss > 0 ? 1 : 0)
+        if (landingPage > 0 && !pagesHandled.has(landingPage)) {
+          extraMarginCss += colPaddingTopCss
+          pagesHandled.add(landingPage)
+        }
+
+        if (extraMarginCss > 0) {
+          entry.style.setProperty("margin-top", `${extraMarginCss}px`, "important")
+        }
+      })
     } else {
       // Discrete-page template: each child div is one A4 page.
       const lastDiv = children[children.length - 1]
@@ -156,21 +191,15 @@ export async function renderResumePdf(
     }
 
     // --- Margin-top reset for elements at page boundaries ---
-    // Elements whose top falls within 8px of a new page boundary carry their
-    // margin-top as visible whitespace. Batch-collect then batch-apply to
-    // minimize reflow impact.
-    const wrapperRect = wrapper.getBoundingClientRect()
+    // Catches residual margin-top on headings/entries not covered by the boundary fix above.
     const candidates = Array.from(
-      wrapper.querySelectorAll<HTMLElement>(
-        ".resume-entry, .resume-section-title, h1, h2, h3, h4",
-      ),
+      wrapper.querySelectorAll<HTMLElement>("h1, h2, h3, h4"),
     )
     const fixes: HTMLElement[] = []
     candidates.forEach((el) => {
       const r = el.getBoundingClientRect()
       const topInWrapper = (r.top - wrapperRect.top) * zoom
       const offsetInPage = topInWrapper % pagePx
-      // offsetInPage === 0 means top of page 1 (or exact boundary) — skip.
       if (offsetInPage > 0 && offsetInPage < 8) fixes.push(el)
     })
     fixes.forEach((el) => el.style.setProperty("margin-top", "0", "important"))
