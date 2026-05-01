@@ -143,7 +143,12 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
       <style>{`
         @page {
           size: A4;
-          margin: 0;
+          /* ?pdf=1 → Puppeteer render with 8mm breathing room.
+             No param → browser window.print with zero margin (full bleed). */
+          margin: ${searchParams.get("pdf") === "1" ? "8mm 0" : "0"};
+        }
+        @page :first {
+          margin-top: 0;
         }
         @media print {
           html, body {
@@ -161,8 +166,6 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
           .resume-pages > div {
             min-height: 0 !important;
             height: auto !important;
-            box-decoration-break: clone !important;
-            -webkit-box-decoration-break: clone !important;
           }
           .resume-pages * {
             break-inside: auto !important;

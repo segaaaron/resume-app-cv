@@ -16,7 +16,7 @@ function Sec({ title, gold, children }: { title: string; gold: string; children:
 
 function MainBlock({ title, navy, gold, children }: { title: string; navy: string; gold: string; children: React.ReactNode }) {
   return (
-    <section style={{ marginBottom: 22 }}>
+    <section style={{ marginBottom: 32 }}>
       <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 18, color: navy, margin: "0 0 8px", fontWeight: 700 }}>{title}</h2>
       <div style={{ height: 1, background: gold, width: 36, marginBottom: 10, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
       {children}
@@ -133,7 +133,7 @@ export default function NavyExecutiveTemplate() {
         {visible("workExperience") && workExperience.length > 0 && (
           <MainBlock title={label("workExperience")} navy={navy} gold={gold}>
             {workExperience.map((job) => (
-              <div key={job.id} style={{ marginBottom: 14, paddingBottom: 12, borderBottom: "1px solid #d9d2bf" }}>
+              <div key={job.id} className="resume-entry" style={{ marginBottom: 20, paddingBottom: 14, borderBottom: "1px solid #d9d2bf" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                   <span style={{ fontWeight: 700, fontSize: 13 }}>{job.jobTitle}</span>
                   <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9.5, color: gold }}>
