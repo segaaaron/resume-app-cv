@@ -47,28 +47,16 @@
 }
 
 
-/* 4. PAGE BREAK — ENTRADAS Y SECCIONES
-   .resume-entry: nunca cortar un job/education a mitad de página.
-   .resume-section-title: nunca dejar un título solo al final de página
-   sin su primer entry (huérfano de título). */
+/* 4. FLUJO DE CONTENIDO EN PÁGINAS
+   break-inside: auto fuerza flujo continuo: el contenido se divide naturalmente
+   en el borde de página. Sin esto, break-inside:avoid en entradas de sidebar
+   empuja bloques enteros a la siguiente página dejando gaps enormes en la
+   columna principal. El padding-top faltante en página 2+ lo corrige el
+   renderer JS (resume.ts) con margin-top en el primer entry. */
 @media print {
-  .resume-pages .resume-entry,
-  .resume-pages .resume-section-title {
-    break-inside: avoid;
-    page-break-inside: avoid;
-  }
-
-  .resume-pages .resume-section-title {
-    break-after: avoid;
-    page-break-after: avoid;
-  }
-
-  /* Mínimo 3 líneas antes/después del corte de página en párrafos */
-  .resume-pages p,
-  .resume-pages .resume-desc,
-  .resume-pages .resume-desc * {
-    orphans: 3;
-    widows: 3;
+  .resume-pages * {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
   }
 }
 

@@ -1,7 +1,6 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ResumePreview from "@/components/resume/ResumePreview"
@@ -37,14 +36,9 @@ export default function TemplateSwitchModal({ pendingTemplateId, onConfirm, onCa
     <Dialog open onOpenChange={(open) => { if (!open) onCancel() }}>
       <DialogContent className="max-w-2xl w-full p-0 overflow-hidden gap-0">
         <DialogHeader className="px-6 pt-5 pb-4 border-b">
-          <div className="flex items-center justify-between">
-            <DialogTitle className="text-base font-semibold">
-              {t("title", { name: targetMeta?.name ?? pendingTemplateId })}
-            </DialogTitle>
-            <button onClick={onCancel} className="text-muted-foreground hover:text-foreground transition-colors">
-              <X size={16} />
-            </button>
-          </div>
+          <DialogTitle className="text-base font-semibold">
+            {t("title", { name: targetMeta?.name ?? pendingTemplateId })}
+          </DialogTitle>
           <p className="text-sm text-muted-foreground mt-1">{t("subtitle")}</p>
         </DialogHeader>
 
