@@ -80,6 +80,26 @@ const articles = [
     readingTime: 5,
     tag: "Carta",
   },
+  {
+    slug: "como-hacer-un-cv-con-ia",
+    titleEs: "Cómo hacer un CV con inteligencia artificial (paso a paso)",
+    titleEn: "How to Make a Resume with AI in 2026 (Step by Step)",
+    descEs: "Guía completa: usa IA para generar tu resumen, mejorar bullets, revisar el ATS Score y redactar tu carta de presentación en minutos.",
+    descEn: "Complete guide: use AI to generate your summary, improve bullets, check ATS Score and write your cover letter in minutes.",
+    date: "2026-05-02",
+    readingTime: 8,
+    tag: "IA",
+  },
+  {
+    slug: "cv-para-desarrolladores-de-software",
+    titleEs: "CV para desarrollador de software: guía completa 2026",
+    titleEn: "Software Developer Resume: Complete Guide 2026",
+    descEs: "Formato, sección de habilidades, bullets de impacto, proyectos y ATS Score. Todo lo que necesita tu CV para conseguir entrevistas en tech.",
+    descEn: "Format, skills section, impact bullets, projects and ATS Score. Everything your resume needs to land tech interviews.",
+    date: "2026-05-02",
+    readingTime: 9,
+    tag: "Tech",
+  },
 ]
 
 export default async function BlogIndexPage({

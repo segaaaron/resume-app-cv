@@ -23,11 +23,22 @@ const corePages: Page[] = [
 ]
 
 // Blog articles — high priority for SEO cluster strategy
-const blogSlugs: string[] = [
-  "que-es-ats-y-por-que-rechaza-tu-cv",
-  "como-escribir-bullets-de-cv",
-  "constructores-de-cv-gratuitos-vs-pago",
-  "carta-de-presentacion-2026",
+const blogSlugs: { slug: string; date: string }[] = [
+  { slug: "que-es-ats-y-por-que-rechaza-tu-cv",    date: "2026-04-29" },
+  { slug: "como-escribir-bullets-de-cv",             date: "2026-04-29" },
+  { slug: "constructores-de-cv-gratuitos-vs-pago",  date: "2026-04-29" },
+  { slug: "carta-de-presentacion-2026",              date: "2026-04-29" },
+  { slug: "como-hacer-un-cv-con-ia",                date: "2026-05-02" },
+  { slug: "cv-para-desarrolladores-de-software",    date: "2026-05-02" },
+]
+
+const professionSlugs: string[] = [
+  "software-engineer",
+  "marketing",
+  "data-scientist",
+  "nurse",
+  "project-manager",
+  "designer",
 ]
 
 const LAST_DEPLOY = new Date("2026-05-02")
@@ -49,12 +60,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   // Blog articles for each locale
   for (const locale of locales) {
-    for (const slug of blogSlugs) {
+    for (const { slug, date } of blogSlugs) {
       entries.push({
         url: `${BASE_URL}/${locale}/blog/${slug}`,
-        lastModified: new Date("2026-04-29"),
+        lastModified: new Date(date),
         changeFrequency: "monthly",
         priority: 0.7,
+      })
+    }
+  }
+
+  // Profession landing pages
+  for (const locale of locales) {
+    for (const slug of professionSlugs) {
+      entries.push({
+        url: `${BASE_URL}/${locale}/templates/${slug}`,
+        lastModified: LAST_DEPLOY,
+        changeFrequency: "monthly",
+        priority: 0.8,
       })
     }
   }
