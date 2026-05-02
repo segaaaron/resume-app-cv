@@ -1,6 +1,7 @@
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import Link from "next/link"
+import Script from "next/script"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
@@ -100,6 +101,36 @@ const articles = [
     readingTime: 9,
     tag: "Tech",
   },
+  {
+    slug: "como-pasar-el-ats",
+    titleEs: "Cómo pasar el ATS en 2026: tácticas probadas para tu CV",
+    titleEn: "How to Pass ATS Screening in 2026 (Proven Tactics)",
+    descEs: "El 75% de los CVs son rechazados por el ATS antes de llegar a un humano. Aprende las tácticas de formato, palabras clave y estructura que funcionan.",
+    descEn: "Over 75% of resumes are rejected by ATS before a human reads them. Learn the format, keyword and structure tactics that actually work.",
+    date: "2026-05-02",
+    readingTime: 7,
+    tag: "ATS",
+  },
+  {
+    slug: "cv-para-marketing",
+    titleEs: "CV para marketing 2026: formato, métricas y ejemplos",
+    titleEn: "Marketing Resume Guide 2026: Format, Metrics & Examples",
+    descEs: "Cómo estructurar tu CV de marketing, qué métricas incluir, herramientas que listar y cómo adaptarlo a cada oferta para conseguir más entrevistas.",
+    descEn: "How to structure your marketing resume, which metrics to include, tools to list and how to tailor it to each role to get more interviews.",
+    date: "2026-05-02",
+    readingTime: 8,
+    tag: "Marketing",
+  },
+  {
+    slug: "carta-de-presentacion-ejemplos",
+    titleEs: "Ejemplos de carta de presentación 2026: plantillas que funcionan",
+    titleEn: "Cover Letter Examples 2026: Templates That Actually Work",
+    descEs: "Ejemplos reales de cartas de presentación para tech, marketing y cambios de carrera. La estructura de 3 párrafos, aperturas ganadoras y los errores a evitar.",
+    descEn: "Real cover letter examples for tech, marketing and career changers. The 3-paragraph structure, winning openings and the mistakes to avoid.",
+    date: "2026-05-02",
+    readingTime: 7,
+    tag: "Carta",
+  },
 ]
 
 export default async function BlogIndexPage({
@@ -111,8 +142,24 @@ export default async function BlogIndexPage({
   setRequestLocale(locale)
   const isEn = locale === "en"
 
+  const jsonLdBlogIndex = {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: isEn ? "CV Tips and Job Search Guides — ReadyCV Blog" : "Guías de CV y Búsqueda de Empleo — Blog ReadyCV",
+    url: `https://readycvv.com/${locale}/blog`,
+    description: isEn
+      ? "Practical guides on optimizing your resume, passing ATS filters and getting more interviews."
+      : "Guías prácticas para optimizar tu CV, pasar filtros ATS y conseguir más entrevistas.",
+    hasPart: articles.map((a) => ({
+      "@type": "Article",
+      headline: isEn ? a.titleEn : a.titleEs,
+      url: `https://readycvv.com/${locale}/blog/${a.slug}`,
+    })),
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
+      <Script id="blog-index-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBlogIndex) }} />
       <Navbar />
       <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-3xl mx-auto">

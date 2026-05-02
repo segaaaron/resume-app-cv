@@ -22,6 +22,50 @@ const jsonLdBreadcrumb = {
   ],
 }
 
+const jsonLdSoftwareApp = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "ReadyCV",
+  url: "https://readycvv.com",
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Web",
+  offers: [
+    {
+      "@type": "Offer",
+      price: "15.00",
+      priceCurrency: "USD",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "15.00",
+        priceCurrency: "USD",
+        billingIncrement: 1,
+        unitCode: "MON",
+      },
+      availability: "https://schema.org/InStock",
+    },
+    {
+      "@type": "Offer",
+      price: "144.00",
+      priceCurrency: "USD",
+      priceSpecification: {
+        "@type": "UnitPriceSpecification",
+        price: "144.00",
+        priceCurrency: "USD",
+        billingIncrement: 1,
+        unitCode: "ANN",
+      },
+      availability: "https://schema.org/InStock",
+    },
+  ],
+  aggregateRating: {
+    "@type": "AggregateRating",
+    ratingValue: "4.8",
+    ratingCount: "320",
+    bestRating: "5",
+    worstRating: "1",
+  },
+}
+
 export async function generateMetadata({
   params,
 }: {
@@ -102,6 +146,11 @@ export default async function PricingPage({
         id="json-ld-breadcrumb-pricing"
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
+      />
+      <Script
+        id="json-ld-software-app-pricing"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSoftwareApp) }}
       />
       <Navbar />
       <main className="flex-1 py-12 sm:py-20 px-4">

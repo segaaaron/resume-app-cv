@@ -141,6 +141,23 @@ export default async function ATSArticlePage({
             ))}
           </div>
 
+          <div className="mt-10 border-t border-border pt-8">
+            <p className="font-semibold mb-4">{isEn ? "Related guides" : "Guías relacionadas"}</p>
+            <ul className="space-y-2">
+              {[
+                { slug: "como-pasar-el-ats", titleEs: "Cómo pasar el ATS en 2026: tácticas probadas", titleEn: "How to Pass ATS Screening in 2026" },
+                { slug: "como-hacer-un-cv-con-ia", titleEs: "Cómo hacer un CV con inteligencia artificial", titleEn: "How to Make a Resume with AI in 2026" },
+                { slug: "como-escribir-bullets-de-cv", titleEs: "Cómo escribir bullets de CV que consiguen entrevistas", titleEn: "How to Write CV Bullets That Get Interviews" },
+              ].map((a) => (
+                <li key={a.slug}>
+                  <Link href={`/${locale}/blog/${a.slug}`} className="text-primary hover:underline text-sm font-medium">
+                    {isEn ? a.titleEn : a.titleEs}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
           <div className="mt-12 bg-primary/5 border border-primary/20 rounded-2xl p-8 text-center">
             <p className="font-semibold text-lg mb-2">{t("cta_title")}</p>
             <p className="text-muted-foreground mb-6">{t("cta_desc")}</p>

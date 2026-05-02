@@ -1,13 +1,13 @@
 {
   "metadata": {
     "home": {
-      "title": "ReadyCV — Constructor de CV con IA | Pasa el ATS, 111+ Plantillas",
+      "title": "ReadyCV — Constructor de CV con IA | 111+ Plantillas ATS",
       "description": "Crea tu CV profesional con inteligencia artificial en minutos. Más de 111 plantillas, ATS Score, generador de carta de presentación IA y seguimiento de candidaturas. Desde $15/mes.",
-      "og_title": "ReadyCV — Constructor de CV con IA | Pasa el ATS, 111+ Plantillas",
+      "og_title": "ReadyCV — Constructor de CV con IA | 111+ Plantillas ATS",
       "og_description": "Crea tu CV con IA en minutos. 111+ plantillas profesionales, análisis ATS, carta de presentación automática y tracker de candidaturas. Plan Pro desde $15/mes."
     },
     "templates": {
-      "title": "Plantillas de CV Profesionales con IA — 111+ Diseños ATS | ReadyCV",
+      "title": "Plantillas de CV con IA — 111+ Diseños ATS | ReadyCV",
       "description": "Más de 111 plantillas de currículum profesionales compatibles con ATS. Creative, Business, Legal, Salud, Ingeniería, Hostelería, Arte y más. Cambia de plantilla en cualquier momento sin perder tu contenido.",
       "og_title": "111+ Plantillas de CV Profesionales con IA — ReadyCV",
       "og_description": "Elige entre 111+ plantillas de CV profesionales compatibles con ATS. Diseños para todos los sectores, listos en minutos, descarga en PDF."
@@ -23,10 +23,12 @@
       "description": "Plantillas premium con SVG personalizados y diseños únicos para destacar."
     },
     "privacy": {
-      "title": "Política de Privacidad — READY CV"
+      "title": "Política de Privacidad | ReadyCV",
+      "description": "Lee cómo ReadyCV protege tus datos personales. Política de privacidad completa: qué recopilamos, cómo lo usamos y tus derechos."
     },
     "terms": {
-      "title": "Términos de Servicio — READY CV"
+      "title": "Términos de Servicio | ReadyCV",
+      "description": "Términos de servicio de ReadyCV. Conoce tus derechos, condiciones de uso de la plataforma y política de cancelación."
     },
     "blog_index": {
       "title": "Blog — Consejos de CV y búsqueda de empleo | READY CV",
@@ -41,12 +43,32 @@
       "description": "Guía práctica con ejemplos reales para redactar bullets de experiencia con verbos de acción, métricas y lenguaje orientado a resultados."
     },
     "blog_free_vs_paid": {
-      "title": "Constructores de CV gratuitos vs de pago: ¿qué importa realmente? — READY CV",
-      "description": "Comparativa honesta de herramientas de CV gratuitas y de pago. Qué funciones cambian el resultado y cuándo vale la pena pagar."
+      "title": "¿Vale la Pena Pagar por un Constructor de CV? | ReadyCV",
+      "description": "Comparativa honesta de herramientas de CV. Qué funciones cambian el resultado, cuándo vale la pena pagar y qué buscar antes de decidir."
     },
     "blog_cover_letter": {
       "title": "Carta de presentación en 2026: ¿todavía importa? — READY CV",
       "description": "¿Necesitas carta de presentación en 2026? Datos reales, cuándo incluirla y cómo escribir una que funcione con IA integrada."
+    },
+    "blog_ai_cv": {
+      "title": "Cómo Hacer un CV con Inteligencia Artificial en 2026 | ReadyCV",
+      "description": "Guía paso a paso para crear un CV profesional y optimizado para ATS con inteligencia artificial en minutos. Resumen IA, bullets, ATS Score y carta de presentación."
+    },
+    "blog_dev_cv": {
+      "title": "CV para Desarrollador de Software 2026: Guía Completa | ReadyCV",
+      "description": "Formato, sección de habilidades, bullets de impacto, proyectos y ATS Score. Todo lo que necesita tu CV para conseguir entrevistas en tech."
+    },
+    "blog_pass_ats": {
+      "title": "Cómo Pasar el ATS en 2026: Tácticas Probadas | ReadyCV",
+      "description": "Más del 75% de los CVs son rechazados por ATS antes de llegar a un humano. Aprende las tácticas de formato, palabras clave y estructura que funcionan."
+    },
+    "blog_marketing_cv": {
+      "title": "CV para Marketing 2026: Formato, Métricas y Ejemplos | ReadyCV",
+      "description": "Cómo estructurar tu CV de marketing, qué métricas incluir, herramientas que listar y cómo adaptarlo a cada oferta para más entrevistas."
+    },
+    "blog_cover_examples": {
+      "title": "Ejemplos de Carta de Presentación 2026: Plantillas que Funcionan | ReadyCV",
+      "description": "Ejemplos reales de cartas para tech, marketing y cambios de carrera. La estructura de 3 párrafos, aperturas ganadoras y errores a evitar."
     },
     "login": {
       "title": "Iniciar Sesión",

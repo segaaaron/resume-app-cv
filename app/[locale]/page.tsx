@@ -81,11 +81,13 @@ const jsonLdOrganization = {
   url: "https://readycvv.com",
   logo: {
     "@type": "ImageObject",
-    url: "https://readycvv.com/og-image.png",
-    width: 1200,
-    height: 630,
+    url: "https://readycvv.com/icon.svg",
+    width: 512,
+    height: 512,
   },
-  sameAs: [],
+  sameAs: [
+    "https://twitter.com/readycvv",
+  ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",

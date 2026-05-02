@@ -7,19 +7,20 @@ type Page = {
   path: string
   changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never"
   priority: number
+  lastModified?: Date
 }
 
 // Core public pages — both locales
-const corePages: Page[] = [
-  { path: "",              changeFrequency: "weekly",  priority: 1.0 },
-  { path: "/pricing",      changeFrequency: "monthly", priority: 0.9 },
-  { path: "/templates",    changeFrequency: "monthly", priority: 0.9 },
-  { path: "/blog",         changeFrequency: "weekly",  priority: 0.7 },
-  { path: "/register",     changeFrequency: "yearly",  priority: 0.8 },
-  { path: "/login",        changeFrequency: "yearly",  priority: 0.4 },
-  { path: "/pro-disenos",  changeFrequency: "monthly", priority: 0.5 },
-  { path: "/privacy",      changeFrequency: "yearly",  priority: 0.2 },
-  { path: "/terms",        changeFrequency: "yearly",  priority: 0.2 },
+const corePages: Array<Page & { lastModified: Date }> = [
+  { path: "",              changeFrequency: "weekly",  priority: 1.0, lastModified: new Date("2026-05-02") },
+  { path: "/pricing",      changeFrequency: "monthly", priority: 0.9, lastModified: new Date("2026-05-02") },
+  { path: "/templates",    changeFrequency: "monthly", priority: 0.9, lastModified: new Date("2026-05-02") },
+  { path: "/blog",         changeFrequency: "weekly",  priority: 0.7, lastModified: new Date("2026-05-02") },
+  { path: "/register",     changeFrequency: "yearly",  priority: 0.8, lastModified: new Date("2026-04-01") },
+  { path: "/login",        changeFrequency: "yearly",  priority: 0.4, lastModified: new Date("2026-04-01") },
+  { path: "/pro-disenos",  changeFrequency: "monthly", priority: 0.5, lastModified: new Date("2026-04-29") },
+  { path: "/privacy",      changeFrequency: "yearly",  priority: 0.2, lastModified: new Date("2026-04-01") },
+  { path: "/terms",        changeFrequency: "yearly",  priority: 0.2, lastModified: new Date("2026-04-01") },
 ]
 
 // Blog articles — high priority for SEO cluster strategy
@@ -30,6 +31,9 @@ const blogSlugs: { slug: string; date: string }[] = [
   { slug: "carta-de-presentacion-2026",              date: "2026-04-29" },
   { slug: "como-hacer-un-cv-con-ia",                date: "2026-05-02" },
   { slug: "cv-para-desarrolladores-de-software",    date: "2026-05-02" },
+  { slug: "como-pasar-el-ats",                      date: "2026-05-02" },
+  { slug: "cv-para-marketing",                      date: "2026-05-02" },
+  { slug: "carta-de-presentacion-ejemplos",         date: "2026-05-02" },
 ]
 
 const professionSlugs: string[] = [
@@ -39,6 +43,11 @@ const professionSlugs: string[] = [
   "nurse",
   "project-manager",
   "designer",
+  "accountant",
+  "teacher",
+  "lawyer",
+  "sales",
+  "hr",
 ]
 
 const LAST_DEPLOY = new Date("2026-05-02")
@@ -51,7 +60,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     for (const page of corePages) {
       entries.push({
         url: `${BASE_URL}/${locale}${page.path}`,
-        lastModified: LAST_DEPLOY,
+        lastModified: page.lastModified ?? LAST_DEPLOY,
         changeFrequency: page.changeFrequency,
         priority: page.priority,
       })

@@ -4,11 +4,11 @@ import { getTranslations } from "next-intl/server"
 import { ArrowRight } from "lucide-react"
 
 const EXAMPLES = [
-  { file: "/examples/cv-example-tech.png", badgeKey: "badge_tech" as const, template: "Nova" },
-  { file: "/examples/cv-example-design.png", badgeKey: "badge_design" as const, template: "EditorialSerif" },
-  { file: "/examples/cv-example-legal.png", badgeKey: "badge_legal" as const, template: "Consul" },
-  { file: "/examples/cv-example-health.png", badgeKey: "badge_health" as const, template: "ClassicMono" },
-  { file: "/examples/cv-example-hospitality.png", badgeKey: "badge_hospitality" as const, template: "ChefMenu" },
+  { file: "/examples/tech.webp", badgeKey: "badge_tech" as const, template: "Nova" },
+  { file: "/examples/design.webp", badgeKey: "badge_design" as const, template: "EditorialSerif" },
+  { file: "/examples/legal.webp", badgeKey: "badge_legal" as const, template: "Consul" },
+  { file: "/examples/health.webp", badgeKey: "badge_health" as const, template: "ClassicMono" },
+  { file: "/examples/hospitality.webp", badgeKey: "badge_hospitality" as const, template: "ChefMenu" },
 ]
 
 export default async function CVExamples() {

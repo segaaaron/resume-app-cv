@@ -7,7 +7,7 @@
       "og_description": "Build your resume with AI in minutes. 111+ professional templates, ATS Score, automatic cover letters and application tracker. Pro plan from $15/month."
     },
     "templates": {
-      "title": "Professional AI Resume Templates — 111+ ATS-Friendly Designs | ReadyCV",
+      "title": "AI Resume Templates — 111+ ATS-Friendly Designs | ReadyCV",
       "description": "Explore 111+ professional ATS-friendly resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
       "og_title": "111+ Professional AI Resume Templates — ReadyCV",
       "og_description": "Choose from 111+ ATS-optimized resume templates for every industry. Unique designs, ready in minutes, download as PDF."
@@ -23,10 +23,12 @@
       "description": "Premium templates with custom SVGs and unique designs to make you stand out."
     },
     "privacy": {
-      "title": "Privacy Policy — READY CV"
+      "title": "Privacy Policy | ReadyCV",
+      "description": "Learn how ReadyCV protects your personal data. Full privacy policy: what we collect, how we use it, and your rights."
     },
     "terms": {
-      "title": "Terms of Service — READY CV"
+      "title": "Terms of Service | ReadyCV",
+      "description": "ReadyCV terms of service. Learn your rights, platform usage conditions, and cancellation policy."
     },
     "blog_index": {
       "title": "Blog — CV Tips and Job Search Advice | READY CV",
@@ -41,12 +43,32 @@
       "description": "Practical guide with real examples to write experience bullets with action verbs, metrics and results-oriented language."
     },
     "blog_free_vs_paid": {
-      "title": "Free vs Paid CV Builders: What Actually Matters — READY CV",
-      "description": "Honest comparison of free and paid CV tools. Which features change outcomes and when is it worth paying."
+      "title": "CV Builder Features That Actually Matter in 2026 | ReadyCV",
+      "description": "Honest comparison of CV builder tools. Which features change outcomes, what to look for, and when paying is worth it."
     },
     "blog_cover_letter": {
       "title": "Cover Letter in 2026: Does It Still Matter? — READY CV",
       "description": "Do you need a cover letter in 2026? Real data, when to include one and how to write one that works with AI."
+    },
+    "blog_ai_cv": {
+      "title": "How to Make a Resume with AI in 2026 (Step by Step) | ReadyCV",
+      "description": "Step-by-step guide to creating a professional ATS-optimized resume with AI in minutes. AI summary, bullet points, ATS Score and cover letter."
+    },
+    "blog_dev_cv": {
+      "title": "Software Developer Resume Guide 2026: Format & Examples | ReadyCV",
+      "description": "Format, skills section, impact bullets, projects and ATS Score. Everything your resume needs to land tech interviews."
+    },
+    "blog_pass_ats": {
+      "title": "How to Pass ATS Screening in 2026 (Proven Tactics) | ReadyCV",
+      "description": "Over 75% of resumes are rejected by ATS before a human reads them. Learn the format, keyword and structure tactics that work."
+    },
+    "blog_marketing_cv": {
+      "title": "Marketing Resume Guide 2026: Format, Metrics & Examples | ReadyCV",
+      "description": "How to structure your marketing resume, which metrics to include, tools to list and how to tailor it for more interviews."
+    },
+    "blog_cover_examples": {
+      "title": "Cover Letter Examples 2026: Templates That Actually Work | ReadyCV",
+      "description": "Real examples for tech, marketing and career changers. The 3-paragraph structure, winning openings and mistakes to avoid."
     },
     "login": {
       "title": "Sign In",
