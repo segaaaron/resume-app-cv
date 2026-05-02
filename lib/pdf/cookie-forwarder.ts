@@ -47,12 +47,13 @@ const SESSION_COOKIE_NAMES = new Set([
 type ForwardedCookie = {
   name: string
   value: string
+  url?: string
   domain?: string
   secure?: boolean
   path?: string
 }
 
-function parseCookies(cookieHeader: string, hostname: string): ForwardedCookie[] {
+function parseCookies(cookieHeader: string, hostname: string, appUrl: string): ForwardedCookie[] {
   return cookieHeader
     .split(";")
     .map((c) => {
@@ -61,9 +62,10 @@ function parseCookies(cookieHeader: string, hostname: string): ForwardedCookie[]
       const name = c.slice(0, eq).trim()
       const value = c.slice(eq + 1).trim()
       if (!name) return null
-      // __Host- cookies must NOT have domain per spec — Chrome CDP rejects them otherwise
+      // __Host- cookies must NOT have domain per spec.
+      // Puppeteer needs url or domain for its internal deleteCookie step — use url.
       if (name.startsWith("__Host-")) {
-        return { name, value, secure: true, path: "/" }
+        return { name, value, url: appUrl, secure: true, path: "/" }
       }
       // __Secure- cookies require secure flag
       if (name.startsWith("__Secure-")) {
@@ -82,7 +84,7 @@ export async function applyCookies(
   if (!cookieHeader) return
 
   const hostname = new URL(appUrl).hostname
-  const all = parseCookies(cookieHeader, hostname)
+  const all = parseCookies(cookieHeader, hostname, appUrl)
   if (all.length === 0) return
 
   const allowed = all.filter((c) => ALLOWED_COOKIES.has(c.name))
