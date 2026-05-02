@@ -5,32 +5,56 @@ const locales = ["es", "en"] as const
 
 type Page = {
   path: string
-  changeFrequency: "weekly" | "monthly" | "yearly"
+  changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never"
   priority: number
 }
 
-const pages: Page[] = [
-  { path: "",           changeFrequency: "weekly",  priority: 1.0 },
-  { path: "/pricing",   changeFrequency: "monthly", priority: 0.9 },
-  { path: "/templates", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/register",  changeFrequency: "yearly",  priority: 0.8 },
-  { path: "/login",     changeFrequency: "yearly",  priority: 0.7 },
-  { path: "/blog",      changeFrequency: "weekly",  priority: 0.6 },
-  { path: "/pro-disenos", changeFrequency: "monthly", priority: 0.5 },
-  { path: "/privacy",   changeFrequency: "yearly",  priority: 0.2 },
-  { path: "/terms",     changeFrequency: "yearly",  priority: 0.2 },
+// Core public pages — both locales
+const corePages: Page[] = [
+  { path: "",              changeFrequency: "weekly",  priority: 1.0 },
+  { path: "/pricing",      changeFrequency: "monthly", priority: 0.9 },
+  { path: "/templates",    changeFrequency: "monthly", priority: 0.9 },
+  { path: "/blog",         changeFrequency: "weekly",  priority: 0.7 },
+  { path: "/register",     changeFrequency: "yearly",  priority: 0.8 },
+  { path: "/login",        changeFrequency: "yearly",  priority: 0.4 },
+  { path: "/pro-disenos",  changeFrequency: "monthly", priority: 0.5 },
+  { path: "/privacy",      changeFrequency: "yearly",  priority: 0.2 },
+  { path: "/terms",        changeFrequency: "yearly",  priority: 0.2 },
 ]
+
+// Blog articles — high priority for SEO cluster strategy
+const blogSlugs: string[] = [
+  "que-es-ats-y-por-que-rechaza-tu-cv",
+  "como-escribir-bullets-de-cv",
+  "constructores-de-cv-gratuitos-vs-pago",
+  "carta-de-presentacion-2026",
+]
+
+const LAST_DEPLOY = new Date("2026-05-02")
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const entries: MetadataRoute.Sitemap = []
 
+  // Core pages for each locale
   for (const locale of locales) {
-    for (const page of pages) {
+    for (const page of corePages) {
       entries.push({
         url: `${BASE_URL}/${locale}${page.path}`,
-        lastModified: new Date(),
+        lastModified: LAST_DEPLOY,
         changeFrequency: page.changeFrequency,
         priority: page.priority,
+      })
+    }
+  }
+
+  // Blog articles for each locale
+  for (const locale of locales) {
+    for (const slug of blogSlugs) {
+      entries.push({
+        url: `${BASE_URL}/${locale}/blog/${slug}`,
+        lastModified: new Date("2026-04-29"),
+        changeFrequency: "monthly",
+        priority: 0.7,
       })
     }
   }

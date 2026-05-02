@@ -16,8 +16,26 @@ export async function generateMetadata({
   return {
     title: t("title"),
     description: t("description"),
-    alternates: { canonical: "https://readycv.app/blog" },
-    openGraph: { title: t("title"), description: t("description"), url: "https://readycv.app/blog", type: "website" },
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/blog`,
+      languages: {
+        es: "https://readycvv.com/es/blog",
+        en: "https://readycvv.com/en/blog",
+      },
+    },
+    openGraph: {
+      title: t("title"),
+      description: t("description"),
+      url: `https://readycvv.com/${locale}/blog`,
+      type: "website",
+      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("description"),
+      images: ["https://readycvv.com/og-image.png"],
+    },
   }
 }
 

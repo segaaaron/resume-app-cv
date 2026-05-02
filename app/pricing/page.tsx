@@ -9,13 +9,13 @@ export const metadata: Metadata = {
   description:
     "Desbloquea todas las plantillas premium, CV ilimitados y funciones avanzadas. Plan mensual a $15/mes o anual a $144/año (ahorra 20%).",
   alternates: {
-    canonical: "https://readycv.app/pricing",
+    canonical: "https://readycvv.com/es/pricing",
   },
   openGraph: {
-    title: "Precios — READY CV | Plan Pro desde $15/mes",
+    title: "Precios ReadyCV — Plan Pro desde $15/mes",
     description:
-      "Crea CVs profesionales. Plan mensual $15/mes o anual $144/año. Ahorra 20% con el plan anual.",
-    url: "https://readycv.app/pricing",
+      "Crea CVs profesionales con IA. Plan mensual $15/mes o anual $144/año. Más barato que Zety. Cancela cuando quieras.",
+    url: "https://readycvv.com/es/pricing",
     type: "website",
   },
 }

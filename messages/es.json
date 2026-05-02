@@ -1,22 +1,22 @@
 {
   "metadata": {
     "home": {
-      "title": "Crea el CV que consigue la entrevista — READY CV",
-      "description": "Constructor de CV con IA y análisis ATS. Más de 40 plantillas profesionales, 7 herramientas de inteligencia artificial y tracker de candidaturas.",
-      "og_title": "Crea el CV que consigue la entrevista — READY CV",
-      "og_description": "128 plantillas profesionales, análisis ATS con IA, carta de presentación automática y tracker de candidaturas. Un plan Pro para conseguir el trabajo."
+      "title": "ReadyCV — Constructor de CV con IA | Pasa el ATS, 111+ Plantillas",
+      "description": "Crea tu CV profesional con inteligencia artificial en minutos. Más de 111 plantillas, ATS Score, generador de carta de presentación IA y seguimiento de candidaturas. Desde $15/mes.",
+      "og_title": "ReadyCV — Constructor de CV con IA | Pasa el ATS, 111+ Plantillas",
+      "og_description": "Crea tu CV con IA en minutos. 111+ plantillas profesionales, análisis ATS, carta de presentación automática y tracker de candidaturas. Plan Pro desde $15/mes."
     },
     "templates": {
-      "title": "Plantillas de CV Profesionales — 128 Diseños para todos los sectores",
-      "description": "Explora más de 40 plantillas de currículum profesionales. Creative, Business, Legal, Salud, Ingeniería, Hostelería, Arte y clásicas. Cambia de plantilla en cualquier momento sin perder tu contenido.",
-      "og_title": "128 Plantillas de CV Profesionales — READY CV",
-      "og_description": "Más de 40 plantillas de CV para todos los sectores y estilos. Diseños únicos, listos en minutos, descarga en PDF."
+      "title": "Plantillas de CV Profesionales con IA — 111+ Diseños ATS | ReadyCV",
+      "description": "Más de 111 plantillas de currículum profesionales compatibles con ATS. Creative, Business, Legal, Salud, Ingeniería, Hostelería, Arte y más. Cambia de plantilla en cualquier momento sin perder tu contenido.",
+      "og_title": "111+ Plantillas de CV Profesionales con IA — ReadyCV",
+      "og_description": "Elige entre 111+ plantillas de CV profesionales compatibles con ATS. Diseños para todos los sectores, listos en minutos, descarga en PDF."
     },
     "pricing": {
-      "title": "Precios — Plan Pro desde $15/mes | READY CV",
-      "description": "128 plantillas premium, CVs ilimitados, 7 herramientas de IA, análisis ATS, carta de presentación con IA y tracker de candidaturas. Todo en un plan Pro.",
-      "og_title": "Precios — READY CV | Todo incluido desde $15/mes",
-      "og_description": "Un plan Pro para conseguir el trabajo: plantillas, IA, ATS Score, cartas de presentación y más. Cancela cuando quieras."
+      "title": "Precios ReadyCV — Plan Pro $15/mes | Constructor de CV con IA",
+      "description": "111+ plantillas premium, CVs ilimitados, 7 herramientas de IA, ATS Score, carta de presentación con IA y tracker de candidaturas. Todo en un plan Pro. Más barato que Zety o Resume.io.",
+      "og_title": "Precios ReadyCV — Plan Pro desde $15/mes",
+      "og_description": "Un plan Pro para conseguir el trabajo: 111+ plantillas, IA, ATS Score, cartas de presentación. Desde $15/mes — más barato que la competencia. Cancela cuando quieras."
     },
     "pro_designs": {
       "title": "Pro Diseños — READY CV",
@@ -573,7 +573,7 @@
       "error_pdf": "Error al generar el PDF",
       "pro_only_word": "La exportación Word es exclusiva del plan Pro",
       "watermark_text": "readycvv.com",
-      "watermark_upgrade": "Activa tu plan Pro en readycv.app",
+      "watermark_upgrade": "Activa tu plan Pro en readycvv.com",
       "export_with_design": "Con diseño y colores"
     },
     "download_generating_pdf": "Generando PDF...",

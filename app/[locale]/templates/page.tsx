@@ -17,7 +17,28 @@ const jsonLdBreadcrumbTemplates = {
   "@type": "BreadcrumbList",
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Inicio", item: "https://readycvv.com" },
-    { "@type": "ListItem", position: 2, name: "Plantillas de CV", item: "https://readycvv.com/templates" },
+    { "@type": "ListItem", position: 2, name: "Plantillas de CV", item: "https://readycvv.com/es/templates" },
+  ],
+}
+
+const jsonLdItemList = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Professional Resume Templates — ReadyCV",
+  description: "111+ ATS-optimized professional resume templates for every industry",
+  url: "https://readycvv.com/templates",
+  numberOfItems: 111,
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://readycvv.com/templates#featured" },
+    { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://readycvv.com/templates#city" },
+    { "@type": "ListItem", position: 3, name: "Creative Resume Templates", url: "https://readycvv.com/templates#creative" },
+    { "@type": "ListItem", position: 4, name: "Business Resume Templates", url: "https://readycvv.com/templates#business" },
+    { "@type": "ListItem", position: 5, name: "Health & Science Resume Templates", url: "https://readycvv.com/templates#health" },
+    { "@type": "ListItem", position: 6, name: "Legal & Academic Resume Templates", url: "https://readycvv.com/templates#legal" },
+    { "@type": "ListItem", position: 7, name: "Hospitality Resume Templates", url: "https://readycvv.com/templates#hospitality" },
+    { "@type": "ListItem", position: 8, name: "Engineering & Tech Resume Templates", url: "https://readycvv.com/templates#engineering" },
+    { "@type": "ListItem", position: 9, name: "Arts & Media Resume Templates", url: "https://readycvv.com/templates#arts" },
+    { "@type": "ListItem", position: 10, name: "Other Professional Resume Templates", url: "https://readycvv.com/templates#other" },
   ],
 }
 
@@ -32,29 +53,50 @@ export async function generateMetadata({
   return {
     title: t("title"),
     description: t("description"),
-    keywords: [
-      "plantillas de curriculum",
-      "plantillas cv profesionales",
-      "modelos de curriculum vitae",
-      "diseños de cv",
-      "plantillas resume",
-      "plantillas cv profesionales",
-      "curriculum vitae moderno",
-      "plantillas ats",
-    ],
+    keywords: locale === "es"
+      ? [
+          "plantillas de curriculum vitae profesionales",
+          "plantillas cv ats compatible",
+          "modelos de curriculum vitae modernos",
+          "plantillas de cv con ia",
+          "diseños de cv 2025",
+          "plantillas resume ats",
+          "curriculum vitae creativo",
+          "plantillas cv para ingenieros",
+          "plantillas cv para diseñadores",
+          "plantillas cv para profesionales de salud",
+        ]
+      : [
+          "professional resume templates",
+          "ats-friendly resume templates",
+          "modern cv templates",
+          "resume templates 2025",
+          "ai resume templates",
+          "creative resume templates",
+          "engineering resume templates",
+          "tech resume templates",
+          "resume templates for designers",
+          "free resume templates download",
+        ],
     alternates: {
-      canonical: "https://readycvv.com/templates",
+      canonical: `https://readycvv.com/${locale}/templates`,
+      languages: {
+        es: "https://readycvv.com/es/templates",
+        en: "https://readycvv.com/en/templates",
+      },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: "https://readycvv.com/templates",
+      url: `https://readycvv.com/${locale}/templates`,
       type: "website",
+      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
+      images: ["https://readycvv.com/og-image.png"],
     },
   }
 }
@@ -372,6 +414,11 @@ export default async function TemplatesPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumbTemplates) }}
       />
+      <Script
+        id="json-ld-itemlist-templates"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdItemList) }}
+      />
       <Navbar />
       <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-7xl mx-auto">
@@ -405,7 +452,7 @@ export default async function TemplatesPage({
               const catTemplates = proTemplates.filter((tmpl) => cat.ids.includes(tmpl.id))
               if (catTemplates.length === 0) return null
               return (
-                <div key={cat.key} className="mb-10">
+                <div key={cat.key} id={cat.key} className="mb-10">
                   <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="h-px flex-1 bg-border" />
                     {cat.label}

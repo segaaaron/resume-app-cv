@@ -11,16 +11,16 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600", "700", "800"],
 })
 
-const BASE_URL = "https://readycv.app"
+const BASE_URL = "https://readycvv.com"
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "READY CV — Constructor de CV Profesional con IA",
-    template: "%s | READY CV",
+    default: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
+    template: "%s | ReadyCV",
   },
   description:
-    "Constructor de CV con IA y análisis ATS. 128 plantillas profesionales, 7 herramientas de inteligencia artificial y tracker de candidaturas.",
+    "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. From $15/month.",
 }
 
 export default async function RootLayout({

@@ -1,10 +1,15 @@
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import Link from "next/link"
+import Script from "next/script"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import { ArrowRight } from "lucide-react"
+
+const SLUG = "carta-de-presentacion-2026"
+const DATE_PUBLISHED = "2026-04-29"
+const DATE_MODIFIED = "2026-04-29"
 
 export async function generateMetadata({
   params,
@@ -16,8 +21,29 @@ export async function generateMetadata({
   return {
     title: t("title"),
     description: t("description"),
-    alternates: { canonical: "https://readycv.app/blog/carta-de-presentacion-2026" },
-    openGraph: { title: t("title"), description: t("description"), type: "article" },
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      languages: {
+        es: `https://readycvv.com/es/blog/${SLUG}`,
+        en: `https://readycvv.com/en/blog/${SLUG}`,
+      },
+    },
+    openGraph: {
+      title: t("title"),
+      description: t("description"),
+      type: "article",
+      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      publishedTime: DATE_PUBLISHED,
+      modifiedTime: DATE_MODIFIED,
+      authors: ["ReadyCV"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("description"),
+      images: ["https://readycvv.com/og-image.png"],
+    },
   }
 }
 
@@ -133,6 +159,20 @@ export default async function CoverLetterArticlePage({
           </div>
         </div>
       </main>
+      <Script id="article-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: content.title,
+        description: content.intro,
+        datePublished: DATE_PUBLISHED,
+        dateModified: DATE_MODIFIED,
+        author: { "@type": "Organization", name: "ReadyCV", url: "https://readycvv.com" },
+        publisher: { "@type": "Organization", name: "ReadyCV", logo: { "@type": "ImageObject", url: "https://readycvv.com/og-image.png" } },
+        image: "https://readycvv.com/og-image.png",
+        url: `https://readycvv.com/${locale}/blog/${SLUG}`,
+        inLanguage: locale,
+        mainEntityOfPage: { "@type": "WebPage", "@id": `https://readycvv.com/${locale}/blog/${SLUG}` },
+      }) }} />
       <Footer />
     </div>
   )

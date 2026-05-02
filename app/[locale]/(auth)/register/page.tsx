@@ -19,7 +19,7 @@ export async function generateMetadata({
       follow: false,
     },
     alternates: {
-      canonical: "https://readycv.app/register",
+      canonical: `https://readycvv.com/${locale}/register`,
     },
   }
 }

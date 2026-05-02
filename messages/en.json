@@ -1,22 +1,22 @@
 {
   "metadata": {
     "home": {
-      "title": "Build the CV That Gets the Interview — READY CV",
-      "description": "AI-powered CV builder with ATS analysis. 128 professional templates, 7 AI tools, and application tracker.",
-      "og_title": "Build the CV That Gets the Interview — READY CV",
-      "og_description": "128 professional templates, AI-powered ATS analysis, automatic cover letters, and application tracker. One Pro plan to get hired."
+      "title": "ReadyCV — Best AI Resume Builder | Beat ATS, 111+ Templates",
+      "description": "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. Try ReadyCV Pro from $15/month.",
+      "og_title": "ReadyCV — Best AI Resume Builder | Beat ATS, 111+ Templates",
+      "og_description": "Build your resume with AI in minutes. 111+ professional templates, ATS Score, automatic cover letters and application tracker. Pro plan from $15/month."
     },
     "templates": {
-      "title": "Professional CV Templates — 128 Designs for Every Industry",
-      "description": "Explore 128 professional resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
-      "og_title": "128 Professional CV Templates — READY CV",
-      "og_description": "Over 40 CV templates for every industry and style. Unique designs, ready in minutes, download as PDF."
+      "title": "Professional AI Resume Templates — 111+ ATS-Friendly Designs | ReadyCV",
+      "description": "Explore 111+ professional ATS-friendly resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
+      "og_title": "111+ Professional AI Resume Templates — ReadyCV",
+      "og_description": "Choose from 111+ ATS-optimized resume templates for every industry. Unique designs, ready in minutes, download as PDF."
     },
     "pricing": {
-      "title": "Pricing — Pro Plan from $15/month | READY CV",
-      "description": "128 premium templates, unlimited CVs, 7 AI tools, ATS Score, AI cover letters and application tracker. Everything in one Pro plan.",
-      "og_title": "Pricing — READY CV | Everything from $15/month",
-      "og_description": "One Pro plan to get hired: templates, AI, ATS Score, cover letters and more. Cancel anytime."
+      "title": "ReadyCV Pricing — Pro Plan $15/month | AI Resume Builder",
+      "description": "111+ premium templates, unlimited resumes, 7 AI tools, ATS Score, AI cover letters and application tracker. Everything in one Pro plan. Cheaper than Zety or Resume.io.",
+      "og_title": "ReadyCV Pricing — Pro Plan from $15/month",
+      "og_description": "One Pro plan to get hired: 111+ templates, AI, ATS Score, cover letters. From $15/month — cheaper than the competition. Cancel anytime."
     },
     "pro_designs": {
       "title": "Pro Designs — READY CV",
@@ -573,7 +573,7 @@
       "error_pdf": "Error generating PDF",
       "pro_only_word": "Word export is exclusive to the Pro plan",
       "watermark_text": "readycvv.com",
-      "watermark_upgrade": "Activate your Pro plan at readycv.app",
+      "watermark_upgrade": "Activate your Pro plan at readycvv.com",
       "export_with_design": "With design and colors"
     },
     "download_generating_pdf": "Generating PDF...",

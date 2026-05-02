@@ -34,13 +34,24 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: "https://readycvv.com/pricing",
+      canonical: `https://readycvv.com/${locale}/pricing`,
+      languages: {
+        es: "https://readycvv.com/es/pricing",
+        en: "https://readycvv.com/en/pricing",
+      },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: "https://readycvv.com/pricing",
+      url: `https://readycvv.com/${locale}/pricing`,
       type: "website",
+      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("og_title"),
+      description: t("og_description"),
+      images: ["https://readycvv.com/og-image.png"],
     },
   }
 }

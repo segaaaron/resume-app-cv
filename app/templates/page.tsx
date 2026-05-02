@@ -20,13 +20,13 @@ export const metadata: Metadata = {
     "plantillas ats",
   ],
   alternates: {
-    canonical: "https://readycv.app/templates",
+    canonical: "https://readycvv.com/es/templates",
   },
   openGraph: {
-    title: "Plantillas de Curriculum Vitae Profesionales — READY CV",
+    title: "111+ Plantillas de CV Profesionales ATS — ReadyCV",
     description:
-      "128 plantillas de CV profesionales. Elige el diseño perfecto para tu sector y descarga en PDF.",
-    url: "https://readycv.app/templates",
+      "111+ plantillas de CV profesionales compatibles con ATS. Elige el diseño perfecto para tu sector y descarga en PDF.",
+    url: "https://readycvv.com/es/templates",
     type: "website",
   },
   twitter: {
