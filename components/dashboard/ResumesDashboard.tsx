@@ -174,7 +174,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           <button
             onClick={createResume}
             disabled={creating}
-            className="aspect-[3/4] border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary/50 hover:text-primary transition-colors group"
+            className="aspect-[3/4] border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all group cursor-pointer"
           >
             <div className="h-12 w-12 rounded-xl border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
               <Plus className="h-6 w-6" />
@@ -184,10 +184,10 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
           {resumes.map((resume) => (
             <div key={resume.id} className="group relative">
-              <Link href={`/${locale}/editor/${resume.id}`} className="block">
-                <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all">
-                  <div className="h-10 w-full" style={{ backgroundColor: resume.colorScheme }} />
-                  <div className="p-4 space-y-2">
+              <Link href={`/${locale}/editor/${resume.id}`} className="block cursor-pointer">
+                <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all flex flex-col">
+                  <div className="h-10 w-full shrink-0" style={{ backgroundColor: resume.colorScheme }} />
+                  <div className="p-4 space-y-2 flex-1">
                     <div className="h-2.5 bg-gray-200 rounded w-3/4" />
                     <div className="h-2 bg-gray-100 rounded w-1/2 mb-4" />
                     {[1, 2, 3, 4, 5].map((i) => (
