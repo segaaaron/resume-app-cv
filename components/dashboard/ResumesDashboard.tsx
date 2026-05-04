@@ -10,6 +10,7 @@ import { es, enUS } from "date-fns/locale"
 import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
+import UpgradeCTACard from "./UpgradeCTACard"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +128,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
   return (
     <div>
+      <UpgradeCTACard />
       {showUpgradeBanner && (
         <div className="flex items-center justify-between bg-primary text-white rounded-2xl px-5 py-4 mb-6 shadow-lg">
           <div className="flex items-center gap-3">

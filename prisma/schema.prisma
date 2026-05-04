@@ -39,6 +39,8 @@ model User {
   referralCycleOffset Int                  @default(0)
   referrerConversions ReferralConversion[] @relation("ReferrerConversions")
   referredConversions ReferralConversion[] @relation("ReferredConversions")
+  sessionVersion      Int                  @default(1)
+  lastActiveAt        DateTime             @default(now())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
 }

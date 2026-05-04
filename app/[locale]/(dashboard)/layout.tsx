@@ -26,7 +26,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      <DashboardNav user={session.user} />
+      <DashboardNav user={{ name: session.user.name, email: session.user.email, image: session.user.image, role: session.user.role }} />
       <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
         {children}
       </main>

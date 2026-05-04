@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
-import { FileText, Mail, LogOut, ChevronDown } from "lucide-react"
+import { FileText, Mail, LogOut, ChevronDown, Shield } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,7 +17,7 @@ import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
-  user: { name?: string | null; email?: string | null; image?: string | null }
+  user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
 }
 
 export default function DashboardNav({ user }: Props) {
@@ -28,6 +28,7 @@ export default function DashboardNav({ user }: Props) {
   const tabs = [
     { label: t("cvs"),    href: `/${locale}/dashboard/resumes`,       icon: FileText },
     { label: t("letters"), href: `/${locale}/dashboard/cover-letters`, icon: Mail },
+    ...(user.role === "SUPER_ADMIN" ? [{ label: "Admin", href: `/${locale}/dashboard/admin`, icon: Shield }] : []),
   ]
 
   return (

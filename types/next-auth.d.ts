@@ -21,5 +21,6 @@ declare module "next-auth/jwt" {
     subscriptionEndsAt?: string | null
     role?: string
     emailVerified?: string | null
+    sessionVersion?: number
   }
 }

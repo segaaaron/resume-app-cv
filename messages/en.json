@@ -364,6 +364,16 @@
       "upgrade": "Upgrade plan",
       "logout": "Log out"
     },
+    "upgrade_cta": {
+      "headline": "Unlock everything with Pro",
+      "subtext": "Unlimited CVs, cover letters, professional PDF export, and access to 100+ premium AI-powered templates.",
+      "price_hint": "From $15/month",
+      "cta_button": "View plans",
+      "pill_unlimited_cvs": "Unlimited CVs",
+      "pill_cover_letters": "Cover letters",
+      "pill_pdf_export": "PDF export",
+      "pill_premium_templates": "Premium templates"
+    },
     "resumes": {
       "title": "My CVs",
       "count_one": "resume",

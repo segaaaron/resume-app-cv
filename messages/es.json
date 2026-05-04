@@ -364,6 +364,16 @@
       "upgrade": "Mejorar plan",
       "logout": "Cerrar sesión"
     },
+    "upgrade_cta": {
+      "headline": "Desbloquea todo con Pro",
+      "subtext": "CVs ilimitados, cartas de presentación, exportación PDF profesional y acceso a más de 100 plantillas premium con IA.",
+      "price_hint": "Desde $15/mes",
+      "cta_button": "Ver planes",
+      "pill_unlimited_cvs": "CVs ilimitados",
+      "pill_cover_letters": "Cartas de presentación",
+      "pill_pdf_export": "Exportación PDF",
+      "pill_premium_templates": "Plantillas premium"
+    },
     "resumes": {
       "title": "Mis CVs",
       "count_one": "currículum",

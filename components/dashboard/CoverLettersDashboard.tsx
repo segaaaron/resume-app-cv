@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import UpgradeCTACard from "./UpgradeCTACard"
 
 interface LetterCard {
   id: string
@@ -64,6 +65,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
   return (
     <div>
+      <UpgradeCTACard />
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>
