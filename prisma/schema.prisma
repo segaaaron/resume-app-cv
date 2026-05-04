@@ -13,7 +13,7 @@ model User {
   emailVerified       DateTime?
   image               String?
   password            String?
-  plan                Plan                 @default(FREE)
+  plan                Plan                 @default(UNSUBSCRIBED)
   trialEndsAt         DateTime?
   role                Role                 @default(USER)
   stripeCustomerId    String?              @unique
@@ -219,6 +219,7 @@ enum AuditAction {
   DATA_EXPORT
   REFUND_ISSUED
   PARTIAL_REFUND
+  DISPUTE_CHARGEBACK
 }
 
 enum Role {
@@ -227,8 +228,7 @@ enum Role {
 }
 
 enum Plan {
-  FREE
-  TRIAL
+  UNSUBSCRIBED
   PRO
 }
 

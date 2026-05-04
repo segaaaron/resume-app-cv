@@ -15,7 +15,7 @@ export default async function CoverLetterPage({ params, searchParams }: { params
     db.coverLetter.findFirst({ where: { id, userId: session.user.id } }),
     db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true, role: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
     }),
     db.resume.findFirst({
       where: { userId: session.user.id },
@@ -27,8 +27,7 @@ export default async function CoverLetterPage({ params, searchParams }: { params
   if (!letter) notFound()
 
   const isPro = isSuperAdmin(user?.role) || isActive(
-    user?.plan ?? "FREE",
-    user?.trialEndsAt ?? null,
+    user?.plan ?? "UNSUBSCRIBED",
     user?.subscriptionEndsAt ?? null,
     user?.subscriptionStatus ?? null,
   )

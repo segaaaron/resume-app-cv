@@ -117,10 +117,10 @@ export default async function PricingPage({
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
     })
     if (dbUser) {
-      userIsPro = isActive(dbUser.plan, dbUser.trialEndsAt, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus)
+      userIsPro = isActive(dbUser.plan, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus)
       subscriptionEndsAt = dbUser.subscriptionEndsAt
     }
   }
@@ -134,7 +134,6 @@ export default async function PricingPage({
     t("feature6"),
     t("feature7"),
     t("feature8"),
-    t("feature9"),
     t("feature10"),
     t("feature11"),
     t("feature12"),
@@ -199,7 +198,7 @@ export default async function PricingPage({
                   </li>
                 ))}
               </ul>
-              <PricingButtons plan="monthly" />
+              <PricingButtons plan="monthly" isPro={userIsPro} />
               <p className="text-xs text-muted-foreground text-center mt-2">{t("cancel_anytime")}</p>
             </div>
 
@@ -223,7 +222,7 @@ export default async function PricingPage({
                   </li>
                 ))}
               </ul>
-              <PricingButtons plan="annual" />
+              <PricingButtons plan="annual" isPro={userIsPro} />
               <p className="text-xs text-white/60 text-center mt-2">{t("cancel_anytime")}</p>
             </div>
           </div>

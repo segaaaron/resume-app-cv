@@ -8,14 +8,20 @@ import { useTranslations } from "next-intl"
 
 interface Props {
   plan: "monthly" | "annual"
+  isPro?: boolean
 }
 
-export default function PricingButtons({ plan }: Props) {
+export default function PricingButtons({ plan, isPro }: Props) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const t = useTranslations("pricing")
 
   async function handleClick() {
+    if (isPro) {
+      window.location.href = "/api/stripe/portal"
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch("/api/stripe/checkout", {
@@ -52,7 +58,7 @@ export default function PricingButtons({ plan }: Props) {
 
   return (
     <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-      {loading ? t("btn_loading") : t("btn_start")}
+      {loading ? t("btn_loading") : isPro ? t("pro_member_manage") : t("btn_start")}
     </Button>
   )
 }

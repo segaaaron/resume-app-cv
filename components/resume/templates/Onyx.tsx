@@ -187,7 +187,7 @@ export default function OnyxTemplate() {
                   }}>
                     <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#fff", marginBottom: 2 }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "9px", color: accent, fontWeight: 600, marginBottom: 3 }}>{proj.role}</p>}
-                    {proj.description && <p style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.65 }}>{proj.description}</p>}
+                    {proj.description && <p className="resume-desc" style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                   </div>
                 ))}
               </div>
@@ -202,7 +202,7 @@ export default function OnyxTemplate() {
                   <div key={vol.id} className="resume-entry">
                     <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#fff" }}>{vol.role}</p>
                     <p style={{ fontSize: "9px", color: accent }}>{vol.organization}</p>
-                    {vol.description && <p style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.65, marginTop: 3 }}>{vol.description}</p>}
+                    {vol.description && <p className="resume-desc" style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.65, marginTop: 3 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />}
                   </div>
                 ))}
               </div>

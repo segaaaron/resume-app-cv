@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
   // Plan limit check
   const user = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } })
-  const limits = getLimits(user?.plan ?? "FREE")
+  const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
   if (limits.maxResumes !== Infinity) {
     const count = await db.resume.count({ where: { userId: session.user.id } })
     if (count >= limits.maxResumes) {

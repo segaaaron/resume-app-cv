@@ -132,7 +132,7 @@ describe("Stripe webhook", () => {
       expect.objectContaining({
         where: { id: "user-3" },
         data: expect.objectContaining({
-          plan: "FREE",
+          plan: "UNSUBSCRIBED",
           subscriptionStatus: "EXPIRED",
         }),
       })

@@ -22,7 +22,7 @@ export async function POST(_req: Request, { params }: Params) {
   if (!original) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
   // Enforce plan limit before duplicating
-  const limits = getLimits(user?.plan ?? "FREE")
+  const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
   if (limits.maxResumes !== Infinity) {
     const count = await db.resume.count({ where: { userId: session.user.id } })
     if (count >= limits.maxResumes) {

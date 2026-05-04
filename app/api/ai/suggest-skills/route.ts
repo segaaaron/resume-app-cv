@@ -5,6 +5,7 @@ import { validateAIInput } from "@/lib/ai-safety"
 import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage } from "@/lib/ai-client"
 import { checkOrigin } from "@/lib/csrf"
 import { z } from "zod"
+import { isActive } from "@/lib/plans"
 
 const schema = z.object({
   jobTitle: z.string().min(1).max(200),
@@ -27,13 +28,7 @@ export async function POST(req: Request) {
   ])
   if (!allowed) return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
 
-  const now = new Date()
-  const hasActiveAccess =
-    user?.plan === "PRO" &&
-    user?.subscriptionStatus === "ACTIVE" &&
-    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
-
-  if (!hasActiveAccess) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
@@ -93,6 +88,10 @@ Rules:
     const result = JSON.parse(content) as { skills?: { name: string; level: string }[] }
 
     if (!Array.isArray(result.skills)) {
+      return NextResponse.json({ skills: [] }, { status: 422 })
+    }
+
+    if (result.skills.length === 0) {
       return NextResponse.json({ skills: [] }, { status: 422 })
     }
 

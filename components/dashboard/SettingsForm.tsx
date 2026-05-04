@@ -128,8 +128,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const intervalLabel = user.planInterval === "annual" ? "Anual" : user.planInterval === "monthly" ? "Mensual" : null
   const planLabel = user.plan === "PRO"
     ? `Pro ${intervalLabel ? `· ${intervalLabel}` : ""}`
-    : user.plan === "TRIAL" ? "Trial" : t("plan_free")
-  const planColor = user.plan === "PRO" ? "bg-amber-100 text-amber-700" : user.plan === "TRIAL" ? "bg-blue-100 text-blue-700" : "bg-gray-100 text-gray-600"
+    : t("plan_free")
+  const planColor = user.plan === "PRO" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"
 
   const isCanceled = subscriptionStatus === "CANCELED"
   const isActive = subscriptionStatus === "ACTIVE"

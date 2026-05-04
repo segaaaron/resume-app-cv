@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { z } from "zod"
 import { ResumeSectionsSchema } from "@/types/resume"
 import { checkOrigin } from "@/lib/csrf"
+import { isActive } from "@/lib/plans"
 
 const MAX_VERSIONS = 10
 
@@ -62,13 +63,7 @@ export async function POST(req: Request) {
     select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
 
-  const now = new Date()
-  const hasActiveAccess =
-    user?.plan === "PRO" &&
-    user?.subscriptionStatus === "ACTIVE" &&
-    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
-
-  if (!hasActiveAccess) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

@@ -119,6 +119,16 @@ import FinanceTerminalTemplate from "./templates/FinanceTerminal"
 import CampaignPosterTemplate from "./templates/CampaignPoster"
 import SalesPitchTemplate from "./templates/SalesPitch"
 import LedgerCVTemplate from "./templates/LedgerCV"
+import CobaltTemplate from "./templates/Cobalt"
+import DualityTemplate from "./templates/Duality"
+import HavanaTemplate from "./templates/Havana"
+import HelixTemplate from "./templates/Helix"
+import LisbonTemplate from "./templates/Lisbon"
+import NauticalTemplate from "./templates/Nautical"
+import ObsidianTemplate from "./templates/Obsidian"
+import PrismTemplate from "./templates/Prism"
+import TokyoTemplate from "./templates/Tokyo"
+import VitaeTemplate from "./templates/Vitae"
 
 const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   classic: ClassicTemplate,
@@ -239,6 +249,16 @@ const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   campaignposter: CampaignPosterTemplate,
   salespitch: SalesPitchTemplate,
   ledgercv: LedgerCVTemplate,
+  cobalt: CobaltTemplate,
+  duality: DualityTemplate,
+  havana: HavanaTemplate,
+  helix: HelixTemplate,
+  lisbon: LisbonTemplate,
+  nautical: NauticalTemplate,
+  obsidian: ObsidianTemplate,
+  prism: PrismTemplate,
+  tokyo: TokyoTemplate,
+  vitae: VitaeTemplate,
 }
 
 // Google Fonts dynamic loader

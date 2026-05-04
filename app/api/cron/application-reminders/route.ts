@@ -16,10 +16,11 @@ export async function GET(req: Request) {
   const endOfDay = new Date(now)
   endOfDay.setHours(23, 59, 59, 999)
 
-  // Find applications with followUpAt today that haven't been reminded yet
+  // Find applications with followUpAt today (within last 24h) that haven't been reminded yet
+  const startOfWindow = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const applications = await db.application.findMany({
     where: {
-      followUpAt: { lte: endOfDay },
+      followUpAt: { gte: startOfWindow, lte: endOfDay },
       reminderSentAt: null,
       user: { emailOptOut: false },
     },

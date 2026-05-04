@@ -42,18 +42,20 @@ export function proxy(request: NextRequest) {
   }
 
   // Strip locale prefix to check the real path (/es/login → /login)
+  const localeMatch = pathname.match(/^\/(es|en)/)
+  const locale = localeMatch ? localeMatch[1] : "es"
   const pathnameWithoutLocale = pathname.replace(/^\/(es|en)/, "") || "/"
 
   const isAuth = getIsAuth(request)
 
   // Redirect logged-in users away from auth pages
   if (authRoutes.some((r) => pathnameWithoutLocale.startsWith(r)) && isAuth) {
-    return NextResponse.redirect(new URL("/es/dashboard/resumes", request.url))
+    return NextResponse.redirect(new URL(`/${locale}/dashboard/resumes`, request.url))
   }
 
   // Redirect unauthenticated users away from protected pages
   if (protectedRoutes.some((r) => pathnameWithoutLocale.startsWith(r)) && !isAuth) {
-    return NextResponse.redirect(new URL("/es/login", request.url))
+    return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
   }
 
   // Apply i18n locale routing for public pages

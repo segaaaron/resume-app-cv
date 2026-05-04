@@ -1,6 +1,7 @@
 import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isActive, isSuperAdmin } from "@/lib/plans"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import PrintLayout from "@/components/resume/PrintLayout"
@@ -11,7 +12,7 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
   if (!session?.user) redirect(`/${locale}/login`)
   const [resume, user] = await Promise.all([
     db.resume.findFirst({ where: { id, userId: session.user.id } }),
-    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true } }),
+    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true } }),
   ])
 
   if (!resume) notFound()
@@ -30,7 +31,11 @@ export default async function PrintPage({ params }: { params: Promise<{ id: stri
     language: (resume.language as ResumeConfig["language"]) ?? "es",
   }
 
-  const isPro = user?.plan === "PRO" && user?.subscriptionStatus === "ACTIVE"
+  const isPro = isSuperAdmin(user?.role) || isActive(
+    user?.plan ?? "UNSUBSCRIBED",
+    user?.subscriptionEndsAt ?? null,
+    user?.subscriptionStatus ?? null,
+  )
 
   return (
     <PrintLayout

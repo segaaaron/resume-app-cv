@@ -3,8 +3,8 @@ import { stripe, stripeEnabled } from "@/lib/stripe"
 import { db } from "@/lib/db"
 import { resend, emailEnabled } from "@/lib/resend"
 import { subscriptionConfirmationHtml, subscriptionConfirmationText } from "@/lib/emails/subscriptionConfirmation"
+import { paymentFailedHtml, paymentFailedText } from "@/lib/emails/paymentFailed"
 import { checkAndApplyReferralReward } from "@/lib/referral-rewards"
-import { generateUnsubscribeToken } from "@/lib/unsubscribe-token"
 import type Stripe from "stripe"
 
 export async function POST(req: Request) {
@@ -68,13 +68,36 @@ export async function POST(req: Request) {
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
+
+        // In Stripe v22, subscription reference moved to invoice.parent.subscription_details.subscription
+        const subDetails = invoice.parent?.type === "subscription_details"
+          ? invoice.parent.subscription_details
+          : null
+        const subscriptionId = subDetails
+          ? typeof subDetails.subscription === "string"
+            ? subDetails.subscription
+            : (subDetails.subscription as Stripe.Subscription | null)?.id ?? null
+          : null
+        if (!subscriptionId) break
+
         const user = await db.user.findFirst({
           where: { stripeCustomerId: customerId },
-          select: { id: true, name: true, email: true, planInterval: true },
+          select: { id: true, name: true, email: true, planInterval: true, subscriptionStatus: true },
         })
         if (!user) break
 
-        const renewalDate = new Date(invoice.period_end * 1000)
+        // In Stripe v22, current_period_end moved from Subscription to SubscriptionItem.
+        // invoice.period_end is unreliable (covers usage period, not next renewal).
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+          expand: ["items"],
+        })
+        const firstItem = subscription.items.data[0]
+        if (!firstItem) break
+        const renewalDate = new Date(firstItem.current_period_end * 1000)
+
+        // Don't overwrite CANCELED status — user may have canceled immediately after purchase
+        // and customer.subscription.updated (CANCELED) may have arrived before invoice.paid
+        const newStatus = user.subscriptionStatus === "CANCELED" ? "CANCELED" : "ACTIVE"
 
         await db.user.update({
           where: { id: user.id },
@@ -82,7 +105,7 @@ export async function POST(req: Request) {
             plan: "PRO",
             trialEndsAt: null,
             subscriptionEndsAt: renewalDate,
-            subscriptionStatus: "ACTIVE",
+            subscriptionStatus: newStatus,
           },
         })
 
@@ -118,7 +141,12 @@ export async function POST(req: Request) {
 
         if (sub.cancel_at_period_end) {
           // Cancellation scheduled — user keeps access until subscriptionEndsAt (set by invoice.paid)
-          const cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000) : undefined
+          let cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000) : undefined
+          if (!cancelAt) {
+            // Fallback: use current period end from subscription items if cancel_at is null
+            const periodEnd = sub.items.data[0]?.current_period_end
+            if (periodEnd) cancelAt = new Date(periodEnd * 1000)
+          }
           await db.user.update({
             where: { id: user.id },
             data: {
@@ -128,10 +156,14 @@ export async function POST(req: Request) {
           })
           await db.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { cancelAt: cancelAt?.toISOString() } } })
         } else if (sub.status === "active") {
-          // Cancellation reversed or subscription renewed
+          // Cancellation reversed or plan change — sync period end from subscription items
+          const periodEnd = sub.items.data[0]?.current_period_end
           await db.user.update({
             where: { id: user.id },
-            data: { subscriptionStatus: "ACTIVE" },
+            data: {
+              subscriptionStatus: "ACTIVE",
+              ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}),
+            },
           })
         }
         break
@@ -145,7 +177,7 @@ export async function POST(req: Request) {
           await db.user.update({
             where: { id: user.id },
             data: {
-              plan: "FREE",
+              plan: "UNSUBSCRIBED",
               trialEndsAt: null,
               subscriptionId: null,
               subscriptionEndsAt: null,
@@ -181,7 +213,7 @@ export async function POST(req: Request) {
           await db.user.update({
             where: { id: user.id },
             data: {
-              plan: "FREE",
+              plan: "UNSUBSCRIBED",
               subscriptionId: null,
               subscriptionEndsAt: null,
               subscriptionStatus: "EXPIRED",
@@ -198,6 +230,46 @@ export async function POST(req: Request) {
         break
       }
 
+      case "charge.dispute.created": {
+        const dispute = event.data.object as Stripe.Dispute
+        const customerId = typeof dispute.charge === "string"
+          ? null
+          : (dispute.charge as Stripe.Charge | null)?.customer as string | null
+        const chargeId = typeof dispute.charge === "string" ? dispute.charge : (dispute.charge as Stripe.Charge | null)?.id ?? null
+
+        // Resolve customerId from charge if not expanded
+        let resolvedCustomerId = customerId
+        if (!resolvedCustomerId && chargeId) {
+          const charge = await stripe.charges.retrieve(chargeId)
+          resolvedCustomerId = charge.customer as string | null
+        }
+        if (!resolvedCustomerId) break
+
+        const user = await db.user.findFirst({
+          where: { stripeCustomerId: resolvedCustomerId },
+          select: { id: true },
+        })
+        if (user) {
+          await db.user.update({
+            where: { id: user.id },
+            data: {
+              plan: "UNSUBSCRIBED",
+              subscriptionId: null,
+              subscriptionEndsAt: null,
+              subscriptionStatus: "EXPIRED",
+            },
+          })
+          await db.auditLog.create({
+            data: {
+              userId: user.id,
+              action: "DISPUTE_CHARGEBACK",
+              metadata: { disputeId: dispute.id, chargeId, amount: dispute.amount, reason: dispute.reason },
+            },
+          })
+        }
+        break
+      }
+
       case "invoice.payment_failed": {
         const invoice = event.data.object as Stripe.Invoice
         const customerId = invoice.customer as string
@@ -206,11 +278,14 @@ export async function POST(req: Request) {
           select: { id: true, name: true, email: true },
         })
         if (user) {
-          // Grace period: set PAST_DUE + extend subscriptionEndsAt 3 days so isActive() allows access
-          const gracePeriodEnd = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
           await db.user.update({
             where: { id: user.id },
-            data: { subscriptionStatus: "PAST_DUE", subscriptionEndsAt: gracePeriodEnd },
+            data: {
+              plan: "UNSUBSCRIBED",
+              subscriptionId: null,
+              subscriptionEndsAt: null,
+              subscriptionStatus: "EXPIRED",
+            },
           })
 
           if (emailEnabled() && resend && user.email) {
@@ -219,16 +294,8 @@ export async function POST(req: Request) {
               from: "READY CV <no-reply@readycvv.com>",
               to: user.email,
               subject: "Acción requerida: problema con tu pago en READY CV",
-              html: `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head><body style="font-family:sans-serif;background:#f4f6f8;padding:40px 0;">
-<table width="580" style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;">
-<tr><td><h2 style="color:#dc2626;">Problema con tu pago</h2>
-<p>Hola <strong>${firstName}</strong>,</p>
-<p>No pudimos procesar el pago de tu suscripción a READY CV. Tienes <strong>3 días</strong> para actualizar tu método de pago antes de que tu acceso Pro sea suspendido.</p>
-<p><a href="https://www.readycvv.com/dashboard/settings" style="display:inline-block;background:#2a72d7;color:#fff;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:600;">Actualizar método de pago</a></p>
-<p style="color:#6b7280;font-size:13px;">Si ya actualizaste tu tarjeta, puedes ignorar este mensaje.</p>
-<p style="font-size:12px;color:#9ca3af;margin-top:32px;">Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(user.id)}&t=${generateUnsubscribeToken(user.id)}">cancela tu suscripción a emails aquí</a>.</p>
-</td></tr></table></body></html>`,
-              text: `Hola ${firstName},\n\nNo pudimos procesar el pago de tu suscripción a READY CV. Tienes 3 días para actualizar tu método de pago.\n\nActualiza en: https://www.readycvv.com/dashboard/settings\n\n© ${new Date().getFullYear()} READY CV`,
+              html: paymentFailedHtml({ firstName, userId: user.id }),
+              text: paymentFailedText({ firstName }),
             }).catch(() => {})
           }
         }

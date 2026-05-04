@@ -93,7 +93,7 @@ export async function POST(req: Request) {
   await db.user.update({
     where: { id: userId },
     data: {
-      plan: "FREE",
+      plan: "UNSUBSCRIBED",
       subscriptionId: null,
       subscriptionEndsAt: null,
       subscriptionStatus: "EXPIRED",

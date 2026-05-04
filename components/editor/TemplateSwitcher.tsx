@@ -1070,6 +1070,16 @@ function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "campaignposter":        return <CampaignPosterThumb color={color} />
     case "salespitch":            return <SalesPitchThumb color={color} />
     case "ledgercv":              return <LedgerCVThumb color={color} />
+    case "cobalt":         return <CobaltThumb color={color} />
+    case "duality":        return <DualityThumb color={color} />
+    case "havana":         return <HavanaThumb color={color} />
+    case "helix":          return <HelixThumb color={color} />
+    case "lisbon":         return <LisbonThumb color={color} />
+    case "nautical":       return <NauticalThumb color={color} />
+    case "obsidian":       return <ObsidianThumb color={color} />
+    case "prism":          return <PrismThumb color={color} />
+    case "tokyo":          return <TokyoThumb color={color} />
+    case "vitae":          return <VitaeThumb color={color} />
     default:             return <ClassicThumb color={color} />
   }
 }
@@ -2531,7 +2541,245 @@ function LedgerCVThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fafaf8" /><rect x="0" y="0" width="80" height="12" fill="#f0ece0" /><rect x="4" y="4" width="40" height="4" rx="0.5" fill="#222" opacity="0.7" /><rect x="0" y="12" width="80" height="1.5" fill="#333" opacity="0.5" /><rect x="0" y="14" width="80" height="0.5" fill="#333" opacity="0.5" />{[0,1,2,3,4,5,6,7].map(i=><g key={i}><rect x="0" y={18+i*10} width="80" height="10" fill={i%2===0?"#f8f6ee":"#fff"} /><rect x="4" y={20+i*10} width="16" height="2" rx="0.3" fill="#888" opacity="0.5" /><rect x="22" y={20+i*10} width="26" height="2" rx="0.3" fill="#333" opacity="0.5" /><rect x="52" y={20+i*10} width="10" height="2" rx="0.3" fill={color} opacity="0.5" /><rect x="65" y={20+i*10} width="10" height="2" rx="0.3" fill="#888" opacity="0.4" /></g>)}<rect x="0" y="98" width="80" height="1.5" fill="#333" opacity="0.7" /><rect x="0" y="100" width="80" height="0.5" fill="#333" opacity="0.7" /><rect x="52" y="102" width="10" height="3" rx="0.5" fill={color} opacity="0.8" /></svg>)
 }
 
-const PRO_IDS = ["aurora", "lumiere", "consul", "rose", "minimal", "wave", "banner", "vertex", "prestige", "kyoto", "geneva", "windsor", "vienna", "berlin", "seoul", "copenhagen", "genevanoir", "reykjavik", "apex", "nova", "cascade", "onyx", "mosaic", "larsson", "thompson", "classicmono", "editorialserif", "boldblock", "timelinevertical", "swissgrid", "charcoalclassic", "navyexecutive", "coralsidebar", "neobrutalist", "sagebotanical", "terminalcv", "iosappcv", "datadriven", "boardingpass", "magazinespread", "legalbrief", "engraved", "chalkboard", "academiccv", "psychologist", "chefmenu", "sommelier", "hotelcv", "bartendercv", "postcardcv", "frontpage", "vinylcv", "callsheet", "copywritermag", "animatorcv", "codeeditor", "civileng", "mechanical", "devopsterminal", "processflow", "pilotlog", "onboardingform", "athletecard", "translatorcv", "herbariumcv", "risodesigner", "uxtokens", "sketchbookillustrator", "blueprintcv", "contactsheet", "annualreport", "financeterminal", "campaignposter", "salespitch", "ledgercv", "neon", "medicalchart", "vitalsigns", "vetcv", "fieldjournal", "sharp", "bauhaus"]
+function CobaltThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#0d2137" />
+      <circle cx="13" cy="18" r="8" fill={color} opacity="0.8" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.7" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#222" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="20" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="23" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="26" width="40" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="32" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="36" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="39" width="40" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="47" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="51" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="54" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+function DualityThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="54" y="0" width="26" height="110" fill="#2a5298" />
+      <rect x="6" y="8" width="40" height="3" rx="0.5" fill="#222" />
+      <rect x="6" y="13" width="28" height="1.5" rx="0.5" fill="#555" />
+      <rect x="6" y="20" width="18" height="1.5" rx="0.5" fill={color} />
+      <rect x="6" y="24" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="6" y="27" width="40" height="1" rx="0.3" fill="#999" />
+      <rect x="6" y="30" width="42" height="1" rx="0.3" fill="#999" />
+      <rect x="6" y="36" width="18" height="1.5" rx="0.5" fill={color} />
+      <rect x="6" y="40" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="6" y="43" width="38" height="1" rx="0.3" fill="#999" />
+      <circle cx="67" cy="18" r="8" fill="#ffffff40" />
+      <rect x="57" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.7" />
+      <rect x="57" y="33" width="16" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="57" y="40" width="18" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="57" y="43" width="14" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+    </svg>
+  )
+}
+
+function HavanaThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#c0645a" />
+      <circle cx="13" cy="18" r="8" fill="#ffffff40" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.8" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="0" y="0" width="80" height="10" fill="#c0645a" opacity="0.3" />
+      <rect x="30" y="12" width="44" height="3" rx="0.5" fill="#222" />
+      <rect x="30" y="17" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="25" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="29" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="32" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="39" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="43" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="46" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+function HelixThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#0d1117" />
+      <circle cx="13" cy="18" r="7" fill="none" stroke={color} strokeWidth="1.5" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill={color} opacity="0.9" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.4" />
+      <rect x="3" y="58" width="18" height="1" rx="0.5" fill={color} opacity="0.6" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#222" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="20" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="24" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="27" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="34" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="38" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="41" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+function LisbonThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill={color} opacity="0.9" />
+      <circle cx="13" cy="18" r="8" fill="#ffffff40" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.9" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.7" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#222" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="20" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="24" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="27" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="34" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="38" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="41" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+function NauticalThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#1e3a5f" />
+      <circle cx="13" cy="18" r="8" fill="none" stroke="#fff" strokeWidth="1.5" />
+      <circle cx="13" cy="18" r="6" fill="#ffffff20" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.8" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#1e3a5f" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="20" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="24" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="27" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="34" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="38" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="41" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+function ObsidianThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#1a1a2e" />
+      <rect x="0" y="0" width="80" height="30" fill="#16213e" />
+      <circle cx="40" cy="15" r="8" fill={color} opacity="0.5" />
+      <rect x="10" y="33" width="60" height="3" rx="0.5" fill="#fff" opacity="0.8" />
+      <rect x="20" y="38" width="40" height="1.5" rx="0.5" fill={color} opacity="0.7" />
+      <rect x="6" y="47" width="68" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+      <rect x="6" y="50" width="55" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+      <rect x="6" y="53" width="60" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+      <rect x="6" y="60" width="30" height="1.5" rx="0.5" fill={color} opacity="0.7" />
+      <rect x="6" y="64" width="68" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+      <rect x="6" y="67" width="55" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+      <rect x="6" y="75" width="30" height="1.5" rx="0.5" fill={color} opacity="0.7" />
+      <rect x="6" y="79" width="68" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+      <rect x="6" y="82" width="60" height="1" rx="0.3" fill="#fff" opacity="0.3" />
+    </svg>
+  )
+}
+
+function PrismThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#1b2a3b" />
+      <circle cx="13" cy="18" r="8" fill={color} opacity="0.7" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.8" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill={color} opacity="0.6" />
+      <rect x="3" y="45" width="20" height="1" rx="0.5" fill="#fff" opacity="0.3" />
+      <rect x="3" y="49" width="20" height="1" rx="0.5" fill="#fff" opacity="0.3" />
+      <rect x="3" y="53" width="16" height="1" rx="0.5" fill="#fff" opacity="0.3" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#222" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="20" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="24" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="27" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="34" width="20" height="1.5" rx="0.5" fill={color} />
+      <rect x="30" y="38" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="41" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+function TokyoThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#0D0D0D" />
+      <circle cx="13" cy="18" r="7" fill={color} opacity="0.6" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.8" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill={color} opacity="0.7" />
+      <rect x="3" y="46" width="20" height="1" rx="0.5" fill="#fff" opacity="0.3" />
+      <rect x="3" y="50" width="16" height="1" rx="0.5" fill="#fff" opacity="0.3" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#111" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill={color} opacity="0.8" />
+      <rect x="30" y="19" width="20" height="1" rx="0.5" fill="#888" />
+      <rect x="30" y="24" width="44" height="1" rx="0.3" fill="#bbb" />
+      <rect x="30" y="27" width="38" height="1" rx="0.3" fill="#bbb" />
+      <rect x="30" y="32" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
+      <rect x="30" y="36" width="44" height="1" rx="0.3" fill="#bbb" />
+      <rect x="30" y="39" width="36" height="1" rx="0.3" fill="#bbb" />
+      <rect x="30" y="45" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
+      <rect x="30" y="49" width="44" height="1" rx="0.3" fill="#bbb" />
+    </svg>
+  )
+}
+
+function VitaeThumb({ color }: { color: string }) {
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#fff" />
+      <rect x="0" y="0" width="26" height="110" fill="#1e2d3d" />
+      <circle cx="13" cy="18" r="8" fill="#ffffff30" />
+      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.8" />
+      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.6" />
+      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.5" />
+      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#222" />
+      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
+      <rect x="30" y="19" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="25" width="20" height="2" rx="1" fill={color} opacity="0.8" />
+      <rect x="30" y="29" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="32" width="38" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="39" width="20" height="2" rx="1" fill={color} opacity="0.8" />
+      <rect x="30" y="43" width="44" height="1" rx="0.3" fill="#999" />
+      <rect x="30" y="46" width="36" height="1" rx="0.3" fill="#999" />
+    </svg>
+  )
+}
+
+const PRO_IDS = ["aurora", "lumiere", "consul", "rose", "minimal", "wave", "banner", "vertex", "prestige", "kyoto", "geneva", "windsor", "vienna", "berlin", "seoul", "copenhagen", "genevanoir", "reykjavik", "apex", "nova", "cascade", "onyx", "mosaic", "larsson", "thompson", "classicmono", "editorialserif", "boldblock", "timelinevertical", "swissgrid", "charcoalclassic", "navyexecutive", "coralsidebar", "neobrutalist", "sagebotanical", "terminalcv", "iosappcv", "datadriven", "boardingpass", "magazinespread", "legalbrief", "engraved", "chalkboard", "academiccv", "psychologist", "chefmenu", "sommelier", "hotelcv", "bartendercv", "postcardcv", "frontpage", "vinylcv", "callsheet", "copywritermag", "animatorcv", "codeeditor", "civileng", "mechanical", "devopsterminal", "processflow", "pilotlog", "onboardingform", "athletecard", "translatorcv", "herbariumcv", "risodesigner", "uxtokens", "sketchbookillustrator", "blueprintcv", "contactsheet", "annualreport", "financeterminal", "campaignposter", "salespitch", "ledgercv", "neon", "medicalchart", "vitalsigns", "vetcv", "fieldjournal", "sharp", "bauhaus", "cobalt", "duality", "havana", "helix", "lisbon", "nautical", "obsidian", "prism", "tokyo", "vitae"]
 
 const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
 const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
@@ -2540,11 +2788,10 @@ interface Props {
   plan: string
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
-  trialEndsAt?: string | null
   role?: string
 }
 
-export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
+export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role }: Props) {
   const t = useTranslations("editor")
   const { config, setTemplateWithAdapt } = useResumeStore()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
@@ -2552,7 +2799,6 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
-    trialEndsAt ? new Date(trialEndsAt) : null,
     subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
     subscriptionStatus
   )

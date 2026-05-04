@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { renderToPdf } from "@/lib/pdf/render-page"
 import { checkRateLimit } from "@/lib/ai-client"
+import { isActive } from "@/lib/plans"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -29,13 +30,7 @@ export async function GET(req: Request, { params }: Params) {
 
   if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
 
-  const now = new Date()
-  const hasActiveAccess =
-    user?.plan === "PRO" &&
-    user?.subscriptionStatus === "ACTIVE" &&
-    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
-
-  if (!hasActiveAccess) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

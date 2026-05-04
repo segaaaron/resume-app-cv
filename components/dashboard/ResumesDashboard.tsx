@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
@@ -44,6 +45,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { update } = useSession()
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -57,6 +59,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       const url = new URL(window.location.href)
       url.searchParams.delete("upgraded")
       window.history.replaceState({}, "", url.toString())
+      // Force session refresh so JWT cache is invalidated and plan=PRO is loaded
+      update().then(() => router.refresh())
     }
   }, [searchParams])
 

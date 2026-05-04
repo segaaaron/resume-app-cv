@@ -275,6 +275,16 @@ export type TemplateId =
   | "campaignposter"
   | "salespitch"
   | "ledgercv"
+  | "cobalt"
+  | "duality"
+  | "havana"
+  | "helix"
+  | "lisbon"
+  | "nautical"
+  | "obsidian"
+  | "prism"
+  | "tokyo"
+  | "vitae"
 
 export interface ResumeConfig {
   templateId: TemplateId
@@ -337,6 +347,16 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "stripe", name: "Stripe", description: "Banda de color completa con foto, dos columnas abajo", columns: "double", hasPhoto: true },
   { id: "vogue", name: "Vogue", description: "Nombre gigante estilo editorial, foto cuadrada en header", columns: "double", hasPhoto: true },
   { id: "coral", name: "Coral", description: "Header centrado con foto, acento lateral en secciones", columns: "double", hasPhoto: true },
+  { id: "cobalt",   name: "Cobalt ⭐",   description: "Sidebar navy oscuro, tipografía creativa, foto circular, ideal para diseñadores", columns: "double", hasPhoto: true },
+  { id: "duality",  name: "Duality ⭐",  description: "Sidebar derecho elegante, foto panorámica, layout bipartito limpio", columns: "double", hasPhoto: true },
+  { id: "havana",   name: "Havana ⭐",   description: "Sidebar terracota con degradado, banda de nombre full-width, foto circular", columns: "double", hasPhoto: true },
+  { id: "helix",    name: "Helix ⭐",    description: "Sidebar oscuro hexagonal SVG, progreso circular SVG, ideal para perfiles técnicos", columns: "double", hasPhoto: true },
+  { id: "lisbon",   name: "Lisbon ⭐",   description: "Sidebar con degradado accent, foto hexagonal, iconos geométricos por sección", columns: "double", hasPhoto: true },
+  { id: "nautical", name: "Nautical ⭐", description: "Sidebar navy marino, estética náutica clásica, foto circular con marco", columns: "double", hasPhoto: true },
+  { id: "obsidian", name: "Obsidian ⭐", description: "Una columna oscura con photo header panorámica, estética dark premium", columns: "single", hasPhoto: true },
+  { id: "prism",    name: "Prism ⭐",    description: "Sidebar navy profundo, foto circular, iconos de hobbies, estilo David Martin", columns: "double", hasPhoto: true },
+  { id: "tokyo",    name: "Tokyo ⭐",    description: "Sidebar casi negro, círculos accent, labels uppercase con puntos decorativos", columns: "double", hasPhoto: true },
+  { id: "vitae",    name: "Vitae ⭐",    description: "Sidebar navy clásico, foto circular, section headers con tab ovalado accent", columns: "double", hasPhoto: true },
   { id: "aurora",  name: "Aurora ✦",  description: "Header fluido con ola SVG, arcos decorativos, diseño orgánico para creativos", columns: "double", hasPhoto: false },
   { id: "lumiere", name: "Lumière ✦", description: "Art Deco de lujo con ornamentos SVG simétricos, para ejecutivos y directivos", columns: "double", hasPhoto: false },
   { id: "consul",  name: "Consul",    description: "Sidebar azul con nombre apilado, foto circular y secciones con línea inferior", columns: "double", hasPhoto: true },

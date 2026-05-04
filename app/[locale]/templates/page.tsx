@@ -25,9 +25,9 @@ const jsonLdItemList = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   name: "Professional Resume Templates — ReadyCV",
-  description: "111+ ATS-optimized professional resume templates for every industry",
+  description: "129+ ATS-optimized professional resume templates for every industry",
   url: "https://readycvv.com/templates",
-  numberOfItems: 111,
+  numberOfItems: 129,
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://readycvv.com/templates#featured" },
     { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://readycvv.com/templates#city" },
@@ -140,6 +140,14 @@ const TEMPLATE_VISUALS: Record<string, {
   lumiere:      { bg: "#faf9f7", accent: "#b45309", headerBg: "#fff",     headerText: "#1a1a1a", style: "minimal" },
   prism:        { bg: "#fff",    accent: "#29b6d8", headerBg: "#1b2a3b",  headerText: "#29b6d8", style: "sidebar",   tag: "Foto" },
   consul:       { bg: "#fff",    accent: "#2563eb", headerBg: "#2563eb",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  cobalt:   { bg: "#fff",    accent: "#2a72d7", headerBg: "#0d2137",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  duality:  { bg: "#fff",    accent: "#2a5298", headerBg: "#2a5298",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  havana:   { bg: "#fff",    accent: "#c0645a", headerBg: "#c0645a",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  lisbon:   { bg: "#fff",    accent: "#2a72d7", headerBg: "#2a72d7",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  nautical: { bg: "#fff",    accent: "#1e3a5f", headerBg: "#1e3a5f",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  obsidian: { bg: "#1a1a2e", accent: "#7c3aed", headerBg: "#1a1a2e",  headerText: "#fff",    style: "dark",      tag: "Foto" },
+  tokyo:    { bg: "#fff",    accent: "#0D0D0D", headerBg: "#0D0D0D",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  vitae:    { bg: "#fff",    accent: "#1e2d3d", headerBg: "#1e2d3d",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
 }
 
 function TemplatePreview({ id, visual }: { id: string; visual: typeof TEMPLATE_VISUALS[string] }) {
@@ -309,7 +317,7 @@ export default async function TemplatesPage({
     ? await import("@/lib/db").then(({ db }) =>
         db.user.findUnique({
           where: { id: session.user.id },
-          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true, role: true },
+          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
         })
       )
     : null
@@ -318,16 +326,15 @@ export default async function TemplatesPage({
     ? isSuperAdmin(dbUser.role) ||
       isActive(
         dbUser.plan,
-        dbUser.trialEndsAt,
         dbUser.subscriptionEndsAt,
         dbUser.subscriptionStatus
       )
     : false
 
-  const PRO_IDS = ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical","terminalcv","iosappcv","datadriven","boardingpass","magazinespread","legalbrief","engraved","chalkboard","academiccv","psychologist","chefmenu","sommelier","hotelcv","bartendercv","postcardcv","frontpage","vinylcv","callsheet","copywritermag","animatorcv","codeeditor","civileng","mechanical","devopsterminal","processflow","pilotlog","onboardingform","athletecard","translatorcv","herbariumcv","risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","annualreport","financeterminal","campaignposter","salespitch","ledgercv","neon","medicalchart","vitalsigns","vetcv","fieldjournal","sharp","bauhaus"]
+  const PRO_IDS = ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical","terminalcv","iosappcv","datadriven","boardingpass","magazinespread","legalbrief","engraved","chalkboard","academiccv","psychologist","chefmenu","sommelier","hotelcv","bartendercv","postcardcv","frontpage","vinylcv","callsheet","copywritermag","animatorcv","codeeditor","civileng","mechanical","devopsterminal","processflow","pilotlog","onboardingform","athletecard","translatorcv","herbariumcv","risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","annualreport","financeterminal","campaignposter","salespitch","ledgercv","neon","medicalchart","vitalsigns","vetcv","fieldjournal","sharp","bauhaus","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"]
 
   const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
-    { key: "featured", label: "Destacados", ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid"] },
+    { key: "featured", label: "Destacados", ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"] },
     { key: "city", label: "Ciudad", ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
     { key: "creative", label: "Creative", ids: ["risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical"] },
     { key: "business", label: "Business", ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","boardingpass","magazinespread","terminalcv","iosappcv"] },

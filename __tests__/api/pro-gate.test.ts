@@ -67,7 +67,7 @@ describe("Pro gate — improve-bullet route", () => {
 
   it("FREE plan → 403", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } })
-    mockFindUnique.mockResolvedValue({ plan: "FREE", subscriptionStatus: null, subscriptionEndsAt: null })
+    mockFindUnique.mockResolvedValue({ plan: "UNSUBSCRIBED", subscriptionStatus: null, subscriptionEndsAt: null })
     const res = await callHandler(makeRequest())
     expect(res.status).toBe(403)
   })

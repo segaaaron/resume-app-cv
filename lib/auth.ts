@@ -53,11 +53,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id
         // Invalidate cache on new login so stale data is never used
         if (user.id) userPlanCache.delete(user.id)
+      }
+      // On explicit session update (e.g. post-purchase refresh), bypass cache
+      if (trigger === "update") {
+        const uid = token.id as string | undefined
+        if (uid) userPlanCache.delete(uid)
       }
       const userId = (token.id ?? user?.id) as string | undefined
       if (userId) {

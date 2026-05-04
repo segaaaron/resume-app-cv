@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isActive } from "@/lib/plans"
 import {
   Document,
   Packer,
@@ -26,13 +27,7 @@ export async function GET(req: Request) {
     select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
 
-  const now = new Date()
-  const hasActiveAccess =
-    user?.plan === "PRO" &&
-    user?.subscriptionStatus === "ACTIVE" &&
-    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
-
-  if (!hasActiveAccess) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

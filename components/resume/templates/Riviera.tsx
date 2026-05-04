@@ -199,7 +199,7 @@ export default function RivieraTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{edu.description}</p>
+                      <p className="resume-desc text-[11px] text-gray-500 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -215,7 +215,7 @@ export default function RivieraTemplate() {
                     <h4 className="font-bold text-[12px] text-gray-900">{proj.name}</h4>
                     {proj.role && <p className="text-[11px] font-semibold" style={{ color }}>{proj.role}</p>}
                     {proj.description && (
-                      <p className="text-[11px] text-gray-600 leading-relaxed">{proj.description}</p>
+                      <p className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}

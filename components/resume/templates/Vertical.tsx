@@ -177,7 +177,7 @@ export default function VerticalTemplate() {
                     )}
                   </div>
                   {proj.role && <p className="text-xs text-gray-500">{proj.role}</p>}
-                  {proj.description && <p className="text-xs text-gray-600 mt-0.5">{proj.description}</p>}
+                  {proj.description && <p className="resume-desc text-xs text-gray-600 mt-0.5" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                 </div>
               ))}
             </div>

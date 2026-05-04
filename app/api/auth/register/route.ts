@@ -7,6 +7,7 @@ import { DEFAULT_SECTIONS } from "@/types/resume"
 import { nanoid } from "nanoid"
 import { resend, emailEnabled } from "@/lib/resend"
 import { verifyEmailHtml, verifyEmailText } from "@/lib/emails/verifyEmail"
+import { checkOrigin } from "@/lib/csrf"
 
 // Simple in-memory rate limiter: max 5 attempts per IP per 15 minutes
 const attempts = new Map<string, { count: number; resetAt: number }>()
@@ -38,6 +39,8 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
   if (!checkRateLimit(ip)) {
     return NextResponse.json(

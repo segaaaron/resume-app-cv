@@ -195,7 +195,7 @@ export default function MechanicalTemplate() {
               {projects.map((proj) => (
                 <p key={proj.id} style={{ margin: "0 0 6px", fontSize: 11, lineHeight: 1.6 }}>
                   <b>{proj.name}</b>{proj.url ? ` — ${proj.url}` : ""}
-                  {proj.description ? <><br /><span style={{ color: "#555", fontSize: 10 }}>{proj.description}</span></> : null}
+                  {proj.description ? <><br /><span className="resume-desc" style={{ color: "#555", fontSize: 10 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} /></> : null}
                 </p>
               ))}
             </>

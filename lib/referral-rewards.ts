@@ -21,7 +21,7 @@ import { referralRewardHtml, referralRewardText } from "@/lib/emails/referralRew
 export const REFERRAL_TIERS = [
   { tier: 1, threshold: 3,  label: "30% descuento", creditCents: 450 }, // 30% of $15
   { tier: 2, threshold: 5,  label: "50% descuento", creditCents: 300 }, // +20% → 50% total
-  { tier: 3, threshold: 9,  label: "1 mes gratis",  creditCents: 750 }, // +50% → 100% total ($15)
+  { tier: 3, threshold: 10, label: "1 mes gratis",  creditCents: 750 }, // +50% → 100% total ($15)
 ] as const
 
 export type RewardTier = 0 | 1 | 2 | 3
@@ -92,6 +92,7 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
           tierDef.creditCents,
           tierDef.tier,
           tierDef.label,
+          referrer.id,
         )
       }
     }
@@ -204,6 +205,7 @@ async function applyStripeCredit(
   amountCents: number,
   tier: number,
   label: string,
+  referrerId: string,
 ): Promise<void> {
   if (!stripeEnabled() || !stripe || !stripeCustomerId) return
   try {
@@ -212,8 +214,10 @@ async function applyStripeCredit(
       currency: "usd",
       description: `Recompensa por referidos — Tier ${tier} (${label})`,
     })
-  } catch {
-    // silently ignore
+  } catch (err) {
+    // Log Stripe credit failure — REFERRAL_CREDIT_FAILED not yet in AuditAction enum,
+    // so we write to server logs until a migration adds it.
+    console.error("[referral-rewards] Stripe credit failed", { referrerId, tier, error: String(err) })
   }
 }
 

@@ -22,12 +22,11 @@ export async function GET(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true, role: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
   })
 
   const isPro = isSuperAdmin(user?.role) || isActive(
-    user?.plan ?? "FREE",
-    user?.trialEndsAt ?? null,
+    user?.plan ?? "UNSUBSCRIBED",
     user?.subscriptionEndsAt ?? null,
     user?.subscriptionStatus ?? null,
   )

@@ -1,22 +1,22 @@
 {
   "metadata": {
     "home": {
-      "title": "ReadyCV — Best AI Resume Builder | Beat ATS, 111+ Templates",
-      "description": "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. Try ReadyCV Pro from $15/month.",
-      "og_title": "ReadyCV — Best AI Resume Builder | Beat ATS, 111+ Templates",
-      "og_description": "Build your resume with AI in minutes. 111+ professional templates, ATS Score, automatic cover letters and application tracker. Pro plan from $15/month."
+      "title": "ReadyCV — Best AI Resume Builder | Beat ATS, 129+ Templates",
+      "description": "Build an ATS-optimized resume with AI in minutes. 129+ professional templates, cover letter generator, job application tracker. Try ReadyCV Pro from $15/month.",
+      "og_title": "ReadyCV — Best AI Resume Builder | Beat ATS, 129+ Templates",
+      "og_description": "Build your resume with AI in minutes. 129+ professional templates, ATS Score, automatic cover letters and application tracker. Pro plan from $15/month."
     },
     "templates": {
-      "title": "AI Resume Templates — 111+ ATS-Friendly Designs | ReadyCV",
-      "description": "Explore 111+ professional ATS-friendly resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
-      "og_title": "111+ Professional AI Resume Templates — ReadyCV",
-      "og_description": "Choose from 111+ ATS-optimized resume templates for every industry. Unique designs, ready in minutes, download as PDF."
+      "title": "AI Resume Templates — 129+ ATS-Friendly Designs | ReadyCV",
+      "description": "Explore 129+ professional ATS-friendly resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
+      "og_title": "129+ Professional AI Resume Templates — ReadyCV",
+      "og_description": "Choose from 129+ ATS-optimized resume templates for every industry. Unique designs, ready in minutes, download as PDF."
     },
     "pricing": {
       "title": "ReadyCV Pricing — Pro Plan $15/month | AI Resume Builder",
-      "description": "111+ premium templates, unlimited resumes, 7 AI tools, ATS Score, AI cover letters and application tracker. Everything in one Pro plan. Cheaper than Zety or Resume.io.",
+      "description": "129+ premium templates, unlimited resumes, 7 AI tools, ATS Score, AI cover letters and application tracker. Everything in one Pro plan. Cheaper than Zety or Resume.io.",
       "og_title": "ReadyCV Pricing — Pro Plan from $15/month",
-      "og_description": "One Pro plan to get hired: 111+ templates, AI, ATS Score, cover letters. From $15/month — cheaper than the competition. Cancel anytime."
+      "og_description": "One Pro plan to get hired: 129+ templates, AI, ATS Score, cover letters. From $15/month — cheaper than the competition. Cancel anytime."
     },
     "pro_designs": {
       "title": "Pro Designs — READY CV",
@@ -92,7 +92,7 @@
     "rating": "Trusted by thousands of professionals",
     "title": "Build the CV that gets",
     "title_highlight": "the interview",
-    "subtitle": "READY CV combines 128 professional templates with 7 AI tools and ATS analysis so your resume reaches real humans — not just algorithms.",
+    "subtitle": "READY CV combines 129 professional templates with 7 AI tools and ATS analysis so your resume reaches real humans — not just algorithms.",
     "cta_primary": "Create my CV",
     "cta_secondary": "View templates",
     "no_credit_card": "No credit card required",
@@ -105,7 +105,7 @@
     "step1_title": "Enter your details",
     "step1_desc": "Fill in the relevant sections: experience, education, skills and more. AI helps you write every part.",
     "step2_title": "Choose your template",
-    "step2_desc": "Customize with one of our 128 professional templates for your industry and style.",
+    "step2_desc": "Customize with one of our 129 professional templates for your industry and style.",
     "step3_title": "Download your CV",
     "step3_desc": "Export as PDF or Word, analyze your ATS compatibility, and apply with confidence."
   },
@@ -116,7 +116,7 @@
     "cv_desc": "Create unlimited CVs with our real-time editor. Switch templates anytime without losing a single data point.",
     "cover_letter_title": "AI Cover Letters",
     "cover_letter_desc": "Generate personalized cover letters in 30 seconds. The AI uses your actual CV data.",
-    "jobs_title": "128 Premium Templates",
+    "jobs_title": "129 Premium Templates",
     "jobs_desc": "Professional designs for every industry: creative, business, legal, health, engineering and more.",
     "ai_title": "7 AI Tools",
     "ai_desc": "Improve bullets, generate summaries, analyze ATS compatibility, suggest skills and review your full CV.",
@@ -124,7 +124,7 @@
     "kanban_desc": "Manage your applications with a Kanban board: from wishlist to offer in one place."
   },
   "template_gallery": {
-    "title": "128 Professional templates",
+    "title": "129 Professional templates",
     "subtitle": "Change templates anytime without losing your content",
     "see_all": "View all templates"
   },
@@ -145,9 +145,9 @@
     "title": "Frequently Asked Questions",
     "subtitle": "Everything you need to know before getting started",
     "q1": "What does the Pro plan include?",
-    "a1": "The Pro plan includes: 128 professional templates, unlimited CVs, 7 AI tools (bullet improvement, summary generator, ATS Score, skill suggestions, CV review, profile fill, cover letter), PDF and Word export, application tracker, public shareable CV and version history.",
+    "a1": "The Pro plan includes: 129 professional templates, unlimited CVs, 7 AI tools (bullet improvement, summary generator, ATS Score, skill suggestions, CV review, profile fill, cover letter), PDF and Word export, application tracker, public shareable CV and version history.",
     "q2": "Can I change templates without losing my data?",
-    "a2": "Yes. Your data is separated from the template. You can switch between 128 templates at any time and your content stays intact.",
+    "a2": "Yes. Your data is separated from the template. You can switch between 129 templates at any time and your content stays intact.",
     "q3": "In what formats can I download my CV?",
     "a3": "You can download as high-resolution PDF or Word (.docx), ready to edit. Both formats included in the Pro plan.",
     "q4": "Can I create more than one CV?",
@@ -188,14 +188,13 @@
     "pro_member_active": "Your subscription is active",
     "pro_member_manage": "Manage subscription",
     "feature1": "Unlimited CVs — tailor your resume for every role",
-    "feature2": "128 templates for every industry",
+    "feature2": "129 templates for every industry",
     "feature3": "High-quality PDF export",
     "feature4": "AI cover letter in 30 seconds",
     "feature5": "Word (.docx) export ready to send",
     "feature6": "ATS Score — check compatibility before you apply",
     "feature7": "7 AI tools to write and improve your CV",
     "feature8": "Application tracker with Kanban board",
-    "feature9": "CV version history",
     "feature10": "Public shareable CV link",
     "feature11": "PDF/Word import",
     "feature12": "Version history — restore any previous version",
@@ -204,7 +203,7 @@
     "toast_connection_error": "Connection error"
   },
   "templates_page": {
-    "badge": "128 templates",
+    "badge": "129 templates",
     "title": "Find the template for your industry",
     "subtitle": "Over 40 professional designs for creative, business, legal, health, engineering, hospitality, arts and classic. Change templates anytime without losing your content.",
     "pro_label": "Pro Designs",
@@ -322,7 +321,7 @@
     "val_cvs_pro": "Unlimited",
     "row_templates": "Templates",
     "val_templates_free": "5 classic",
-    "val_templates_pro": "128 professional",
+    "val_templates_pro": "129 professional",
     "row_pdf": "PDF export",
     "val_pdf_free": "With watermark",
     "val_pdf_pro": "No watermark",
@@ -343,7 +342,7 @@
     "published": "Published",
     "reading_time": "min read",
     "cta_title": "Build your professional CV with ReadyCV",
-    "cta_desc": "128 templates, 7 AI tools and ATS analysis.",
+    "cta_desc": "129 templates, 7 AI tools and ATS analysis.",
     "cta_btn": "Create my CV"
   },
   "privacy_page": {

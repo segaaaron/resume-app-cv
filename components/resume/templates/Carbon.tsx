@@ -160,7 +160,7 @@ export default function CarbonTemplate() {
               <div key={proj.id} className="mb-3">
                 <h4 className="font-bold text-sm text-white">{proj.name}</h4>
                 {proj.role && <p className="text-xs font-semibold" style={{ color }}>{proj.role}</p>}
-                {proj.description && <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{proj.description}</p>}
+                {proj.description && <p className="resume-desc text-xs text-gray-400 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
               </div>
             ))}
           </CarbonSection>

@@ -87,7 +87,7 @@ export default function HorizontalTemplate() {
                   <div key={proj.id}>
                     <h4 className="font-semibold text-[13px] text-gray-900">{proj.name}</h4>
                     {proj.role && <p className="text-xs font-medium" style={{ color }}>{proj.role}</p>}
-                    {proj.description && <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{proj.description}</p>}
+                    {proj.description && <p className="resume-desc text-xs text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                   </div>
                 ))}
               </div>

@@ -205,7 +205,7 @@ export default function BlueprintTemplate() {
                     {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                   </p>
                   {edu.description && (
-                    <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">{edu.description}</p>
+                    <p className="resume-desc text-[11px] text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                   )}
                 </div>
               ))}
@@ -221,7 +221,7 @@ export default function BlueprintTemplate() {
                 <div key={proj.id} className="resume-entry">
                   <h4 className="font-bold text-[12px] text-gray-900">{proj.name}</h4>
                   {proj.description && (
-                    <p className="text-[11px] text-gray-600 leading-relaxed">{proj.description}</p>
+                    <p className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                   )}
                 </div>
               ))}

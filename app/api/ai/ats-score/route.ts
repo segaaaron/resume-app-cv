@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
 import { getOpenAI, AI_MODEL, AI_TEMPERATURE, checkRateLimit, logAIUsage, buildResumeContext } from "@/lib/ai-client"
 import { checkOrigin } from "@/lib/csrf"
+import { isActive } from "@/lib/plans"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -17,13 +18,7 @@ export async function POST(req: Request) {
   ])
   if (!allowed) return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
 
-  const now = new Date()
-  const hasActiveAccess =
-    user?.plan === "PRO" &&
-    user?.subscriptionStatus === "ACTIVE" &&
-    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
-
-  if (!hasActiveAccess) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

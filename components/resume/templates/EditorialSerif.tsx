@@ -120,7 +120,7 @@ export default function EditorialSerifTemplate() {
                   <li key={proj.id} style={{ marginBottom: 12, paddingBottom: 12, borderBottom: `1px solid ${rule}` }}>
                     <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: 13, fontWeight: 700 }}>{proj.name}</div>
                     {proj.role && <div style={{ fontStyle: "italic", color: muted, fontSize: 10.5 }}>{proj.role}</div>}
-                    {proj.description && <div style={{ marginTop: 4, fontSize: 10 }}>{proj.description}</div>}
+                    {proj.description && <div className="resume-desc" style={{ marginTop: 4, fontSize: 10 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                   </li>
                 ))}
               </ul>

@@ -207,7 +207,7 @@ export default function LumiereTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}>{edu.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }} dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -223,7 +223,7 @@ export default function LumiereTemplate() {
                     <p style={{ fontSize: "11px", fontWeight: 700, color: "#1a1a1a" }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{proj.role}</p>}
                     {proj.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}>{proj.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}
@@ -244,7 +244,7 @@ export default function LumiereTemplate() {
                     </div>
                     <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{vol.organization}</p>
                     {vol.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}>{vol.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />
                     )}
                   </div>
                 ))}

@@ -55,14 +55,19 @@ export async function POST(req: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
   if (!appUrl) return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
 
-  // Create or reuse Stripe customer
+  // Create or reuse Stripe customer — check by email before creating to avoid duplicates
   let customerId = user.stripeCustomerId
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email,
-      metadata: { userId: user.id },
-    })
-    customerId = customer.id
+    const existingCustomers = await stripe.customers.list({ email: user.email!, limit: 1 })
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id
+    } else {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { userId: user.id },
+      })
+      customerId = customer.id
+    }
     await db.user.update({
       where: { id: user.id },
       data: { stripeCustomerId: customerId },

@@ -18,13 +18,12 @@ interface Props {
   plan: string
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
-  trialEndsAt?: string | null
   role?: string
   isNew?: boolean
 }
 
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role, isNew = false }: Props) {
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
@@ -36,7 +35,6 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
 
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
-    trialEndsAt ? new Date(trialEndsAt) : null,
     subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
     subscriptionStatus
   )
@@ -51,7 +49,6 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
             plan={plan}
             subscriptionStatus={subscriptionStatus}
             subscriptionEndsAt={subscriptionEndsAt}
-            trialEndsAt={trialEndsAt}
             role={role}
           />
         </div>

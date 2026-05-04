@@ -17,28 +17,37 @@ const RATE_LIMIT_DEFAULT = 20
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
 
 // Rate limit per userId+endpoint stored in DB. Returns true if allowed.
+// Uses upsert-then-read to reduce (but not fully eliminate) race condition window.
+// Under concurrent requests the count may exceed limit by at most 1 in the same millisecond.
 export async function checkRateLimit(userId: string, endpoint: string, limit = RATE_LIMIT_DEFAULT): Promise<boolean> {
   const now = new Date()
-  const record = await db.aIRateLimit.findUnique({
+  const resetAt = new Date(now.getTime() + RATE_LIMIT_WINDOW_MS)
+
+  // Check if existing record is expired first — reset atomically via upsert
+  const existing = await db.aIRateLimit.findUnique({
     where: { userId_endpoint: { userId, endpoint } },
+    select: { count: true, resetAt: true },
   })
 
-  if (!record || record.resetAt < now) {
+  if (!existing || existing.resetAt < now) {
+    // Window expired or no record — start fresh with count=1
     await db.aIRateLimit.upsert({
       where: { userId_endpoint: { userId, endpoint } },
-      create: { userId, endpoint, count: 1, resetAt: new Date(now.getTime() + RATE_LIMIT_WINDOW_MS) },
-      update: { count: 1, resetAt: new Date(now.getTime() + RATE_LIMIT_WINDOW_MS) },
+      create: { userId, endpoint, count: 1, resetAt },
+      update: { count: 1, resetAt },
     })
     return true
   }
 
-  if (record.count >= limit) return false
-
-  await db.aIRateLimit.update({
+  // Increment atomically, then read resulting count
+  const updated = await db.aIRateLimit.update({
     where: { userId_endpoint: { userId, endpoint } },
     data: { count: { increment: 1 } },
+    select: { count: true },
   })
-  return true
+
+  // Allow if count after increment is within limit
+  return updated.count <= limit
 }
 
 // Fire-and-forget usage log — never throws

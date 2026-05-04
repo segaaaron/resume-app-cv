@@ -224,7 +224,7 @@ export default function VitaeTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}>{edu.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -266,7 +266,7 @@ export default function VitaeTemplate() {
                     <p style={{ fontSize: "11px", fontWeight: 700, color: NAVY }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "10.5px", fontWeight: 600, color: accent }}>{proj.role}</p>}
                     {proj.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}>{proj.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}
@@ -287,7 +287,7 @@ export default function VitaeTemplate() {
                     </div>
                     <p style={{ fontSize: "10.5px", fontWeight: 600, color: accent }}>{vol.organization}</p>
                     {vol.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}>{vol.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />
                     )}
                   </div>
                 ))}

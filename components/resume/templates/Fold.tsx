@@ -96,7 +96,7 @@ export default function FoldTemplate() {
                 <div key={proj.id} className="mb-3">
                   <h4 className="font-semibold text-[13px] text-gray-900">{proj.name}</h4>
                   {proj.role && <p className="text-xs font-medium" style={{ color }}>{proj.role}</p>}
-                  {proj.description && <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{proj.description}</p>}
+                  {proj.description && <p className="resume-desc text-xs text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                 </div>
               ))}
             </FoldBlock>
@@ -108,7 +108,7 @@ export default function FoldTemplate() {
                 <div key={vol.id} className="mb-2">
                   <h4 className="font-semibold text-[13px] text-gray-900">{vol.role}</h4>
                   <p className="text-xs font-medium" style={{ color }}>{vol.organization}</p>
-                  {vol.description && <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{vol.description}</p>}
+                  {vol.description && <p className="resume-desc text-xs text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />}
                 </div>
               ))}
             </FoldBlock>

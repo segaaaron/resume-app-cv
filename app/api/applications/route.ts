@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
+import { isActive } from "@/lib/plans"
 
 const createSchema = z.object({
   jobTitle: z.string().min(1).max(255),
@@ -42,12 +43,9 @@ export async function POST(req: Request) {
     where: { id: session.user.id },
     select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
-  const now = new Date()
-  const proAccess =
-    user?.plan === "PRO" &&
-    (user?.subscriptionStatus === "ACTIVE" || user?.subscriptionStatus === "PAST_DUE") &&
-    (!user?.subscriptionEndsAt || user.subscriptionEndsAt > now)
-  if (!proAccess) return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
+    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
+  }
 
   let body: unknown
   try {

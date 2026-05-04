@@ -12,16 +12,12 @@ export default async function EditorPage({ params, searchParams }: { params: Pro
   const isNew = isNewParam === "1"
   if (!session?.user) redirect(`/${locale}/login`)
 
-  const plan = session.user.plan ?? "FREE"
+  const plan = session.user.plan ?? "UNSUBSCRIBED"
   const subscriptionStatus = session.user.subscriptionStatus ?? "NONE"
   const subscriptionEndsAt = session.user.subscriptionEndsAt ?? null
   const role = session.user.role ?? "USER"
 
-  const [resume, dbUser] = await Promise.all([
-    db.resume.findFirst({ where: { id, userId: session.user.id } }),
-    db.user.findUnique({ where: { id: session.user.id }, select: { trialEndsAt: true } }),
-  ])
-  const trialEndsAt = dbUser?.trialEndsAt?.toISOString() ?? null
+  const resume = await db.resume.findFirst({ where: { id, userId: session.user.id } })
 
   if (!resume) notFound()
 
@@ -65,7 +61,6 @@ export default async function EditorPage({ params, searchParams }: { params: Pro
       plan={plan}
       subscriptionStatus={subscriptionStatus}
       subscriptionEndsAt={subscriptionEndsAt}
-      trialEndsAt={trialEndsAt}
       role={role}
     />
   )
