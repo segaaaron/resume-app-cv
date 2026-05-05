@@ -200,7 +200,8 @@
     "feature12": "Version history — restore any previous version",
     "btn_loading": "Redirecting...",
     "btn_start": "Get started now",
-    "toast_connection_error": "Connection error"
+    "toast_connection_error": "Connection error",
+    "toast_payment_error": "Error starting the payment"
   },
   "templates_page": {
     "badge": "129 templates",
@@ -242,7 +243,8 @@
       "register_link": "Sign up",
       "error": "Incorrect email or password",
       "email_invalid": "Invalid email",
-      "password_required": "Password is required"
+      "password_required": "Password is required",
+      "plan_pro_banner": "One more step to activate your Pro Plan"
     },
     "register": {
       "title": "Create your account",
@@ -271,7 +273,8 @@
       "consent_required": "You must accept the terms to continue",
       "age_consent": "I confirm that I am 16 years of age or older.",
       "age_required": "You must confirm you are 16 or older to continue",
-      "marketing_consent": "I agree to receive emails about updates and offers from READY CV. You can unsubscribe at any time."
+      "marketing_consent": "I agree to receive emails about updates and offers from READY CV. You can unsubscribe at any time.",
+      "plan_pro_banner": "Create your account to activate your Pro Plan — takes only 30 seconds"
     }
   },
   "ai_features": {
@@ -362,7 +365,8 @@
       "letters": "Letters",
       "settings": "Settings",
       "upgrade": "Upgrade plan",
-      "logout": "Log out"
+      "logout": "Log out",
+      "admin": "Admin"
     },
     "upgrade_cta": {
       "headline": "Unlock everything with Pro",
@@ -396,7 +400,16 @@
       "duplicate_success": "CV duplicated",
       "pdf_error": "Error generating PDF",
       "welcome_pro_title": "Welcome to Pro!",
-      "welcome_pro_subtitle": "You now have full access to all templates and features."
+      "welcome_pro_subtitle": "You now have full access to all templates and features.",
+      "require_pro_toast": "Activate your Pro plan to continue",
+      "import_error": "Error importing the CV",
+      "import_success": "CV imported successfully",
+      "resume_filename_fallback": "resume",
+      "import_button": "Import CV",
+      "import_analyzing_file": "Analyzing {name}…",
+      "import_processing": "Processing…",
+      "import_overlay_title": "Analyzing your CV",
+      "import_overlay_desc": "We are extracting your information with AI…"
     },
     "cover_letters": {
       "title": "Cover Letters",
@@ -411,7 +424,8 @@
       "delete_description": "This action cannot be undone. The letter and all its data will be permanently deleted.",
       "cancel": "Cancel",
       "create_error": "Error creating letter",
-      "delete_success": "Letter deleted"
+      "delete_success": "Letter deleted",
+      "require_pro_toast": "Activate your Pro plan to continue"
     },
     "settings": {
       "title": "Settings",
@@ -455,7 +469,43 @@
       "delete_account": "Delete account",
       "subscription_ends": "Your Pro access ends on",
       "subscription_ends_note": "After this date your Pro access will become inactive",
-      "days": "days"
+      "days": "days",
+      "plan_section_label": "Plan & account",
+      "plan_pro_label": "Pro",
+      "plan_pro_canceled_label": "Pro · Cancelled",
+      "interval_annual": "Annual",
+      "interval_monthly": "Monthly",
+      "status_active": "Active",
+      "status_not_activated": "Not activated",
+      "billing_cycle": "Current billing cycle",
+      "billing_days": "{elapsed} / {total} days",
+      "period_elapsed_pct": "{pct}% of period elapsed",
+      "included_in_plan": "Included in your plan",
+      "pro_benefit_1": "Unlimited premium templates",
+      "pro_benefit_2": "High-quality PDF export",
+      "pro_benefit_3": "Unlimited CVs, letters and applications",
+      "pro_benefit_4": "Priority support",
+      "access_until_expiry": "Active access until expiration",
+      "reactivate_pro": "Reactivate Pro plan",
+      "no_subscription_title": "No active subscription",
+      "unlock_all_with_pro": "Unlock everything with Pro",
+      "free_benefit_1": "Exclusive premium templates",
+      "free_benefit_2": "PDF export without watermark",
+      "free_benefit_3": "Unlimited CVs, letters and applications",
+      "free_benefit_4": "Priority support",
+      "per_month": "/mo",
+      "annual_discount": "· or $144/yr (save 20%)",
+      "export_section_title": "My data",
+      "export_desc": "Download a copy of all your personal information stored in READY CV (account, CVs and cover letters).",
+      "exporting": "Exporting...",
+      "export_button": "Download my data",
+      "deleting": "Deleting...",
+      "delete_dialog_title": "Permanently delete your account?",
+      "delete_dialog_desc": "This action is irreversible. Your account, all your CVs, cover letters and applications will be deleted. You cannot recover this data.",
+      "cancel": "Cancel",
+      "confirm_delete": "Yes, delete my account",
+      "export_error": "Error exporting data",
+      "delete_error": "Error deleting account"
     }
   },
   "editor": {
@@ -839,7 +889,26 @@
       "toast_pro_only": "This feature requires a Pro plan"
     },
     "upgrade": {
-      "toast_connection_error": "Connection error"
+      "toast_connection_error": "Connection error",
+      "toast_payment_error": "Error starting the payment",
+      "title": "Unlock all templates with Pro",
+      "subtitle": "Access all templates, export to PDF and much more.",
+      "feature_1": "Unlimited CVs",
+      "feature_2": "111+ professional templates",
+      "feature_3": "PDF download",
+      "feature_4": "Cover letters",
+      "feature_5": "Application tracking",
+      "feature_6": "Priority support",
+      "monthly_label": "Monthly",
+      "monthly_per": "/ mo",
+      "annual_label": "Annual",
+      "annual_per": "/ yr",
+      "save_badge": "Save 20%",
+      "annual_detail": "$12/mo · save $36",
+      "redirecting": "Redirecting...",
+      "start_now": "Start now",
+      "best_price": "Best price",
+      "footer_note": "Cancel anytime · Secure payment with Stripe"
     }
   },
   "kanban": {
@@ -967,7 +1036,11 @@
     "download_preparing": "Preparing document...",
     "download_applying_styles": "Applying styles...",
     "download_almost_done": "Almost done...",
-    "download_success": "{filename} downloaded"
+    "download_success": "{filename} downloaded",
+    "pdf_error": "Error generating the PDF",
+    "word_error": "Error generating the Word file",
+    "word_download_error": "Error downloading the Word file",
+    "word_label": "Word (.docx)"
   },
   "public_cv": {
     "shared_via": "CV shared via",
@@ -1010,5 +1083,10 @@
     "badge_health": "Healthcare",
     "badge_hospitality": "Hospitality",
     "cta": "Create my CV"
+  },
+  "dashboard_admin": {
+    "invalidate_success": "Session invalidated — user will be logged out in ≤5 min",
+    "invalidate_error": "Error invalidating session",
+    "invalidate_network_error": "Network error invalidating session"
   }
 }

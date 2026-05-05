@@ -200,7 +200,8 @@
     "feature12": "Historial de versiones — restaura cualquier versión anterior",
     "btn_loading": "Redirigiendo...",
     "btn_start": "Empezar ahora",
-    "toast_connection_error": "Error de conexión"
+    "toast_connection_error": "Error de conexión",
+    "toast_payment_error": "Error al iniciar el pago"
   },
   "templates_page": {
     "badge": "139 plantillas",
@@ -242,7 +243,8 @@
       "register_link": "Regístrate",
       "error": "Email o contraseña incorrectos",
       "email_invalid": "Email inválido",
-      "password_required": "Contraseña requerida"
+      "password_required": "Contraseña requerida",
+      "plan_pro_banner": "Un paso más para activar tu Plan Pro"
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -271,7 +273,8 @@
       "consent_required": "Debes aceptar los términos para continuar",
       "age_consent": "Confirmo que tengo 16 años o más.",
       "age_required": "Debes confirmar que tienes 16 años o más para continuar",
-      "marketing_consent": "Acepto recibir correos sobre novedades y ofertas de READY CV. Puedes darte de baja en cualquier momento."
+      "marketing_consent": "Acepto recibir correos sobre novedades y ofertas de READY CV. Puedes darte de baja en cualquier momento.",
+      "plan_pro_banner": "Crea tu cuenta para activar tu Plan Pro — solo toma 30 segundos"
     }
   },
   "ai_features": {
@@ -362,7 +365,8 @@
       "letters": "Cartas",
       "settings": "Configuración",
       "upgrade": "Mejorar plan",
-      "logout": "Cerrar sesión"
+      "logout": "Cerrar sesión",
+      "admin": "Admin"
     },
     "upgrade_cta": {
       "headline": "Desbloquea todo con Pro",
@@ -396,7 +400,16 @@
       "duplicate_success": "CV duplicado",
       "pdf_error": "Error al generar el PDF",
       "welcome_pro_title": "¡Bienvenido a Pro!",
-      "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones."
+      "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones.",
+      "require_pro_toast": "Activa tu plan Pro para continuar",
+      "import_error": "Error al importar el CV",
+      "import_success": "CV importado correctamente",
+      "resume_filename_fallback": "curriculum",
+      "import_button": "Importar CV",
+      "import_analyzing_file": "Analizando {name}…",
+      "import_processing": "Procesando…",
+      "import_overlay_title": "Analizando tu CV",
+      "import_overlay_desc": "Estamos extrayendo tu información con IA…"
     },
     "cover_letters": {
       "title": "Cartas de Presentación",
@@ -411,7 +424,8 @@
       "delete_description": "Esta acción no se puede deshacer. La carta y todos sus datos serán eliminados permanentemente.",
       "cancel": "Cancelar",
       "create_error": "Error al crear la carta",
-      "delete_success": "Carta eliminada"
+      "delete_success": "Carta eliminada",
+      "require_pro_toast": "Activa tu plan Pro para continuar"
     },
     "settings": {
       "title": "Configuración",
@@ -455,7 +469,43 @@
       "delete_account": "Eliminar cuenta",
       "subscription_ends": "Tu acceso Pro termina el",
       "subscription_ends_note": "Después de esta fecha tu acceso Pro quedará inactivo",
-      "days": "días"
+      "days": "días",
+      "plan_section_label": "Plan y cuenta",
+      "plan_pro_label": "Pro",
+      "plan_pro_canceled_label": "Pro · Cancelado",
+      "interval_annual": "Anual",
+      "interval_monthly": "Mensual",
+      "status_active": "Activo",
+      "status_not_activated": "No activado",
+      "billing_cycle": "Ciclo de facturación actual",
+      "billing_days": "{elapsed} / {total} días",
+      "period_elapsed_pct": "{pct}% del período transcurrido",
+      "included_in_plan": "Incluido en tu plan",
+      "pro_benefit_1": "Plantillas premium ilimitadas",
+      "pro_benefit_2": "Exportación PDF de alta calidad",
+      "pro_benefit_3": "CVs, cartas y candidaturas sin límite",
+      "pro_benefit_4": "Soporte prioritario",
+      "access_until_expiry": "Acceso activo hasta expiración",
+      "reactivate_pro": "Reactivar plan Pro",
+      "no_subscription_title": "Sin suscripción activa",
+      "unlock_all_with_pro": "Desbloquea todo con Pro",
+      "free_benefit_1": "Plantillas premium exclusivas",
+      "free_benefit_2": "Exportación PDF sin marca de agua",
+      "free_benefit_3": "CVs, cartas y candidaturas ilimitadas",
+      "free_benefit_4": "Soporte prioritario",
+      "per_month": "/mes",
+      "annual_discount": "· o $144/año (ahorra 20%)",
+      "export_section_title": "Mis datos",
+      "export_desc": "Descarga una copia de toda tu información personal almacenada en READY CV (cuenta, CVs y cartas de presentación).",
+      "exporting": "Exportando...",
+      "export_button": "Descargar mis datos",
+      "deleting": "Eliminando...",
+      "delete_dialog_title": "¿Eliminar tu cuenta permanentemente?",
+      "delete_dialog_desc": "Esta acción es irreversible. Se eliminarán tu cuenta, todos tus CVs, cartas de presentación y candidaturas. No podrás recuperar estos datos.",
+      "cancel": "Cancelar",
+      "confirm_delete": "Sí, eliminar mi cuenta",
+      "export_error": "Error al exportar los datos",
+      "delete_error": "Error al eliminar la cuenta"
     }
   },
   "editor": {
@@ -839,7 +889,26 @@
       "toast_pro_only": "Esta función requiere plan Pro"
     },
     "upgrade": {
-      "toast_connection_error": "Error de conexión"
+      "toast_connection_error": "Error de conexión",
+      "toast_payment_error": "Error al iniciar el pago",
+      "title": "Desbloquea todas las plantillas con Pro",
+      "subtitle": "Accede a todas las plantillas, exporta en PDF y mucho más.",
+      "feature_1": "CVs ilimitados",
+      "feature_2": "111+ plantillas profesionales",
+      "feature_3": "Descarga en PDF",
+      "feature_4": "Cartas de presentación",
+      "feature_5": "Seguimiento de candidaturas",
+      "feature_6": "Soporte prioritario",
+      "monthly_label": "Mensual",
+      "monthly_per": "/ mes",
+      "annual_label": "Anual",
+      "annual_per": "/ año",
+      "save_badge": "Ahorra 20%",
+      "annual_detail": "$12/mes · ahorras $36",
+      "redirecting": "Redirigiendo...",
+      "start_now": "Empezar ahora",
+      "best_price": "Mejor precio",
+      "footer_note": "Cancela en cualquier momento · Pago seguro con Stripe"
     }
   },
   "kanban": {
@@ -967,7 +1036,11 @@
     "download_preparing": "Preparando documento...",
     "download_applying_styles": "Aplicando estilos...",
     "download_almost_done": "Casi listo...",
-    "download_success": "{filename} descargado"
+    "download_success": "{filename} descargado",
+    "pdf_error": "Error al generar el PDF",
+    "word_error": "Error al generar el archivo Word",
+    "word_download_error": "Error al descargar el archivo Word",
+    "word_label": "Word (.docx)"
   },
   "public_cv": {
     "shared_via": "CV compartido via",
@@ -1010,5 +1083,10 @@
     "badge_health": "Salud",
     "badge_hospitality": "Hostelería",
     "cta": "Crear mi CV"
+  },
+  "dashboard_admin": {
+    "invalidate_success": "Sesión invalidada — el usuario será deslogueado en ≤5 min",
+    "invalidate_error": "Error al invalidar sesión",
+    "invalidate_network_error": "Error de red al invalidar sesión"
   }
 }

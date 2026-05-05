@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
@@ -40,11 +41,20 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
+  const { data: session } = useSession()
+  const isPro = session?.user?.plan === "PRO" &&
+    (session?.user?.subscriptionStatus === "ACTIVE" || session?.user?.subscriptionStatus === "CANCELED")
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
 
+  function requirePro() {
+    router.push(`/${locale}/pricing`)
+    toast.info(t("require_pro_toast"))
+  }
+
   async function createLetter() {
+    if (!isPro) { requirePro(); return }
     setCreating(true)
     try {
       const res = await fetch("/api/cover-letters", { method: "POST" })
@@ -73,7 +83,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
             {letters.length} {letters.length === 1 ? t("count_one") : t("count_other")}
           </p>
         </div>
-        <Button onClick={createLetter} disabled={creating} className="gap-2 w-full sm:w-auto">
+        <Button onClick={createLetter} disabled={creating || !isPro} className="gap-2 w-full sm:w-auto">
           <Plus className="h-4 w-4" />
           {t("new")}
         </Button>
@@ -86,7 +96,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
           </div>
           <h2 className="text-xl font-semibold mb-2">{t("empty_title")}</h2>
           <p className="text-muted-foreground mb-6 max-w-sm">{t("empty_subtitle")}</p>
-          <Button onClick={createLetter} disabled={creating} size="lg" className="gap-2">
+          <Button onClick={createLetter} disabled={creating || !isPro} size="lg" className="gap-2">
             <Plus className="h-4 w-4" />
             {t("new")}
           </Button>
@@ -95,8 +105,8 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           <button
             onClick={createLetter}
-            disabled={creating}
-            className="aspect-[3/4] border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all group cursor-pointer"
+            disabled={creating || !isPro}
+            className="aspect-[3/4] border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-border disabled:hover:text-muted-foreground disabled:hover:bg-transparent"
           >
             <div className="h-12 w-12 rounded-xl border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
               <Plus className="h-6 w-6" />

@@ -42,7 +42,7 @@ export default function PricingButtons({ plan, isPro }: Props) {
 
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? "Error al iniciar el pago")
+        toast.error(data.error ?? t("toast_payment_error"))
         return
       }
 

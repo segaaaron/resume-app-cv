@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
-import { Check, Zap, X } from "lucide-react"
+import { Check, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -18,20 +18,20 @@ interface Props {
   onClose: () => void
 }
 
-const features = [
-  "CVs ilimitados",
-  "29 plantillas profesionales",
-  "Descarga en PDF",
-  "Cartas de presentación",
-  "Seguimiento de candidaturas",
-  "Soporte prioritario",
-]
-
 export default function UpgradeModal({ open, onClose }: Props) {
   const t = useTranslations("editor.upgrade")
   const [loading, setLoading] = useState<"monthly" | "annual" | null>(null)
   const router = useRouter()
   const locale = useLocale()
+
+  const features = [
+    t("feature_1"),
+    t("feature_2"),
+    t("feature_3"),
+    t("feature_4"),
+    t("feature_5"),
+    t("feature_6"),
+  ]
 
   async function handleCheckout(plan: "monthly" | "annual") {
     setLoading(plan)
@@ -49,7 +49,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? "Error al iniciar el pago")
+        toast.error(data.error ?? t("toast_payment_error"))
         return
       }
 
@@ -67,20 +67,20 @@ export default function UpgradeModal({ open, onClose }: Props) {
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <Zap className="h-5 w-5 text-primary" />
-            Desbloquea todas las plantillas con Pro
+            {t("title")}
           </DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Accede a todas las plantillas, exporta en PDF y mucho más.
+            {t("subtitle")}
           </p>
         </DialogHeader>
 
         <div className="grid sm:grid-cols-2 gap-4 px-6 pb-6 pt-2">
           {/* Monthly */}
           <div className="border-2 border-border rounded-xl p-5 flex flex-col">
-            <p className="text-sm font-medium text-muted-foreground mb-1">Mensual</p>
+            <p className="text-sm font-medium text-muted-foreground mb-1">{t("monthly_label")}</p>
             <div className="flex items-baseline gap-1 mb-4">
               <span className="text-3xl font-bold">$15</span>
-              <span className="text-muted-foreground text-sm">/ mes</span>
+              <span className="text-muted-foreground text-sm">{t("monthly_per")}</span>
             </div>
             <ul className="space-y-1.5 mb-5 flex-1">
               {features.map((f) => (
@@ -95,21 +95,21 @@ export default function UpgradeModal({ open, onClose }: Props) {
               onClick={() => handleCheckout("monthly")}
               disabled={!!loading}
             >
-              {loading === "monthly" ? "Redirigiendo..." : "Empezar ahora"}
+              {loading === "monthly" ? t("redirecting") : t("start_now")}
             </Button>
           </div>
 
           {/* Annual */}
           <div className="border-2 border-primary rounded-xl p-5 flex flex-col bg-primary/5 relative">
             <span className="absolute top-3 right-3 text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
-              Ahorra 20%
+              {t("save_badge")}
             </span>
-            <p className="text-sm font-medium text-primary mb-1">Anual</p>
+            <p className="text-sm font-medium text-primary mb-1">{t("annual_label")}</p>
             <div className="flex items-baseline gap-1 mb-1">
               <span className="text-3xl font-bold">$144</span>
-              <span className="text-muted-foreground text-sm">/ año</span>
+              <span className="text-muted-foreground text-sm">{t("annual_per")}</span>
             </div>
-            <p className="text-xs text-muted-foreground mb-4">$12/mes · ahorras $36</p>
+            <p className="text-xs text-muted-foreground mb-4">{t("annual_detail")}</p>
             <ul className="space-y-1.5 mb-5 flex-1">
               {features.map((f) => (
                 <li key={f} className="flex items-center gap-2 text-sm text-foreground">
@@ -122,13 +122,13 @@ export default function UpgradeModal({ open, onClose }: Props) {
               onClick={() => handleCheckout("annual")}
               disabled={!!loading}
             >
-              {loading === "annual" ? "Redirigiendo..." : "Mejor precio"}
+              {loading === "annual" ? t("redirecting") : t("best_price")}
             </Button>
           </div>
         </div>
 
         <p className="text-center text-xs text-muted-foreground pb-4">
-          Cancela en cualquier momento · Pago seguro con Stripe
+          {t("footer_note")}
         </p>
       </DialogContent>
     </Dialog>

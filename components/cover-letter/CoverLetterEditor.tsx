@@ -536,7 +536,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     try {
       if (dirty) await save()
       const res = await fetch(`/api/cover-letters/${id}/pdf?locale=${language}`)
-      if (!res.ok) { toast.error("Error al generar el PDF"); return }
+      if (!res.ok) { toast.error(t("pdf_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -545,7 +545,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      toast.error("Error al generar el PDF")
+      toast.error(t("pdf_error"))
     } finally {
       setDownloadingPdf(false)
     }
@@ -555,7 +555,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     setDownloadingWord(true)
     try {
       const res = await fetch(`/api/export/cover-letter-docx?id=${id}`)
-      if (!res.ok) { toast.error("Error al generar el archivo Word"); return }
+      if (!res.ok) { toast.error(t("word_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -563,7 +563,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       a.download = `${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.docx`
       a.click()
     } catch {
-      toast.error("Error al descargar el archivo Word")
+      toast.error(t("word_download_error"))
     } finally {
       setDownloadingWord(false)
     }
@@ -654,7 +654,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
               },
               {
                 format: "docx",
-                label: "Word (.docx)",
+                label: t("word_label"),
                 sublabel: t("export_plain"),
                 isLoading: downloadingWord,
                 onDownload: downloadWord,

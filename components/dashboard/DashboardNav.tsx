@@ -28,7 +28,7 @@ export default function DashboardNav({ user }: Props) {
   const tabs = [
     { label: t("cvs"),    href: `/${locale}/dashboard/resumes`,       icon: FileText },
     { label: t("letters"), href: `/${locale}/dashboard/cover-letters`, icon: Mail },
-    ...(user.role === "SUPER_ADMIN" ? [{ label: "Admin", href: `/${locale}/dashboard/admin`, icon: Shield }] : []),
+    ...(user.role === "SUPER_ADMIN" ? [{ label: t("admin"), href: `/${locale}/dashboard/admin`, icon: Shield }] : []),
   ]
 
   return (

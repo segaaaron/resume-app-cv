@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { RefreshCw, Shield, User, Crown, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -59,6 +60,7 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export default function AdminUsersTable({ users: initial }: { users: UserRow[] }) {
+  const t = useTranslations("dashboard_admin")
   const [users, setUsers] = useState(initial)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
@@ -75,12 +77,12 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
       })
       if (!res.ok) {
         const data = await res.json().catch(() => ({}))
-        toast.error(data.error ?? "Error al invalidar sesión")
+        toast.error(data.error ?? t("invalidate_error"))
         return
       }
-      toast.success("Sesión invalidada — el usuario será deslogueado en ≤5 min")
+      toast.success(t("invalidate_success"))
     } catch {
-      toast.error("Error de red al invalidar sesión")
+      toast.error(t("invalidate_network_error"))
     } finally {
       setLoading(null)
       setConfirmId(null)

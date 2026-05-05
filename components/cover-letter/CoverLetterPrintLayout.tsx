@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Download, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import ElegantTemplate from "./templates/ElegantTemplate"
 import SidebarTemplate from "./templates/SidebarTemplate"
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export default function CoverLetterPrintLayout({ letterId, title, colorScheme, fontFamily, templateId, content, candidate, locale }: Props) {
+  const t = useTranslations("cover_letter_editor")
   const [downloading, setDownloading] = useState(false)
   const searchParams = useSearchParams()
 
@@ -48,7 +50,7 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
     setDownloading(true)
     try {
       const res = await fetch(`/api/cover-letters/${letterId}/pdf?locale=${locale}`)
-      if (!res.ok) { toast.error("Error al generar el PDF"); return }
+      if (!res.ok) { toast.error(t("pdf_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -57,7 +59,7 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      toast.error("Error al generar el PDF")
+      toast.error(t("pdf_error"))
     } finally {
       setDownloading(false)
     }

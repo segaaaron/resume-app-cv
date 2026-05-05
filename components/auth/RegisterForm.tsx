@@ -82,7 +82,7 @@ export default function RegisterForm() {
         {planParam && (
           <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-xl px-4 py-3 mb-5 text-sm font-medium">
             <Zap className="h-4 w-4 shrink-0" />
-            Crea tu cuenta para activar tu Plan Pro — solo toma 30 segundos
+            {t("plan_pro_banner")}
           </div>
         )}
         <h1 className="text-2xl font-bold mb-1">{t("title")}</h1>

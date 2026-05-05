@@ -46,7 +46,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { update } = useSession()
+  const { update, data: session } = useSession()
+  const isPro = session?.user?.plan === "PRO" &&
+    (session?.user?.subscriptionStatus === "ACTIVE" || session?.user?.subscriptionStatus === "CANCELED")
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -65,7 +67,13 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     }
   }, [searchParams])
 
+  function requirePro() {
+    router.push(`/${locale}/pricing`)
+    toast.info(t("require_pro_toast"))
+  }
+
   async function createResume() {
+    if (!isPro) { requirePro(); return }
     setCreating(true)
     try {
       const res = await fetch("/api/resumes", { method: "POST" })
@@ -151,7 +159,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <ImportResumeButton />
+          <div onClick={!isPro ? requirePro : undefined} className={!isPro ? "cursor-pointer" : ""}>
+            <ImportResumeButton disabled={!isPro} />
+          </div>
           <Button onClick={createResume} disabled={creating} className="gap-2 flex-1 sm:flex-none">
             <Plus className="h-4 w-4" />
             {t("new")}
@@ -172,7 +182,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
               {t("create_from_scratch")}
             </Button>
             <span className="text-xs text-muted-foreground">{t("or")}</span>
-            <ImportResumeButton />
+            <div onClick={!isPro ? requirePro : undefined} className={!isPro ? "cursor-pointer" : ""}>
+              <ImportResumeButton disabled={!isPro} />
+            </div>
           </div>
         </div>
       ) : (

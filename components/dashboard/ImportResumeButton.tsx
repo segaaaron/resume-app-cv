@@ -2,11 +2,17 @@
 
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Upload, Loader2, FileText, X } from "lucide-react"
+import { useTranslations } from "next-intl"
+import { Upload, Loader2, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 
-export default function ImportResumeButton() {
+interface Props {
+  disabled?: boolean
+}
+
+export default function ImportResumeButton({ disabled }: Props) {
+  const t = useTranslations("dashboard.resumes")
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -32,15 +38,15 @@ export default function ImportResumeButton() {
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error ?? "Error al importar el CV")
+        toast.error(data.error ?? t("import_error"))
         setFile(null)
         return
       }
 
-      toast.success("CV importado correctamente")
+      toast.success(t("import_success"))
       router.push(`/editor/${data.id}`)
     } catch {
-      toast.error("Error al importar el CV")
+      toast.error(t("import_error"))
       setFile(null)
     } finally {
       setUploading(false)
@@ -61,23 +67,22 @@ export default function ImportResumeButton() {
       <Button
         variant="outline"
         onClick={() => inputRef.current?.click()}
-        disabled={uploading}
+        disabled={uploading || disabled}
         className="gap-2"
       >
         {uploading ? (
           <>
             <Loader2 className="h-4 w-4 animate-spin" />
-            {file ? `Analizando ${file.name}…` : "Procesando…"}
+            {file ? t("import_analyzing_file", { name: file.name }) : t("import_processing")}
           </>
         ) : (
           <>
             <Upload className="h-4 w-4" />
-            Importar CV
+            {t("import_button")}
           </>
         )}
       </Button>
 
-      {/* Progress overlay while uploading */}
       {uploading && (
         <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
           <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm w-full mx-4">
@@ -85,9 +90,9 @@ export default function ImportResumeButton() {
               <FileText className="h-8 w-8 text-primary animate-pulse" />
             </div>
             <div className="text-center">
-              <p className="font-semibold text-gray-900 mb-1">Analizando tu CV</p>
+              <p className="font-semibold text-gray-900 mb-1">{t("import_overlay_title")}</p>
               <p className="text-sm text-muted-foreground">
-                Estamos extrayendo tu información con IA…
+                {t("import_overlay_desc")}
               </p>
               {file && (
                 <p className="text-xs text-muted-foreground mt-1 truncate max-w-[200px] mx-auto">

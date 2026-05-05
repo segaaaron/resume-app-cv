@@ -69,7 +69,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
     try {
       const res = await fetch("/api/user/data-export")
       if (!res.ok) {
-        toast.error("Error al exportar los datos")
+        toast.error(t("export_error"))
         return
       }
       const blob = await res.blob()
@@ -80,7 +80,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       a.click()
       URL.revokeObjectURL(url)
     } catch {
-      toast.error("Error al exportar los datos")
+      toast.error(t("export_error"))
     } finally {
       setExportLoading(false)
     }
@@ -91,14 +91,13 @@ export default function SettingsForm({ user }: { user: UserData }) {
     try {
       const res = await fetch("/api/user/delete", { method: "DELETE" })
       if (res.ok) {
-        // Sign out and redirect to home
         const { signOut } = await import("next-auth/react")
         await signOut({ callbackUrl: `/${locale}/` })
       } else {
-        toast.error("Error al eliminar la cuenta")
+        toast.error(t("delete_error"))
       }
     } catch {
-      toast.error("Error al eliminar la cuenta")
+      toast.error(t("delete_error"))
     } finally {
       setDeleteLoading(false)
     }
@@ -124,12 +123,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
       setSaving(false)
     }
   }
-
-  const intervalLabel = user.planInterval === "annual" ? "Anual" : user.planInterval === "monthly" ? "Mensual" : null
-  const planLabel = user.plan === "PRO"
-    ? `Pro ${intervalLabel ? `· ${intervalLabel}` : ""}`
-    : t("plan_free")
-  const planColor = user.plan === "PRO" ? "bg-amber-100 text-amber-700" : "bg-gray-100 text-gray-600"
 
   const isCanceled = subscriptionStatus === "CANCELED"
   const isActive = subscriptionStatus === "ACTIVE"
@@ -196,7 +189,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
         const endsAt = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
         const today = new Date()
 
-        // Billing progress calculation
         const periodDays = user.planInterval === "annual" ? 365 : 30
         const periodStart = endsAt
           ? new Date(endsAt.getTime() - periodDays * 24 * 60 * 60 * 1000)
@@ -206,7 +198,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
           : 0
         const progressPercent = periodDays > 0 ? Math.round((daysElapsed / periodDays) * 100) : 0
 
-        // Countdown for canceled state
         const daysLeft = endsAt
           ? Math.max(0, Math.ceil((endsAt.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)))
           : 0
@@ -215,7 +206,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
         if (user.plan === "PRO" && isActive) {
           return (
             <div className="rounded-2xl overflow-hidden border border-indigo-200/60 shadow-sm">
-              {/* Header gradient */}
               <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-violet-600 px-6 py-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -223,31 +213,28 @@ export default function SettingsForm({ user }: { user: UserData }) {
                       <Crown className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-white/70 text-xs font-medium tracking-wide uppercase">Plan y cuenta</p>
-                      <p className="text-white font-bold text-lg leading-tight">Pro</p>
+                      <p className="text-white/70 text-xs font-medium tracking-wide uppercase">{t("plan_section_label")}</p>
+                      <p className="text-white font-bold text-lg leading-tight">{t("plan_pro_label")}</p>
                     </div>
                   </div>
-                  {/* Chips */}
                   <div className="flex flex-wrap justify-end gap-2">
                     <span className="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                       <Sparkles className="h-3 w-3" />
-                      {user.planInterval === "annual" ? "Anual" : "Mensual"}
+                      {user.planInterval === "annual" ? t("interval_annual") : t("interval_monthly")}
                     </span>
                     <span className="inline-flex items-center bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                       {user.planInterval === "annual" ? "$144/yr" : "$15/mo"}
                     </span>
                     <span className="inline-flex items-center gap-1 bg-emerald-400/30 text-emerald-100 text-xs font-semibold px-2.5 py-1 rounded-full">
                       <BadgeCheck className="h-3 w-3" />
-                      Activo
+                      {t("status_active")}
                     </span>
                   </div>
                 </div>
               </div>
 
-              {/* Body */}
               <div className="bg-gradient-to-b from-indigo-50/60 to-white px-6 py-5 space-y-5">
 
-                {/* Renewal date box */}
                 {endsAt && (
                   <div className="rounded-xl bg-white border border-indigo-100 shadow-sm px-4 py-4 flex items-center gap-4">
                     <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
@@ -262,12 +249,11 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   </div>
                 )}
 
-                {/* Billing progress */}
                 {endsAt && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>Ciclo de facturación actual</span>
-                      <span className="font-semibold text-indigo-600">{daysElapsed} / {periodDays} días</span>
+                      <span>{t("billing_cycle")}</span>
+                      <span className="font-semibold text-indigo-600">{t("billing_days", { elapsed: daysElapsed, total: periodDays })}</span>
                     </div>
                     <div className="h-2 w-full rounded-full bg-indigo-100 overflow-hidden">
                       <div
@@ -275,20 +261,19 @@ export default function SettingsForm({ user }: { user: UserData }) {
                         style={{ width: `${progressPercent}%` }}
                       />
                     </div>
-                    <p className="text-xs text-muted-foreground text-right">{progressPercent}% del período transcurrido</p>
+                    <p className="text-xs text-muted-foreground text-right">{t("period_elapsed_pct", { pct: progressPercent })}</p>
                   </div>
                 )}
 
-                {/* Benefits */}
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Incluido en tu plan</p>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("included_in_plan")}</p>
                   <ul className="space-y-1.5">
-                    {[
-                      "Plantillas premium ilimitadas",
-                      "Exportación PDF de alta calidad",
-                      "CVs, cartas y candidaturas sin límite",
-                      "Soporte prioritario",
-                    ].map((benefit) => (
+                    {([
+                      t("pro_benefit_1"),
+                      t("pro_benefit_2"),
+                      t("pro_benefit_3"),
+                      t("pro_benefit_4"),
+                    ]).map((benefit) => (
                       <li key={benefit} className="flex items-center gap-2 text-sm text-foreground">
                         <CheckCircle2 className="h-4 w-4 text-indigo-500 shrink-0" />
                         {benefit}
@@ -299,7 +284,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
                 <Separator />
 
-                {/* Footer row */}
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Calendar className="h-4 w-4" />
@@ -352,7 +336,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
         if (user.plan === "PRO" && isCanceled) {
           return (
             <div className="rounded-2xl overflow-hidden border border-amber-200 shadow-sm">
-              {/* Header */}
               <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-6 py-5">
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div className="flex items-center gap-3">
@@ -360,21 +343,19 @@ export default function SettingsForm({ user }: { user: UserData }) {
                       <AlertCircle className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-white/80 text-xs font-medium tracking-wide uppercase">Plan y cuenta</p>
-                      <p className="text-white font-bold text-lg leading-tight">Pro · Cancelado</p>
+                      <p className="text-white/80 text-xs font-medium tracking-wide uppercase">{t("plan_section_label")}</p>
+                      <p className="text-white font-bold text-lg leading-tight">{t("plan_pro_canceled_label")}</p>
                     </div>
                   </div>
                   <span className="inline-flex items-center gap-1 bg-white/25 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
                     <Clock className="h-3 w-3" />
-                    Acceso activo hasta expiración
+                    {t("access_until_expiry")}
                   </span>
                 </div>
               </div>
 
-              {/* Body */}
               <div className="bg-gradient-to-b from-amber-50/70 to-white px-6 py-5 space-y-5">
 
-                {/* Countdown + expiry */}
                 {endsAt && (
                   <div className="rounded-xl bg-white border border-amber-200 shadow-sm px-4 py-4 flex items-center gap-4">
                     <div className="h-12 w-12 rounded-lg bg-amber-100 flex flex-col items-center justify-center shrink-0">
@@ -393,13 +374,12 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   </div>
                 )}
 
-                {/* CTA reactivar */}
                 <Button
                   className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm"
                   onClick={() => window.location.href = `/${locale}/pricing`}
                 >
                   <RefreshCcw className="h-4 w-4" />
-                  Reactivar plan Pro
+                  {t("reactivate_pro")}
                 </Button>
 
                 <Separator />
@@ -413,10 +393,9 @@ export default function SettingsForm({ user }: { user: UserData }) {
           )
         }
 
-        // ── FREE ──────────────────────────────────────────────────────────
+        // ── SIN SUSCRIPCIÓN ───────────────────────────────────────────────
         return (
           <div className="rounded-2xl overflow-hidden border border-border shadow-sm">
-            {/* Header */}
             <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div className="flex items-center gap-3">
@@ -424,32 +403,30 @@ export default function SettingsForm({ user }: { user: UserData }) {
                     <Zap className="h-5 w-5 text-slate-300" />
                   </div>
                   <div>
-                    <p className="text-slate-400 text-xs font-medium tracking-wide uppercase">Plan y cuenta</p>
-                    <p className="text-white font-bold text-lg leading-tight">Gratuito</p>
+                    <p className="text-slate-400 text-xs font-medium tracking-wide uppercase">{t("plan_section_label")}</p>
+                    <p className="text-white font-bold text-lg leading-tight">{t("no_subscription_title")}</p>
                   </div>
                 </div>
                 <span className="inline-flex items-center bg-slate-600/60 text-slate-300 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  Plan Free
+                  {t("status_not_activated")}
                 </span>
               </div>
             </div>
 
-            {/* Body */}
             <div className="bg-gradient-to-b from-slate-50/50 to-white px-6 py-5 space-y-5">
 
-              {/* Upgrade pitch */}
               <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 px-4 py-4">
                 <p className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
                   <Star className="h-4 w-4 fill-indigo-400 text-indigo-400" />
-                  Desbloquea todo con Pro
+                  {t("unlock_all_with_pro")}
                 </p>
                 <ul className="mt-3 space-y-2">
-                  {[
-                    "Plantillas premium exclusivas",
-                    "Exportación PDF sin marca de agua",
-                    "CVs, cartas y candidaturas ilimitadas",
-                    "Soporte prioritario",
-                  ].map((item) => (
+                  {([
+                    t("free_benefit_1"),
+                    t("free_benefit_2"),
+                    t("free_benefit_3"),
+                    t("free_benefit_4"),
+                  ]).map((item) => (
                     <li key={item} className="flex items-center gap-2 text-sm text-slate-700">
                       <CheckCircle2 className="h-4 w-4 text-indigo-400 shrink-0" />
                       {item}
@@ -458,12 +435,11 @@ export default function SettingsForm({ user }: { user: UserData }) {
                 </ul>
                 <div className="mt-4 flex items-baseline gap-1">
                   <span className="text-2xl font-extrabold text-indigo-700">$15</span>
-                  <span className="text-sm text-indigo-500 font-medium">/mes</span>
-                  <span className="ml-2 text-xs text-muted-foreground">· o $144/año (ahorra 20%)</span>
+                  <span className="text-sm text-indigo-500 font-medium">{t("per_month")}</span>
+                  <span className="ml-2 text-xs text-muted-foreground">{t("annual_discount")}</span>
                 </div>
               </div>
 
-              {/* CTA */}
               <Button
                 className="w-full gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md"
                 onClick={() => window.location.href = `/${locale}/pricing`}
@@ -487,10 +463,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
       <div className="border border-border rounded-xl p-6 space-y-3">
         <h2 className="font-semibold flex items-center gap-2">
           <Download className="h-4 w-4" />
-          Descargar mis datos / Export my data
+          {t("export_section_title")}
         </h2>
         <p className="text-sm text-muted-foreground">
-          Descarga una copia de toda tu información personal almacenada en READY CV (cuenta, CVs y cartas de presentación).
+          {t("export_desc")}
         </p>
         <Button
           variant="outline"
@@ -500,7 +476,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
           className="gap-2"
         >
           <Download className="h-4 w-4" />
-          {exportLoading ? "Exportando..." : "Descargar mis datos / Export my data"}
+          {exportLoading ? t("exporting") : t("export_button")}
         </Button>
       </div>
 
@@ -522,22 +498,22 @@ export default function SettingsForm({ user }: { user: UserData }) {
             }
           >
             <Trash2 className="h-4 w-4" />
-            {deleteLoading ? "Eliminando..." : t("delete_account")}
+            {deleteLoading ? t("deleting") : t("delete_account")}
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>¿Eliminar tu cuenta permanentemente?</AlertDialogTitle>
+              <AlertDialogTitle>{t("delete_dialog_title")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Esta acción es <strong>irreversible</strong>. Se eliminarán tu cuenta, todos tus CVs, cartas de presentación y candidaturas. No podrás recuperar estos datos.
+                {t("delete_dialog_desc")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={handleDeleteAccount}
                 className="bg-destructive text-white hover:bg-destructive/90"
               >
-                Sí, eliminar mi cuenta
+                {t("confirm_delete")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
