@@ -27,11 +27,13 @@ export default function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-50 bg-white border-b border-border shadow-sm">
+    <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-neutral-100 shadow-brand-xs">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 font-bold text-xl text-primary">
-          <FileText className="h-6 w-6" />
-          READY CV
+        <Link href="/" className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
+          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
+            <FileText className="h-4 w-4 text-white" />
+          </div>
+          ReadyCV
         </Link>
 
         {/* Desktop nav */}
@@ -65,7 +67,7 @@ export default function Navbar() {
               <Button variant="ghost" asChild>
                 <Link href="/login">{t("login")}</Link>
               </Button>
-              <Button asChild>
+              <Button asChild className="shadow-brand-sm">
                 <Link href="/register">{t("register")}</Link>
               </Button>
             </>
