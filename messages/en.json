@@ -97,7 +97,11 @@
     "cta_secondary": "View templates",
     "no_credit_card": "No credit card required",
     "cancel_anytime": "Cancel anytime · Your CVs are always yours",
-    "pdf_downloaded": "✓ PDF downloaded"
+    "pdf_downloaded": "✓ PDF downloaded",
+    "users_trust": "professionals trust ReadyCV",
+    "proof_ats": "ATS-compatible templates",
+    "proof_pdf": "Export to PDF in one click",
+    "proof_ai": "Improve your CV with AI"
   },
   "how_it_works": {
     "title": "How does it work?",

@@ -97,7 +97,11 @@
     "cta_secondary": "Ver plantillas",
     "no_credit_card": "Sin tarjeta de crédito requerida",
     "cancel_anytime": "Cancela cuando quieras · Tus CVs siempre son tuyos",
-    "pdf_downloaded": "✓ PDF descargado"
+    "pdf_downloaded": "✓ PDF descargado",
+    "users_trust": "profesionales confían en ReadyCV",
+    "proof_ats": "Compatible con sistemas ATS",
+    "proof_pdf": "Exporta a PDF en un clic",
+    "proof_ai": "Mejora tu CV con IA"
   },
   "how_it_works": {
     "title": "¿Cómo funciona?",
