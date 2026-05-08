@@ -520,6 +520,13 @@
     }
   },
   "editor": {
+    "nav": {
+      "content": "Contenido",
+      "design": "Diseño",
+      "ai": "IA",
+      "ats": "ATS",
+      "cover": "Carta"
+    },
     "photo_updated": "Foto actualizada",
     "photo_deleted": "Foto eliminada",
     "photo_delete_error": "Error al eliminar la foto",

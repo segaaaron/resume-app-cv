@@ -520,6 +520,13 @@
     }
   },
   "editor": {
+    "nav": {
+      "content": "Content",
+      "design": "Design",
+      "ai": "AI",
+      "ats": "ATS",
+      "cover": "Cover Letter"
+    },
     "photo_updated": "Photo updated",
     "photo_deleted": "Photo deleted",
     "photo_delete_error": "Error deleting photo",

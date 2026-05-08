@@ -1,17 +1,18 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslations } from "next-intl"
 import { cn } from "@/lib/utils"
 import { FileText, Palette, Sparkles, Target, Mail, ChevronRight } from "lucide-react"
 
 type EditorTab = "content" | "design" | "ai" | "ats" | "cover"
 
-const NAV_ITEMS: Array<{ id: EditorTab; icon: React.ElementType; label: string }> = [
-  { id: "content", icon: FileText, label: "Contenido" },
-  { id: "design", icon: Palette, label: "Diseño" },
-  { id: "ai", icon: Sparkles, label: "IA" },
-  { id: "ats", icon: Target, label: "ATS" },
-  { id: "cover", icon: Mail, label: "Carta" },
+const NAV_ITEMS: Array<{ id: EditorTab; icon: React.ElementType }> = [
+  { id: "content", icon: FileText },
+  { id: "design", icon: Palette },
+  { id: "ai", icon: Sparkles },
+  { id: "ats", icon: Target },
+  { id: "cover", icon: Mail },
 ]
 
 interface EditorNavSidebarProps {
@@ -21,6 +22,7 @@ interface EditorNavSidebarProps {
 
 export function EditorNavSidebar({ activeTab, onTabChange }: EditorNavSidebarProps) {
   const [expanded, setExpanded] = useState(true)
+  const t = useTranslations("editor.nav")
 
   return (
     <aside
@@ -30,7 +32,7 @@ export function EditorNavSidebar({ activeTab, onTabChange }: EditorNavSidebarPro
       )}
     >
       <div className="flex-1 py-4 space-y-1 px-2">
-        {NAV_ITEMS.map(({ id, icon: Icon, label }) => (
+        {NAV_ITEMS.map(({ id, icon: Icon }) => (
           <button
             key={id}
             onClick={() => onTabChange(id)}
@@ -42,7 +44,7 @@ export function EditorNavSidebar({ activeTab, onTabChange }: EditorNavSidebarPro
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
-            {expanded && <span className="truncate">{label}</span>}
+            {expanded && <span className="truncate">{t(id)}</span>}
           </button>
         ))}
       </div>
