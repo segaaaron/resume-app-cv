@@ -175,7 +175,14 @@
     "contact": "Contact",
     "privacy": "Privacy",
     "terms": "Terms",
-    "rights": "All rights reserved."
+    "rights": "All rights reserved.",
+    "tagline": "Build professional CVs with AI in minutes.",
+    "product": "Product",
+    "templates": "Templates",
+    "blog": "Blog",
+    "legal": "Legal",
+    "cookies": "Cookies",
+    "copyright": "© {year} ReadyCV. All rights reserved."
   },
   "pricing": {
     "title": "One price, everything included",

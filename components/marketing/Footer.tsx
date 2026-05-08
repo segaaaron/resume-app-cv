@@ -1,62 +1,64 @@
 import Link from "next/link"
 import { FileText } from "lucide-react"
-import { getTranslations } from "next-intl/server"
+import { useTranslations, useLocale } from "next-intl"
+import LocaleSwitcher from "./LocaleSwitcher"
 
-export default async function Footer() {
-  const t = await getTranslations("footer")
+export default function Footer() {
+  const t = useTranslations("footer")
+  const locale = useLocale()
 
-  const links = {
-    [t("tools")]: [
-      { label: t("cv_builder"), href: "/dashboard/resumes" },
-      { label: t("cover_letter"), href: "/dashboard/cover-letters" },
-    ],
-    [t("resources")]: [
-      { label: t("cv_templates"), href: "/templates" },
-    ],
-    [t("support")]: [
-      { label: "FAQ", href: "/#faq" },
-      { label: t("pricing"), href: "/pricing" },
-      { label: t("privacy"), href: "/privacy" },
-      { label: t("terms"), href: "/terms" },
-    ],
-  }
+  const productLinks = [
+    { label: t("templates"), href: `/${locale}/templates` },
+    { label: t("pricing"), href: `/${locale}/pricing` },
+    { label: t("blog"), href: `/${locale}/blog` },
+  ]
+
+  const legalLinks = [
+    { label: t("privacy"), href: `/${locale}/privacy` },
+    { label: t("terms"), href: `/${locale}/terms` },
+    { label: t("cookies"), href: `/${locale}/cookie-policy` },
+  ]
 
   return (
-    <footer className="bg-[#1d1d20] text-white py-16 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10 mb-12">
-          <div>
-            <Link href="/" className="flex items-center gap-2 font-bold text-lg mb-4">
-              <FileText className="h-5 w-5 text-primary" />
-              READY CV
+    <footer className="bg-neutral-50 border-t border-neutral-200">
+      <div className="max-w-6xl mx-auto px-4 py-12">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
+          <div className="col-span-2 md:col-span-1">
+            <Link href={`/${locale}`} className="flex items-center gap-2 font-bold text-foreground mb-3">
+              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
+                <FileText className="h-4 w-4 text-white" />
+              </div>
+              ReadyCV
             </Link>
-            <p className="text-sm text-white/60 leading-relaxed">
-              {t("description")}
-            </p>
+            <p className="text-sm text-muted-foreground leading-relaxed">{t("tagline")}</p>
           </div>
 
-          {Object.entries(links).map(([category, items]) => (
-            <div key={category}>
-              <h4 className="font-semibold mb-4 text-sm">{category}</h4>
-              <ul className="space-y-2">
-                {items.map(({ label, href }) => (
-                  <li key={label}>
-                    <Link href={href} className="text-sm text-white/60 hover:text-white transition-colors">
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-4">{t("product")}</h4>
+            <ul className="space-y-3">
+              {productLinks.map(({ label, href }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <h4 className="text-sm font-semibold text-foreground mb-4">{t("legal")}</h4>
+            <ul className="space-y-3">
+              {legalLinks.map(({ label, href }) => (
+                <li key={href}>
+                  <Link href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{label}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
 
-        <div className="border-t border-white/10 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-white/40">
-          <p>© {new Date().getFullYear()} READY CV. {t("rights")}</p>
-          <div className="flex gap-4">
-            <Link href="/privacy" className="hover:text-white transition-colors">{t("privacy")}</Link>
-            <Link href="/terms" className="hover:text-white transition-colors">{t("terms")}</Link>
-          </div>
+        <div className="border-t border-neutral-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground">{t("copyright", { year: new Date().getFullYear() })}</p>
+          <LocaleSwitcher />
         </div>
       </div>
     </footer>

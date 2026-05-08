@@ -175,7 +175,14 @@
     "contact": "Contacto",
     "privacy": "Privacidad",
     "terms": "Términos",
-    "rights": "Todos los derechos reservados."
+    "rights": "Todos los derechos reservados.",
+    "tagline": "Crea CVs profesionales con IA en minutos.",
+    "product": "Producto",
+    "templates": "Plantillas",
+    "blog": "Blog",
+    "legal": "Legal",
+    "cookies": "Cookies",
+    "copyright": "© {year} ReadyCV. Todos los derechos reservados."
   },
   "pricing": {
     "title": "Un precio, todo incluido",
