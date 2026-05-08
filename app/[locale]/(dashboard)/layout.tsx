@@ -25,9 +25,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="h-screen flex overflow-hidden">
       <DashboardNav user={{ name: session.user.name, email: session.user.email, image: session.user.image, role: session.user.role }} />
-      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8">
+      <main className="flex-1 overflow-y-auto bg-neutral-50">
         {children}
       </main>
     </div>
