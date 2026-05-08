@@ -4,13 +4,12 @@ import { TEMPLATES } from "@/types/resume"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
+import { PRO_IDS } from "@/components/editor/template-switcher"
 
 export const metadata: Metadata = {
   title: "Pro Diseños — READY CV",
   description: "Plantillas premium con SVG personalizados y diseños únicos para destacar.",
 }
-
-const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
 
 const PRO_VISUALS: Record<string, {
   bg: string; accent: string; headerBg: string; headerText: string;

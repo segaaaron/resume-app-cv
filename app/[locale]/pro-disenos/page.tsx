@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
+import { PRO_IDS } from "@/components/editor/template-switcher"
 
 export async function generateMetadata({
   params,
@@ -20,8 +21,6 @@ export async function generateMetadata({
     description: t("description"),
   }
 }
-
-const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
 
 const PRO_VISUALS: Record<string, {
   bg: string; accent: string; headerBg: string; headerText: string;

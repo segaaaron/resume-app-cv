@@ -4,6 +4,7 @@ import { TEMPLATES } from "@/types/resume"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
+import { PRO_IDS } from "@/components/editor/template-switcher"
 
 export const metadata: Metadata = {
   title: "Plantillas de Curriculum Vitae Profesionales — 128 Diseños",
@@ -260,7 +261,6 @@ export default function TemplatesPage() {
 
           {/* ── Pro Diseños ── */}
           {(() => {
-            const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
             const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
             const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
 
