@@ -15,31 +15,7 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
-
-interface ItemUpdate { id: string; description: string }
-interface SuggestedLanguage { name: string; level: string }
-interface NewWorkExperience {
-  jobTitle: string
-  employer: string
-  city?: string
-  startDate?: string
-  endDate?: string
-  currentlyWorking?: boolean
-  description: string
-}
-
-interface FillProfileResult {
-  summary?: string | null
-  jobTitle?: string | null
-  hobbies?: string | null
-  suggestedSkills?: string[]
-  suggestedLanguages?: SuggestedLanguage[]
-  workExperienceUpdates?: ItemUpdate[]
-  workExperienceNew?: NewWorkExperience[]
-  educationUpdates?: ItemUpdate[]
-  projectUpdates?: ItemUpdate[]
-  volunteerUpdates?: ItemUpdate[]
-}
+import { useAIProfileFill } from "./hooks/useAIProfileFill"
 
 // ── Reusable diff block ────────────────────────────────────────────────────────
 function DiffBlock({
@@ -121,13 +97,11 @@ function SectionUpdateBlock({
 
 export default function AIProfileFillPanel() {
   const t = useTranslations("editor.ai_profile_fill")
-  const { sectionData, updateSectionData, config } = useResumeStore()
+  const { sectionData, updateSectionData } = useResumeStore()
+  const { prompt, setPrompt, loading, result, generate } = useAIProfileFill()
   const [expanded, setExpanded] = useState(false)
-  const [prompt, setPrompt] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<FillProfileResult | null>(null)
 
-  // Applied state per section
+  // Applied state per section (UI-only)
   const [appliedSummary, setAppliedSummary] = useState(false)
   const [appliedJobTitle, setAppliedJobTitle] = useState(false)
   const [appliedHobbies, setAppliedHobbies] = useState(false)
@@ -142,33 +116,16 @@ export default function AIProfileFillPanel() {
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set())
 
   async function handleGenerate() {
-    if (prompt.trim().length < 10) { toast.error(t("toast_min_chars")); return }
-    setLoading(true)
-    setResult(null)
+    // Reset all applied UI state before generating
     setAppliedSummary(false); setAppliedJobTitle(false); setAppliedHobbies(false)
     setAppliedSkills(false); setAppliedLanguages(false)
     setAppliedWork(new Set()); setAppliedNewWork(new Set())
     setAppliedEdu(new Set()); setAppliedProj(new Set()); setAppliedVol(new Set())
     setSelectedSkills(new Set()); setSelectedLanguages(new Set())
-    try {
-      const res = await fetch("/api/ai/fill-profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: config.language }),
-      })
-      if (res.status === 429) { toast.error(t("toast_rate_limit")); return }
-      if (res.status === 403) { toast.error(t("toast_pro_only")); return }
-      if (res.status === 400) { toast.error(t("toast_more_detail")); return }
-      if (res.status === 422) { toast.error(t("toast_off_topic")); return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setResult(data)
+    const data = await generate()
+    if (data) {
       setSelectedSkills(new Set(data.suggestedSkills ?? []))
-      setSelectedLanguages(new Set((data.suggestedLanguages ?? []).map((l: SuggestedLanguage) => l.name)))
-    } catch {
-      toast.error(t("toast_generate_error"))
-    } finally {
-      setLoading(false)
+      setSelectedLanguages(new Set((data.suggestedLanguages ?? []).map((l) => l.name)))
     }
   }
 
