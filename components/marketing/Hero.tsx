@@ -1,24 +1,17 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2 } from "lucide-react"
-import { getTranslations } from "next-intl/server"
+import { getTranslations, getLocale } from "next-intl/server"
+import { db } from "@/lib/db"
 
 export default async function Hero() {
   const t = await getTranslations("hero")
+  const locale = await getLocale()
 
   let userCount = 1200
   try {
-    const baseUrl = process.env.NEXTAUTH_URL ?? "http://localhost:3000"
-    const res = await fetch(`${baseUrl}/api/stats/users-count`, {
-      next: { revalidate: 3600 },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      userCount = data.count ?? 1200
-    }
-  } catch {
-    /* use fallback */
-  }
+    userCount = await db.user.count({ where: { deletedAt: null } })
+  } catch { /* use fallback */ }
 
   return (
     <section className="relative overflow-hidden bg-white">
@@ -54,13 +47,13 @@ export default async function Hero() {
 
           <div className="flex flex-wrap gap-3">
             <Button size="lg" className="gap-2 shadow-brand-md" asChild>
-              <Link href="/register">
+              <Link href={`/${locale}/register`}>
                 {t("cta_primary")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
             <Button size="lg" variant="outline" asChild>
-              <Link href="/templates">{t("cta_secondary")}</Link>
+              <Link href={`/${locale}/templates`}>{t("cta_secondary")}</Link>
             </Button>
           </div>
 
