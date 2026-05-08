@@ -3,7 +3,6 @@
 import { useState } from "react"
 import type { AppStatus, ApplicationCard } from "@/stores/applicationStore"
 import { useApplicationStore } from "@/stores/applicationStore"
-import { Badge } from "@/components/ui/badge"
 import { Trash2, ExternalLink, Bell, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
@@ -75,10 +74,12 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
   }
 
   return (
-    <div className={cn("rounded-xl p-3 min-h-[400px]", color)}>
+    <div className={cn("rounded-xl p-3 min-h-[400px] bg-white shadow-sm", color)}>
       <div className="flex items-center justify-between mb-3">
-        <h3 className="text-xs font-bold uppercase tracking-wider text-gray-600">{label}</h3>
-        <Badge variant="secondary" className="text-xs h-5 px-1.5">{applications.length}</Badge>
+        <div className="flex items-center gap-2">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-600">{label}</h3>
+          <span className="text-xs bg-neutral-100 text-neutral-600 font-semibold px-1.5 py-0.5 rounded-full">{applications.length}</span>
+        </div>
       </div>
 
       <div className="space-y-2">

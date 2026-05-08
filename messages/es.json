@@ -1085,7 +1085,10 @@
     "reward_tier_3": "1 mes gratis (100%)",
     "max_tier": "¡Alcanzaste el máximo nivel!",
     "reward_applied": "El crédito se aplica automáticamente en tu próxima factura.",
-    "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas."
+    "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas.",
+    "tier_achieved": "✓ activo",
+    "tier_referidos": "{range} referidos",
+    "progress_label": "{count} de {threshold} referidos Pro en este ciclo"
   },
   "checkout": {
     "loading": "Preparando tu pago...",

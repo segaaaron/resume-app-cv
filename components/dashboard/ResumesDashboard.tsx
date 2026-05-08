@@ -171,7 +171,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
       {resumes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="h-20 w-20 rounded-2xl bg-[#eaf3fc] flex items-center justify-center mb-4">
+          <div className="h-20 w-20 rounded-2xl bg-[var(--brand-50)] flex items-center justify-center mb-4">
             <FileText className="h-10 w-10 text-primary" />
           </div>
           <h2 className="text-xl font-semibold mb-2">{t("empty_title")}</h2>
@@ -203,7 +203,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           {resumes.map((resume) => (
             <div key={resume.id} className="group relative">
               <Link href={`/${locale}/editor/${resume.id}`} className="block cursor-pointer">
-                <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all flex flex-col">
+                <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-brand-sm transition-all flex flex-col relative">
                   <div className="h-10 w-full shrink-0" style={{ backgroundColor: resume.colorScheme }} />
                   <div className="p-4 space-y-2 flex-1">
                     <div className="h-2.5 bg-gray-200 rounded w-3/4" />
@@ -211,6 +211,11 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                     {[1, 2, 3, 4, 5].map((i) => (
                       <div key={i} className="h-1.5 bg-gray-100 rounded" style={{ width: `${70 + (i % 3) * 10}%` }} />
                     ))}
+                  </div>
+                  <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                    <span className="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
+                      {t("edit")}
+                    </span>
                   </div>
                 </div>
               </Link>

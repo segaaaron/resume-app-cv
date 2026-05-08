@@ -1085,7 +1085,10 @@
     "reward_tier_3": "1 free month (100%)",
     "max_tier": "You've reached the highest level!",
     "reward_applied": "The credit is automatically applied to your next invoice.",
-    "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again."
+    "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again.",
+    "tier_achieved": "✓ active",
+    "tier_referidos": "{range} referrals",
+    "progress_label": "{count} of {threshold} Pro referrals this cycle"
   },
   "checkout": {
     "loading": "Preparing your payment...",

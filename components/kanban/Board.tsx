@@ -89,10 +89,10 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
             columnId={col.id}
             label={t(col.labelKey as Parameters<typeof t>[0])}
             color={
-              col.id === "WISHLIST" ? "bg-gray-100" :
-              col.id === "APPLIED" ? "bg-blue-50" :
-              col.id === "INTERVIEW" ? "bg-yellow-50" :
-              col.id === "OFFER" ? "bg-green-50" : "bg-red-50"
+              col.id === "WISHLIST" ? "border-l-4 border-l-neutral-400" :
+              col.id === "APPLIED" ? "border-l-4 border-l-blue-500" :
+              col.id === "INTERVIEW" ? "border-l-4 border-l-yellow-500" :
+              col.id === "OFFER" ? "border-l-4 border-l-green-500" : "border-l-4 border-l-red-500"
             }
             applications={applications.filter((a) => a.status === col.id)}
           />

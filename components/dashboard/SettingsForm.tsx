@@ -19,6 +19,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { Card } from "@/components/ui/card"
 import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw, Download, Trash2 } from "lucide-react"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
@@ -136,7 +137,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       </div>
 
       {/* Profile Card */}
-      <div className="border border-border rounded-xl p-6 space-y-5">
+      <Card className="p-6 space-y-5">
         <h2 className="font-semibold flex items-center gap-2">
           <User className="h-4 w-4" />
           {t("profile_section")}
@@ -182,7 +183,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
             {saving ? t("saving") : t("save_button")}
           </Button>
         </form>
-      </div>
+      </Card>
 
       {/* Plan Card */}
       {(() => {
@@ -460,7 +461,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       })()}
 
       {/* Data Export */}
-      <div className="border border-border rounded-xl p-6 space-y-3">
+      <Card className="p-6 space-y-3">
         <h2 className="font-semibold flex items-center gap-2">
           <Download className="h-4 w-4" />
           {t("export_section_title")}
@@ -478,10 +479,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
           <Download className="h-4 w-4" />
           {exportLoading ? t("exporting") : t("export_button")}
         </Button>
-      </div>
+      </Card>
 
       {/* Danger Zone */}
-      <div className="border border-destructive/30 rounded-xl p-6 space-y-3">
+      <Card className="p-6 space-y-3 border-destructive/30">
         <h2 className="font-semibold text-destructive">{t("danger_zone")}</h2>
         <p className="text-sm text-muted-foreground">{t("danger_desc")}</p>
 
@@ -518,7 +519,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-      </div>
+      </Card>
     </div>
   )
 }

@@ -129,31 +129,62 @@ export default function ReferralCard() {
                   </span>
                 </div>
                 <span className={cn("text-[10px]", achieved ? color : "text-muted-foreground")}>
-                  {achieved ? "✓ activo" : `${range} referidos`}
+                  {achieved ? t("tier_achieved") : t("tier_referidos", { range })}
                 </span>
               </div>
             )
           })}
         </div>
 
-        {/* Progress bar */}
-        <div className="mt-3">
-          {nextTier ? (
-            <>
-              <div className="flex justify-between text-[10px] text-muted-foreground mb-1">
-                <span>{cycleCount} de {nextTier.threshold} referidos Pro en este ciclo</span>
-                <span>{t((`reward_tier_${nextTier.tier}`) as "reward_tier_1" | "reward_tier_2" | "reward_tier_3")}</span>
-              </div>
-              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+        {/* Milestone progress bar */}
+        <div className="mt-4">
+          <div className="relative h-2 bg-neutral-100 rounded-full overflow-visible">
+            <div
+              className="absolute left-0 top-0 h-full bg-primary rounded-full transition-all duration-500"
+              style={{ width: `${Math.min(100, (cycleCount / 10) * 100)}%` }}
+            />
+            {[3, 5, 9].map((threshold) => {
+              const pct = (threshold / 10) * 100
+              const reached = cycleCount >= threshold
+              return (
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-500"
-                  style={{ width: `${progressPct}%` }}
-                />
-              </div>
-            </>
-          ) : (
-            <p className="text-[11px] text-purple-600 font-medium text-center mt-1">
-              🏆 {t("max_tier")}
+                  key={threshold}
+                  className="absolute top-1/2 -translate-y-1/2"
+                  style={{ left: `${pct}%` }}
+                >
+                  <div className={cn(
+                    "w-3 h-3 rounded-full border-2 -translate-x-1/2",
+                    reached ? "bg-primary border-primary" : "bg-white border-neutral-300"
+                  )} />
+                </div>
+              )
+            })}
+          </div>
+          <div className="relative h-4 mt-1">
+            {[
+              { val: 0, label: "0" },
+              { val: 3, label: "3" },
+              { val: 5, label: "5" },
+              { val: 9, label: "9" },
+              { val: 10, label: "10" },
+            ].map(({ val, label }) => (
+              <span
+                key={val}
+                className="absolute -translate-x-1/2 text-[10px] text-muted-foreground"
+                style={{ left: `${(val / 10) * 100}%` }}
+              >
+                {label}
+              </span>
+            ))}
+          </div>
+          {nextTier && (
+            <p className="text-[10px] text-muted-foreground mt-1 text-center">
+              {t("progress_label", { count: cycleCount, threshold: nextTier.threshold })}
+            </p>
+          )}
+          {!nextTier && (
+            <p className="text-[10px] text-purple-600 font-medium text-center mt-1">
+              {t("max_tier")}
             </p>
           )}
         </div>
