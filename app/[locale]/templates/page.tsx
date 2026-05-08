@@ -11,6 +11,7 @@ import UseTemplateButton from "@/components/marketing/UseTemplateButton"
 import { auth } from "@/lib/auth"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import { Lock } from "lucide-react"
+import { PRO_IDS } from "@/components/editor/template-switcher"
 
 const jsonLdBreadcrumbTemplates = {
   "@context": "https://schema.org",
@@ -331,7 +332,7 @@ export default async function TemplatesPage({
       )
     : false
 
-  const PRO_IDS = ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical","terminalcv","iosappcv","datadriven","boardingpass","magazinespread","legalbrief","engraved","chalkboard","academiccv","psychologist","chefmenu","sommelier","hotelcv","bartendercv","postcardcv","frontpage","vinylcv","callsheet","copywritermag","animatorcv","codeeditor","civileng","mechanical","devopsterminal","processflow","pilotlog","onboardingform","athletecard","translatorcv","herbariumcv","risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","annualreport","financeterminal","campaignposter","salespitch","ledgercv","neon","medicalchart","vitalsigns","vetcv","fieldjournal","sharp","bauhaus","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"]
+  // PRO_IDS imported from @/components/editor/template-switcher (single source of truth)
 
   const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
     { key: "featured", label: "Destacados", ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"] },
