@@ -6,7 +6,7 @@ import { useApplicationStore } from "@/stores/applicationStore"
 import { Trash2, ExternalLink, Bell, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
   columnId: AppStatus
@@ -17,6 +17,7 @@ interface Props {
 
 export default function KanbanColumn({ columnId, label, color, applications }: Props) {
   const t = useTranslations("kanban")
+  const locale = useLocale()
   const { moveApplication, deleteApplication, updateApplication } = useApplicationStore()
   const [editingReminder, setEditingReminder] = useState<string | null>(null)
 
@@ -119,7 +120,7 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
             {app.followUpAt && editingReminder !== app.id && (
               <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
                 <Bell className="h-2.5 w-2.5" />
-                {new Date(app.followUpAt).toLocaleDateString("es-ES", { day: "numeric", month: "short" })}
+                {new Date(app.followUpAt).toLocaleDateString(locale === "es" ? "es-ES" : "en-US", { day: "numeric", month: "short" })}
               </p>
             )}
 
