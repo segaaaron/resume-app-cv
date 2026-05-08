@@ -67,13 +67,6 @@ export default function ReferralCard() {
   const rewardTier  = stats?.rewardTier  ?? 0
   const nextTier    = stats?.nextTier    ?? null
 
-  // Progress bar within the current cycle
-  const prevThreshold = rewardTier > 0 ? (TIERS.find((t) => t.tier === rewardTier)?.threshold ?? 0) : 0
-  const nextThreshold = nextTier?.threshold ?? 10
-  const progressPct = nextTier
-    ? Math.min(100, Math.max(0, ((cycleCount - prevThreshold) / (nextThreshold - prevThreshold)) * 100))
-    : 100
-
   return (
     <div className="rounded-2xl border border-border bg-white p-6 space-y-5">
       {/* Header */}
