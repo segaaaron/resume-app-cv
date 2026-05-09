@@ -42,10 +42,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 })
   }
 
+  const now = new Date()
   const updated = await db.user.update({
     where: { id: userId },
-    data:  { sessionVersion: { increment: 1 } },
+    data:  { sessionVersion: { increment: 1 }, forceLogoutAt: now },
     select: { sessionVersion: true },
+  })
+
+  await db.auditLog.create({
+    data: { userId, action: "ADMIN_FORCE_LOGOUT", metadata: { byAdmin: session.user.id, at: now.toISOString() } },
   })
 
   // purge in-process cache immediately (best-effort for single-instance)

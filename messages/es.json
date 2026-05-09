@@ -253,9 +253,26 @@
       "no_account": "¿No tienes cuenta?",
       "register_link": "Regístrate",
       "error": "Email o contraseña incorrectos",
+      "error_user_not_found": "No existe una cuenta con ese email",
+      "error_invalid_password": "Contraseña incorrecta",
       "email_invalid": "Email inválido",
       "password_required": "Contraseña requerida",
-      "plan_pro_banner": "Un paso más para activar tu Plan Pro"
+      "plan_pro_banner": "Un paso más para activar tu Plan Pro",
+      "active_session_title": "Ya hay una sesión activa",
+      "active_session_subtitle": "Si eres tú, envíate un código para cerrar la otra sesión.",
+      "send_code": "Enviar código",
+      "sending_code": "Enviando...",
+      "code_sent": "Código enviado. Revisa tu correo.",
+      "code_label": "Código de verificación",
+      "code_placeholder": "123456",
+      "verify_and_enter": "Verificar y acceder",
+      "verifying": "Verificando...",
+      "code_invalid": "Código incorrecto. Te quedan {attemptsLeft} intentos.",
+      "code_expired": "El código expiró. Solicita uno nuevo.",
+      "account_blocked_title": "Cuenta bloqueada temporalmente",
+      "account_blocked_until": "Demasiados intentos fallidos. Bloqueado hasta las {time}.",
+      "back_to_login": "← Volver al login",
+      "error_session_blocked": "Cuenta bloqueada temporalmente por demasiados intentos."
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -285,7 +302,20 @@
       "age_consent": "Confirmo que tengo 16 años o más.",
       "age_required": "Debes confirmar que tienes 16 años o más para continuar",
       "marketing_consent": "Acepto recibir correos sobre novedades y ofertas de READY CV. Puedes darte de baja en cualquier momento.",
-      "plan_pro_banner": "Crea tu cuenta para activar tu Plan Pro — solo toma 30 segundos"
+      "plan_pro_banner": "Crea tu cuenta para activar tu Plan Pro — solo toma 30 segundos",
+      "otp_title": "Verifica tu email",
+      "otp_subtitle": "Enviamos un código a {email}. Ingrésalo para activar tu cuenta.",
+      "otp_label": "Código de verificación",
+      "otp_placeholder": "123456",
+      "otp_submit": "Verificar y crear cuenta",
+      "otp_verifying": "Verificando...",
+      "otp_resend": "¿No recibiste el código? Reenviar",
+      "otp_resent": "Código reenviado. Revisa tu correo.",
+      "otp_back": "← Volver",
+      "otp_invalid": "Código incorrecto. Te quedan {attemptsLeft} intentos.",
+      "otp_expired": "El código expiró. Vuelve a intentarlo.",
+      "otp_max_attempts": "Demasiados intentos fallidos. Vuelve a registrarte.",
+      "otp_email_taken": "Este email ya tiene una cuenta. Inicia sesión."
     }
   },
   "ai_features": {
@@ -371,6 +401,12 @@
     "label": "Idioma"
   },
   "dashboard": {
+    "past_due_banner": {
+      "title": "Problema con tu pago",
+      "description": "No pudimos procesar el cobro de tu suscripción Pro. Actualiza tu método de pago para mantener el acceso.",
+      "cta": "Actualizar método de pago",
+      "dismiss": "Ignorar"
+    },
     "nav": {
       "cvs": "CVs",
       "letters": "Cartas",
@@ -413,6 +449,11 @@
       "pdf_error": "Error al generar el PDF",
       "welcome_pro_title": "¡Bienvenido a Pro!",
       "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones.",
+      "syncing_title": "Activando tu suscripción…",
+      "syncing_subtitle": "Esto puede tardar unos segundos.",
+      "timeout_title": "Pago recibido",
+      "timeout_subtitle": "Si no ves tu acceso Pro en unos minutos, recarga la página.",
+      "timeout_reload": "Recargar página",
       "require_pro_toast": "Activa tu plan Pro para continuar",
       "import_error": "Error al importar el CV",
       "import_success": "CV importado correctamente",

@@ -4,6 +4,7 @@ import Link from "next/link"
 import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { Crown, Sparkles, ArrowRight, Check } from "lucide-react"
+import { isActive } from "@/lib/plans"
 
 /**
  * UpgradeCTACard
@@ -24,13 +25,13 @@ export default function UpgradeCTACard() {
   // for users who actually are Pro.
   if (status === "loading") return null
 
-  const plan = session?.user?.plan
-  const subscriptionStatus = session?.user?.subscriptionStatus
-  const isActiveOrCanceled =
-    subscriptionStatus === "ACTIVE" || subscriptionStatus === "CANCELED"
-  const isPro = plan === "PRO" && isActiveOrCanceled
+  const pro = isActive(
+    session?.user?.plan ?? "UNSUBSCRIBED",
+    session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
+    session?.user?.subscriptionStatus,
+  )
 
-  if (isPro) return null
+  if (pro) return null
 
   const pills = [
     t("pill_unlimited_cvs"),

@@ -9,6 +9,8 @@ declare module "next-auth" {
       subscriptionEndsAt?: string | null
       role?: string
       emailVerified?: string | null
+      sessionVersion?: number
+      activeSessionToken?: string | null
     } & DefaultSession["user"]
   }
 }
@@ -22,5 +24,6 @@ declare module "next-auth/jwt" {
     role?: string
     emailVerified?: string | null
     sessionVersion?: number
+    activeSessionToken?: string | null
   }
 }

@@ -1,12 +1,9 @@
 import { NextResponse } from "next/server"
 import bcrypt from "bcryptjs"
-import { randomBytes } from "crypto"
 import { z } from "zod"
 import { db } from "@/lib/db"
-import { DEFAULT_SECTIONS } from "@/types/resume"
-import { nanoid } from "nanoid"
 import { resend, emailEnabled } from "@/lib/resend"
-import { verifyEmailHtml, verifyEmailText } from "@/lib/emails/verifyEmail"
+import { registrationOtpHtml, registrationOtpText } from "@/lib/emails/registrationOtp"
 import { checkOrigin } from "@/lib/csrf"
 
 // Simple in-memory rate limiter: max 5 attempts per IP per 15 minutes
@@ -53,58 +50,56 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, email, password, marketingConsent, ageConsent, referralCode } = schema.parse(body)
 
+    // Anti-enumeration: return pending:true even if email already registered
     const existing = await db.user.findUnique({ where: { email } })
     if (existing) {
-      // Generic message to prevent email enumeration
-      return NextResponse.json({ success: true }, { status: 201 })
+      return NextResponse.json({ pending: true })
     }
 
-    // Resolve referrer if a valid code was provided
-    let referrerId: string | undefined
-    if (referralCode) {
-      const referrer = await db.user.findUnique({
-        where: { referralCode },
-        select: { id: true },
-      })
-      if (referrer) referrerId = referrer.id
-    }
+    const passwordHash = await bcrypt.hash(password, 12)
 
-    const hashed = await bcrypt.hash(password, 12)
-    const user = await db.user.create({
-      data: {
-        name,
+    // Generate 6-digit OTP using cryptographically secure source
+    const otpInt = crypto.getRandomValues(new Uint32Array(1))[0]
+    const code = String((otpInt % 900000) + 100000)
+    const otpHash = await bcrypt.hash(code, 10)
+    const otpExp = new Date(Date.now() + 10 * 60 * 1000)
+
+    // Upsert: reset OTP and attempts if email was already pending
+    await db.pendingRegistration.upsert({
+      where: { email },
+      create: {
         email,
-        password: hashed,
+        name,
+        passwordHash,
         marketingConsent: marketingConsent ?? false,
-        ageVerified: ageConsent === true,
-        referralCode: nanoid(8),
-        ...(referrerId ? { referredBy: referrerId } : {}),
+        ageConsent,
+        referralCode: referralCode ?? null,
+        otpHash,
+        otpExp,
       },
-    })
-
-    // Generate email verification token (24h expiry)
-    const verifyToken = randomBytes(32).toString("hex")
-    await db.verificationToken.create({
-      data: {
-        identifier: email,
-        token: verifyToken,
-        expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      update: {
+        name,
+        passwordHash,
+        marketingConsent: marketingConsent ?? false,
+        ageConsent,
+        referralCode: referralCode ?? null,
+        otpHash,
+        otpExp,
+        attempts: 0,
       },
     })
 
     if (emailEnabled() && resend) {
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://readycvv.com"
-      const verifyUrl = `${appUrl}/es/verify-email?token=${verifyToken}`
       await resend.emails.send({
         from: "READY CV <no-reply@readycvv.com>",
         to: email,
-        subject: "Verifica tu email en READY CV",
-        html: verifyEmailHtml({ userName: user.name ?? name, verifyUrl }),
-        text: verifyEmailText({ userName: user.name ?? name, verifyUrl }),
+        subject: "Tu código de verificación — READY CV",
+        html: registrationOtpHtml({ userName: name, code }),
+        text: registrationOtpText({ userName: name, code }),
       }).catch(() => {})
     }
 
-    return NextResponse.json({ success: true }, { status: 201 })
+    return NextResponse.json({ pending: true })
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })

@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import UpgradeCTACard from "./UpgradeCTACard"
+import { isActive } from "@/lib/plans"
 
 interface LetterCard {
   id: string
@@ -42,8 +43,11 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
   const { data: session } = useSession()
-  const isPro = session?.user?.plan === "PRO" &&
-    (session?.user?.subscriptionStatus === "ACTIVE" || session?.user?.subscriptionStatus === "CANCELED")
+  const isPro = isActive(
+    session?.user?.plan ?? "UNSUBSCRIBED",
+    session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
+    session?.user?.subscriptionStatus,
+  )
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { checkOrigin } from "@/lib/csrf"
@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     where: { id: session.user.id },
     data: { subscriptionStatus: "CANCELED" },
   })
+  purgeUserCache(session.user.id)
 
   return NextResponse.json({ success: true })
 }

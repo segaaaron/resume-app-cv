@@ -7,7 +7,8 @@ import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
-import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X, Loader2 } from "lucide-react"
+import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X, Loader2, AlertCircle } from "lucide-react"
+import { usePostPurchaseSync } from "@/hooks/usePostPurchaseSync"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import UpgradeCTACard from "./UpgradeCTACard"
@@ -30,6 +31,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { TEMPLATES } from "@/types/resume"
+import { isActive } from "@/lib/plans"
 
 interface ResumeCard {
   id: string
@@ -46,24 +48,26 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const dateLocale = locale === "es" ? es : enUS
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { update, data: session } = useSession()
-  const isPro = session?.user?.plan === "PRO" &&
-    (session?.user?.subscriptionStatus === "ACTIVE" || session?.user?.subscriptionStatus === "CANCELED")
+  const { data: session } = useSession()
+  const isPro = isActive(
+    session?.user?.plan ?? "UNSUBSCRIBED",
+    session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
+    session?.user?.subscriptionStatus,
+  )
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const { syncState, startSync } = usePostPurchaseSync()
 
   useEffect(() => {
     if (searchParams.get("upgraded") === "true") {
       setShowUpgradeBanner(true)
-      // Clean URL without reload
       const url = new URL(window.location.href)
       url.searchParams.delete("upgraded")
       window.history.replaceState({}, "", url.toString())
-      // Force session refresh so JWT cache is invalidated and plan=PRO is loaded
-      update().then(() => router.refresh())
+      startSync()
     }
   }, [searchParams])
 
@@ -138,17 +142,39 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     <div>
       <UpgradeCTACard />
       {showUpgradeBanner && (
-        <div className="flex items-center justify-between bg-primary text-white rounded-2xl px-5 py-4 mb-6 shadow-lg">
+        <div className={`flex items-center justify-between rounded-2xl px-5 py-4 mb-6 shadow-lg ${syncState === "timeout" ? "bg-amber-500 text-white" : "bg-primary text-white"}`}>
           <div className="flex items-center gap-3">
-            <PartyPopper className="h-5 w-5 shrink-0" />
+            {syncState === "polling" ? (
+              <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
+            ) : syncState === "timeout" ? (
+              <AlertCircle className="h-5 w-5 shrink-0" />
+            ) : (
+              <PartyPopper className="h-5 w-5 shrink-0" />
+            )}
             <div>
-              <p className="font-semibold text-sm">{t("welcome_pro_title")}</p>
-              <p className="text-xs text-white/80">{t("welcome_pro_subtitle")}</p>
+              <p className="font-semibold text-sm">
+                {syncState === "polling" ? t("syncing_title") : syncState === "timeout" ? t("timeout_title") : t("welcome_pro_title")}
+              </p>
+              <p className="text-xs text-white/80">
+                {syncState === "polling" ? t("syncing_subtitle") : syncState === "timeout" ? t("timeout_subtitle") : t("welcome_pro_subtitle")}
+              </p>
             </div>
           </div>
-          <button onClick={() => setShowUpgradeBanner(false)} className="p-1 rounded hover:bg-white/20 transition-colors">
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {syncState === "timeout" && (
+              <button
+                onClick={() => window.location.reload()}
+                className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                {t("timeout_reload")}
+              </button>
+            )}
+            {syncState !== "polling" && (
+              <button onClick={() => setShowUpgradeBanner(false)} className="p-1 rounded hover:bg-white/20 transition-colors">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">

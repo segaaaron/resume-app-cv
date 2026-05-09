@@ -40,6 +40,12 @@ model User {
   referrerConversions ReferralConversion[] @relation("ReferrerConversions")
   referredConversions ReferralConversion[] @relation("ReferredConversions")
   sessionVersion      Int                  @default(1)
+  forceLogoutAt       DateTime?            // set by admin to invalidate all active JWTs immediately
+  activeSessionToken           String?   @unique
+  sessionChallengeCode         String?
+  sessionChallengeExp          DateTime?
+  sessionChallengeAttempts     Int       @default(0)
+  sessionChallengeBlockedUntil DateTime?
   lastActiveAt        DateTime             @default(now())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -197,10 +203,13 @@ model ReferralConversion {
 }
 
 model StripeEvent {
-  id          String   @id // Stripe event ID (e.g. evt_xxx)
-  processedAt DateTime @default(now())
+  id                String   @id // Stripe event ID (e.g. evt_xxx)
+  processedAt       DateTime @default(now())
+  userId            String?  // set when the event is associated to a known user
+  checkoutSessionId String?  // set for checkout.session.completed events
 
   @@index([processedAt])
+  @@index([userId])
 }
 
 model AuditLog {
@@ -222,6 +231,12 @@ enum AuditAction {
   REFUND_ISSUED
   PARTIAL_REFUND
   DISPUTE_CHARGEBACK
+  DISPUTE_CLOSED
+  FRAUD_WARNING
+  PROFILE_SYNCED_FROM_STRIPE
+  SUBSCRIPTION_CREATED_EXTERNAL
+  ADMIN_RECONCILE_USER
+  ADMIN_FORCE_LOGOUT
 }
 
 enum Role {
@@ -248,4 +263,17 @@ enum AppStatus {
   INTERVIEW
   OFFER
   REJECTED
+}
+
+model PendingRegistration {
+  email            String   @id
+  name             String
+  passwordHash     String
+  marketingConsent Boolean
+  ageConsent       Boolean
+  referralCode     String?
+  otpHash          String
+  otpExp           DateTime
+  attempts         Int      @default(0)
+  createdAt        DateTime @default(now())
 }
