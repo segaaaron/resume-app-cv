@@ -13,7 +13,7 @@ export default function GuideFeatureBlock({ badge, title, description, mockup, r
   return (
     <section className={cn("py-16 px-4", alt ? "bg-neutral-50" : "bg-white")}>
       <div className={cn(
-        "max-w-5xl mx-auto flex flex-col lg:flex-row items-center gap-12",
+        "max-w-5xl mx-auto flex flex-col lg:flex-row items-center gap-12 animate-on-scroll",
         reverse && "lg:flex-row-reverse"
       )}>
         <div className="flex-1 flex justify-center">

@@ -11,6 +11,7 @@ import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, Loader2
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import UpgradeCTACard from "./UpgradeCTACard"
+import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -219,7 +220,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             {resumes.length} {resumes.length === 1 ? t("count_one") : t("count_other")}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <LocaleSwitcher />
           <div onClick={!isPro ? requirePro : undefined} className={!isPro ? "cursor-pointer" : ""}>
             <ImportResumeButton disabled={!isPro} />
           </div>
@@ -253,7 +255,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           <button
             onClick={createResume}
             disabled={creating}
-            className="aspect-[3/4] border-2 border-dashed border-border rounded-2xl flex flex-col items-center justify-center gap-3 text-muted-foreground hover:border-primary/50 hover:text-primary hover:bg-primary/5 transition-all group cursor-pointer"
+            className="aspect-[3/4] border-2 border-dashed border-[#7B2D42]/30 rounded-2xl flex flex-col items-center justify-center gap-3 text-[#7B2D42]/60 hover:border-[#7B2D42]/60 hover:text-[#7B2D42] hover:bg-[#7B2D42]/5 transition-all group cursor-pointer"
           >
             <div className="h-12 w-12 rounded-xl border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
               <Plus className="h-6 w-6" />

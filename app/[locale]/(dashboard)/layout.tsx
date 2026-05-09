@@ -26,9 +26,9 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="h-screen flex overflow-hidden">
+    <div className="h-screen flex overflow-hidden dashboard-vintage">
       <DashboardNav user={{ name: session.user.name, email: session.user.email, image: session.user.image, role: session.user.role }} />
-      <main className="flex-1 overflow-y-auto bg-neutral-50">
+      <main className="flex-1 overflow-y-auto bg-background">
         {session.user.subscriptionStatus === "PAST_DUE" && <PastDueBanner />}
         <div className="p-6 sm:p-8">
           {children}

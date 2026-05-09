@@ -3,6 +3,7 @@ import Script from "next/script"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
+import ScrollRevealInit from "@/components/ui/ScrollRevealInit"
 import GuideHero from "@/components/guide/GuideHero"
 import GuideSteps from "@/components/guide/GuideSteps"
 import GuideFeatureBlock from "@/components/guide/GuideFeatureBlock"
@@ -144,6 +145,7 @@ export default async function GuidePage({
 
   return (
     <>
+      <ScrollRevealInit />
       <Script
         id="json-ld-guide"
         type="application/ld+json"

@@ -32,9 +32,9 @@ export default function DashboardNav({ user }: Props) {
   }
 
   return (
-    <aside className="w-56 shrink-0 h-full bg-white border-r border-neutral-200 flex flex-col">
+    <aside className="w-56 shrink-0 h-full bg-sidebar border-r border-sidebar-border flex flex-col">
       {/* Logo */}
-      <div className="h-14 flex items-center gap-2 px-4 border-b border-neutral-100">
+      <div className="h-14 flex items-center gap-2 px-4 border-b border-sidebar-border">
         <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
           <FileText className="h-4 w-4 text-white" />
         </div>

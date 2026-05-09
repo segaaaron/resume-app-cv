@@ -15,7 +15,7 @@ export default async function GuideStats({ locale }: { locale: string }) {
         <h2 className="text-sm font-bold text-center text-muted-foreground mb-10 uppercase tracking-wide">
           {t("title")}
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 text-center animate-on-scroll">
           {stats.map(({ number, label }) => (
             <div key={label} className="flex flex-col items-center gap-2">
               <span className="text-5xl font-extrabold text-primary">{number}</span>
