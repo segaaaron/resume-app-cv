@@ -44,7 +44,7 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
 export default function CVReviewPanel() {
   const t = useTranslations("editor.cv_review")
   const tAts = useTranslations("editor.ats")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, save } = useResumeStore()
   const { question, setQuestion, loading, result, review, reset } = useCVReview()
   const [expanded, setExpanded] = useState(true)
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
@@ -116,6 +116,7 @@ export default function CVReviewPanel() {
     } finally {
       setModal(null)
     }
+    save().catch(() => {})
   }
 
   return (

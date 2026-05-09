@@ -1,7 +1,6 @@
 import Link from "next/link"
 import { FileText } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
-import LocaleSwitcher from "./LocaleSwitcher"
 
 export default function Footer() {
   const t = useTranslations("footer")
@@ -56,9 +55,8 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-neutral-200 pt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="border-t border-neutral-200 pt-6">
           <p className="text-xs text-muted-foreground">{t("copyright", { year: new Date().getFullYear() })}</p>
-          <LocaleSwitcher />
         </div>
       </div>
     </footer>

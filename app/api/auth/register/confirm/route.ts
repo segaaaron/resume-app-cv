@@ -8,6 +8,7 @@ import { checkOrigin } from "@/lib/csrf"
 const confirmAttempts = new Map<string, { count: number; resetAt: number }>()
 const CONFIRM_WINDOW_MS = 15 * 60 * 1000
 const CONFIRM_MAX_ATTEMPTS = 10
+setInterval(() => { const now = Date.now(); confirmAttempts.forEach((v, k) => { if (now > v.resetAt) confirmAttempts.delete(k) }) }, 10 * 60 * 1000)
 
 function checkConfirmRateLimit(ip: string): boolean {
   const now = Date.now()

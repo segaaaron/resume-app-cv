@@ -18,6 +18,12 @@
       "og_title": "Precios ReadyCV — Plan Pro desde $15/mes",
       "og_description": "Un plan Pro para conseguir el trabajo: 139+ plantillas, IA, ATS Score, cartas de presentación. Desde $15/mes — más barato que la competencia. Cancela cuando quieras."
     },
+    "guide": {
+      "title": "Cómo usar ReadyCV — Guía completa con IA para tu CV",
+      "description": "Aprende a crear un CV profesional con IA: mejora bullets, genera resúmenes, analiza tu ATS score y crea cartas de presentación en minutos con ReadyCV.",
+      "og_title": "Cómo usar ReadyCV con IA — Guía paso a paso",
+      "og_description": "7 herramientas de IA para tu CV: mejora bullets, genera resúmenes, analiza ATS score y crea cartas de presentación. Todo en ReadyCV."
+    },
     "pro_designs": {
       "title": "Pro Diseños — READY CV",
       "description": "Plantillas premium con SVG personalizados y diseños únicos para destacar."
@@ -83,6 +89,7 @@
     "templates": "Plantillas",
     "pro_designs": "Pro Diseños",
     "pricing": "Precios",
+    "guide": "Guía",
     "faq": "FAQ",
     "login": "Iniciar sesión",
     "register": "Crear CV",
@@ -447,13 +454,14 @@
       "delete_success": "CV eliminado",
       "duplicate_success": "CV duplicado",
       "pdf_error": "Error al generar el PDF",
-      "welcome_pro_title": "¡Bienvenido a Pro!",
+      "welcome_pro_title": "¡Tu plan Pro está activo!",
       "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones.",
+      "upgrade_relogin_subtitle": "Serás redirigido al login en 3 segundos para activar tu sesión Pro.",
       "syncing_title": "Activando tu suscripción…",
       "syncing_subtitle": "Esto puede tardar unos segundos.",
       "timeout_title": "Pago recibido",
-      "timeout_subtitle": "Si no ves tu acceso Pro en unos minutos, recarga la página.",
-      "timeout_reload": "Recargar página",
+      "timeout_subtitle": "Si no ves tu acceso Pro en unos minutos, inicia sesión de nuevo.",
+      "timeout_reload": "Iniciar sesión",
       "require_pro_toast": "Activa tu plan Pro para continuar",
       "import_error": "Error al importar el CV",
       "import_success": "CV importado correctamente",
@@ -583,6 +591,13 @@
     "unsaved": "Sin guardar",
     "saved": "Guardado",
     "save": "Guardar",
+    "saved_at": "Guardado {time}",
+    "unsaved_modal": {
+      "title": "Tienes cambios sin guardar",
+      "description": "¿Qué quieres hacer con los cambios realizados?",
+      "save": "Guardar",
+      "discard": "Descartar"
+    },
     "see_plans": "Ver planes",
     "photo_upload_error": "Error al subir la foto",
     "form": {
@@ -802,6 +817,9 @@
       "title": "Ayúdate con la IA",
       "pro_badge": "Pro",
       "description": "Describe tu perfil profesional con tus palabras y la IA generará tu resumen, título y habilidades sugeridas.",
+      "review_hint": "¿Quieres que la IA revise tu CV completo? Ve a la pestaña",
+      "review_hint_tab": "Revisión",
+      "review_hint_suffix": "y pide sugerencias de mejora o detecta secciones que te faltan.",
       "placeholder": "Ej: Soy desarrollador React con 5 años de experiencia en startups, especializado en performance y accesibilidad.",
       "generate": "Generar con IA",
       "generating": "Generando...",
@@ -1151,5 +1169,76 @@
     "invalidate_success": "Sesión invalidada — el usuario será deslogueado en ≤5 min",
     "invalidate_error": "Error al invalidar sesión",
     "invalidate_network_error": "Error de red al invalidar sesión"
+  },
+  "guide": {
+    "hero": {
+      "badge": "Guía completa",
+      "h1": "Cómo usar ReadyCV — Tu CV con Inteligencia Artificial",
+      "subtitle": "De hoja en blanco a CV profesional en minutos. 7 herramientas de IA que hacen el trabajo pesado por ti.",
+      "stat_templates": "139+ Plantillas",
+      "stat_ai": "7 Herramientas IA",
+      "stat_ats": "ATS Score",
+      "stat_pdf": "PDF Profesional",
+      "cta_primary": "Crear mi CV",
+      "cta_secondary": "Ver precios"
+    },
+    "steps": {
+      "title": "Así funciona en 4 pasos",
+      "step1_title": "Elige tu plantilla",
+      "step1_desc": "139+ diseños profesionales compatibles con ATS",
+      "step2_title": "Completa con IA",
+      "step2_desc": "La IA rellena y mejora tu contenido automáticamente",
+      "step3_title": "Analiza tu ATS",
+      "step3_desc": "Comprueba tu compatibilidad con la oferta de empleo",
+      "step4_title": "Descarga PDF",
+      "step4_desc": "Exporta tu CV en PDF profesional en un clic"
+    },
+    "features": {
+      "fill_profile": {
+        "badge": "IA · Rellena perfil",
+        "title": "De cero a perfil completo en segundos",
+        "description": "Describe brevemente tu trayectoria y la IA genera tu resumen profesional, título del puesto, habilidades sugeridas y actualiza tu experiencia automáticamente."
+      },
+      "improve_bullet": {
+        "badge": "IA · Mejora bullets",
+        "title": "De descripción genérica a logro memorable",
+        "description": "Selecciona cualquier punto de tu experiencia y la IA lo reescribe con verbos de acción, métricas y lenguaje orientado a resultados. 3 versiones para elegir."
+      },
+      "summary": {
+        "badge": "IA · Resumen",
+        "title": "El resumen profesional que abre puertas",
+        "description": "La IA analiza toda tu experiencia y genera un resumen de 3-4 líneas adaptado a tu sector. Puedes pedir nuevas versiones hasta encontrar la perfecta."
+      },
+      "ats_score": {
+        "badge": "IA · ATS Score",
+        "title": "Sabe si tu CV pasará el filtro automático",
+        "description": "Pega la descripción del empleo y en segundos ves tu porcentaje de compatibilidad, keywords presentes y ausentes, y recomendaciones específicas para mejorar."
+      },
+      "cover_letter": {
+        "badge": "IA · Carta de presentación",
+        "title": "Una carta personalizada para cada oferta",
+        "description": "Elige plantilla, ingresa empresa y puesto, y la IA redacta una carta de presentación formal, personalizada y convincente. Editable con formato rich text."
+      },
+      "cv_review": {
+        "badge": "IA · Revisión CV",
+        "title": "Un experto de RRHH revisando tu CV",
+        "description": "La IA revisa tu CV completo y devuelve fortalezas, mejoras concretas con ejemplos y sugerencias aplicables con un click. Como tener un mentor de carrera 24/7."
+      }
+    },
+    "stats": {
+      "title": "En números",
+      "templates_number": "139+",
+      "templates_label": "Plantillas profesionales",
+      "ai_number": "7",
+      "ai_label": "Herramientas de IA",
+      "time_number": "< 5 min",
+      "time_label": "Para tu primer CV"
+    },
+    "cta": {
+      "h2": "¿Listo para conseguir el trabajo?",
+      "subtitle": "Únete a miles de profesionales que ya usan ReadyCV para destacar.",
+      "button": "Empezar ahora",
+      "note": "Plan Pro desde $15/mes · Cancela cuando quieras"
+    }
   }
 }

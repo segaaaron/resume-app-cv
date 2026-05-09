@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
@@ -8,7 +8,6 @@ import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
 import { EditorProvider } from "./EditorContext"
-import { EditorNavSidebar } from "./EditorNavSidebar"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 
 interface Props {
@@ -30,8 +29,6 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   const router = useRouter()
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
-  const [activeTab, setActiveTab] = useState<"content" | "design" | "ai" | "ats" | "cover">("content")
-
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)
@@ -57,8 +54,7 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
       <div className="h-screen flex flex-col overflow-hidden bg-neutral-50">
         <EditorTopBar hasAccess={hasAccess} />
         <div className="flex flex-1 overflow-hidden">
-          <EditorNavSidebar activeTab={activeTab} onTabChange={setActiveTab} />
-          <FormPanel activeTab={activeTab} />
+          <FormPanel />
           <PreviewPanel
             plan={plan}
             subscriptionStatus={subscriptionStatus}

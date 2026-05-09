@@ -24,13 +24,8 @@ import AIProfileFillPanel from "./AIProfileFillPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { LayoutTemplate, Settings2, Target } from "lucide-react"
 
-interface FormPanelProps {
-  activeTab?: string
-}
-
-export default function FormPanel({ activeTab = "content" }: FormPanelProps) {
+export default function FormPanel() {
   const t = useTranslations("editor")
-  void activeTab
   const { sections, reorderSections } = useResumeStore()
   const visibleSections = sections.filter((s) => s.visible)
 

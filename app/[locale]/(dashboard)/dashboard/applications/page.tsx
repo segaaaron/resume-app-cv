@@ -12,8 +12,8 @@ export default async function ApplicationsPage() {
   })
 
   return (
-    <div>
-      <h1 className="text-2xl font-bold mb-6">{t("page_title")}</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold mb-6 mt-2">{t("page_title")}</h1>
       <KanbanBoard initialApplications={applications.map(a => ({
         id: a.id,
         jobTitle: a.jobTitle,

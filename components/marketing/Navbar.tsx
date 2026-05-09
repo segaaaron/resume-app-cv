@@ -48,6 +48,12 @@ export default function Navbar() {
             ✦ {t("pro_designs")}
           </Link>
           <Link
+            href="/guide"
+            className={`relative pb-0.5 hover:text-foreground transition-colors ${isActive("/guide") ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:rounded-full" : ""}`}
+          >
+            {t("guide")}
+          </Link>
+          <Link
             href="/pricing"
             className={`relative pb-0.5 hover:text-foreground transition-colors ${isActive("/pricing") ? "text-foreground after:absolute after:bottom-0 after:left-0 after:right-0 after:h-0.5 after:bg-primary after:rounded-full" : ""}`}
           >
@@ -85,6 +91,7 @@ export default function Navbar() {
         <div className="md:hidden border-t border-border bg-white px-4 py-4 flex flex-col gap-3 text-sm">
           <Link href="/templates" className={`py-2 hover:text-primary transition-colors ${isActive("/templates") ? "text-primary font-semibold" : ""}`} onClick={() => setOpen(false)}>{t("templates")}</Link>
           <Link href="/pro-disenos" className={`py-2 font-semibold bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent ${isActive("/pro-disenos") ? "underline" : ""}`} onClick={() => setOpen(false)}>✦ {t("pro_designs")}</Link>
+          <Link href="/guide" className={`py-2 hover:text-primary transition-colors ${isActive("/guide") ? "text-primary font-semibold" : ""}`} onClick={() => setOpen(false)}>{t("guide")}</Link>
           <Link href="/pricing" className={`py-2 hover:text-primary transition-colors ${isActive("/pricing") ? "text-primary font-semibold" : ""}`} onClick={() => setOpen(false)}>{t("pricing")}</Link>
           <Link href="/#faq" onClick={handleFaqClick} className="py-2 hover:text-primary">{t("faq")}</Link>
           <div className="py-2">

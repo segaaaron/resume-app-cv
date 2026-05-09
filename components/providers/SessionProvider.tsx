@@ -3,72 +3,49 @@
 import { SessionProvider as NextAuthSessionProvider, useSession, signOut } from "next-auth/react"
 import type { Session } from "next-auth"
 import { useEffect, useRef } from "react"
+import { toast } from "sonner"
 
 function SessionWatcher() {
   const { status } = useSession()
-  // Debounce: require 2 consecutive unauthenticated ticks before signing out.
-  // Prevents false logout when server is slow during a background refetch.
-  const unauthCount = useRef(0)
+  const signingOut = useRef(false)
 
   useEffect(() => {
     if (status === "authenticated") {
       sessionStorage.setItem("wasAuthenticated", "1")
-      unauthCount.current = 0
       return
     }
-    if (status === "loading") {
-      // Mid-refetch — do not act, but don't count as unauthenticated tick
-      return
-    }
+    if (status === "loading") return
     if (status === "unauthenticated" && sessionStorage.getItem("wasAuthenticated")) {
-      unauthCount.current += 1
-      if (unauthCount.current >= 3) {
-        // 3 consecutive unauth ticks (270s) required before forced logout — resilient to mobile handoffs
-        sessionStorage.removeItem("wasAuthenticated")
-        signOut({ redirect: true, callbackUrl: "/login" })
-      }
+      sessionStorage.removeItem("wasAuthenticated")
+      signOut({ redirect: true, callbackUrl: "/login" })
     }
   }, [status])
 
-  return null
-}
-
-function SessionVersionWatcher() {
-  const { update } = useSession()
-  // Use a ref to read the latest version without adding session to deps (which would reset the interval on every refetch)
-  const versionRef = useRef<number | undefined>(undefined)
-  const { data: session } = useSession()
-
+  // Global fetch interceptor: any API 401 → session expired → force logout
   useEffect(() => {
-    versionRef.current = session?.user?.sessionVersion
-  }, [session?.user?.sessionVersion])
-
-  useEffect(() => {
-    if (!session?.user?.id) return
-
-    const check = async () => {
-      try {
-        const res = await fetch("/api/billing/version")
-        if (!res.ok) return
-        const { version } = await res.json() as { version: number }
-        const knownVersion = versionRef.current
-        if (knownVersion !== undefined && version !== knownVersion) {
-          await update()
+    const original = window.fetch
+    window.fetch = async (...args) => {
+      const res = await original(...args)
+      if (res.status === 401 && !signingOut.current && sessionStorage.getItem("wasAuthenticated")) {
+        signingOut.current = true
+        const url = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].href : args[0] instanceof Request ? args[0].url : ""
+        // Only intercept internal API calls, not NextAuth endpoints (avoid loop)
+        if (url.startsWith("/api/") && !url.startsWith("/api/auth/")) {
+          toast.error("Tu sesión expiró. Inicia sesión de nuevo.")
+          sessionStorage.removeItem("wasAuthenticated")
+          setTimeout(() => signOut({ redirect: true, callbackUrl: "/login" }), 1_500)
+        } else {
+          signingOut.current = false
         }
-      } catch {
-        // silent — non-critical heartbeat
       }
+      return res
     }
-
-    check() // immediate check on mount / user change
-    const id = setInterval(check, 30_000)
-    return () => clearInterval(id)
-  // Only re-run when the user id changes (login/logout), not on every session object update
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user?.id, update])
+    return () => { window.fetch = original }
+  }, [])
 
   return null
 }
+
 
 export default function SessionProvider({
   children,
@@ -78,9 +55,8 @@ export default function SessionProvider({
   session: Session | null
 }) {
   return (
-    <NextAuthSessionProvider session={session} refetchInterval={90} refetchOnWindowFocus>
+    <NextAuthSessionProvider session={session} refetchOnWindowFocus>
       <SessionWatcher />
-      <SessionVersionWatcher />
       {children}
     </NextAuthSessionProvider>
   )

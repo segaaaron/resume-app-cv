@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle2 } from "lucide-react"
 import { getTranslations, getLocale } from "next-intl/server"
 import { db } from "@/lib/db"
+import HeroMockupCard from "./HeroMockupCard"
 
 export default async function Hero() {
   const t = await getTranslations("hero")
@@ -60,36 +61,7 @@ export default async function Hero() {
           <p className="mt-4 text-xs text-muted-foreground">{t("cancel_anytime")}</p>
         </div>
 
-        <div className="relative hidden md:block">
-          <div className="bg-white rounded-2xl shadow-brand-lg border border-neutral-100 overflow-hidden">
-            <div className="bg-primary h-20 flex items-end px-6 pb-3">
-              <div>
-                <div className="h-4 bg-white/90 rounded w-40 mb-1.5" />
-                <div className="h-2.5 bg-white/60 rounded w-24" />
-              </div>
-            </div>
-            <div className="p-6 grid grid-cols-3 gap-5">
-              <div className="col-span-2 space-y-4">
-                {[80, 100, 65].map((w, i) => (
-                  <div key={i}>
-                    <div className="h-2.5 bg-neutral-200 rounded mb-2" style={{ width: "35%" }} />
-                    <div className="h-2 bg-neutral-100 rounded mb-1 w-full" />
-                    <div className="h-2 bg-neutral-100 rounded" style={{ width: `${w}%` }} />
-                  </div>
-                ))}
-              </div>
-              <div className="space-y-2.5">
-                {[100, 80, 90, 70].map((w, i) => (
-                  <div key={i} className="h-2 bg-neutral-100 rounded" style={{ width: `${w}%` }} />
-                ))}
-              </div>
-            </div>
-          </div>
-          <div className="absolute -left-6 bottom-8 bg-white shadow-brand-md border border-neutral-100 rounded-xl px-3 py-2.5 text-xs font-semibold text-green-700 flex items-center gap-1.5">
-            <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-            ATS Score: 94%
-          </div>
-        </div>
+        <HeroMockupCard />
       </div>
     </section>
   )

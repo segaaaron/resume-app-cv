@@ -11,7 +11,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import {
   Sparkles, Loader2, ChevronDown, ChevronUp, Check,
-  ArrowRight, Briefcase, GraduationCap, FolderOpen, Heart, Globe,
+  ArrowRight, Briefcase, GraduationCap, FolderOpen, Heart, Globe, Info,
 } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -97,7 +97,7 @@ function SectionUpdateBlock({
 
 export default function AIProfileFillPanel() {
   const t = useTranslations("editor.ai_profile_fill")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData, save } = useResumeStore()
   const { prompt, setPrompt, loading, result, generate } = useAIProfileFill()
   const [expanded, setExpanded] = useState(false)
 
@@ -137,6 +137,7 @@ export default function AIProfileFillPanel() {
     updateSectionData("skills", [...existing, ...toAdd.map((n): SkillItem => ({ id: nanoid(), name: n, level: "intermediate" }))])
     setAppliedSkills(true)
     toast.success(t("toast_skills_added", { count: toAdd.length }))
+    save().catch(() => {})
   }
 
   function applyLanguages() {
@@ -155,6 +156,7 @@ export default function AIProfileFillPanel() {
     ])
     setAppliedLanguages(true)
     toast.success(t("toast_languages_added", { count: toAdd.length }))
+    save().catch(() => {})
   }
 
   function applyItemUpdate(
@@ -171,6 +173,7 @@ export default function AIProfileFillPanel() {
     updateSectionData(field, updated as any)
     setApplied(new Set(appliedSet).add(updateId))
     toast.success(t("toast_item_updated", { label }))
+    save().catch(() => {})
   }
 
   // ── Derived values ─────────────────────────────────────────────────────────
@@ -206,6 +209,13 @@ export default function AIProfileFillPanel() {
           <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">
             {t("description")}
           </p>
+
+          <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
+            <Info className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
+            <p className="text-[11px] text-blue-700 leading-relaxed">
+              {t("review_hint")} <span className="font-semibold">{t("review_hint_tab")}</span> {t("review_hint_suffix")}
+            </p>
+          </div>
 
           <Textarea
             value={prompt}
@@ -273,6 +283,7 @@ export default function AIProfileFillPanel() {
                           updateSectionData("workExperience", [...existing, newEntry])
                           setAppliedNewWork(prev => new Set(prev).add(i))
                           toast.success(t("toast_item_updated", { label: entry.employer }))
+                          save().catch(() => {})
                         }}>
                         <Sparkles className="h-2.5 w-2.5" /> {t("btn_apply")}
                       </Button>
@@ -363,6 +374,7 @@ export default function AIProfileFillPanel() {
                     updateSectionData("summary", result!.summary!)
                     setAppliedSummary(true)
                     toast.success(t("toast_summary_updated"))
+                    save().catch(() => {})
                   }}
                 />
               )}
@@ -383,6 +395,7 @@ export default function AIProfileFillPanel() {
                     updateSectionData("personalDetails", { ...pd, jobTitle: result!.jobTitle! })
                     setAppliedJobTitle(true)
                     toast.success(t("toast_job_title_updated"))
+                    save().catch(() => {})
                   }}
                 />
               )}
@@ -402,6 +415,7 @@ export default function AIProfileFillPanel() {
                     updateSectionData("hobbies", result!.hobbies!)
                     setAppliedHobbies(true)
                     toast.success(t("toast_hobbies_updated"))
+                    save().catch(() => {})
                   }}
                 />
               )}

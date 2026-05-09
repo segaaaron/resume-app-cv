@@ -1,14 +1,13 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useSession } from "next-auth/react"
+import { useSession, signOut } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
-import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, PartyPopper, X, Loader2, AlertCircle } from "lucide-react"
-import { usePostPurchaseSync } from "@/hooks/usePostPurchaseSync"
+import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import UpgradeCTACard from "./UpgradeCTACard"
@@ -57,19 +56,52 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
-  const [showUpgradeBanner, setShowUpgradeBanner] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
-  const { syncState, startSync } = usePostPurchaseSync()
+
+  // Post-purchase flow
+  type UpgradeState = "idle" | "waiting" | "confirmed" | "timeout"
+  const [upgradeState, setUpgradeState] = useState<UpgradeState>("idle")
+  const upgradeActiveRef = useRef(false)
 
   useEffect(() => {
-    if (searchParams.get("upgraded") === "true") {
-      setShowUpgradeBanner(true)
-      const url = new URL(window.location.href)
-      url.searchParams.delete("upgraded")
-      window.history.replaceState({}, "", url.toString())
-      startSync()
+    if (searchParams.get("upgraded") !== "true") return
+    const url = new URL(window.location.href)
+    url.searchParams.delete("upgraded")
+    window.history.replaceState({}, "", url.toString())
+
+    setUpgradeState("waiting")
+    upgradeActiveRef.current = true
+
+    const started = Date.now()
+    const MAX_MS = 30_000
+    let intervalMs = 2_000
+
+    const poll = async () => {
+      if (!upgradeActiveRef.current) return
+      if (Date.now() - started > MAX_MS) {
+        setUpgradeState("timeout")
+        return
+      }
+      try {
+        const res = await fetch("/api/billing/post-purchase-status")
+        if (res.ok) {
+          const data = await res.json() as { plan: string; subscriptionStatus: string }
+          if (data.plan === "PRO" && (data.subscriptionStatus === "ACTIVE" || data.subscriptionStatus === "PAST_DUE")) {
+            upgradeActiveRef.current = false
+            setUpgradeState("confirmed")
+            setTimeout(() => signOut({ callbackUrl: `/${locale}/login` }), 3_000)
+            return
+          }
+        }
+      } catch { /* transient error — keep polling */ }
+      intervalMs = Math.min(intervalMs * 1.5, 8_000)
+      setTimeout(poll, intervalMs)
     }
-  }, [searchParams])
+
+    poll()
+    return () => { upgradeActiveRef.current = false }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   function requirePro() {
     router.push(`/${locale}/pricing`)
@@ -138,45 +170,48 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const templateName = (id: string) =>
     TEMPLATES.find((tmpl) => tmpl.id === id)?.name ?? t("default_template")
 
+  if (upgradeState === "waiting" || upgradeState === "confirmed" || upgradeState === "timeout") {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
+          {upgradeState === "waiting" && (
+            <>
+              <Loader2 className="h-12 w-12 text-primary animate-spin" />
+              <div>
+                <p className="text-lg font-semibold">{t("syncing_title")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("syncing_subtitle")}</p>
+              </div>
+            </>
+          )}
+          {upgradeState === "confirmed" && (
+            <>
+              <CheckCircle2 className="h-12 w-12 text-green-500" />
+              <div>
+                <p className="text-lg font-semibold">{t("welcome_pro_title")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("upgrade_relogin_subtitle")}</p>
+              </div>
+            </>
+          )}
+          {upgradeState === "timeout" && (
+            <>
+              <AlertCircle className="h-12 w-12 text-amber-500" />
+              <div>
+                <p className="text-lg font-semibold">{t("timeout_title")}</p>
+                <p className="text-sm text-muted-foreground mt-1">{t("timeout_subtitle")}</p>
+              </div>
+              <Button onClick={() => signOut({ callbackUrl: `/${locale}/login` })}>
+                {t("timeout_reload")}
+              </Button>
+            </>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div>
       <UpgradeCTACard />
-      {showUpgradeBanner && (
-        <div className={`flex items-center justify-between rounded-2xl px-5 py-4 mb-6 shadow-lg ${syncState === "timeout" ? "bg-amber-500 text-white" : "bg-primary text-white"}`}>
-          <div className="flex items-center gap-3">
-            {syncState === "polling" ? (
-              <Loader2 className="h-5 w-5 shrink-0 animate-spin" />
-            ) : syncState === "timeout" ? (
-              <AlertCircle className="h-5 w-5 shrink-0" />
-            ) : (
-              <PartyPopper className="h-5 w-5 shrink-0" />
-            )}
-            <div>
-              <p className="font-semibold text-sm">
-                {syncState === "polling" ? t("syncing_title") : syncState === "timeout" ? t("timeout_title") : t("welcome_pro_title")}
-              </p>
-              <p className="text-xs text-white/80">
-                {syncState === "polling" ? t("syncing_subtitle") : syncState === "timeout" ? t("timeout_subtitle") : t("welcome_pro_subtitle")}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {syncState === "timeout" && (
-              <button
-                onClick={() => window.location.reload()}
-                className="text-xs font-semibold bg-white/20 hover:bg-white/30 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                {t("timeout_reload")}
-              </button>
-            )}
-            {syncState !== "polling" && (
-              <button onClick={() => setShowUpgradeBanner(false)} className="p-1 rounded hover:bg-white/20 transition-colors">
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </div>
-      )}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold">{t("title")}</h1>
