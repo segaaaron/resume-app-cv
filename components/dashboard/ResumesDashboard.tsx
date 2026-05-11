@@ -5,8 +5,8 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useSession, signOut } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
-import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
 import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
@@ -46,6 +46,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const t = useTranslations("dashboard.resumes")
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
+  const userTimezone = useUserTimezone()
   const router = useRouter()
   const searchParams = useSearchParams()
   const { data: session } = useSession()
@@ -287,7 +288,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{resume.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {templateName(resume.templateId)} · {format(new Date(resume.updatedAt), "d MMM yyyy", { locale: dateLocale })}
+                    {templateName(resume.templateId)} · {formatInTimezone(resume.updatedAt, userTimezone, dateLocale)}
                   </p>
                 </div>
 

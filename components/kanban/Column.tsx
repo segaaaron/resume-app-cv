@@ -7,6 +7,8 @@ import { Trash2, ExternalLink, Bell, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
+import { es, enUS } from "date-fns/locale"
+import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
 
 interface Props {
   columnId: AppStatus
@@ -18,6 +20,8 @@ interface Props {
 export default function KanbanColumn({ columnId, label, color, applications }: Props) {
   const t = useTranslations("kanban")
   const locale = useLocale()
+  const userTimezone = useUserTimezone()
+  const dateLocale = locale === "es" ? es : enUS
   const { moveApplication, deleteApplication, updateApplication } = useApplicationStore()
   const [editingReminder, setEditingReminder] = useState<string | null>(null)
 
@@ -120,7 +124,7 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
             {app.followUpAt && editingReminder !== app.id && (
               <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
                 <Bell className="h-2.5 w-2.5" />
-                {new Date(app.followUpAt).toLocaleDateString(locale === "es" ? "es-ES" : "en-US", { day: "numeric", month: "short" })}
+                {formatInTimezone(app.followUpAt!, userTimezone, dateLocale, "d MMM")}
               </p>
             )}
 

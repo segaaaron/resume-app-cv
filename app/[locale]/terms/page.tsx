@@ -210,40 +210,51 @@ export default async function TermsPage({
                   Artificial Intelligence — Disclaimer
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  ReadyCV integrates third-party AI models (including, without limitation, OpenAI and Anthropic models)
-                  to power features such as bullet improvement, professional summary generation, ATS scoring, cover
-                  letter generation, and skill suggestions.
+                  ReadyCV offers optional AI-assisted features — including bullet improvement, professional summary generation,
+                  ATS scoring, cover letter drafting, and skill suggestions — to help users as a starting point for their own writing.{" "}
+                  <strong className="text-foreground">These features are entirely optional.</strong> Users may create, edit, and export
+                  documents without using any AI functionality. No AI feature is mandatory or applied automatically without
+                  the User&apos;s explicit action.
                 </p>
                 <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-background p-4 space-y-3">
-                  <p className="text-sm font-semibold text-foreground">The User expressly acknowledges and agrees that:</p>
+                  <p className="text-sm font-semibold text-foreground">By using any AI feature, the User expressly acknowledges and agrees that:</p>
                   <ul className="space-y-3 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      AI-generated results are <strong className="text-foreground">automatic suggestions only</strong> and do not constitute professional advice of any kind.
+                      AI-generated results are <strong className="text-foreground">suggestions only</strong> — a creative starting point, not a final product. They do not constitute professional, career, legal, or HR advice of any kind.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      AI models may produce <strong className="text-foreground">inaccurate, incomplete, outdated or contextually inappropriate</strong> results,
-                      including <strong className="text-foreground">&quot;hallucinations&quot;</strong> — content entirely fabricated by the model with no basis in reality.
+                      AI models may produce <strong className="text-foreground">inaccurate, incomplete, outdated, or contextually inappropriate</strong> content,
+                      including fabricated information (&quot;hallucinations&quot;) with no basis in reality.{" "}
+                      <strong className="text-foreground">A suggestion may not reflect the User&apos;s actual qualifications, experience, or skills.</strong>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      The User is <strong className="text-foreground">solely responsible</strong> for reviewing, validating and correcting all AI-generated content before use.
+                      <strong className="text-foreground">Applying, saving, or exporting any AI suggestion constitutes the User&apos;s explicit decision to use that content.</strong>{" "}
+                      From that moment, the User assumes full and exclusive responsibility for the accuracy, truthfulness,
+                      and appropriateness of the content, and releases MS Saravia Tech Stack LLC from any liability arising from its use.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      <strong className="text-foreground">MS Saravia Tech Stack LLC does not guarantee that using AI features will improve the chances of
-                      obtaining interviews, passing ATS filters, receiving job offers, or achieving any other employment outcome.</strong>
+                      The User is <strong className="text-foreground">solely responsible</strong> for reviewing, fact-checking, and correcting all AI-generated content before
+                      including it in any document submitted to employers, recruiters, or any third party.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      The ATS score is an <strong className="text-foreground">orientative estimate</strong> based on text analysis and does not replicate the proprietary criteria of real ATS systems.
+                      The ATS score is an <strong className="text-foreground">orientative estimate</strong> based on keyword analysis and does not replicate the proprietary logic of any real ATS system. Results may vary significantly from actual recruiter outcomes.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                      <strong className="text-foreground">MS Saravia Tech Stack LLC makes no warranty, express or implied, that AI features will meet the User&apos;s
+                      expectations, improve employment outcomes, or produce results suitable for any specific purpose.</strong>
                     </li>
                   </ul>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  The User is the <strong className="text-foreground">sole and exclusive owner of the final content</strong> of any document created
-                  via ReadyCV and bears full responsibility for its accuracy, truthfulness and legality.
+                  The User is the <strong className="text-foreground">sole and exclusive author and owner of the final content</strong> of any document
+                  created via ReadyCV. MS Saravia Tech Stack LLC shall not be held liable for any direct, indirect, incidental,
+                  or consequential damage arising from the use — or misuse — of AI-generated suggestions.
                 </p>
               </section>
 
@@ -573,40 +584,52 @@ export default async function TermsPage({
                   Inteligencia Artificial — Descargo de Responsabilidad
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">
-                  ReadyCV integra modelos de inteligencia artificial de terceros (incluyendo, sin limitación, modelos de
-                  OpenAI y Anthropic) para ofrecer funcionalidades como mejora de bullets de experiencia, generación de
-                  resúmenes profesionales, análisis ATS, generación de cartas de presentación y sugerencias de habilidades.
+                  ReadyCV ofrece funciones opcionales asistidas por inteligencia artificial — incluyendo mejora de experiencia,
+                  generación de resúmenes profesionales, análisis ATS, redacción de cartas de presentación y sugerencias de habilidades —
+                  como punto de partida para la escritura del propio Usuario.{" "}
+                  <strong className="text-foreground">Estas funciones son completamente opcionales.</strong> El Usuario puede crear, editar y exportar
+                  documentos sin utilizar ninguna función de IA. Ninguna función de IA es obligatoria ni se aplica automáticamente
+                  sin una acción explícita del Usuario.
                 </p>
                 <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-background p-4 space-y-3">
-                  <p className="text-sm font-semibold text-foreground">El Usuario reconoce y acepta expresamente que:</p>
+                  <p className="text-sm font-semibold text-foreground">Al usar cualquier función de IA, el Usuario reconoce y acepta expresamente que:</p>
                   <ul className="space-y-3 text-sm text-muted-foreground">
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      Los resultados generados por las funciones de IA son <strong className="text-foreground">sugerencias automáticas</strong> y no constituyen asesoría profesional de ningún tipo.
+                      Los resultados generados por la IA son <strong className="text-foreground">sugerencias únicamente</strong> — un punto de partida creativo, no un producto final. No constituyen asesoría profesional, laboral, legal ni de recursos humanos de ningún tipo.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      Los modelos de IA pueden producir resultados <strong className="text-foreground">inexactos, incompletos, desactualizados o inadecuados</strong>,
-                      incluyendo <strong className="text-foreground">&quot;alucinaciones&quot;</strong> — contenido completamente inventado por el modelo sin base en la realidad.
+                      Los modelos de IA pueden producir contenido <strong className="text-foreground">inexacto, incompleto, desactualizado o inadecuado</strong>,
+                      incluyendo información inventada sin base en la realidad (&quot;alucinaciones&quot;).{" "}
+                      <strong className="text-foreground">Una sugerencia puede no reflejar las calificaciones, experiencia o habilidades reales del Usuario.</strong>
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      Es <strong className="text-foreground">responsabilidad exclusiva del Usuario</strong> revisar, validar y corregir todo contenido generado por IA antes de utilizarlo.
+                      <strong className="text-foreground">Aplicar, guardar o exportar cualquier sugerencia de IA constituye la decisión explícita del Usuario de utilizar dicho contenido.</strong>{" "}
+                      Desde ese momento, el Usuario asume plena y exclusiva responsabilidad por la exactitud, veracidad y adecuación del
+                      contenido, y libera a MS Saravia Tech Stack LLC de toda responsabilidad derivada de su uso.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      <strong className="text-foreground">MS Saravia Tech Stack LLC no garantiza que el uso de las funciones de IA mejore las probabilidades
-                      de obtener entrevistas, pasar filtros ATS, recibir ofertas laborales o alcanzar cualquier otro resultado en el proceso de búsqueda de empleo.</strong>
+                      Es <strong className="text-foreground">responsabilidad exclusiva del Usuario</strong> revisar, verificar y corregir todo contenido generado por IA
+                      antes de incluirlo en cualquier documento enviado a empleadores, reclutadores o terceros.
                     </li>
                     <li className="flex items-start gap-2">
                       <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
-                      La puntuación ATS es una <strong className="text-foreground">estimación orientativa</strong> basada en el análisis del texto y no replica los criterios propietarios de sistemas ATS reales.
+                      La puntuación ATS es una <strong className="text-foreground">estimación orientativa</strong> basada en análisis de palabras clave y no replica la lógica propietaria de ningún sistema ATS real. Los resultados pueden diferir significativamente de los criterios reales de selección.
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <span className="mt-1 w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                      <strong className="text-foreground">MS Saravia Tech Stack LLC no otorga ninguna garantía, expresa ni implícita, de que las funciones de IA cumplan
+                      las expectativas del Usuario, mejoren sus resultados laborales o produzcan contenido adecuado para un fin específico.</strong>
                     </li>
                   </ul>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  El Usuario es el <strong className="text-foreground">único y exclusivo responsable del contenido final</strong> de su CV, carta de
-                  presentación y cualquier otro documento creado mediante ReadyCV.
+                  El Usuario es el <strong className="text-foreground">único y exclusivo autor y responsable del contenido final</strong> de cualquier
+                  documento creado mediante ReadyCV. MS Saravia Tech Stack LLC no será responsable de ningún daño directo, indirecto,
+                  incidental o consecuente derivado del uso — o mal uso — de las sugerencias generadas por IA.
                 </p>
               </section>
 

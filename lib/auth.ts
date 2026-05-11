@@ -81,9 +81,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new SessionChallengeBlockedError()
         }
 
-        // Block if another session is active
+        // Block if another session is active — unless it's stale (last activity > inactivity limit)
         if (user.activeSessionToken) {
-          throw new ActiveSessionError()
+          const isStale = !user.lastActiveAt ||
+            Date.now() - user.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS
+          if (!isStale) throw new ActiveSessionError()
+          // Stale session: JWT already dead server-side — clear token and proceed
+          await db.user.update({ where: { id: user.id }, data: { activeSessionToken: null } })
         }
 
         // Generate and persist new active session token

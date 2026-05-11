@@ -76,16 +76,6 @@ export default function DashboardNav({ user }: Props) {
           <LogOut className="h-4 w-4" />
           {t("logout")}
         </button>
-        <div className="flex items-center gap-2.5 px-3 pt-2 mt-1 border-t border-neutral-100">
-          <Avatar className="h-7 w-7">
-            <AvatarImage src={user.image ?? ""} />
-            <AvatarFallback className="text-xs bg-primary text-white">{user.name?.[0]?.toUpperCase() ?? "U"}</AvatarFallback>
-          </Avatar>
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-foreground truncate">{user.name}</p>
-            <p className="text-[10px] text-muted-foreground truncate">{user.email}</p>
-          </div>
-        </div>
       </div>
     </aside>
   )

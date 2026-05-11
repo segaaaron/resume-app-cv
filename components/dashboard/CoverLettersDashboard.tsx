@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
-import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
 import { Plus, Mail, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -41,6 +41,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const t = useTranslations("dashboard.cover_letters")
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
+  const userTimezone = useUserTimezone()
   const router = useRouter()
   const { data: session } = useSession()
   const isPro = isActive(
@@ -145,7 +146,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{letter.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(letter.updatedAt), "d MMM yyyy", { locale: dateLocale })}
+                    {formatInTimezone(letter.updatedAt, userTimezone, dateLocale)}
                   </p>
                 </div>
 
