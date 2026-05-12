@@ -22,7 +22,8 @@ class SessionChallengeBlockedError extends CredentialsSignin {
 // equalizing response time and preventing user enumeration via timing.
 const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+const CACHE_TTL_MS        = 5 * 60 * 1000        // 5 minutes
+const INACTIVITY_LIMIT_MS = 24 * 60 * 60 * 1000  // 24 hours — used only in authorize stale-session check
 
 interface UserPlanCacheEntry {
   plan:                string
