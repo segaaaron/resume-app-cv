@@ -19,18 +19,22 @@
  *   Detectamos el color y lo movemos al background del root como linear-gradient.
  *   El root al ser el elemento paginado, Chrome pinta su background en cada hoja.
  *
- * PAGINACIÓN — DOS NIVELES DE MÁRGENES (@page en print-resume.css):
- *   @page :first { margin: 0 0 10mm 0 }  → página 1: sin margen superior; el template
- *                                           maneja su propio padding interno (ej. pt-9).
- *   @page { margin: 10mm 0 10mm 0 }       → páginas 2+: 10mm arriba Y abajo. Chrome
- *                                           inserta ese espacio automáticamente.
- *   page.pdf() usa preferCSSPageSize:true; margin CDP queda en 0.
+ * PAGINACIÓN (@page en print-resume.css):
+ *   @page { margin: 0 0 10mm 0 } — SOLO bottom margin. El top margin en @page es espacio
+ *   FÍSICO fuera del DOM: el sidebar linear-gradient (pintado en el root DOM) no puede
+ *   cubrir ese espacio → habría franja blanca sobre el sidebar en páginas 2+.
+ *   El padding-top en páginas 2+ se maneja con DOM spacers inyectados en JS.
  *
- * HEIGHT SNAP (dos niveles):
- *   page1Eff = pagePx - bottomMarginPx           (~1085px, sin margen superior en pág.1)
- *   pageNEff = pagePx - topMarginPx - bottomMarginPx (~1047px, para páginas 2+)
- *   capacity(n) = page1Eff + (n-1)*pageNEff
- *   Si la última página tiene <5% de contenido, recorta a N-1 páginas.
+ * DOM SPACERS (padding-top páginas 2+):
+ *   Para cada columna con paddingTop > 0, para cada límite de página N>1:
+ *   elementFromPoint(colCenter, boundaryY) → ancestro directo de la columna →
+ *   insertBefore(spacer). Funciona para mid-entry breaks (no depende de .resume-entry).
+ *   Inserción en orden inverso (página alta → baja) para evitar desplazamiento de cálculos.
+ *
+ * HEIGHT SNAP:
+ *   effectivePagePx = pagePx - bottomMarginPx (~1085px, uniforme para todas las páginas).
+ *   TRIM threshold 5%: solo recorta páginas realmente vacías.
+ *   KEEP floor: max(snapTarget, scrollHeight) evita que overflow:hidden recorte contenido.
  *
  * BLANK PAGE GUARD (discrete-page templates):
  *   Oculta el último div si tiene <15% de contenido.
@@ -46,7 +50,6 @@ import { applyCookies } from "../cookie-forwarder"
 import {
   FUDGE_PX,
   PDF_BOTTOM_MARGIN_PX,
-  PDF_TOP_MARGIN_PX,
   USABLE_PX_PER_PAGE,
 } from "../constants"
 import {
@@ -78,7 +81,7 @@ export async function renderResumePdf(
   page.on("console", (msg) => console.warn("[pdf-chrome]", msg.text()))
 
   await page.evaluate(
-    (pagePx: number, fudgePx: number, bottomMarginPx: number, topMarginPx: number) => {
+    (pagePx: number, fudgePx: number, bottomMarginPx: number) => {
       const wrapper = document.querySelector<HTMLElement>(".resume-pages")
       if (!wrapper) return
 
@@ -107,10 +110,29 @@ export async function renderResumePdf(
           let sidebarEl: HTMLElement | null = null
           let sidebarSide: "left" | "right" = "left"
 
+          // isSolidBg: returns true for any non-transparent, non-zero-alpha background.
+          // Defined early so the detection loops below can use it.
+          const isSolidBgDetect = (bg: string) =>
+            !!bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")
+
+          // hasSolidBgDeep: checks a candidate element up to 2 levels of children.
+          // If the element itself has a solid bg, returns true.
+          // Otherwise walks its direct children (and their children) to find one.
+          // Always uses the candidate (parent) element as sidebarEl — not the child.
+          const hasSolidBgDeep = (el: HTMLElement): boolean => {
+            if (isSolidBgDetect(window.getComputedStyle(el).backgroundColor)) return true
+            for (const c1 of Array.from(el.children)) {
+              if (isSolidBgDetect(window.getComputedStyle(c1 as HTMLElement).backgroundColor)) return true
+              for (const c2 of Array.from(c1.children)) {
+                if (isSolidBgDetect(window.getComputedStyle(c2 as HTMLElement).backgroundColor)) return true
+              }
+            }
+            return false
+          }
+
           if (isSidebarRight) {
             for (let i = rootChildren.length - 1; i >= 0; i--) {
-              const bg = window.getComputedStyle(rootChildren[i]).backgroundColor
-              if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")) {
+              if (hasSolidBgDeep(rootChildren[i])) {
                 sidebarEl = rootChildren[i]
                 sidebarSide = "right"
                 break
@@ -118,8 +140,7 @@ export async function renderResumePdf(
             }
           } else {
             for (let i = 0; i < rootChildren.length; i++) {
-              const bg = window.getComputedStyle(rootChildren[i]).backgroundColor
-              if (bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent" && !bg.endsWith(", 0)")) {
+              if (hasSolidBgDeep(rootChildren[i])) {
                 sidebarEl = rootChildren[i]
                 sidebarSide = isSidebarLeft ? "left" : i === 0 ? "left" : "right"
                 break
@@ -132,7 +153,19 @@ export async function renderResumePdf(
             const rootWidth = root.getBoundingClientRect().width
             if (rootWidth > 0 && sidebarWidth > 0 && sidebarWidth < rootWidth) {
               const ratio = (sidebarWidth / rootWidth) * 100
-              const sidebarBg = window.getComputedStyle(sidebarEl).backgroundColor
+              // Resolve the actual sidebar background color, walking up to 2 levels deep
+              // in case the sidebar's direct bg is transparent (color lives on a child).
+              let sidebarBg = window.getComputedStyle(sidebarEl).backgroundColor
+              if (!isSolidBgDetect(sidebarBg)) {
+                outer2: for (const c1 of Array.from(sidebarEl.children)) {
+                  const bg1 = window.getComputedStyle(c1 as HTMLElement).backgroundColor
+                  if (isSolidBgDetect(bg1)) { sidebarBg = bg1; break outer2 }
+                  for (const c2 of Array.from(c1.children)) {
+                    const bg2 = window.getComputedStyle(c2 as HTMLElement).backgroundColor
+                    if (isSolidBgDetect(bg2)) { sidebarBg = bg2; break outer2 }
+                  }
+                }
+              }
               const mainColEl =
                 sidebarSide === "left"
                   ? (root.lastElementChild as HTMLElement)
@@ -166,44 +199,108 @@ export async function renderResumePdf(
           }
         }
 
-        // --- Content height measurement ---
+        // --- Content height + pagination ---
         //
-        // Two-tier pagination:
-        //   page 1  → @page :first { margin: 0 0 10mm 0 } → effective = pagePx - bottomMarginPx
-        //   pages 2+ → @page { margin: 10mm 0 10mm 0 }   → effective = pagePx - topMarginPx - bottomMarginPx
+        // @page { margin: 0 0 10mm 0 } — SOLO bottom margin en CSS.
+        // Top margin en @page sería espacio FÍSICO fuera del DOM: el sidebar linear-gradient
+        // (pintado en el elemento root) no puede cubrirlo → franja blanca sobre el sidebar.
+        // Solución: top margin via DOM spacers (ver sección abajo), no via @page.
         //
-        // Chrome provides 10mm top breathing room on pages 2+ natively via @page — no spacer
-        // divs needed. root.scrollHeight is used as an upper bound for content height.
-        const page1Eff = pagePx - bottomMarginPx                   // ~1085px
-        const pageNEff = pagePx - topMarginPx - bottomMarginPx     // ~1047px
+        // effectivePagePx: altura de contenido por página (A4 - bottom margin).
+        const effectivePagePx = pagePx - bottomMarginPx  // ~1085px
 
         const contentBottomPx = root.scrollHeight * zoom - fudgePx
 
-        // capacity(n): total DOM pixels for n full pages
-        function capacity(n: number): number {
-          if (n <= 0) return 0
-          return n === 1 ? page1Eff : page1Eff + (n - 1) * pageNEff
+        // --- DOM spacers para padding-top en páginas 2+ ---
+        //
+        // Problema previo: buscar .resume-entry al inicio de cada página fallaba cuando
+        // el contenido se dividía en medio de un entry (break-inside: auto). El primer
+        // elemento visible en la página 2 era una continuación de un entry de la página 1.
+        //
+        // Solución: elementFromPoint() al centro de cada columna en cada límite de página.
+        // Devuelve el elemento más profundo en ese punto. Subimos al ancestro directo de la
+        // columna y el spacer se inserta antes de él — funciona para cualquier tipo de break.
+        const layout2 = root.dataset.printLayout ?? ""
+        const isSidebarLeft2 = layout2 === "sidebar-left"
+        const isSidebarRight2 = layout2 === "sidebar-right"
+
+        const cols: { el: HTMLElement; paddingPx: number }[] = []
+        const mainColEl2 = isSidebarLeft2
+          ? (root.lastElementChild as HTMLElement)
+          : isSidebarRight2
+            ? (root.firstElementChild as HTMLElement)
+            : root
+        const sidebarColEl2 = isSidebarLeft2
+          ? (root.firstElementChild as HTMLElement)
+          : isSidebarRight2
+            ? (root.lastElementChild as HTMLElement)
+            : null
+
+        for (const colEl of [mainColEl2, sidebarColEl2].filter(Boolean) as HTMLElement[]) {
+          const pt = parseFloat(window.getComputedStyle(colEl).paddingTop) || 0
+          if (pt > 0) cols.push({ el: colEl, paddingPx: pt })
         }
 
-        const numPages = contentBottomPx <= page1Eff
-          ? 1
-          : 1 + Math.ceil((contentBottomPx - page1Eff) / pageNEff)
+        const numPagesApprox = Math.ceil(contentBottomPx / effectivePagePx)
 
+        // Limpiar spacers de renders previos
+        root.querySelectorAll("[data-pdf-spacer]").forEach((s) => s.remove())
+
+        // Por cada columna con padding, por cada límite de página 2+, insertar spacer.
+        // Los spacers se insertan en orden inverso (página más alta primero) para que
+        // las inserciones anteriores no desplacen los cálculos de páginas posteriores.
+        for (const { el: col, paddingPx } of cols) {
+          const colRect = col.getBoundingClientRect()
+          const colCenterX = colRect.left + colRect.width / 2
+
+          for (let pN = numPagesApprox - 1; pN >= 1; pN--) {
+            // Y del límite de página en coordenadas viewport.
+            // effectivePagePx es CSS px a zoom=1 (Puppeteer siempre usa deviceScaleFactor:1,
+            // sin CSS zoom en el wrapper). Si se añade CSS zoom al wrapper en el futuro,
+            // esta fórmula debe cambiar a: wrapperRect.top + pN * effectivePagePx * zoom.
+            const boundaryY = wrapperRect.top + pN * effectivePagePx
+
+            // Elemento en ese punto dentro de esta columna
+            const hit = document.elementFromPoint(colCenterX, boundaryY) as HTMLElement | null
+            if (!hit || !col.contains(hit)) continue
+
+            // Subir al hijo directo de col
+            let ancestor: HTMLElement = hit
+            while (ancestor.parentElement && ancestor.parentElement !== col) {
+              ancestor = ancestor.parentElement as HTMLElement
+            }
+            if (ancestor === col) continue
+            if ((ancestor as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) continue
+
+            const gap = parseFloat(window.getComputedStyle(ancestor.parentElement ?? col).gap) || 0
+            const spacerH = Math.max(0, paddingPx - gap)
+            if (spacerH <= 0) continue
+
+            const spacer = document.createElement("div")
+            spacer.dataset.pdfSpacer = "true"
+            spacer.style.cssText = `height:${spacerH}px;flex-shrink:0;`
+            col.insertBefore(spacer, ancestor)
+          }
+        }
+
+        // --- Height snap ---
+        //
+        // Usa effectivePagePx (pagePx - bottomMarginPx) para todos los cálculos.
+        // TRIM threshold: 5% (~54px ≈ 2 líneas). Solo recorta páginas realmente vacías.
+        // KEEP floor: max(snapTarget, root.scrollHeight) evita que overflow:hidden
+        // recorte contenido real cuando scrollHeight > N×effectivePagePx (flex-stretch).
+        const numPages = Math.ceil(contentBottomPx / effectivePagePx)
         if (numPages <= 1) return
 
-        const lastFill = (contentBottomPx - capacity(numPages - 1)) / pageNEff
+        const lastFill = (contentBottomPx - (numPages - 1) * effectivePagePx) / effectivePagePx
 
         if (lastFill < 0.05) {
-          // TRIM: last page < 5% full — cut it.
-          const trimPx = capacity(numPages - 1) / zoom
+          const trimPx = ((numPages - 1) * effectivePagePx) / zoom
           root.style.setProperty("height", `${trimPx}px`, "important")
           root.style.setProperty("min-height", "0", "important")
           root.style.setProperty("overflow", "hidden", "important")
         } else {
-          // KEEP: snap to N full pages for clean sidebar gradient coverage.
-          // max() prevents overflow:hidden from clipping content that slightly exceeds
-          // the snap boundary (e.g. flex-stretch inflation in sidebar column).
-          const snapPx = capacity(numPages) / zoom
+          const snapPx = (numPages * effectivePagePx) / zoom
           const finalTarget = Math.max(snapPx, root.scrollHeight)
           root.style.setProperty("height", `${finalTarget}px`, "important")
           root.style.setProperty("min-height", `${finalTarget}px`, "important")
@@ -218,11 +315,11 @@ export async function renderResumePdf(
         }
       }
 
-      // --- Margin-top reset for elements landing within 8px of a page boundary ---
-      // Neutralises default element margins that create a visible gap at the top of pages 2+.
-      // Uses two-tier page boundaries: page 1 ends at page1Eff, pages 2+ at pageNEff intervals.
-      const p1e = pagePx - bottomMarginPx
-      const pne = pagePx - topMarginPx - bottomMarginPx
+      // --- Margin-top reset para elementos en límites de página ---
+      // Neutraliza margin-top de elementos que caen en los primeros 8px de una página
+      // nueva — evita el "gap falso" visible arriba en página 2+.
+      // Se ejecuta DESPUÉS del spacer fix para no pisar los spacers.
+      const eff = pagePx - bottomMarginPx
       const candidates = Array.from(
         wrapper.querySelectorAll<HTMLElement>(
           ".resume-entry, .resume-section-title, h1, h2, h3, h4",
@@ -230,11 +327,10 @@ export async function renderResumePdf(
       )
       const fixes: HTMLElement[] = []
       candidates.forEach((el) => {
+        if ((el as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) return
         const r = el.getBoundingClientRect()
         const topInWrapper = (r.top - wrapperRect.top) * zoom
-        const offsetInPage = topInWrapper < p1e
-          ? topInWrapper % p1e
-          : (topInWrapper - p1e) % pne
+        const offsetInPage = topInWrapper % eff
         if (offsetInPage > 0 && offsetInPage < 8) fixes.push(el)
       })
       fixes.forEach((el) =>
@@ -244,7 +340,6 @@ export async function renderResumePdf(
     USABLE_PX_PER_PAGE,
     FUDGE_PX,
     PDF_BOTTOM_MARGIN_PX,
-    PDF_TOP_MARGIN_PX,
   )
 
   // preferCSSPageSize: true — Chrome uses @page CSS for both size AND margins.

@@ -7,7 +7,7 @@ import { useSession, signOut } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { es, enUS } from "date-fns/locale"
 import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
-import { Plus, FileText, Pencil, Trash2, Download, Copy, MoreHorizontal, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { Plus, FileText, Trash2, Download, Copy, MoreHorizontal, Loader2, CheckCircle2, AlertCircle, Pen } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import UpgradeCTACard from "./UpgradeCTACard"
@@ -57,6 +57,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   )
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [renameId, setRenameId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState("")
+  const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
 
@@ -131,6 +134,29 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     toast.success(t("delete_success"))
   }
 
+  async function confirmRename() {
+    if (!renameId || !renameDraft.trim()) return
+    setRenaming(true)
+    try {
+      const res = await fetch(`/api/resumes/${renameId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: renameDraft.trim() }),
+      })
+      if (res.ok) {
+        setResumes((prev) => prev.map((r) => r.id === renameId ? { ...r, title: renameDraft.trim() } : r))
+        setRenameId(null)
+        toast.success(t("rename_success"))
+      } else {
+        toast.error(t("rename_error"))
+      }
+    } catch {
+      toast.error(t("rename_error"))
+    } finally {
+      setRenaming(false)
+    }
+  }
+
   async function duplicateResume(id: string) {
     const res = await fetch(`/api/resumes/${id}/duplicate`, { method: "POST" })
     if (res.ok) {
@@ -155,8 +181,10 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       const a = document.createElement("a")
       a.href = url
       a.download = `${resume.title || "resume"}.pdf`
+      document.body.appendChild(a)
       a.click()
-      URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      setTimeout(() => URL.revokeObjectURL(url), 1_000)
       toast.success(`${resume.title || "resume"}.pdf`)
     } catch {
       toast.error(t("pdf_error"))
@@ -297,9 +325,10 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                     <MoreHorizontal className="h-4 w-4" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-44">
-                    <DropdownMenuItem className="gap-2" onClick={() => router.push(`/${locale}/editor/${resume.id}`)}>
-                      <Pencil className="h-3.5 w-3.5" /> {t("edit")}
+                    <DropdownMenuItem className="gap-2" onClick={() => { setRenameId(resume.id); setRenameDraft(resume.title) }}>
+                      <Pen className="h-3.5 w-3.5" /> {t("rename")}
                     </DropdownMenuItem>
+                    <DropdownMenuSeparator />
                     <DropdownMenuItem className="gap-2" onClick={() => duplicateResume(resume.id)}>
                       <Copy className="h-3.5 w-3.5" /> {t("duplicate")}
                     </DropdownMenuItem>
@@ -349,6 +378,28 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
               onClick={() => deleteId && deleteResume(deleteId)}
             >
               {t("delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!renameId} onOpenChange={(o) => !o && setRenameId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("rename_title")}</AlertDialogTitle>
+          </AlertDialogHeader>
+          <input
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={renameDraft}
+            onChange={(e) => setRenameDraft(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && confirmRename()}
+            maxLength={200}
+            autoFocus
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmRename} disabled={renaming || !renameDraft.trim()}>
+              {renaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("rename_confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

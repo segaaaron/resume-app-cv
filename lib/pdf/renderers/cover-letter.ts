@@ -14,33 +14,44 @@
  *   3. gotoAndWaitForContent
  *   4. emulateMediaType("print")
  *   5. waitForFonts
- *   6. Reset min-height del wrapper (evita altura forzada de 297mm que
+ *   6. waitForImages
+ *   7. Reset min-height del wrapper (evita altura forzada de 297mm que
  *      generaría página en blanco si el contenido es corto)
- *   7. page.pdf() — sin post-procesamiento
+ *   8. page.pdf() con preferCSSPageSize: true — tamaño y margen vienen
+ *      de @page en styles/print-cover-letter.css (margin: 10mm 0)
+ *   9. embedPdfMetadata — embebe título/autor con pdf-lib
  *
  * NO debe: pintar gutters, calcular páginas, ni meter lógica de CV.
  */
 
+import { PDFDocument } from "pdf-lib"
 import type { Page } from "puppeteer"
-import { COVER_MARGIN_MM } from "../constants"
 import { applyCookies } from "../cookie-forwarder"
 import {
   gotoAndWaitForContent,
   setA4Viewport,
   waitForFonts,
+  waitForImages,
 } from "../print-helpers"
 
 const WRAPPER_SELECTOR = ".cover-letter-page"
 
 export async function renderCoverLetterPdf(
   page: Page,
-  opts: { printUrl: string; cookieHeader: string; appUrl: string },
+  opts: {
+    printUrl: string
+    cookieHeader: string
+    appUrl: string
+    candidateName?: string
+    letterTitle?: string
+  },
 ): Promise<Buffer> {
   await setA4Viewport(page)
   await applyCookies(page, opts.cookieHeader, opts.appUrl)
   await gotoAndWaitForContent(page, opts.printUrl, WRAPPER_SELECTOR)
   await page.emulateMediaType("print")
   await waitForFonts(page)
+  await waitForImages(page)
 
   // Reset min-height: el wrapper en pantalla tiene min-height: 297mm para
   // verse como hoja completa, pero en print eso fuerza una página vacía
@@ -52,16 +63,35 @@ export async function renderCoverLetterPdf(
     el.style.setProperty("height", "auto", "important")
   })
 
+  // preferCSSPageSize: true — Chrome uses @page in print-cover-letter.css
+  // for both page size and margins (margin: 10mm 0). CDP margin params are
+  // ignored when preferCSSPageSize is true.
   const rawPdf = await page.pdf({
-    format: "A4",
+    preferCSSPageSize: true,
     printBackground: true,
-    margin: {
-      top: `${COVER_MARGIN_MM}mm`,
-      right: "0",
-      bottom: `${COVER_MARGIN_MM}mm`,
-      left: "0",
-    },
+    margin: { top: "0", right: "0", bottom: "0", left: "0" },
   })
 
-  return Buffer.from(rawPdf)
+  return embedPdfMetadata(Buffer.from(rawPdf), {
+    title: opts.letterTitle,
+    author: opts.candidateName,
+  })
+}
+
+async function embedPdfMetadata(
+  pdfBuffer: Buffer,
+  meta: { title?: string; author?: string },
+): Promise<Buffer> {
+  try {
+    const pdfDoc = await PDFDocument.load(pdfBuffer)
+    if (meta.title) pdfDoc.setTitle(meta.title)
+    if (meta.author) pdfDoc.setAuthor(meta.author)
+    pdfDoc.setProducer("ReadyCV")
+    pdfDoc.setCreator("ReadyCV — readycvv.com")
+    pdfDoc.setCreationDate(new Date())
+    const bytes = await pdfDoc.save()
+    return Buffer.from(bytes)
+  } catch {
+    return pdfBuffer
+  }
 }

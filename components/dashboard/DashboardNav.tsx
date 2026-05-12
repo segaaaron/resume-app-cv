@@ -5,6 +5,17 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { FileText, Mail, Briefcase, Settings, LogOut, Shield } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { cn } from "@/lib/utils"
 import { useTranslations, useLocale } from "next-intl"
 
@@ -69,13 +80,24 @@ export default function DashboardNav({ user }: Props) {
           <Settings className="h-4 w-4" />
           {t("settings")}
         </Link>
-        <button
-          onClick={() => signOut({ callbackUrl: `/${locale}` })}
-          className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors"
-        >
-          <LogOut className="h-4 w-4" />
-          {t("logout")}
-        </button>
+        <AlertDialog>
+          <AlertDialogTrigger className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:bg-red-50 hover:text-red-600 transition-colors">
+            <LogOut className="h-4 w-4" />
+            {t("logout")}
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>{t("logout_confirm_title")}</AlertDialogTitle>
+              <AlertDialogDescription>{t("logout_confirm_desc")}</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>{t("logout_cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={() => signOut({ callbackUrl: `/${locale}` })}>
+                {t("logout_confirm_action")}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </aside>
   )

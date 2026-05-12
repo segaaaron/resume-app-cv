@@ -52,10 +52,10 @@ export const FONTS_TIMEOUT_MS = 6_000
 // por eso la fuente de verdad es print-resume.css, no el parámetro de Puppeteer.
 // top = 0: los div-spacers gestionan el padding superior por página.
 // 10mm @ 96dpi ≈ 38px — espacio de respiración profesional entre páginas.
-export const PDF_BOTTOM_MARGIN_PX = 38 // 10mm @ 96dpi (all pages via @page margin-bottom)
-// Top margin applies to pages 2+ only (@page :first overrides page 1 to margin-top: 0).
-// Chrome paginates pages 2+ at (A4_HEIGHT - top - bottom) = 1047px intervals.
-export const PDF_TOP_MARGIN_PX = 38 // 10mm @ 96dpi
+// @page { margin: 0 0 10mm 0 } — solo bottom margin en CSS (top = 0 siempre).
+// Top margin via DOM spacers JS (ver resume.ts). No usar @page margin-top: el espacio
+// físico de @page queda fuera del DOM y el sidebar gradient no puede cubrirlo.
+export const PDF_BOTTOM_MARGIN_PX = 38 // 10mm @ 96dpi
 
 // --- Tolerancias --------------------------------------------------------
 // Tolerancia de sub-pixel rounding de Chrome al medir scrollHeight.

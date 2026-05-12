@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { Card } from "@/components/ui/card"
-import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw, Download, Trash2 } from "lucide-react"
+import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw, Download, Trash2, CreditCard } from "lucide-react"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 
@@ -43,9 +43,30 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const [name, setName] = useState(user.name ?? "")
   const [saving, setSaving] = useState(false)
   const [cancelLoading, setCancelLoading] = useState(false)
+  const [portalLoading, setPortalLoading] = useState(false)
   const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscriptionStatus)
   const [exportLoading, setExportLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+
+  async function handleBillingPortal() {
+    setPortalLoading(true)
+    try {
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      const { url } = await res.json()
+      if (!res.ok || !url) {
+        toast.error(t("portal_error"))
+        return
+      }
+      window.location.href = url
+    } catch {
+      toast.error(t("portal_error"))
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   async function handleCancelSubscription() {
     setCancelLoading(true)
@@ -265,6 +286,28 @@ export default function SettingsForm({ user }: { user: UserData }) {
                     <p className="text-xs text-muted-foreground text-right">{t("period_elapsed_pct", { pct: progressPercent })}</p>
                   </div>
                 )}
+
+                <div className="rounded-xl bg-white border border-indigo-100 shadow-sm px-4 py-4 flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                      <CreditCard className="h-4 w-4 text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">{t("manage_billing")}</p>
+                      <p className="text-xs text-muted-foreground">{t("manage_billing_description")}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleBillingPortal}
+                    disabled={portalLoading}
+                    className="shrink-0 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 gap-1.5"
+                  >
+                    <CreditCard className="h-3.5 w-3.5" />
+                    {portalLoading ? t("opening_portal") : t("manage_billing")}
+                  </Button>
+                </div>
 
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("included_in_plan")}</p>

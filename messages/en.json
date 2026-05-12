@@ -244,6 +244,8 @@
     "pro_member_renews": "Your plan renews on",
     "pro_member_active": "Your subscription is active",
     "pro_member_manage": "Manage subscription",
+    "plan_monthly": "Monthly",
+    "plan_annual": "Annual",
     "feature1": "Unlimited CVs — tailor your resume for every role",
     "feature2": "129 templates for every industry",
     "feature3": "High-quality PDF export",
@@ -460,6 +462,10 @@
       "settings": "Settings",
       "upgrade": "Upgrade plan",
       "logout": "Log out",
+      "logout_confirm_title": "Log out?",
+      "logout_confirm_desc": "You will be signed out of this device.",
+      "logout_confirm_action": "Log out",
+      "logout_cancel": "Cancel",
       "admin": "Admin"
     },
     "upgrade_cta": {
@@ -492,6 +498,11 @@
       "create_error": "Error creating CV",
       "delete_success": "CV deleted",
       "duplicate_success": "CV duplicated",
+      "rename": "Rename",
+      "rename_title": "Rename CV",
+      "rename_confirm": "Save",
+      "rename_success": "Name updated",
+      "rename_error": "Error renaming CV",
       "pdf_error": "Error generating PDF",
       "welcome_pro_title": "Your Pro plan is active!",
       "welcome_pro_subtitle": "You now have full access to all templates and features.",
@@ -605,7 +616,10 @@
       "cancel": "Cancel",
       "confirm_delete": "Yes, delete my account",
       "export_error": "Error exporting data",
-      "delete_error": "Error deleting account"
+      "delete_error": "Error deleting account",
+      "manage_billing": "Manage billing",
+      "manage_billing_description": "Update payment method, download invoices, or cancel your plan.",
+      "opening_portal": "Opening portal..."
     }
   },
   "editor": {

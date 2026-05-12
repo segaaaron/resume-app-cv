@@ -14,6 +14,25 @@ const PUPPETEER_ARGS = [
 const MAX_CONCURRENT_PAGES = 3
 let activePages = 0
 
+// Cola de resolvers en espera de un slot libre.
+const waitQueue: Array<() => void> = []
+
+function acquireSlot(): Promise<void> {
+  if (activePages < MAX_CONCURRENT_PAGES) {
+    activePages++
+    return Promise.resolve()
+  }
+  return new Promise<void>((resolve) => waitQueue.push(() => { activePages++; resolve() }))
+}
+
+function releaseSlot(): void {
+  activePages--
+  waitQueue.shift()?.()
+}
+
+/** Número de renders en espera de slot (útil para monitoring). */
+export function queueDepth(): number { return waitQueue.length }
+
 let browserPromise: Promise<Browser> | null = null
 
 async function createBrowser(): Promise<Browser> {
@@ -41,19 +60,34 @@ export async function getBrowser(): Promise<Browser> {
   return browserPromise
 }
 
-export async function withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
-  // Semáforo simple: si hay 3 renders en curso, espera 200ms y reintenta.
-  // Para producción de mayor escala, sustituir por una cola con backpressure.
-  while (activePages >= MAX_CONCURRENT_PAGES) {
-    await new Promise<void>((resolve) => setTimeout(resolve, 200))
-  }
-  activePages++
+async function ensureHealthyBrowser(): Promise<Browser> {
   const browser = await getBrowser()
-  const page = await browser.newPage()
   try {
-    return await fn(page)
+    await Promise.race([
+      browser.version(),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("health timeout")), 2000)
+      ),
+    ])
+    return browser
+  } catch (err) {
+    console.warn("[browser-pool] health check failed, reconnecting", err)
+    browserPromise = null
+    return getBrowser()
+  }
+}
+
+export async function withPage<T>(fn: (page: Page) => Promise<T>): Promise<T> {
+  await acquireSlot()
+  try {
+    const browser = await ensureHealthyBrowser()
+    const page = await browser.newPage()
+    try {
+      return await fn(page)
+    } finally {
+      await page.close().catch(() => {})
+    }
   } finally {
-    await page.close().catch(() => {})
-    activePages--
+    releaseSlot()
   }
 }

@@ -25,10 +25,12 @@ export type RenderPdfOptions = {
   appUrl: string
   /** true → CV (con stretch + gutter painting); false → carta */
   stretchPages: boolean
-  /** Solo para CVs — autor en metadata del PDF */
+  /** Autor en metadata del PDF (CV y carta) */
   candidateName?: string
   /** Solo para CVs — título en metadata del PDF */
   resumeTitle?: string
+  /** Solo para cartas — título en metadata del PDF */
+  letterTitle?: string
 }
 
 export async function renderToPdf(opts: RenderPdfOptions): Promise<Buffer> {
@@ -41,7 +43,13 @@ export async function renderToPdf(opts: RenderPdfOptions): Promise<Buffer> {
           candidateName: opts.candidateName,
           resumeTitle: opts.resumeTitle,
         })
-      : renderCoverLetterPdf(page, opts),
+      : renderCoverLetterPdf(page, {
+          printUrl: opts.printUrl,
+          cookieHeader: opts.cookieHeader,
+          appUrl: opts.appUrl,
+          candidateName: opts.candidateName,
+          letterTitle: opts.letterTitle,
+        }),
   )
   return withTimeout(job, RENDER_TIMEOUT_MS, "renderToPdf")
 }

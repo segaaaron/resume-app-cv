@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { checkRateLimit } from "@/lib/ai-client"
 import { renderToPdf } from "@/lib/pdf/render-page"
 import { isActive } from "@/lib/plans"
 
@@ -33,12 +34,22 @@ export async function GET(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
+  const allowed = await checkRateLimit(session.user.id, "cover-letter-pdf-export", 20)
+  if (!allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   const printUrl = `${appUrl}/${locale}/cover-letter/${id}/print?pdf=1`
   const cookieHeader = req.headers.get("cookie") ?? ""
 
   try {
-    const pdf = await renderToPdf({ printUrl, cookieHeader, appUrl, stretchPages: false })
+    const pdf = await renderToPdf({
+      printUrl,
+      cookieHeader,
+      appUrl,
+      stretchPages: false,
+      candidateName: session.user.name ?? undefined,
+      letterTitle: letter.title ?? undefined,
+    })
     const filename = encodeURIComponent(letter.title || "carta")
     return new Response(Buffer.from(pdf), {
       headers: {
