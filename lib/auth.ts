@@ -22,8 +22,7 @@ class SessionChallengeBlockedError extends CredentialsSignin {
 // equalizing response time and preventing user enumeration via timing.
 const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
-const CACHE_TTL_MS        = 5 * 60 * 1000        // 5 minutes
-const INACTIVITY_LIMIT_MS = 24 * 60 * 60 * 1000  // 24 hours
+const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
 interface UserPlanCacheEntry {
   plan:                string
@@ -155,9 +154,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
       // Admin force-logout: any JWT issued before forceLogoutAt is invalidated immediately
       if (dbUser.forceLogoutAt && token.iat && token.iat * 1000 < dbUser.forceLogoutAt.getTime()) return null
-
-      // 24h inactivity check — skip on fresh login so returning users aren't blocked
-      if (!isFreshLogin && now - dbUser.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS) return null
 
       // Concurrent session guard: if token was replaced (OTP verify), invalidate this JWT
       if (
