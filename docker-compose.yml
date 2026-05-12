@@ -8,7 +8,6 @@ services:
     environment:
       PDF_SERVICE_URL: http://pdf-generator:3001
       PDF_SERVICE_SECRET: ${PDF_SERVICE_SECRET}
-      INTERNAL_APP_URL: http://app:3000
     depends_on:
       postgres:
         condition: service_healthy

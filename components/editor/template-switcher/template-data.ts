@@ -17,7 +17,7 @@ export const PRO_IDS: string[] = [
   "contactsheet", "annualreport", "financeterminal", "campaignposter", "salespitch",
   "ledgercv", "neon", "medicalchart", "vitalsigns", "vetcv", "fieldjournal",
   "sharp", "bauhaus", "cobalt", "duality", "havana", "helix", "lisbon", "nautical",
-  "obsidian", "prism", "tokyo", "vitae",
+  "obsidian", "prism", "tokyo", "vitae", "meridian",
 ]
 
 export type TemplateLayout = "single-column" | "sidebar-left" | "sidebar-right"

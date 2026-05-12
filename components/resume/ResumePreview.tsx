@@ -129,6 +129,7 @@ import ObsidianTemplate from "./templates/Obsidian"
 import PrismTemplate from "./templates/Prism"
 import TokyoTemplate from "./templates/Tokyo"
 import VitaeTemplate from "./templates/Vitae"
+import MeridianTemplate from "./templates/Meridian"
 
 const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   classic: ClassicTemplate,
@@ -259,6 +260,7 @@ const TEMPLATE_MAP: Record<string, React.ComponentType> = {
   prism: PrismTemplate,
   tokyo: TokyoTemplate,
   vitae: VitaeTemplate,
+  meridian: MeridianTemplate,
 }
 
 // Google Fonts dynamic loader
