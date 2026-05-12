@@ -53,8 +53,18 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/dashboard/resumes`, request.url))
   }
 
+  // Allow PDF print pages with a signed print token — Puppeteer has no session cookie
+  const isPrintPath =
+    /^\/resume\/[^/]+\/print$/.test(pathnameWithoutLocale) ||
+    /^\/cover-letter\/[^/]+\/print$/.test(pathnameWithoutLocale)
+  const hasPrintToken = request.nextUrl.searchParams.has("pt")
+
   // Redirect unauthenticated users away from protected pages
-  if (protectedRoutes.some((r) => pathnameWithoutLocale.startsWith(r)) && !isAuth) {
+  if (
+    protectedRoutes.some((r) => pathnameWithoutLocale.startsWith(r)) &&
+    !isAuth &&
+    !(isPrintPath && hasPrintToken)
+  ) {
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
   }
 
