@@ -19,6 +19,7 @@ export default function ImportResumeButton({ disabled }: Props) {
   const [uploading, setUploading] = useState(false)
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    if (disabled) return
     const f = e.target.files?.[0]
     if (!f) return
     setFile(f)
@@ -66,7 +67,7 @@ export default function ImportResumeButton({ disabled }: Props) {
 
       <Button
         variant="outline"
-        onClick={() => inputRef.current?.click()}
+        onClick={() => { if (!disabled && !uploading) inputRef.current?.click() }}
         disabled={uploading || disabled}
         className="gap-2"
       >

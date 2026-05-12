@@ -44,24 +44,33 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true },
+    select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true, subscriptionId: true },
   })
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-  // Block checkout if already has active subscription
-  if (user.subscriptionStatus === "ACTIVE") {
+  // Block checkout if subscription is still live in Stripe
+  if (user.subscriptionStatus === "ACTIVE" || user.subscriptionStatus === "PAST_DUE") {
     return NextResponse.json({ error: "Already subscribed" }, { status: 400 })
+  }
+
+  // If CANCELED but subscriptionId still exists, clean it up before new checkout
+  if (user.subscriptionId && user.subscriptionStatus === "CANCELED") {
+    await stripe.subscriptions.cancel(user.subscriptionId).catch(() => {})
+    await db.user.update({ where: { id: user.id }, data: { subscriptionId: null } })
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL
   if (!appUrl) return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
 
-  // Create or reuse Stripe customer — check by email before creating to avoid duplicates
+  // Create or reuse Stripe customer — match by metadata.userId to avoid wrong-customer risk
   let customerId = user.stripeCustomerId
   if (!customerId) {
-    const existingCustomers = await stripe.customers.list({ email: user.email!, limit: 1 })
-    if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id
+    const existingCustomers = await stripe.customers.list({ email: user.email!, limit: 10 })
+    const matchingCustomer = existingCustomers.data.find(
+      c => c.metadata?.userId === session.user.id && !c.deleted
+    )
+    if (matchingCustomer) {
+      customerId = matchingCustomer.id
     } else {
       const customer = await stripe.customers.create({
         email: user.email,

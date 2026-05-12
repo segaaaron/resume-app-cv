@@ -3,29 +3,19 @@ import { db } from "@/lib/db"
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
 
 // Rate limit per userId+endpoint stored in DB. Returns true if allowed.
+// Uses a single atomic raw SQL upsert to avoid TOCTOU race at window reset boundary.
 export async function checkRateLimit(userId: string, endpoint: string, limit = 20): Promise<boolean> {
-  const now = new Date()
-  const resetAt = new Date(now.getTime() + RATE_LIMIT_WINDOW_MS)
+  const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS)
 
-  const existing = await db.aIRateLimit.findUnique({
-    where: { userId_endpoint: { userId, endpoint } },
-    select: { count: true, resetAt: true },
-  })
+  const result = await db.$queryRaw<{ count: number }[]>`
+    INSERT INTO "AIRateLimit" ("userId", "endpoint", "count", "resetAt")
+    VALUES (${userId}, ${endpoint}, 1, ${resetAt})
+    ON CONFLICT ("userId", "endpoint") DO UPDATE
+    SET
+      "count"   = CASE WHEN "AIRateLimit"."resetAt" < NOW() THEN 1 ELSE "AIRateLimit"."count" + 1 END,
+      "resetAt" = CASE WHEN "AIRateLimit"."resetAt" < NOW() THEN ${resetAt} ELSE "AIRateLimit"."resetAt" END
+    RETURNING "count"
+  `
 
-  if (!existing || existing.resetAt < now) {
-    await db.aIRateLimit.upsert({
-      where:  { userId_endpoint: { userId, endpoint } },
-      create: { userId, endpoint, count: 1, resetAt },
-      update: { count: 1, resetAt },
-    })
-    return true
-  }
-
-  const updated = await db.aIRateLimit.update({
-    where: { userId_endpoint: { userId, endpoint } },
-    data:  { count: { increment: 1 } },
-    select: { count: true },
-  })
-
-  return updated.count <= limit
+  return result[0].count <= limit
 }

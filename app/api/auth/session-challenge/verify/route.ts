@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { resend, emailEnabled } from "@/lib/resend"
 import { checkOrigin } from "@/lib/csrf"
 import { purgeUserCache } from "@/lib/auth"
+import { checkRateLimit } from "@/lib/ai-client"
 import { sessionChallengeFailedHtml, sessionChallengeFailedText } from "@/lib/emails/sessionChallengeFailedAttempt"
 import { sessionChallengeBlockedHtml, sessionChallengeBlockedText } from "@/lib/emails/sessionChallengeBlocked"
 import { sessionForcedHtml, sessionForcedText } from "@/lib/emails/sessionForced"
@@ -26,8 +27,11 @@ export async function POST(req: NextRequest) {
 
   const { email, code } = parsed.data
 
+  const allowed = await checkRateLimit(email, "session-challenge-verify", 10)
+  if (!allowed) return NextResponse.json({ error: "rate_limit" }, { status: 429 })
+
   const user = await db.user.findUnique({ where: { email } })
-  if (!user) return NextResponse.json({ error: "not_found" }, { status: 404 })
+  if (!user) return NextResponse.json({ error: "invalid_or_no_challenge" }, { status: 400 })
 
   if (user.sessionChallengeBlockedUntil && user.sessionChallengeBlockedUntil > new Date()) {
     return NextResponse.json(

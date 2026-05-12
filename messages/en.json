@@ -320,7 +320,8 @@
       "account_blocked_title": "Account temporarily blocked",
       "account_blocked_until": "Too many failed attempts. Blocked until {time}.",
       "back_to_login": "← Back to login",
-      "error_session_blocked": "Account temporarily blocked due to too many failed attempts."
+      "error_session_blocked": "Account temporarily blocked due to too many failed attempts.",
+      "forgot_password": "Forgot your password?"
     },
     "register": {
       "title": "Create your account",
@@ -363,7 +364,50 @@
       "otp_invalid": "Incorrect code. {attemptsLeft} attempts remaining.",
       "otp_expired": "Code expired. Please try again.",
       "otp_max_attempts": "Too many failed attempts. Please register again.",
-      "otp_email_taken": "This email already has an account. Sign in instead."
+      "otp_email_taken": "This email already has an account. Sign in instead.",
+      "fp_banner_credentials": "You already have an account with this email.",
+      "fp_banner_credentials_cta": "Sign in",
+      "fp_banner_google": "This account was created with Google.",
+      "fp_banner_google_cta": "Continue with Google"
+    },
+    "forgot_password": {
+      "title": "Forgot your password?",
+      "subtitle": "Enter your email and we'll send you a code to reset it.",
+      "email_label": "Email",
+      "submit": "Send code",
+      "back_to_login": "Back to login",
+      "forgot_link": "Forgot your password?",
+      "sent_message": "If the email is registered, you'll receive a code in your inbox.",
+      "google_account": "This account uses Google to sign in. You don't need a password.",
+      "rate_limit": "Too many attempts. Please try again later.",
+      "verify": {
+        "title": "Enter your code",
+        "subtitle": "We sent a 6-digit code to {email}.",
+        "otp_label": "Verification code",
+        "otp_placeholder": "123456",
+        "password_label": "New password",
+        "password_placeholder": "Minimum 8 characters",
+        "confirm_label": "Confirm password",
+        "confirm_placeholder": "Repeat your new password",
+        "submit": "Reset password",
+        "resend": "Resend code",
+        "success": "Password reset. Please sign in.",
+        "expired": "The code has expired. Request a new one.",
+        "invalid_code": "Wrong code. Attempts left: {attemptsLeft}.",
+        "too_many_attempts": "Too many attempts. Request a new code.",
+        "already_used": "This code was already used. Request a new one.",
+        "passwords_mismatch": "Passwords don't match.",
+        "password_min": "Minimum 8 characters",
+        "password_uppercase": "Must contain at least one uppercase letter",
+        "password_lowercase": "Must contain at least one lowercase letter",
+        "password_number": "Must contain at least one number"
+      },
+      "register_banner": {
+        "credentials": "You already have an account with this email.",
+        "credentials_cta": "Sign in",
+        "google": "This account was created with Google.",
+        "google_cta": "Continue with Google"
+      }
     }
   },
   "ai_features": {

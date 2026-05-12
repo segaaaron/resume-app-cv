@@ -34,6 +34,7 @@ export async function GET(req: Request) {
       subscriptionId: null,
       subscriptionEndsAt: null,
       subscriptionStatus: "EXPIRED",
+      sessionVersion: { increment: 1 },
     },
   })
 

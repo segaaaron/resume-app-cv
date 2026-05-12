@@ -320,7 +320,8 @@
       "account_blocked_title": "Cuenta bloqueada temporalmente",
       "account_blocked_until": "Demasiados intentos fallidos. Bloqueado hasta las {time}.",
       "back_to_login": "← Volver al login",
-      "error_session_blocked": "Cuenta bloqueada temporalmente por demasiados intentos."
+      "error_session_blocked": "Cuenta bloqueada temporalmente por demasiados intentos.",
+      "forgot_password": "¿Olvidaste tu contraseña?"
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -363,7 +364,50 @@
       "otp_invalid": "Código incorrecto. Te quedan {attemptsLeft} intentos.",
       "otp_expired": "El código expiró. Vuelve a intentarlo.",
       "otp_max_attempts": "Demasiados intentos fallidos. Vuelve a registrarte.",
-      "otp_email_taken": "Este email ya tiene una cuenta. Inicia sesión."
+      "otp_email_taken": "Este email ya tiene una cuenta. Inicia sesión.",
+      "fp_banner_credentials": "Ya tienes una cuenta con este email.",
+      "fp_banner_credentials_cta": "Iniciar sesión",
+      "fp_banner_google": "Esta cuenta fue creada con Google.",
+      "fp_banner_google_cta": "Continuar con Google"
+    },
+    "forgot_password": {
+      "title": "¿Olvidaste tu contraseña?",
+      "subtitle": "Ingresa tu email y te enviaremos un código para restablecerla.",
+      "email_label": "Email",
+      "submit": "Enviar código",
+      "back_to_login": "Volver al inicio de sesión",
+      "forgot_link": "¿Olvidaste tu contraseña?",
+      "sent_message": "Si el email está registrado, recibirás un código en tu bandeja de entrada.",
+      "google_account": "Esta cuenta usa Google para iniciar sesión. No necesitas contraseña.",
+      "rate_limit": "Demasiados intentos. Intenta de nuevo más tarde.",
+      "verify": {
+        "title": "Ingresa tu código",
+        "subtitle": "Enviamos un código de 6 dígitos a {email}.",
+        "otp_label": "Código de verificación",
+        "otp_placeholder": "123456",
+        "password_label": "Nueva contraseña",
+        "password_placeholder": "Mínimo 8 caracteres",
+        "confirm_label": "Confirmar contraseña",
+        "confirm_placeholder": "Repite tu nueva contraseña",
+        "submit": "Restablecer contraseña",
+        "resend": "Reenviar código",
+        "success": "Contraseña restablecida. Inicia sesión.",
+        "expired": "El código ha expirado. Solicita uno nuevo.",
+        "invalid_code": "Código incorrecto. Intentos restantes: {attemptsLeft}.",
+        "too_many_attempts": "Demasiados intentos. Solicita un nuevo código.",
+        "already_used": "Este código ya fue usado. Solicita uno nuevo.",
+        "passwords_mismatch": "Las contraseñas no coinciden.",
+        "password_min": "Mínimo 8 caracteres",
+        "password_uppercase": "Debe contener al menos una mayúscula",
+        "password_lowercase": "Debe contener al menos una minúscula",
+        "password_number": "Debe contener al menos un número"
+      },
+      "register_banner": {
+        "credentials": "Ya tienes una cuenta con este email.",
+        "credentials_cta": "Iniciar sesión",
+        "google": "Esta cuenta fue creada con Google.",
+        "google_cta": "Continuar con Google"
+      }
     }
   },
   "ai_features": {

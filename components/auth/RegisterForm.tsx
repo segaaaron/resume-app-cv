@@ -10,7 +10,7 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Eye, EyeOff, Zap, Mail } from "lucide-react"
+import { Loader2, Eye, EyeOff, Zap, Mail, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
 
@@ -24,6 +24,7 @@ export default function RegisterForm() {
   const planParam = searchParams.get("plan")
   const refParam = searchParams.get("ref")
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [emailConflict, setEmailConflict] = useState<"credentials" | "google" | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [step, setStep] = useState<RegisterStep>("form")
   const [submittedEmail, setSubmittedEmail] = useState("")
@@ -55,19 +56,28 @@ export default function RegisterForm() {
   } = useForm<FormData>({ resolver: zodResolver(schema), defaultValues: { consent: false, ageConsent: false, marketingConsent: false } })
 
   async function onSubmit(data: FormData) {
+    setEmailConflict(null)
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, referralCode: refParam ?? undefined }),
     })
 
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body.error ?? t("error"))
+    const body = await res.json().catch(() => ({}))
+
+    if (res.status === 409 && body.error === "email_exists_credentials") {
+      setEmailConflict("credentials")
+      return
+    }
+    if (res.status === 409 && body.error === "email_exists_google") {
+      setEmailConflict("google")
       return
     }
 
-    const body = await res.json()
+    if (!res.ok) {
+      toast.error(body.error ?? t("error"))
+      return
+    }
     if (body.pending) {
       setSubmittedEmail(data.email)
       setSubmittedPassword(data.password)
@@ -341,6 +351,46 @@ export default function RegisterForm() {
               </span>
             </label>
           </div>
+
+          {emailConflict === "credentials" && (
+            <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm text-blue-800">{t("fp_banner_credentials")}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  onClick={() => router.push(`/${locale}/login`)}
+                >
+                  {t("fp_banner_credentials_cta")}
+                </Button>
+              </div>
+            </div>
+          )}
+          {emailConflict === "google" && (
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-sm text-amber-800">{t("fp_banner_google")}</p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-2"
+                  disabled={googleLoading}
+                  onClick={async () => {
+                    setGoogleLoading(true)
+                    await signIn("google", { callbackUrl: `/${locale}/dashboard/resumes` })
+                  }}
+                >
+                  {googleLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                  {t("fp_banner_google_cta")}
+                </Button>
+              </div>
+            </div>
+          )}
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>
             {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

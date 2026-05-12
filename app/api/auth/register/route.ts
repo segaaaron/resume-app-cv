@@ -5,24 +5,7 @@ import { db } from "@/lib/db"
 import { resend, emailEnabled } from "@/lib/resend"
 import { registrationOtpHtml, registrationOtpText } from "@/lib/emails/registrationOtp"
 import { checkOrigin } from "@/lib/csrf"
-
-// Simple in-memory rate limiter: max 5 attempts per IP per 15 minutes
-const attempts = new Map<string, { count: number; resetAt: number }>()
-const WINDOW_MS = 15 * 60 * 1000
-const MAX_ATTEMPTS = 5
-setInterval(() => { const now = Date.now(); attempts.forEach((v, k) => { if (now > v.resetAt) attempts.delete(k) }) }, 10 * 60 * 1000)
-
-function checkRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = attempts.get(ip)
-  if (!entry || now > entry.resetAt) {
-    attempts.set(ip, { count: 1, resetAt: now + WINDOW_MS })
-    return true
-  }
-  if (entry.count >= MAX_ATTEMPTS) return false
-  entry.count++
-  return true
-}
+import { checkRateLimit } from "@/lib/ai-client"
 
 const schema = z.object({
   name:             z.string().min(2).max(255),
@@ -40,7 +23,8 @@ export async function POST(req: Request) {
   if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!checkRateLimit(ip)) {
+  const allowed = await checkRateLimit(ip, "register", 5)
+  if (!allowed) {
     return NextResponse.json(
       { error: "Demasiados intentos. Espera 15 minutos antes de intentarlo de nuevo." },
       { status: 429 }
@@ -51,10 +35,15 @@ export async function POST(req: Request) {
     const body = await req.json()
     const { name, email, password, marketingConsent, ageConsent, referralCode } = schema.parse(body)
 
-    // Anti-enumeration: return pending:true even if email already registered
-    const existing = await db.user.findUnique({ where: { email } })
+    const existing = await db.user.findUnique({
+      where: { email },
+      select: { id: true, password: true },
+    })
     if (existing) {
-      return NextResponse.json({ pending: true })
+      if (existing.password) {
+        return NextResponse.json({ error: "email_exists_credentials" }, { status: 409 })
+      }
+      return NextResponse.json({ error: "email_exists_google" }, { status: 409 })
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
@@ -97,7 +86,7 @@ export async function POST(req: Request) {
         subject: "Tu código de verificación — READY CV",
         html: registrationOtpHtml({ userName: name, code }),
         text: registrationOtpText({ userName: name, code }),
-      }).catch(() => {})
+      }).catch((e) => console.error("[resend] registration OTP failed:", e))
     }
 
     return NextResponse.json({ pending: true })

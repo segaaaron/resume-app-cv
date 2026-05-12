@@ -4,23 +4,7 @@ import { z } from "zod"
 import { db } from "@/lib/db"
 import { nanoid } from "nanoid"
 import { checkOrigin } from "@/lib/csrf"
-
-const confirmAttempts = new Map<string, { count: number; resetAt: number }>()
-const CONFIRM_WINDOW_MS = 15 * 60 * 1000
-const CONFIRM_MAX_ATTEMPTS = 10
-setInterval(() => { const now = Date.now(); confirmAttempts.forEach((v, k) => { if (now > v.resetAt) confirmAttempts.delete(k) }) }, 10 * 60 * 1000)
-
-function checkConfirmRateLimit(ip: string): boolean {
-  const now = Date.now()
-  const entry = confirmAttempts.get(ip)
-  if (!entry || now > entry.resetAt) {
-    confirmAttempts.set(ip, { count: 1, resetAt: now + CONFIRM_WINDOW_MS })
-    return true
-  }
-  if (entry.count >= CONFIRM_MAX_ATTEMPTS) return false
-  entry.count++
-  return true
-}
+import { checkRateLimit } from "@/lib/ai-client"
 
 const schema = z.object({
   email: z.string().email(),
@@ -30,14 +14,14 @@ const schema = z.object({
 export async function POST(req: Request) {
   if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
-  if (!checkConfirmRateLimit(ip)) {
-    return NextResponse.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 })
-  }
-
   try {
     const body = await req.json()
     const { email, code } = schema.parse(body)
+
+    const allowed = await checkRateLimit(email, "register-confirm", 10)
+    if (!allowed) {
+      return NextResponse.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 })
+    }
 
     const pending = await db.pendingRegistration.findUnique({ where: { email } })
     if (!pending) {

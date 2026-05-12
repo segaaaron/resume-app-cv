@@ -315,6 +315,14 @@ export default function LoginForm() {
               </button>
             </div>
             {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
+            <div className="flex justify-end mt-1">
+              <Link
+                href={`/${locale}/forgot-password`}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                {t("forgot_password")}
+              </Link>
+            </div>
           </div>
 
           <Button type="submit" className="w-full" disabled={isSubmitting}>

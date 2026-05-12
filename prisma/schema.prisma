@@ -277,3 +277,12 @@ model PendingRegistration {
   attempts         Int      @default(0)
   createdAt        DateTime @default(now())
 }
+
+model PasswordReset {
+  email     String    @id
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int       @default(0)
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+}
