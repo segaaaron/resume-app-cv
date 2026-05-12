@@ -54,6 +54,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       const res = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
       })
       const { url } = await res.json()
       if (!res.ok || !url) {

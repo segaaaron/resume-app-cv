@@ -14,6 +14,10 @@ export async function POST(req: Request) {
 
   if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
+  const body = await req.json().catch(() => ({})) as Record<string, unknown>
+  const rawLocale = typeof body.locale === "string" ? body.locale : ""
+  const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
+
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: { stripeCustomerId: true },
@@ -26,7 +30,7 @@ export async function POST(req: Request) {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   const portalSession = await stripe.billingPortal.sessions.create({
     customer: user.stripeCustomerId,
-    return_url: `${appUrl}/dashboard/settings`,
+    return_url: `${appUrl}/${locale}/dashboard/settings`,
   })
 
   return NextResponse.json({ url: portalSession.url })

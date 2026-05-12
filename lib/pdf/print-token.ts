@@ -29,9 +29,9 @@ export function verifyPrintToken(
     const encoded = token.slice(0, dot)
     const sig = token.slice(dot + 1)
     const expectedSig = sign(encoded)
-    // timing-safe compare
-    const sigBuf = Buffer.from(sig)
-    const expBuf = Buffer.from(expectedSig)
+    // timing-safe compare — must decode base64url to bytes first
+    const sigBuf = Buffer.from(sig, "base64url")
+    const expBuf = Buffer.from(expectedSig, "base64url")
     if (sigBuf.length !== expBuf.length) return null
     if (!timingSafeEqual(sigBuf, expBuf)) return null
     const data = JSON.parse(Buffer.from(encoded, "base64url").toString()) as {

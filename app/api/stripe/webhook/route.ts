@@ -478,10 +478,11 @@ export async function POST(req: Request) {
       case "customer.updated": {
         const customer = event.data.object as Stripe.Customer
         const customerId = customer.id
-        const newEmail = typeof customer.email === "string" ? customer.email : null
+        // Only sync name — email is an auth credential, syncing it would allow Stripe Dashboard
+        // access to overwrite login email and effectively take over the account.
         const newName = typeof customer.name === "string" ? customer.name : null
 
-        if (!newEmail && !newName) break
+        if (!newName) break
 
         const result = await db.$transaction(async (tx) => {
           try { await tx.stripeEvent.create({ data: { id: event.id } }) }
@@ -492,16 +493,13 @@ export async function POST(req: Request) {
 
           await tx.user.update({
             where: { id: user.id },
-            data: {
-              ...(newEmail ? { email: newEmail } : {}),
-              ...(newName  ? { name: newName }   : {}),
-            },
+            data: { name: newName },
           })
           await tx.auditLog.create({
             data: {
               userId: user.id,
               action: "PROFILE_SYNCED_FROM_STRIPE",
-              metadata: { email: newEmail, name: newName },
+              metadata: { name: newName },
             },
           })
           return { skip: false, userId: user.id }

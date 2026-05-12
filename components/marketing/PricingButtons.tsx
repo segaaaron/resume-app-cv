@@ -4,7 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
   plan: "monthly" | "annual"
@@ -13,6 +13,7 @@ interface Props {
 
 export default function PricingButtons({ plan, isPro }: Props) {
   const [loading, setLoading] = useState(false)
+  const locale = useLocale()
   const router = useRouter()
   const t = useTranslations("pricing")
 
@@ -23,6 +24,7 @@ export default function PricingButtons({ plan, isPro }: Props) {
         const res = await fetch("/api/stripe/portal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ locale }),
         })
         const data = await res.json()
         if (res.ok && data.url) {

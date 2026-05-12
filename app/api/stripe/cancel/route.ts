@@ -35,7 +35,7 @@ export async function POST(req: Request) {
   // Update DB immediately — webhook will also fire but this keeps UI in sync faster
   await db.user.update({
     where: { id: session.user.id },
-    data: { subscriptionStatus: "CANCELED" },
+    data: { subscriptionStatus: "CANCELED", sessionVersion: { increment: 1 } },
   })
   purgeUserCache(session.user.id)
 

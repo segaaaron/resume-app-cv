@@ -1,11 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { AlertTriangle, X, ExternalLink } from "lucide-react"
 
 export default function PastDueBanner() {
   const t = useTranslations("dashboard.past_due_banner")
+  const locale = useLocale()
   const [dismissed, setDismissed] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -14,7 +15,11 @@ export default function PastDueBanner() {
   async function openPortal() {
     setLoading(true)
     try {
-      const res = await fetch("/api/stripe/portal", { method: "POST" })
+      const res = await fetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      })
       const data = await res.json()
       if (data.url) window.location.href = data.url
     } finally {

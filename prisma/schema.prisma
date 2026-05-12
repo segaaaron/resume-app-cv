@@ -28,7 +28,8 @@ model User {
   applications        Application[]
   marketingConsent    Boolean              @default(false)
   ageVerified         Boolean              @default(false)
-  emailOptOut         Boolean              @default(false)
+  emailOptOut             Boolean              @default(false)
+  renewalReminderSentAt   DateTime?
   deletedAt           DateTime?
   auditLogs           AuditLog[]
   referralCode        String?              @unique

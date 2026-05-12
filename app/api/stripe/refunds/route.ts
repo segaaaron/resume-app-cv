@@ -97,6 +97,7 @@ export async function POST(req: Request) {
       subscriptionId: null,
       subscriptionEndsAt: null,
       subscriptionStatus: "EXPIRED",
+      sessionVersion: { increment: 1 },
     },
   })
   purgeUserCache(userId)

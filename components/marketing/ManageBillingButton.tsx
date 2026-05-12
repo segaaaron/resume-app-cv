@@ -2,10 +2,11 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 
 export default function ManageBillingButton() {
   const [loading, setLoading] = useState(false)
+  const locale = useLocale()
   const t = useTranslations("pricing")
 
   async function handleClick() {
@@ -14,6 +15,7 @@ export default function ManageBillingButton() {
       const res = await fetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
       })
       const data = await res.json()
       if (res.ok && data.url) {
