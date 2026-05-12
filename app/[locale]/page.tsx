@@ -1,18 +1,19 @@
 import type { Metadata } from "next"
 import Script from "next/script"
-import Navbar from "@/components/marketing/Navbar"
-import Hero from "@/components/marketing/Hero"
-import HowItWorks from "@/components/marketing/HowItWorks"
-import FeatureCards from "@/components/marketing/FeatureCards"
-import AIFeatures from "@/components/marketing/AIFeatures"
-import ATSSection from "@/components/marketing/ATSSection"
-import CVExamples from "@/components/marketing/CVExamples"
-import TemplateGallery from "@/components/marketing/TemplateGallery"
-import SocialProof from "@/components/marketing/SocialProof"
-import FAQ from "@/components/marketing/FAQ"
-import Footer from "@/components/marketing/Footer"
-import { getTranslations } from "next-intl/server"
-import { setRequestLocale } from "next-intl/server"
+import { getTranslations, setRequestLocale } from "next-intl/server"
+import CinematicHomepage from "@/components/marketing/cinematic/CinematicHomepage"
+import ActEntry from "@/components/marketing/cinematic/ActEntry"
+import ActProblem from "@/components/marketing/cinematic/ActProblem"
+import ActReveal from "@/components/marketing/cinematic/ActReveal"
+import ActFeatureScene from "@/components/marketing/cinematic/ActFeatureScene"
+import FillProfileMockup from "@/components/guide/mockups/FillProfileMockup"
+import ImproveBulletMockup from "@/components/guide/mockups/ImproveBulletMockup"
+import SummaryMockup from "@/components/guide/mockups/SummaryMockup"
+import ATSScoreMockup from "@/components/guide/mockups/ATSScoreMockup"
+import CoverLetterMockup from "@/components/guide/mockups/CoverLetterMockup"
+import CVReviewMockup from "@/components/guide/mockups/CVReviewMockup"
+import ActTemplates from "@/components/marketing/cinematic/ActTemplates"
+import ActClimax from "@/components/marketing/cinematic/ActClimax"
 
 export async function generateMetadata({
   params,
@@ -101,7 +102,7 @@ const jsonLdWebApp = {
   name: "ReadyCV",
   url: "https://readycvv.com",
   description:
-    "AI-powered resume builder with ATS analysis. 111+ professional templates, cover letter generator, job application tracker.",
+    "AI-powered resume builder with ATS analysis. 139+ professional templates, cover letter generator, job application tracker.",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   browserRequirements: "Requires JavaScript. Requires HTML5.",
@@ -110,19 +111,19 @@ const jsonLdWebApp = {
       "@type": "Offer",
       price: "15.00",
       priceCurrency: "USD",
-      description: "Pro Plan: 111+ templates, 7 AI tools, ATS Score, cover letter generator, application tracker",
+      description: "Pro Plan: 139+ templates, 7 AI tools, ATS Score, cover letter generator, application tracker",
       priceValidUntil: "2027-01-01",
     },
     {
       "@type": "Offer",
       price: "144.00",
       priceCurrency: "USD",
-      description: "Pro Plan Annual (save 20%): 111+ templates, 7 AI tools, ATS Score, cover letter generator",
+      description: "Pro Plan Annual (save 20%): 139+ templates, 7 AI tools, ATS Score, cover letter generator",
       priceValidUntil: "2027-01-01",
     },
   ],
   featureList: [
-    "111+ professional resume templates",
+    "139+ professional resume templates",
     "ATS Score analysis with AI",
     "AI bullet point improvement",
     "AI professional summary generator",
@@ -151,7 +152,7 @@ const jsonLdFaq = {
       name: "What is ReadyCV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes 111+ professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.",
+        text: "ReadyCV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes 139+ professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.",
       },
     },
     {
@@ -175,7 +176,7 @@ const jsonLdFaq = {
       name: "How much does ReadyCV cost?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all 111+ templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.",
+        text: "ReadyCV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all 139+ templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.",
       },
     },
     {
@@ -191,7 +192,7 @@ const jsonLdFaq = {
       name: "¿Qué es ReadyCV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye más de 111 plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.",
+        text: "ReadyCV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye más de 139 plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.",
       },
     },
     {
@@ -199,7 +200,7 @@ const jsonLdFaq = {
       name: "¿Cuánto cuesta ReadyCV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, todas las 111+ plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas. Es más económico que competidores como Zety ($24/mes) o Resume.io ($26/mes).",
+        text: "ReadyCV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, todas las 139+ plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.",
       },
     },
   ],
@@ -212,9 +213,10 @@ export default async function HomePage({
 }) {
   const { locale } = await params
   setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: "cinematic" })
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <>
       <Script
         id="json-ld-webapp"
         type="application/ld+json"
@@ -235,19 +237,95 @@ export default async function HomePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }}
       />
-      <Navbar />
-      <main className="flex-1">
-        <Hero />
-        <HowItWorks />
-        <FeatureCards />
-        <AIFeatures />
-        <ATSSection />
-        <CVExamples />
-        <TemplateGallery />
-        <SocialProof />
-        <FAQ />
-      </main>
-      <Footer />
-    </div>
+
+      <CinematicHomepage locale={locale}>
+        <ActEntry
+          line1={t("entry_line1")}
+          line2={t("entry_line2")}
+          scrollHint={t("entry_scroll")}
+        />
+        <ActProblem
+          stat={t("problem_stat")}
+          line1={t("problem_line1")}
+          line2={t("problem_line2")}
+          body={t("problem_body")}
+        />
+        <ActReveal
+          brand={t("reveal_brand")}
+          tagline={t("reveal_tagline")}
+          statAi={t("reveal_stats_ai")}
+          statTemplates={t("reveal_stats_templates")}
+          statAts={t("reveal_stats_ats")}
+        />
+        <ActFeatureScene
+          scene="act-fill"
+          badge="IA · Fill Profile"
+          headline={t("feature_fill_headline")}
+          body={t("feature_fill_body")}
+          mockup={<FillProfileMockup locale={locale} />}
+          reverse={false}
+        />
+        <ActFeatureScene
+          scene="act-bullets"
+          badge="IA · Improve Bullets"
+          headline={t("feature_bullets_headline")}
+          body={t("feature_bullets_body")}
+          mockup={<ImproveBulletMockup locale={locale} />}
+          reverse={true}
+        />
+        <ActFeatureScene
+          scene="act-summary"
+          badge="IA · Summary"
+          headline={t("feature_summary_headline")}
+          body={t("feature_summary_body")}
+          mockup={<SummaryMockup locale={locale} />}
+          reverse={false}
+        />
+        <ActFeatureScene
+          scene="act-ats"
+          badge="IA · ATS Score"
+          headline={t("feature_ats_headline")}
+          body={t("feature_ats_body")}
+          mockup={<ATSScoreMockup locale={locale} />}
+          reverse={true}
+        />
+        <ActFeatureScene
+          scene="act-cover"
+          badge="IA · Cover Letter"
+          headline={t("feature_cover_headline")}
+          body={t("feature_cover_body")}
+          mockup={<CoverLetterMockup locale={locale} />}
+          reverse={false}
+        />
+        <ActFeatureScene
+          scene="act-review"
+          badge="IA · CV Review"
+          headline={t("feature_review_headline")}
+          body={t("feature_review_body")}
+          mockup={<CVReviewMockup locale={locale} />}
+          reverse={true}
+        />
+        <ActTemplates
+          headline={t("templates_headline")}
+          sub={t("templates_sub")}
+          footer={t("templates_footer")}
+          locale={locale}
+          labels={{
+            tech: t("templates_tech"),
+            design: t("templates_design"),
+            legal: t("templates_legal"),
+            health: t("templates_health"),
+            hospitality: t("templates_hospitality"),
+          }}
+        />
+        <ActClimax
+          line1={t("climax_line1")}
+          line2={t("climax_line2")}
+          cta={t("climax_cta")}
+          note={t("climax_note")}
+          locale={locale}
+        />
+      </CinematicHomepage>
+    </>
   )
 }

@@ -18,7 +18,23 @@ export default function PricingButtons({ plan, isPro }: Props) {
 
   async function handleClick() {
     if (isPro) {
-      window.location.href = "/api/stripe/portal"
+      setLoading(true)
+      try {
+        const res = await fetch("/api/stripe/portal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        })
+        const data = await res.json()
+        if (res.ok && data.url) {
+          window.location.href = data.url
+        } else {
+          toast.error(t("toast_payment_error"))
+        }
+      } catch {
+        toast.error(t("toast_connection_error"))
+      } finally {
+        setLoading(false)
+      }
       return
     }
 

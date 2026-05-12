@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { renderToPdf } from "@/lib/pdf/render-page"
+import { checkRateLimit } from "@/lib/ai-client"
+import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { isActive } from "@/lib/plans"
 
 type Params = { params: Promise<{ id: string }> }
@@ -14,7 +15,8 @@ export async function GET(req: Request, { params }: Params) {
 
   const { id } = await params
   const url = new URL(req.url)
-  const locale = url.searchParams.get("locale") ?? "es"
+  const rawLocale = url.searchParams.get("locale") ?? ""
+  const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
 
   const [letter, user] = await Promise.all([
     db.coverLetter.findFirst({
@@ -33,14 +35,23 @@ export async function GET(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
+  const allowed = await checkRateLimit(session.user.id, "cover-letter-pdf-export", 20)
+  if (!allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   const printUrl = `${appUrl}/${locale}/cover-letter/${id}/print?pdf=1`
   const cookieHeader = req.headers.get("cookie") ?? ""
 
   try {
-    const pdf = await renderToPdf({ printUrl, cookieHeader, appUrl, stretchPages: false })
+    const pdf = await callPdfService({
+      printUrl,
+      cookies: cookieHeader,
+      stretchPages: false,
+      candidateName: session.user.name ?? undefined,
+      letterTitle: letter.title ?? undefined,
+    })
     const filename = encodeURIComponent(letter.title || "carta")
-    return new Response(Buffer.from(pdf), {
+    return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}.pdf"`,

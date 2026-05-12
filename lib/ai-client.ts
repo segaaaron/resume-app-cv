@@ -1,6 +1,9 @@
 import OpenAI from "openai"
 import { db } from "@/lib/db"
 
+// Re-export so existing AI routes don't need to change their import path
+export { checkRateLimit } from "@/lib/rate-limit"
+
 // Lazy singleton — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
 let _openai: OpenAI | null = null
 export function getOpenAI(): OpenAI {
@@ -12,43 +15,6 @@ export const AI_MODEL = "gpt-4o-mini" as const
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_BALANCED = 0.5 as const  // profile fill — between deterministic and creative
-
-const RATE_LIMIT_DEFAULT = 20
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
-
-// Rate limit per userId+endpoint stored in DB. Returns true if allowed.
-// Uses upsert-then-read to reduce (but not fully eliminate) race condition window.
-// Under concurrent requests the count may exceed limit by at most 1 in the same millisecond.
-export async function checkRateLimit(userId: string, endpoint: string, limit = RATE_LIMIT_DEFAULT): Promise<boolean> {
-  const now = new Date()
-  const resetAt = new Date(now.getTime() + RATE_LIMIT_WINDOW_MS)
-
-  // Check if existing record is expired first — reset atomically via upsert
-  const existing = await db.aIRateLimit.findUnique({
-    where: { userId_endpoint: { userId, endpoint } },
-    select: { count: true, resetAt: true },
-  })
-
-  if (!existing || existing.resetAt < now) {
-    // Window expired or no record — start fresh with count=1
-    await db.aIRateLimit.upsert({
-      where: { userId_endpoint: { userId, endpoint } },
-      create: { userId, endpoint, count: 1, resetAt },
-      update: { count: 1, resetAt },
-    })
-    return true
-  }
-
-  // Increment atomically, then read resulting count
-  const updated = await db.aIRateLimit.update({
-    where: { userId_endpoint: { userId, endpoint } },
-    data: { count: { increment: 1 } },
-    select: { count: true },
-  })
-
-  // Allow if count after increment is within limit
-  return updated.count <= limit
-}
 
 // Fire-and-forget usage log — never throws
 export function logAIUsage(userId: string, endpoint: string): void {

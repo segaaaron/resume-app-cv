@@ -6,7 +6,8 @@ import { checkOrigin } from "@/lib/csrf"
 import { z } from "zod"
 
 const schema = z.object({
-  plan: z.enum(["monthly", "annual"]),
+  plan:   z.enum(["monthly", "annual"]),
+  locale: z.enum(["es", "en"]).optional(),
 })
 
 export async function POST(req: Request) {
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/dashboard/resumes?upgraded=true`,
+    success_url: `${appUrl.replace(/\/$/, "")}/${parsed.data.locale ?? "es"}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/pricing`,
     metadata: { userId: user.id, planInterval: parsed.data.plan },
     subscription_data: {

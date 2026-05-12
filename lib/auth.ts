@@ -1,21 +1,39 @@
-import NextAuth from "next-auth"
+import NextAuth, { CredentialsSignin } from "next-auth"
 import { PrismaAdapter } from "@auth/prisma-adapter"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 
+class UserNotFoundError extends CredentialsSignin {
+  code = "user_not_found" as const
+}
+class InvalidPasswordError extends CredentialsSignin {
+  code = "invalid_password" as const
+}
+class ActiveSessionError extends CredentialsSignin {
+  code = "active_session" as const
+}
+class SessionChallengeBlockedError extends CredentialsSignin {
+  code = "session_challenge_blocked" as const
+}
+
+// Pre-computed dummy hash — ensures bcrypt runs even when user doesn't exist,
+// equalizing response time and preventing user enumeration via timing.
+const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+
 const CACHE_TTL_MS        = 5 * 60 * 1000        // 5 minutes
 const INACTIVITY_LIMIT_MS = 24 * 60 * 60 * 1000  // 24 hours
 
 interface UserPlanCacheEntry {
-  plan:               string
-  subscriptionStatus: string
-  subscriptionEndsAt: Date | null
-  role:               string
-  emailVerified:      Date | null
-  sessionVersion:     number
-  expiresAt:          number
+  plan:                string
+  subscriptionStatus:  string
+  subscriptionEndsAt:  Date | null
+  role:                string
+  emailVerified:       Date | null
+  sessionVersion:      number
+  activeSessionToken:  string | null
+  expiresAt:           number
 }
 
 const userPlanCache = new Map<string, UserPlanCacheEntry>()
@@ -26,7 +44,7 @@ export function purgeUserCache(userId: string) {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(db),
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 24 * 60 * 60 },
   pages: {
     signIn: "/login",
     error: "/login",
@@ -49,20 +67,47 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           where: { email: credentials.email as string },
         })
 
-        if (!user || !user.password) return null
+        if (!user || !user.password) {
+          await bcrypt.compare(credentials.password as string, DUMMY_HASH)
+          throw new UserNotFoundError()
+        }
         if (user.deletedAt !== null) return null
 
         const valid = await bcrypt.compare(credentials.password as string, user.password)
-        if (!valid) return null
+        if (!valid) throw new InvalidPasswordError()
 
-        return { id: user.id, email: user.email, name: user.name, image: user.image }
+        // Block if account is challenge-blocked
+        if (user.sessionChallengeBlockedUntil && user.sessionChallengeBlockedUntil > new Date()) {
+          throw new SessionChallengeBlockedError()
+        }
+
+        // Block if another session is active — unless it's stale (last activity > inactivity limit)
+        if (user.activeSessionToken) {
+          const isStale = !user.lastActiveAt ||
+            Date.now() - user.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS
+          if (!isStale) throw new ActiveSessionError()
+          // Stale session: JWT already dead server-side — clear token and proceed
+          await db.user.update({ where: { id: user.id }, data: { activeSessionToken: null } })
+        }
+
+        // Generate and persist new active session token
+        const activeSessionToken = crypto.randomUUID()
+        await db.user.update({
+          where: { id: user.id },
+          data: { activeSessionToken, sessionChallengeAttempts: 0, sessionChallengeBlockedUntil: null },
+        })
+
+        return { id: user.id, email: user.email, name: user.name, image: user.image, activeSessionToken }
       },
     }),
   ],
   callbacks: {
     async jwt({ token, user, trigger }) {
+      const isFreshLogin = !!user  // user arg only present on sign-in, not token refreshes
+
       if (user) {
         token.id = user.id
+        token.activeSessionToken = (user as { activeSessionToken?: string }).activeSessionToken ?? null
         if (user.id) userPlanCache.delete(user.id)
       }
       if (trigger === "update") {
@@ -77,6 +122,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const cached = userPlanCache.get(userId)
 
       if (cached && cached.expiresAt > now) {
+        // Concurrent session guard on cache hit
+        if (token.activeSessionToken && cached.activeSessionToken !== token.activeSessionToken) {
+          return null
+        }
         token.plan               = cached.plan
         token.subscriptionStatus = cached.subscriptionStatus
         token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
@@ -95,20 +144,36 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           deletedAt:          true,
           emailVerified:      true,
           sessionVersion:     true,
+          forceLogoutAt:      true,
           lastActiveAt:       true,
+          activeSessionToken:  true,
         },
       })
 
       if (!dbUser)          return null
       if (dbUser.deletedAt) return null
 
-      // 24h inactivity check
-      if (now - dbUser.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS) return null
+      // Admin force-logout: any JWT issued before forceLogoutAt is invalidated immediately
+      if (dbUser.forceLogoutAt && token.iat && token.iat * 1000 < dbUser.forceLogoutAt.getTime()) return null
 
-      // sessionVersion invalidation — tokens minted before this feature have no version (undefined → 0)
+      // 24h inactivity check — skip on fresh login so returning users aren't blocked
+      if (!isFreshLogin && now - dbUser.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS) return null
+
+      // Concurrent session guard: if token was replaced (OTP verify), invalidate this JWT
+      if (
+        token.activeSessionToken &&
+        dbUser.activeSessionToken !== token.activeSessionToken
+      ) {
+        return null
+      }
+
+      // sessionVersion drift signals a webhook fired (renewal, purchase, cancellation).
+      // Refresh the token data but do NOT invalidate — logging the user out on every
+      // Stripe event (which increments sessionVersion) is wrong UX.
       const tokenVersion = (token.sessionVersion as number | undefined) ?? 0
-      if (tokenVersion !== 0 && tokenVersion !== dbUser.sessionVersion) return null
-      // stamp current version into token (handles first-run for pre-feature tokens)
+      if (tokenVersion !== 0 && tokenVersion !== dbUser.sessionVersion) {
+        console.info(`[auth] sessionVersion refreshed for ${userId}: ${tokenVersion} → ${dbUser.sessionVersion}`)
+      }
       token.sessionVersion = dbUser.sessionVersion
 
       userPlanCache.set(userId, {
@@ -118,6 +183,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         role:               dbUser.role,
         emailVerified:      dbUser.emailVerified,
         sessionVersion:     dbUser.sessionVersion,
+        activeSessionToken: dbUser.activeSessionToken,
         expiresAt:          now + CACHE_TTL_MS,
       })
 
@@ -126,6 +192,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token.subscriptionEndsAt = dbUser.subscriptionEndsAt?.toISOString() ?? null
       token.role               = dbUser.role
       token.emailVerified      = dbUser.emailVerified?.toISOString() ?? null
+      token.activeSessionToken = dbUser.activeSessionToken
 
       // fire-and-forget lastActiveAt update (runs at most every 5 min per user)
       db.user.update({
@@ -143,8 +210,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.subscriptionEndsAt = token.subscriptionEndsAt as string | null | undefined
         session.user.role               = token.role as string | undefined
         session.user.emailVerified      = (token.emailVerified ?? null) as unknown as (Date & string) | null
+        session.user.sessionVersion     = token.sessionVersion as number | undefined
       }
       return session
+    },
+  },
+  events: {
+    async signOut(message) {
+      const token = "token" in message ? message.token : undefined
+      const sub = (token as { sub?: string } | null | undefined)?.sub
+      if (sub) {
+        await db.user.update({
+          where: { id: sub },
+          data: { activeSessionToken: null },
+        }).catch(() => {})
+        purgeUserCache(sub)
+      }
     },
   },
 })

@@ -3,13 +3,11 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
-import { Check, Zap } from "lucide-react"
+import { Check, Crown } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 
@@ -63,73 +61,53 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl p-0 overflow-hidden">
-        <DialogHeader className="px-6 pt-6 pb-2">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
-            {t("title")}
-          </DialogTitle>
-          <p className="text-sm text-muted-foreground">
-            {t("subtitle")}
-          </p>
-        </DialogHeader>
-
-        <div className="grid sm:grid-cols-2 gap-4 px-6 pb-6 pt-2">
-          {/* Monthly */}
-          <div className="border-2 border-border rounded-xl p-5 flex flex-col">
-            <p className="text-sm font-medium text-muted-foreground mb-1">{t("monthly_label")}</p>
-            <div className="flex items-baseline gap-1 mb-4">
-              <span className="text-3xl font-bold">$15</span>
-              <span className="text-muted-foreground text-sm">{t("monthly_per")}</span>
-            </div>
-            <ul className="space-y-1.5 mb-5 flex-1">
-              {features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-foreground">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => handleCheckout("monthly")}
-              disabled={!!loading}
-            >
-              {loading === "monthly" ? t("redirecting") : t("start_now")}
-            </Button>
+      <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl">
+        <div className="bg-gradient-to-br from-primary to-[#1D4ED8] px-8 py-8 text-white">
+          <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center mb-4">
+            <Crown className="h-5 w-5 text-white" />
           </div>
-
-          {/* Annual */}
-          <div className="border-2 border-primary rounded-xl p-5 flex flex-col bg-primary/5 relative">
-            <span className="absolute top-3 right-3 text-xs bg-primary text-white px-2 py-0.5 rounded-full font-medium">
-              {t("save_badge")}
-            </span>
-            <p className="text-sm font-medium text-primary mb-1">{t("annual_label")}</p>
-            <div className="flex items-baseline gap-1 mb-1">
-              <span className="text-3xl font-bold">$144</span>
-              <span className="text-muted-foreground text-sm">{t("annual_per")}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mb-4">{t("annual_detail")}</p>
-            <ul className="space-y-1.5 mb-5 flex-1">
-              {features.map((f) => (
-                <li key={f} className="flex items-center gap-2 text-sm text-foreground">
-                  <Check className="h-3.5 w-3.5 shrink-0 text-primary" /> {f}
-                </li>
-              ))}
-            </ul>
-            <Button
-              className="w-full"
-              onClick={() => handleCheckout("annual")}
-              disabled={!!loading}
-            >
-              {loading === "annual" ? t("redirecting") : t("best_price")}
-            </Button>
-          </div>
+          <h2 className="text-2xl font-bold mb-1">{t("title")}</h2>
+          <p className="text-blue-100 text-sm">{t("subtitle")}</p>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground pb-4">
-          {t("footer_note")}
-        </p>
+        <div className="px-8 py-6">
+          <ul className="space-y-2 mb-6">
+            {features.map((f) => (
+              <li key={f} className="flex items-center gap-2 text-sm text-foreground">
+                <Check className="h-4 w-4 shrink-0 text-primary" /> {f}
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex items-baseline gap-1 mb-1">
+            <span className="text-3xl font-bold text-foreground mb-1">$15</span>
+            <span className="text-muted-foreground text-sm">{t("monthly_per")}</span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-4">{t("annual_detail")}</p>
+
+          <Button
+            className="w-full shadow-brand-md"
+            size="lg"
+            onClick={() => handleCheckout("monthly")}
+            disabled={!!loading}
+          >
+            {loading === "monthly" ? t("redirecting") : t("start_now")}
+          </Button>
+
+          <Button
+            variant="outline"
+            className="w-full mt-2"
+            size="lg"
+            onClick={() => handleCheckout("annual")}
+            disabled={!!loading}
+          >
+            {loading === "annual" ? t("redirecting") : t("best_price")}
+          </Button>
+
+          <p className="text-center text-xs text-muted-foreground mt-4">
+            {t("footer_note")}
+          </p>
+        </div>
       </DialogContent>
     </Dialog>
   )

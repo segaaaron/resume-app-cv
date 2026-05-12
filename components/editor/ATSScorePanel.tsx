@@ -14,36 +14,8 @@ import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
-
-interface ATSResult {
-  score: number
-  label: string
-  summary: string
-  strengths: string[]
-  gaps: string[]
-  missingKeywords: string[]
-  suggestions: string[]
-}
-
-interface ReviewItem {
-  text: string
-  suggestion?: Suggestion
-}
-
-interface ReviewResult {
-  summary: string
-  strengths: ReviewItem[]
-  improvements: ReviewItem[]
-  answer: string
-}
-
-/** Heuristic: short text or ends with ? → treat as question */
-function isQuestion(text: string): boolean {
-  const trimmed = text.trim()
-  if (trimmed.endsWith("?")) return true
-  if (trimmed.length < 50) return true
-  return false
-}
+import { useATSScore, isQuestion } from "./hooks/useATSScore"
+import type { ReviewItem, ReviewResult } from "./hooks/useATSScore"
 
 function ScoreRing({ score }: { score: number }) {
   const color =
@@ -111,12 +83,16 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
 
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
-  const { sectionData, updateSectionData, config } = useResumeStore()
-  const [input, setInput] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
-  const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
-  const [offTopic, setOffTopic] = useState(false)
+  const { sectionData, updateSectionData } = useResumeStore()
+  const {
+    input, setInput,
+    loading,
+    atsResult, reviewResult,
+    offTopic,
+    hasResult,
+    analyze,
+    reset,
+  } = useATSScore()
   const [expanded, setExpanded] = useState(true)
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
@@ -125,51 +101,9 @@ export default function ATSScorePanel() {
   const inputIsQuestion = isQuestion(input)
 
   async function handleSubmit() {
-    const text = input.trim()
-    if (text.length < 5) {
-      toast.error(t("toast_empty_input"))
-      return
-    }
-    setLoading(true)
-    setAtsResult(null)
-    setReviewResult(null)
-    setOffTopic(false)
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
-
-    try {
-      if (inputIsQuestion) {
-        const res = await fetch("/api/ai/review-cv", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectionData, question: text, language: config.language }),
-        })
-        if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
-        if (res.status === 403) { toast.error(t("pro_only")); return }
-        if (res.status === 400) { toast.error(t("not_enough_data")); return }
-        if (res.status === 422) { setOffTopic(true); return }
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error)
-        setReviewResult(data)
-      } else {
-        const res = await fetch("/api/ai/ats-score", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobDescription: text, sectionData, language: config.language }),
-        })
-        if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
-        if (res.status === 403) { toast.error(t("pro_only")); return }
-        if (res.status === 400) { toast.error(t("not_enough_data")); return }
-        if (res.status === 422) { setOffTopic(true); return }
-        const data = await res.json()
-        if (!res.ok) throw new Error(data.error)
-        setAtsResult(data)
-      }
-    } catch {
-      toast.error(t("error"))
-    } finally {
-      setLoading(false)
-    }
+    await analyze()
   }
 
   function openDiffModal(item: ReviewItem, itemKey: string) {
@@ -295,8 +229,6 @@ export default function ATSScorePanel() {
       </li>
     )
   }
-
-  const hasResult = atsResult || reviewResult
 
   return (
     <>
@@ -506,7 +438,7 @@ export default function ATSScorePanel() {
 
             {hasResult && (
               <button type="button"
-                onClick={() => { setAtsResult(null); setReviewResult(null); setAddedKeywords(new Set()); setAppliedItems(new Set()) }}
+                onClick={() => { reset(); setAddedKeywords(new Set()); setAppliedItems(new Set()) }}
                 className="text-[11px] text-muted-foreground hover:text-foreground transition-colors">
                 {t("clear")}
               </button>

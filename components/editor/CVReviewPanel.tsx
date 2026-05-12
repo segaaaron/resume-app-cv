@@ -10,18 +10,8 @@ import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
-
-interface ReviewItem {
-  text: string
-  suggestion?: Suggestion
-}
-
-interface ReviewResult {
-  summary: string
-  strengths: ReviewItem[]
-  improvements: ReviewItem[]
-  answer: string
-}
+import { useCVReview } from "./hooks/useCVReview"
+import type { ReviewItem } from "./hooks/useCVReview"
 
 function getCurrentValue(field: SuggestionField, targetId: string | undefined, sectionData: ResumeSections): string {
   switch (field) {
@@ -54,35 +44,15 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
 export default function CVReviewPanel() {
   const t = useTranslations("editor.cv_review")
   const tAts = useTranslations("editor.ats")
-  const { sectionData, updateSectionData, config } = useResumeStore()
-  const [question, setQuestion] = useState("")
-  const [loading, setLoading] = useState(false)
-  const [result, setResult] = useState<ReviewResult | null>(null)
+  const { sectionData, updateSectionData, save } = useResumeStore()
+  const { question, setQuestion, loading, result, review, reset } = useCVReview()
   const [expanded, setExpanded] = useState(true)
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
 
   async function handleReview() {
-    setLoading(true)
-    setResult(null)
     setAppliedItems(new Set())
-    try {
-      const res = await fetch("/api/ai/review-cv", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionData, question: question.trim() || undefined, language: config.language }),
-      })
-      if (res.status === 403) { toast.error(t("pro_only")); return }
-      if (res.status === 400) { toast.error(t("not_enough_data")); return }
-      if (res.status === 422) { toast.error(t("off_topic")); return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      setResult(data)
-    } catch {
-      toast.error(t("error"))
-    } finally {
-      setLoading(false)
-    }
+    await review()
   }
 
   function openDiffModal(item: ReviewItem, itemKey: string) {
@@ -146,6 +116,7 @@ export default function CVReviewPanel() {
     } finally {
       setModal(null)
     }
+    save().catch(() => {})
   }
 
   return (
@@ -185,7 +156,7 @@ export default function CVReviewPanel() {
               {result && (
                 <button
                   type="button"
-                  onClick={() => { setResult(null); setQuestion(""); setAppliedItems(new Set()) }}
+                  onClick={() => { reset(); setAppliedItems(new Set()) }}
                   className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {t("clear")}

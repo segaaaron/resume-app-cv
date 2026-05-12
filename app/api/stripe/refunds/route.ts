@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { z } from "zod"
@@ -99,6 +99,7 @@ export async function POST(req: Request) {
       subscriptionStatus: "EXPIRED",
     },
   })
+  purgeUserCache(userId)
 
   // Audit log
   await db.auditLog.create({

@@ -5,7 +5,7 @@
  */
 
 export type Plan = "UNSUBSCRIBED" | "PRO"
-export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED"
+export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED" | "PAST_DUE"
 export type Role = "USER" | "SUPER_ADMIN"
 
 export function isSuperAdmin(role?: string | null): boolean {
@@ -40,7 +40,8 @@ export function isActive(
     if (subscriptionStatus === "EXPIRED") return false
     if (subscriptionEndsAt && new Date() > subscriptionEndsAt) return false
     // CANCELED: paid period not yet over — allow access until subscriptionEndsAt
-    return subscriptionStatus === "ACTIVE" || subscriptionStatus === "CANCELED"
+    // PAST_DUE: payment failed, Stripe retrying — user keeps access during retry window
+    return subscriptionStatus === "ACTIVE" || subscriptionStatus === "CANCELED" || subscriptionStatus === "PAST_DUE"
   }
   return false
 }

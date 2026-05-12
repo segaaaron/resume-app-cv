@@ -10,9 +10,11 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2, Eye, EyeOff, Zap } from "lucide-react"
+import { Loader2, Eye, EyeOff, Zap, Mail } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
+
+type RegisterStep = "form" | "otp"
 
 export default function RegisterForm() {
   const t = useTranslations("auth.register")
@@ -23,11 +25,22 @@ export default function RegisterForm() {
   const refParam = searchParams.get("ref")
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [step, setStep] = useState<RegisterStep>("form")
+  const [submittedEmail, setSubmittedEmail] = useState("")
+  const [submittedPassword, setSubmittedPassword] = useState("")
+  const [otpCode, setOtpCode] = useState("")
+  const [otpLoading, setOtpLoading] = useState(false)
+  const [resending, setResending] = useState(false)
+  const [formSnapshot, setFormSnapshot] = useState<FormData | null>(null)
 
   const schema = z.object({
     name: z.string().min(2, t("name_short")),
     email: z.string().email(t("email_invalid")),
-    password: z.string().min(8, t("password_min")),
+    password: z.string()
+      .min(8, t("password_min"))
+      .regex(/[A-Z]/, "Must contain at least one uppercase letter")
+      .regex(/[a-z]/, "Must contain at least one lowercase letter")
+      .regex(/[0-9]/, "Must contain at least one number"),
     consent: z.boolean().refine((v) => v === true, { message: t("consent_required") }),
     ageConsent: z.boolean().refine((v) => v === true, { message: t("age_required") }),
     marketingConsent: z.boolean().optional(),
@@ -49,23 +62,87 @@ export default function RegisterForm() {
     })
 
     if (!res.ok) {
-      const { error } = await res.json()
-      toast.error(error ?? t("error"))
+      const body = await res.json().catch(() => ({}))
+      toast.error(body.error ?? t("error"))
       return
     }
 
-    await signIn("credentials", {
-      email: data.email,
-      password: data.password,
-      redirect: false,
-    })
-
-    if (planParam) {
-      router.push(`/${locale}/checkout?plan=${planParam}`)
-    } else {
-      router.push(`/${locale}/dashboard/resumes`)
+    const body = await res.json()
+    if (body.pending) {
+      setSubmittedEmail(data.email)
+      setSubmittedPassword(data.password)
+      setFormSnapshot(data)
+      setOtpCode("")
+      setStep("otp")
     }
-    router.refresh()
+  }
+
+  async function verifyOtp() {
+    if (otpCode.length !== 6) return
+    setOtpLoading(true)
+    try {
+      const res = await fetch("/api/auth/register/confirm", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: submittedEmail, code: otpCode }),
+      })
+
+      const body = await res.json().catch(() => ({}))
+
+      if (res.ok && body.success) {
+        await signIn("credentials", {
+          email: submittedEmail,
+          password: submittedPassword,
+          redirect: false,
+        })
+        if (planParam) {
+          router.push(`/${locale}/checkout?plan=${planParam}`)
+        } else {
+          router.push(`/${locale}/dashboard/resumes`)
+        }
+        router.refresh()
+        return
+      }
+
+      if (body.error === "expired") {
+        toast.error(t("otp_expired"))
+        setStep("form")
+      } else if (body.error === "max_attempts") {
+        toast.error(t("otp_max_attempts"))
+        setStep("form")
+      } else if (body.error === "email_taken") {
+        toast.error(t("otp_email_taken"))
+        setStep("form")
+      } else if (body.error === "invalid") {
+        toast.error(t("otp_invalid", { attemptsLeft: body.attemptsLeft ?? 0 }))
+      } else {
+        toast.error(t("error"))
+        setStep("form")
+      }
+    } finally {
+      setOtpLoading(false)
+    }
+  }
+
+  async function resendCode() {
+    if (!formSnapshot) return
+    setResending(true)
+    try {
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...formSnapshot, referralCode: refParam ?? undefined }),
+      })
+      if (res.ok) {
+        setOtpCode("")
+        toast.success(t("otp_resent"))
+      } else {
+        const body = await res.json().catch(() => ({}))
+        toast.error(body.error ?? t("error"))
+      }
+    } finally {
+      setResending(false)
+    }
   }
 
   async function loginWithGoogle() {
@@ -74,6 +151,68 @@ export default function RegisterForm() {
       ? `/${locale}/checkout?plan=${planParam}`
       : `/${locale}/dashboard/resumes`
     await signIn("google", { callbackUrl })
+  }
+
+  if (step === "otp") {
+    return (
+      <div className="w-full max-w-md">
+        <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
+          <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-primary/10 mb-4">
+            <Mail className="h-6 w-6 text-primary" />
+          </div>
+          <h1 className="text-2xl font-bold mb-1">{t("otp_title")}</h1>
+          <p className="text-muted-foreground text-sm mb-6">
+            {t("otp_subtitle", { email: submittedEmail })}
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="otp">{t("otp_label")}</Label>
+              <Input
+                id="otp"
+                type="text"
+                inputMode="numeric"
+                pattern="\d{6}"
+                maxLength={6}
+                placeholder={t("otp_placeholder")}
+                className="mt-1 text-center text-lg tracking-widest"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                onKeyDown={(e) => { if (e.key === "Enter") verifyOtp() }}
+                autoFocus
+              />
+            </div>
+
+            <Button
+              className="w-full"
+              onClick={verifyOtp}
+              disabled={otpLoading || otpCode.length !== 6}
+            >
+              {otpLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {otpLoading ? t("otp_verifying") : t("otp_submit")}
+            </Button>
+
+            <button
+              type="button"
+              onClick={resendCode}
+              disabled={resending}
+              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+            >
+              {resending ? <Loader2 className="inline h-3 w-3 animate-spin mr-1" /> : null}
+              {t("otp_resend")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setStep("form")}
+              className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+            >
+              {t("otp_back")}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -212,7 +351,7 @@ export default function RegisterForm() {
         <p className="text-center text-sm text-muted-foreground mt-4">
           {t("have_account")}{" "}
           <Link
-            href={planParam ? `/login?plan=${planParam}` : "/login"}
+            href={planParam ? `/${locale}/login?plan=${planParam}` : `/${locale}/login`}
             className="text-primary font-medium hover:underline"
           >
             {t("login_link")}

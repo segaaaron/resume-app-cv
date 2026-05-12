@@ -4,8 +4,8 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
-import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
 import { Plus, Mail, Pencil, Trash2, MoreHorizontal } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import {
@@ -27,10 +27,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import UpgradeCTACard from "./UpgradeCTACard"
+import { isActive } from "@/lib/plans"
+import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
 
 interface LetterCard {
   id: string
   title: string
+  templateId: string
   colorScheme: string
   updatedAt: Date
   createdAt: Date
@@ -40,10 +43,14 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const t = useTranslations("dashboard.cover_letters")
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
+  const userTimezone = useUserTimezone()
   const router = useRouter()
   const { data: session } = useSession()
-  const isPro = session?.user?.plan === "PRO" &&
-    (session?.user?.subscriptionStatus === "ACTIVE" || session?.user?.subscriptionStatus === "CANCELED")
+  const isPro = isActive(
+    session?.user?.plan ?? "UNSUBSCRIBED",
+    session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
+    session?.user?.subscriptionStatus,
+  )
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
@@ -91,7 +98,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
       {letters.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="h-20 w-20 rounded-2xl bg-[#eaf3fc] flex items-center justify-center mb-4">
+          <div className="h-20 w-20 rounded-2xl bg-[var(--brand-50)] flex items-center justify-center mb-4">
             <Mail className="h-10 w-10 text-primary" />
           </div>
           <h2 className="text-xl font-semibold mb-2">{t("empty_title")}</h2>
@@ -117,18 +124,16 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
           {letters.map((letter) => (
             <div key={letter.id} className="group relative">
               <button
-                className="aspect-[3/4] w-full bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-md transition-all text-left cursor-pointer flex flex-col"
+                className="aspect-[3/4] w-full bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-brand-sm transition-all text-left cursor-pointer flex flex-col relative"
                 onClick={() => router.push(`/${locale}/cover-letter/${letter.id}`)}
               >
-                <div className="h-10 w-full shrink-0" style={{ backgroundColor: letter.colorScheme }} />
-                <div className="p-4 space-y-2 flex-1">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Mail className="h-4 w-4" style={{ color: letter.colorScheme }} />
-                    <div className="h-2 bg-gray-200 rounded flex-1" />
-                  </div>
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-1.5 bg-gray-100 rounded" style={{ width: `${60 + (i % 4) * 10}%` }} />
-                  ))}
+                <div className="flex-1 overflow-hidden">
+                  <CoverLetterThumbnail id={letter.templateId} color={letter.colorScheme} />
+                </div>
+                <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                  <span className="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
+                    {t("edit")}
+                  </span>
                 </div>
               </button>
 
@@ -136,7 +141,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 <div className="min-w-0">
                   <p className="font-medium text-sm truncate">{letter.title}</p>
                   <p className="text-xs text-muted-foreground">
-                    {format(new Date(letter.updatedAt), "d MMM yyyy", { locale: dateLocale })}
+                    {formatInTimezone(letter.updatedAt, userTimezone, dateLocale)}
                   </p>
                 </div>
 

@@ -58,7 +58,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
     <div>
       <div className="flex justify-end mb-4">
         <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger className="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+          <DialogTrigger className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
             <Plus className="h-4 w-4" /> {t("add_button")}
           </DialogTrigger>
           <DialogContent className="sm:max-w-sm">
@@ -82,17 +82,17 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-5 gap-4 overflow-x-auto min-w-[800px]">
+      <div className="grid grid-cols-5 gap-4 overflow-x-auto min-w-[800px] pb-6">
         {COLUMNS.map((col) => (
           <KanbanColumn
             key={col.id}
             columnId={col.id}
             label={t(col.labelKey as Parameters<typeof t>[0])}
             color={
-              col.id === "WISHLIST" ? "bg-gray-100" :
-              col.id === "APPLIED" ? "bg-blue-50" :
-              col.id === "INTERVIEW" ? "bg-yellow-50" :
-              col.id === "OFFER" ? "bg-green-50" : "bg-red-50"
+              col.id === "WISHLIST" ? "border-l-4 border-l-neutral-400" :
+              col.id === "APPLIED" ? "border-l-4 border-l-blue-500" :
+              col.id === "INTERVIEW" ? "border-l-4 border-l-yellow-500" :
+              col.id === "OFFER" ? "border-l-4 border-l-green-500" : "border-l-4 border-l-red-500"
             }
             applications={applications.filter((a) => a.status === col.id)}
           />

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { renderToPdf } from "@/lib/pdf/render-page"
+import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { checkRateLimit } from "@/lib/ai-client"
 import { isActive } from "@/lib/plans"
 
@@ -15,12 +15,13 @@ export async function GET(req: Request, { params }: Params) {
 
   const { id } = await params
   const url = new URL(req.url)
-  const locale = url.searchParams.get("locale") ?? "en"
+  const rawLocale = url.searchParams.get("locale") ?? ""
+  const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "en"
 
   const [resume, user] = await Promise.all([
     db.resume.findFirst({
       where: { id, userId: session.user.id },
-      select: { id: true, title: true, templateId: true },
+      select: { id: true, title: true, templateId: true, updatedAt: true },
     }),
     db.user.findUnique({
       where: { id: session.user.id },
@@ -29,6 +30,11 @@ export async function GET(req: Request, { params }: Params) {
   ])
 
   if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  const etag = `"${resume.id}-${resume.updatedAt.getTime()}"`
+  if (req.headers.get("if-none-match") === etag) {
+    return new Response(null, { status: 304 })
+  }
 
   if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
@@ -44,13 +50,20 @@ export async function GET(req: Request, { params }: Params) {
   const cookieHeader = req.headers.get("cookie") ?? ""
 
   try {
-    const pdf = await renderToPdf({ printUrl, cookieHeader, appUrl, stretchPages: true })
+    const pdf = await callPdfService({
+      printUrl,
+      cookies: cookieHeader,
+      stretchPages: true,
+      resumeTitle: `CV — ${resume.title}`,
+      candidateName: session.user.name ?? undefined,
+    })
     const filename = encodeURIComponent(resume.title || "resume")
-    return new Response(Buffer.from(pdf), {
+    return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}.pdf"`,
-        "Cache-Control": "no-store",
+        "Cache-Control": "private, no-cache",
+        "ETag": etag,
       },
     })
   } catch (err) {

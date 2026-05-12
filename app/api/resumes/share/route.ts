@@ -6,6 +6,7 @@ import { checkOrigin } from "@/lib/csrf"
 
 // Simple in-memory rate limiter: 60 requests per IP per minute
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+setInterval(() => { const now = Date.now(); rateLimitMap.forEach((v, k) => { if (now > v.resetAt) rateLimitMap.delete(k) }) }, 10 * 60 * 1000)
 
 function checkRateLimit(ip: string): boolean {
   const now = Date.now()

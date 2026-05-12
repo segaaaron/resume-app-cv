@@ -58,6 +58,23 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL(`/${locale}/login`, request.url))
   }
 
+  // Auto-detect language on first visit (no NEXT_LOCALE cookie = no preference set yet)
+  const localePreference = request.cookies.get("NEXT_LOCALE")?.value
+  if (!localePreference && !localeMatch) {
+    const acceptLanguage = request.headers.get("accept-language") ?? ""
+    const preferEs = acceptLanguage.toLowerCase().includes("es")
+    const detectedLocale = preferEs ? "es" : "en"
+    const url = request.nextUrl.clone()
+    url.pathname = `/${detectedLocale}${pathname === "/" ? "" : pathname}`
+    const response = NextResponse.redirect(url, { status: 302 })
+    response.cookies.set("NEXT_LOCALE", detectedLocale, {
+      path: "/",
+      maxAge: 60 * 60 * 24 * 365,
+      sameSite: "lax",
+    })
+    return response
+  }
+
   // Apply i18n locale routing for public pages
   return intlMiddleware(request)
 }

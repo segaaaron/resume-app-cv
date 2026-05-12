@@ -1,14 +1,14 @@
 "use client"
 
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Save, Download, Loader2, Lock, Share2, Copy, Eye } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, AlertCircle } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
+import UnsavedChangesModal from "./UnsavedChangesModal"
 
 interface Props {
   hasAccess: boolean
@@ -16,13 +16,14 @@ interface Props {
 
 export default function EditorTopBar({ hasAccess }: Props) {
   const router = useRouter()
-  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, sectionData, sections, config } = useResumeStore()
+  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId } = useResumeStore()
   const [editing, setEditing] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [publicSlug, setPublicSlug] = useState<string | null>(null)
   const [togglingShare, setTogglingShare] = useState(false)
   const [viewStats, setViewStats] = useState<{ total: number; last7d: number } | null>(null)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const [showExitModal, setShowExitModal] = useState(false)
   const locale = useLocale()
   const t = useTranslations("editor")
 
@@ -52,14 +53,33 @@ export default function EditorTopBar({ hasAccess }: Props) {
     const handler = (e: BeforeUnloadEvent) => {
       if (!isDirty) return
       e.preventDefault()
-      save().catch(() => {})
     }
     window.addEventListener("beforeunload", handler)
     return () => window.removeEventListener("beforeunload", handler)
-  }, [isDirty, save])
+  }, [isDirty])
 
-  async function handleBack() {
-    if (isDirty && hasAccess) await save().catch(() => {})
+  function handleBack() {
+    if (isDirty) {
+      setShowExitModal(true)
+      return
+    }
+    router.push(`/${locale}/dashboard/resumes`)
+  }
+
+  async function handleModalSave() {
+    setShowExitModal(false)
+    if (hasAccess) {
+      await save().catch(() => {})
+      if (useResumeStore.getState().isDirty) {
+        toast.error(t("save_error") ?? "Error al guardar")
+        return
+      }
+    }
+    router.push(`/${locale}/dashboard/resumes`)
+  }
+
+  function handleModalDiscard() {
+    setShowExitModal(false)
     router.push(`/${locale}/dashboard/resumes`)
   }
 
@@ -105,6 +125,9 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   async function handleDownloadPdf() {
     if (!resumeId) return
+    if (isDirty && hasAccess) {
+      await save().catch(() => {})
+    }
     setDownloadingPdf(true)
     try {
       const res = await fetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
@@ -126,7 +149,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
   }
 
   return (
-    <header className="h-12 bg-white border-b border-border flex items-center justify-between px-4 gap-4 shrink-0 relative">
+    <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4 gap-4 shrink-0 relative">
       <div className="flex items-center gap-3 min-w-0">
         <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
           <ArrowLeft className="h-4 w-4" />
@@ -152,13 +175,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
       </div>
 
       <div className="flex items-center gap-2">
-        {/* Save status — only show while actively saving */}
-        {isSaving && (
-          <span className="text-xs text-muted-foreground hidden sm:flex items-center gap-1">
-            <Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}
-          </span>
-        )}
-
         {/* Share button */}
         {hasAccess && (
           <div className="flex items-center gap-1">
@@ -187,16 +203,41 @@ export default function EditorTopBar({ hasAccess }: Props) {
           </div>
         )}
 
+        {/* Save status indicator */}
         {hasAccess ? (
-          <Button variant="outline" size="sm" onClick={async () => { await save(); toast.success(t("saved")) }} disabled={isSaving} className="gap-1.5">
-            <Save className="h-3.5 w-3.5" />
-            {t("save")}
-          </Button>
+          <button
+            onClick={() => { if (isDirty && !isSaving) save().catch(() => {}) }}
+            disabled={isSaving || !isDirty}
+            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md transition-colors disabled:cursor-default cursor-pointer hover:bg-neutral-100"
+            title={isDirty ? t("unsaved") : lastSaved ? t("saved") : ""}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                <span className="hidden sm:inline text-muted-foreground">{t("saving")}</span>
+              </>
+            ) : isDirty ? (
+              <>
+                <AlertCircle className="h-3 w-3 text-amber-500" />
+                <span className="hidden sm:inline text-amber-600 hover:text-amber-700">{t("unsaved")}</span>
+              </>
+            ) : lastSaved ? (
+              <>
+                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <span className="hidden sm:inline text-muted-foreground">
+                  {t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}
+                </span>
+              </>
+            ) : null}
+          </button>
         ) : (
-          <Button variant="outline" size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
-            <Lock className="h-3.5 w-3.5" />
-            {t("save")}
-          </Button>
+          <button
+            onClick={handleLockedClick}
+            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md opacity-50 cursor-pointer"
+          >
+            <Lock className="h-3 w-3" />
+            <span className="hidden sm:inline">{t("save")}</span>
+          </button>
         )}
 
         {hasAccess ? (
@@ -212,6 +253,12 @@ export default function EditorTopBar({ hasAccess }: Props) {
         )}
       </div>
 
+      <UnsavedChangesModal
+        open={showExitModal}
+        onSave={handleModalSave}
+        onDiscard={handleModalDiscard}
+        onClose={() => setShowExitModal(false)}
+      />
     </header>
   )
 }

@@ -4,6 +4,7 @@ import { Check, BadgeCheck } from "lucide-react"
 import type { Metadata } from "next"
 import Script from "next/script"
 import PricingButtons from "@/components/marketing/PricingButtons"
+import ManageBillingButton from "@/components/marketing/ManageBillingButton"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
@@ -113,15 +114,17 @@ export default async function PricingPage({
   const session = await auth()
   let userIsPro = false
   let subscriptionEndsAt: Date | null = null
+  let planInterval: string | null = null
 
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true },
     })
     if (dbUser) {
       userIsPro = isActive(dbUser.plan, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus)
       subscriptionEndsAt = dbUser.subscriptionEndsAt
+      planInterval = dbUser.planInterval
     }
   }
 
@@ -164,7 +167,14 @@ export default async function PricingPage({
               <div className="flex items-center gap-3 text-left">
                 <BadgeCheck className="h-8 w-8 text-primary shrink-0" />
                 <div>
-                  <p className="font-bold text-foreground">{t("pro_member_title")}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-bold text-foreground">{t("pro_member_title")}</p>
+                    {planInterval && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                        {planInterval === "annual" ? t("plan_annual") : t("plan_monthly")}
+                      </span>
+                    )}
+                  </div>
                   <p className="text-sm text-muted-foreground">
                     {subscriptionEndsAt
                       ? `${t("pro_member_renews")} ${format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}`
@@ -172,12 +182,7 @@ export default async function PricingPage({
                   </p>
                 </div>
               </div>
-              <Link
-                href="/api/stripe/portal"
-                className="shrink-0 inline-flex items-center justify-center rounded-xl bg-primary text-white text-sm font-medium px-5 py-2.5 hover:bg-primary/90 transition-colors"
-              >
-                {t("pro_member_manage")}
-              </Link>
+              <ManageBillingButton />
             </div>
           )}
 

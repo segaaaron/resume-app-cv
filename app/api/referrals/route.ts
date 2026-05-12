@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { nanoid } from "nanoid"
 import { REFERRAL_TIERS } from "@/lib/referral-rewards"
+import { isActive } from "@/lib/plans"
 
 // GET /api/referrals — get current user's referral code, stats, cycle count and reward tier
 export async function GET() {
@@ -27,12 +28,12 @@ export async function GET() {
 
   const referred = await db.user.findMany({
     where: { referredBy: session.user.id },
-    select: { plan: true, subscriptionStatus: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
   })
 
   const totalReferred = referred.length
   const totalPaid = referred.filter(
-    (u) => u.plan === "PRO" && u.subscriptionStatus === "ACTIVE"
+    (u) => isActive(u.plan, u.subscriptionEndsAt, u.subscriptionStatus)
   ).length
 
   // Cycle count = paid referrals since last reset

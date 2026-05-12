@@ -5,10 +5,33 @@ services:
       - "3000:3000"
     env_file:
       - .env.production
+    environment:
+      PDF_SERVICE_URL: http://pdf-generator:3001
+      PDF_SERVICE_SECRET: ${PDF_SERVICE_SECRET}
     depends_on:
       postgres:
         condition: service_healthy
+      pdf-generator:
+        condition: service_healthy
     restart: unless-stopped
+
+  pdf-generator:
+    build:
+      context: ./services/pdf-generator
+      dockerfile: Dockerfile
+    environment:
+      PDF_SERVICE_SECRET: ${PDF_SERVICE_SECRET}
+      MAX_CONCURRENT_PAGES: "3"
+      PORT: "3001"
+      NODE_ENV: production
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:3001/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   postgres:
     image: postgres:16-alpine

@@ -18,6 +18,12 @@
       "og_title": "ReadyCV Pricing — Pro Plan from $15/month",
       "og_description": "One Pro plan to get hired: 129+ templates, AI, ATS Score, cover letters. From $15/month — cheaper than the competition. Cancel anytime."
     },
+    "guide": {
+      "title": "How to use ReadyCV — Complete AI Guide for your Resume",
+      "description": "Learn to create a professional resume with AI: improve bullets, generate summaries, analyze your ATS score and create cover letters in minutes with ReadyCV.",
+      "og_title": "How to use ReadyCV with AI — Step-by-step guide",
+      "og_description": "7 AI tools for your resume: improve bullets, generate summaries, analyze ATS score and create cover letters. All in ReadyCV."
+    },
     "pro_designs": {
       "title": "Pro Designs — READY CV",
       "description": "Premium templates with custom SVGs and unique designs to make you stand out."
@@ -83,7 +89,9 @@
     "templates": "Templates",
     "pro_designs": "Pro Designs",
     "pricing": "Pricing",
+    "guide": "Guide",
     "faq": "FAQ",
+    "blog": "Blog",
     "login": "Sign in",
     "register": "Create CV",
     "dashboard": "My Dashboard"
@@ -97,7 +105,11 @@
     "cta_secondary": "View templates",
     "no_credit_card": "No credit card required",
     "cancel_anytime": "Cancel anytime · Your CVs are always yours",
-    "pdf_downloaded": "✓ PDF downloaded"
+    "pdf_downloaded": "✓ PDF downloaded",
+    "users_trust": "professionals trust ReadyCV",
+    "proof_ats": "ATS-compatible templates",
+    "proof_pdf": "Export to PDF in one click",
+    "proof_ai": "Improve your CV with AI"
   },
   "how_it_works": {
     "title": "How does it work?",
@@ -142,20 +154,58 @@
     "testimonial3_role": "Project Manager"
   },
   "faq": {
-    "title": "Frequently Asked Questions",
-    "subtitle": "Everything you need to know before getting started",
+    "page_title": "Frequently Asked Questions",
+    "page_subtitle": "Everything you need to know about ReadyCV, AI features, and the Pro plan",
+    "section_general": "General",
+    "section_ai": "Artificial Intelligence",
+    "section_ats": "ATS Score",
+    "section_templates": "Templates",
+    "section_plan": "Plan & Pricing",
+    "section_privacy": "Privacy & Security",
     "q1": "What does the Pro plan include?",
-    "a1": "The Pro plan includes: 129 professional templates, unlimited CVs, 7 AI tools (bullet improvement, summary generator, ATS Score, skill suggestions, CV review, profile fill, cover letter), PDF and Word export, application tracker, public shareable CV and version history.",
-    "q2": "Can I change templates without losing my data?",
-    "a2": "Yes. Your data is separated from the template. You can switch between 129 templates at any time and your content stays intact.",
-    "q3": "In what formats can I download my CV?",
-    "a3": "You can download as high-resolution PDF or Word (.docx), ready to edit. Both formats included in the Pro plan.",
-    "q4": "Can I create more than one CV?",
-    "a4": "Yes. With the Pro plan you can create unlimited CVs, allowing you to tailor your resume for different positions or industries.",
-    "q5": "Can I import my existing CV?",
-    "a5": "Yes. You can import your CV in PDF or Word (.docx) format and the system will automatically extract your information to populate the editor.",
+    "a1": "The Pro plan includes: 139 professional templates, unlimited CVs, 7 AI tools (bullets, summary, ATS Score, skills, review, profile fill, cover letter), PDF and Word export, job application tracker, shareable public CV, and version history.",
+    "q2": "Can I switch templates without losing my data?",
+    "a2": "Yes. Your data is separated from the template. You can switch between all 139 templates at any time and your content remains intact.",
+    "q3": "What formats can I download my resume in?",
+    "a3": "You can download in high-resolution PDF or Word (.docx), ready to edit. Both formats are included in the Pro plan.",
+    "q4": "Can I create more than one resume?",
+    "a4": "Yes. With the Pro plan you can create unlimited resumes, allowing you to tailor your CV for different positions or industries.",
+    "q5": "Can I import my existing resume?",
+    "a5": "Yes. You can import your resume in PDF or Word (.docx) format and the system will automatically extract your information to populate the editor.",
     "q6": "Is my data secure?",
-    "a6": "Absolutely. We use bank-level encryption and never share your data with third parties. You can delete your account and all your data at any time."
+    "a6": "Absolutely. We use bank-level encryption and never share your data with third parties. You can delete your account and all your data at any time.",
+    "q_ai1": "How does ReadyCV AI work?",
+    "a_ai1": "ReadyCV uses OpenAI GPT-4o-mini to power its 7 AI tools. Each tool is specialized: it analyzes your profile context, sector, and job posting to generate relevant, professional content — not generic text.",
+    "q_ai2": "What does the bullet improvement tool do?",
+    "a_ai2": "It takes each bullet point in your work experience and rewrites it with powerful action verbs, impact metrics, and results-oriented structure. It gives you 3 versions to choose the one that best fits your style.",
+    "q_ai3": "What does the AI professional summary generate?",
+    "a_ai3": "It generates a 3-4 line paragraph summarizing your background, specialty, and value proposition. It analyzes your entire profile (experience, skills, education) to create a coherent and compelling text.",
+    "q_ai4": "How does the AI profile fill work?",
+    "a_ai4": "You describe your background in free text (max 500 characters) and the AI automatically extracts: job title, summary, suggested skills, and work experience improvements. Ideal if you are starting from scratch.",
+    "q_ai5": "What is the AI CV review?",
+    "a_ai5": "A complete analysis of your resume that identifies strengths, weaknesses, and concrete improvements. Each suggestion includes a button to apply it directly with one click, seeing the difference before accepting.",
+    "q_ai6": "How does the cover letter generator work?",
+    "a_ai6": "It analyzes your full CV and the job posting to generate a personalized, formal, and convincing letter. You can edit it with the built-in rich text editor and generate variants if you are not satisfied with the first version.",
+    "q_ats1": "What is ATS Score?",
+    "a_ats1": "ATS (Applicant Tracking System) are algorithms used by 98% of large companies to automatically filter resumes before a human recruiter sees them. ReadyCV ATS Score analyzes how compatible your resume is with a specific job posting.",
+    "q_ats2": "How does ATS analysis work?",
+    "a_ats2": "You paste the job posting text and ReadyCV compares your resume against it: detects present and missing keywords, analyzes skills, experience and education compatibility, and gives you a compatibility percentage with specific recommendations.",
+    "q_ats3": "Does a high ATS Score guarantee the job?",
+    "a_ats3": "It does not guarantee the job, but it does guarantee your resume reaches human eyes. 75% of resumes are rejected by ATS filters before anyone reads them. A high score eliminates that barrier.",
+    "q_ats4": "Are ReadyCV templates ATS compatible?",
+    "a_ats4": "Yes. All templates are designed with clean formats and semantic structures that ATS systems can parse correctly. We avoid complex tables, illogical multi-column layouts, and graphic elements that confuse automated systems.",
+    "q_tpl1": "How many templates are available?",
+    "a_tpl1": "There are 139 templates organized into more than 10 categories: Technology, Design, Legal, Healthcare, Hospitality, Finance, Education, Marketing, Executive, and more. All included in the Pro plan.",
+    "q_tpl2": "Can I customize template colors?",
+    "a_tpl2": "Yes. Each template has predefined color schemes you can change from the editor. You can also adjust fonts, sizes, and section order.",
+    "q_plan1": "How much does the Pro plan cost?",
+    "a_plan1": "$15/month or $144/year (equivalent to $12/month, saving 20%). There is no free plan — the Pro plan includes full access to everything without restrictions.",
+    "q_plan2": "Can I cancel at any time?",
+    "a_plan2": "Yes. Cancel anytime from your profile, with no commitments or penalties. You keep access until the end of your paid period.",
+    "q_priv1": "Does ReadyCV use my resume to train AI?",
+    "a_priv1": "No. Your data is never used to train AI models. Each AI request is processed in isolation and not stored as training data. This is reflected in our Privacy Policy.",
+    "q_priv2": "Can I delete my account and data?",
+    "a_priv2": "Yes. From Settings → Account you can permanently delete your account. All your CVs, letters, applications, and personal data are immediately and irreversibly deleted (GDPR Art. 17 compliance)."
   },
   "footer": {
     "description": "The most complete platform to create your professional resume and cover letter.",
@@ -171,7 +221,14 @@
     "contact": "Contact",
     "privacy": "Privacy",
     "terms": "Terms",
-    "rights": "All rights reserved."
+    "rights": "All rights reserved.",
+    "tagline": "Build professional CVs with AI in minutes.",
+    "product": "Product",
+    "templates": "Templates",
+    "blog": "Blog",
+    "legal": "Legal",
+    "cookies": "Cookies",
+    "copyright": "© {year} ReadyCV. All rights reserved."
   },
   "pricing": {
     "title": "One price, everything included",
@@ -187,6 +244,8 @@
     "pro_member_renews": "Your plan renews on",
     "pro_member_active": "Your subscription is active",
     "pro_member_manage": "Manage subscription",
+    "plan_monthly": "Monthly",
+    "plan_annual": "Annual",
     "feature1": "Unlimited CVs — tailor your resume for every role",
     "feature2": "129 templates for every industry",
     "feature3": "High-quality PDF export",
@@ -242,9 +301,26 @@
       "no_account": "Don't have an account?",
       "register_link": "Sign up",
       "error": "Incorrect email or password",
+      "error_user_not_found": "No account found with that email",
+      "error_invalid_password": "Incorrect password",
       "email_invalid": "Invalid email",
       "password_required": "Password is required",
-      "plan_pro_banner": "One more step to activate your Pro Plan"
+      "plan_pro_banner": "One more step to activate your Pro Plan",
+      "active_session_title": "Session already active",
+      "active_session_subtitle": "If that's you, we'll send a code to close the other session.",
+      "send_code": "Send code",
+      "sending_code": "Sending...",
+      "code_sent": "Code sent. Check your email.",
+      "code_label": "Verification code",
+      "code_placeholder": "123456",
+      "verify_and_enter": "Verify and sign in",
+      "verifying": "Verifying...",
+      "code_invalid": "Incorrect code. {attemptsLeft} attempts remaining.",
+      "code_expired": "Code expired. Request a new one.",
+      "account_blocked_title": "Account temporarily blocked",
+      "account_blocked_until": "Too many failed attempts. Blocked until {time}.",
+      "back_to_login": "← Back to login",
+      "error_session_blocked": "Account temporarily blocked due to too many failed attempts."
     },
     "register": {
       "title": "Create your account",
@@ -274,7 +350,20 @@
       "age_consent": "I confirm that I am 16 years of age or older.",
       "age_required": "You must confirm you are 16 or older to continue",
       "marketing_consent": "I agree to receive emails about updates and offers from READY CV. You can unsubscribe at any time.",
-      "plan_pro_banner": "Create your account to activate your Pro Plan — takes only 30 seconds"
+      "plan_pro_banner": "Create your account to activate your Pro Plan — takes only 30 seconds",
+      "otp_title": "Verify your email",
+      "otp_subtitle": "We sent a code to {email}. Enter it to activate your account.",
+      "otp_label": "Verification code",
+      "otp_placeholder": "123456",
+      "otp_submit": "Verify and create account",
+      "otp_verifying": "Verifying...",
+      "otp_resend": "Didn't receive a code? Resend",
+      "otp_resent": "Code resent. Check your email.",
+      "otp_back": "← Back",
+      "otp_invalid": "Incorrect code. {attemptsLeft} attempts remaining.",
+      "otp_expired": "Code expired. Please try again.",
+      "otp_max_attempts": "Too many failed attempts. Please register again.",
+      "otp_email_taken": "This email already has an account. Sign in instead."
     }
   },
   "ai_features": {
@@ -360,12 +449,23 @@
     "label": "Language"
   },
   "dashboard": {
+    "past_due_banner": {
+      "title": "Payment issue",
+      "description": "We couldn't process your Pro subscription payment. Update your payment method to keep your access.",
+      "cta": "Update payment method",
+      "dismiss": "Dismiss"
+    },
     "nav": {
       "cvs": "CVs",
       "letters": "Letters",
+      "jobs": "Applications",
       "settings": "Settings",
       "upgrade": "Upgrade plan",
       "logout": "Log out",
+      "logout_confirm_title": "Log out?",
+      "logout_confirm_desc": "You will be signed out of this device.",
+      "logout_confirm_action": "Log out",
+      "logout_cancel": "Cancel",
       "admin": "Admin"
     },
     "upgrade_cta": {
@@ -398,9 +498,20 @@
       "create_error": "Error creating CV",
       "delete_success": "CV deleted",
       "duplicate_success": "CV duplicated",
+      "rename": "Rename",
+      "rename_title": "Rename CV",
+      "rename_confirm": "Save",
+      "rename_success": "Name updated",
+      "rename_error": "Error renaming CV",
       "pdf_error": "Error generating PDF",
-      "welcome_pro_title": "Welcome to Pro!",
+      "welcome_pro_title": "Your Pro plan is active!",
       "welcome_pro_subtitle": "You now have full access to all templates and features.",
+      "upgrade_relogin_subtitle": "You'll be redirected to login in 3 seconds to activate your Pro session.",
+      "syncing_title": "Activating your subscription…",
+      "syncing_subtitle": "This may take a few seconds.",
+      "timeout_title": "Payment received",
+      "timeout_subtitle": "If you don't see Pro access in a few minutes, sign in again.",
+      "timeout_reload": "Sign in",
       "require_pro_toast": "Activate your Pro plan to continue",
       "import_error": "Error importing the CV",
       "import_success": "CV imported successfully",
@@ -505,10 +616,20 @@
       "cancel": "Cancel",
       "confirm_delete": "Yes, delete my account",
       "export_error": "Error exporting data",
-      "delete_error": "Error deleting account"
+      "delete_error": "Error deleting account",
+      "manage_billing": "Manage billing",
+      "manage_billing_description": "Update payment method, download invoices, or cancel your plan.",
+      "opening_portal": "Opening portal..."
     }
   },
   "editor": {
+    "nav": {
+      "content": "Content",
+      "design": "Design",
+      "ai": "AI",
+      "ats": "ATS",
+      "cover": "Cover Letter"
+    },
     "photo_updated": "Photo updated",
     "photo_deleted": "Photo deleted",
     "photo_delete_error": "Error deleting photo",
@@ -523,6 +644,13 @@
     "unsaved": "Unsaved",
     "saved": "Saved",
     "save": "Save",
+    "saved_at": "Saved at {time}",
+    "unsaved_modal": {
+      "title": "You have unsaved changes",
+      "description": "What would you like to do with your changes?",
+      "save": "Save",
+      "discard": "Discard"
+    },
     "see_plans": "See plans",
     "photo_upload_error": "Error uploading photo",
     "form": {
@@ -742,6 +870,9 @@
       "title": "AI Assistant",
       "pro_badge": "Pro",
       "description": "Describe your professional profile in your own words and the AI will generate your summary, title, and suggested skills.",
+      "review_hint": "Review each suggestion and apply it independently.",
+      "review_hint_tab": "Review",
+      "review_hint_suffix": "tab to get improvement suggestions and detect missing sections.",
       "placeholder": "E.g.: I'm a React developer with 5 years of experience in startups, specialized in performance and accessibility.",
       "generate": "Generate with AI",
       "generating": "Generating...",
@@ -773,7 +904,6 @@
       "btn_apply": "Apply",
       "btn_generating": "Generating...",
       "btn_generate": "Generate with AI",
-      "review_hint": "Review each suggestion and apply it independently.",
       "label_summary": "Professional summary",
       "toast_summary_updated": "Professional summary updated",
       "label_job_title": "Job title",
@@ -1066,7 +1196,10 @@
     "reward_tier_3": "1 free month (100%)",
     "max_tier": "You've reached the highest level!",
     "reward_applied": "The credit is automatically applied to your next invoice.",
-    "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again."
+    "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again.",
+    "tier_achieved": "✓ active",
+    "tier_referidos": "{range} referrals",
+    "progress_label": "{count} of {threshold} Pro referrals this cycle"
   },
   "checkout": {
     "loading": "Preparing your payment...",
@@ -1088,5 +1221,115 @@
     "invalidate_success": "Session invalidated — user will be logged out in ≤5 min",
     "invalidate_error": "Error invalidating session",
     "invalidate_network_error": "Network error invalidating session"
+  },
+  "guide": {
+    "hero": {
+      "badge": "Complete guide",
+      "h1": "How to use ReadyCV — Your Resume with Artificial Intelligence",
+      "subtitle": "From blank page to professional resume in minutes. 7 AI tools that do the heavy lifting for you.",
+      "stat_templates": "139+ Templates",
+      "stat_ai": "7 AI Tools",
+      "stat_ats": "ATS Score",
+      "stat_pdf": "Professional PDF",
+      "cta_primary": "Create my resume",
+      "cta_secondary": "See pricing"
+    },
+    "steps": {
+      "title": "How it works in 4 steps",
+      "step1_title": "Choose your template",
+      "step1_desc": "139+ professional ATS-compatible designs",
+      "step2_title": "Complete with AI",
+      "step2_desc": "AI fills and improves your content automatically",
+      "step3_title": "Analyze your ATS",
+      "step3_desc": "Check your compatibility with the job offer",
+      "step4_title": "Download PDF",
+      "step4_desc": "Export your resume as a professional PDF in one click"
+    },
+    "features": {
+      "fill_profile": {
+        "badge": "AI · Fill Profile",
+        "title": "From zero to complete profile in seconds",
+        "description": "Briefly describe your career and the AI generates your professional summary, job title, suggested skills and automatically updates your experience."
+      },
+      "improve_bullet": {
+        "badge": "AI · Improve Bullets",
+        "title": "From generic description to memorable achievement",
+        "description": "Select any bullet point from your experience and the AI rewrites it with action verbs, metrics and results-oriented language. 3 versions to choose from."
+      },
+      "summary": {
+        "badge": "AI · Summary",
+        "title": "The professional summary that opens doors",
+        "description": "The AI analyzes all your experience and generates a 3-4 line summary tailored to your industry. You can request new versions until you find the perfect one."
+      },
+      "ats_score": {
+        "badge": "AI · ATS Score",
+        "title": "Know if your resume will pass the automatic filter",
+        "description": "Paste the job description and in seconds you see your compatibility percentage, present and missing keywords, and specific recommendations to improve."
+      },
+      "cover_letter": {
+        "badge": "AI · Cover Letter",
+        "title": "A personalized letter for each application",
+        "description": "Choose a template, enter company and position, and the AI drafts a formal, personalized and convincing cover letter. Editable with rich text format."
+      },
+      "cv_review": {
+        "badge": "AI · CV Review",
+        "title": "An HR expert reviewing your resume",
+        "description": "The AI reviews your entire resume and returns strengths, concrete improvements with examples and suggestions applicable with one click. Like having a career mentor 24/7."
+      }
+    },
+    "stats": {
+      "title": "By the numbers",
+      "templates_number": "139+",
+      "templates_label": "Professional templates",
+      "ai_number": "7",
+      "ai_label": "AI tools",
+      "time_number": "< 5 min",
+      "time_label": "For your first resume"
+    },
+    "cta": {
+      "h2": "Ready to land the job?",
+      "subtitle": "Join thousands of professionals who already use ReadyCV to stand out.",
+      "button": "Start now",
+      "note": "Pro plan from $15/month · Cancel anytime"
+    }
+  },
+  "cinematic": {
+    "entry_line1": "Your next job",
+    "entry_line2": "starts here.",
+    "entry_scroll": "Scroll to discover",
+    "problem_stat": "75%",
+    "problem_line1": "of resumes never reach",
+    "problem_line2": "human eyes.",
+    "problem_body": "ATS algorithms filter them before anyone reads them. ReadyCV changes that.",
+    "reveal_brand": "ReadyCV",
+    "reveal_tagline": "reads them before they do.",
+    "reveal_stats_ai": "7 AI tools",
+    "reveal_stats_templates": "139 templates",
+    "reveal_stats_ats": "ATS Score included",
+    "feature_fill_headline": "From zero to complete profile.",
+    "feature_fill_body": "Describe your background and AI generates summary, title and skills. In seconds.",
+    "feature_bullets_headline": "From generic to memorable.",
+    "feature_bullets_body": "Every bullet rewritten with action verbs, metrics and results. 3 versions to choose from.",
+    "feature_summary_headline": "The summary that opens doors.",
+    "feature_summary_body": "A 3-4 line paragraph tailored to your field. AI regenerates it until perfect.",
+    "feature_ats_headline": "Know if you will pass the filter.",
+    "feature_ats_body": "Paste the job posting and get your compatibility %, present and missing keywords.",
+    "feature_cover_headline": "A letter for every application.",
+    "feature_cover_body": "Formal, personalized and convincing. Editable with rich text format.",
+    "feature_review_headline": "An expert reviewing your resume.",
+    "feature_review_body": "Strengths, concrete improvements and one-click applicable suggestions. 24/7.",
+    "templates_headline": "139 templates.",
+    "templates_sub": "One was made for you.",
+    "templates_footer": "and more designed for your field.",
+    "templates_tech": "Technology",
+    "templates_design": "Design",
+    "templates_legal": "Legal",
+    "templates_health": "Healthcare",
+    "templates_hospitality": "Hospitality",
+    "climax_line1": "Your resume, ready.",
+    "climax_line2": "The interview, yours.",
+    "climax_cta": "Create my resume",
+    "climax_note": "Pro plan from $15/month · Cancel anytime",
+    "nav_cta": "Create my resume"
   }
 }

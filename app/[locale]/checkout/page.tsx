@@ -1,13 +1,15 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useSearchParams, useParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 
 export default function CheckoutRedirectPage() {
   const t = useTranslations("checkout")
   const params = useSearchParams()
+  const routeParams = useParams()
+  const locale = (routeParams?.locale as string | undefined) ?? "es"
   const plan = params.get("plan")
   const [error, setError] = useState(false)
 
@@ -20,7 +22,7 @@ export default function CheckoutRedirectPage() {
     fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan }),
+      body: JSON.stringify({ plan, locale }),
     })
       .then((r) => r.json())
       .then((data) => {
