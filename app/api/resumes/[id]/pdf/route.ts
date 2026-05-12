@@ -44,7 +44,14 @@ export async function GET(req: Request, { params }: Params) {
   const cookieHeader = req.headers.get("cookie") ?? ""
 
   try {
-    const pdf = await renderToPdf({ printUrl, cookieHeader, appUrl, stretchPages: true })
+    const pdf = await renderToPdf({
+      printUrl,
+      cookieHeader,
+      appUrl,
+      stretchPages: true,
+      resumeTitle: `CV — ${resume.title}`,
+      candidateName: session.user.name ?? undefined,
+    })
     const filename = encodeURIComponent(resume.title || "resume")
     return new Response(Buffer.from(pdf), {
       headers: {

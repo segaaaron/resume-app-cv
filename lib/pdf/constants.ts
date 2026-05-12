@@ -41,6 +41,27 @@ export const USABLE_PX_PER_PAGE = A4_HEIGHT_MM * MM_TO_PX
 // page.goto: si tarda más, algo está roto (servidor caído, loop infinito).
 export const GOTO_TIMEOUT_MS = 20_000
 // fonts.ready: no es bloqueante crítico — degradamos a fuente fallback.
-export const FONTS_TIMEOUT_MS = 3_000
+// 6s da margen para fuentes auto-hospedadas en entornos con disco lento.
+export const FONTS_TIMEOUT_MS = 6_000
+
+// --- Márgenes del PDF ---------------------------------------------------
+// Margen inferior de página controlado por CSS @page { margin-bottom: 10mm }.
+// Chrome repagina dentro del área imprimible (pagePx - PDF_BOTTOM_MARGIN_PX).
+// El height snap usa effectivePagePx para que no se genere una última página extra.
+// CSS @page toma precedencia sobre el margin de page.pdf() en Chrome headless —
+// por eso la fuente de verdad es print-resume.css, no el parámetro de Puppeteer.
+// top = 0: los div-spacers gestionan el padding superior por página.
+// 10mm @ 96dpi ≈ 38px — espacio de respiración profesional entre páginas.
+export const PDF_BOTTOM_MARGIN_PX = 38 // 10mm @ 96dpi (all pages via @page margin-bottom)
+// Top margin applies to pages 2+ only (@page :first overrides page 1 to margin-top: 0).
+// Chrome paginates pages 2+ at (A4_HEIGHT - top - bottom) = 1047px intervals.
+export const PDF_TOP_MARGIN_PX = 38 // 10mm @ 96dpi
+
+// --- Tolerancias --------------------------------------------------------
+// Tolerancia de sub-pixel rounding de Chrome al medir scrollHeight.
+// Chrome a veces reporta una altura ~1-3px mayor que la real visible,
+// lo que dispara un page-break espurio si calculamos numPages = ceil(rawH / pagePx).
+// Restamos FUDGE_PX antes del ceil() para absorber ese error.
+export const FUDGE_PX = 4
 // Timeout global del handler completo. Cualquier tiempo mayor cancela.
 export const RENDER_TIMEOUT_MS = 45_000

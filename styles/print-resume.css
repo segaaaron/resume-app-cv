@@ -11,13 +11,98 @@
    ============================================================ */
 
 
-/* 1. TAMAÑO DE PÁGINA
-   margin: 0 — cada template maneja su propio padding interno.
-   Puppeteer también recibe margin=0; el CSS lo controla todo. */
+/* 0. FUENTES AUTO-HOSPEDADAS
+   Cargadas localmente para evitar dependencia de red a Google Fonts en render time.
+   font-display: block — Chrome headless debe usar estas fuentes, nunca el fallback.
+   WOFF2 soportado en Chrome 36+. Puppeteer siempre usa Chrome moderno. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/inter-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/inter-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/inter-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/poppins-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/poppins-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/poppins-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/roboto-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/roboto-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/lato-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/lato-700.woff2') format('woff2');
+  font-display: block;
+}
+
+
+/* 1. TAMAÑO DE PÁGINA Y MÁRGENES
+   margin-bottom: 10mm — espacio de respiración inferior en cada página.
+   Chrome headless usa CSS @page con prioridad sobre el parámetro margin de page.pdf().
+   top/left/right = 0: los templates manejan su propio padding interno.
+   Los div-spacers en resume.ts gestionan el padding-top en páginas 2+.
+   10mm = 38px @ 96dpi — debe coincidir con PDF_BOTTOM_MARGIN_PX en constants.ts. */
 
 @page {
   size: A4;
-  margin: 0;
+  margin: 10mm 0 10mm 0;
+}
+
+/* Page 1: no top margin — template handles its own top padding (pt-9 etc.) */
+@page :first {
+  margin: 0 0 10mm 0;
 }
 
 

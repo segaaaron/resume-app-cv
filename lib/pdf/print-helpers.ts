@@ -80,6 +80,41 @@ export async function gotoAndWaitForContent(
 }
 
 /**
+ * Espera a que todas las <img> en el documento terminen de cargar
+ * (load o error), con timeout de seguridad.
+ *
+ * POR QUÉ: Puppeteer puede generar el PDF antes de que la imagen de
+ * perfil cargue, produciendo un PDF sin foto. waitForFonts no cubre
+ * esto porque document.fonts.ready ignora HTMLImageElement.
+ *
+ * Igual que waitForFonts: no-bloqueante. Si una imagen tarda más del
+ * timeout, generamos el PDF sin ella en lugar de colgar el handler.
+ */
+export async function waitForImages(page: Page, timeoutMs = 3_000): Promise<void> {
+  await Promise.race([
+    page.evaluate(() =>
+      Promise.all(
+        Array.from(document.images)
+          .filter((img) => !img.complete)
+          .map(
+            (img) =>
+              new Promise<void>((resolve) => {
+                img.onload = () => resolve()
+                img.onerror = () => resolve()
+              }),
+          ),
+      ),
+    ),
+    new Promise<void>((resolve) =>
+      setTimeout(() => {
+        console.warn(`[pdf] images not ready after ${timeoutMs}ms — proceeding without waiting`)
+        resolve()
+      }, timeoutMs),
+    ),
+  ])
+}
+
+/**
  * Race entre una promesa y un timeout. Si la promesa no resuelve en
  * `ms` milisegundos, rechaza con un Error descriptivo.
  *
