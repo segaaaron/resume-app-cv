@@ -24,6 +24,7 @@ export default function ForgotPasswordForm() {
   const locale = useLocale()
   const [googleError, setGoogleError] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [notRegistered, setNotRegistered] = useState(false)
 
   const {
     register,
@@ -33,6 +34,7 @@ export default function ForgotPasswordForm() {
 
   async function onSubmit(data: FormData) {
     setGoogleError(false)
+    setNotRegistered(false)
     const res = await fetch("/api/auth/reset-password/request", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -41,12 +43,16 @@ export default function ForgotPasswordForm() {
 
     const body = await res.json().catch(() => ({}))
 
+    if (body.error === "not_registered") {
+      setNotRegistered(true)
+      return
+    }
+
     if (body.error === "google_account") {
       setGoogleError(true)
       return
     }
 
-    // Always navigate to verify — anti-enumeration
     router.push(`/${locale}/forgot-password/verify?email=${encodeURIComponent(data.email)}`)
   }
 
@@ -60,6 +66,21 @@ export default function ForgotPasswordForm() {
       <div className="w-full max-w-md bg-white rounded-2xl border border-gray-200 p-8 shadow-sm">
         <h1 className="text-2xl font-bold text-gray-900 mb-1">{t("title")}</h1>
         <p className="text-gray-500 text-sm mb-6">{t("subtitle")}</p>
+
+        {notRegistered && (
+          <div className="mb-4 p-3 rounded-xl bg-blue-50 border border-blue-200 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm text-blue-800">{t("not_registered")}</p>
+              <Link
+                href={`/${locale}/register`}
+                className="inline-block mt-2 text-xs font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900"
+              >
+                {t("not_registered_cta")}
+              </Link>
+            </div>
+          </div>
+        )}
 
         {googleError && (
           <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 flex items-start gap-2">

@@ -407,7 +407,9 @@
         "credentials_cta": "Sign in",
         "google": "This account was created with Google.",
         "google_cta": "Continue with Google"
-      }
+      },
+      "not_registered": "This email is not registered in READY CV.",
+      "not_registered_cta": "Create an account"
     }
   },
   "ai_features": {

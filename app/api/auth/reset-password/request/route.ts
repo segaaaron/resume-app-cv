@@ -29,8 +29,7 @@ export async function POST(req: Request) {
     select: { id: true, name: true, password: true },
   })
 
-  // Anti-enumeration: always return sent:true if email doesn't exist
-  if (!user) return NextResponse.json({ sent: true })
+  if (!user) return NextResponse.json({ error: "not_registered" }, { status: 404 })
 
   // Google-only account: no password to reset
   if (!user.password) {
