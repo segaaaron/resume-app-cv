@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
+import { createPrintToken } from "@/lib/pdf/print-token"
 import { checkRateLimit } from "@/lib/ai-client"
 import { isActive } from "@/lib/plans"
 
@@ -45,14 +46,14 @@ export async function GET(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  const printUrl = `${appUrl}/${locale}/resume/${id}/print?pdf=1`
-  const cookieHeader = req.headers.get("cookie") ?? ""
+  const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
+  const printToken = createPrintToken(session.user.id, id)
+  const printUrl = `${internalUrl}/${locale}/resume/${id}/print?pdf=1&pt=${printToken}`
 
   try {
     const pdf = await callPdfService({
       printUrl,
-      cookies: cookieHeader,
+      cookies: "",
       stretchPages: true,
       resumeTitle: `CV — ${resume.title}`,
       candidateName: session.user.name ?? undefined,

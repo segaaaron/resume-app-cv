@@ -2,17 +2,37 @@ import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive, isSuperAdmin } from "@/lib/plans"
+import { verifyPrintToken } from "@/lib/pdf/print-token"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import PrintLayout from "@/components/resume/PrintLayout"
 
-export default async function PrintPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
-  const session = await auth()
+export default async function PrintPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string; locale: string }>
+  searchParams: Promise<Record<string, string>>
+}) {
   const { id, locale } = await params
-  if (!session?.user) redirect(`/${locale}/login`)
+  const sp = await searchParams
+  const pt = sp.pt as string | undefined
+
+  let userId: string
+
+  if (pt) {
+    const tokenData = verifyPrintToken(pt, id)
+    if (!tokenData) notFound()
+    userId = tokenData.userId
+  } else {
+    const session = await auth()
+    if (!session?.user) redirect(`/${locale}/login`)
+    userId = session.user.id
+  }
+
   const [resume, user] = await Promise.all([
-    db.resume.findFirst({ where: { id, userId: session.user.id } }),
-    db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true } }),
+    db.resume.findFirst({ where: { id, userId } }),
+    db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true } }),
   ])
 
   if (!resume) notFound()

@@ -1,17 +1,36 @@
 import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { verifyPrintToken } from "@/lib/pdf/print-token"
 import CoverLetterPrintLayout from "@/components/cover-letter/CoverLetterPrintLayout"
 
-export default async function CoverLetterPrintPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
-  const session = await auth()
+export default async function CoverLetterPrintPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string; locale: string }>
+  searchParams: Promise<Record<string, string>>
+}) {
   const { id, locale } = await params
-  if (!session?.user) redirect(`/${locale}/login`)
+  const sp = await searchParams
+  const pt = sp.pt as string | undefined
+
+  let userId: string
+
+  if (pt) {
+    const tokenData = verifyPrintToken(pt, id)
+    if (!tokenData) notFound()
+    userId = tokenData.userId
+  } else {
+    const session = await auth()
+    if (!session?.user) redirect(`/${locale}/login`)
+    userId = session.user.id
+  }
 
   const [letter, latestResume] = await Promise.all([
-    db.coverLetter.findFirst({ where: { id, userId: session.user.id } }),
+    db.coverLetter.findFirst({ where: { id, userId } }),
     db.resume.findFirst({
-      where: { userId: session.user.id },
+      where: { userId },
       orderBy: { updatedAt: "desc" },
       select: { personalDetails: true, photoUrl: true },
     }),
