@@ -28,10 +28,12 @@ import {
 import { toast } from "sonner"
 import UpgradeCTACard from "./UpgradeCTACard"
 import { isActive } from "@/lib/plans"
+import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
 
 interface LetterCard {
   id: string
   title: string
+  templateId: string
   colorScheme: string
   updatedAt: Date
   createdAt: Date
@@ -125,15 +127,8 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 className="aspect-[3/4] w-full bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-brand-sm transition-all text-left cursor-pointer flex flex-col relative"
                 onClick={() => router.push(`/${locale}/cover-letter/${letter.id}`)}
               >
-                <div className="h-10 w-full shrink-0" style={{ backgroundColor: letter.colorScheme }} />
-                <div className="p-4 space-y-2 flex-1">
-                  <div className="flex items-center gap-1.5 mb-3">
-                    <Mail className="h-4 w-4" style={{ color: letter.colorScheme }} />
-                    <div className="h-2 bg-gray-200 rounded flex-1" />
-                  </div>
-                  {[1, 2, 3, 4, 5, 6].map((i) => (
-                    <div key={i} className="h-1.5 bg-gray-100 rounded" style={{ width: `${60 + (i % 4) * 10}%` }} />
-                  ))}
+                <div className="flex-1 overflow-hidden">
+                  <CoverLetterThumbnail id={letter.templateId} color={letter.colorScheme} />
                 </div>
                 <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
                   <span className="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-full shadow-lg">

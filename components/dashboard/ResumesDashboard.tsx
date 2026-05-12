@@ -32,6 +32,7 @@ import {
 import { toast } from "sonner"
 import { TEMPLATES } from "@/types/resume"
 import { isActive } from "@/lib/plans"
+import { ResumeThumbnail } from "@/components/editor/template-switcher/thumbnails"
 
 interface ResumeCard {
   id: string
@@ -295,15 +296,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           {resumes.map((resume) => (
             <div key={resume.id} className="group relative">
               <Link href={`/${locale}/editor/${resume.id}`} className="block cursor-pointer">
-                <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-brand-sm transition-all flex flex-col relative">
-                  <div className="h-10 w-full shrink-0" style={{ backgroundColor: resume.colorScheme }} />
-                  <div className="p-4 space-y-2 flex-1">
-                    <div className="h-2.5 bg-gray-200 rounded w-3/4" />
-                    <div className="h-2 bg-gray-100 rounded w-1/2 mb-4" />
-                    {[1, 2, 3, 4, 5].map((i) => (
-                      <div key={i} className="h-1.5 bg-gray-100 rounded" style={{ width: `${70 + (i % 3) * 10}%` }} />
-                    ))}
-                  </div>
+                <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-brand-sm transition-all relative">
+                  <ResumeThumbnail id={resume.templateId} color={resume.colorScheme} />
                   <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
                     <span className="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
                       {t("edit")}
@@ -335,13 +329,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                     <DropdownMenuItem
                       className="gap-2"
                       disabled={downloadingIds.has(resume.id)}
-                      onSelect={(e) => {
-                        if (downloadingIds.has(resume.id)) {
-                          e.preventDefault()
-                          return
-                        }
-                        downloadPdf(resume)
-                      }}
+                      onClick={() => downloadPdf(resume)}
                     >
                       {downloadingIds.has(resume.id) ? (
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
