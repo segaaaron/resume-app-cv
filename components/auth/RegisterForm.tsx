@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Eye, EyeOff, Zap, Mail, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
+import OtpInput from "@/components/auth/OtpInput"
 
 type RegisterStep = "form" | "otp"
 
@@ -177,19 +178,12 @@ export default function RegisterForm() {
 
           <div className="space-y-4">
             <div>
-              <Label htmlFor="otp">{t("otp_label")}</Label>
-              <Input
-                id="otp"
-                type="text"
-                inputMode="numeric"
-                pattern="\d{6}"
-                maxLength={6}
-                placeholder={t("otp_placeholder")}
-                className="mt-1 text-center text-lg tracking-widest"
+              <Label className="block text-center mb-3">{t("otp_label")}</Label>
+              <OtpInput
                 value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                onKeyDown={(e) => { if (e.key === "Enter") verifyOtp() }}
+                onChange={setOtpCode}
                 autoFocus
+                disabled={otpLoading}
               />
             </div>
 

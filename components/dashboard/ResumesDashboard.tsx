@@ -252,9 +252,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
         </div>
         <div className="flex items-center gap-3">
           <LocaleSwitcher />
-          <div onClick={!isPro ? requirePro : undefined} className={!isPro ? "cursor-pointer" : ""}>
-            <ImportResumeButton disabled={!isPro} />
-          </div>
+          <ImportResumeButton disabled={!isPro} />
           <Button onClick={createResume} disabled={creating} className="gap-2 flex-1 sm:flex-none">
             <Plus className="h-4 w-4" />
             {t("new")}
@@ -275,9 +273,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
               {t("create_from_scratch")}
             </Button>
             <span className="text-xs text-muted-foreground">{t("or")}</span>
-            <div onClick={!isPro ? requirePro : undefined} className={!isPro ? "cursor-pointer" : ""}>
-              <ImportResumeButton disabled={!isPro} />
-            </div>
+            <ImportResumeButton disabled={!isPro} />
           </div>
         </div>
       ) : (

@@ -21,19 +21,20 @@ import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
+  isPro?: boolean
 }
 
-export default function DashboardNav({ user }: Props) {
+export default function DashboardNav({ user, isPro = false }: Props) {
   const pathname = usePathname()
   const t = useTranslations("dashboard.nav")
   const locale = useLocale()
 
   const tabs = [
-    { label: t("cvs"),     href: `/${locale}/dashboard/resumes`,       icon: FileText },
-    { label: t("letters"), href: `/${locale}/dashboard/cover-letters`, icon: Mail },
-    { label: t("jobs"),    href: `/${locale}/dashboard/applications`,  icon: Briefcase },
+    { label: t("cvs"),     href: `/${locale}/dashboard/resumes`,       icon: FileText, proOnly: false },
+    { label: t("letters"), href: `/${locale}/dashboard/cover-letters`, icon: Mail,     proOnly: false },
+    { label: t("jobs"),    href: `/${locale}/dashboard/applications`,  icon: Briefcase, proOnly: true },
     ...(user.role === "SUPER_ADMIN"
-      ? [{ label: t("admin"), href: `/${locale}/dashboard/admin`, icon: Shield }]
+      ? [{ label: t("admin"), href: `/${locale}/dashboard/admin`, icon: Shield, proOnly: false }]
       : []),
   ]
 
@@ -54,21 +55,35 @@ export default function DashboardNav({ user }: Props) {
 
       {/* Nav items */}
       <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
-        {tabs.map(({ label, href, icon: Icon }) => (
-          <Link
-            key={href}
-            href={href}
-            className={cn(
-              "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-              isActive(href)
-                ? "bg-blue-50 text-primary"
-                : "text-muted-foreground hover:bg-neutral-100 hover:text-foreground"
-            )}
-          >
-            <Icon className="h-4 w-4 shrink-0" />
-            {label}
-          </Link>
-        ))}
+        {tabs.map(({ label, href, icon: Icon, proOnly }) => {
+          const locked = proOnly && !isPro
+          if (locked) {
+            return (
+              <span
+                key={href}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground opacity-40 cursor-not-allowed select-none"
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                {label}
+              </span>
+            )
+          }
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
+                isActive(href)
+                  ? "bg-blue-50 text-primary"
+                  : "text-muted-foreground hover:bg-neutral-100 hover:text-foreground"
+              )}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              {label}
+            </Link>
+          )
+        })}
       </nav>
 
       {/* User footer */}

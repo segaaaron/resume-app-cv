@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     const allowed = await checkRateLimit(email, "register-confirm", 10)
     if (!allowed) {
-      return NextResponse.json({ error: "Demasiados intentos. Espera 15 minutos." }, { status: 429 })
+      return NextResponse.json({ error: "Demasiados intentos. Espera 1 hora." }, { status: 429 })
     }
 
     const pending = await db.pendingRegistration.findUnique({ where: { email } })

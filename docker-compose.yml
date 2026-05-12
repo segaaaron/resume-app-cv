@@ -24,7 +24,7 @@ services:
       MAX_CONCURRENT_PAGES: "3"
       PORT: "3001"
       NODE_ENV: production
-    mem_limit: 512m
+    mem_limit: 1g
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3001/health || exit 1"]

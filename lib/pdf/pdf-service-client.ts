@@ -29,7 +29,8 @@ async function callOnce(opts: PdfServiceOpts, signal: AbortSignal): Promise<Buff
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({})) as Record<string, string>
-    const err = new Error(`PDF service ${res.status}: ${body.error ?? "unknown"}`) as FetchError
+    const detail = body.detail ? ` — ${body.detail}` : ""
+    const err = new Error(`PDF service ${res.status}: ${body.error ?? "unknown"}${detail}`) as FetchError
     err.status = res.status
     throw err
   }

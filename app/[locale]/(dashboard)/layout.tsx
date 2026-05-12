@@ -27,7 +27,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="h-screen flex overflow-hidden dashboard-vintage">
-      <DashboardNav user={{ name: session.user.name, email: session.user.email, image: session.user.image, role: session.user.role }} />
+      <DashboardNav user={{ name: session.user.name, email: session.user.email, image: session.user.image, role: session.user.role }} isPro={session.user.plan === "PRO" && session.user.subscriptionStatus === "ACTIVE"} />
       <main className="flex-1 overflow-y-auto bg-background">
         {session.user.subscriptionStatus === "PAST_DUE" && <PastDueBanner />}
         <div className="p-6 sm:p-8">

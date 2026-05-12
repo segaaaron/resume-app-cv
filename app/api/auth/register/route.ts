@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   const allowed = await checkRateLimit(ip, "register", 5)
   if (!allowed) {
     return NextResponse.json(
-      { error: "Demasiados intentos. Espera 15 minutos antes de intentarlo de nuevo." },
+      { error: "Demasiados intentos. Espera 1 hora antes de intentarlo de nuevo." },
       { status: 429 }
     )
   }

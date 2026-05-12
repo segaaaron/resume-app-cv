@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
+import OtpInput from "@/components/auth/OtpInput"
 
 export default function ForgotPasswordVerifyForm() {
   const t = useTranslations("auth.forgot_password.verify")
@@ -22,6 +23,7 @@ export default function ForgotPasswordVerifyForm() {
   const email = searchParams.get("email") ?? ""
   const [showPassword, setShowPassword] = useState(false)
   const [resending, setResending] = useState(false)
+  const [otpCode, setOtpCode] = useState("")
 
   const schema = z.object({
     code: z.string().length(6, "6 dígitos").regex(/^\d{6}$/, "Solo números"),
@@ -41,8 +43,14 @@ export default function ForgotPasswordVerifyForm() {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) })
+
+  function handleOtpChange(val: string) {
+    setOtpCode(val)
+    setValue("code", val, { shouldValidate: val.length === 6 })
+  }
 
   async function onSubmit(data: FormData) {
     const res = await fetch("/api/auth/reset-password/confirm", {
@@ -89,18 +97,14 @@ export default function ForgotPasswordVerifyForm() {
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
-            <Label htmlFor="code">{t("otp_label")}</Label>
-            <Input
-              id="code"
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              placeholder={t("otp_placeholder")}
+            <Label className="block text-center mb-3">{t("otp_label")}</Label>
+            <OtpInput
+              value={otpCode}
+              onChange={handleOtpChange}
               autoFocus
-              {...register("code")}
-              className="mt-1 text-center text-xl tracking-widest font-mono"
+              disabled={isSubmitting}
             />
-            {errors.code && <p className="text-red-500 text-xs mt-1">{errors.code.message}</p>}
+            {errors.code && <p className="text-red-500 text-xs mt-2 text-center">{errors.code.message}</p>}
           </div>
 
           <div>
