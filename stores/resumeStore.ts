@@ -6,9 +6,57 @@ import {
   ResumeSections,
   ResumeConfig,
   TemplateId,
+  TEMPLATES,
   DEFAULT_SECTIONS,
   ResumeSectionsSchema,
 } from "@/types/resume"
+
+/** Parse a free-text date like "04/2023", "2023", "2021 - 2022" → numeric value for sorting */
+function parseDateValue(d: string): number {
+  if (!d) return 0
+  const clean = d.trim().split(/[\s–\-→]+/)[0] // take first part if range
+  const parts = clean.split("/")
+  if (parts.length === 2) {
+    const [month, year] = parts
+    return parseInt(year) * 12 + parseInt(month)
+  }
+  return parseInt(clean) * 12
+}
+
+/** Sort work experience and education chronologically (oldest first) */
+function sortChronological<T extends { startDate?: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => parseDateValue(a.startDate ?? "") - parseDateValue(b.startDate ?? ""))
+}
+
+/**
+ * Adapts section columns when switching templates.
+ * - single-column template: move all "side" sections to "main"
+ * - double-column template: restore DEFAULT_SECTIONS column layout for known sections
+ * Photo is never deleted — templates that don't use it simply ignore config.photoUrl.
+ */
+export function adaptSectionsForTemplate(sections: ResumeSection[], targetId: TemplateId): ResumeSection[] {
+  const meta = TEMPLATES.find((t) => t.id === targetId)
+  if (!meta) return sections
+
+  if (meta.columns === "single") {
+    return sections.map((s) => s.column === "side" ? { ...s, column: "main" as const } : s)
+  }
+
+  // double: restore default column assignments
+  const defaultColumnMap = new Map(DEFAULT_SECTIONS.map((s) => [s.type, s.column]))
+  return sections.map((s) => {
+    const defaultCol = defaultColumnMap.get(s.type)
+    return defaultCol ? { ...s, column: defaultCol } : s
+  })
+}
+
+export function applySectionOrder(data: ResumeSections): ResumeSections {
+  return {
+    ...data,
+    workExperience: sortChronological(data.workExperience ?? []),
+    education:      sortChronological(data.education ?? []),
+  }
+}
 
 interface ResumeState {
   resumeId: string | null
@@ -26,6 +74,7 @@ interface ResumeActions {
   reset: () => void
   setTitle: (title: string) => void
   setTemplate: (id: TemplateId) => void
+  setTemplateWithAdapt: (id: TemplateId) => void
   setColor: (hex: string) => void
   setFont: (family: string) => void
   setFontSize: (size: number) => void
@@ -52,6 +101,12 @@ const defaultConfig: ResumeConfig = {
 }
 
 const defaultSectionData: ResumeSections = ResumeSectionsSchema.parse({})
+
+/** Hook for templates: returns sectionData sorted chronologically */
+export function useTemplateSectionData() {
+  const raw = useResumeStore((s) => s.sectionData)
+  return applySectionOrder(raw)
+}
 
 export const useResumeStore = create<ResumeState & ResumeActions>()(
   devtools(
@@ -89,6 +144,11 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
 
       setTitle: (title) => set((state) => { state.title = title; state.isDirty = true }),
       setTemplate: (id) => set((state) => { state.config.templateId = id; state.isDirty = true }),
+      setTemplateWithAdapt: (id) => set((state) => {
+        state.sections = adaptSectionsForTemplate(state.sections, id)
+        state.config.templateId = id
+        state.isDirty = true
+      }),
       setColor: (hex) => set((state) => { state.config.colorScheme = hex; state.isDirty = true }),
       setFont: (family) => set((state) => { state.config.fontFamily = family; state.isDirty = true }),
       setFontSize: (size) => set((state) => { state.config.fontSize = size; state.isDirty = true }),
@@ -145,9 +205,12 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             body: JSON.stringify({ title, sections, sectionData, config }),
           })
           if (!res.ok) {
-            const err = await res.json().catch(() => ({}))
-            console.error("[save] server error:", res.status, err)
-            set((state) => { state.isSaving = false })
+            await res.json().catch(() => ({}))
+            set((state) => {
+              state.isSaving = false
+              // Resume deleted or forbidden — stop autosave loop
+              if (res.status === 404 || res.status === 403) state.isDirty = false
+            })
             return
           }
           set((state) => {
@@ -155,8 +218,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             state.lastSaved = new Date()
             state.isDirty = false
           })
-        } catch (err) {
-          console.error("[save] network error:", err)
+        } catch {
           set((state) => { state.isSaving = false })
         }
       },

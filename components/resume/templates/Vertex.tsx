@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function VertexTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -13,7 +14,10 @@ export default function VertexTemplate() {
   const title = pd.jobTitle || "Graphic Designer"
   const email = pd.email || "kathlyn@email.com"
   const phone = pd.phone || "+1 555 987 6543"
-  const addr = pd.city || pd.address || "Los Angeles, USA"
+  const addr    = pd.city || pd.address || "Los Angeles, USA"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Creative and detail-oriented graphic designer with a strong portfolio in branding, editorial design, and digital illustration. Passionate about clean, impactful visuals."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Senior Graphic Designer", employer: "VisualArts Studio", startDate: "2020", endDate: "", currentlyWorking: true, city: "", description: "Leading brand identity projects for clients in fashion, tech, and hospitality." },
@@ -38,7 +42,7 @@ export default function VertexTemplate() {
   const gold = "#c9a84c"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-  const LANG_PCT: Record<string, number> = { elementary: 20, limited: 40, professional: 60, full_professional: 80, native: 100 }
+  const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   const CircleGauge = ({ pct, label }: { pct: number; label: string }) => {
     const r = 16, c = 2 * Math.PI * r, offset = c - (pct / 100) * c
@@ -55,7 +59,7 @@ export default function VertexTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", position: "relative", overflow: "hidden" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", position: "relative", overflow: "hidden" }}>
       {/* Corner accents */}
       <svg style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none" }} width="180" height="180" viewBox="0 0 180 180">
         <polygon points="0,0 180,0 0,180" fill={navy} opacity="0.9" />
@@ -68,8 +72,8 @@ export default function VertexTemplate() {
         {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
           <div style={{ paddingTop: 24 }}>
-            <h1 style={{ fontSize: 30, fontWeight: 900, color: navy, lineHeight: 1.1 }}>{name}</h1>
-            <p style={{ fontSize: 12, color: "#888", fontWeight: 500, marginTop: 4 }}>{title}</p>
+            <h1 style={{ fontSize: 30, fontWeight: 900, color: gold, lineHeight: 1.1 }}>{name}</h1>
+            <p style={{ fontSize: 12, color: gold, fontWeight: 600, marginTop: 4, opacity: 0.8 }}>{title}</p>
           </div>
           <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${gold}`, position: "relative" }}>
             {config.photoUrl ? (
@@ -126,6 +130,9 @@ export default function VertexTemplate() {
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={9} color={gold} />{phone}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={9} color={gold} />{email}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 5 }}><MapPin size={9} color={gold} />{addr}</span>
+              {website  && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Globe  size={9} color={gold} />{website}</span>}
+              {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Link2  size={9} color={gold} />{linkedin}</span>}
+              {github   && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><GitFork size={9} color={gold} />{github}</span>}
             </div>
           </div>
 
@@ -141,7 +148,7 @@ export default function VertexTemplate() {
                       <span style={{ fontSize: 9, color: "#aaa" }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                     </div>
                     <p style={{ fontSize: 10, fontWeight: 600, color: navy }}>{job.employer}</p>
-                    {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                    {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                   </div>
                 ))}
               </div>

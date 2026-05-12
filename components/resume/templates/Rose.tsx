@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function RoseTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -13,7 +14,10 @@ export default function RoseTemplate() {
   const title = pd.jobTitle || "Lic. en Administración"
   const email = pd.email || "hola@sitioincreible.com"
   const phone = pd.phone || "(55) 1234-5678"
-  const addr = pd.address || pd.city || "Calle Cualquiera 123"
+  const addr    = pd.address || pd.city || "Calle Cualquiera 123"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Soy una persona proactiva, organizada y responsable, con buenas relaciones interpersonales y capacidad para trabajar en equipo."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Asistente de Gerencia", employer: "Empresa Increíble", startDate: "Ago 2019", endDate: "", currentlyWorking: true, city: "", description: "Coordinación de agenda, atención a clientes y elaboración de reportes mensuales." },
@@ -60,10 +64,10 @@ export default function RoseTemplate() {
   )
 
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-  const LANG_W: Record<string, number> = { elementary: 20, limited: 40, professional: 60, full_professional: 80, native: 100 }
+  const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   return (
-    <div style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Sidebar */}
       <div style={{ width: "35%", backgroundColor: sidebarBg, padding: "28px 20px", flexShrink: 0 }}>
         <PhotoPlaceholder />
@@ -74,6 +78,9 @@ export default function RoseTemplate() {
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={accent} />{phone}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={accent} />{email}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><MapPin size={10} color={accent} />{addr}</span>
+          {website  && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Globe  size={10} color={accent} />{website}</span>}
+          {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Link2  size={10} color={accent} />{linkedin}</span>}
+          {github   && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><GitFork size={10} color={accent} />{github}</span>}
         </div>
 
         {visible("education") && (
@@ -134,7 +141,7 @@ export default function RoseTemplate() {
                   <span style={{ fontSize: 9, color: "#aaa", flexShrink: 0 }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                 </div>
                 <p style={{ fontSize: 10, fontWeight: 600, color: accent }}>{job.employer}</p>
-                {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 3 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 3 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
               </div>
             ))}
           </>

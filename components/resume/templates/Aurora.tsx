@@ -6,14 +6,15 @@
  * Ideal para creativos, marketing, diseño y comunicación.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 52, advanced: 76, expert: 100 }
-const LANG_W: Record<string, number> = { elementary: 18, limited: 38, professional: 58, full_professional: 80, native: 100 }
+const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 export default function AuroraTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, hobbies, volunteer,
@@ -32,7 +33,7 @@ export default function AuroraTemplate() {
   const darker = `rgb(${Math.max(0, rgb.r - 55)},${Math.max(0, rgb.g - 55)},${Math.max(0, rgb.b - 55)})`
 
   return (
-    <div style={{ minHeight: "297mm", backgroundColor: "#fff", fontFamily: "inherit" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", backgroundColor: "#fff", fontFamily: "inherit" }}>
 
       {/* ── HEADER with SVG wave ───────────────────────────────────────────── */}
       <div style={{
@@ -141,7 +142,7 @@ export default function AuroraTemplate() {
                       {job.employer}{job.city ? ` · ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div
+                      <div className="resume-desc"
                         style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                       />
@@ -173,7 +174,7 @@ export default function AuroraTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}>{edu.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -193,7 +194,7 @@ export default function AuroraTemplate() {
                     <p style={{ fontSize: "11px", fontWeight: 700, color: "#1a1a2e" }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{proj.role}</p>}
                     {proj.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}>{proj.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}
@@ -218,7 +219,7 @@ export default function AuroraTemplate() {
                     </div>
                     <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{vol.organization}</p>
                     {vol.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}>{vol.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />
                     )}
                   </div>
                 ))}

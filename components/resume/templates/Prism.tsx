@@ -6,7 +6,7 @@
  */
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
   Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane, Coffee,
@@ -18,8 +18,8 @@ const SKILL_W: Record<string, string> = {
   beginner: "22%", intermediate: "50%", advanced: "75%", expert: "100%",
 }
 const LANG_W: Record<string, string> = {
-  elementary: "18%", limited: "36%", professional: "56%",
-  full_professional: "78%", native: "100%",
+  a1: "17%", a2: "33%", b1: "50%",
+  b2: "67%", c1: "83%", c2: "100%", native: "100%",
 }
 const HOBBY_ICONS = [Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane, Coffee]
 
@@ -27,7 +27,8 @@ const HOBBY_ICONS = [Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function PrismTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, hobbies, volunteer, references,
@@ -42,7 +43,7 @@ export default function PrismTemplate() {
   const hobbyList = hobbies ? hobbies.split(/[,\n]+/).map((h) => h.trim()).filter(Boolean) : []
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ══════════════════════════════════════════════════════════════════
           SIDEBAR — 238px, solo foto / contacto / skills / idiomas / hobbies
@@ -303,7 +304,7 @@ export default function PrismTemplate() {
                         {job.employer}{job.city ? `, ${job.city}` : ""}
                       </p>
                       {job.description && (
-                        <div
+                        <div className="resume-desc"
                           style={{ fontSize: "10px", color: "#6a7588", lineHeight: 1.65 }}
                           dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                         />

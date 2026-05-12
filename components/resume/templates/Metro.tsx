@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function MetroTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -15,7 +16,7 @@ export default function MetroTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Header tile */}
       <div className="flex" style={{ borderBottom: `4px solid ${color}` }}>
         {/* Color block */}
@@ -71,7 +72,7 @@ export default function MetroTemplate() {
                     </div>
                     <p className="text-xs font-semibold mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                     {job.description && (
-                      <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}
@@ -106,7 +107,7 @@ export default function MetroTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id}>
                     <p className="text-xs font-semibold text-gray-800">{lang.name}</p>
-                    <p className="text-[10px] text-gray-500 capitalize">{lang.level.replace("_", " ")}</p>
+                    <p className="text-[10px] text-gray-500">{lang.level.toUpperCase()}</p>
                   </div>
                 ))}
               </div>

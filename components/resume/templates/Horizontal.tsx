@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function HorizontalTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -15,7 +16,7 @@ export default function HorizontalTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Full-width top bar with name + contact */}
       <div className="px-10 py-7" style={{ backgroundColor: color }}>
         <div className="flex items-start justify-between">
@@ -71,7 +72,7 @@ export default function HorizontalTemplate() {
                     </div>
                     <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                     {job.description && (
-                      <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}
@@ -86,7 +87,7 @@ export default function HorizontalTemplate() {
                   <div key={proj.id}>
                     <h4 className="font-semibold text-[13px] text-gray-900">{proj.name}</h4>
                     {proj.role && <p className="text-xs font-medium" style={{ color }}>{proj.role}</p>}
-                    {proj.description && <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{proj.description}</p>}
+                    {proj.description && <p className="resume-desc text-xs text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                   </div>
                 ))}
               </div>
@@ -116,7 +117,7 @@ export default function HorizontalTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex justify-between items-center text-xs">
                     <span className="font-medium text-gray-800">{lang.name}</span>
-                    <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                    <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                   </div>
                 ))}
               </div>

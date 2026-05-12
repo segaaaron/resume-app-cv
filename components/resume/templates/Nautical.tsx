@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
 export default function NauticalTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -40,10 +41,10 @@ export default function NauticalTemplate() {
   const sidebar = "#1e3a5f"
   const accent = "#2d6bbf"
   const present = config.language === "en" ? "Present" : "Presente"
-  const LANG_W: Record<string, number> = { elementary: 20, limited: 40, professional: 60, full_professional: 80, native: 100 }
+  const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   return (
-    <div style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
       {/* Sidebar */}
       <div style={{ width: "28%", backgroundColor: sidebar, padding: "0", flexShrink: 0, color: "#fff" }}>
         {/* Photo area */}
@@ -121,7 +122,7 @@ export default function NauticalTemplate() {
                   <span style={{ fontSize: 9, color: "#aaa" }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                 </div>
                 <p style={{ fontSize: 10, fontWeight: 600, color: accent }}>{job.employer}</p>
-                {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
               </div>
             ))}
           </MainSection>

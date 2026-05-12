@@ -6,10 +6,11 @@
  * Puro texto semántico que los parsers de RRHH pueden leer sin errores.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 
 export default function ATSTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -19,7 +20,7 @@ export default function ATSTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-10 py-9 text-gray-900" style={{ minHeight: "297mm", lineHeight: "1.55" }}>
+    <div data-print-layout="single-column" className="px-10 py-9 text-gray-900" style={{ minHeight: "297mm", lineHeight: "1.55" }}>
       {/* Header */}
       <div className="mb-5">
         {fullName && <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">{fullName}</h1>}
@@ -55,7 +56,7 @@ export default function ATSTemplate() {
               <p className="text-xs font-semibold mb-1" style={{ color }}>{job.employer}{job.city ? `, ${job.city}` : ""}</p>
               {job.description && (
                 <div
-                  className="text-xs text-gray-700 leading-relaxed"
+                  className="resume-desc text-xs text-gray-700 leading-relaxed"
                   dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                 />
               )}
@@ -89,7 +90,7 @@ export default function ATSTemplate() {
       {visible("languages") && languages.length > 0 && (
         <ATSSection title={label("languages")} color={color}>
           <p className="text-sm text-gray-700">
-            {languages.map((l) => `${l.name} (${l.level.replace("_", " ")})`).join(" · ")}
+            {languages.map((l) => `${l.name} (${l.level.toUpperCase()})`).join(" · ")}
           </p>
         </ATSSection>
       )}

@@ -7,15 +7,37 @@ import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 
 interface Props {
-  plan: "trial" | "pro"
+  plan: "monthly" | "annual"
+  isPro?: boolean
 }
 
-export default function PricingButtons({ plan }: Props) {
+export default function PricingButtons({ plan, isPro }: Props) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
   const t = useTranslations("pricing")
 
   async function handleClick() {
+    if (isPro) {
+      setLoading(true)
+      try {
+        const res = await fetch("/api/stripe/portal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        })
+        const data = await res.json()
+        if (res.ok && data.url) {
+          window.location.href = data.url
+        } else {
+          toast.error(t("toast_payment_error"))
+        }
+      } catch {
+        toast.error(t("toast_connection_error"))
+      } finally {
+        setLoading(false)
+      }
+      return
+    }
+
     setLoading(true)
     try {
       const res = await fetch("/api/stripe/checkout", {
@@ -25,18 +47,18 @@ export default function PricingButtons({ plan }: Props) {
       })
 
       if (res.status === 401) {
-        router.push("/login")
+        router.push(`/register?plan=${plan}`)
         return
       }
 
       if (res.status === 503) {
-        router.push("/register")
+        router.push(`/register?plan=${plan}`)
         return
       }
 
       const data = await res.json()
       if (!res.ok) {
-        toast.error(data.error ?? "Error al iniciar el pago")
+        toast.error(data.error ?? t("toast_payment_error"))
         return
       }
 
@@ -44,23 +66,15 @@ export default function PricingButtons({ plan }: Props) {
         window.location.href = data.url
       }
     } catch {
-      toast.error("Error de conexión")
+      toast.error(t("toast_connection_error"))
     } finally {
       setLoading(false)
     }
   }
 
-  if (plan === "trial") {
-    return (
-      <Button variant="secondary" size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-        {loading ? t("btn_trial_loading") : t("btn_trial")}
-      </Button>
-    )
-  }
-
   return (
     <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-      {loading ? t("btn_pro_loading") : t("btn_pro")}
+      {loading ? t("btn_loading") : isPro ? t("pro_member_manage") : t("btn_start")}
     </Button>
   )
 }

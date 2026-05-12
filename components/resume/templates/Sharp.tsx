@@ -5,11 +5,12 @@
  * Tendencia 2024-2026: diseños geométricos y asimétricos.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function SharpTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -20,7 +21,7 @@ export default function SharpTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Angled header */}
       <div className="relative overflow-hidden" style={{ backgroundColor: color }}>
         <div className="flex items-center gap-6 px-10 pt-8 pb-14">
@@ -72,7 +73,7 @@ export default function SharpTemplate() {
                       {job.startDate}{job.currentlyWorking ? "→NOW" : job.endDate ? `→${job.endDate}` : ""}
                     </span>
                   </div>
-                  {job.description && <div className="text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </SharpSection>
@@ -134,7 +135,7 @@ export default function SharpTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between text-xs mb-1">
                   <span className="font-medium">{lang.name}</span>
-                  <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                  <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </SharpSection>

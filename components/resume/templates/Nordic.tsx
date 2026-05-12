@@ -6,10 +6,11 @@
  * una sola línea de acento de color, estructura aérea.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 
 export default function NordicTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -19,7 +20,7 @@ export default function NordicTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Thin color accent line */}
       <div className="h-[3px] w-full" style={{ backgroundColor: color }} />
 
@@ -66,7 +67,7 @@ export default function NordicTemplate() {
                     </div>
                     <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? `, ${job.city}` : ""}</p>
                     {job.description && (
-                      <div className="text-xs text-gray-500 font-light leading-loose" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-xs text-gray-500 font-light leading-loose" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}
@@ -134,7 +135,7 @@ export default function NordicTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id} className="mb-2">
                     <p className="text-xs font-medium text-gray-800">{lang.name}</p>
-                    <p className="text-[10px] font-light text-gray-400 capitalize">{lang.level.replace("_", " ")}</p>
+                    <p className="text-[10px] font-light text-gray-400">{lang.level.toUpperCase()}</p>
                   </div>
                 ))}
               </NordicSection>

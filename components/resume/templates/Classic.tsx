@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function ClassicTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -16,7 +17,7 @@ export default function ClassicTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-10 py-8" style={{ lineHeight: spacing * 1.5 }}>
+    <div data-print-layout="single-column" className="px-10 py-8" style={{ lineHeight: spacing * 1.5 }}>
       {/* Header */}
       <div className="mb-6">
         {fullName && (
@@ -84,7 +85,7 @@ export default function ClassicTemplate() {
                 </div>
                 <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                 {job.description && (
-                  <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                  <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>
             ))}
@@ -138,7 +139,7 @@ export default function ClassicTemplate() {
             {languages.map((lang) => (
               <div key={lang.id} className="flex justify-between items-center text-xs">
                 <span className="font-medium text-gray-800">{lang.name}</span>
-                <span className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</span>
+                <span className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</span>
               </div>
             ))}
           </div>

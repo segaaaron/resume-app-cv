@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function VerticalTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -16,7 +17,7 @@ export default function VerticalTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div className="flex" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm" }}>
       {/* Left sidebar */}
       <div className="w-[40%] shrink-0 p-8" style={{ backgroundColor: color + "15", borderRight: `3px solid ${color}` }}>
         {/* Photo / Avatar */}
@@ -86,7 +87,7 @@ export default function VerticalTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between text-xs">
                   <span className="font-medium">{lang.name}</span>
-                  <span className="text-gray-500 capitalize text-[10px]">{lang.level.replace("_", " ")}</span>
+                  <span className="text-gray-500 text-[10px]">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </div>
@@ -136,7 +137,7 @@ export default function VerticalTemplate() {
                     </span>
                   </div>
                   {job.description && (
-                    <div className="text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}
@@ -176,7 +177,7 @@ export default function VerticalTemplate() {
                     )}
                   </div>
                   {proj.role && <p className="text-xs text-gray-500">{proj.role}</p>}
-                  {proj.description && <p className="text-xs text-gray-600 mt-0.5">{proj.description}</p>}
+                  {proj.description && <p className="resume-desc text-xs text-gray-600 mt-0.5" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                 </div>
               ))}
             </div>

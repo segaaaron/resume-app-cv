@@ -2,16 +2,13 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
+import { checkOrigin } from "@/lib/csrf"
 import { z } from "zod"
 
 const schema = z.object({
-  plan: z.enum(["trial", "pro"]),
+  plan:   z.enum(["monthly", "annual"]),
+  locale: z.enum(["es", "en"]).optional(),
 })
-
-const PRICE_IDS: Record<string, string | undefined> = {
-  trial: process.env.STRIPE_PRICE_ID_TRIAL,
-  pro: process.env.STRIPE_PRICE_ID_PRO,
-}
 
 export async function POST(req: Request) {
   if (!stripeEnabled() || !stripe) {
@@ -20,6 +17,8 @@ export async function POST(req: Request) {
 
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   let body: unknown
   try {
@@ -33,6 +32,11 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid data" }, { status: 422 })
   }
 
+  const PRICE_IDS: Record<string, string | undefined> = {
+    monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
+    annual: process.env.STRIPE_PRICE_ID_ANNUAL,
+  }
+
   const priceId = PRICE_IDS[parsed.data.plan]
   if (!priceId) {
     return NextResponse.json({ error: "Plan not configured" }, { status: 503 })
@@ -40,36 +44,47 @@ export async function POST(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, email: true, stripeCustomerId: true },
+    select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true },
   })
   if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
 
-  // Create or reuse Stripe customer
+  // Block checkout if already has active subscription
+  if (user.subscriptionStatus === "ACTIVE") {
+    return NextResponse.json({ error: "Already subscribed" }, { status: 400 })
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL
+  if (!appUrl) return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
+
+  // Create or reuse Stripe customer — check by email before creating to avoid duplicates
   let customerId = user.stripeCustomerId
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: user.email,
-      metadata: { userId: user.id },
-    })
-    customerId = customer.id
+    const existingCustomers = await stripe.customers.list({ email: user.email!, limit: 1 })
+    if (existingCustomers.data.length > 0) {
+      customerId = existingCustomers.data[0].id
+    } else {
+      const customer = await stripe.customers.create({
+        email: user.email,
+        metadata: { userId: user.id },
+      })
+      customerId = customer.id
+    }
     await db.user.update({
       where: { id: user.id },
       data: { stripeCustomerId: customerId },
     })
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-
   const checkoutSession = await stripe.checkout.sessions.create({
     customer: customerId,
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl}/dashboard/resumes?upgraded=true`,
+    success_url: `${appUrl.replace(/\/$/, "")}/${parsed.data.locale ?? "es"}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${appUrl}/pricing`,
-    metadata: { userId: user.id },
+    metadata: { userId: user.id, planInterval: parsed.data.plan },
     subscription_data: {
-      metadata: { userId: user.id },
+      metadata: { userId: user.id, planInterval: parsed.data.plan },
     },
   })
 

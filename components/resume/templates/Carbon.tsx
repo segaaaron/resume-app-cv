@@ -5,11 +5,12 @@
  * Tendencia 2024-2026: dark-theme en CVs para perfiles tech/diseño.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, GitFork, Link2 } from "lucide-react"
 
 export default function CarbonTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -20,7 +21,7 @@ export default function CarbonTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div className="flex" style={{ minHeight: "297mm", backgroundColor: "#111827" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", backgroundColor: "#111827" }}>
       {/* Left sidebar — dark */}
       <div className="w-52 shrink-0 px-5 pt-8 pb-8 flex flex-col gap-5" style={{ backgroundColor: "#0f172a" }}>
         {/* Avatar */}
@@ -81,7 +82,7 @@ export default function CarbonTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id}>
                   <p className="text-[11px] text-gray-300 font-semibold">{lang.name}</p>
-                  <p className="text-[10px] text-gray-500 capitalize">{lang.level.replace("_", " ")}</p>
+                  <p className="text-[10px] text-gray-500">{lang.level.toUpperCase()}</p>
                 </div>
               ))}
             </div>
@@ -130,7 +131,7 @@ export default function CarbonTemplate() {
                 </div>
                 <p className="text-xs font-semibold mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                 {job.description && (
-                  <div className="text-xs text-gray-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                  <div className="resume-desc text-xs text-gray-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>
             ))}
@@ -159,7 +160,7 @@ export default function CarbonTemplate() {
               <div key={proj.id} className="mb-3">
                 <h4 className="font-bold text-sm text-white">{proj.name}</h4>
                 {proj.role && <p className="text-xs font-semibold" style={{ color }}>{proj.role}</p>}
-                {proj.description && <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{proj.description}</p>}
+                {proj.description && <p className="resume-desc text-xs text-gray-400 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
               </div>
             ))}
           </CarbonSection>

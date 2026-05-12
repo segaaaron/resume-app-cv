@@ -49,7 +49,7 @@ export default function SectionBlock({ section }: { section: ResumeSection }) {
       )}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5">
+      <div className="flex items-center gap-2 px-3 py-2.5" suppressHydrationWarning>
         <button
           {...attributes}
           {...listeners}

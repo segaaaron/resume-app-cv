@@ -12,6 +12,7 @@ export interface ApplicationCard {
   url?: string
   salary?: string
   appliedAt?: string
+  followUpAt?: string | null
   createdAt: string
 }
 

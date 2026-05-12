@@ -2,20 +2,21 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { z } from "zod"
+import { checkOrigin } from "@/lib/csrf"
 
 type Params = { params: Promise<{ id: string }> }
 
 const patchSchema = z.object({
   title:       z.string().min(1).max(200).optional(),
-  sections:    z.array(z.record(z.string(), z.unknown())).optional(),
-  sectionData: z.record(z.string(), z.unknown()).optional(),
+  sections:    z.array(z.any()).optional(),
+  sectionData: z.any().optional(),
   config: z.object({
     templateId:  z.string().optional(),
     colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     fontFamily:  z.string().max(100).optional(),
     fontSize:    z.number().int().min(8).max(24).optional(),
     spacing:     z.number().min(0.5).max(3).optional(),
-    photoUrl:      z.string().nullable().optional(),
+    photoUrl:      z.string().regex(/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/).max(500000).optional().nullable(),
     photoPosition: z.number().int().min(0).max(100).optional(),
     language:      z.enum(["es", "en"]).optional(),
   }).optional(),
@@ -38,6 +39,8 @@ export async function PATCH(req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
   const { id } = await params
 
   let body: unknown
@@ -49,7 +52,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid data", details: parsed.error.flatten() }, { status: 422 })
+    return NextResponse.json({ error: "Invalid data" }, { status: 422 })
   }
 
   const { title, sections, sectionData, config } = parsed.data
@@ -77,9 +80,11 @@ export async function PATCH(req: Request, { params }: Params) {
   return NextResponse.json({ success: true })
 }
 
-export async function DELETE(_req: Request, { params }: Params) {
+export async function DELETE(req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { id } = await params
   const existing = await db.resume.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })

@@ -5,10 +5,11 @@
  * Tendencia 2024-2026: visual "modular", cada bloque es una tarjeta independiente.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 
 export default function FoldTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -26,7 +27,7 @@ export default function FoldTemplate() {
   const rgb = color.startsWith("#") ? hexToRgb(color) : "42, 114, 215"
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Header band */}
       <div className="px-10 pt-8 pb-6" style={{ backgroundColor: `rgba(${rgb}, 0.07)`, borderBottom: `3px solid rgba(${rgb}, 0.2)` }}>
         <div className="flex items-end justify-between">
@@ -66,7 +67,7 @@ export default function FoldTemplate() {
                   </div>
                   <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                   {job.description && (
-                    <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}
@@ -95,7 +96,7 @@ export default function FoldTemplate() {
                 <div key={proj.id} className="mb-3">
                   <h4 className="font-semibold text-[13px] text-gray-900">{proj.name}</h4>
                   {proj.role && <p className="text-xs font-medium" style={{ color }}>{proj.role}</p>}
-                  {proj.description && <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{proj.description}</p>}
+                  {proj.description && <p className="resume-desc text-xs text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                 </div>
               ))}
             </FoldBlock>
@@ -107,7 +108,7 @@ export default function FoldTemplate() {
                 <div key={vol.id} className="mb-2">
                   <h4 className="font-semibold text-[13px] text-gray-900">{vol.role}</h4>
                   <p className="text-xs font-medium" style={{ color }}>{vol.organization}</p>
-                  {vol.description && <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{vol.description}</p>}
+                  {vol.description && <p className="resume-desc text-xs text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />}
                 </div>
               ))}
             </FoldBlock>
@@ -139,7 +140,7 @@ export default function FoldTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="mb-2">
                   <p className="text-xs font-semibold text-gray-800">{lang.name}</p>
-                  <p className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</p>
+                  <p className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</p>
                 </div>
               ))}
             </FoldBlock>

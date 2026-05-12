@@ -6,11 +6,12 @@
  * Inspirado en templates tipo CVapp/Mi CV Ideal.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function CoralTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies, volunteer, references } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -24,11 +25,11 @@ export default function CoralTemplate() {
     beginner: 1, intermediate: 2, advanced: 3, expert: 4,
   }
   const LANG_DOTS: Record<string, number> = {
-    elementary: 1, limited: 2, professional: 3, full_professional: 4, native: 5,
+    a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5,
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── Header band ───────────────────────────────────────────────────── */}
       <div
@@ -102,7 +103,7 @@ export default function CoralTemplate() {
                       {job.employer}{job.city ? `, ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div className="text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}

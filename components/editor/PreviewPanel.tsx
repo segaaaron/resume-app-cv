@@ -11,11 +11,10 @@ interface Props {
   plan: string
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
-  trialEndsAt?: string | null
   role?: string
 }
 
-export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
+export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEndsAt, role }: Props) {
   const [scale, setScale] = useState(0.65)
 
   return (
@@ -59,7 +58,6 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
         plan={plan}
         subscriptionStatus={subscriptionStatus}
         subscriptionEndsAt={subscriptionEndsAt}
-        trialEndsAt={trialEndsAt}
         role={role}
       />
     </div>

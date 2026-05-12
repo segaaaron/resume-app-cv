@@ -5,21 +5,27 @@ import EditorLayout from "@/components/editor/EditorLayout"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 
-export default async function EditorPage({ params }: { params: Promise<{ id: string; locale: string }> }) {
+export default async function EditorPage({ params, searchParams }: { params: Promise<{ id: string; locale: string }>; searchParams: Promise<{ new?: string; upgraded?: string; session_id?: string }> }) {
   const session = await auth()
   const { id, locale } = await params
+  const { new: isNewParam, upgraded, session_id } = await searchParams
+  const isNew = isNewParam === "1"
   if (!session?.user) redirect(`/${locale}/login`)
 
-  const plan = session.user.plan ?? "FREE"
-  const subscriptionStatus = session.user.subscriptionStatus ?? "NONE"
-  const subscriptionEndsAt = session.user.subscriptionEndsAt ?? null
-  const role = session.user.role ?? "USER"
-
-  const [resume, dbUser] = await Promise.all([
+  // When coming from a Stripe purchase redirect (upgraded=true or session_id present),
+  // bypass the JWT (which is stale) and read plan directly from DB — single cheap query.
+  const comingFromPurchase = upgraded === "true" || !!session_id
+  const [resume, freshUser] = await Promise.all([
     db.resume.findFirst({ where: { id, userId: session.user.id } }),
-    db.user.findUnique({ where: { id: session.user.id }, select: { trialEndsAt: true } }),
+    comingFromPurchase
+      ? db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true } })
+      : Promise.resolve(null),
   ])
-  const trialEndsAt = dbUser?.trialEndsAt?.toISOString() ?? null
+
+  const plan = (freshUser?.plan ?? session.user.plan) ?? "UNSUBSCRIBED"
+  const subscriptionStatus = (freshUser?.subscriptionStatus ?? session.user.subscriptionStatus) ?? "NONE"
+  const subscriptionEndsAt = (freshUser?.subscriptionEndsAt?.toISOString() ?? session.user.subscriptionEndsAt) ?? null
+  const role = session.user.role ?? "USER"
 
   if (!resume) notFound()
 
@@ -56,13 +62,13 @@ export default async function EditorPage({ params }: { params: Promise<{ id: str
     <EditorLayout
       resumeId={resume.id}
       title={resume.title}
+      isNew={isNew}
       sections={sections}
       sectionData={sectionData}
       config={config}
       plan={plan}
       subscriptionStatus={subscriptionStatus}
       subscriptionEndsAt={subscriptionEndsAt}
-      trialEndsAt={trialEndsAt}
       role={role}
     />
   )

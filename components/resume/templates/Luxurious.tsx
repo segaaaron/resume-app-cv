@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function LuxuriousTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -16,7 +17,7 @@ export default function LuxuriousTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ minHeight: "297mm", background: "#1a1a2e" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", background: "#1a1a2e" }}>
       {/* Dark header */}
       <div className="px-10 py-9" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", borderBottom: `2px solid ${color}` }}>
         <div className="flex items-center gap-7">
@@ -73,7 +74,7 @@ export default function LuxuriousTemplate() {
                       </div>
                       <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                       {job.description && (
-                        <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                        <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                       )}
                     </div>
                   ))}
@@ -128,7 +129,7 @@ export default function LuxuriousTemplate() {
                   {languages.map((lang) => (
                     <div key={lang.id} className="flex justify-between items-center text-xs">
                       <span className="font-medium text-gray-800">{lang.name}</span>
-                      <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                      <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                     </div>
                   ))}
                 </div>

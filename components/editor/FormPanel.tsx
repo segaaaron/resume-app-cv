@@ -18,8 +18,11 @@ import {
 } from "@dnd-kit/sortable"
 import SectionBlock from "./SectionBlock"
 import DesignPanel from "./DesignPanel"
+import ATSScorePanel from "./ATSScorePanel"
+import AIProGate from "./AIProGate"
+import AIProfileFillPanel from "./AIProfileFillPanel"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { LayoutTemplate, Settings2 } from "lucide-react"
+import { LayoutTemplate, Settings2, Target } from "lucide-react"
 
 export default function FormPanel() {
   const t = useTranslations("editor")
@@ -50,11 +53,14 @@ export default function FormPanel() {
           <TabsTrigger value="design" className="gap-1.5 text-xs data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-2">
             <Settings2 className="h-3.5 w-3.5" /> {t("form.design_tab")}
           </TabsTrigger>
+          <TabsTrigger value="ats" className="gap-1.5 text-xs data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-2">
+            <Target className="h-3.5 w-3.5" /> {t("form.ats_tab")}
+          </TabsTrigger>
         </TabsList>
 
         {/* Scrollable content */}
         <TabsContent value="content" className="flex-1 min-h-0 overflow-y-auto mt-0 p-4 space-y-2 data-[state=inactive]:hidden">
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <DndContext id="form-panel-dnd" sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
             <SortableContext items={visibleSections.map((s) => s.id)} strategy={verticalListSortingStrategy}>
               {visibleSections.map((section) => (
                 <SectionBlock key={section.id} section={section} />
@@ -73,10 +79,19 @@ export default function FormPanel() {
               ))}
             </div>
           )}
+
+          {/* AI Profile Fill — at the bottom of content tab */}
+          <div className="pt-2">
+            <AIProGate><AIProfileFillPanel /></AIProGate>
+          </div>
         </TabsContent>
 
         <TabsContent value="design" className="flex-1 min-h-0 overflow-y-auto mt-0 data-[state=inactive]:hidden">
           <DesignPanel />
+        </TabsContent>
+
+        <TabsContent value="ats" className="flex-1 min-h-0 overflow-y-auto mt-0 p-4 space-y-4 data-[state=inactive]:hidden">
+          <AIProGate><ATSScorePanel /></AIProGate>
         </TabsContent>
       </Tabs>
     </aside>

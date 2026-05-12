@@ -7,11 +7,12 @@
  * flotante de datos de contacto.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function VogueTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies, volunteer } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -24,11 +25,11 @@ export default function VogueTemplate() {
     beginner: "●○○○○", intermediate: "●●●○○", advanced: "●●●●○", expert: "●●●●●",
   }
   const LANG_LABEL: Record<string, string> = {
-    elementary: "A1", limited: "A2-B1", professional: "B2", full_professional: "C1", native: "Nativo",
+    a1: "A1", a2: "A2", b1: "B1", b2: "B2", c1: "C1", c2: "C2", native: "Nativo",
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── Header ────────────────────────────────────────────────────────── */}
       <div className="relative px-10 pt-8" style={{ borderBottom: `3px solid ${color}` }}>
@@ -107,7 +108,7 @@ export default function VogueTemplate() {
                       {job.employer}{job.city ? ` · ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div className="text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}

@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function ObsidianTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -13,7 +14,10 @@ export default function ObsidianTemplate() {
   const title = pd.jobTitle || "Community Manager"
   const email = pd.email || "michael@email.com"
   const phone = pd.phone || "+46 70 123 4567"
-  const addr = pd.city || pd.address || "Stockholm, Sweden"
+  const addr    = pd.city || pd.address || "Stockholm, Sweden"
+  const website = pd.website
+  const linkedin = pd.linkedin
+  const github  = pd.github
   const sum = summary || "Experienced community manager with a passion for building engaged online communities. Expert in social media strategy, content creation, and analytics."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Community Manager", employer: "SocialBrand", startDate: "2020", endDate: "", currentlyWorking: true, city: "", description: "Managing communities of 500K+ members across multiple platforms. Grew engagement by 120%." },
@@ -37,10 +41,10 @@ export default function ObsidianTemplate() {
   const blue = "#3b82f6"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-  const LANG_W: Record<string, number> = { elementary: 20, limited: 40, professional: 60, full_professional: 80, native: 100 }
+  const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: darkBg, position: "relative", overflow: "hidden" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: darkBg, position: "relative", overflow: "hidden" }}>
       {/* White curved panel on right */}
       <svg style={{ position: "absolute", top: 0, right: 0, width: "60%", height: "100%", pointerEvents: "none" }} viewBox="0 0 400 1120" preserveAspectRatio="none">
         <path d="M80,0 Q0,560 80,1120 L400,1120 L400,0 Z" fill="#ffffff" />
@@ -68,6 +72,9 @@ export default function ObsidianTemplate() {
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={blue} />{phone}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={blue} />{email}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><MapPin size={10} color={blue} />{addr}</span>
+              {website  && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Globe  size={10} color={blue} />{website}</span>}
+              {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Link2  size={10} color={blue} />{linkedin}</span>}
+              {github   && <span style={{ display: "flex", alignItems: "center", gap: 6 }}><GitFork size={10} color={blue} />{github}</span>}
             </div>
           </DarkSection>
 
@@ -121,7 +128,7 @@ export default function ObsidianTemplate() {
                     <span style={{ fontSize: 9, color: "#aaa" }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                   </div>
                   <p style={{ fontSize: 10, fontWeight: 600, color: blue }}>{job.employer}</p>
-                  {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </LightSection>

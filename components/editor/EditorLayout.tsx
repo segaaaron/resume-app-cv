@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
+import { EditorProvider } from "./EditorContext"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 
 interface Props {
@@ -17,42 +19,50 @@ interface Props {
   plan: string
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
-  trialEndsAt?: string | null
   role?: string
+  isNew?: boolean
 }
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, trialEndsAt, role }: Props) {
+
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
-  // Use a ref so we always call init with the latest server-provided data,
-  // even if the same resumeId is re-mounted after navigating away and back.
+  const router = useRouter()
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   propsRef.current = { resumeId, title, sections, sectionData, config }
-
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)
   }, [resumeId, init])
 
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return
+    const channel = new BroadcastChannel("billing")
+    channel.onmessage = (e) => {
+      if (e.data?.type === "BILLING_SYNCED") router.refresh()
+    }
+    return () => channel.close()
+  }, [router])
+
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
-    trialEndsAt ? new Date(trialEndsAt) : null,
     subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
     subscriptionStatus
   )
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <EditorTopBar hasAccess={hasAccess} />
-      <div className="flex flex-1 overflow-hidden">
-        <FormPanel />
-        <PreviewPanel
-          plan={plan}
-          subscriptionStatus={subscriptionStatus}
-          subscriptionEndsAt={subscriptionEndsAt}
-          trialEndsAt={trialEndsAt}
-          role={role}
-        />
+    <EditorProvider isPro={hasAccess}>
+      <div className="h-screen flex flex-col overflow-hidden bg-neutral-50">
+        <EditorTopBar hasAccess={hasAccess} />
+        <div className="flex flex-1 overflow-hidden">
+          <FormPanel />
+          <PreviewPanel
+            plan={plan}
+            subscriptionStatus={subscriptionStatus}
+            subscriptionEndsAt={subscriptionEndsAt}
+            role={role}
+          />
+        </div>
       </div>
-    </div>
+    </EditorProvider>
   )
 }

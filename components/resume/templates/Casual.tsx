@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function CasualTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -16,7 +17,7 @@ export default function CasualTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Gradient header */}
       <div
         className="relative px-10 pt-9 pb-14 overflow-hidden"
@@ -76,7 +77,7 @@ export default function CasualTemplate() {
                   </div>
                   <p className="text-xs font-medium mt-0.5 mb-1.5" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                   {job.description && (
-                    <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}
@@ -124,7 +125,7 @@ export default function CasualTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id} className="text-xs">
                     <span className="font-semibold text-gray-800">{lang.name}</span>
-                    <span className="text-gray-400 ml-1.5 text-[10px] capitalize">({lang.level.replace("_", " ")})</span>
+                    <span className="text-gray-400 ml-1.5 text-[10px]">({lang.level.toUpperCase()})</span>
                   </div>
                 ))}
               </div>

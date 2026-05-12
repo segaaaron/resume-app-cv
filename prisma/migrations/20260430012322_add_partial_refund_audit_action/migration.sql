@@ -1,0 +1,2 @@
+ALTER TYPE "AuditAction" ADD VALUE 'PARTIAL_REFUND';
+

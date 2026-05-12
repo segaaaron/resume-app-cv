@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function PrestigeTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -14,7 +15,10 @@ export default function PrestigeTemplate() {
   const title = pd.jobTitle || "Graphic & Web Designer"
   const email = pd.email || "kevin@email.com"
   const phone = pd.phone || "+1 555 234 5678"
-  const addr = pd.city || pd.address || "Miami, USA"
+  const addr    = pd.city || pd.address || "Miami, USA"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Versatile designer with expertise in both print and digital media. Skilled in creating cohesive brand experiences across all touchpoints."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Lead Designer", employer: "DigitalCraft", startDate: "2020", endDate: "", currentlyWorking: true, city: "", description: "Directing design for web and mobile products. Managing a team of 4 designers." },
@@ -40,7 +44,7 @@ export default function PrestigeTemplate() {
   const copper = "#b87333"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-  const LANG_PCT: Record<string, number> = { elementary: 20, limited: 40, professional: 60, full_professional: 80, native: 100 }
+  const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
   const CircleGauge = ({ pct, label }: { pct: number; label: string }) => {
     const r = 14, c = 2 * Math.PI * r, offset = c - (pct / 100) * c
@@ -57,7 +61,7 @@ export default function PrestigeTemplate() {
   }
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: bg }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: bg }}>
       {/* Header */}
       <div style={{ padding: "28px 28px 0", display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
         <div>
@@ -69,6 +73,9 @@ export default function PrestigeTemplate() {
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Phone size={9} color={copper} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Mail size={9} color={copper} />{email}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 4 }}><MapPin size={9} color={copper} />{addr}</span>
+            {website  && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Globe  size={9} color={copper} />{website}</span>}
+            {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><Link2  size={9} color={copper} />{linkedin}</span>}
+            {github   && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GitFork size={9} color={copper} />{github}</span>}
           </div>
         </div>
         <div style={{ width: 90, height: 90, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${copper}`, position: "relative" }}>
@@ -117,7 +124,7 @@ export default function PrestigeTemplate() {
                     <span style={{ fontSize: 9, color: "#aaa" }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                   </div>
                   <p style={{ fontSize: 10, fontWeight: 600, color: copper }}>{job.employer}</p>
-                  {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </div>

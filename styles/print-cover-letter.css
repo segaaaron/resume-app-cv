@@ -1,0 +1,57 @@
+/* ============================================================
+   COVER LETTER PRINT STYLES
+
+   Cargadas por components/cover-letter/CoverLetterPrintLayout.tsx.
+   Aplican tanto en window.print() como en Puppeteer.
+
+   IMPORTANTE: @page :first { margin-top: 0 } fue eliminado por la
+   misma razón que en print-resume.css — Puppeteer ignora esa regla
+   cuando se pasa margin explícito al API page.pdf().
+   ============================================================ */
+
+/* 1. PAGE BOX
+   Margen para window.print(). Puppeteer usa COVER_MARGIN_MM
+   en lib/pdf/renderers/cover-letter.ts. */
+@page {
+  size: A4;
+  margin: 10mm 0;
+}
+
+/* 2. ROOT RESETS */
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+}
+
+/* 3. COVER LETTER WRAPPER
+   En pantalla la carta tiene min-height: 297mm para verse como hoja
+   completa. En print eso fuerza una página vacía si el contenido es
+   corto, así que reseteamos. */
+@media print {
+  .cover-letter-page {
+    width: 210mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+    box-shadow: none !important;
+  }
+
+  .cover-letter-page * {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+}
+
+/* 4. COLOR FIDELITY */
+@media print {
+  .cover-letter-page,
+  .cover-letter-page * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

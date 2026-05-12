@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
 export default function MinimalTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -38,7 +39,7 @@ export default function MinimalTemplate() {
   const navy = "#1a2744"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
-  const LANG_DOTS: Record<string, number> = { elementary: 1, limited: 2, professional: 3, full_professional: 4, native: 5 }
+  const LANG_DOTS: Record<string, number> = { a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5 }
 
   const Dots = ({ filled, total }: { filled: number; total: number }) => (
     <div style={{ display: "flex", gap: 3 }}>
@@ -49,7 +50,7 @@ export default function MinimalTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "32px 30px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "32px 30px" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
         <div>
@@ -130,7 +131,7 @@ export default function MinimalTemplate() {
                     <span style={{ fontSize: 9, color: "#aaa" }}>{job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}</span>
                   </div>
                   <p style={{ fontSize: 10, fontWeight: 600, color: navy }}>{job.employer}</p>
-                  {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </div>

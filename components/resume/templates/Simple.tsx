@@ -1,10 +1,11 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 
 export default function SimpleTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -14,7 +15,7 @@ export default function SimpleTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="p-10" style={{ minHeight: "297mm", lineHeight: config.spacing * 1.5 }}>
+    <div data-print-layout="single-column" className="p-10" style={{ minHeight: "297mm", lineHeight: config.spacing * 1.5 }}>
       {/* Minimal header */}
       <div className="mb-7">
         {fullName && <h1 className="text-2xl font-bold text-gray-900 mb-0.5">{fullName}</h1>}
@@ -48,7 +49,7 @@ export default function SimpleTemplate() {
                 </div>
                 <p className="text-xs text-gray-500">{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                 {job.description && (
-                  <div className="text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                  <div className="resume-desc text-xs text-gray-600 mt-1 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>
             ))}
@@ -102,7 +103,7 @@ export default function SimpleTemplate() {
         {visible("languages") && languages.length > 0 && (
           <Block title={label("languages")} color={color}>
             <p className="text-xs text-gray-700 leading-relaxed">
-              {languages.map((l) => `${l.name} (${l.level.replace("_", " ")})`).join(" · ")}
+              {languages.map((l) => `${l.name} (${l.level.toUpperCase()})`).join(" · ")}
             </p>
           </Block>
         )}

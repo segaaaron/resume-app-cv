@@ -6,11 +6,11 @@
  * Ideal para ejecutivos, directivos, abogados, finanzas, roles de alta dirección.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 52, advanced: 76, expert: 100 }
-const LANG_W:  Record<string, number> = { elementary: 18, limited: 38, professional: 58, full_professional: 80, native: 100 }
+const LANG_W:  Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 /* Art Deco ornamental divider SVG */
 function OrnamentDivider({ color, width = 380 }: { color: string; width?: number }) {
@@ -47,7 +47,8 @@ function DiamondOrnament({ color }: { color: string }) {
 }
 
 export default function LumiereTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, hobbies, volunteer,
@@ -58,7 +59,7 @@ export default function LumiereTemplate() {
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   return (
-    <div style={{ minHeight: "297mm", backgroundColor: "#faf9f7", fontFamily: "inherit" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", backgroundColor: "#faf9f7", fontFamily: "inherit" }}>
 
       {/* ── HEADER ───────────────────────────────────────────────────────── */}
       <div style={{
@@ -178,7 +179,7 @@ export default function LumiereTemplate() {
                       {job.employer}{job.city ? ` · ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div
+                      <div className="resume-desc"
                         style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                       />
@@ -206,7 +207,7 @@ export default function LumiereTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}>{edu.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }} dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -222,7 +223,7 @@ export default function LumiereTemplate() {
                     <p style={{ fontSize: "11px", fontWeight: 700, color: "#1a1a1a" }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{proj.role}</p>}
                     {proj.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}>{proj.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}
@@ -243,7 +244,7 @@ export default function LumiereTemplate() {
                     </div>
                     <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{vol.organization}</p>
                     {vol.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }}>{vol.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.72 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />
                     )}
                   </div>
                 ))}

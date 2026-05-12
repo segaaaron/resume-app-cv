@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function ModernTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -15,7 +16,7 @@ export default function ModernTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="flex" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm" }}>
       {/* Sidebar */}
       <div className="w-[34%] shrink-0 text-white px-6 pt-8 pb-8 flex flex-col gap-6" style={{ backgroundColor: color }}>
         {/* Photo */}
@@ -80,7 +81,7 @@ export default function ModernTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center">
                   <span className="text-[11px] text-white/90 font-medium">{lang.name}</span>
-                  <span className="text-[10px] text-white/55 capitalize">{lang.level.replace("_", " ")}</span>
+                  <span className="text-[10px] text-white/55">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </div>
@@ -111,7 +112,7 @@ export default function ModernTemplate() {
                     </span>
                   </div>
                   <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
-                  {job.description && <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </div>

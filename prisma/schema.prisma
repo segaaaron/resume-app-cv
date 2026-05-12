@@ -4,30 +4,51 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 model User {
-  id               String        @id @default(cuid())
-  name             String?
-  email            String        @unique
-  emailVerified    DateTime?
-  image            String?
-  password         String?
-  plan             Plan          @default(FREE)
-  trialEndsAt      DateTime?
-  role               Role               @default(USER)
-  stripeCustomerId   String?            @unique
-  subscriptionId     String?            @unique
-  subscriptionEndsAt DateTime?
-  subscriptionStatus SubscriptionStatus @default(NONE)
-  accounts           Account[]
-  sessions         Session[]
-  resumes          Resume[]
-  coverLetters     CoverLetter[]
-  applications     Application[]
-  createdAt        DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
+  id                  String               @id @default(cuid())
+  name                String?
+  email               String               @unique
+  emailVerified       DateTime?
+  image               String?
+  password            String?
+  plan                Plan                 @default(UNSUBSCRIBED)
+  trialEndsAt         DateTime?
+  role                Role                 @default(USER)
+  stripeCustomerId    String?              @unique
+  subscriptionId      String?              @unique
+  subscriptionEndsAt  DateTime?
+  subscriptionStatus  SubscriptionStatus   @default(NONE)
+  planInterval        String?
+  accounts            Account[]
+  sessions            Session[]
+  resumes             Resume[]
+  coverLetters        CoverLetter[]
+  applications        Application[]
+  marketingConsent    Boolean              @default(false)
+  ageVerified         Boolean              @default(false)
+  emailOptOut         Boolean              @default(false)
+  deletedAt           DateTime?
+  auditLogs           AuditLog[]
+  referralCode        String?              @unique
+  referredBy          String?
+  referredUsers       User[]               @relation("Referrals")
+  referrer            User?                @relation("Referrals", fields: [referredBy], references: [id])
+  referralRewardTier  Int                  @default(0)
+  referralCycleOffset Int                  @default(0)
+  referrerConversions ReferralConversion[] @relation("ReferrerConversions")
+  referredConversions ReferralConversion[] @relation("ReferredConversions")
+  sessionVersion      Int                  @default(1)
+  forceLogoutAt       DateTime?            // set by admin to invalidate all active JWTs immediately
+  activeSessionToken           String?   @unique
+  sessionChallengeCode         String?
+  sessionChallengeExp          DateTime?
+  sessionChallengeAttempts     Int       @default(0)
+  sessionChallengeBlockedUntil DateTime?
+  lastActiveAt        DateTime             @default(now())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 model Account {
@@ -65,24 +86,39 @@ model VerificationToken {
 }
 
 model Resume {
-  id              String   @id @default(cuid())
+  id              String          @id @default(cuid())
   userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title           String   @default("Mi CV")
-  templateId      String   @default("classic")
-  colorScheme     String   @default("#2a72d7")
-  fontFamily      String   @default("Poppins")
-  fontSize        Int      @default(14)
-  spacing         Float    @default(1.0)
-  sections        Json     @default("[]")
-  personalDetails Json     @default("{}")
-  photoUrl        String?  @db.Text
-  photoPosition   Int      @default(15)
-  language        String   @default("es")
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title           String          @default("Mi CV")
+  templateId      String          @default("classic")
+  colorScheme     String          @default("#2a72d7")
+  fontFamily      String          @default("Poppins")
+  fontSize        Int             @default(14)
+  spacing         Float           @default(1.0)
+  sections        Json            @default("[]")
+  personalDetails Json            @default("{}")
+  photoUrl        String?         @db.Text
+  photoPosition   Int             @default(15)
+  language        String          @default("es")
+  isPublic        Boolean         @default(false)
+  publicSlug      String?         @unique
+  versions        ResumeVersion[]
+  views           CVView[]
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   @@index([userId])
+}
+
+model ResumeVersion {
+  id        String   @id @default(cuid())
+  resumeId  String
+  resume    Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  label     String?
+  snapshot  Json
+  createdAt DateTime @default(now())
+
+  @@index([resumeId])
 }
 
 model CoverLetter {
@@ -101,20 +137,106 @@ model CoverLetter {
 }
 
 model Application {
-  id        String    @id @default(cuid())
-  userId    String
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jobTitle  String
-  company   String
-  status    AppStatus @default(WISHLIST)
-  notes     String?   @db.Text
-  url       String?
-  salary    String?
-  appliedAt DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobTitle       String
+  company        String
+  status         AppStatus @default(WISHLIST)
+  notes          String?   @db.Text
+  url            String?
+  salary         String?
+  appliedAt      DateTime?
+  followUpAt     DateTime?
+  reminderSentAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@index([userId])
+  @@index([followUpAt])
+}
+
+model CVView {
+  id       String   @id @default(cuid())
+  resumeId String
+  resume   Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
+
+  @@index([resumeId])
+  @@index([viewedAt])
+}
+
+model AIRateLimit {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  count     Int      @default(0)
+  resetAt   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, endpoint])
+  @@index([userId])
+  @@index([resetAt])
+}
+
+model AIUsageLog {
+  id        String   @id @default(cuid())
+  userId    String
+  endpoint  String
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([endpoint])
+  @@index([createdAt])
+}
+
+model ReferralConversion {
+  id         String   @id @default(cuid())
+  referrerId String
+  referredId String
+  createdAt  DateTime @default(now())
+  referrer   User     @relation("ReferrerConversions", fields: [referrerId], references: [id], onDelete: Cascade)
+  referred   User     @relation("ReferredConversions", fields: [referredId], references: [id], onDelete: Cascade)
+
+  @@unique([referrerId, referredId])
+}
+
+model StripeEvent {
+  id                String   @id // Stripe event ID (e.g. evt_xxx)
+  processedAt       DateTime @default(now())
+  userId            String?  // set when the event is associated to a known user
+  checkoutSessionId String?  // set for checkout.session.completed events
+
+  @@index([processedAt])
+  @@index([userId])
+}
+
+model AuditLog {
+  id        String      @id @default(cuid())
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    AuditAction
+  metadata  Json?
+  createdAt DateTime    @default(now())
+
+  @@index([userId])
+}
+
+enum AuditAction {
+  DELETE_ACCOUNT
+  CANCEL_SUBSCRIPTION
+  TOGGLE_PUBLIC_CV
+  DATA_EXPORT
+  REFUND_ISSUED
+  PARTIAL_REFUND
+  DISPUTE_CHARGEBACK
+  DISPUTE_CLOSED
+  FRAUD_WARNING
+  PROFILE_SYNCED_FROM_STRIPE
+  SUBSCRIPTION_CREATED_EXTERNAL
+  ADMIN_RECONCILE_USER
+  ADMIN_FORCE_LOGOUT
 }
 
 enum Role {
@@ -123,8 +245,7 @@ enum Role {
 }
 
 enum Plan {
-  FREE
-  TRIAL
+  UNSUBSCRIBED
   PRO
 }
 
@@ -133,6 +254,7 @@ enum SubscriptionStatus {
   ACTIVE
   CANCELED
   EXPIRED
+  PAST_DUE
 }
 
 enum AppStatus {
@@ -141,4 +263,17 @@ enum AppStatus {
   INTERVIEW
   OFFER
   REJECTED
+}
+
+model PendingRegistration {
+  email            String   @id
+  name             String
+  passwordHash     String
+  marketingConsent Boolean
+  ageConsent       Boolean
+  referralCode     String?
+  otpHash          String
+  otpExp           DateTime
+  attempts         Int      @default(0)
+  createdAt        DateTime @default(now())
 }

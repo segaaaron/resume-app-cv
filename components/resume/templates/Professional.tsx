@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function ProfessionalTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -15,7 +16,7 @@ export default function ProfessionalTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
       {/* Header band */}
       <div className="px-10 py-8 text-white" style={{ backgroundColor: color }}>
         <h1 className="text-3xl font-extrabold tracking-tight">{fullName || "Tu Nombre"}</h1>
@@ -53,12 +54,12 @@ export default function ProfessionalTemplate() {
                   <div key={lang.id}>
                     <div className="flex justify-between items-center text-xs">
                       <span className="font-medium text-gray-700">{lang.name}</span>
-                      <span className="text-gray-400 capitalize text-[10px]">{lang.level.replace("_", " ")}</span>
+                      <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                     </div>
                     <div className="h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
                       <div className="h-full rounded-full" style={{
                         backgroundColor: color,
-                        width: lang.level === "native" ? "100%" : lang.level === "full_professional" ? "85%" : lang.level === "professional" ? "70%" : lang.level === "limited" ? "50%" : "35%"
+                        width: ({ a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%" } as Record<string, string>)[lang.level] ?? "50%"
                       }} />
                     </div>
                   </div>
@@ -87,7 +88,7 @@ export default function ProfessionalTemplate() {
                     </span>
                   </div>
                   <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
-                  {job.description && <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                  {job.description && <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                 </div>
               ))}
             </Section>

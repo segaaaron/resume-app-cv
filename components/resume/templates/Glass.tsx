@@ -5,11 +5,12 @@
  * Tendencia 2024-2026: fondos translúcidos, blur, gradientes pastel.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function GlassTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -22,7 +23,7 @@ export default function GlassTemplate() {
   const bgGradient = `linear-gradient(135deg, ${color}1a 0%, ${color}08 50%, ${color}14 100%)`
 
   return (
-    <div style={{ minHeight: "297mm", background: bgGradient }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", background: bgGradient }}>
       {/* Glass header */}
       <div
         className="mx-6 mt-6 rounded-2xl px-8 py-7 border border-white/60"
@@ -74,7 +75,7 @@ export default function GlassTemplate() {
                       </span>
                     </div>
                     <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
-                    {job.description && <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                    {job.description && <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                   </div>
                 ))}
               </div>
@@ -128,7 +129,7 @@ export default function GlassTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center text-xs mb-1.5">
                   <span className="font-semibold text-gray-800">{lang.name}</span>
-                  <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                  <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </GlassCard>

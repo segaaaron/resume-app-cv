@@ -200,7 +200,7 @@ function stripDates(line: string): string {
     .replace(new RegExp(`([a-záéíóúüñA-Z]+\\.?\\s+\\d{4})\\s*[-–—]\\s*([a-záéíóúüñA-Z]+\\.?\\s+\\d{4}|${CURRENT_ALT})`, "gi"), "")
     .replace(new RegExp(`\\d{1,2}\\/\\d{4}\\s*[-–—]\\s*(\\d{1,2}\\/\\d{4}|${CURRENT_ALT})`, "gi"), "")
     .replace(new RegExp(`\\b\\d{4}\\s*[-–—]\\s*(\\d{4}|${CURRENT_ALT})\\b`, "gi"), "")
-    .replace(/\b(20\d{2}|19\d{2})\b/g, "")
+    .replace(/\b(20\d{2}|19\d{2})\b/g, " ")
     .replace(/[|,·\-–]\s*$/, "").replace(/^\s*[|,·\-–]\s*/, "")
     .replace(/\s+/g, " ").trim()
 }
@@ -225,7 +225,7 @@ function stripDates(line: string): string {
  */
 function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
   /** Lines with more words than this are likely description text, not titles. */
-  const MAX_TITLE_WORDS = 5
+  const MAX_TITLE_WORDS = 8
 
   const isShortTitleLine = (line: string) =>
     line.split(/\s+/).length <= MAX_TITLE_WORDS &&
@@ -317,8 +317,23 @@ function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
 // Keywords that strongly suggest a line is a job role/title (not a company name)
 const ROLE_KEYWORDS = /\b(developer|engineer|manager|designer|director|lead|senior|junior|intern|analyst|consultant|architect|scientist|specialist|coordinator|executive|officer|head|vp|cto|ceo|coo|cfo|devops|fullstack|frontend|backend|mobile|ios|android|qa|tester|scrum|agile|product|project|software|web|data|cloud|security|network|system|support|recruiter|hr|marketing|sales|account)\b/i
 
+// ─── Merge wrapped lines (PDF word-wrap continuation) ────────────────────────
+function mergeWrappedLines(lines: string[]): string[] {
+  const result: string[] = []
+  for (const line of lines) {
+    const prev = result[result.length - 1]
+    if (prev !== undefined && /^[a-z]/.test(line) && !isBullet(line)) {
+      result[result.length - 1] = prev + " " + line
+    } else {
+      result.push(line)
+    }
+  }
+  return result
+}
+
 // ─── Parse a single work experience block ─────────────────────────────────────
 function parseWorkBlock(block: string[], id: string) {
+  block = mergeWrappedLines(block)
   const job = {
     id,
     jobTitle: "",
@@ -403,21 +418,29 @@ function parseWorkBlock(block: string[], id: string) {
     // Short line without date → fill jobTitle, employer, or city in order
     if (line.length < 80 && !HAS_YEAR.test(line)) {
       const parts = line.split(/\s*[|·,]\s*/).map(clean).filter(p => p.length > 1)
+      const looksLikeSentence = line.endsWith(".") || line.endsWith(",") || line.length > 50
       if (!job.jobTitle && !job.employer) {
-        // Nothing set yet — first short line is the title
         job.jobTitle = parts[0] ?? ""
         if (parts.length >= 2 && !job.city) job.city = parts[1]
       } else if (!job.jobTitle) {
-        // Employer was set from i=0 inline date — this line is the job title
         job.jobTitle = parts[0] ?? ""
         if (parts.length >= 2 && !job.city) job.city = parts[1]
-      } else if (!job.employer) {
-        job.employer = parts[0] ?? ""
-        if (parts.length >= 2 && !job.city) job.city = parts[1]
-      } else if (!job.city && parts.length === 1) {
+      } else if (!job.employer && !looksLikeSentence) {
+        // If the line is a single role-keyword word that could be a title continuation,
+        // merge it into jobTitle instead of setting as employer
+        const wordCount = parts[0]?.split(/\s+/).length ?? 0
+        if (wordCount <= 2 && ROLE_KEYWORDS.test(parts[0] ?? "") && !job.startDate) {
+          job.jobTitle = job.jobTitle + " " + (parts[0] ?? "")
+        } else {
+          job.employer = parts[0] ?? ""
+          if (parts.length >= 2 && !job.city) job.city = parts[1]
+        }
+      } else if (!job.city && parts.length === 1 && !looksLikeSentence && line.length < 45) {
         job.city = parts[0]
       } else if (job.startDate) {
-        descLines.push(line)
+        const wordCount = line.trim().split(/\s+/).length
+        const looksLikeLeakedSidebarItem = wordCount <= 3 && line.length <= 25 && !/[.,]$/.test(line) && descLines.length > 0
+        if (!looksLikeLeakedSidebarItem) descLines.push(line)
       }
       continue
     }
@@ -428,7 +451,7 @@ function parseWorkBlock(block: string[], id: string) {
     }
   }
 
-  job.description = descLines.slice(0, 8).map(d => `• ${d}`).join("<br>")
+  job.description = descLines.slice(0, 20).map(d => `• ${d}`).join("\n")
   return job
 }
 
@@ -556,9 +579,27 @@ export function parseResumeText(rawText: string): ParsedResume {
   const sections: Section[] = []
   let cur: Section = { type: "header", lines: [] }
 
-  for (const line of lines) {
+  // Sections that commonly appear as sidebar headings in 2-column PDFs
+  // and can interrupt work/education content mid-flow
+  const SIDEBAR_SECTION_TYPES = new Set(["skills", "languages", "hobbies"])
+
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li]
     const type = isSectionHeading(line)
     if (type) {
+      // Guard: if we're inside a work/education section and this heading is a
+      // typical sidebar section (skills/languages/hobbies), check whether the
+      // immediately following lines look like job description sentences.
+      // If they do, this heading is a sidebar artifact injected by pdf-parse
+      // into the middle of the main column — ignore it and keep the current section.
+      if (
+        (cur.type === "work" || cur.type === "education") &&
+        SIDEBAR_SECTION_TYPES.has(type)
+      ) {
+        const nextLines = lines.slice(li + 1, li + 3)
+        const hasDescAhead = nextLines.some(l => l.length > 45 && /[.!?]$/.test(l))
+        if (hasDescAhead) continue // sidebar artifact — skip heading, stay in current section
+      }
       if (cur.lines.length > 0 || cur.type !== "header") sections.push(cur)
       cur = { type, lines: [] }
     } else {
@@ -594,7 +635,7 @@ export function parseResumeText(rawText: string): ParsedResume {
   // ── Summary ───────────────────────────────────────────────────────────
   const summarySection = get("summary")
   if (summarySection) {
-    result.summary = summarySection.lines.join(" ").slice(0, 1000).trim()
+    result.summary = summarySection.lines.join(" ").slice(0, 2500).trim()
   }
 
   // ── Work Experience (block-based) ─────────────────────────────────────
@@ -604,6 +645,30 @@ export function parseResumeText(rawText: string): ParsedResume {
       if (result.workExperience.length >= 12) break
       const job = parseWorkBlock(block, `we${result.workExperience.length + 1}`)
       if (job.jobTitle || job.employer) result.workExperience.push(job)
+    }
+  }
+
+  // ── Description rescue: recover job bullets lost in sidebar-hijacked sections ──
+  // When pdf-parse interleaves 2-column content, description bullets from the last
+  // parsed job often land in the next section (skills/languages/etc).
+  // Scan non-work sections for long sentences (real bullets) and append them to the
+  // most recently added job — done BEFORE the rescue pass + sort so order is correct.
+  if (result.workExperience.length > 0) {
+    const SKIP_FOR_DESC_RESCUE = new Set(["work", "header", "summary", "education", "certifications", "projects", "volunteer", "hobbies"])
+    for (const sec of sections) {
+      if (SKIP_FOR_DESC_RESCUE.has(sec.type)) continue
+      const rescuedBullets: string[] = []
+      for (const line of sec.lines) {
+        // A real job bullet: long sentence ending in punctuation, no year (not a date line)
+        if (line.length > 45 && /[.!?]$/.test(line) && !HAS_YEAR.test(line) && !isBullet(line)) {
+          rescuedBullets.push(line)
+        }
+      }
+      if (rescuedBullets.length === 0) continue
+      // Append to the last job parsed (the one being actively written when section split)
+      const lastJob = result.workExperience[result.workExperience.length - 1]
+      const existing = lastJob.description ? lastJob.description.split("\n").filter(Boolean) : []
+      lastJob.description = [...existing, ...rescuedBullets.map(b => `• ${b}`)].join("\n")
     }
   }
 
@@ -670,9 +735,76 @@ export function parseResumeText(rawText: string): ParsedResume {
       }
     }
   }
-  result.skills = Array.from(skillNames).slice(0, 35).map((name, i) => ({
+  result.skills = Array.from(skillNames).slice(0, 60).map((name, i) => ({
     id: `sk${i + 1}`, name, level: "intermediate",
   }))
+
+  // ── Skill rescue: collect short tokens from sidebar overflow in any section ──
+  // 2-column PDFs split the skills sidebar across work/education blocks.
+  // We restore rescue for all sections but blocklist employer names, cities, and
+  // job titles already parsed from work experience to prevent those from leaking in.
+  const workBlocklist = new Set<string>()
+
+  // From parsed work experience
+  for (const job of result.workExperience) {
+    if (job.employer) workBlocklist.add(job.employer.toLowerCase().trim())
+    if (job.city) workBlocklist.add(job.city.toLowerCase().trim())
+    if (job.jobTitle) {
+      workBlocklist.add(job.jobTitle.toLowerCase().trim())
+      for (const part of job.jobTitle.split(/[&,]/)) workBlocklist.add(part.toLowerCase().trim())
+    }
+  }
+
+  // From education institutions (e.g. "Catalica University")
+  for (const edu of result.education) {
+    if (edu.institution) workBlocklist.add(edu.institution.toLowerCase().trim())
+    if (edu.city) workBlocklist.add(edu.city.toLowerCase().trim())
+  }
+
+  // Personal location
+  if (result.personalDetails.city) workBlocklist.add(result.personalDetails.city.toLowerCase().trim())
+  if (result.personalDetails.country) workBlocklist.add(result.personalDetails.country.toLowerCase().trim())
+  if (result.personalDetails.jobTitle) workBlocklist.add(result.personalDetails.jobTitle.toLowerCase().trim())
+
+  // Scan raw work/education lines for "Company, City" patterns the parser may have missed
+  // Only comma-split lines — avoids blocking single-token skill names
+  for (const sec of sections) {
+    if (!["work", "education"].includes(sec.type)) continue
+    for (const line of sec.lines) {
+      if (line.length > 50 || isBullet(line) || /\d{4}/.test(line) || line.endsWith(".")) continue
+      if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+      const commaIdx = line.indexOf(",")
+      if (commaIdx > 0) {
+        workBlocklist.add(line.slice(0, commaIdx).toLowerCase().trim())
+        workBlocklist.add(line.slice(commaIdx + 1).toLowerCase().trim())
+      }
+    }
+  }
+
+  const existingSkillNames = new Set(result.skills.map(s => s.name.toLowerCase()))
+  for (const sec of sections) {
+    if (["skills", "header", "summary", "languages", "hobbies"].includes(sec.type)) continue
+    for (const line of sec.lines) {
+      if (line.length > 35 || line.endsWith(".") || line.endsWith(",")) continue
+      if (/\d{4}/.test(line)) continue
+      if (isBullet(line)) continue
+      if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+      // Don't split on "/" — preserves tokens like "CI/CD", "iOS back-end services"
+      for (const part of line.split(/[,|•·\t]/)) {
+        const s = clean(part)
+        if (
+          s.length > 1 && s.length < 35 &&
+          !/^\d+$/.test(s) &&
+          !existingSkillNames.has(s.toLowerCase()) &&
+          !workBlocklist.has(s.toLowerCase().trim()) &&
+          result.skills.length < 60
+        ) {
+          result.skills.push({ id: `sk${result.skills.length + 1}`, name: s, level: "intermediate" })
+          existingSkillNames.add(s.toLowerCase())
+        }
+      }
+    }
+  }
 
   // ── Languages ─────────────────────────────────────────────────────────
   const LANG_LEVEL_MAP: Record<string, string> = {
@@ -727,6 +859,26 @@ export function parseResumeText(rawText: string): ParsedResume {
       const wordCount = name.trim().split(/\s+/).length
       if (wordCount > 3) continue
 
+      const level = Object.entries(LANG_LEVEL_MAP).find(([k]) => rawLevel.includes(k))?.[1] ?? "professional"
+      if (!result.languages.find(l => l.name.toLowerCase() === name.toLowerCase())) {
+        result.languages.push({ id: `la${result.languages.length + 1}`, name, level })
+      }
+    }
+  }
+
+  // ── Language rescue: scan all lines if no languages found ────────────
+  // 2-column PDFs can bury the Languages section inside work content.
+  if (result.languages.length === 0) {
+    for (const line of lines) {
+      if (line.length > 60 || line.length < 2) continue
+      if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+      const parts = line.split(/\s*[-–:|()\[\]\/\s●•○]+/).map(p => clean(p)).filter(Boolean)
+      const name = parts[0]
+      if (!name || name.length < 2 || name.length > 30) continue
+      const nameNorm = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      if (!KNOWN_LANGUAGES.has(nameNorm) && !KNOWN_LANGUAGES.has(name.toLowerCase())) continue
+      if (name.trim().split(/\s+/).length > 3) continue
+      const rawLevel = parts.slice(1).join(" ").toLowerCase()
       const level = Object.entries(LANG_LEVEL_MAP).find(([k]) => rawLevel.includes(k))?.[1] ?? "professional"
       if (!result.languages.find(l => l.name.toLowerCase() === name.toLowerCase())) {
         result.languages.push({ id: `la${result.languages.length + 1}`, name, level })

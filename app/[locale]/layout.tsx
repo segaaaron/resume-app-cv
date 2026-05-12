@@ -4,33 +4,38 @@ import { getMessages } from "next-intl/server"
 import { routing } from "@/i18n/routing"
 import { notFound } from "next/navigation"
 
-const BASE_URL = "https://readycv.app"
+const BASE_URL = "https://readycvv.com"
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "READY CV — Crear CV Profesional Online Gratis",
-    template: "%s | READY CV",
+    default: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
+    template: "%s | ReadyCV",
   },
   description:
-    "Crea tu currículum vitae profesional online en minutos. Elige entre 29 plantillas modernas, completa tus datos y descarga tu CV en PDF. ¡Gratis para siempre!",
+    "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. Try ReadyCV Pro from $15/month.",
   keywords: [
+    // High-intent EN (KD 50-65)
+    "ai resume builder",
+    "ats resume builder",
+    "resume builder with cover letter",
+    "professional resume templates",
+    // High-intent ES (KD 20-35 — primary opportunity)
+    "constructor de cv con ia",
+    "resume builder en español",
     "crear cv profesional online",
-    "hacer curriculum vitae gratis",
-    "resume builder",
-    "cv online profesional",
-    "plantillas de curriculum",
-    "crear cv gratis",
-    "generador de cv",
-    "cv para trabajo",
-    "curriculum vitae",
-    "CV online",
-    "hacer cv",
-    "plantillas cv profesionales",
+    "plantillas de cv profesionales",
+    "generador de curriculum vitae con inteligencia artificial",
+    "cv con analisis ats",
+    // Long-tail decision-intent
+    "hacer cv online gratis con ia",
+    "curriculum vitae para trabajo en el extranjero",
+    "plantillas cv ats compatible",
+    "carta de presentacion con inteligencia artificial",
   ],
-  authors: [{ name: "READY CV", url: BASE_URL }],
-  creator: "READY CV",
-  publisher: "READY CV",
+  authors: [{ name: "ReadyCV", url: BASE_URL }],
+  creator: "ReadyCV",
+  publisher: "ReadyCV",
   robots: {
     index: true,
     follow: true,
@@ -47,36 +52,38 @@ export const metadata: Metadata = {
     languages: {
       es: `${BASE_URL}/es`,
       en: `${BASE_URL}/en`,
+      "x-default": `${BASE_URL}/es`,
     },
   },
   openGraph: {
     type: "website",
     locale: "es_ES",
+    alternateLocale: ["en_US"],
     url: BASE_URL,
-    siteName: "READY CV",
-    title: "READY CV — Crear CV Profesional Online Gratis",
+    siteName: "ReadyCV",
+    title: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
     description:
-      "Crea tu currículum vitae profesional online en minutos. 29 plantillas modernas, descarga en PDF. ¡Gratis!",
+      "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. From $15/month.",
     images: [
       {
-        url: "/og-image.png",
+        url: `${BASE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: "READY CV — Generador de CV Profesional Online",
+        alt: "ReadyCV — AI Resume Builder with 111+ Professional Templates",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "READY CV — Crear CV Profesional Online Gratis",
+    title: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
     description:
-      "Crea tu currículum vitae profesional online en minutos. 29 plantillas modernas, descarga en PDF. ¡Gratis!",
-    images: ["/og-image.png"],
-    creator: "@readycv",
-    site: "@readycv",
+      "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker.",
+    images: [`${BASE_URL}/og-image.png`],
+    creator: "@readycvv",
+    site: "@readycvv",
   },
   verification: {
-    google: "google-site-verification-placeholder",
+    google: "a7b236b7cefc3ac7e10f5ca57c3ec884eaea1aac",
   },
 }
 

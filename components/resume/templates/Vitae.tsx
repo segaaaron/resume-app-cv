@@ -9,7 +9,7 @@
  * section headers con banda navy + tab ovalado accent a la derecha.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
   Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane, Coffee,
@@ -22,11 +22,12 @@ const SKILL_W: Record<string, string> = {
   beginner: "25%", intermediate: "52%", advanced: "76%", expert: "100%",
 }
 const LANG_W: Record<string, string> = {
-  elementary: "18%", limited: "38%", professional: "58%", full_professional: "80%", native: "100%",
+  a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%",
 }
 
 export default function VitaeTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, hobbies, volunteer,
@@ -46,7 +47,7 @@ export default function VitaeTemplate() {
     : []
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
       <div style={{
@@ -223,7 +224,7 @@ export default function VitaeTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}>{edu.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -246,7 +247,7 @@ export default function VitaeTemplate() {
                       {job.employer}{job.city ? `, ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div
+                      <div className="resume-desc"
                         style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                       />
@@ -265,7 +266,7 @@ export default function VitaeTemplate() {
                     <p style={{ fontSize: "11px", fontWeight: 700, color: NAVY }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "10.5px", fontWeight: 600, color: accent }}>{proj.role}</p>}
                     {proj.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}>{proj.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}
@@ -286,7 +287,7 @@ export default function VitaeTemplate() {
                     </div>
                     <p style={{ fontSize: "10.5px", fontWeight: 600, color: accent }}>{vol.organization}</p>
                     {vol.description && (
-                      <p style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }}>{vol.description}</p>
+                      <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a6a7a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />
                     )}
                   </div>
                 ))}

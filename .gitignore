@@ -81,3 +81,8 @@ Desktop.ini
 .cache/
 tmp/
 temp/
+.claude/worktrees/
+.claude/
+
+# ── Internal docs (private) ───────────────────────────────────────────────────
+docs/

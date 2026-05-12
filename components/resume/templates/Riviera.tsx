@@ -6,11 +6,12 @@
  * sobre fondo oscuro. Inspirado en el estilo premium tipo Freepik/Vitae.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function RivieraTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies, volunteer } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -23,11 +24,11 @@ export default function RivieraTemplate() {
     beginner: "25%", intermediate: "55%", advanced: "78%", expert: "100%",
   }
   const LANG_WIDTH: Record<string, string> = {
-    elementary: "20%", limited: "40%", professional: "60%", full_professional: "80%", native: "100%",
+    a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%",
   }
 
   return (
-    <div className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
 
       {/* ── Dark Sidebar ──────────────────────────────────────────────────── */}
       <div
@@ -173,7 +174,7 @@ export default function RivieraTemplate() {
                       {job.employer}{job.city ? `, ${job.city}` : ""}
                     </p>
                     {job.description && (
-                      <div className="text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                      <div className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     )}
                   </div>
                 ))}
@@ -198,7 +199,7 @@ export default function RivieraTemplate() {
                       {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                     </p>
                     {edu.description && (
-                      <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{edu.description}</p>
+                      <p className="resume-desc text-[11px] text-gray-500 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                     )}
                   </div>
                 ))}
@@ -214,7 +215,7 @@ export default function RivieraTemplate() {
                     <h4 className="font-bold text-[12px] text-gray-900">{proj.name}</h4>
                     {proj.role && <p className="text-[11px] font-semibold" style={{ color }}>{proj.role}</p>}
                     {proj.description && (
-                      <p className="text-[11px] text-gray-600 leading-relaxed">{proj.description}</p>
+                      <p className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                     )}
                   </div>
                 ))}

@@ -1,13 +1,16 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import "@/styles/print-resume.css"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import ResumePreview from "./ResumePreview"
 import { Button } from "@/components/ui/button"
-import { Printer, ArrowLeft } from "lucide-react"
+import { Download, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
+import { useTranslations, useLocale } from "next-intl"
+import { toast } from "sonner"
 
 interface Props {
   resumeId: string
@@ -15,11 +18,15 @@ interface Props {
   sections: ResumeSection[]
   sectionData: ResumeSections
   config: ResumeConfig
+  isPro?: boolean
 }
 
-export default function PrintLayout({ resumeId, title, sections, sectionData, config }: Props) {
+export default function PrintLayout({ resumeId, title, sections, sectionData, config, isPro = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
+  const [downloadingPdf, setDownloadingPdf] = useState(false)
+  const t = useTranslations("editor.print")
+  const locale = useLocale()
   propsRef.current = { resumeId, title, sections, sectionData, config }
   const searchParams = useSearchParams()
 
@@ -30,11 +37,29 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
 
   useEffect(() => {
     if (searchParams.get("auto") === "true") {
-      // Wait for fonts/images to load before printing
-      const timer = setTimeout(() => window.print(), 800)
-      return () => clearTimeout(timer)
+      handleDownloadPdf()
     }
-  }, [searchParams])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  async function handleDownloadPdf() {
+    setDownloadingPdf(true)
+    try {
+      const res = await fetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
+      if (!res.ok) { toast.error(t("error_pdf")); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = `${title}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      toast.error(t("error_pdf"))
+    } finally {
+      setDownloadingPdf(false)
+    }
+  }
 
   return (
     <>
@@ -43,38 +68,79 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/editor/${resumeId}`}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Volver al editor
+              <ArrowLeft className="h-4 w-4 mr-1" /> {t("back")}
             </Link>
           </Button>
           <span className="text-sm text-muted-foreground">{title}</span>
         </div>
-        <Button onClick={() => window.print()} size="sm" className="gap-2">
-          <Printer className="h-4 w-4" />
-          Imprimir / Guardar PDF
-        </Button>
-      </div>
-
-      {/* Resume — centered on screen, full width when printing */}
-      <div className="print:p-0 flex justify-center bg-gray-100 min-h-screen print:bg-white py-8">
-        <div className="print:shadow-none">
-          <ResumePreview />
+        <div className="flex items-center gap-2">
+          <Button onClick={handleDownloadPdf} size="sm" className="gap-2" disabled={downloadingPdf}>
+            {downloadingPdf ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+            {t("print_pdf")}
+          </Button>
         </div>
       </div>
 
-      <style>{`
-        @page {
-          size: A4;
-          margin: 14mm 0;
-        }
-        @page :first {
-          margin: 0;
-        }
-        @media print {
-          body {
-            margin: 0;
-          }
-        }
-      `}</style>
+      {/* Upgrade banner for free users — hidden when printing */}
+      {!isPro && (
+        <div className="print:hidden bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between">
+          <p className="text-xs text-amber-800">
+            <span className="font-semibold">Plan Free:</span> {t("watermark_upgrade")}
+          </p>
+          <a
+            href="/pricing"
+            className="text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
+          >
+            Actualizar a Pro →
+          </a>
+        </div>
+      )}
+
+      {/* Resume — centered on screen, full width when printing */}
+      <div className="print:p-0 flex justify-center bg-gray-100 min-h-screen print:bg-white py-8 print:block print:min-h-0">
+        <div className="print:shadow-none relative print:w-full">
+          <ResumePreview />
+          {/* Watermark — only shown in print for free users */}
+          {!isPro && (
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 overflow-hidden hidden print:flex items-center justify-center"
+            >
+              {/* Diagonal repeated text watermark */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  alignContent: "center",
+                  gap: "48px 32px",
+                  transform: "rotate(-35deg) scale(1.5)",
+                  opacity: 0.1,
+                  pointerEvents: "none",
+                }}
+              >
+                {Array.from({ length: 30 }).map((_, i) => (
+                  <span
+                    key={i}
+                    style={{
+                      fontSize: "18px",
+                      fontWeight: 700,
+                      color: "#1a1a1a",
+                      whiteSpace: "nowrap",
+                      fontFamily: "sans-serif",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {t("watermark_text")}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
     </>
   )
 }

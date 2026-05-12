@@ -6,19 +6,20 @@
  */
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const SKILL_W: Record<string, string> = {
   beginner: "22%", intermediate: "50%", advanced: "75%", expert: "100%",
 }
 const LANG_W: Record<string, string> = {
-  elementary: "18%", limited: "36%", professional: "56%",
-  full_professional: "78%", native: "100%",
+  a1: "17%", a2: "33%", b1: "50%",
+  b2: "67%", c1: "83%", c2: "100%", native: "100%",
 }
 
 export default function ConsulTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, volunteer, references,
@@ -35,7 +36,7 @@ export default function ConsulTemplate() {
   const SW = 210
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ══════════════════════════════════════════════════════════════════
           SIDEBAR
@@ -204,7 +205,7 @@ export default function ConsulTemplate() {
                   {job.description && (
                     <div style={{ display: "flex", gap: 6 }}>
                       <span style={{ color: accent, flexShrink: 0, fontWeight: 700 }}>•</span>
-                      <div style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.65 }}
+                      <div className="resume-desc" style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.65 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                     </div>
                   )}

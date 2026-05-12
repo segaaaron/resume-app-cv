@@ -5,10 +5,11 @@
  * Tendencia 2024-2026: diseño "wireframe", elegancia extrema.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 
 export default function OutlineTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -18,7 +19,7 @@ export default function OutlineTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="bg-white px-12 pt-10 pb-10" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white px-12 pt-10 pb-10" style={{ minHeight: "297mm" }}>
       {/* Header — bordered box */}
       <div className="border-2 border-gray-800 p-6 mb-6">
         <div className="flex items-end justify-between gap-4">
@@ -63,7 +64,7 @@ export default function OutlineTemplate() {
                   </div>
                   <p className="text-xs font-medium mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                   {job.description && (
-                    <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}
@@ -122,7 +123,7 @@ export default function OutlineTemplate() {
                 {languages.map((lang) => (
                   <div key={lang.id}>
                     <p className="text-xs font-bold text-gray-800">{lang.name}</p>
-                    <p className="text-[10px] text-gray-400 capitalize">{lang.level.replace("_", " ")}</p>
+                    <p className="text-[10px] text-gray-400">{lang.level.toUpperCase()}</p>
                   </div>
                 ))}
               </div>

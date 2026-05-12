@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
-import { Mail, Phone, MapPin } from "lucide-react"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function BannerTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
@@ -13,7 +14,10 @@ export default function BannerTemplate() {
   const title = pd.jobTitle || "Graphic Designer"
   const email = pd.email || "carlos.m@email.com"
   const phone = pd.phone || "+34 612 345 678"
-  const addr = pd.city || pd.address || "Barcelona, España"
+  const addr    = pd.city || pd.address || "Barcelona, España"
+  const website  = pd.website
+  const linkedin = pd.linkedin
+  const github   = pd.github
   const sum = summary || "Diseñador gráfico apasionado con experiencia en branding, UX/UI y diseño editorial. Creativo, detallista y orientado a resultados."
   const jobs = workExperience.length ? workExperience : [
     { id: "1", jobTitle: "Lead Designer", employer: "BrandFactory", startDate: "2021", endDate: "", currentlyWorking: true, city: "", description: "Dirección creativa de proyectos de identidad visual para startups." },
@@ -56,7 +60,7 @@ export default function BannerTemplate() {
   )
 
   return (
-    <div style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "28px 28px 32px" }}>
+    <div data-print-layout="single-column" style={{ minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", padding: "28px 28px 32px" }}>
       {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 18 }}>
         <div>
@@ -89,6 +93,9 @@ export default function BannerTemplate() {
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={9} color={accent} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={9} color={accent} />{email}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><MapPin size={9} color={accent} />{addr}</span>
+            {website  && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Globe  size={9} color={accent} />{website}</span>}
+            {linkedin && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Link2  size={9} color={accent} />{linkedin}</span>}
+            {github   && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><GitFork size={9} color={accent} />{github}</span>}
           </div>
 
           {visible("skills") && (
@@ -146,7 +153,7 @@ export default function BannerTemplate() {
                   <div>
                     <p style={{ fontSize: 11, fontWeight: 700, color: "#1a1a1a" }}>{job.jobTitle}</p>
                     <p style={{ fontSize: 10, fontWeight: 600, color: accent }}>{job.employer}</p>
-                    {job.description && <div style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
+                    {job.description && <div className="resume-desc" style={{ fontSize: 10, color: "#555", lineHeight: 1.65, marginTop: 2 }} dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />}
                   </div>
                 </div>
               ))}

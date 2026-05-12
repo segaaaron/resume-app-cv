@@ -11,7 +11,7 @@ export default async function CoverLettersPage({ params }: { params: Promise<{ l
   const letters = await db.coverLetter.findMany({
     where: { userId: session.user.id },
     orderBy: { updatedAt: "desc" },
-    select: { id: true, title: true, colorScheme: true, updatedAt: true, createdAt: true },
+    select: { id: true, title: true, templateId: true, colorScheme: true, updatedAt: true, createdAt: true },
   })
 
   return <CoverLettersDashboard initialLetters={letters} />

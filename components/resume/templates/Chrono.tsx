@@ -1,11 +1,12 @@
 "use client"
 
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
 export default function ChronoTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -15,7 +16,7 @@ export default function ChronoTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div className="px-10 py-8" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="px-10 py-8" style={{ minHeight: "297mm" }}>
       {/* Header */}
       <div className="flex justify-between items-start mb-6 pb-5 border-b-2" style={{ borderColor: color }}>
         <div>
@@ -101,7 +102,7 @@ export default function ChronoTemplate() {
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center text-xs">
                   <span className="font-medium text-gray-800">{lang.name}</span>
-                  <span className="text-gray-400 text-[10px] capitalize">{lang.level.replace("_", " ")}</span>
+                  <span className="text-gray-400 text-[10px]">{lang.level.toUpperCase()}</span>
                 </div>
               ))}
             </div>
@@ -155,7 +156,7 @@ function TimelineItem({
       <h4 className="font-semibold text-[13px] text-gray-900">{title}</h4>
       <p className="text-xs font-medium mb-1" style={{ color }}>{subtitle}</p>
       {description && (
-        <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(description) }} />
+        <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(description) }} />
       )}
     </div>
   )

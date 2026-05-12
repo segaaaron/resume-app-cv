@@ -4,12 +4,44 @@ import { TEMPLATES } from "@/types/resume"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
+import Script from "next/script"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import UseTemplateButton from "@/components/marketing/UseTemplateButton"
 import { auth } from "@/lib/auth"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import { Lock } from "lucide-react"
+import { PRO_IDS } from "@/components/editor/template-switcher"
+
+const jsonLdBreadcrumbTemplates = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Inicio", item: "https://readycvv.com" },
+    { "@type": "ListItem", position: 2, name: "Plantillas de CV", item: "https://readycvv.com/es/templates" },
+  ],
+}
+
+const jsonLdItemList = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  name: "Professional Resume Templates — ReadyCV",
+  description: "129+ ATS-optimized professional resume templates for every industry",
+  url: "https://readycvv.com/templates",
+  numberOfItems: 129,
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://readycvv.com/templates#featured" },
+    { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://readycvv.com/templates#city" },
+    { "@type": "ListItem", position: 3, name: "Creative Resume Templates", url: "https://readycvv.com/templates#creative" },
+    { "@type": "ListItem", position: 4, name: "Business Resume Templates", url: "https://readycvv.com/templates#business" },
+    { "@type": "ListItem", position: 5, name: "Health & Science Resume Templates", url: "https://readycvv.com/templates#health" },
+    { "@type": "ListItem", position: 6, name: "Legal & Academic Resume Templates", url: "https://readycvv.com/templates#legal" },
+    { "@type": "ListItem", position: 7, name: "Hospitality Resume Templates", url: "https://readycvv.com/templates#hospitality" },
+    { "@type": "ListItem", position: 8, name: "Engineering & Tech Resume Templates", url: "https://readycvv.com/templates#engineering" },
+    { "@type": "ListItem", position: 9, name: "Arts & Media Resume Templates", url: "https://readycvv.com/templates#arts" },
+    { "@type": "ListItem", position: 10, name: "Other Professional Resume Templates", url: "https://readycvv.com/templates#other" },
+  ],
+}
 
 export async function generateMetadata({
   params,
@@ -22,29 +54,50 @@ export async function generateMetadata({
   return {
     title: t("title"),
     description: t("description"),
-    keywords: [
-      "plantillas de curriculum",
-      "plantillas cv profesionales",
-      "modelos de curriculum vitae",
-      "diseños de cv",
-      "plantillas resume",
-      "plantillas cv gratis",
-      "curriculum vitae moderno",
-      "plantillas ats",
-    ],
+    keywords: locale === "es"
+      ? [
+          "plantillas de curriculum vitae profesionales",
+          "plantillas cv ats compatible",
+          "modelos de curriculum vitae modernos",
+          "plantillas de cv con ia",
+          "diseños de cv 2025",
+          "plantillas resume ats",
+          "curriculum vitae creativo",
+          "plantillas cv para ingenieros",
+          "plantillas cv para diseñadores",
+          "plantillas cv para profesionales de salud",
+        ]
+      : [
+          "professional resume templates",
+          "ats-friendly resume templates",
+          "modern cv templates",
+          "resume templates 2025",
+          "ai resume templates",
+          "creative resume templates",
+          "engineering resume templates",
+          "tech resume templates",
+          "resume templates for designers",
+          "free resume templates download",
+        ],
     alternates: {
-      canonical: "https://readycv.app/templates",
+      canonical: `https://readycvv.com/${locale}/templates`,
+      languages: {
+        es: "https://readycvv.com/es/templates",
+        en: "https://readycvv.com/en/templates",
+      },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: "https://readycv.app/templates",
+      url: `https://readycvv.com/${locale}/templates`,
       type: "website",
+      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
+      images: ["https://readycvv.com/og-image.png"],
     },
   }
 }
@@ -88,6 +141,14 @@ const TEMPLATE_VISUALS: Record<string, {
   lumiere:      { bg: "#faf9f7", accent: "#b45309", headerBg: "#fff",     headerText: "#1a1a1a", style: "minimal" },
   prism:        { bg: "#fff",    accent: "#29b6d8", headerBg: "#1b2a3b",  headerText: "#29b6d8", style: "sidebar",   tag: "Foto" },
   consul:       { bg: "#fff",    accent: "#2563eb", headerBg: "#2563eb",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  cobalt:   { bg: "#fff",    accent: "#2a72d7", headerBg: "#0d2137",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  duality:  { bg: "#fff",    accent: "#2a5298", headerBg: "#2a5298",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  havana:   { bg: "#fff",    accent: "#c0645a", headerBg: "#c0645a",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  lisbon:   { bg: "#fff",    accent: "#2a72d7", headerBg: "#2a72d7",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  nautical: { bg: "#fff",    accent: "#1e3a5f", headerBg: "#1e3a5f",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  obsidian: { bg: "#1a1a2e", accent: "#7c3aed", headerBg: "#1a1a2e",  headerText: "#fff",    style: "dark",      tag: "Foto" },
+  tokyo:    { bg: "#fff",    accent: "#0D0D0D", headerBg: "#0D0D0D",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
+  vitae:    { bg: "#fff",    accent: "#1e2d3d", headerBg: "#1e2d3d",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
 }
 
 function TemplatePreview({ id, visual }: { id: string; visual: typeof TEMPLATE_VISUALS[string] }) {
@@ -257,7 +318,7 @@ export default async function TemplatesPage({
     ? await import("@/lib/db").then(({ db }) =>
         db.user.findUnique({
           where: { id: session.user.id },
-          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, trialEndsAt: true, role: true },
+          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
         })
       )
     : null
@@ -266,18 +327,28 @@ export default async function TemplatesPage({
     ? isSuperAdmin(dbUser.role) ||
       isActive(
         dbUser.plan,
-        dbUser.trialEndsAt,
         dbUser.subscriptionEndsAt,
         dbUser.subscriptionStatus
       )
     : false
 
-  const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
-  const ULTRA_IDS = ["rose", "minimal", "nautical", "wave", "cobalt", "banner", "duality", "obsidian", "vertex", "prestige"]
+  // PRO_IDS imported from @/components/editor/template-switcher (single source of truth)
+
+  const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
+    { key: "featured", label: "Destacados", ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"] },
+    { key: "city", label: "Ciudad", ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
+    { key: "creative", label: "Creative", ids: ["risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical"] },
+    { key: "business", label: "Business", ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","boardingpass","magazinespread","terminalcv","iosappcv"] },
+    { key: "health", label: "Health & Science", ids: ["medicalchart","vitalsigns","vetcv","fieldjournal"] },
+    { key: "legal", label: "Legal & Academia", ids: ["legalbrief","engraved","chalkboard","academiccv","psychologist"] },
+    { key: "hospitality", label: "Hostelería", ids: ["chefmenu","sommelier","hotelcv","bartendercv","postcardcv"] },
+    { key: "engineering", label: "Ingeniería & Tech", ids: ["codeeditor","civileng","mechanical","devopsterminal","processflow","neon","sharp","bauhaus"] },
+    { key: "arts", label: "Artes & Medios", ids: ["frontpage","vinylcv","callsheet","copywritermag","animatorcv"] },
+    { key: "other", label: "Otros", ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
+  ]
 
   const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
-  const ultraTemplates   = TEMPLATES.filter((t) => ULTRA_IDS.includes(t.id))
-  const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id) && !ULTRA_IDS.includes(t.id))
+  const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
 
   const TemplateCard = ({ template, locked = false }: { template: typeof TEMPLATES[number]; locked?: boolean }) => {
     const visual = TEMPLATE_VISUALS[template.id] ?? {
@@ -346,6 +417,16 @@ export default async function TemplatesPage({
 
   return (
     <div className="flex flex-col min-h-screen">
+      <Script
+        id="json-ld-breadcrumb-templates"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumbTemplates) }}
+      />
+      <Script
+        id="json-ld-itemlist-templates"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdItemList) }}
+      />
       <Navbar />
       <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-7xl mx-auto">
@@ -364,7 +445,7 @@ export default async function TemplatesPage({
 
           {/* Pro Diseños */}
           <div className="mb-12">
-            <div className="flex items-center gap-4 mb-6">
+            <div className="flex items-center gap-4 mb-8">
               <div className="flex-1 h-px bg-border" />
               <div className="flex items-center gap-2">
                 <span className="text-lg font-extrabold tracking-tight">{t("pro_label")}</span>
@@ -374,26 +455,23 @@ export default async function TemplatesPage({
               </div>
               <div className="flex-1 h-px bg-border" />
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-              {proTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
-            </div>
-          </div>
 
-          {/* Ultra Diseños */}
-          <div className="mb-12">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="flex-1 h-px bg-border" />
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold tracking-tight">{t("ultra_label")}</span>
-                <span className="text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-amber-500 to-orange-400 text-white px-2.5 py-0.5 rounded-full">
-                  Ultra
-                </span>
-              </div>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-              {ultraTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
-            </div>
+            {CATEGORIES.map((cat) => {
+              const catTemplates = proTemplates.filter((tmpl) => cat.ids.includes(tmpl.id))
+              if (catTemplates.length === 0) return null
+              return (
+                <div key={cat.key} id={cat.key} className="mb-10">
+                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+                    <span className="h-px flex-1 bg-border" />
+                    {cat.label}
+                    <span className="h-px flex-1 bg-border" />
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+                    {catTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
+                  </div>
+                </div>
+              )
+            })}
           </div>
 
           {/* Divider */}

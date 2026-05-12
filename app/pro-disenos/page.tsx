@@ -4,13 +4,12 @@ import { TEMPLATES } from "@/types/resume"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
+import { PRO_IDS } from "@/components/editor/template-switcher"
 
 export const metadata: Metadata = {
   title: "Pro Diseños — READY CV",
   description: "Plantillas premium con SVG personalizados y diseños únicos para destacar.",
 }
-
-const PRO_IDS = ["aurora", "helix", "lumiere", "prism", "consul"]
 
 const PRO_VISUALS: Record<string, {
   bg: string; accent: string; headerBg: string; headerText: string;
@@ -78,7 +77,7 @@ export default function ProDisenosPage() {
               Cada una creada a mano para causar una primera impresión imborrable.
             </p>
             <Button size="lg" className="bg-gradient-to-r from-violet-500 to-cyan-500 hover:from-violet-600 hover:to-cyan-600 text-white border-0" asChild>
-              <Link href="/register">Empezar gratis</Link>
+              <Link href="/register">Crear mi CV</Link>
             </Button>
           </div>
         </section>
@@ -139,7 +138,7 @@ export default function ProDisenosPage() {
         {/* CTA */}
         <section className="py-16 px-4 text-center">
           <h2 className="text-2xl font-bold mb-2">¿Listo para destacar con un diseño único?</h2>
-          <p className="text-muted-foreground mb-6">Crea tu CV con cualquiera de estas plantillas premium. Gratis para siempre.</p>
+          <p className="text-muted-foreground mb-6">Crea tu CV con cualquiera de estas plantillas premium. Cancela cuando quieras.</p>
           <Button size="lg" asChild>
             <Link href="/register">Crear mi CV ahora</Link>
           </Button>

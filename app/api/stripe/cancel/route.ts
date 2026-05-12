@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
+import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
+import { checkOrigin } from "@/lib/csrf"
 
-export async function POST() {
+export async function POST(req: Request) {
   if (!stripeEnabled() || !stripe) {
     return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
   }
 
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -34,6 +37,7 @@ export async function POST() {
     where: { id: session.user.id },
     data: { subscriptionStatus: "CANCELED" },
   })
+  purgeUserCache(session.user.id)
 
   return NextResponse.json({ success: true })
 }

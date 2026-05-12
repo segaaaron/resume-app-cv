@@ -5,11 +5,12 @@
  * Inspirado en el diseño clásico de dos columnas con foto circular.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork, Flag } from "lucide-react"
 
 export default function BlueprintTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies, volunteer } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -21,11 +22,11 @@ export default function BlueprintTemplate() {
 
   // Dot level indicator for languages
   const LEVEL_DOTS: Record<string, number> = {
-    elementary: 1, limited: 2, professional: 3, full_professional: 4, native: 5,
+    a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5,
   }
 
   return (
-    <div className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
+    <div data-print-layout="single-column" className="flex" style={{ minHeight: "297mm", fontFamily: "inherit" }}>
 
       {/* ── Sidebar ─────────────────────────────────────────────────────── */}
       <div className="shrink-0 flex flex-col" style={{ width: "195px", backgroundColor: "#fff" }}>
@@ -178,7 +179,7 @@ export default function BlueprintTemplate() {
                     {job.employer}{job.city ? `, ${job.city}` : ""}
                   </p>
                   {job.description && (
-                    <div className="text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}
@@ -204,7 +205,7 @@ export default function BlueprintTemplate() {
                     {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                   </p>
                   {edu.description && (
-                    <p className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">{edu.description}</p>
+                    <p className="resume-desc text-[11px] text-gray-600 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                   )}
                 </div>
               ))}
@@ -220,7 +221,7 @@ export default function BlueprintTemplate() {
                 <div key={proj.id} className="resume-entry">
                   <h4 className="font-bold text-[12px] text-gray-900">{proj.name}</h4>
                   {proj.description && (
-                    <p className="text-[11px] text-gray-600 leading-relaxed">{proj.description}</p>
+                    <p className="resume-desc text-[11px] text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                   )}
                 </div>
               ))}

@@ -15,15 +15,17 @@ export default function LanguagesSection() {
   const languages = sectionData.languages
 
   const LEVELS = [
-    { value: "elementary",       label: t("languages.elementary") },
-    { value: "limited",          label: t("languages.limited") },
-    { value: "professional",     label: t("languages.professional") },
-    { value: "full_professional", label: t("languages.full_professional") },
-    { value: "native",           label: t("languages.native") },
+    { value: "a1", label: t("languages.a1") },
+    { value: "a2", label: t("languages.a2") },
+    { value: "b1", label: t("languages.b1") },
+    { value: "b2", label: t("languages.b2") },
+    { value: "c1", label: t("languages.c1") },
+    { value: "c2", label: t("languages.c2") },
+    { value: "native", label: t("languages.native") },
   ]
 
   function add() {
-    updateSectionData("languages", [...languages, { id: nanoid(), name: "", level: "professional" as const }])
+    updateSectionData("languages", [...languages, { id: nanoid(), name: "", level: "b1" as const }])
   }
 
   function update(id: string, field: keyof LanguageItem, value: string) {

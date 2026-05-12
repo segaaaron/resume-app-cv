@@ -1,0 +1,90 @@
+import { notFound } from "next/navigation"
+import type { Metadata } from "next"
+import { db } from "@/lib/db"
+import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
+import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
+import PublicResumeView from "@/components/resume/PublicResumeView"
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; locale: string }>
+}): Promise<Metadata> {
+  const { slug, locale } = await params
+  const resume = await db.resume.findFirst({
+    where: { publicSlug: slug, isPublic: true },
+    select: { title: true, publicSlug: true },
+  })
+  if (!resume) return {}
+
+  const title = resume.title
+    ? `${resume.title} — CV | ReadyCV`
+    : "CV profesional | ReadyCV"
+  const description =
+    locale === "es"
+      ? `Mira el CV profesional creado con ReadyCV. Crea el tuyo con IA en minutos.`
+      : `View this professional resume created with ReadyCV. Build yours with AI in minutes.`
+  const url = `https://readycvv.com/${locale}/cv/${slug}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      type: "profile",
+      url,
+      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["https://readycvv.com/og-image.png"],
+    },
+    robots: { index: true, follow: false },
+  }
+}
+
+export default async function PublicCVPage({
+  params,
+}: {
+  params: Promise<{ slug: string; locale: string }>
+}) {
+  const { slug } = await params
+
+  const resume = await db.resume.findFirst({
+    where: { publicSlug: slug, isPublic: true },
+  })
+
+  if (!resume) notFound()
+
+  // Fire-and-forget view tracking
+  db.cVView.create({ data: { resumeId: resume.id } }).catch(() => {})
+
+  const sections = (resume.sections as unknown as ResumeSection[]) ?? DEFAULT_SECTIONS
+  const parsed = ResumeSectionsSchema.safeParse((resume.personalDetails as object) ?? {})
+  if (!parsed.success) notFound()
+  const sectionData: ResumeSections = parsed.data
+
+  const config: ResumeConfig = {
+    templateId: (resume.templateId as ResumeConfig["templateId"]) ?? "classic",
+    colorScheme: resume.colorScheme,
+    fontFamily: resume.fontFamily,
+    fontSize: resume.fontSize,
+    spacing: resume.spacing,
+    photoUrl: resume.photoUrl,
+    photoPosition: resume.photoPosition,
+    language: (resume.language as ResumeConfig["language"]) ?? "es",
+  }
+
+  return (
+    <PublicResumeView
+      title={resume.title}
+      sections={sections}
+      sectionData={sectionData}
+      config={config}
+    />
+  )
+}

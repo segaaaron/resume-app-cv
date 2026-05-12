@@ -5,11 +5,12 @@
  * Tendencia 2024-2026: diseño dinámico, energético, para perfiles tech y creativos.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function SparkTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -28,7 +29,7 @@ export default function SparkTemplate() {
   const darker = `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`
 
   return (
-    <div className="bg-white" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="single-column" className="bg-white" style={{ minHeight: "297mm" }}>
       {/* Diagonal gradient header */}
       <div
         className="relative px-10 pt-8 pb-8 overflow-hidden"
@@ -80,7 +81,7 @@ export default function SparkTemplate() {
                   </div>
                   <p className="text-xs font-semibold mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                   {job.description && (
-                    <div className="text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                    <div className="resume-desc text-xs text-gray-600 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                   )}
                 </div>
               ))}
@@ -146,7 +147,7 @@ export default function SparkTemplate() {
                   <div className="h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
                     <div className="h-full rounded-full" style={{
                       backgroundColor: color,
-                      width: lang.level === "native" ? "100%" : lang.level === "full_professional" ? "85%" : lang.level === "professional" ? "70%" : lang.level === "limited" ? "50%" : "30%"
+                      width: ({ a1: "17%", a2: "33%", b1: "50%", b2: "67%", c1: "83%", c2: "100%", native: "100%" } as Record<string, string>)[lang.level] ?? "50%"
                     }} />
                   </div>
                 </div>

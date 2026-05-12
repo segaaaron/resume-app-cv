@@ -1,0 +1,291 @@
+/* ============================================================
+   RESUME PRINT STYLES
+   Usado por:
+     - components/resume/PrintLayout.tsx (carga la hoja)
+     - Puppeteer (endpoint /api/resumes/[id]/pdf via /print)
+
+   FILOSOFÍA: estos estilos son mínimos a propósito. Cada template
+   maneja su propio diseño y espaciado interno. Este archivo solo
+   configura el contexto de impresión: tamaño de página, resets
+   básicos y fidelidad de color.
+   ============================================================ */
+
+
+/* 0. FUENTES AUTO-HOSPEDADAS
+   Cargadas localmente para evitar dependencia de red a Google Fonts en render time.
+   font-display: block — Chrome headless debe usar estas fuentes, nunca el fallback.
+   WOFF2 soportado en Chrome 36+. Puppeteer siempre usa Chrome moderno. */
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/inter-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/inter-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/inter-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/poppins-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/poppins-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/poppins-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/roboto-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Roboto';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/roboto-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/lato-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Lato';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/lato-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/montserrat-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/montserrat-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Montserrat';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/montserrat-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/playfair-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/playfair-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 400;
+  src: url('/fonts/playfair-400-italic.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Playfair Display';
+  font-style: italic;
+  font-weight: 700;
+  src: url('/fonts/playfair-700-italic.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Merriweather';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/merriweather-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Merriweather';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/merriweather-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/open-sans-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/open-sans-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Open Sans';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/open-sans-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/raleway-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/raleway-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Raleway';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/raleway-700.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/source-sans-400.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 600;
+  src: url('/fonts/source-sans-600.woff2') format('woff2');
+  font-display: block;
+}
+@font-face {
+  font-family: 'Source Sans 3';
+  font-style: normal;
+  font-weight: 700;
+  src: url('/fonts/source-sans-700.woff2') format('woff2');
+  font-display: block;
+}
+
+
+/* 1. TAMAÑO DE PÁGINA Y MÁRGENES
+   margin-bottom: 10mm — espacio de respiración inferior entre páginas.
+   margin-top: 0 SIEMPRE — el @page top margin es espacio FÍSICO fuera del DOM.
+   El sidebar linear-gradient está pintado sobre el elemento root (DOM), y Chrome
+   no puede extender ese gradient al margen físico: resultado sería franja blanca
+   sobre el sidebar en páginas 2+. El padding-top en páginas 2+ se maneja con
+   DOM spacers inyectados por resume.ts.
+   10mm bottom = 38px @ 96dpi — debe coincidir con PDF_BOTTOM_MARGIN_PX en constants.ts. */
+
+@page {
+  size: A4;
+  margin: 0 0 10mm 0;
+}
+
+
+/* 2. RESETS BÁSICOS
+   Evita que márgenes default del navegador empujen el contenido. */
+@media print {
+  html,
+  body {
+    margin: 0;
+    padding: 0;
+    background: white;
+  }
+}
+
+
+/* 3. WRAPPER DEL CV
+   .resume-pages: contenedor externo. Ancho fijo A4.
+   NO se toca min-height/height del hijo directo — cada template declara
+   su propio minHeight (ej. 297mm para sidebars full-bleed). El renderer
+   JS (resume.ts) gestiona el snapping exacto a múltiplos de A4. */
+@media print {
+  .resume-pages {
+    width: 210mm !important;
+    min-height: 0 !important;
+    height: auto !important;
+  }
+}
+
+
+/* 4. FLUJO DE CONTENIDO EN PÁGINAS
+   break-inside: auto fuerza flujo continuo: el contenido se divide naturalmente
+   en el borde de página. Sin esto, break-inside:avoid en entradas de sidebar
+   empuja bloques enteros a la siguiente página dejando gaps enormes en la
+   columna principal. El padding-top faltante en página 2+ lo corrige el
+   renderer JS (resume.ts) con margin-top en el primer entry. */
+@media print {
+  .resume-pages * {
+    break-inside: auto !important;
+    page-break-inside: auto !important;
+  }
+}
+
+
+/* 5. FIDELIDAD DE COLOR
+   Sin esta regla, Chrome omite todos los colores de fondo en impresión:
+   sidebars, banners, chips de habilidades, etc. quedan en blanco.
+   Aplicado globalmente dentro del CV para no perder ningún elemento. */
+@media print {
+  .resume-pages,
+  .resume-pages * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+
+
+/* 6. OCULTAR UI DEL EDITOR
+   El toolbar, botones y paneles del editor no deben aparecer en el PDF. */
+@media print {
+  .print-hide {
+    display: none !important;
+  }
+}

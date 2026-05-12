@@ -6,14 +6,14 @@
  * Ideal para ingenieros, devs, data scientists, perfiles técnicos.
  */
 import { fmtDesc } from "@/lib/utils"
-import { useResumeStore } from "@/stores/resumeStore"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const DARK  = "#0d1117"
 const DARK2 = "#161b22"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 52, advanced: 76, expert: 100 }
-const LANG_PCT:  Record<string, number> = { elementary: 18, limited: 38, professional: 58, full_professional: 80, native: 100 }
+const LANG_PCT:  Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 /* SVG circular progress ring */
 function RingProgress({ pct, color, size = 30 }: { pct: number; color: string; size?: number }) {
@@ -34,7 +34,8 @@ function RingProgress({ pct, color, size = 30 }: { pct: number; color: string; s
 }
 
 export default function HelixTemplate() {
-  const { sectionData, config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore()
+  const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
     skills, languages, certifications, projects, hobbies, volunteer,
@@ -46,7 +47,7 @@ export default function HelixTemplate() {
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
 
       {/* ── SIDEBAR ────────────────────────────────────────────────────────── */}
       <div style={{ width: "212px", flexShrink: 0, backgroundColor: DARK, position: "relative", overflow: "hidden" }}>
@@ -273,7 +274,7 @@ export default function HelixTemplate() {
                     {job.employer}{job.city ? ` · ${job.city}` : ""}
                   </p>
                   {job.description && (
-                    <div
+                    <div className="resume-desc"
                       style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }}
                     />
@@ -306,7 +307,7 @@ export default function HelixTemplate() {
                     {edu.institution}{edu.city ? `, ${edu.city}` : ""}
                   </p>
                   {edu.description && (
-                    <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}>{edu.description}</p>
+                    <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(edu.description) }} />
                   )}
                 </div>
               ))}
@@ -328,7 +329,7 @@ export default function HelixTemplate() {
                   <p style={{ fontSize: "11px", fontWeight: 700, color: DARK }}>{proj.name}</p>
                   {proj.role && <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{proj.role}</p>}
                   {proj.description && (
-                    <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}>{proj.description}</p>
+                    <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />
                   )}
                 </div>
               ))}
@@ -352,7 +353,7 @@ export default function HelixTemplate() {
                   </div>
                   <p style={{ fontSize: "10.5px", fontWeight: 600, color }}>{vol.organization}</p>
                   {vol.description && (
-                    <p style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }}>{vol.description}</p>
+                    <p className="resume-desc" style={{ fontSize: "10.5px", color: "#5a5a6a", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />
                   )}
                 </div>
               ))}

@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
@@ -10,21 +10,33 @@ import { z } from "zod"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Loader2 } from "lucide-react"
+import { Loader2, Eye, EyeOff, Zap, AlertTriangle, Lock } from "lucide-react"
 import { toast } from "sonner"
 import { useTranslations, useLocale } from "next-intl"
+
+type FormState = "login" | "challenge" | "blocked"
 
 export default function LoginForm() {
   const t = useTranslations("auth.login")
   const router = useRouter()
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const planParam = searchParams.get("plan")
   const [googleLoading, setGoogleLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [formState, setFormState] = useState<FormState>("login")
+  const [pendingEmail, setPendingEmail] = useState("")
+  const [pendingPassword, setPendingPassword] = useState("")
+  const [codeSent, setCodeSent] = useState(false)
+  const [sendingCode, setSendingCode] = useState(false)
+  const [verifyingCode, setVerifyingCode] = useState(false)
+  const [otp, setOtp] = useState("")
+  const [blockedUntil, setBlockedUntil] = useState<Date | null>(null)
 
   const schema = z.object({
     email: z.string().email(t("email_invalid")),
     password: z.string().min(1, t("password_required")),
   })
-
   type FormData = z.infer<typeof schema>
 
   const {
@@ -40,22 +52,205 @@ export default function LoginForm() {
       redirect: false,
     })
 
-    if (result?.error) {
+    if (result?.code === "user_not_found") {
+      toast.error(t("error_user_not_found"), {
+        action: {
+          label: t("register_link"),
+          onClick: () => router.push(planParam ? `/${locale}/register?plan=${planParam}` : `/${locale}/register`),
+        },
+        duration: 6000,
+      })
+    } else if (result?.code === "invalid_password") {
+      toast.error(t("error_invalid_password"))
+    } else if (result?.code === "active_session") {
+      setPendingEmail(data.email)
+      setPendingPassword(data.password)
+      setFormState("challenge")
+    } else if (result?.code === "session_challenge_blocked") {
+      setFormState("blocked")
+    } else if (result?.error) {
       toast.error(t("error"))
     } else {
-      router.push(`/${locale}/dashboard/resumes`)
+      router.push(planParam ? `/${locale}/checkout?plan=${planParam}` : `/${locale}/dashboard/resumes`)
       router.refresh()
+    }
+  }
+
+  async function sendCode() {
+    setSendingCode(true)
+    try {
+      const res = await fetch("/api/auth/session-challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail }),
+      })
+      const data = await res.json()
+      if (data.blocked) {
+        setBlockedUntil(new Date(data.blockedUntil))
+        setFormState("blocked")
+        return
+      }
+      setCodeSent(true)
+      toast.success(t("code_sent"))
+    } finally {
+      setSendingCode(false)
+    }
+  }
+
+  async function verifyCode() {
+    if (otp.length !== 6) return
+    setVerifyingCode(true)
+    try {
+      const res = await fetch("/api/auth/session-challenge/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: pendingEmail, code: otp }),
+      })
+      const data = await res.json()
+
+      if (data.blocked) {
+        setBlockedUntil(new Date(data.blockedUntil))
+        setFormState("blocked")
+        return
+      }
+      if (data.error === "expired") {
+        toast.error(t("code_expired"))
+        setCodeSent(false)
+        setOtp("")
+        return
+      }
+      if (data.error === "invalid") {
+        toast.error(t("code_invalid").replace("{attemptsLeft}", String(data.attemptsLeft)))
+        setOtp("")
+        return
+      }
+      if (data.success) {
+        const result = await signIn("credentials", {
+          email: pendingEmail,
+          password: pendingPassword,
+          redirect: false,
+        })
+        if (result?.ok && !result.error) {
+          router.push(planParam ? `/${locale}/checkout?plan=${planParam}` : `/${locale}/dashboard/resumes`)
+          router.refresh()
+        } else {
+          toast.error(t("error"))
+          setFormState("login")
+        }
+      }
+    } finally {
+      setVerifyingCode(false)
     }
   }
 
   async function loginWithGoogle() {
     setGoogleLoading(true)
-    await signIn("google", { callbackUrl: `/${locale}/dashboard/resumes` })
+    const callbackUrl = planParam
+      ? `/${locale}/checkout?plan=${planParam}`
+      : `/${locale}/dashboard/resumes`
+    await signIn("google", { callbackUrl })
+  }
+
+  if (formState === "blocked") {
+    return (
+      <div className="w-full max-w-md">
+        <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className="h-14 w-14 rounded-2xl bg-red-100 flex items-center justify-center">
+              <Lock className="h-7 w-7 text-red-600" />
+            </div>
+            <h2 className="text-xl font-bold">{t("account_blocked_title")}</h2>
+            <p className="text-sm text-muted-foreground">
+              {blockedUntil
+                ? t("account_blocked_until").replace("{time}", blockedUntil.toLocaleTimeString(locale === "es" ? "es-ES" : "en-US", { hour: "2-digit", minute: "2-digit" }))
+                : t("error_session_blocked")}
+            </p>
+            <button
+              onClick={() => { setFormState("login"); setOtp(""); setCodeSent(false) }}
+              className="text-sm text-primary hover:underline mt-2"
+            >
+              {t("back_to_login")}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (formState === "challenge") {
+    return (
+      <div className="w-full max-w-md">
+        <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
+          <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 mb-6">
+            <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-sm font-semibold text-amber-900">{t("active_session_title")}</p>
+              <p className="text-xs text-amber-700 mt-0.5">{t("active_session_subtitle")}</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            {!codeSent ? (
+              <Button onClick={sendCode} disabled={sendingCode} className="w-full">
+                {sendingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {sendingCode ? t("sending_code") : t("send_code")}
+              </Button>
+            ) : (
+              <>
+                <div>
+                  <Label htmlFor="otp">{t("code_label")}</Label>
+                  <Input
+                    id="otp"
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    placeholder={t("code_placeholder")}
+                    value={otp}
+                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                    className="mt-1 text-center text-lg tracking-widest font-mono"
+                    autoFocus
+                  />
+                </div>
+                <Button
+                  onClick={verifyCode}
+                  disabled={verifyingCode || otp.length !== 6}
+                  className="w-full"
+                >
+                  {verifyingCode && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {verifyingCode ? t("verifying") : t("verify_and_enter")}
+                </Button>
+                <button
+                  type="button"
+                  onClick={() => { setCodeSent(false); setOtp("") }}
+                  className="w-full text-sm text-muted-foreground hover:text-foreground"
+                >
+                  {t("send_code")}
+                </button>
+              </>
+            )}
+
+            <button
+              type="button"
+              onClick={() => { setFormState("login"); setCodeSent(false); setOtp("") }}
+              className="w-full text-sm text-muted-foreground hover:text-foreground"
+            >
+              {t("back_to_login")}
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
     <div className="w-full max-w-md">
       <div className="bg-white border border-border rounded-2xl p-5 sm:p-8 shadow-sm">
+        {planParam && (
+          <div className="flex items-center gap-2 bg-primary/10 text-primary rounded-xl px-4 py-3 mb-5 text-sm font-medium">
+            <Zap className="h-4 w-4 shrink-0" />
+            {t("plan_pro_banner")}
+          </div>
+        )}
         <h1 className="text-2xl font-bold text-center mb-6">{t("title")}</h1>
 
         <Button
@@ -101,13 +296,24 @@ export default function LoginForm() {
 
           <div>
             <Label htmlFor="password">{t("password")}</Label>
-            <Input
-              id="password"
-              type="password"
-              placeholder={t("password_placeholder")}
-              className="mt-1"
-              {...register("password")}
-            />
+            <div className="relative mt-1">
+              <Input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                autoComplete="current-password"
+                placeholder={t("password_placeholder")}
+                className="pr-10"
+                {...register("password")}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
             {errors.password && <p className="text-xs text-destructive mt-1">{errors.password.message}</p>}
           </div>
 
@@ -119,7 +325,10 @@ export default function LoginForm() {
 
         <p className="text-center text-sm text-muted-foreground mt-4">
           {t("no_account")}{" "}
-          <Link href="/register" className="text-primary font-medium hover:underline">
+          <Link
+            href={planParam ? `/register?plan=${planParam}` : "/register"}
+            className="text-primary font-medium hover:underline"
+          >
             {t("register_link")}
           </Link>
         </p>
