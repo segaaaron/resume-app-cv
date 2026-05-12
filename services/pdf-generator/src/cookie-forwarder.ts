@@ -24,7 +24,7 @@ type ForwardedCookie = {
   path?: string
 }
 
-function parseCookies(cookieHeader: string, hostname: string, appUrl: string): ForwardedCookie[] {
+export function parseCookies(cookieHeader: string, hostname: string, appUrl: string): ForwardedCookie[] {
   return cookieHeader
     .split(";")
     .map((c) => {
