@@ -86,3 +86,7 @@ temp/
 
 # ── Internal docs (private) ───────────────────────────────────────────────────
 docs/
+
+# ── Project-specific ignores ──────────────────────────────────────────────────
+CLAUDE.md
+.env.example
