@@ -39,13 +39,9 @@ export function evaluateImages(): Promise<void[]> {
   return Promise.all(
     Array.from(document.images)
       .filter((img) => !img.complete)
-      .map(waitForImageLoad)
+      .map((img) => new Promise<void>((resolve) => {
+        img.onload = () => resolve()
+        img.onerror = () => resolve()
+      }))
   )
-}
-
-function waitForImageLoad(img: HTMLImageElement): Promise<void> {
-  return new Promise<void>((resolve) => {
-    img.onload = () => resolve()
-    img.onerror = () => resolve()
-  })
 }
