@@ -53,4 +53,4 @@ RUN groupadd -r pptruser && useradd -r -g pptruser -G audio,video pptruser \
 
 USER pptruser
 
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/server.js"]
