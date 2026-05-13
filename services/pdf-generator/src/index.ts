@@ -1,1 +1,3 @@
-import "./server"
+import { startServer } from "./server"
+
+startServer()

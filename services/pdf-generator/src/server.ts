@@ -1,4 +1,5 @@
 import { buildApp } from "./app"
+import { getBrowser } from "./browser/lifecycle"
 
 const PORT = parseInt(process.env.PORT ?? "3001", 10)
 
@@ -13,6 +14,7 @@ export function startServer(): void {
   app.listen({ port: PORT, host: "0.0.0.0" }, (err) => {
     if (err) { console.error("[server] Failed to start:", err); process.exit(1) }
     console.log(`[server] listening on port ${PORT}`)
+    getBrowser().then(() => console.log("[server] Chrome pre-warmed")).catch((err) => console.warn("[server] Chrome pre-warm failed:", err))
   })
 }
 
