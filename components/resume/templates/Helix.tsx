@@ -8,6 +8,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 const DARK  = "#0d1117"
 const DARK2 = "#161b22"
@@ -42,7 +43,8 @@ export default function HelixTemplate() {
   } = sectionData
   const color   = config.colorScheme
   const label   = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
 
@@ -139,7 +141,7 @@ export default function HelixTemplate() {
 
           {/* CONTACT */}
           <div style={{ width: "100%", padding: "0 18px", marginBottom: 18 }}>
-            <HelixSideTitle title={config.language === "en" ? "Contact" : "Contacto"} color={color} />
+            <HelixSideTitle title={L.contact} color={color} />
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {pd.email    && <SideContact icon={<Mail size={9} />} text={pd.email} color={color} />}
               {pd.phone    && <SideContact icon={<Phone size={9} />} text={pd.phone} color={color} />}

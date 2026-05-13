@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function BauhausTemplate() {
   const { config, sections } = useResumeStore()
@@ -13,7 +14,8 @@ export default function BauhausTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -61,7 +63,7 @@ export default function BauhausTemplate() {
             {/* Main */}
             <div className="flex-1">
               {visible("workExperience") && workExperience.length > 0 && (
-                <BauhausSection title="Experiencia" color={color}>
+                <BauhausSection title={L.experience} color={color}>
                   {workExperience.map((job) => (
                     <div key={job.id} className="resume-entry mb-4">
                       <div className="flex items-start gap-2.5">
@@ -122,7 +124,7 @@ export default function BauhausTemplate() {
             {/* Side */}
             <div className="w-40 shrink-0">
               {visible("skills") && skills.length > 0 && (
-                <BauhausSection title="Skills" color={color}>
+                <BauhausSection title={L.skills} color={color}>
                   <div className="space-y-2">
                     {skills.map((skill) => (
                       <div key={skill.id} className="flex items-center gap-2">
@@ -146,7 +148,7 @@ export default function BauhausTemplate() {
               )}
 
               {visible("certifications") && certifications.length > 0 && (
-                <BauhausSection title="Certs" color={color}>
+                <BauhausSection title={L.certifications} color={color}>
                   {certifications.map((cert) => (
                     <div key={cert.id} className="mb-2.5">
                       <p className="text-xs font-black uppercase text-gray-800">{cert.name}</p>

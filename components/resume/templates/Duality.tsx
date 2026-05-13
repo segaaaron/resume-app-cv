@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function DualityTemplate() {
   const { config, sections } = useResumeStore()
@@ -37,7 +38,8 @@ export default function DualityTemplate() {
 
   const dark = "#1a2744"
   const cyan = "#00bcd4"
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 
   return (
@@ -48,13 +50,13 @@ export default function DualityTemplate() {
         <p style={{ fontSize: 12, color: cyan, fontWeight: 600, marginBottom: 16 }}>{title}</p>
 
         {visible("summary") && (
-          <LeftSection title="About Me" color={cyan}>
+          <LeftSection title={L.aboutMe} color={cyan}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </LeftSection>
         )}
 
         {visible("workExperience") && (
-          <LeftSection title="Experience" color={cyan}>
+          <LeftSection title={L.experience} color={cyan}>
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -69,7 +71,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("skills") && (
-          <LeftSection title="Pro Skills" color={cyan}>
+          <LeftSection title={L.skills} color={cyan}>
             {sks.map((sk) => (
               <div key={sk.id} style={{ marginBottom: 7 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -85,7 +87,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("hobbies") && (
-          <LeftSection title="Hobbies" color={cyan}>
+          <LeftSection title={L.hobbies} color={cyan}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.7 }}>{hobbies || "Photography, Cycling, Travel"}</p>
           </LeftSection>
         )}
@@ -104,7 +106,7 @@ export default function DualityTemplate() {
           </div>
         </div>
 
-        <RightSection title="Contact">
+        <RightSection title={L.contact}>
           <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 9.5 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={cyan} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={cyan} />{email}</span>
@@ -114,7 +116,7 @@ export default function DualityTemplate() {
         </RightSection>
 
         {visible("education") && (
-          <RightSection title="Education">
+          <RightSection title={L.education}>
             {edus.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 10, fontWeight: 700 }}>{edu.degree}</p>
@@ -126,7 +128,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("languages") && (
-          <RightSection title="Language">
+          <RightSection title={L.languages}>
             {langs.map((l) => (
               <p key={l.id} style={{ fontSize: 9.5, marginBottom: 4, opacity: 0.85 }}>{l.name}</p>
             ))}

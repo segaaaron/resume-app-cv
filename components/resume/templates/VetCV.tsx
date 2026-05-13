@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function VetCVTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function VetCVTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const sand = "#f5e6cc"
   const ink = "#3b2a1a"
@@ -186,7 +188,7 @@ export default function VetCVTemplate() {
             </>
           )}
 
-          <H>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H>{L.contact}</H>
           <div style={{ fontSize: 11.5, lineHeight: 1.85 }}>
             {pd.email && <div>✉ {pd.email}</div>}
             {pd.phone && <div>📞 {pd.phone}</div>}

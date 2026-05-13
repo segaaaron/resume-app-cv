@@ -7,6 +7,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function SidebarTemplate() {
   const { config, sections } = useResumeStore()
@@ -14,7 +15,8 @@ export default function SidebarTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -44,7 +46,7 @@ export default function SidebarTemplate() {
 
         {/* Contact */}
         <div>
-          <SideLabel label={config.language === "en" ? "Contact" : "Contacto"} />
+          <SideLabel label={L.contact} />
           <div className="mt-2 space-y-1.5">
             {pd.email && <SideContact icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} />}
             {pd.phone && <SideContact icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} />}
@@ -118,7 +120,7 @@ export default function SidebarTemplate() {
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
-          <SidebarSection title="Experiencia" color={color}>
+          <SidebarSection title={L.experience} color={color}>
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry mb-4">
                 <div className="flex justify-between items-baseline gap-2">

@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function BartenderCVTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function BartenderCVTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const black = "#0d0a0a"
   const neon = config.colorScheme || "#ff2e63"
@@ -199,7 +201,7 @@ export default function BartenderCVTemplate() {
           )}
 
           {/* Contact */}
-          <H>{config.language === "en" ? "Contact" : "Reservas"}</H>
+          <H>{L.contact}</H>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10.5, lineHeight: 1.85, color: cyan }}>
             {pd.email && <div>{pd.email}</div>}
             {pd.phone && <div>{pd.phone}</div>}

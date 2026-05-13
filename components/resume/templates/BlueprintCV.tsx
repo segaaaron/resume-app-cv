@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function BlueprintCVTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function BlueprintCVTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const blue = "#0d3b66"
   const lineColor = "rgba(255,255,255,0.18)"
@@ -23,7 +25,7 @@ export default function BlueprintCVTemplate() {
   const eduLabel = label("education").toUpperCase()
   const projLabel = label("projects").toUpperCase()
   const skillLabel = label("skills").toUpperCase()
-  const contactLabel = config.language === "en" ? "CONTACT" : "CONTACTO"
+  const contactLabel = L.contact.toUpperCase()
 
   return (
     <div data-print-layout="single-column" style={{

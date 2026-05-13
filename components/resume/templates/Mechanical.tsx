@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function MechanicalTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function MechanicalTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const paper = "#fafaf6"
   const ink = "#101010"
@@ -201,7 +203,7 @@ export default function MechanicalTemplate() {
             </>
           )}
 
-          <H n="④">{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H n="④">{L.contact}</H>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10.5, lineHeight: 1.85 }}>
             {pd.email && <div>{pd.email}</div>}
             {pd.phone && <div>{pd.phone}</div>}

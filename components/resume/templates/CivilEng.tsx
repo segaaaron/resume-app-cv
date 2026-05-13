@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CivilEngTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function CivilEngTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const cream = "#f3eddc"
   const ink = "#1a1f17"
@@ -114,7 +116,7 @@ export default function CivilEngTemplate() {
                 </text>
               </svg>
 
-              <H>{config.language === "en" ? "Experience" : "Experiencia"}</H>
+              <H>{L.experience}</H>
               {workExperience.map((job) => {
                 const start = job.startDate?.match(/\d{4}/)?.[0] ?? ""
                 const end = job.currentlyWorking ? present : (job.endDate?.match(/\d{4}/)?.[0] ?? "")
@@ -209,7 +211,7 @@ export default function CivilEngTemplate() {
             </>
           )}
 
-          <H>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H>{L.contact}</H>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10.5, lineHeight: 1.85 }}>
             {pd.email && <div>{pd.email}</div>}
             {pd.phone && <div>{pd.phone}</div>}

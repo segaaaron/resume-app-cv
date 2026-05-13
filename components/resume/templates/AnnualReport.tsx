@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function AnnualReportTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function AnnualReportTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const ink = "#0a1f44"
   const red = config.colorScheme || "#c72e1f"
@@ -185,7 +187,7 @@ export default function AnnualReportTemplate() {
             </>
           )}
 
-          <H style={{ marginTop: 16 }}>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H style={{ marginTop: 16 }}>{L.contact}</H>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, lineHeight: 1.85 }}>
             {pd.email && <div>{pd.email}</div>}
             {pd.phone && <div>{pd.phone}</div>}

@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function ObsidianTemplate() {
   const { config, sections } = useResumeStore()
@@ -39,7 +40,8 @@ export default function ObsidianTemplate() {
 
   const darkBg = "#0f1e2d"
   const blue = "#3b82f6"
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
   const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
@@ -67,7 +69,7 @@ export default function ObsidianTemplate() {
           <h1 style={{ fontSize: 22, fontWeight: 900, textAlign: "center", marginBottom: 2 }}>{name}</h1>
           <p style={{ fontSize: 10, textAlign: "center", color: blue, fontWeight: 600, marginBottom: 18 }}>{title}</p>
 
-          <DarkSection title="Contact">
+          <DarkSection title={L.contact}>
             <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 9.5 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={blue} />{phone}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={blue} />{email}</span>
@@ -79,7 +81,7 @@ export default function ObsidianTemplate() {
           </DarkSection>
 
           {visible("skills") && (
-            <DarkSection title="Skills">
+            <DarkSection title={L.skills}>
               {sks.map((sk) => (
                 <div key={sk.id} style={{ marginBottom: 7 }}>
                   <span style={{ fontSize: 9.5, opacity: 0.85 }}>{sk.name}</span>
@@ -92,7 +94,7 @@ export default function ObsidianTemplate() {
           )}
 
           {visible("languages") && (
-            <DarkSection title="Languages">
+            <DarkSection title={L.languages}>
               {langs.map((l) => (
                 <div key={l.id} style={{ marginBottom: 7 }}>
                   <span style={{ fontSize: 9.5, opacity: 0.85 }}>{l.name}</span>
@@ -105,7 +107,7 @@ export default function ObsidianTemplate() {
           )}
 
           {visible("hobbies") && (
-            <DarkSection title="Hobbies">
+            <DarkSection title={L.hobbies}>
               <p style={{ fontSize: 9.5, opacity: 0.8, lineHeight: 1.7 }}>{hobbies || "Reading, Gaming, Hiking"}</p>
             </DarkSection>
           )}
@@ -114,13 +116,13 @@ export default function ObsidianTemplate() {
         {/* Right (white) */}
         <div style={{ flex: 1, padding: "28px 26px 32px 30px" }}>
           {visible("summary") && (
-            <LightSection title="Profile" color={blue}>
+            <LightSection title={L.profile} color={blue}>
               <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
             </LightSection>
           )}
 
           {visible("workExperience") && (
-            <LightSection title="Work Experience" color={blue}>
+            <LightSection title={L.experience} color={blue}>
               {jobs.map((job) => (
                 <div key={job.id} className="resume-entry" style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -135,7 +137,7 @@ export default function ObsidianTemplate() {
           )}
 
           {visible("education") && (
-            <LightSection title="Education" color={blue}>
+            <LightSection title={L.education} color={blue}>
               {edus.map((edu) => (
                 <div key={edu.id} className="resume-entry" style={{ marginBottom: 8 }}>
                   <p style={{ fontSize: 11, fontWeight: 700, color: "#1a1a1a" }}>{edu.degree}</p>

@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CobaltTemplate() {
   const { config, sections } = useResumeStore()
@@ -37,7 +38,8 @@ export default function CobaltTemplate() {
 
   const sidebar = "#0d2137"
   const accent = "#1e88e5"
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 
   return (
@@ -55,7 +57,7 @@ export default function CobaltTemplate() {
           </div>
         </div>
 
-        <SideHead text="Contact" />
+        <SideHead text={L.contact} />
         <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 9.5, marginBottom: 16 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={accent} />{phone}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={accent} />{email}</span>
@@ -65,7 +67,7 @@ export default function CobaltTemplate() {
 
         {visible("languages") && (
           <>
-            <SideHead text="Languages" />
+            <SideHead text={L.languages} />
             <div style={{ marginBottom: 16 }}>
               {langs.map((l) => <p key={l.id} style={{ fontSize: 9.5, marginBottom: 3, opacity: 0.85 }}>{l.name}</p>)}
             </div>
@@ -74,7 +76,7 @@ export default function CobaltTemplate() {
 
         {visible("skills") && (
           <>
-            <SideHead text="Skills" />
+            <SideHead text={L.skills} />
             <div style={{ marginBottom: 16 }}>
               {sks.map((sk) => (
                 <div key={sk.id} style={{ marginBottom: 7 }}>
@@ -90,7 +92,7 @@ export default function CobaltTemplate() {
 
         {visible("hobbies") && (
           <>
-            <SideHead text="Hobbies" />
+            <SideHead text={L.hobbies} />
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {(hobbies || "Gym, Gaming, Música").split(",").map((h, i) => (
                 <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
@@ -109,13 +111,13 @@ export default function CobaltTemplate() {
         <p style={{ fontSize: 12, color: accent, fontWeight: 600, marginBottom: 14 }}>{title}</p>
 
         {visible("summary") && (
-          <MainSection title="About" color={accent}>
+          <MainSection title={L.aboutMe} color={accent}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </MainSection>
         )}
 
         {visible("workExperience") && (
-          <MainSection title="Experience" color={accent}>
+          <MainSection title={L.experience} color={accent}>
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -130,7 +132,7 @@ export default function CobaltTemplate() {
         )}
 
         {visible("education") && (
-          <MainSection title="Education" color={accent}>
+          <MainSection title={L.education} color={accent}>
             {edus.map((edu) => (
               <div key={edu.id} className="resume-entry" style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#1a1a1a" }}>{edu.degree}</p>

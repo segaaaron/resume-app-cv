@@ -7,6 +7,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function GlassTemplate() {
   const { config, sections } = useResumeStore()
@@ -14,7 +15,8 @@ export default function GlassTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -57,14 +59,14 @@ export default function GlassTemplate() {
         <div className="flex-1 space-y-4">
           {visible("summary") && summary && (
             <GlassCard color={color}>
-              <GlassTitle title="Perfil" color={color} />
+              <GlassTitle title={L.profile} color={color} />
               <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </GlassCard>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title="Experiencia" color={color} />
+              <GlassTitle title={L.experience} color={color} />
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry pl-3 border-l-2" style={{ borderColor: color + "70" }}>
@@ -106,7 +108,7 @@ export default function GlassTemplate() {
         <div className="w-44 shrink-0 space-y-4">
           {visible("skills") && skills.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title="Skills" color={color} />
+              <GlassTitle title={L.skills} color={color} />
               <div className="space-y-2">
                 {skills.map((skill) => (
                   <div key={skill.id}>
@@ -149,7 +151,7 @@ export default function GlassTemplate() {
 
           {visible("hobbies") && hobbies && (
             <GlassCard color={color}>
-              <GlassTitle title="Intereses" color={color} />
+              <GlassTitle title={L.interests} color={color} />
               <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
             </GlassCard>
           )}

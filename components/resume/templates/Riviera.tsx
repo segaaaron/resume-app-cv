@@ -8,6 +8,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function RivieraTemplate() {
   const { config, sections } = useResumeStore()
@@ -15,7 +16,8 @@ export default function RivieraTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies, volunteer } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
@@ -59,7 +61,7 @@ export default function RivieraTemplate() {
         <div className="flex-1 px-5 pt-5 pb-6 flex flex-col gap-5">
 
           {/* Contact */}
-          <SideBlock title={config.language === "en" ? "Contact" : "Contacto"} color={color}>
+          <SideBlock title={L.contact} color={color}>
             <div className="space-y-2">
               {pd.email && <ContactRow icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} color={color} />}
               {pd.phone && <ContactRow icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} color={color} />}

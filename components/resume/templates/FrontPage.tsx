@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function FrontPageTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function FrontPageTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const paper = "#f6f1e4"
   const ink = "#0a0a0a"
@@ -151,7 +153,7 @@ export default function FrontPageTemplate() {
           </>
         )}
 
-        <H red={red}>{config.language === "en" ? "Contact" : "Contacto"}</H>
+        <H red={red}>{L.contact}</H>
         {pd.email && <Line ink={ink}>{pd.email}</Line>}
         {pd.phone && <Line ink={ink}>{pd.phone}</Line>}
         {(pd.city || pd.country) && <Line ink={ink}>{[pd.city, pd.country].filter(Boolean).join(", ")}</Line>}

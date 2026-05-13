@@ -24,7 +24,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
 
   try {
-    const result = await registrationService.requestOtp({ ...parsed.data, ipAddress: ip })
+    const result = await registrationService.requestOtp({ ...parsed.data, ageConsent: parsed.data.ageConsent as true, ipAddress: ip })
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

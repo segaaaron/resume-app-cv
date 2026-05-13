@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function ChefMenuTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function ChefMenuTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const cream = "#f4ecd8"
   const ink = "#1a120a"
@@ -49,13 +51,13 @@ export default function ChefMenuTemplate() {
     return roman[courseNum - 1] || String(courseNum)
   }
 
-  const summaryLabel = config.language === "en" ? "About me" : "Sobre mí"
+  const summaryLabel = L.aboutMe
   const expLabel = label("workExperience")
   const skillsLabel = label("skills")
   const eduLabel = label("education")
   const certLabel = label("certifications")
   const langLabel = label("languages")
-  const contactLabel = config.language === "en" ? "Contact" : "Reservas"
+  const contactLabel = L.contact
 
   return (
     <div data-print-layout="single-column" style={{

@@ -400,7 +400,8 @@
         "password_min": "Mínimo 8 caracteres",
         "password_uppercase": "Debe contener al menos una mayúscula",
         "password_lowercase": "Debe contener al menos una minúscula",
-        "password_number": "Debe contener al menos un número"
+        "password_number": "Debe contener al menos un número",
+        "unknown_error": "Error inesperado. Intenta de nuevo."
       },
       "register_banner": {
         "credentials": "Ya tienes una cuenta con este email.",
@@ -410,6 +411,20 @@
       },
       "not_registered": "Este email no está registrado en READY CV.",
       "not_registered_cta": "Crear una cuenta"
+    },
+    "session_expired": "Tu sesión expiró. Inicia sesión de nuevo.",
+    "verify_email": {
+      "loading": "Verificando tu email...",
+      "success_title": "Email verificado",
+      "success_message": "Tu cuenta está activa. Ya puedes usar todas las funciones de READY CV.",
+      "success_cta": "Ir al dashboard",
+      "invalid_title": "Enlace inválido",
+      "invalid_message": "Este enlace de verificación no es válido o ya fue utilizado.",
+      "expired_title": "Enlace expirado",
+      "expired_message": "Este enlace de verificación expiró (válido por 24 horas). Regístrate de nuevo o contacta soporte.",
+      "error_title": "Error de verificación",
+      "error_message": "Algo salió mal. Intenta de nuevo o contacta soporte.",
+      "back_cta": "Volver al dashboard"
     }
   },
   "ai_features": {
@@ -1377,5 +1392,14 @@
     "climax_cta": "Crear mi CV",
     "climax_note": "Plan Pro desde $15/mes · Sin permanencia",
     "nav_cta": "Crear mi CV"
+  },
+  "common": {
+    "not_found_title": "404",
+    "not_found_message": "La página que buscas no existe.",
+    "not_found_back": "Volver al inicio",
+    "error_title": "500",
+    "error_message": "Algo salió mal. Por favor intenta de nuevo.",
+    "retry": "Reintentar",
+    "home": "Ir al inicio"
   }
 }

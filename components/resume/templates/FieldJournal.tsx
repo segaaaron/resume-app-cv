@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function FieldJournalTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function FieldJournalTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const paper = "#ede2c8"
   const ink = "#1f1a0e"
@@ -200,7 +202,7 @@ export default function FieldJournalTemplate() {
             </>
           )}
 
-          <H>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H>{L.contact}</H>
           <p style={{ margin: 0, fontFamily: "ui-monospace, monospace", fontSize: 10.5, lineHeight: 1.85 }}>
             {pd.email && <>{pd.email}<br /></>}
             {pd.phone && <>{pd.phone}<br /></>}

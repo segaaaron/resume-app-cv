@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 function SL({ children }: { children: React.ReactNode }) {
   return (
@@ -20,7 +21,8 @@ export default function IOSAppCVTemplate() {
   const accent = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const bg = "#f2f2f7"
   const card = "#ffffff"
@@ -82,7 +84,7 @@ export default function IOSAppCVTemplate() {
         {[
           [yearsExp, config.language === "en" ? "Years" : "Años"],
           [`${workExperience.length}`, config.language === "en" ? "Companies" : "Empresas"],
-          [`${skills.length}`, config.language === "en" ? "Skills" : "Skills"],
+          [`${skills.length}`, L.skills],
           [`${education.length + certifications.length}`, config.language === "en" ? "Degrees" : "Títulos"],
         ].map(([k, v]) => (
           <div key={v} style={{ background: card, borderRadius: 12, padding: 12, textAlign: "center", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -168,7 +170,7 @@ export default function IOSAppCVTemplate() {
 
       {/* Tab bar */}
       <div style={{ marginTop: "auto", background: "rgba(255,255,255,0.85)", borderTop: "0.5px solid #d1d1d6", padding: "10px 0 24px", display: "grid", gridTemplateColumns: "repeat(5,1fr)", textAlign: "center", fontSize: 10, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-        {[["👤", config.language === "en" ? "Profile" : "Perfil", true], ["💼", config.language === "en" ? "Work" : "Trabajo"], ["🛠", "Skills"], ["🎓", config.language === "en" ? "Edu" : "Edu"], ["📞", config.language === "en" ? "Contact" : "Contacto"]].map(([i, l, a]) => (
+        {[["👤", L.profile, true], ["💼", L.work], ["🛠", L.skills], ["🎓", L.education], ["📞", L.contact]].map(([i, l, a]) => (
           <div key={String(l)} style={{ color: a ? blue : dim }}>
             <div style={{ fontSize: 22, lineHeight: 1 }}>{i}</div>
             <div style={{ marginTop: 2, fontWeight: a ? 600 : 400 }}>{String(l)}</div>

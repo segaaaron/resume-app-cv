@@ -7,6 +7,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, GitFork, Link2 } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CarbonTemplate() {
   const { config, sections } = useResumeStore()
@@ -14,7 +15,8 @@ export default function CarbonTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -45,7 +47,7 @@ export default function CarbonTemplate() {
 
         {/* Contact */}
         <div>
-          <CarbonSideLabel label={config.language === "en" ? "Contact" : "Contacto"} color={color} />
+          <CarbonSideLabel label={L.contact} color={color} />
           <div className="mt-2 space-y-1.5">
             {pd.email && <CarbonContact icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} />}
             {pd.phone && <CarbonContact icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} />}
@@ -120,7 +122,7 @@ export default function CarbonTemplate() {
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
-          <CarbonSection title="Experiencia" color={color}>
+          <CarbonSection title={L.experience} color={color}>
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry mb-4">
                 <div className="flex justify-between items-baseline gap-2">

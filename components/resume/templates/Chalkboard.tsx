@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function ChalkboardTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function ChalkboardTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const board = config.colorScheme || "#1f3a2c"
   const chalk = "#f3f1e8"
@@ -136,7 +138,7 @@ export default function ChalkboardTemplate() {
           )}
 
           {/* Contact */}
-          <H yellow={yellow}>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H yellow={yellow}>{L.contact}</H>
           <div style={{ fontFamily: "'Caveat', cursive", fontSize: 21, lineHeight: 1.5 }}>
             {pd.email && <div>{pd.email}</div>}
             {pd.phone && <div>{pd.phone}</div>}

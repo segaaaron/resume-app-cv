@@ -4,10 +4,12 @@ import { SessionProvider as NextAuthSessionProvider, useSession, signOut } from 
 import type { Session } from "next-auth"
 import { useEffect, useRef } from "react"
 import { toast } from "sonner"
+import { useTranslations } from "next-intl"
 
 function SessionWatcher() {
   const { status } = useSession()
   const signingOut = useRef(false)
+  const t = useTranslations("auth")
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -31,7 +33,7 @@ function SessionWatcher() {
         const url = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].href : args[0] instanceof Request ? args[0].url : ""
         // Only intercept internal API calls, not NextAuth endpoints (avoid loop)
         if (url.startsWith("/api/") && !url.startsWith("/api/auth/")) {
-          toast.error("Tu sesión expiró. Inicia sesión de nuevo.")
+          toast.error(t("session_expired"))
           sessionStorage.removeItem("wasAuthenticated")
           setTimeout(() => signOut({ redirect: true, callbackUrl: "/login" }), 1_500)
         } else {

@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function ModernTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function ModernTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -41,7 +43,7 @@ export default function ModernTemplate() {
 
         {/* Contact */}
         <div>
-          <SideTitle>{config.language === "en" ? "Contact" : "Contacto"}</SideTitle>
+          <SideTitle>{L.contact}</SideTitle>
           <div className="space-y-2 mt-1">
             {pd.email && <ContactRow icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} />}
             {pd.phone && <ContactRow icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} />}
@@ -95,13 +97,13 @@ export default function ModernTemplate() {
         {pd.jobTitle && <p className="text-sm font-medium text-gray-500 mb-6">{pd.jobTitle}</p>}
 
         {visible("summary") && summary && (
-          <Section title="Perfil" color={color}>
+          <Section title={L.profile} color={color}>
             <p className="text-xs text-gray-600 leading-relaxed">{summary}</p>
           </Section>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
-          <Section title="Experiencia" color={color}>
+          <Section title={L.experience} color={color}>
             <div className="space-y-4">
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry pl-3 border-l-2" style={{ borderColor: color + "70" }}>

@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function RisoDesignerTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function RisoDesignerTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const cream = "#f4e9d3"
   const red = config.colorScheme || "#e94f37"
@@ -60,7 +62,7 @@ export default function RisoDesignerTemplate() {
         <section>
           {visible("summary") && summary && (
             <>
-              <H red={red} blue={blue}>{config.language === "en" ? "Statement" : "Perfil"}</H>
+              <H red={red} blue={blue}>{L.profile}</H>
               <p style={{ margin: 0, fontSize: 12.5, lineHeight: 1.6 }}>{summary}</p>
             </>
           )}
@@ -160,7 +162,7 @@ export default function RisoDesignerTemplate() {
             </>
           )}
 
-          <H red={red} blue={blue}>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H red={red} blue={blue}>{L.contact}</H>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10.5, lineHeight: 1.85 }}>
             {pd.email && <div>{pd.email}</div>}
             {pd.phone && <div>{pd.phone}</div>}

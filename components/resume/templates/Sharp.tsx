@@ -7,6 +7,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function SharpTemplate() {
   const { config, sections } = useResumeStore()
@@ -14,7 +15,8 @@ export default function SharpTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -55,13 +57,13 @@ export default function SharpTemplate() {
         {/* Main */}
         <div className="flex-1">
           {visible("summary") && summary && (
-            <SharpSection title="Perfil" color={color}>
+            <SharpSection title={L.profile} color={color}>
               <p className="text-sm text-gray-700 leading-relaxed">{summary}</p>
             </SharpSection>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <SharpSection title="Experiencia" color={color}>
+            <SharpSection title={L.experience} color={color}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry mb-4">
                   <div className="flex items-start justify-between">
@@ -113,7 +115,7 @@ export default function SharpTemplate() {
         {/* Side */}
         <div className="w-44 shrink-0">
           {visible("skills") && skills.length > 0 && (
-            <SharpSection title="Skills" color={color}>
+            <SharpSection title={L.skills} color={color}>
               <div className="space-y-2">
                 {skills.map((skill) => (
                   <div key={skill.id}>
@@ -142,7 +144,7 @@ export default function SharpTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <SharpSection title="Certs" color={color}>
+            <SharpSection title={L.certifications} color={color}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="mb-2">
                   <p className="text-xs font-semibold">{cert.name}</p>

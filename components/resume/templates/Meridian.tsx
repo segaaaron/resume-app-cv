@@ -8,6 +8,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 const GOLD = "#C9A06A"
 const CREAM = "#FDFCF8"
@@ -28,7 +29,8 @@ export default function MeridianTemplate() {
   } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)]
@@ -116,7 +118,7 @@ export default function MeridianTemplate() {
         {/* Contact */}
         {(pd.email || pd.phone || pd.city || pd.country || pd.linkedin || pd.website || pd.github) && (
           <div>
-            <SideTitle>{config.language === "en" ? "Contact" : "Contacto"}</SideTitle>
+            <SideTitle>{L.contact}</SideTitle>
             <div className="mt-2 space-y-1.5">
               {pd.email && <SideContact icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} />}
               {pd.phone && <SideContact icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} />}

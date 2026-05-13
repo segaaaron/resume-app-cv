@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CasualTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function CasualTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -57,13 +59,13 @@ export default function CasualTemplate() {
         {/* Main */}
         <div className="flex-1">
           {visible("summary") && summary && (
-            <Section title="Acerca de mí" color={color}>
+            <Section title={L.aboutMe} color={color}>
               <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </Section>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <Section title="Experiencia" color={color}>
+            <Section title={L.experience} color={color}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry mb-4 p-3.5 rounded-xl border" style={{ backgroundColor: color + "06", borderColor: color + "20" }}>
                   <div className="flex justify-between items-start gap-2">
@@ -104,7 +106,7 @@ export default function CasualTemplate() {
         {/* Side */}
         <div className="w-44 shrink-0">
           {visible("skills") && skills.length > 0 && (
-            <Section title="Skills" color={color}>
+            <Section title={L.skills} color={color}>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((skill) => (
                   <span
@@ -142,7 +144,7 @@ export default function CasualTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <Section title="Intereses" color={color}>
+            <Section title={L.interests} color={color}>
               <p className="text-[10px] text-gray-600 leading-relaxed">{hobbies}</p>
             </Section>
           )}

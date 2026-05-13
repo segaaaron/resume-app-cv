@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function BannerTemplate() {
   const { config, sections } = useResumeStore()
@@ -39,7 +40,8 @@ export default function BannerTemplate() {
 
   const navy = "#0d3b6e"
   const accent = "#1565c0"
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
 
   const BannerHead = ({ text }: { text: string }) => (
@@ -79,7 +81,7 @@ export default function BannerTemplate() {
       {/* About me - full width */}
       {visible("summary") && (
         <>
-          <BannerHead text="About Me" />
+          <BannerHead text={L.aboutMe} />
           <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75, marginBottom: 10 }}>{sum}</p>
         </>
       )}
@@ -88,7 +90,7 @@ export default function BannerTemplate() {
       <div style={{ display: "flex", gap: 24 }}>
         {/* Left */}
         <div style={{ width: "32%", flexShrink: 0 }}>
-          <BannerHead text="Contact" />
+          <BannerHead text={L.contact} />
           <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 9.5, color: "#444", marginBottom: 10 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={9} color={accent} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={9} color={accent} />{email}</span>
@@ -100,7 +102,7 @@ export default function BannerTemplate() {
 
           {visible("skills") && (
             <>
-              <BannerHead text="Skills" />
+              <BannerHead text={L.skills} />
               {sks.map((sk) => (
                 <div key={sk.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontSize: 9.5, color: "#444" }}>{sk.name}</span>
@@ -112,14 +114,14 @@ export default function BannerTemplate() {
 
           {visible("hobbies") && (
             <>
-              <BannerHead text="Hobbies" />
+              <BannerHead text={L.hobbies} />
               <p style={{ fontSize: 9.5, color: "#555", lineHeight: 1.7 }}>{hobbies || "Fotografía, Senderismo, Cocina"}</p>
             </>
           )}
 
           {visible("languages") && (
             <>
-              <BannerHead text="Languages" />
+              <BannerHead text={L.languages} />
               {langs.map((l) => (
                 <p key={l.id} style={{ fontSize: 9.5, color: "#444", marginBottom: 3 }}>{l.name}</p>
               ))}
@@ -131,7 +133,7 @@ export default function BannerTemplate() {
         <div style={{ flex: 1 }}>
           {visible("education") && (
             <>
-              <BannerHead text="Education" />
+              <BannerHead text={L.education} />
               {edus.map((edu) => (
                 <div key={edu.id} className="resume-entry" style={{ display: "flex", gap: 12, marginBottom: 10 }}>
                   <span style={{ fontSize: 9, color: accent, fontWeight: 700, flexShrink: 0, width: 60 }}>{edu.startDate}{edu.endDate ? `–${edu.endDate}` : ""}</span>
@@ -146,7 +148,7 @@ export default function BannerTemplate() {
 
           {visible("workExperience") && (
             <>
-              <BannerHead text="Experience" />
+              <BannerHead text={L.experience} />
               {jobs.map((job) => (
                 <div key={job.id} className="resume-entry" style={{ display: "flex", gap: 12, marginBottom: 12 }}>
                   <span style={{ fontSize: 9, color: accent, fontWeight: 700, flexShrink: 0, width: 60 }}>{job.startDate}{job.currentlyWorking ? `–${present}` : job.endDate ? `–${job.endDate}` : ""}</span>

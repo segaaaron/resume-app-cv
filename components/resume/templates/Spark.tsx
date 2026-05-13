@@ -7,6 +7,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function SparkTemplate() {
   const { config, sections } = useResumeStore()
@@ -14,7 +15,8 @@ export default function SparkTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
@@ -69,7 +71,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <SparkSection title="Experiencia" color={color}>
+            <SparkSection title={L.experience} color={color}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry mb-4 relative pl-4">
                   <div className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -122,7 +124,7 @@ export default function SparkTemplate() {
         {/* Side */}
         <div className="w-48 shrink-0 px-5 pt-6 pb-8 bg-gray-50 border-l border-gray-100">
           {visible("skills") && skills.length > 0 && (
-            <SparkSection title="Skills" color={color}>
+            <SparkSection title={L.skills} color={color}>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((skill) => (
                   <span
@@ -167,7 +169,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <SparkSection title="Intereses" color={color}>
+            <SparkSection title={L.interests} color={color}>
               <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
             </SparkSection>
           )}

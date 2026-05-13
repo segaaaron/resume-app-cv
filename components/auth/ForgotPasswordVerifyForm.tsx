@@ -71,7 +71,7 @@ export default function ForgotPasswordVerifyForm() {
     else if (body.error === "invalid_code") toast.error(t("invalid_code", { attemptsLeft: body.attemptsLeft ?? 0 }))
     else if (body.error === "too_many_attempts") toast.error(t("too_many_attempts"))
     else if (body.error === "already_used") toast.error(t("already_used"))
-    else toast.error("Error inesperado")
+    else toast.error(t("unknown_error"))
   }
 
   async function resendCode() {

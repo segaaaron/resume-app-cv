@@ -400,7 +400,8 @@
         "password_min": "Minimum 8 characters",
         "password_uppercase": "Must contain at least one uppercase letter",
         "password_lowercase": "Must contain at least one lowercase letter",
-        "password_number": "Must contain at least one number"
+        "password_number": "Must contain at least one number",
+        "unknown_error": "Unexpected error. Please try again."
       },
       "register_banner": {
         "credentials": "You already have an account with this email.",
@@ -410,6 +411,20 @@
       },
       "not_registered": "This email is not registered in READY CV.",
       "not_registered_cta": "Create an account"
+    },
+    "session_expired": "Your session expired. Please sign in again.",
+    "verify_email": {
+      "loading": "Verifying your email...",
+      "success_title": "Email verified",
+      "success_message": "Your account is active. You can now use all READY CV features.",
+      "success_cta": "Go to dashboard",
+      "invalid_title": "Invalid link",
+      "invalid_message": "This verification link is invalid or has already been used.",
+      "expired_title": "Link expired",
+      "expired_message": "This verification link has expired (valid for 24 hours). Please register again or contact support.",
+      "error_title": "Verification error",
+      "error_message": "Something went wrong. Please try again or contact support.",
+      "back_cta": "Back to dashboard"
     }
   },
   "ai_features": {
@@ -1377,5 +1392,14 @@
     "climax_cta": "Create my resume",
     "climax_note": "Pro plan from $15/month · Cancel anytime",
     "nav_cta": "Create my resume"
+  },
+  "common": {
+    "not_found_title": "404",
+    "not_found_message": "The page you're looking for doesn't exist.",
+    "not_found_back": "Back to home",
+    "error_title": "500",
+    "error_message": "Something went wrong. Please try again.",
+    "retry": "Retry",
+    "home": "Go home"
   }
 }

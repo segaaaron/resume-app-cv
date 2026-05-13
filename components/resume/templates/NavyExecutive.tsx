@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 
@@ -30,7 +31,8 @@ export default function NavyExecutiveTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const navy = "#0e2a44"
   const ivory = "#f7f3e8"
@@ -63,7 +65,7 @@ export default function NavyExecutiveTemplate() {
           <div style={{ fontSize: 10.5, letterSpacing: "0.18em", color: gold, textTransform: "uppercase" }}>{pd.jobTitle}</div>
         )}
 
-        <Sec title="Contact" gold={gold}>
+        <Sec title={L.contact} gold={gold}>
           {pd.phone && <div>{pd.phone}</div>}
           {pd.email && <div>{pd.email}</div>}
           {(pd.city || pd.country) && <div>{[pd.city, pd.country].filter(Boolean).join(", ")}</div>}

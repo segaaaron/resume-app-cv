@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function LegalBriefTemplate() {
   const { config, sections } = useResumeStore()
@@ -10,7 +11,8 @@ export default function LegalBriefTemplate() {
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const paper = "#fbfaf6"
   const ink = "#0d0d0d"
@@ -111,10 +113,10 @@ export default function LegalBriefTemplate() {
 
         {/* Languages & Contact */}
         {(visible("languages") || pd.email || pd.phone) && (
-          <Section n="V." t={config.language === "en" ? "LANGUAGES & CONTACT" : "IDIOMAS Y CONTACTO"} red={red}>
+          <Section n="V." t={`${L.languages.toUpperCase()} & ${L.contact.toUpperCase()}`} red={red}>
             <p style={{ margin: 0, lineHeight: 1.7 }}>
               {visible("languages") && languages.length > 0 && (
-                <><b>{config.language === "en" ? "Languages" : "Idiomas"}:</b> {languages.map(l => `${l.name}${l.level ? ` (${l.level.toUpperCase()})` : ""}`).join(" · ")}<br /></>
+                <><b>{L.languages}:</b> {languages.map(l => `${l.name}${l.level ? ` (${l.level.toUpperCase()})` : ""}`).join(" · ")}<br /></>
               )}
               {(pd.city || pd.country) && <><b>{config.language === "en" ? "Address" : "Domicilio"}:</b> {[pd.city, pd.country].filter(Boolean).join(", ")}<br /></>}
               {pd.email && <><b>{config.language === "en" ? "Email" : "Correo"}:</b> {pd.email}{pd.phone ? <>&nbsp; · &nbsp;<b>{config.language === "en" ? "Phone" : "Teléfono"}:</b> {pd.phone}</> : ""}</>}

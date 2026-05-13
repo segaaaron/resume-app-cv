@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function WaveTemplate() {
   const { config, sections } = useResumeStore()
@@ -41,7 +42,8 @@ export default function WaveTemplate() {
   const headerDark = "#0d4f6b"
   const headerLight = "#1a7a8a"
   const cyan = "#00bcd4"
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
   const SKILL_STARS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
   const LANG_STARS: Record<string, number> = { a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5 }
 
@@ -97,13 +99,13 @@ export default function WaveTemplate() {
       {/* Body */}
       <div style={{ padding: "12px 30px 32px" }}>
         {visible("summary") && (
-          <Section title="Perfil profesional" color={headerDark}>
+          <Section title={L.profile} color={headerDark}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </Section>
         )}
 
         {visible("education") && (
-          <Section title="Educación" color={headerDark}>
+          <Section title={L.education} color={headerDark}>
             <div style={{ display: "flex", gap: 20, flexWrap: "wrap" }}>
               {edus.map((edu, i) => (
                 <div key={edu.id} style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
@@ -121,7 +123,7 @@ export default function WaveTemplate() {
         )}
 
         {visible("workExperience") && (
-          <Section title="Experiencia laboral" color={headerDark}>
+          <Section title={L.experience} color={headerDark}>
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 10, paddingLeft: 14, borderLeft: `2px solid ${cyan}44` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -139,7 +141,7 @@ export default function WaveTemplate() {
         <div style={{ display: "flex", gap: 28 }}>
           {visible("languages") && (
             <div style={{ flex: 1 }}>
-              <Section title="Idiomas" color={headerDark}>
+              <Section title={L.languages} color={headerDark}>
                 {langs.map((l) => (
                   <div key={l.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <span style={{ fontSize: 9.5, color: "#444" }}>{l.name}</span>
@@ -151,7 +153,7 @@ export default function WaveTemplate() {
           )}
           {visible("skills") && (
             <div style={{ flex: 1 }}>
-              <Section title="Habilidades" color={headerDark}>
+              <Section title={L.skills} color={headerDark}>
                 {sks.map((sk) => (
                   <div key={sk.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                     <span style={{ fontSize: 9.5, color: "#444" }}>{sk.name}</span>
@@ -164,7 +166,7 @@ export default function WaveTemplate() {
         </div>
 
         {visible("hobbies") && (
-          <Section title="Hobbies" color={headerDark}>
+          <Section title={L.hobbies} color={headerDark}>
             <p style={{ fontSize: 10, color: "#555" }}>{hobbies || "Programación, Ciclismo, Videojuegos"}</p>
           </Section>
         )}

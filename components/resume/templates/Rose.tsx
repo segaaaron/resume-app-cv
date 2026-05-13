@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function RoseTemplate() {
   const { config, sections } = useResumeStore()
@@ -42,7 +43,8 @@ export default function RoseTemplate() {
   const accent = "#c9947a"
   const sidebarBg = "#f5e6e0"
   const dark = "#2d2d2d"
-  const present = config.language === "en" ? "Present" : "Presente"
+  const L = getResumeLabels(config.language)
+  const present = L.present
 
   const SectionHead = ({ text }: { text: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, marginTop: 14 }}>
@@ -73,7 +75,7 @@ export default function RoseTemplate() {
         <PhotoPlaceholder />
         {visible("summary") && <p style={{ fontSize: 10, color: "#555", lineHeight: 1.7, marginBottom: 10 }}>{sum}</p>}
 
-        <SectionHead text="Contacto" />
+        <SectionHead text={L.contact} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 10, color: dark }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={accent} />{phone}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={accent} />{email}</span>
@@ -85,7 +87,7 @@ export default function RoseTemplate() {
 
         {visible("education") && (
           <>
-            <SectionHead text="Educación" />
+            <SectionHead text={L.education} />
             {edus.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, color: dark }}>{edu.degree}</p>
@@ -98,7 +100,7 @@ export default function RoseTemplate() {
 
         {visible("skills") && (
           <>
-            <SectionHead text="Habilidades" />
+            <SectionHead text={L.skills} />
             {sks.map((sk) => (
               <div key={sk.id} style={{ marginBottom: 6 }}>
                 <span style={{ fontSize: 9.5, color: dark }}>{sk.name}</span>
@@ -112,7 +114,7 @@ export default function RoseTemplate() {
 
         {visible("languages") && (
           <>
-            <SectionHead text="Idiomas" />
+            <SectionHead text={L.languages} />
             {langs.map((l) => (
               <div key={l.id} style={{ marginBottom: 6 }}>
                 <span style={{ fontSize: 9.5, color: dark }}>{l.name}</span>
@@ -133,7 +135,7 @@ export default function RoseTemplate() {
 
         {visible("workExperience") && (
           <>
-            <SectionHead text="Experiencia Laboral" />
+            <SectionHead text={L.experience} />
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 12, paddingLeft: 12, borderLeft: `2px solid ${accent}44` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -149,7 +151,7 @@ export default function RoseTemplate() {
 
         {visible("hobbies") && (
           <>
-            <SectionHead text="Hobbies" />
+            <SectionHead text={L.hobbies} />
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.7 }}>{hob}</p>
           </>
         )}
