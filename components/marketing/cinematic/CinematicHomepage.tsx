@@ -23,23 +23,29 @@ const SCENES: Record<string, { bg: string; text: "light" | "dark"; overlay: numb
 }
 
 const SCENE_IMAGE: Record<string, string> = {
-  "act-entry":     "/images/bg/bg-act-entry.png",
-  "act-problem":   "/images/bg/bg-act-problem.png",
-  "act-reveal":    "/images/bg/bg-act-reveal.png",
-  "act-fill":      "/images/bg/bg-act-fill.png",
-  "act-bullets":   "/images/bg/bg-act-bullets.png",
-  "act-summary":   "/images/bg/bg-act-summary.png",
-  "act-ats":       "/images/bg/bg-act-ats.png",
-  "act-cover":     "/images/bg/bg-act-cover.png",
-  "act-review":    "/images/bg/bg-act-review.png",
-  "act-templates": "/images/bg/bg-act-templates.png",
-  "act-climax":    "/images/bg/bg-act-climax.png",
+  "act-entry":     "/images/bg/bg-act-entry.webp",
+  "act-problem":   "/images/bg/bg-act-problem.webp",
+  "act-reveal":    "/images/bg/bg-act-reveal.webp",
+  "act-fill":      "/images/bg/bg-act-fill.webp",
+  "act-bullets":   "/images/bg/bg-act-bullets.webp",
+  "act-summary":   "/images/bg/bg-act-summary.webp",
+  "act-ats":       "/images/bg/bg-act-ats.webp",
+  "act-cover":     "/images/bg/bg-act-cover.webp",
+  "act-review":    "/images/bg/bg-act-review.webp",
+  "act-templates": "/images/bg/bg-act-templates.webp",
+  "act-climax":    "/images/bg/bg-act-climax.webp",
 }
 
 // Max translateY must stay within image's extra height.
 // Image: top -10%, height 120% → extra = 20% of 100vh ≈ 200px. Clamp safely below that.
 const PARALLAX_FACTOR = 0.12
 const PARALLAX_MAX    = 80 // px
+
+// Strict order: scenes can only advance one step at a time in scroll direction
+const SCENE_ORDER = [
+  "act-entry", "act-problem", "act-reveal", "act-fill", "act-bullets",
+  "act-summary", "act-ats", "act-cover", "act-review", "act-templates", "act-climax",
+]
 
 interface Props {
   children: React.ReactNode
@@ -54,11 +60,20 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
   const imgRef        = useRef<HTMLImageElement>(null)
   const displayedSrc  = useRef(SCENE_IMAGE["act-entry"])
+  const sceneIndexRef = useRef(0)
 
   const t   = useTranslations("cinematic")
   const nav = useTranslations("nav")
   const { data: session } = useSession()
   useScrollReveal()
+
+  // Preload all scene images into browser cache on mount
+  useEffect(() => {
+    Object.values(SCENE_IMAGE).forEach((src) => {
+      const img = new window.Image()
+      img.src = src
+    })
+  }, [])
 
   // Parallax — clamped so image never leaves the fixed container
   useEffect(() => {
@@ -72,38 +87,71 @@ export default function CinematicHomepage({ children, locale }: Props) {
     return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(rafId) }
   }, [])
 
-  // Scene IntersectionObserver
+  // Scroll-based scene detection with strict sequential advance.
+  // On each scroll tick: find scene whose center is closest to viewport center,
+  // then advance sceneIndexRef by exactly ONE step toward it — never jumps multiple scenes.
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            const s = entry.target.getAttribute("data-scene")
-            if (s) setScene(s)
-          }
-        }
-      },
-      { threshold: 0.4 }
-    )
-    document.querySelectorAll("[data-scene]").forEach((el) => observer.observe(el))
-    return () => observer.disconnect()
+    let rafId: number
+
+    const detect = () => {
+      const els = Array.from(document.querySelectorAll<HTMLElement>("[data-scene]"))
+      if (!els.length) return
+
+      // Find which scene element is most centered in the viewport
+      const mid = window.innerHeight / 2
+      let target = els[0]
+      let bestDist = Infinity
+      for (const el of els) {
+        const { top, height } = el.getBoundingClientRect()
+        const dist = Math.abs(top + height / 2 - mid)
+        if (dist < bestDist) { bestDist = dist; target = el }
+      }
+
+      const targetName  = target.getAttribute("data-scene") ?? SCENE_ORDER[0]
+      const targetIndex = SCENE_ORDER.indexOf(targetName)
+      if (targetIndex === -1) return
+
+      const current = sceneIndexRef.current
+      if (targetIndex === current) return
+
+      // Advance exactly one step toward target — never skip scenes
+      const nextIndex = targetIndex > current ? current + 1 : current - 1
+      sceneIndexRef.current = nextIndex
+      setScene(SCENE_ORDER[nextIndex])
+    }
+
+    const onScroll = () => { cancelAnimationFrame(rafId); rafId = requestAnimationFrame(detect) }
+    detect() // set initial scene without waiting for scroll
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(rafId) }
   }, [])
 
-  // Sequential fade: out → swap src → in.
-  // useEffect cleanup cancels pending timer on rapid scene changes — no blocking ref needed.
+  // Sequential fade: out → wait for image load → swap src → in.
+  // Waiting for onload prevents the blank-frame flash when image isn't cached yet.
   useEffect(() => {
     const newSrc = SCENE_IMAGE[scene]
     if (!newSrc || newSrc === displayedSrc.current) return
 
-    setBgOpacity(0)
+    let cancelled = false
 
-    const timer = setTimeout(() => {
-      setBgSrc(newSrc)
-      displayedSrc.current = newSrc
-      setBgOpacity(1)
-    }, 380)
+    const doTransition = () => {
+      if (cancelled) return
+      setBgOpacity(0)
+      setTimeout(() => {
+        if (cancelled) return
+        setBgSrc(newSrc)
+        displayedSrc.current = newSrc
+        setBgOpacity(1)
+      }, 380)
+    }
 
-    return () => clearTimeout(timer)
+    // If already in browser cache onload fires synchronously / near-instantly
+    const probe = new window.Image()
+    probe.onload = doTransition
+    probe.onerror = doTransition // still transition even if image fails
+    probe.src = newSrc
+
+    return () => { cancelled = true }
   }, [scene])
 
   const current    = SCENES[scene] ?? SCENES["act-entry"]

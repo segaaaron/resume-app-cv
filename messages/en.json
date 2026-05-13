@@ -109,7 +109,9 @@
     "users_trust": "professionals trust ReadyCV",
     "proof_ats": "ATS-compatible templates",
     "proof_pdf": "Export to PDF in one click",
-    "proof_ai": "Improve your CV with AI"
+    "proof_ai": "Improve your CV with AI",
+    "mockup_ai_badge": "AI active",
+    "mockup_ats_compat": "High compatibility"
   },
   "how_it_works": {
     "title": "How does it work?",

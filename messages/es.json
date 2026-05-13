@@ -109,7 +109,9 @@
     "users_trust": "profesionales confían en ReadyCV",
     "proof_ats": "Compatible con sistemas ATS",
     "proof_pdf": "Exporta a PDF en un clic",
-    "proof_ai": "Mejora tu CV con IA"
+    "proof_ai": "Mejora tu CV con IA",
+    "mockup_ai_badge": "IA activa",
+    "mockup_ats_compat": "Alta compatibilidad"
   },
   "how_it_works": {
     "title": "¿Cómo funciona?",

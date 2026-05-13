@@ -1,6 +1,9 @@
 "use client"
 
+import { useTranslations } from "next-intl"
+
 export default function HeroMockupCard() {
+  const t = useTranslations("hero")
   return (
     <>
       <style>{`
@@ -33,7 +36,7 @@ export default function HeroMockupCard() {
             {/* Floating AI badge */}
             <div className="absolute top-3 right-4 flex items-center gap-1 bg-white/20 backdrop-blur-sm border border-white/30 rounded-full px-2.5 py-1">
               <span className="h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
-              <span className="text-[10px] font-semibold text-white">IA activa</span>
+              <span className="text-[10px] font-semibold text-white">{t("mockup_ai_badge")}</span>
             </div>
           </div>
 
@@ -76,7 +79,7 @@ export default function HeroMockupCard() {
           </div>
           <div>
             <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">ATS Score</p>
-            <p className="text-sm font-bold text-green-600">Alta compatibilidad</p>
+            <p className="text-sm font-bold text-green-600">{t("mockup_ats_compat")}</p>
             <div className="flex gap-1 mt-1">
               {["React", "TS", "Git"].map(k => (
                 <span key={k} className="text-[8px] bg-green-50 text-green-700 border border-green-200 rounded-full px-1.5 py-0.5 font-semibold">✓ {k}</span>
