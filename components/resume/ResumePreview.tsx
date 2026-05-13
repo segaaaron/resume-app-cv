@@ -291,6 +291,8 @@ export default function ResumePreview({ overrideTemplateId }: { overrideTemplate
       {/* eslint-disable-next-line @next/next/no-page-custom-font */}
       <style>{`@import url('${buildFontUrl(config.fontFamily)}');`}</style>
 
+      {/* web app — PDF contract class: "resume-pages" is queried by pdf-generator microservice.
+          Do NOT rename without updating services/pdf-generator/src/contracts.ts */}
       <div
         className="bg-white shadow-2xl print:shadow-none resume-pages"
         style={{

@@ -1,7 +1,10 @@
+// web app — API contract with pdf-generator microservice (services/pdf-generator).
+// These fields are consumed by generate-pdf.route.ts in the microservice.
+// If fields change here, update the microservice route in sync.
 export type PdfServiceOpts = {
   printUrl: string
   cookies: string
-  stretchPages: boolean
+  stretchPages: boolean  // true = resume renderer | false = cover-letter renderer
   candidateName?: string
   resumeTitle?: string
   letterTitle?: string

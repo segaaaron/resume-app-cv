@@ -1,0 +1,89 @@
+import bcrypt from "bcryptjs"
+import { AppError } from "@/lib/services/auth/AppError"
+import { purgeUserCache } from "@/lib/auth"
+import type { IUserRepository } from "@/lib/interfaces/IUserRepository"
+import type { IPasswordResetRepository } from "@/lib/interfaces/IPasswordResetRepository"
+import type { IEmailService } from "@/lib/interfaces/IEmailService"
+import type { IRateLimitService } from "@/lib/interfaces/IRateLimitService"
+import type { ILogger } from "@/lib/interfaces/ILogger"
+
+const MAX_ATTEMPTS = 5
+
+export interface ConfirmResetInput {
+  email: string
+  code: string
+  password: string
+}
+
+export class PasswordResetService {
+  constructor(
+    private readonly users: IUserRepository,
+    private readonly resets: IPasswordResetRepository,
+    private readonly rateLimit: IRateLimitService,
+    private readonly email: IEmailService,
+    private readonly logger: ILogger,
+  ) {}
+
+  async requestReset(ipAddress: string, emailAddress: string): Promise<{ sent: true }> {
+    const allowed = await this.rateLimit.check(ipAddress, "reset-password-request", 3)
+    if (!allowed) {
+      this.logger.warn("PasswordResetService.requestReset: rate limited", { ip: ipAddress })
+      throw new AppError("rate_limited", 429)
+    }
+
+    const user = await this.users.findForReset(emailAddress)
+    if (!user) {
+      await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
+      throw new AppError("not_registered", 404)
+    }
+
+    if (!user.hasPassword) {
+      await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
+      throw new AppError("google_account", 409)
+    }
+
+    const code = this.generateOtp()
+    const otpHash = await bcrypt.hash(code, 10)
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
+
+    await this.resets.upsert(emailAddress, otpHash, expiresAt)
+    await this.email.sendPasswordResetOtp(emailAddress, user.name ?? "Usuario", code)
+    this.logger.info("PasswordResetService.requestReset: OTP sent", { email: emailAddress })
+    return { sent: true }
+  }
+
+  async confirmReset(input: ConfirmResetInput): Promise<{ ok: true }> {
+    const allowed = await this.rateLimit.check(input.email, "reset-password-confirm", 10)
+    if (!allowed) throw new AppError("rate_limited", 429)
+
+    const reset = await this.resets.findByEmail(input.email)
+    if (!reset) throw new AppError("no_reset_request", 400)
+    if (reset.expiresAt < new Date()) throw new AppError("expired", 400)
+    if (reset.usedAt) throw new AppError("already_used", 400)
+    if (reset.attempts >= MAX_ATTEMPTS) throw new AppError("too_many_attempts", 400)
+
+    await this.resets.incrementAttempts(input.email)
+
+    const valid = await bcrypt.compare(input.code, reset.otpHash)
+    if (!valid) {
+      const attemptsLeft = MAX_ATTEMPTS - (reset.attempts + 1)
+      this.logger.warn("PasswordResetService.confirmReset: invalid code", { email: input.email, attemptsLeft })
+      throw new AppError("invalid_code", 400, { attemptsLeft })
+    }
+
+    const user = await this.users.findByEmail(input.email)
+    if (!user) throw new AppError("user_not_found", 400)
+
+    const passwordHash = await bcrypt.hash(input.password, 12)
+    await this.users.updatePassword(user.id, passwordHash)
+    await this.resets.markUsed(input.email)
+    purgeUserCache(user.id)
+
+    this.logger.info("PasswordResetService.confirmReset: password updated", { email: input.email })
+    return { ok: true }
+  }
+
+  private generateOtp(): string {
+    return String(crypto.getRandomValues(new Uint32Array(1))[0] % 900000 + 100000)
+  }
+}

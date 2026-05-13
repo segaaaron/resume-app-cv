@@ -1,87 +1,63 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-// ─── Mock db ──────────────────────────────────────────────────────────────────
-// vi.mock is hoisted — cannot reference top-level variables in factory.
-// Use vi.fn() inline and retrieve the mocks after import.
 vi.mock("@/lib/db", () => ({
   db: {
     aIRateLimit: {
       findUnique: vi.fn(),
-      upsert: vi.fn(),
-      update: vi.fn(),
     },
+    $queryRaw: vi.fn(),
   },
 }))
 
-import { checkRateLimit } from "@/lib/ai-client"
+import { checkRateLimit, recordRateLimitFailure } from "@/lib/rate-limit"
 import { db } from "@/lib/db"
 
 const mockFindUnique = db.aIRateLimit.findUnique as ReturnType<typeof vi.fn>
-const mockUpsert = db.aIRateLimit.upsert as ReturnType<typeof vi.fn>
-const mockUpdate = db.aIRateLimit.update as ReturnType<typeof vi.fn>
+const mockQueryRaw   = db.$queryRaw as ReturnType<typeof vi.fn>
 
-describe("checkRateLimit", () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
+beforeEach(() => vi.clearAllMocks())
 
-  it("first call for new userId+endpoint → returns true, creates record", async () => {
+describe("checkRateLimit (check-only — never increments)", () => {
+  it("no row → returns true, does NOT write to DB", async () => {
     mockFindUnique.mockResolvedValue(null)
-    mockUpsert.mockResolvedValue({})
-
     const result = await checkRateLimit("user-1", "improve-bullet")
-
     expect(result).toBe(true)
-    expect(mockUpsert).toHaveBeenCalledOnce()
-    const upsertCall = mockUpsert.mock.calls[0][0]
-    expect(upsertCall.create.count).toBe(1)
-    expect(upsertCall.create.userId).toBe("user-1")
-    expect(upsertCall.create.endpoint).toBe("improve-bullet")
+    expect(mockQueryRaw).not.toHaveBeenCalled()
   })
 
-  it("call within limit (count < 20) → returns true, increments count", async () => {
-    const future = new Date(Date.now() + 3600 * 1000)
-    mockFindUnique.mockResolvedValue({ userId: "user-1", endpoint: "improve-bullet", count: 5, resetAt: future })
-    mockUpdate.mockResolvedValue({})
-
+  it("row exists, window expired → returns true (expired windows are always allowed)", async () => {
+    mockFindUnique.mockResolvedValue({ count: 99, resetAt: new Date(Date.now() - 1000) })
     const result = await checkRateLimit("user-1", "improve-bullet")
-
     expect(result).toBe(true)
-    expect(mockUpdate).toHaveBeenCalledOnce()
-    expect(mockUpdate.mock.calls[0][0].data).toEqual({ count: { increment: 1 } })
+    expect(mockQueryRaw).not.toHaveBeenCalled()
   })
 
-  it("call at limit (count >= 20) → returns false", async () => {
-    const future = new Date(Date.now() + 3600 * 1000)
-    mockFindUnique.mockResolvedValue({ userId: "user-1", endpoint: "improve-bullet", count: 20, resetAt: future })
-
-    const result = await checkRateLimit("user-1", "improve-bullet")
-
-    expect(result).toBe(false)
-    expect(mockUpdate).not.toHaveBeenCalled()
+  it("count < default limit (20) → returns true", async () => {
+    mockFindUnique.mockResolvedValue({ count: 5, resetAt: new Date(Date.now() + 3_600_000) })
+    expect(await checkRateLimit("user-1", "improve-bullet")).toBe(true)
+    expect(mockQueryRaw).not.toHaveBeenCalled()
   })
 
-  it("call at custom limit (count >= custom limit) → returns false", async () => {
-    const future = new Date(Date.now() + 3600 * 1000)
-    mockFindUnique.mockResolvedValue({ userId: "user-1", endpoint: "ats-score", count: 5, resetAt: future })
-
-    const result = await checkRateLimit("user-1", "ats-score", 5)
-
-    expect(result).toBe(false)
+  it("count >= default limit (20) → returns false", async () => {
+    mockFindUnique.mockResolvedValue({ count: 20, resetAt: new Date(Date.now() + 3_600_000) })
+    expect(await checkRateLimit("user-1", "improve-bullet")).toBe(false)
   })
 
-  it("call after resetAt has passed → returns true (resets window)", async () => {
-    const past = new Date(Date.now() - 1000) // expired
-    mockFindUnique.mockResolvedValue({ userId: "user-1", endpoint: "improve-bullet", count: 19, resetAt: past })
-    mockUpsert.mockResolvedValue({})
+  it("count < custom limit → returns true", async () => {
+    mockFindUnique.mockResolvedValue({ count: 4, resetAt: new Date(Date.now() + 3_600_000) })
+    expect(await checkRateLimit("user-1", "session-challenge", 5)).toBe(true)
+  })
 
-    const result = await checkRateLimit("user-1", "improve-bullet")
+  it("count >= custom limit → returns false", async () => {
+    mockFindUnique.mockResolvedValue({ count: 5, resetAt: new Date(Date.now() + 3_600_000) })
+    expect(await checkRateLimit("user-1", "session-challenge", 5)).toBe(false)
+  })
+})
 
-    expect(result).toBe(true)
-    // Should reset via upsert, not increment via update
-    expect(mockUpsert).toHaveBeenCalledOnce()
-    expect(mockUpdate).not.toHaveBeenCalled()
-    const upsertCall = mockUpsert.mock.calls[0][0]
-    expect(upsertCall.update.count).toBe(1)
+describe("recordRateLimitFailure (increments on failure only)", () => {
+  it("calls $queryRaw with upsert SQL", async () => {
+    mockQueryRaw.mockResolvedValue([])
+    await recordRateLimitFailure("user-1", "register")
+    expect(mockQueryRaw).toHaveBeenCalledOnce()
   })
 })

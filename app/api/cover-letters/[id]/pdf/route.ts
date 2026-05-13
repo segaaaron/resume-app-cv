@@ -47,7 +47,7 @@ export async function GET(req: Request, { params }: Params) {
     const pdf = await callPdfService({
       printUrl,
       cookies: "",
-      stretchPages: false,
+      stretchPages: false, // web app — PDF contract: false = cover-letter renderer in pdf-generator microservice
       candidateName: session.user.name ?? undefined,
       letterTitle: letter.title ?? undefined,
     })

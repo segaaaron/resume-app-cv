@@ -104,6 +104,8 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
 
       <div className="print:p-0 flex justify-center bg-gray-100 min-h-screen print:bg-white py-8 print:block print:min-h-0">
         <div
+          // web app — PDF contract class: "cover-letter-page" is queried by pdf-generator microservice.
+          // Do NOT rename without updating services/pdf-generator/src/contracts.ts
           className="cover-letter-page bg-white shadow-2xl print:shadow-none overflow-hidden shrink-0"
           style={{ width: "210mm", minHeight: "297mm", fontFamily }}
         >

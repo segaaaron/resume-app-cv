@@ -54,7 +54,7 @@ export async function GET(req: Request, { params }: Params) {
     const pdf = await callPdfService({
       printUrl,
       cookies: "",
-      stretchPages: true,
+      stretchPages: true, // web app — PDF contract: true = resume renderer in pdf-generator microservice
       resumeTitle: `CV — ${resume.title}`,
       candidateName: session.user.name ?? undefined,
     })
