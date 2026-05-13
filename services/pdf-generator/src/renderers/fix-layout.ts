@@ -51,6 +51,81 @@ export async function fixLayout(page: Page): Promise<void> {
  * Receives constants from Node.js via page.evaluate() argument passing.
  */
 function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: number, resumePagesSelector: string, resumeHeadingSelector: string): void {
+  function isDiscretePages(children: HTMLElement[], ppx: number, z: number): boolean {
+    return children.length > 1 && children.every((c) => Math.abs(c.scrollHeight * z - ppx) < ppx * 0.15)
+  }
+  function hideEmptyLastPage(children: HTMLElement[], ppx: number, z: number, fpx: number): void {
+    const last = children[children.length - 1]
+    if ((last.scrollHeight * z - fpx) / ppx < 0.15) last.style.setProperty("display", "none", "important")
+  }
+  function getSidebarConfig(root: HTMLElement): { sidebarEl: HTMLElement | null; mainEl: HTMLElement | null; side: "left" | "right" | null } {
+    const layout = root.dataset.printLayout ?? ""
+    if (layout === "sidebar-left") return { sidebarEl: root.firstElementChild as HTMLElement, mainEl: root.lastElementChild as HTMLElement, side: "left" }
+    if (layout === "sidebar-right") return { sidebarEl: root.lastElementChild as HTMLElement, mainEl: root.firstElementChild as HTMLElement, side: "right" }
+    return { sidebarEl: null, mainEl: null, side: null }
+  }
+  function getSolidBg(el: HTMLElement): string | null {
+    const ok = (bg: string) => bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"
+    const direct = window.getComputedStyle(el).backgroundColor
+    if (ok(direct)) return direct
+    for (const c1 of Array.from(el.children) as HTMLElement[]) {
+      const bg1 = window.getComputedStyle(c1).backgroundColor
+      if (ok(bg1)) return bg1
+      for (const c2 of Array.from(c1.children) as HTMLElement[]) {
+        const bg2 = window.getComputedStyle(c2 as HTMLElement).backgroundColor
+        if (ok(bg2)) return bg2
+      }
+    }
+    return null
+  }
+  function paintSidebarGradient(root: HTMLElement): void {
+    const { sidebarEl, mainEl, side } = getSidebarConfig(root)
+    if (!sidebarEl || !mainEl || !side) return
+    const sidebarBg = getSolidBg(sidebarEl)
+    if (!sidebarBg) return
+    const ratio = (sidebarEl.getBoundingClientRect().width / root.getBoundingClientRect().width) * 100
+    const mainBg = getSolidBg(mainEl) ?? "white"
+    const grad = side === "left"
+      ? `linear-gradient(to right, ${sidebarBg} 0%, ${sidebarBg} ${ratio}%, ${mainBg} ${ratio}%, ${mainBg} 100%)`
+      : `linear-gradient(to left, ${sidebarBg} 0%, ${sidebarBg} ${100 - ratio}%, ${mainBg} ${100 - ratio}%, ${mainBg} 100%)`
+    root.style.setProperty("background", grad, "important")
+  }
+  function insertSpacerAt(col: HTMLElement, cx: number, boundaryY: number, paddingPx: number): void {
+    const hit = document.elementFromPoint(cx, boundaryY) as HTMLElement | null
+    if (!hit || !col.contains(hit)) return
+    let ancestor: HTMLElement = hit
+    while (ancestor.parentElement && ancestor.parentElement !== col) ancestor = ancestor.parentElement as HTMLElement
+    if (ancestor === col || (ancestor as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) return
+    const gap = parseFloat(window.getComputedStyle(ancestor.parentElement ?? col).gap) || 0
+    const spacerH = Math.max(0, paddingPx - gap)
+    if (spacerH <= 0) return
+    const spacer = document.createElement("div")
+    spacer.setAttribute("data-pdf-spacer", "true")
+    spacer.style.cssText = `height:${spacerH}px;flex-shrink:0;`
+    col.insertBefore(spacer, ancestor)
+  }
+  function injectColumnSpacers(root: HTMLElement, wrapperTop: number, eff: number, numPages: number): void {
+    const { sidebarEl, mainEl } = getSidebarConfig(root)
+    const cols = [(mainEl ?? root), sidebarEl].filter(Boolean) as HTMLElement[]
+    cols.map((el) => ({ el, paddingPx: parseFloat(window.getComputedStyle(el).paddingTop) || 0 }))
+      .filter((c) => c.paddingPx > 0)
+      .forEach(({ el, paddingPx }) => {
+        const colRect = el.getBoundingClientRect()
+        const cx = colRect.left + colRect.width / 2
+        el.querySelectorAll("[data-pdf-spacer]").forEach((s) => s.remove())
+        for (let pN = numPages - 1; pN >= 1; pN--) insertSpacerAt(el, cx, wrapperTop + pN * eff, paddingPx)
+      })
+  }
+  function snapRootHeight(root: HTMLElement, contentBottomPx: number, eff: number, z: number): void {
+    const numPages = Math.ceil(contentBottomPx / eff)
+    if (numPages <= 1) return
+    const lastFill = (contentBottomPx - (numPages - 1) * eff) / eff
+    const h = lastFill < 0.05 ? ((numPages - 1) * eff) / z : Math.max((numPages * eff) / z, root.scrollHeight)
+    root.style.setProperty("height", `${h}px`, "important")
+    root.style.setProperty("min-height", lastFill < 0.05 ? "0" : `${h}px`, "important")
+    root.style.setProperty("overflow", "hidden", "important")
+  }
+
   const wrapper = document.querySelector<HTMLElement>(resumePagesSelector)
   if (!wrapper) return
   const root = wrapper.firstElementChild as HTMLElement | null
@@ -60,111 +135,14 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
   if (isDiscretePages(children, pagePx, zoom)) { hideEmptyLastPage(children, pagePx, zoom, fudgePx); return }
   const eff = pagePx - bottomMarginPx
   paintSidebarGradient(root)
-  adjustLayout(root, wrapper, zoom, eff, fudgePx)
-  fixHeadingOffsets(wrapper, wrapper.getBoundingClientRect().top, eff, resumeHeadingSelector)
-}
-
-function isDiscretePages(children: HTMLElement[], pagePx: number, zoom: number): boolean {
-  return children.length > 1 && children.every((c) => Math.abs(c.scrollHeight * zoom - pagePx) < pagePx * 0.15)
-}
-
-function hideEmptyLastPage(children: HTMLElement[], pagePx: number, zoom: number, fudgePx: number): void {
-  const last = children[children.length - 1]
-  if ((last.scrollHeight * zoom - fudgePx) / pagePx < 0.15) last.style.setProperty("display", "none", "important")
-}
-
-function getSidebarConfig(root: HTMLElement): { sidebarEl: HTMLElement | null; mainEl: HTMLElement | null; side: "left" | "right" | null } {
-  const layout = root.dataset.printLayout ?? ""
-  if (layout === "sidebar-left") return { sidebarEl: root.firstElementChild as HTMLElement, mainEl: root.lastElementChild as HTMLElement, side: "left" }
-  if (layout === "sidebar-right") return { sidebarEl: root.lastElementChild as HTMLElement, mainEl: root.firstElementChild as HTMLElement, side: "right" }
-  return { sidebarEl: null, mainEl: null, side: null }
-}
-
-function getSolidBg(el: HTMLElement): string | null {
-  const ok = (bg: string) => bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"
-  const direct = window.getComputedStyle(el).backgroundColor
-  if (ok(direct)) return direct
-  for (const c1 of Array.from(el.children) as HTMLElement[]) {
-    const bg1 = window.getComputedStyle(c1).backgroundColor
-    if (ok(bg1)) return bg1
-    for (const c2 of Array.from(c1.children) as HTMLElement[]) {
-      const bg2 = window.getComputedStyle(c2 as HTMLElement).backgroundColor
-      if (ok(bg2)) return bg2
-    }
-  }
-  return null
-}
-
-function buildGradientCss(side: "left" | "right", ratio: number, sidebarBg: string, mainBg: string): string {
-  if (side === "left") return `linear-gradient(to right, ${sidebarBg} 0%, ${sidebarBg} ${ratio}%, ${mainBg} ${ratio}%, ${mainBg} 100%)`
-  return `linear-gradient(to left, ${sidebarBg} 0%, ${sidebarBg} ${100 - ratio}%, ${mainBg} ${100 - ratio}%, ${mainBg} 100%)`
-}
-
-function paintSidebarGradient(root: HTMLElement): void {
-  const { sidebarEl, mainEl, side } = getSidebarConfig(root)
-  if (!sidebarEl || !mainEl || !side) return
-  const sidebarBg = getSolidBg(sidebarEl)
-  if (!sidebarBg) return
-  const ratio = (sidebarEl.getBoundingClientRect().width / root.getBoundingClientRect().width) * 100
-  const mainBg = getSolidBg(mainEl) ?? "white"
-  root.style.setProperty("background", buildGradientCss(side, ratio, sidebarBg, mainBg), "important")
-}
-
-function adjustLayout(root: HTMLElement, wrapper: HTMLElement, zoom: number, eff: number, fudgePx: number): void {
   const contentBottomPx = root.scrollHeight * zoom - fudgePx
   const numPages = Math.ceil(contentBottomPx / eff)
   injectColumnSpacers(root, wrapper.getBoundingClientRect().top, eff, numPages)
   snapRootHeight(root, contentBottomPx, eff, zoom)
-}
-
-function getColumnsWithPadding(root: HTMLElement): { el: HTMLElement; paddingPx: number }[] {
-  const { sidebarEl, mainEl } = getSidebarConfig(root)
-  const fallback = root
-  const cols = [(mainEl ?? fallback), sidebarEl].filter(Boolean) as HTMLElement[]
-  return cols.map((el) => ({ el, paddingPx: parseFloat(window.getComputedStyle(el).paddingTop) || 0 })).filter((c) => c.paddingPx > 0)
-}
-
-function injectColumnSpacers(root: HTMLElement, wrapperTop: number, eff: number, numPages: number): void {
-  getColumnsWithPadding(root).forEach(({ el, paddingPx }) => doInjectSpacers(el, wrapperTop, eff, numPages, paddingPx))
-}
-
-function doInjectSpacers(col: HTMLElement, wrapperTop: number, eff: number, numPages: number, paddingPx: number): void {
-  const colRect = col.getBoundingClientRect()
-  const cx = colRect.left + colRect.width / 2
-  col.querySelectorAll("[data-pdf-spacer]").forEach((s) => s.remove())
-  for (let pN = numPages - 1; pN >= 1; pN--) insertSpacerAt(col, cx, wrapperTop + pN * eff, paddingPx)
-}
-
-function insertSpacerAt(col: HTMLElement, cx: number, boundaryY: number, paddingPx: number): void {
-  const hit = document.elementFromPoint(cx, boundaryY) as HTMLElement | null
-  if (!hit || !col.contains(hit)) return
-  let ancestor: HTMLElement = hit
-  while (ancestor.parentElement && ancestor.parentElement !== col) ancestor = ancestor.parentElement as HTMLElement
-  if (ancestor === col || (ancestor as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) return
-  const gap = parseFloat(window.getComputedStyle(ancestor.parentElement ?? col).gap) || 0
-  const spacerH = Math.max(0, paddingPx - gap)
-  if (spacerH <= 0) return
-  const spacer = document.createElement("div")
-  spacer.setAttribute("data-pdf-spacer", "true")
-  spacer.style.cssText = `height:${spacerH}px;flex-shrink:0;`
-  col.insertBefore(spacer, ancestor)
-}
-
-function snapRootHeight(root: HTMLElement, contentBottomPx: number, eff: number, zoom: number): void {
-  const numPages = Math.ceil(contentBottomPx / eff)
-  if (numPages <= 1) return
-  const lastFill = (contentBottomPx - (numPages - 1) * eff) / eff
-  const h = lastFill < 0.05 ? ((numPages - 1) * eff) / zoom : Math.max((numPages * eff) / zoom, root.scrollHeight)
-  root.style.setProperty("height", `${h}px`, "important")
-  root.style.setProperty("min-height", lastFill < 0.05 ? "0" : `${h}px`, "important")
-  root.style.setProperty("overflow", "hidden", "important")
-}
-
-function fixHeadingOffsets(wrapper: HTMLElement, wrapperTop: number, eff: number, headingSelector: string): void {
-  Array.from(wrapper.querySelectorAll<HTMLElement>(headingSelector))
+  Array.from(wrapper.querySelectorAll<HTMLElement>(resumeHeadingSelector))
     .filter((el) => !(el as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer)
     .forEach((el) => {
-      const off = (el.getBoundingClientRect().top - wrapperTop) % eff
+      const off = (el.getBoundingClientRect().top - wrapper.getBoundingClientRect().top) % eff
       if (off > 0 && off < 8) el.style.setProperty("margin-top", "0", "important")
     })
 }
