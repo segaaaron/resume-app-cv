@@ -4,6 +4,9 @@ import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("auth")
 
 class UserNotFoundError extends CredentialsSignin {
   code = "user_not_found" as const
@@ -23,7 +26,7 @@ class SessionChallengeBlockedError extends CredentialsSignin {
 const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 const CACHE_TTL_MS        = 5 * 60 * 1000        // 5 minutes
-const INACTIVITY_LIMIT_MS = 24 * 60 * 60 * 1000  // 24 hours — used only in authorize stale-session check
+const INACTIVITY_LIMIT_MS = 8 * 60 * 60 * 1000   // 8 hours — used only in authorize stale-session check
 
 interface UserPlanCacheEntry {
   plan:                string
@@ -81,17 +84,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           throw new SessionChallengeBlockedError()
         }
 
-        // Block if another session is active — unless it's stale (last activity > inactivity limit)
+        // Block if another session is active — unless it's stale or the JWT has naturally expired.
+        // Token format: "uuid:expiresAt" — expiresAt is the ms timestamp when the JWT expires.
+        // This lets authorize() detect natural JWT expiry without a DB migration or extra fields.
         if (user.activeSessionToken) {
+          const storedExpiry = Number(user.activeSessionToken.split(":")[1])
+          const isExpired = !isNaN(storedExpiry) && Date.now() > storedExpiry
           const isStale = !user.lastActiveAt ||
             Date.now() - user.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS
-          if (!isStale) throw new ActiveSessionError()
-          // Stale session: JWT already dead server-side — clear token and proceed
+          if (!isStale && !isExpired) throw new ActiveSessionError()
           await db.user.update({ where: { id: user.id }, data: { activeSessionToken: null } })
         }
 
-        // Generate and persist new active session token
-        const activeSessionToken = crypto.randomUUID()
+        // Embed expiry in token so authorize() can detect natural JWT expiry on next login attempt.
+        const sessionExpiresAt = Date.now() + 24 * 60 * 60 * 1000  // mirrors session.maxAge
+        const activeSessionToken = `${crypto.randomUUID()}:${sessionExpiresAt}`
         await db.user.update({
           where: { id: user.id },
           data: { activeSessionToken, sessionChallengeAttempts: 0, sessionChallengeBlockedUntil: null },
@@ -126,12 +133,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (token.activeSessionToken && cached.activeSessionToken !== token.activeSessionToken) {
           return null
         }
-        token.plan               = cached.plan
-        token.subscriptionStatus = cached.subscriptionStatus
-        token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
-        token.role               = cached.role
-        token.emailVerified      = cached.emailVerified?.toISOString() ?? null
-        return token
+        // Cross-replica cache invalidation: if webhook incremented sessionVersion in DB, the JWT
+        // already carries the new version (set by the replica that processed the webhook).
+        // Bust the local cache so this replica also picks up the fresh state (e.g. plan downgrade).
+        const tokenVersion = (token.sessionVersion as number | undefined) ?? 0
+        if (tokenVersion !== 0 && tokenVersion !== cached.sessionVersion) {
+          userPlanCache.delete(userId)
+          // fall through to DB read below
+        } else {
+          token.plan               = cached.plan
+          token.subscriptionStatus = cached.subscriptionStatus
+          token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
+          token.role               = cached.role
+          token.emailVerified      = cached.emailVerified?.toISOString() ?? null
+          return token
+        }
       }
 
       const dbUser = await db.user.findUnique({
@@ -195,7 +211,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       db.user.update({
         where: { id: userId },
         data:  { lastActiveAt: new Date() },
-      }).catch(() => {})
+      }).catch((e) => logger.error("lastActiveAt update failed", { userId }, e instanceof Error ? e : undefined))
 
       return token
     },
@@ -220,7 +236,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         await db.user.update({
           where: { id: sub },
           data: { activeSessionToken: null },
-        }).catch(() => {})
+        }).catch((e) => logger.error("signOut activeSessionToken clear failed — user may be blocked on next login", { userId: sub }, e instanceof Error ? e : undefined))
         purgeUserCache(sub)
       }
     },

@@ -84,7 +84,10 @@ export class StripeWebhookService {
 
     if (result.skip) return
     purgeUserCache(userId)
-    await checkAndApplyReferralReward(userId)
+    // Fire-and-forget: referral failure must not cause 500 → Stripe retry → idempotency skip → reward permanently lost
+    checkAndApplyReferralReward(userId).catch((e) =>
+      this.logger.error("checkAndApplyReferralReward failed after checkout", { userId, eventId: event.id }, e instanceof Error ? e : undefined)
+    )
   }
 
   private async handleInvoicePaid(event: Stripe.Event): Promise<void> {
@@ -114,6 +117,9 @@ export class StripeWebhookService {
     if (result.skip || !result.user) return
     purgeUserCache(result.user.id)
 
+    if (!result.user.email) {
+      this.logger.error("handleInvoicePaid: user has no email — confirmation email skipped", { eventId: event.id, userId: result.user.id })
+    }
     if (emailEnabled() && resend && result.user.email) {
       const planInterval = (result.user.planInterval ?? "monthly") as "monthly" | "annual"
       await resend.emails.send({
@@ -145,10 +151,13 @@ export class StripeWebhookService {
       } else if (sub.status === "active") {
         const periodEnd = sub.items.data[0]?.current_period_end
         await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "ACTIVE", ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
+        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "ACTIVE", periodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null } } })
       } else if (sub.status === "past_due" || sub.status === "unpaid") {
         await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } } })
+        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "PAST_DUE", stripeStatus: sub.status } } })
       } else if (sub.status === "incomplete_expired" || sub.status === "paused") {
         await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
+        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "EXPIRED", stripeStatus: sub.status } } })
       }
       return { skip: false, userId: user.id }
     }, TX_OPTS)
@@ -272,16 +281,32 @@ export class StripeWebhookService {
 
     const result = await db.$transaction(async (tx) => {
       try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null }; throw e }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: resolvedCustomerId }, select: { id: true } })
-      if (!user) return { skip: false, userId: null }
-      await tx.auditLog.create({ data: { userId: user.id, action: "DISPUTE_CLOSED", metadata: { disputeId: dispute.id, chargeId, status: dispute.status, amount: dispute.amount } } })
-      return { skip: false, userId: user.id }
+      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null, userEmail: null, userName: null }; throw e }
+      const user = await tx.user.findUnique({ where: { stripeCustomerId: resolvedCustomerId }, select: { id: true, email: true, name: true } })
+      if (!user) return { skip: false, userId: null, userEmail: null, userName: null }
+      await tx.auditLog.create({ data: { userId: user.id, action: disputeWon ? "DISPUTE_WON_MANUAL_REVIEW" : "DISPUTE_CLOSED", metadata: { disputeId: dispute.id, chargeId, status: dispute.status, amount: dispute.amount } } })
+      return { skip: false, userId: user.id, userEmail: user.email, userName: user.name }
     }, TX_OPTS)
 
     if (result.skip || !result.userId) return
+    const userId = result.userId
+    const userEmail = (result as { userEmail: string | null }).userEmail ?? null
+    const userName = (result as { userName: string | null }).userName ?? null
+
     if (disputeWon) {
-      this.logger.info("StripeWebhookService: dispute won — manual review required", { eventId: event.id, userId: result.userId, disputeId: dispute.id })
+      // User was auto-downgraded on dispute.created. Stripe won — manual re-activation required.
+      // We cannot auto-recreate the canceled subscription; admin must issue a new one or credit the account.
+      this.logger.error("StripeWebhookService: DISPUTE WON — user locked out, manual re-activation required", {
+        eventId: event.id, userId, disputeId: dispute.id, amount: dispute.amount,
+      })
+      if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+        await resend.emails.send({
+          from: "READY CV <no-reply@readycvv.com>",
+          to: process.env.ADMIN_EMAIL,
+          subject: `[ACTION REQUIRED] Dispute won — user locked out: ${userEmail ?? userId}`,
+          text: `Stripe dispute ${dispute.id} was WON.\n\nUser: ${userName ?? "unknown"} (${userEmail ?? "no email"})\nUser ID: ${userId}\nAmount: $${(dispute.amount / 100).toFixed(2)}\n\nThe user lost Pro access when the dispute was created. Their account is currently LOCKED OUT.\n\nTo re-activate:\n1. Go to Stripe Dashboard → create a new subscription for this customer\n2. Then run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n   This syncs the new subscription to the database and restores Pro access.\n\nAlternatively, issue a manual account credit in Stripe if no new subscription is needed.`,
+        }).catch((e) => this.logger.error("dispute won admin email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
+      }
     }
   }
 
@@ -339,6 +364,17 @@ export class StripeWebhookService {
       await this.stripeClient.cancelSubscription(result.subscriptionId).catch((e) =>
         this.logger.error("fraud warning sub cancel failed", { eventId: event.id }, e instanceof Error ? e : undefined)
       )
+    }
+    this.logger.error("StripeWebhookService: FRAUD WARNING — user auto-downgraded, review required", {
+      eventId: event.id, userId: result.userId, warningId: warning.id, fraudType: warning.fraud_type, actionable: warning.actionable,
+    })
+    if (warning.actionable && emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+      await resend.emails.send({
+        from: "READY CV <no-reply@readycvv.com>",
+        to: process.env.ADMIN_EMAIL,
+        subject: `[ACTION REQUIRED] Stripe Radar fraud warning — userId: ${result.userId}`,
+        text: `Stripe Radar issued an actionable early fraud warning.\n\nUser ID: ${result.userId}\nWarning ID: ${warning.id}\nFraud type: ${warning.fraud_type}\nCharge ID: ${chargeId}\n\nThe user has been auto-downgraded to UNSUBSCRIBED. Review in Stripe Radar and decide whether to dispute or refund.`,
+      }).catch((e) => this.logger.error("fraud warning admin email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
     }
   }
 

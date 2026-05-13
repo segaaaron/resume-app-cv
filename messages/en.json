@@ -516,7 +516,8 @@
       "title": "Payment issue",
       "description": "We couldn't process your Pro subscription payment. Update your payment method to keep your access.",
       "cta": "Update payment method",
-      "dismiss": "Dismiss"
+      "dismiss": "Dismiss",
+      "error": "Error opening payment portal"
     },
     "nav": {
       "cvs": "CVs",
@@ -599,6 +600,7 @@
       "cancel": "Cancel",
       "create_error": "Error creating letter",
       "delete_success": "Letter deleted",
+      "delete_error": "Error deleting letter",
       "require_pro_toast": "Activate your Pro plan to continue"
     },
     "settings": {
@@ -1259,6 +1261,7 @@
     "reward_tier_3": "1 free month (100%)",
     "max_tier": "You've reached the highest level!",
     "reward_applied": "The credit is automatically applied to your next invoice.",
+    "load_error": "Error loading referrals",
     "cycle_reset_note": "After reaching 9 Pro referrals the counter resets and you can earn rewards again.",
     "tier_achieved": "✓ active",
     "tier_referidos": "{range} referrals",

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { stripeEnabled } from "@/lib/stripe"
+import { resend, emailEnabled } from "@/lib/resend"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
@@ -31,8 +32,24 @@ export class StripeCheckoutService {
     }
 
     if (user.subscriptionId && user.subscriptionStatus === "CANCELED") {
-      await this.stripeClient.cancelSubscription(user.subscriptionId).catch(() => {})
-      await db.user.update({ where: { id: userId }, data: { subscriptionId: null } })
+      const oldSubId = user.subscriptionId
+      let cancelSucceeded = false
+      await this.stripeClient.cancelSubscription(oldSubId)
+        .then(() => { cancelSucceeded = true })
+        .catch(async (e) => {
+          this.logger.error("StripeCheckoutService: failed to cancel old sub before checkout", { userId, subscriptionId: oldSubId }, e instanceof Error ? e : undefined)
+          if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+            await resend.emails.send({
+              from: "READY CV <no-reply@readycvv.com>",
+              to: process.env.ADMIN_EMAIL,
+              subject: `[WARNING] Old subscription NOT canceled before new checkout: ${userId}`,
+              text: `User ${userId} started a new checkout but the old subscription (${oldSubId}) could NOT be canceled.\n\nThis may result in two active subscriptions in Stripe.\n\nAction required:\n1. Check Stripe Dashboard for user with subscription ${oldSubId}\n2. Cancel the old subscription manually if still active\n\nError: ${String(e)}`,
+            }).catch((emailErr) => this.logger.error("StripeCheckoutService: admin alert email failed", { userId }, emailErr instanceof Error ? emailErr : undefined))
+          }
+        })
+      if (cancelSucceeded) {
+        await db.user.update({ where: { id: userId }, data: { subscriptionId: null } })
+      }
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
@@ -48,7 +65,20 @@ export class StripeCheckoutService {
         const customer = await this.stripeClient.createCustomer({ email: user.email!, metadata: { userId } })
         customerId = customer.id
       }
-      await db.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
+      try {
+        await db.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
+      } catch (e) {
+        this.logger.error("StripeCheckoutService: failed to save stripeCustomerId — orphan customer created", { userId, customerId }, e instanceof Error ? e : undefined)
+        if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+          await resend.emails.send({
+            from: "READY CV <no-reply@readycvv.com>",
+            to: process.env.ADMIN_EMAIL,
+            subject: `[WARNING] Orphan Stripe customer created: ${userId}`,
+            text: `A Stripe customer (${customerId}) was created for user ${userId} but could NOT be saved to the database.\n\nThis customer is now orphaned in Stripe. Future checkouts may create duplicate customers.\n\nAction required:\n1. Manually set stripeCustomerId = '${customerId}' for user ${userId} in the database\n2. Or run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n\nError: ${String(e)}`,
+          }).catch((emailErr) => this.logger.error("StripeCheckoutService: orphan alert email failed", { userId, customerId }, emailErr instanceof Error ? emailErr : undefined))
+        }
+        throw new AppError("checkout_failed", 500)
+      }
     }
 
     const checkoutSession = await this.stripeClient.createCheckoutSession({

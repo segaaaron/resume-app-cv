@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { AlertTriangle, X, ExternalLink } from "lucide-react"
+import { toast } from "sonner"
 
 export default function PastDueBanner() {
   const t = useTranslations("dashboard.past_due_banner")
@@ -21,6 +22,10 @@ export default function PastDueBanner() {
         body: JSON.stringify({ locale }),
       })
       const data = await res.json()
+      if (!res.ok) {
+        toast.error(t("error"))
+        return
+      }
       if (data.url) window.location.href = data.url
     } finally {
       setLoading(false)

@@ -74,7 +74,12 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   }
 
   async function deleteLetter(id: string) {
-    await fetch(`/api/cover-letters/${id}`, { method: "DELETE" })
+    const res = await fetch(`/api/cover-letters/${id}`, { method: "DELETE" })
+    if (!res.ok) {
+      toast.error(t("delete_error"))
+      setDeleteId(null)
+      return
+    }
     setLetters((prev) => prev.filter((l) => l.id !== id))
     setDeleteId(null)
     toast.success(t("delete_success"))

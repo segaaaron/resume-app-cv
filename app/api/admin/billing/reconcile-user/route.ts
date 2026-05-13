@@ -3,9 +3,12 @@ import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { checkOrigin } from "@/lib/csrf"
+import { createLogger } from "@/lib/logger"
 import { z } from "zod"
 import type Stripe from "stripe"
 import { SubscriptionStatus, Prisma } from "@prisma/client"
+
+const logger = createLogger("reconcile-user")
 
 const schema = z.object({
   userId: z.string().min(1),
@@ -66,7 +69,7 @@ export async function POST(req: Request) {
       expand:   ["data.items"],
     })
   } catch (e) {
-    console.error("[reconcile] Stripe API error", { userId, error: e })
+    logger.error("reconcile-user: Stripe API error", { userId }, e instanceof Error ? e : undefined)
     await db.auditLog.create({
       data: { userId, action: "ADMIN_RECONCILE_USER", metadata: { byAdmin: session.user.id, error: String(e), outcome: "stripe_error" } },
     })

@@ -2,6 +2,9 @@ import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { resend, emailEnabled } from "@/lib/resend"
 import { referralRewardHtml, referralRewardText } from "@/lib/emails/referralReward"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("referral-rewards")
 
 /**
  * Referral reward tiers — based on paid referrals in the CURRENT cycle.
@@ -123,8 +126,8 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
       cycleCount,
       isCycleComplete,
     })
-  } catch {
-    // silently ignore
+  } catch (e) {
+    logger.error("checkAndApplyReferralReward failed — manual credit review required", { newProUserId }, e instanceof Error ? e : undefined)
   }
 }
 
@@ -195,8 +198,8 @@ async function sendReferralRewardEmail({
         isCycleComplete,
       }),
     })
-  } catch {
-    // silently ignore
+  } catch (e) {
+    logger.error("sendReferralRewardEmail failed", { referrerId: referrer.id }, e instanceof Error ? e : undefined)
   }
 }
 
@@ -215,9 +218,8 @@ async function applyStripeCredit(
       description: `Recompensa por referidos — Tier ${tier} (${label})`,
     })
   } catch (err) {
-    // Log Stripe credit failure — REFERRAL_CREDIT_FAILED not yet in AuditAction enum,
-    // so we write to server logs until a migration adds it.
-    console.error("[referral-rewards] Stripe credit failed", { referrerId, tier, error: String(err) })
+    logger.error("Stripe credit failed — tier NOT updated, manual credit required", { referrerId, tier, amountCents }, err instanceof Error ? err : undefined)
+    throw err
   }
 }
 

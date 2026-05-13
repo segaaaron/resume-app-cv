@@ -2,8 +2,12 @@ import { NextResponse } from "next/server"
 import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
+import { resend, emailEnabled } from "@/lib/resend"
+import { createLogger } from "@/lib/logger"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
+
+const logger = createLogger("refunds")
 
 // Causales de reembolso aceptadas según T&C (Sección 4)
 const VALID_REASONS = ["technical_issue", "duplicate_charge", "service_not_as_described"] as const
@@ -51,6 +55,11 @@ export async function POST(req: Request) {
 
     if (!user.stripeCustomerId) {
       return NextResponse.json({ error: "No se encontró cuenta de pago asociada" }, { status: 400 })
+    }
+
+    // Idempotency guard: already refunded/unsubscribed → return success to prevent double refund on double-click
+    if (user.plan === "UNSUBSCRIBED" || user.subscriptionStatus === "EXPIRED") {
+      return NextResponse.json({ error: "La suscripción ya fue cancelada o reembolsada" }, { status: 400 })
     }
 
     if (!user.subscriptionId) {
@@ -104,13 +113,29 @@ export async function POST(req: Request) {
       },
     })
 
-    if (user.subscriptionId) {
-      await stripe.subscriptions.cancel(user.subscriptionId).catch(() => null)
-    }
+    const subId = user.subscriptionId
+    await stripe.subscriptions.cancel(subId).catch(async (e) => {
+      logger.error("refunds: CRITICAL — subscription cancel failed after refund, manual cancel required in Stripe", { userId, subscriptionId: subId }, e instanceof Error ? e : undefined)
+      await db.auditLog.create({
+        data: {
+          userId,
+          action: "REFUND_ISSUED",
+          metadata: { note: "CRITICAL: Stripe sub NOT canceled — manual action required", subscriptionId: subId, refundId: refund.id },
+        },
+      }).catch((dbErr) => logger.error("refunds: failed to write sub-cancel-failed audit log", { userId }, dbErr instanceof Error ? dbErr : undefined))
+      if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+        await resend.emails.send({
+          from: "READY CV <no-reply@readycvv.com>",
+          to: process.env.ADMIN_EMAIL,
+          subject: `[CRITICAL] Refund issued but subscription NOT canceled: ${userId}`,
+          text: `A refund was issued for user ${userId} but the Stripe subscription (${subId}) could NOT be canceled automatically.\n\nStripe will continue billing the user unless you cancel manually.\n\nAction required:\n1. Go to Stripe Dashboard → Subscriptions\n2. Search for subscription ${subId}\n3. Cancel immediately\n\nError: ${String(e)}`,
+        }).catch((emailErr) => logger.error("refunds: admin alert email failed", { userId }, emailErr instanceof Error ? emailErr : undefined))
+      }
+    })
 
     return NextResponse.json({ success: true, refundId: refund.id })
   } catch (err) {
-    console.error("[refunds] error", err)
+    logger.error("refunds: unhandled error", { userId }, err instanceof Error ? err : undefined)
     return NextResponse.json({ error: "Error procesando el reembolso" }, { status: 500 })
   }
 }

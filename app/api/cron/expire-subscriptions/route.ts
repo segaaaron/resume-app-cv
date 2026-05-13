@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   const now = new Date()
 
   // Users who canceled and whose period has now ended
-  const expired = await db.user.findMany({
+  const canceled = await db.user.findMany({
     where: {
       plan: "PRO",
       subscriptionStatus: "CANCELED",
@@ -21,11 +21,23 @@ export async function GET(req: Request) {
     select: { id: true },
   })
 
-  if (expired.length === 0) {
+  // Webhook drift guard: PRO/ACTIVE users whose subscriptionEndsAt is in the past
+  // (webhook subscription.deleted or invoice.paid failed to process)
+  // PAST_DUE excluded — Stripe smart-retry can run up to ~3 weeks; do not downgrade mid-retry
+  const activeStale = await db.user.findMany({
+    where: {
+      plan: "PRO",
+      subscriptionStatus: "ACTIVE",
+      subscriptionEndsAt: { lt: now },
+    },
+    select: { id: true },
+  })
+
+  const ids = [...new Set([...canceled, ...activeStale].map((u) => u.id))]
+
+  if (ids.length === 0) {
     return NextResponse.json({ downgraded: 0 })
   }
-
-  const ids = expired.map((u) => u.id)
 
   await db.user.updateMany({
     where: { id: { in: ids } },
@@ -38,5 +50,5 @@ export async function GET(req: Request) {
     },
   })
 
-  return NextResponse.json({ downgraded: ids.length })
+  return NextResponse.json({ downgraded: ids.length, canceledCount: canceled.length, stalePROCount: activeStale.length })
 }

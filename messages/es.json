@@ -516,7 +516,8 @@
       "title": "Problema con tu pago",
       "description": "No pudimos procesar el cobro de tu suscripción Pro. Actualiza tu método de pago para mantener el acceso.",
       "cta": "Actualizar método de pago",
-      "dismiss": "Ignorar"
+      "dismiss": "Ignorar",
+      "error": "Error al abrir el portal de pago"
     },
     "nav": {
       "cvs": "CVs",
@@ -599,6 +600,7 @@
       "cancel": "Cancelar",
       "create_error": "Error al crear la carta",
       "delete_success": "Carta eliminada",
+      "delete_error": "Error al eliminar la carta",
       "require_pro_toast": "Activa tu plan Pro para continuar"
     },
     "settings": {
@@ -1259,6 +1261,7 @@
     "reward_tier_3": "1 mes gratis (100%)",
     "max_tier": "¡Alcanzaste el máximo nivel!",
     "reward_applied": "El crédito se aplica automáticamente en tu próxima factura.",
+    "load_error": "Error al cargar los referidos",
     "cycle_reset_note": "Al completar 9 referidos Pro el contador se reinicia y puedes volver a ganar recompensas.",
     "tier_achieved": "✓ activo",
     "tier_referidos": "{range} referidos",

@@ -36,10 +36,14 @@ export default function ReferralCard() {
 
   useEffect(() => {
     fetch("/api/referrals")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("referrals fetch failed")
+        return r.json()
+      })
       .then(setStats)
+      .catch(() => toast.error(t("load_error")))
       .finally(() => setLoading(false))
-  }, [])
+  }, [t])
 
   const referralUrl =
     typeof window !== "undefined" && stats

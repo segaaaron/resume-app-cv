@@ -185,16 +185,25 @@ export class CronService {
 
   async purgeStripeEvents(): Promise<PurgeStripeEventsResult> {
     const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90 days ago
+    const BATCH_SIZE = 500
+    let totalDeleted = 0
 
-    const { count } = await db.stripeEvent.deleteMany({
-      where: {
-        processedAt: {
-          lt: cutoff,
-        },
-      },
-    })
+    // Batch deletes to avoid locking StripeEvent table during webhook processing
+    while (true) {
+      const rows = await db.stripeEvent.findMany({
+        where: { processedAt: { lt: cutoff } },
+        select: { id: true },
+        take: BATCH_SIZE,
+      })
+      if (rows.length === 0) break
+      const { count } = await db.stripeEvent.deleteMany({
+        where: { id: { in: rows.map((r) => r.id) } },
+      })
+      totalDeleted += count
+      if (rows.length < BATCH_SIZE) break
+    }
 
-    this.logger.info(`[CronService] purgeStripeEvents: deleted=${count}`)
-    return { deleted: count }
+    this.logger.info(`[CronService] purgeStripeEvents: deleted=${totalDeleted}`)
+    return { deleted: totalDeleted }
   }
 }

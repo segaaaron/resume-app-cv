@@ -1,0 +1,5 @@
+-- Migration: add_audit_action_values
+-- Created: 2026-05-13 13:28:37
+
+ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'DISPUTE_WON_MANUAL_REVIEW';
+ALTER TYPE "AuditAction" ADD VALUE IF NOT EXISTS 'SUBSCRIPTION_UPDATED';
