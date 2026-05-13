@@ -1,71 +1,33 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
-import { ResumeSectionsSchema } from "@/types/resume"
-import { checkOrigin } from "@/lib/csrf"
-import { isActive } from "@/lib/plans"
+import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { resumeService } from "@/lib/controllers/resume-deps"
+import { snapshotSchema } from "@/lib/services/resume/ResumeService"
 
-const MAX_VERSIONS = 10
-
-// Snapshot schema — mirrors the Resume fields saved by EditorLayout autosave
-export const snapshotConfigSchema = z.object({
-  templateId:    z.string().optional(),
-  colorScheme:   z.string().optional(),
-  fontFamily:    z.string().optional(),
-  fontSize:      z.number().optional(),
-  spacing:       z.number().optional(),
-  photoUrl:      z.string().optional().nullable(),
-  photoPosition: z.number().optional(),
-  language:      z.string().optional(),
-}).optional()
-
-export const snapshotSchema = z.object({
-  title:       z.string().optional(),
-  sections:    z.array(z.any()).optional(),
-  sectionData: ResumeSectionsSchema.optional(),
-  config:      snapshotConfigSchema,
-})
-
-export type ResumeSnapshot = z.infer<typeof snapshotSchema>
+// Re-export for restore route (backward compat)
+export { snapshotSchema }
+export type { ResumeSnapshot } from "@/lib/services/resume/ResumeService"
 
 // GET /api/resumes/versions?resumeId=xxx — list versions
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const { searchParams } = new URL(req.url)
   const resumeId = searchParams.get("resumeId")
   if (!resumeId) return NextResponse.json({ error: "resumeId required" }, { status: 400 })
 
-  // Verify ownership
-  const resume = await db.resume.findFirst({ where: { id: resumeId, userId: session.user.id } })
-  if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
-
-  const versions = await db.resumeVersion.findMany({
-    where: { resumeId },
-    orderBy: { createdAt: "desc" },
-    select: { id: true, label: true, createdAt: true },
-  })
-
-  return NextResponse.json({ versions })
+  try {
+    const versions = await resumeService.getVersions(authResult.userId, resumeId)
+    return NextResponse.json({ versions })
+  } catch (err) {
+    return handleError(err)
+  }
 }
 
 // POST /api/resumes/versions — save a new version snapshot
 export async function POST(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
-  })
-
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
-    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
-  }
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const body = await req.json().catch(() => null)
   if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
@@ -76,56 +38,40 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "resumeId required" }, { status: 400 })
   }
 
-  // Validate snapshot shape before persisting
   const parsed = snapshotSchema.safeParse(body.snapshot)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid snapshot format", details: parsed.error.flatten() }, { status: 400 })
+    return NextResponse.json(
+      { error: "Invalid snapshot format", details: parsed.error.flatten() },
+      { status: 400 },
+    )
   }
 
-  // Verify ownership
-  const resume = await db.resume.findFirst({ where: { id: resumeId, userId: session.user.id } })
-  if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
-
-  // Create the new version and prune old ones atomically
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let version: any
-  await db.$transaction(async (tx) => {
-    version = await tx.resumeVersion.create({
-      data: { resumeId, label: typeof label === "string" ? label : null, snapshot: parsed.data as object },
-    })
-    const all = await tx.resumeVersion.findMany({
-      where: { resumeId },
-      orderBy: { createdAt: "desc" },
-      select: { id: true },
-    })
-    if (all.length > MAX_VERSIONS) {
-      const toDelete = all.slice(MAX_VERSIONS).map((v) => v.id)
-      await tx.resumeVersion.deleteMany({ where: { id: { in: toDelete } } })
-    }
-  })
-
-  return NextResponse.json({ version: version! })
+  try {
+    const version = await resumeService.createVersion(
+      authResult.userId,
+      resumeId,
+      parsed.data,
+      typeof label === "string" ? label : undefined,
+    )
+    return NextResponse.json({ version })
+  } catch (err) {
+    return handleError(err)
+  }
 }
 
 // DELETE /api/resumes/versions?id=xxx — delete a specific version
 export async function DELETE(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
 
-  // Verify ownership via join
-  const version = await db.resumeVersion.findFirst({
-    where: { id },
-    include: { resume: { select: { userId: true } } },
-  })
-
-  if (!version || version.resume.userId !== session.user.id) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  try {
+    await resumeService.deleteVersion(authResult.userId, id)
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return handleError(err)
   }
-
-  await db.resumeVersion.delete({ where: { id } })
-  return NextResponse.json({ success: true })
 }

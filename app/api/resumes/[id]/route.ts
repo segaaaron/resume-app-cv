@@ -1,45 +1,26 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
-import { checkOrigin } from "@/lib/csrf"
+import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { resumeService, } from "@/lib/controllers/resume-deps"
+import { resumePatchSchema } from "@/lib/services/resume/ResumeService"
 
 type Params = { params: Promise<{ id: string }> }
 
-const patchSchema = z.object({
-  title:       z.string().min(1).max(200).optional(),
-  sections:    z.array(z.any()).optional(),
-  sectionData: z.any().optional(),
-  config: z.object({
-    templateId:  z.string().optional(),
-    colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-    fontFamily:  z.string().max(100).optional(),
-    fontSize:    z.number().int().min(8).max(24).optional(),
-    spacing:     z.number().min(0.5).max(3).optional(),
-    photoUrl:      z.string().regex(/^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/=]+$/).max(500000).optional().nullable(),
-    photoPosition: z.number().int().min(0).max(100).optional(),
-    language:      z.enum(["es", "en"]).optional(),
-  }).optional(),
-})
-
-export async function GET(_req: Request, { params }: Params) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+export async function GET(req: Request, { params }: Params) {
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const { id } = await params
-  const resume = await db.resume.findFirst({
-    where: { id, userId: session.user.id },
-  })
-
-  if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
-  return NextResponse.json(resume)
+  try {
+    const resume = await resumeService.get(authResult.userId, id)
+    return NextResponse.json(resume)
+  } catch (err) {
+    return handleError(err)
+  }
 }
 
 export async function PATCH(req: Request, { params }: Params) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const { id } = await params
 
@@ -50,46 +31,28 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  const parsed = patchSchema.safeParse(body)
+  const parsed = resumePatchSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid data" }, { status: 422 })
   }
 
-  const { title, sections, sectionData, config } = parsed.data
-
-  const existing = await db.resume.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
-
-  await db.resume.update({
-    where: { id },
-    data: {
-      title:           title ?? undefined,
-      sections:        sections ? (sections as object[]) : undefined,
-      personalDetails: sectionData ? (sectionData as object) : undefined,
-      templateId:      config?.templateId ?? undefined,
-      colorScheme:     config?.colorScheme ?? undefined,
-      fontFamily:      config?.fontFamily ?? undefined,
-      fontSize:        config?.fontSize ?? undefined,
-      spacing:         config?.spacing ?? undefined,
-      photoUrl:        config?.photoUrl !== undefined ? config.photoUrl : undefined,
-      photoPosition:   config?.photoPosition ?? undefined,
-      language:        config?.language ?? undefined,
-    },
-  })
-
-  return NextResponse.json({ success: true })
+  try {
+    await resumeService.update(authResult.userId, id, parsed.data)
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return handleError(err)
+  }
 }
 
 export async function DELETE(req: Request, { params }: Params) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const { id } = await params
-  const existing = await db.resume.findFirst({ where: { id, userId: session.user.id }, select: { id: true } })
-  if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 })
-
-  await db.resume.delete({ where: { id } })
-  return NextResponse.json({ success: true })
+  try {
+    await resumeService.delete(authResult.userId, id)
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return handleError(err)
+  }
 }

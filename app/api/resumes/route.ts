@@ -1,55 +1,26 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
-import { getLimits } from "@/lib/plans"
-import { checkOrigin } from "@/lib/csrf"
+import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { resumeService } from "@/lib/controllers/resume-deps"
 
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const { searchParams } = new URL(req.url)
-  const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50"), 100)
+  const limit  = parseInt(searchParams.get("limit") ?? "50")
   const cursor = searchParams.get("cursor") ?? undefined
 
-  const resumes = await db.resume.findMany({
-    where: { userId: session.user.id },
-    orderBy: { updatedAt: "desc" },
-    take: limit,
-    ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
-    select: {
-      id: true,
-      title: true,
-      templateId: true,
-      colorScheme: true,
-      updatedAt: true,
-      createdAt: true,
-    },
-  })
-
-  const nextCursor = resumes.length === limit ? resumes[resumes.length - 1].id : null
-  return NextResponse.json({ data: resumes, nextCursor })
+  try {
+    const result = await resumeService.list(authResult.userId, limit, cursor)
+    return NextResponse.json(result)
+  } catch (err) {
+    return handleError(err)
+  }
 }
 
 export async function POST(request: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  if (!checkOrigin(request)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-
-  // Plan limit check
-  const user = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true } })
-  const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
-  if (limits.maxResumes !== Infinity) {
-    const count = await db.resume.count({ where: { userId: session.user.id } })
-    if (count >= limits.maxResumes) {
-      return NextResponse.json(
-        { error: `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.` },
-        { status: 403 }
-      )
-    }
-  }
+  const authResult = await requireAuth(request)
+  if (authResult instanceof NextResponse) return authResult
 
   let templateId: string | undefined
   try {
@@ -57,17 +28,10 @@ export async function POST(request: Request) {
     if (body?.templateId) templateId = body.templateId
   } catch {}
 
-  const defaultData = ResumeSectionsSchema.parse({})
-
-  const resume = await db.resume.create({
-    data: {
-      userId: session.user.id,
-      title: "Mi CV",
-      sections: DEFAULT_SECTIONS as object[],
-      personalDetails: defaultData as object,
-      ...(templateId ? { templateId } : {}),
-    },
-  })
-
-  return NextResponse.json(resume, { status: 201 })
+  try {
+    const resume = await resumeService.create(authResult.userId, templateId)
+    return NextResponse.json(resume, { status: 201 })
+  } catch (err) {
+    return handleError(err)
+  }
 }

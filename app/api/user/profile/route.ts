@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
-
-const schema = z.object({
-  name: z.string().min(2, "El nombre debe tener al menos 2 caracteres").max(255).trim(),
-})
+import { handleError } from "@/lib/controllers/shared"
+import { userService } from "@/lib/controllers/user-deps"
 
 export async function PATCH(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
   if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   let body: unknown
@@ -21,15 +16,10 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
   }
 
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid name" }, { status: 400 })
+  try {
+    const result = await userService.updateProfile(session.user.id, body as { name: string })
+    return NextResponse.json(result)
+  } catch (err) {
+    return handleError(err)
   }
-
-  await db.user.update({
-    where: { id: session.user.id },
-    data: { name: parsed.data.name },
-  })
-
-  return NextResponse.json({ success: true })
 }

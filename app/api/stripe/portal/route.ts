@@ -1,37 +1,19 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { stripe, stripeEnabled } from "@/lib/stripe"
-import { checkOrigin } from "@/lib/csrf"
+import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { stripeBillingService } from "@/lib/controllers/stripe-deps"
 
 export async function POST(req: Request) {
-  if (!stripeEnabled() || !stripe) {
-    return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
-  }
-
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
   const rawLocale = typeof body.locale === "string" ? body.locale : ""
   const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
 
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { stripeCustomerId: true },
-  })
-
-  if (!user?.stripeCustomerId) {
-    return NextResponse.json({ error: "No active subscription" }, { status: 400 })
+  try {
+    const result = await stripeBillingService.createPortalSession(authResult.userId, locale)
+    return NextResponse.json(result)
+  } catch (err) {
+    return handleError(err)
   }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
-  const portalSession = await stripe.billingPortal.sessions.create({
-    customer: user.stripeCustomerId,
-    return_url: `${appUrl}/${locale}/dashboard/settings`,
-  })
-
-  return NextResponse.json({ url: portalSession.url })
 }

@@ -1,23 +1,22 @@
+import { timingSafeEqual } from "crypto"
 import { NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { cronService } from "@/lib/controllers/cron-deps"
+import { handleError } from "@/lib/controllers/shared"
 
 export async function GET(req: Request) {
-  const authHeader = req.headers.get("authorization")
   const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const auth = req.headers.get("authorization") ?? ""
+  const expected = Buffer.from(`Bearer ${cronSecret}`)
+  const actual = Buffer.from(auth)
+  if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90 days ago
-
-  const { count } = await db.stripeEvent.deleteMany({
-    where: {
-      processedAt: {
-        lt: cutoff,
-      },
-    },
-  })
-
-  return NextResponse.json({ deleted: count })
+  try {
+    const result = await cronService.purgeStripeEvents()
+    return NextResponse.json(result)
+  } catch (err) {
+    return handleError(err)
+  }
 }

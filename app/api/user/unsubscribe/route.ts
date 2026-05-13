@@ -1,19 +1,23 @@
-import { db } from "@/lib/db"
-import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token"
+import { userService } from "@/lib/controllers/user-deps"
+import { AppError } from "@/lib/services/auth/AppError"
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const userId = searchParams.get("uid")
   const token = searchParams.get("t")
 
-  if (!userId || !token || !verifyUnsubscribeToken(userId, token)) {
+  if (!userId || !token) {
     return new Response("Link inválido o expirado.", { status: 400, headers: { "Content-Type": "text/plain" } })
   }
 
-  await db.user.update({
-    where: { id: userId },
-    data: { emailOptOut: true },
-  })
+  try {
+    await userService.unsubscribeEmail(userId, token)
+  } catch (err) {
+    if (err instanceof AppError && err.status === 400) {
+      return new Response("Link inválido o expirado.", { status: 400, headers: { "Content-Type": "text/plain" } })
+    }
+    return new Response("Error interno.", { status: 500, headers: { "Content-Type": "text/plain" } })
+  }
 
   return new Response(
     `<!DOCTYPE html>

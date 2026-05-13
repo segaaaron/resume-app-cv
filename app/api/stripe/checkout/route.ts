@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { db } from "@/lib/db"
-import { stripe, stripeEnabled } from "@/lib/stripe"
-import { checkOrigin } from "@/lib/csrf"
 import { z } from "zod"
+import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { stripeCheckoutService } from "@/lib/controllers/stripe-deps"
 
 const schema = z.object({
   plan:   z.enum(["monthly", "annual"]),
@@ -11,91 +9,16 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
-  if (!stripeEnabled() || !stripe) {
-    return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
-  }
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const parsed = schema.safeParse(await req.json().catch(() => ({})))
+  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
 
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-
-  let body: unknown
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+    const result = await stripeCheckoutService.createSession(authResult.userId, parsed.data.plan, parsed.data.locale ?? "es")
+    return NextResponse.json(result)
+  } catch (err) {
+    return handleError(err)
   }
-
-  const parsed = schema.safeParse(body)
-  if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid data" }, { status: 422 })
-  }
-
-  const PRICE_IDS: Record<string, string | undefined> = {
-    monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
-    annual: process.env.STRIPE_PRICE_ID_ANNUAL,
-  }
-
-  const priceId = PRICE_IDS[parsed.data.plan]
-  if (!priceId) {
-    return NextResponse.json({ error: "Plan not configured" }, { status: 503 })
-  }
-
-  const user = await db.user.findUnique({
-    where: { id: session.user.id },
-    select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true, subscriptionId: true },
-  })
-  if (!user) return NextResponse.json({ error: "User not found" }, { status: 404 })
-
-  // Block checkout if subscription is still live in Stripe
-  if (user.subscriptionStatus === "ACTIVE" || user.subscriptionStatus === "PAST_DUE") {
-    return NextResponse.json({ error: "Already subscribed" }, { status: 400 })
-  }
-
-  // If CANCELED but subscriptionId still exists, clean it up before new checkout
-  if (user.subscriptionId && user.subscriptionStatus === "CANCELED") {
-    await stripe.subscriptions.cancel(user.subscriptionId).catch(() => {})
-    await db.user.update({ where: { id: user.id }, data: { subscriptionId: null } })
-  }
-
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL
-  if (!appUrl) return NextResponse.json({ error: "Server misconfiguration" }, { status: 500 })
-
-  // Create or reuse Stripe customer — match by metadata.userId to avoid wrong-customer risk
-  let customerId = user.stripeCustomerId
-  if (!customerId) {
-    const existingCustomers = await stripe.customers.list({ email: user.email!, limit: 10 })
-    const matchingCustomer = existingCustomers.data.find(
-      c => c.metadata?.userId === session.user.id && !c.deleted
-    )
-    if (matchingCustomer) {
-      customerId = matchingCustomer.id
-    } else {
-      const customer = await stripe.customers.create({
-        email: user.email,
-        metadata: { userId: user.id },
-      })
-      customerId = customer.id
-    }
-    await db.user.update({
-      where: { id: user.id },
-      data: { stripeCustomerId: customerId },
-    })
-  }
-
-  const checkoutSession = await stripe.checkout.sessions.create({
-    customer: customerId,
-    mode: "subscription",
-    payment_method_types: ["card"],
-    line_items: [{ price: priceId, quantity: 1 }],
-    success_url: `${appUrl.replace(/\/$/, "")}/${parsed.data.locale ?? "es"}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${appUrl}/pricing`,
-    metadata: { userId: user.id, planInterval: parsed.data.plan },
-    subscription_data: {
-      metadata: { userId: user.id, planInterval: parsed.data.plan },
-    },
-  })
-
-  return NextResponse.json({ url: checkoutSession.url })
 }
