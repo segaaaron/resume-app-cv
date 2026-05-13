@@ -10,3 +10,15 @@ export const FONTS_TIMEOUT_MS = 6_000
 export const PDF_BOTTOM_MARGIN_PX = 38
 export const FUDGE_PX = 4
 export const RENDER_TIMEOUT_MS = 45_000
+
+// ─── Márgenes físicos para modo header-footer ────────────────────────────────
+// Solo Puppeteer los usa. La web NO debe agregar padding equivalente al wrapper.
+export const PDF_MARGIN_TOP_CM    = "2cm"
+export const PDF_MARGIN_BOTTOM_CM = "2cm"
+export const PDF_MARGIN_SIDE_CM   = "0"
+
+// ─── PDF Metadata branding ────────────────────────────────────────────────────
+// pdf-generator microservice only — embedded into PDF producer/creator fields.
+// Update here if the product rebrands.
+export const PDF_PRODUCER = "ReadyCV"
+export const PDF_CREATOR  = "ReadyCV — readycvv.com"

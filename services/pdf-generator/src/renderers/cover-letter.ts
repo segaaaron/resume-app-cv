@@ -1,54 +1,54 @@
-import { PDFDocument } from "pdf-lib"
 import type { Page } from "puppeteer-core"
 import { applyCookies } from "../cookie-forwarder"
-import { gotoAndWaitForContent, setA4Viewport, waitForFonts, waitForImages } from "../print-helpers"
+import { embedPdfMetadata, PdfMeta } from "../lib/pdf-metadata"
+import { setA4Viewport, emulateMediaType } from "../page/setup"
+import { gotoAndWaitForContent } from "../page/navigation"
+import { waitForFonts, waitForImages } from "../page/assets"
+import { capturePdf as capturePagePdf } from "../page/capture"
+import { COVER_LETTER_SELECTOR } from "../contracts"
 
-const WRAPPER_SELECTOR = ".cover-letter-page"
+/** Options for rendering a cover letter to PDF. */
+export interface RenderCoverLetterOptions {
+  printUrl: string
+  cookieHeader: string
+  appUrl: string
+  candidateName?: string
+  letterTitle?: string
+}
 
-export async function renderCoverLetterPdf(
-  page: Page,
-  opts: {
-    printUrl: string
-    cookieHeader: string
-    appUrl: string
-    candidateName?: string
-    letterTitle?: string
-  },
-): Promise<Buffer> {
+/**
+ * Renders a cover letter print page to a PDF buffer.
+ * Resets element height to auto before capture to prevent blank trailing pages.
+ */
+export async function renderCoverLetterPdf(page: Page, opts: RenderCoverLetterOptions): Promise<Buffer> {
+  await setupPage(page, opts)
+  await resetCoverLetterHeight(page)
+  return capturePdf(page, { title: opts.letterTitle, author: opts.candidateName })
+}
+
+async function setupPage(page: Page, opts: RenderCoverLetterOptions): Promise<void> {
   await setA4Viewport(page)
   await applyCookies(page, opts.cookieHeader, opts.appUrl)
-  await gotoAndWaitForContent(page, opts.printUrl, WRAPPER_SELECTOR)
-  await page.emulateMediaType("print")
+  await gotoAndWaitForContent(page, opts.printUrl, COVER_LETTER_SELECTOR)
+  await emulateMediaType(page)
   await waitForFonts(page)
   await waitForImages(page)
+}
 
-  await page.evaluate(() => {
-    const el = document.querySelector<HTMLElement>(".cover-letter-page")
+async function resetCoverLetterHeight(page: Page): Promise<void> {
+  await page.evaluate((selector: string) => {
+    const el = document.querySelector<HTMLElement>(selector)
     if (!el) return
     el.style.setProperty("min-height", "0", "important")
     el.style.setProperty("height", "auto", "important")
-  })
-
-  const rawPdf = await page.pdf({
-    preferCSSPageSize: true,
-    printBackground: true,
-    margin: { top: "0", right: "0", bottom: "0", left: "0" },
-  })
-
-  return embedPdfMetadata(Buffer.from(rawPdf), { title: opts.letterTitle, author: opts.candidateName })
+  }, COVER_LETTER_SELECTOR)
 }
 
-async function embedPdfMetadata(pdfBuffer: Buffer, meta: { title?: string; author?: string }): Promise<Buffer> {
-  try {
-    const pdfDoc = await PDFDocument.load(pdfBuffer)
-    if (meta.title) pdfDoc.setTitle(meta.title)
-    if (meta.author) pdfDoc.setAuthor(meta.author)
-    pdfDoc.setProducer("ReadyCV")
-    pdfDoc.setCreator("ReadyCV — readycvv.com")
-    pdfDoc.setCreationDate(new Date())
-    const bytes = await pdfDoc.save()
-    return Buffer.from(bytes)
-  } catch {
-    return pdfBuffer
-  }
+/**
+ * Captura la carta de presentación en modo full-bleed.
+ * La web controla padding y márgenes internos del documento.
+ */
+async function capturePdf(page: Page, meta: PdfMeta): Promise<Buffer> {
+  const raw = await capturePagePdf(page, { mode: "full-bleed" })
+  return embedPdfMetadata(raw, meta)
 }

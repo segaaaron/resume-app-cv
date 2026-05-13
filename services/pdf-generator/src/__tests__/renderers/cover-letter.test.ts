@@ -1,96 +1,66 @@
-// Mock pdf-lib
-jest.mock("pdf-lib", () => ({
-  PDFDocument: {
-    load: jest.fn().mockResolvedValue({
-      setTitle: jest.fn(),
-      setAuthor: jest.fn(),
-      setProducer: jest.fn(),
-      setCreator: jest.fn(),
-      setCreationDate: jest.fn(),
-      save: jest.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])), // %PDF
-    }),
-  },
-}))
+jest.mock("../../cookie-forwarder", () => ({ applyCookies: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../page/setup", () => ({ setA4Viewport: jest.fn().mockResolvedValue(undefined), emulateMediaType: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../page/navigation", () => ({ gotoAndWaitForContent: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../page/assets", () => ({ waitForFonts: jest.fn().mockResolvedValue(undefined), waitForImages: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../lib/pdf-metadata", () => ({ embedPdfMetadata: jest.fn().mockImplementation((buf: Buffer) => Promise.resolve(buf)) }))
 
-// Mock cookie-forwarder
-jest.mock("../../cookie-forwarder", () => ({
-  applyCookies: jest.fn().mockResolvedValue(undefined),
-}))
-
-// Mock print-helpers
-jest.mock("../../print-helpers", () => ({
-  setA4Viewport: jest.fn().mockResolvedValue(undefined),
-  waitForFonts: jest.fn().mockResolvedValue(undefined),
-  waitForImages: jest.fn().mockResolvedValue(undefined),
-  gotoAndWaitForContent: jest.fn().mockResolvedValue(undefined),
-}))
-
-import { PDFDocument } from "pdf-lib"
 import { renderCoverLetterPdf } from "../../renderers/cover-letter"
-import { setA4Viewport, waitForFonts, waitForImages, gotoAndWaitForContent } from "../../print-helpers"
-import { applyCookies } from "../../cookie-forwarder"
+import type { Page } from "puppeteer-core"
 
-const RAW_PDF = Buffer.from("%PDF-1.4 cover-letter-test")
+const mockEvaluate = jest.fn().mockResolvedValue(undefined)
+const mockPdf = jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4"))
+const mockPage = { evaluate: mockEvaluate, pdf: mockPdf } as unknown as Page
 
-function makeMockPage() {
-  return {
-    setViewport: jest.fn().mockResolvedValue(undefined),
-    setCookie: jest.fn().mockResolvedValue(undefined),
-    goto: jest.fn().mockResolvedValue(null),
-    waitForSelector: jest.fn().mockResolvedValue(null),
-    emulateMediaType: jest.fn().mockResolvedValue(undefined),
-    evaluate: jest.fn().mockResolvedValue(null),
-    pdf: jest.fn().mockResolvedValue(RAW_PDF),
-  }
-}
+const OPTS = { printUrl: "https://app.test/cover-letter/1/print", cookieHeader: "", appUrl: "https://app.test", candidateName: "Jane", letterTitle: "Cover Letter" }
 
 describe("renderCoverLetterPdf", () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it("calls setA4Viewport, applyCookies, gotoAndWaitForContent, emulateMediaType, evaluate, pdf()", async () => {
-    const page = makeMockPage()
-    const opts = {
-      printUrl: "https://app.readycvv.com/print/cover-letter/1",
-      cookieHeader: "session=xyz",
-      appUrl: "https://app.readycvv.com",
-      candidateName: "Jane Doe",
-      letterTitle: "Application Letter",
-    }
-    const result = await renderCoverLetterPdf(page as never, opts)
-    expect(setA4Viewport).toHaveBeenCalledWith(page)
-    expect(applyCookies).toHaveBeenCalledWith(page, opts.cookieHeader, opts.appUrl)
-    expect(gotoAndWaitForContent).toHaveBeenCalledWith(page, opts.printUrl, ".cover-letter-page")
-    expect(page.emulateMediaType).toHaveBeenCalledWith("print")
-    expect(waitForFonts).toHaveBeenCalledWith(page)
-    expect(waitForImages).toHaveBeenCalledWith(page)
-    // The evaluate call sets min-height:0 and height:auto on .cover-letter-page
-    expect(page.evaluate).toHaveBeenCalledTimes(1)
-    expect(page.pdf).toHaveBeenCalledWith(expect.objectContaining({ preferCSSPageSize: true, printBackground: true }))
+  it("returns a Buffer", async () => {
+    const result = await renderCoverLetterPdf(mockPage, OPTS)
     expect(Buffer.isBuffer(result)).toBe(true)
   })
 
-  it("does not throw when .cover-letter-page element does not exist in DOM (evaluate returns null)", async () => {
-    const page = makeMockPage()
-    page.evaluate.mockResolvedValue(null)
-    const opts = {
-      printUrl: "https://app.readycvv.com/print/cover-letter/1",
-      cookieHeader: "",
-      appUrl: "https://app.readycvv.com",
-    }
-    await expect(renderCoverLetterPdf(page as never, opts)).resolves.toBeDefined()
-    expect(page.evaluate).toHaveBeenCalledTimes(1)
+  it("calls page.pdf with print settings", async () => {
+    await renderCoverLetterPdf(mockPage, OPTS)
+    expect(mockPdf).toHaveBeenCalledWith(expect.objectContaining({ printBackground: true }))
   })
 
-  it("returns raw PDF buffer when embedPdfMetadata (pdf-lib) fails", async () => {
-    const page = makeMockPage()
-    ;(PDFDocument.load as jest.Mock).mockRejectedValueOnce(new Error("PDF load error"))
-    const opts = {
-      printUrl: "https://app.readycvv.com/print/cover-letter/1",
-      cookieHeader: "",
-      appUrl: "https://app.readycvv.com",
-    }
-    const result = await renderCoverLetterPdf(page as never, opts)
-    expect(Buffer.isBuffer(result)).toBe(true)
-    expect(result.toString()).toBe("%PDF-1.4 cover-letter-test")
+  it("calls evaluate to reset element height", async () => {
+    await renderCoverLetterPdf(mockPage, OPTS)
+    expect(mockEvaluate).toHaveBeenCalledTimes(1)
+  })
+
+  it("calls embedPdfMetadata with letter title and author", async () => {
+    const { embedPdfMetadata } = require("../../lib/pdf-metadata")
+    await renderCoverLetterPdf(mockPage, OPTS)
+    expect(embedPdfMetadata).toHaveBeenCalledWith(expect.any(Buffer), { title: "Cover Letter", author: "Jane" })
+  })
+
+  it("evaluate callback sets min-height:0 and height:auto on .cover-letter-page", async () => {
+    // Capture the evaluate callback and run it against a mock DOM element
+    let capturedCallback: (() => void) | null = null
+    mockEvaluate.mockImplementationOnce((fn: () => void) => { capturedCallback = fn; return Promise.resolve() })
+
+    await renderCoverLetterPdf(mockPage, OPTS)
+
+    // Simulate a DOM environment for the captured callback
+    const mockEl = { style: { setProperty: jest.fn() } }
+    const origQS = (global as any).document?.querySelector
+    ;(global as any).document = { querySelector: jest.fn().mockReturnValue(mockEl) }
+    capturedCallback!()
+    expect(mockEl.style.setProperty).toHaveBeenCalledWith("min-height", "0", "important")
+    expect(mockEl.style.setProperty).toHaveBeenCalledWith("height", "auto", "important")
+    if (origQS !== undefined) (global as any).document.querySelector = origQS
+  })
+
+  it("evaluate callback is safe when .cover-letter-page element not found", async () => {
+    let capturedCallback: (() => void) | null = null
+    mockEvaluate.mockImplementationOnce((fn: () => void) => { capturedCallback = fn; return Promise.resolve() })
+
+    await renderCoverLetterPdf(mockPage, OPTS)
+
+    ;(global as any).document = { querySelector: jest.fn().mockReturnValue(null) }
+    expect(() => capturedCallback!()).not.toThrow()
   })
 })

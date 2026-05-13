@@ -1,19 +1,6 @@
+// pdf-generator microservice only
 import type { Page } from "puppeteer-core"
-
-const ALLOWED_COOKIES = new Set([
-  "authjs.session-token",
-  "__Secure-authjs.session-token",
-  "authjs.csrf-token",
-  "__Host-authjs.csrf-token",
-  "authjs.callback-url",
-  "__Secure-authjs.callback-url",
-  "NEXT_LOCALE",
-])
-
-const SESSION_COOKIE_NAMES = new Set([
-  "authjs.session-token",
-  "__Secure-authjs.session-token",
-])
+import { ALLOWED_COOKIE_NAMES, SESSION_COOKIE_NAMES } from "./contracts"
 
 type ForwardedCookie = {
   name: string
@@ -51,7 +38,7 @@ export async function applyCookies(page: Page, cookieHeader: string, appUrl: str
   const hostname = new URL(appUrl).hostname
   const all = parseCookies(cookieHeader, hostname, appUrl)
   if (all.length === 0) return
-  const allowed = all.filter((c) => ALLOWED_COOKIES.has(c.name))
+  const allowed = all.filter((c) => ALLOWED_COOKIE_NAMES.has(c.name))
   const hasSession = allowed.some((c) => SESSION_COOKIE_NAMES.has(c.name))
   if (!hasSession) {
     console.warn("[pdf] session cookie not found in whitelist — forwarding all as fallback")

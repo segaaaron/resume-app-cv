@@ -1,0 +1,112 @@
+/**
+ * print-base.css — Referencia de estilos base para templates PDF
+ *
+ * IMPORTANTE: Este archivo pertenece al WEB APP (readycvv.com), no al microservicio.
+ * El microservicio NO sirve CSS — Puppeteer navega a URLs del web app y el browser
+ * carga los estilos desde allí.
+ *
+ * Este archivo es SOLO documentación de referencia. Las reglas aquí definidas
+ * deben aplicarse en el web app bajo:
+ *   - styles/print-resume.css
+ *   - styles/print-cover-letter.css
+ *
+ * No importar este archivo desde ningún .ts del microservicio.
+ */
+
+/* ─── PÁGINA ─────────────────────────────────────────────────────────────────
+ * Puppeteer recibe margin: 0 — la web controla todo el espacio interior.
+ * preferCSSPageSize: true hace que Puppeteer respete el @page del CSS.
+ */
+@page {
+  size: A4;
+  margin: 0;
+}
+
+/* ─── FIDELIDAD DE COLOR ──────────────────────────────────────────────────────
+ * Sin estas propiedades Chrome headless suprime backgrounds en modo print.
+ * Los tres aliases cubren Chrome, Firefox y Safari.
+ */
+html, body {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust:         exact;
+  color-adjust:               exact;
+}
+
+/* ─── WRAPPER PRINCIPAL ───────────────────────────────────────────────────────
+ * .pdf-wrapper controla el padding interior del documento.
+ * Puppeteer margin = 0, así que el padding aquí ES el margen visible en el PDF.
+ */
+.pdf-wrapper {
+  width: 100%;
+  min-height: 297mm;
+  padding: 20mm 15mm; /* Espacio interior — modificar por template */
+
+  -webkit-print-color-adjust: exact;
+  print-color-adjust:         exact;
+  color-adjust:               exact;
+}
+
+/* ─── CONTROL DE SALTOS DE PÁGINA ────────────────────────────────────────────
+ * NO usar page-break-inside: avoid en tablas largas (≥ media página).
+ * Causará que salten páginas completas dejando espacio en blanco.
+ */
+
+/* Filas de tabla — nunca partir una fila entre dos páginas */
+tr,
+.pdf-row,
+.pdf-card,
+.pdf-kpi,
+.pdf-signature,
+.pdf-figure,
+.pdf-block,
+.resume-entry,
+.resume-section,
+img,
+figure,
+.pdf-image {
+  page-break-inside: avoid;
+  break-inside:      avoid;
+}
+
+/* Headings — nunca quedar solos al final de una página */
+h1, h2, h3, h4, h5, h6,
+.pdf-title,
+.pdf-subtitle,
+.section-title {
+  page-break-after: avoid;
+  break-after:      avoid;
+}
+
+/* Cabeceras de tabla repetidas en cada página */
+thead {
+  display: table-header-group;
+}
+
+/* Controla líneas huérfanas y viudas en párrafos */
+p {
+  orphans: 3;
+  widows:  3;
+}
+
+/* ─── ESTRATEGIA SIDEBAR FULL-BLEED ──────────────────────────────────────────
+ * Chrome NO extiende background-color de flex/grid children más allá del
+ * contenido en modo print multi-página.
+ *
+ * OPCIÓN A — CSS puro (templates con color fijo):
+ *   html {
+ *     background: linear-gradient(
+ *       to right,
+ *       var(--sidebar-color) var(--sidebar-width),
+ *       var(--main-color)    var(--sidebar-width)
+ *     );
+ *     -webkit-print-color-adjust: exact;
+ *     print-color-adjust: exact;
+ *   }
+ *
+ * OPCIÓN B — JS dinámico (color configurable por usuario):
+ *   El microservicio ejecuta fix-layout.ts via page.evaluate() que detecta
+ *   el color del sidebar en runtime y pinta un linear-gradient en el root.
+ *
+ * Usar Opción A para templates nuevos con color fijo.
+ * Usar Opción B para templates con sidebar color personalizable por usuario.
+ */

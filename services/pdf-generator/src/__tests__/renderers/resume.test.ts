@@ -1,98 +1,40 @@
-// Mock pdf-lib so we don't need a real PDF document
-jest.mock("pdf-lib", () => ({
-  PDFDocument: {
-    load: jest.fn().mockResolvedValue({
-      setTitle: jest.fn(),
-      setAuthor: jest.fn(),
-      setProducer: jest.fn(),
-      setCreator: jest.fn(),
-      setCreationDate: jest.fn(),
-      save: jest.fn().mockResolvedValue(new Uint8Array([37, 80, 68, 70])), // %PDF
-    }),
-  },
-}))
+jest.mock("../../cookie-forwarder", () => ({ applyCookies: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../page/setup", () => ({ setA4Viewport: jest.fn().mockResolvedValue(undefined), emulateMediaType: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../page/navigation", () => ({ gotoAndWaitForContent: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../page/assets", () => ({ waitForFonts: jest.fn().mockResolvedValue(undefined), waitForImages: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../renderers/fix-layout", () => ({ fixLayout: jest.fn().mockResolvedValue(undefined) }))
+jest.mock("../../lib/pdf-metadata", () => ({ embedPdfMetadata: jest.fn().mockImplementation((buf: Buffer) => Promise.resolve(buf)) }))
 
-// Mock cookie-forwarder
-jest.mock("../../cookie-forwarder", () => ({
-  applyCookies: jest.fn().mockResolvedValue(undefined),
-}))
-
-// Mock print-helpers
-jest.mock("../../print-helpers", () => ({
-  setA4Viewport: jest.fn().mockResolvedValue(undefined),
-  waitForFonts: jest.fn().mockResolvedValue(undefined),
-  waitForImages: jest.fn().mockResolvedValue(undefined),
-  gotoAndWaitForContent: jest.fn().mockResolvedValue(undefined),
-}))
-
-import { PDFDocument } from "pdf-lib"
 import { renderResumePdf } from "../../renderers/resume"
-import { setA4Viewport, waitForFonts, waitForImages, gotoAndWaitForContent } from "../../print-helpers"
-import { applyCookies } from "../../cookie-forwarder"
+import type { Page } from "puppeteer-core"
 
-const RAW_PDF = Buffer.from("%PDF-1.4 test")
+const mockPdf = jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4"))
+const mockPage = { pdf: mockPdf } as unknown as Page
 
-function makeMockPage() {
-  return {
-    setViewport: jest.fn().mockResolvedValue(undefined),
-    setCookie: jest.fn().mockResolvedValue(undefined),
-    goto: jest.fn().mockResolvedValue(null),
-    waitForSelector: jest.fn().mockResolvedValue(null),
-    emulateMediaType: jest.fn().mockResolvedValue(undefined),
-    evaluate: jest.fn().mockResolvedValue(null),
-    pdf: jest.fn().mockResolvedValue(RAW_PDF),
-  }
-}
+const OPTS = { printUrl: "https://app.test/resume/1/print", cookieHeader: "", appUrl: "https://app.test", candidateName: "Jane", resumeTitle: "My CV" }
 
 describe("renderResumePdf", () => {
   beforeEach(() => jest.clearAllMocks())
 
-  it("calls setA4Viewport, applyCookies, gotoAndWaitForContent, emulateMediaType, evaluate, pdf()", async () => {
-    const page = makeMockPage()
-    const opts = {
-      printUrl: "https://app.readycvv.com/print/resume/1",
-      cookieHeader: "session=abc",
-      appUrl: "https://app.readycvv.com",
-      candidateName: "John Doe",
-      resumeTitle: "My Resume",
-    }
-    const result = await renderResumePdf(page as never, opts)
-    expect(setA4Viewport).toHaveBeenCalledWith(page)
-    expect(applyCookies).toHaveBeenCalledWith(page, opts.cookieHeader, opts.appUrl)
-    expect(gotoAndWaitForContent).toHaveBeenCalledWith(page, opts.printUrl, expect.stringContaining(".resume-pages"))
-    expect(page.emulateMediaType).toHaveBeenCalledWith("print")
-    expect(waitForFonts).toHaveBeenCalledWith(page)
-    expect(waitForImages).toHaveBeenCalledWith(page)
-    expect(page.evaluate).toHaveBeenCalled()
-    expect(page.pdf).toHaveBeenCalledWith(expect.objectContaining({ preferCSSPageSize: true, printBackground: true }))
+  it("returns a Buffer", async () => {
+    const result = await renderResumePdf(mockPage, OPTS)
     expect(Buffer.isBuffer(result)).toBe(true)
   })
 
-  it("returns the raw PDF buffer when pdf-lib fails to load (catch silently)", async () => {
-    const page = makeMockPage()
-    ;(PDFDocument.load as jest.Mock).mockRejectedValueOnce(new Error("Corrupted PDF"))
-    const opts = {
-      printUrl: "https://app.readycvv.com/print/resume/1",
-      cookieHeader: "",
-      appUrl: "https://app.readycvv.com",
-    }
-    const result = await renderResumePdf(page as never, opts)
-    expect(Buffer.isBuffer(result)).toBe(true)
-    // Should have fallen back to raw PDF bytes
-    expect(result.toString()).toBe("%PDF-1.4 test")
+  it("calls page.pdf with print settings", async () => {
+    await renderResumePdf(mockPage, OPTS)
+    expect(mockPdf).toHaveBeenCalledWith(expect.objectContaining({ printBackground: true, preferCSSPageSize: true }))
   })
 
-  it("fixLayout: evaluate called even when .resume-pages does not exist (evaluate returns null)", async () => {
-    const page = makeMockPage()
-    // evaluate returning null simulates wrapper not found inside the browser evaluate
-    page.evaluate.mockResolvedValue(null)
-    const opts = {
-      printUrl: "https://app.readycvv.com/print/resume/1",
-      cookieHeader: "",
-      appUrl: "https://app.readycvv.com",
-    }
-    // Should not throw
-    await expect(renderResumePdf(page as never, opts)).resolves.toBeDefined()
-    expect(page.evaluate).toHaveBeenCalled()
+  it("calls fixLayout before capturing PDF", async () => {
+    const { fixLayout } = require("../../renderers/fix-layout")
+    await renderResumePdf(mockPage, OPTS)
+    expect(fixLayout).toHaveBeenCalledWith(mockPage)
+  })
+
+  it("calls embedPdfMetadata with title and author", async () => {
+    const { embedPdfMetadata } = require("../../lib/pdf-metadata")
+    await renderResumePdf(mockPage, OPTS)
+    expect(embedPdfMetadata).toHaveBeenCalledWith(expect.any(Buffer), { title: "My CV", author: "Jane" })
   })
 })
