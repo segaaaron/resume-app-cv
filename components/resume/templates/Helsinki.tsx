@@ -25,7 +25,7 @@ export default function HelsinkiTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#f9fafb", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "25%" } as React.CSSProperties}>
       {/* LEFT SIDEBAR — narrow 25% with skill timeline */}
       <div style={{
         width: "25%", flexShrink: 0,

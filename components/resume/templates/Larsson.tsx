@@ -39,7 +39,7 @@ export default function LarssonTemplate() {
   const NAVY_DARK = "#141824"
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#1c2333", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "34%" } as React.CSSProperties}>
 
       {/* ── SIDEBAR ──────────────────────────────────── */}
       <div style={{

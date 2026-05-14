@@ -215,17 +215,14 @@
 
 
 /* 1. TAMAÑO DE PÁGINA Y MÁRGENES
-   margin-bottom: 10mm — espacio de respiración inferior entre páginas.
-   margin-top: 0 SIEMPRE — el @page top margin es espacio FÍSICO fuera del DOM.
-   El sidebar linear-gradient está pintado sobre el elemento root (DOM), y Chrome
-   no puede extender ese gradient al margen físico: resultado sería franja blanca
-   sobre el sidebar en páginas 2+. El padding-top en páginas 2+ se maneja con
-   DOM spacers inyectados por resume.ts.
-   10mm bottom = 38px @ 96dpi — debe coincidir con PDF_BOTTOM_MARGIN_PX en constants.ts. */
+   margin: 0 — sin márgenes físicos. Los márgenes @page son siempre blancos en
+   Chrome; html.style.background NO se extiende a ellos. Para breathing room entre
+   páginas se usan DOM spacers inyectados antes del print (beforeprint handler).
+   Laterales: 0 porque el template maneja sus propios paddings internos. */
 
 @page {
   size: A4;
-  margin: 0 0 10mm 0;
+  margin: 0;
 }
 
 

@@ -47,7 +47,7 @@ export default function VitaeTemplate() {
     : []
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#1e2d3d", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "230px" } as React.CSSProperties}>
 
       {/* ── SIDEBAR ──────────────────────────────────────────────────────── */}
       <div style={{

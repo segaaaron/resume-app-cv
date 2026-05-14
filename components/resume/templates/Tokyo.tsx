@@ -52,7 +52,7 @@ export default function TokyoTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#0D0D0D", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "32%" } as React.CSSProperties}>
       {/* SIDEBAR — almost black */}
       <div style={{
         width: sideW, flexShrink: 0,

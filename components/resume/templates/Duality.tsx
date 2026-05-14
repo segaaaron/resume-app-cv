@@ -43,9 +43,9 @@ export default function DualityTemplate() {
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 
   return (
-    <div data-print-layout="sidebar-right" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-right" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#1a2744", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "35%" } as React.CSSProperties}>
       {/* Left main content */}
-      <div style={{ flex: 1, padding: "28px 22px 32px 28px" }}>
+      <div style={{ flex: 1, padding: "28px 22px 32px 28px", backgroundColor: "#fff" }}>
         <h1 style={{ fontSize: 30, fontWeight: 900, color: dark, lineHeight: 1.1, marginBottom: 2 }}>{name}</h1>
         <p style={{ fontSize: 12, color: cyan, fontWeight: 600, marginBottom: 16 }}>{title}</p>
 

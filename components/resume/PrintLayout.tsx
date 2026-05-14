@@ -42,6 +42,86 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  useEffect(() => {
+    const ok = (bg: string) => !!bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"
+
+    function resolveBg(): string {
+      const layoutEl = document.querySelector<HTMLElement>("[data-print-layout]")
+      if (!layoutEl) return "white"
+      const layout = layoutEl.dataset.printLayout ?? "single-column"
+      if (layout === "sidebar-left" || layout === "sidebar-right") {
+        const sidebarEl = (layout === "sidebar-left" ? layoutEl.firstElementChild : layoutEl.lastElementChild) as HTMLElement
+        const mainEl   = (layout === "sidebar-left" ? layoutEl.lastElementChild  : layoutEl.firstElementChild) as HTMLElement
+        if (!sidebarEl || !mainEl) return "white"
+        const cs = window.getComputedStyle(layoutEl)
+        const varSidebarBg = cs.getPropertyValue("--pdf-sidebar-bg").trim()
+        const varMainBg    = cs.getPropertyValue("--pdf-main-bg").trim()
+        const varWidth     = cs.getPropertyValue("--pdf-sidebar-width").trim()
+        const sidebarBg = varSidebarBg || window.getComputedStyle(sidebarEl).backgroundColor
+        if (!ok(sidebarBg)) return "white"
+        const rawMain = window.getComputedStyle(mainEl).backgroundColor
+        const rootBg  = window.getComputedStyle(layoutEl).backgroundColor
+        const mainBg  = varMainBg || (ok(rawMain) ? rawMain : ok(rootBg) ? rootBg : "white")
+        let ratio: number
+        if (varWidth) {
+          const rootW     = layoutEl.offsetWidth
+          const sidebarPx = varWidth.endsWith("px") ? parseFloat(varWidth) : (parseFloat(varWidth) / 100) * rootW
+          ratio = rootW > 0 ? (sidebarPx / rootW) * 100 : 33
+        } else {
+          ratio = layoutEl.offsetWidth > 0 ? (sidebarEl.offsetWidth / layoutEl.offsetWidth) * 100 : 33
+        }
+        return layout === "sidebar-left"
+          ? `linear-gradient(to right, ${sidebarBg} ${ratio}%, ${mainBg} ${ratio}%)`
+          : `linear-gradient(to left, ${sidebarBg} ${100 - ratio}%, ${mainBg} ${100 - ratio}%)`
+      }
+      const rootBg = window.getComputedStyle(layoutEl).backgroundColor
+      return ok(rootBg) ? rootBg : "white"
+    }
+
+    const applyBg = () => {
+      const el = document.documentElement
+      el.style.background = resolveBg()
+      el.style.setProperty("-webkit-print-color-adjust", "exact")
+      el.style.setProperty("print-color-adjust", "exact")
+
+      // Stretch columns to fill complete pages so the last page isn't half-empty.
+      // Measure PAGE_H, compute ceil(pages), force minHeight on the layout root.
+      const layoutEl = document.querySelector<HTMLElement>("[data-print-layout]")
+      if (layoutEl) {
+        const ruler = document.createElement("div")
+        ruler.style.cssText = "position:fixed;top:-9999px;left:0;height:297mm;visibility:hidden;pointer-events:none;"
+        document.body.appendChild(ruler)
+        const PAGE_H = ruler.offsetHeight
+        document.body.removeChild(ruler)
+        if (PAGE_H > 0) {
+          const numPages = Math.ceil(layoutEl.scrollHeight / PAGE_H)
+          layoutEl.dataset.printPriorMinHeight = layoutEl.style.minHeight
+          layoutEl.style.minHeight = `${numPages * PAGE_H}px`
+        }
+      }
+    }
+    const removeBg = () => {
+      const el = document.documentElement
+      el.style.removeProperty("background")
+      el.style.removeProperty("-webkit-print-color-adjust")
+      el.style.removeProperty("print-color-adjust")
+      const layoutEl = document.querySelector<HTMLElement>("[data-print-layout]")
+      if (layoutEl && "printPriorMinHeight" in layoutEl.dataset) {
+        const prior = layoutEl.dataset.printPriorMinHeight ?? ""
+        if (prior) layoutEl.style.minHeight = prior
+        else layoutEl.style.removeProperty("min-height")
+        delete layoutEl.dataset.printPriorMinHeight
+      }
+    }
+    window.addEventListener("beforeprint", applyBg)
+    window.addEventListener("afterprint", removeBg)
+    return () => {
+      window.removeEventListener("beforeprint", applyBg)
+      window.removeEventListener("afterprint", removeBg)
+      removeBg()
+    }
+  }, [])
+
   async function handleDownloadPdf() {
     setDownloadingPdf(true)
     try {

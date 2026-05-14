@@ -51,7 +51,10 @@ export default function MeridianTemplate() {
         backgroundColor: CREAM,
         WebkitPrintColorAdjust: "exact",
         printColorAdjust: "exact",
-      }}
+        "--pdf-sidebar-bg": color,
+        "--pdf-main-bg": "#FDFCF8",
+        "--pdf-sidebar-width": "224px",
+      } as React.CSSProperties}
     >
       {/* Left sidebar */}
       <div

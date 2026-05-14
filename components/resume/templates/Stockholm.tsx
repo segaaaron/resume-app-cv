@@ -58,7 +58,7 @@ export default function StockholmTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#F3F4F6", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "40%" } as React.CSSProperties}>
       {/* LEFT SIDEBAR */}
       <div style={{
         width: "40%", flexShrink: 0,

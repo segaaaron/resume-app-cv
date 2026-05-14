@@ -16,7 +16,7 @@ export default function ProfessionalTemplate() {
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ")
 
   return (
-    <div data-print-layout="single-column" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" style={{ minHeight: "297mm", "--pdf-sidebar-bg": "#f9fafb", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "30%" } as React.CSSProperties}>
       {/* Header band */}
       <div className="px-10 py-8 text-white" style={{ backgroundColor: color }}>
         <h1 className="text-3xl font-extrabold tracking-tight">{fullName || "Tu Nombre"}</h1>
@@ -70,7 +70,7 @@ export default function ProfessionalTemplate() {
         </div>
 
         {/* Main */}
-        <div className="flex-1 px-8 pt-7 pb-8">
+        <div className="flex-1 px-8 pt-7 pb-8" style={{ backgroundColor: "#fff" }}>
           {visible("summary") && summary && (
             <Section title="Resumen" color={color}>
               <p className="text-xs text-gray-600 leading-relaxed">{summary}</p>

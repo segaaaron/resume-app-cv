@@ -43,7 +43,7 @@ export default function SeoulTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#FAFAFA" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#FAFAFA", "--pdf-sidebar-bg": "#1C1C1E", "--pdf-main-bg": "#FAFAFA", "--pdf-sidebar-width": "30%" } as React.CSSProperties}>
       {/* LEFT SIDEBAR — near-black with subtle dot grid texture */}
       <div style={{
         width: "30%", flexShrink: 0,

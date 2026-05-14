@@ -17,7 +17,7 @@ export default function VerticalTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm" }}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", "--pdf-sidebar-bg": color + "15", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "40%" } as React.CSSProperties}>
       {/* Left sidebar */}
       <div className="w-[40%] shrink-0 p-8" style={{ backgroundColor: color + "15", borderRight: `3px solid ${color}` }}>
         {/* Photo / Avatar */}
@@ -115,7 +115,7 @@ export default function VerticalTemplate() {
       </div>
 
       {/* Right main content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-8" style={{ backgroundColor: "#fff" }}>
         {visible("summary") && summary && (
           <Section title="Perfil" color={color}>
             <p className="text-sm text-gray-700 leading-relaxed">{summary}</p>

@@ -74,7 +74,7 @@ export default function CascadeTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": accent, "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "33%" } as React.CSSProperties}>
       {/* SIDEBAR */}
       <div style={{
         width: "33%", flexShrink: 0,

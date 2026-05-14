@@ -40,12 +40,15 @@ export default function NavyExecutiveTemplate() {
   const ink = "#1a1a1a"
 
   return (
-    <div data-print-layout="single-column" style={{
+    <div data-print-layout="sidebar-left" style={{
       minHeight: "297mm", background: ivory, color: ink,
       fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
       display: "grid", gridTemplateColumns: "260px 1fr",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
-    }}>
+      "--pdf-sidebar-bg": "#0e2a44",
+      "--pdf-main-bg": "#f7f3e8",
+      "--pdf-sidebar-width": "260px",
+    } as React.CSSProperties}>
       {/* Sidebar */}
       <aside style={{ background: navy, color: ivory, padding: "44px 24px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
         {config.photoUrl ? (
@@ -118,7 +121,7 @@ export default function NavyExecutiveTemplate() {
       </aside>
 
       {/* Main */}
-      <main style={{ padding: "44px 40px" }}>
+      <main style={{ padding: "44px 40px", background: ivory, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
         <div style={{ borderBottom: `2px solid ${navy}`, paddingBottom: 8, marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
           <span style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontStyle: "italic", color: navy }}>Curriculum Vitæ</span>
           <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, color: gold, letterSpacing: "0.2em" }}>

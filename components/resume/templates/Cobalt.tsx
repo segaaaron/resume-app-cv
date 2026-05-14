@@ -43,7 +43,7 @@ export default function CobaltTemplate() {
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 
   return (
-    <div data-print-layout="sidebar-left" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ minHeight: "297mm", display: "flex", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#0d2137", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "38%" } as React.CSSProperties}>
       {/* Sidebar */}
       <div style={{ width: "38%", backgroundColor: sidebar, padding: "28px 18px", flexShrink: 0, color: "#fff" }}>
         {/* Photo */}

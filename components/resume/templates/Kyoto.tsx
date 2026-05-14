@@ -50,7 +50,7 @@ export default function KyotoTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", fontWeight: 300 }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", fontWeight: 300, "--pdf-sidebar-bg": "#F7F5F0", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "35%" } as React.CSSProperties}>
       {/* SIDEBAR */}
       <div style={{
         width: "35%", flexShrink: 0,

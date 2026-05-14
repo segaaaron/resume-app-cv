@@ -40,7 +40,7 @@ export default function LagosTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-left" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": accent, "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "32%" } as React.CSSProperties}>
       {/* LEFT SIDEBAR — deep forest green (accent) */}
       <div style={{
         width: "32%", flexShrink: 0,

@@ -41,9 +41,9 @@ export default function MilanTemplate() {
   )
 
   return (
-    <div data-print-layout="sidebar-right" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff" }}>
+    <div data-print-layout="sidebar-right" style={{ display: "flex", minHeight: "297mm", fontFamily: "inherit", backgroundColor: "#fff", "--pdf-sidebar-bg": "#2D2D2D", "--pdf-main-bg": "#fff", "--pdf-sidebar-width": "30%" } as React.CSSProperties}>
       {/* MAIN LEFT */}
-      <div style={{ flex: 1, padding: "32px 28px", display: "flex", flexDirection: "column" }}>
+      <div style={{ flex: 1, padding: "32px 28px", display: "flex", flexDirection: "column", backgroundColor: "#fff" }}>
         {/* Header */}
         <div style={{ marginBottom: 22 }}>
           <h1 style={{ fontWeight: 900, fontSize: "26px", color: "#111827", lineHeight: 1.1, marginBottom: 2 }}>
