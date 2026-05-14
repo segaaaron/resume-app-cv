@@ -103,7 +103,9 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
     if (spacerH <= 0) return
     const spacer = document.createElement("div")
     spacer.setAttribute("data-pdf-spacer", "true")
-    spacer.style.cssText = `height:${spacerH}px;flex-shrink:0;`
+    const colBg = window.getComputedStyle(col).backgroundColor
+    // eslint-disable-next-line no-restricted-syntax
+    spacer.style.cssText = `height:${spacerH}px;flex-shrink:0;background:${colBg && colBg !== "rgba(0, 0, 0, 0)" && colBg !== "transparent" ? colBg : "transparent"};`
     col.insertBefore(spacer, ancestor)
   }
   function injectColumnSpacers(root: HTMLElement, wrapperTop: number, eff: number, numPages: number): void {
