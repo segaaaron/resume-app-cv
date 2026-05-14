@@ -84,7 +84,9 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
     const sidebarBg = getSolidBg(sidebarEl)
     if (!sidebarBg) return
     const ratio = (sidebarEl.getBoundingClientRect().width / root.getBoundingClientRect().width) * 100
-    const mainBg = getSolidBg(mainEl) ?? "white"
+    const rawRootBg = window.getComputedStyle(root).backgroundColor
+    const isOpaque = (bg: string) => !!bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"
+    const mainBg = getSolidBg(mainEl) ?? (isOpaque(rawRootBg) ? rawRootBg : "white")
     const grad = side === "left"
       ? `linear-gradient(to right, ${sidebarBg} 0%, ${sidebarBg} ${ratio}%, ${mainBg} ${ratio}%, ${mainBg} 100%)`
       : `linear-gradient(to left, ${sidebarBg} 0%, ${sidebarBg} ${100 - ratio}%, ${mainBg} ${100 - ratio}%, ${mainBg} 100%)`
@@ -95,7 +97,7 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
     if (!hit || !col.contains(hit)) return
     let ancestor: HTMLElement = hit
     while (ancestor.parentElement && ancestor.parentElement !== col) ancestor = ancestor.parentElement as HTMLElement
-    if (ancestor === col || (ancestor as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) return
+    if (ancestor === col || ancestor.parentElement !== col || (ancestor as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) return
     const gap = parseFloat(window.getComputedStyle(ancestor.parentElement ?? col).gap) || 0
     const spacerH = Math.max(0, paddingPx - gap)
     if (spacerH <= 0) return
