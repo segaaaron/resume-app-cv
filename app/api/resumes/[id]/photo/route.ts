@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import sharp from "sharp"
 import { requireAuth, handleError } from "@/lib/controllers/shared"
 import { resumeService } from "@/lib/controllers/resume-deps"
 
@@ -41,7 +42,18 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Invalid image format" }, { status: 400 })
   }
 
-  const base64 = `data:${file.type};base64,${buffer.toString("base64")}`
+  // Compress and normalise to WebP: max 400px wide, quality 82 — ~15-40 KB
+  let compressed: Buffer
+  try {
+    compressed = await sharp(buffer)
+      .resize({ width: 400, withoutEnlargement: true })
+      .webp({ quality: 82 })
+      .toBuffer()
+  } catch {
+    return NextResponse.json({ error: "No se pudo procesar la imagen" }, { status: 400 })
+  }
+
+  const base64 = `data:image/webp;base64,${compressed.toString("base64")}`
 
   try {
     const result = await resumeService.updatePhoto(authResult.userId, id, base64)

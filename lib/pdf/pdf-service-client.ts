@@ -42,6 +42,40 @@ async function callOnce(opts: PdfServiceOpts, signal: AbortSignal): Promise<Buff
   return Buffer.from(arrayBuffer)
 }
 
+export async function callScreenshotService(printUrl: string, cookies: string): Promise<Buffer> {
+  const serviceUrl = process.env.PDF_SERVICE_URL
+  const secret = process.env.PDF_SERVICE_SECRET
+
+  if (!serviceUrl || !secret) {
+    throw new Error("PDF_SERVICE_URL and PDF_SERVICE_SECRET must be set")
+  }
+
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 30_000)
+
+  try {
+    const res = await fetch(`${serviceUrl}/generate-screenshot`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${secret}`,
+      },
+      body: JSON.stringify({ printUrl, cookies }),
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({})) as Record<string, string>
+      throw new Error(`Screenshot service ${res.status}: ${body.error ?? "unknown"}`)
+    }
+
+    const arrayBuffer = await res.arrayBuffer()
+    return Buffer.from(arrayBuffer)
+  } finally {
+    clearTimeout(timeout)
+  }
+}
+
 export async function callPdfService(opts: PdfServiceOpts): Promise<Buffer> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30_000)

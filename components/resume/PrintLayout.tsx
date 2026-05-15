@@ -29,6 +29,7 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   const locale = useLocale()
   propsRef.current = { resumeId, title, sections, sectionData, config }
   const searchParams = useSearchParams()
+  const isScreenshot = searchParams.get("screenshot") === "1"
 
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
@@ -143,8 +144,8 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
 
   return (
     <>
-      {/* Print toolbar — hidden when printing */}
-      <div className="print:hidden bg-white border-b border-border px-6 py-3 flex items-center justify-between sticky top-0 z-10">
+      {/* Print toolbar — hidden when printing or taking screenshot */}
+      <div className={`${isScreenshot ? "hidden" : "print:hidden"} bg-white border-b border-border px-6 py-3 flex items-center justify-between sticky top-0 z-10`}>
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/editor/${resumeId}`}>
@@ -161,8 +162,8 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
         </div>
       </div>
 
-      {/* Upgrade banner for free users — hidden when printing */}
-      {!isPro && (
+      {/* Upgrade banner for free users — hidden when printing or taking screenshot */}
+      {!isPro && !isScreenshot && (
         <div className="print:hidden bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center justify-between">
           <p className="text-xs text-amber-800">
             <span className="font-semibold">Plan Free:</span> {t("watermark_upgrade")}

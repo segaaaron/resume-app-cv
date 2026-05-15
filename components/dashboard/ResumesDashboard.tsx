@@ -39,6 +39,7 @@ interface ResumeCard {
   title: string
   templateId: string
   colorScheme: string
+  thumbnailUrl: string | null
   updatedAt: Date
   createdAt: Date
 }
@@ -63,6 +64,32 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+
+  // Generate thumbnails for CVs that don't have one yet (staggered, fire-and-forget)
+  useEffect(() => {
+    const missing = initialResumes.filter((r) => !r.thumbnailUrl)
+    if (missing.length === 0) return
+    let cancelled = false
+    const run = async () => {
+      for (const resume of missing) {
+        if (cancelled) break
+        try {
+          const res = await fetch(`/api/resumes/${resume.id}/thumbnail?locale=${locale}`, { method: "POST" })
+          if (res.ok) {
+            const data = await res.json() as { thumbnailUrl?: string }
+            if (data.thumbnailUrl) {
+              setResumes((prev) => prev.map((r) => r.id === resume.id ? { ...r, thumbnailUrl: data.thumbnailUrl! } : r))
+            }
+          }
+        } catch { /* ignore */ }
+        // stagger: 1.5s between each to avoid overwhelming browser pool
+        await new Promise((resolve) => setTimeout(resolve, 1_500))
+      }
+    }
+    run()
+    return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Post-purchase flow
   type UpgradeState = "idle" | "waiting" | "confirmed" | "timeout"
@@ -293,7 +320,16 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             <div key={resume.id} className="group relative">
               <Link href={`/${locale}/editor/${resume.id}`} className="block cursor-pointer">
                 <div className="aspect-[3/4] bg-white border-2 border-border rounded-2xl overflow-hidden hover:border-primary/40 hover:shadow-brand-sm transition-all relative">
-                  <ResumeThumbnail id={resume.templateId} color={resume.colorScheme} />
+                  {resume.thumbnailUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={resume.thumbnailUrl}
+                      alt={resume.title}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <ResumeThumbnail id={resume.templateId} color={resume.colorScheme} />
+                  )}
                   <div className="absolute inset-0 bg-neutral-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
                     <span className="bg-white text-neutral-900 text-sm font-semibold px-4 py-2 rounded-full shadow-lg">
                       {t("edit")}

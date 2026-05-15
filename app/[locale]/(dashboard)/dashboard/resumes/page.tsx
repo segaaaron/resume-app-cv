@@ -15,7 +15,7 @@ export default async function ResumesPage({
     redirect(`/${locale}/login`)
   }
 
-  type ResumeRow = { id: string; title: string; templateId: string; colorScheme: string; updatedAt: Date; createdAt: Date }
+  type ResumeRow = { id: string; title: string; templateId: string; colorScheme: string; thumbnailUrl: string | null; updatedAt: Date; createdAt: Date }
   let resumes: ResumeRow[] = []
   try {
     resumes = await db.resume.findMany({
@@ -26,6 +26,7 @@ export default async function ResumesPage({
         title: true,
         templateId: true,
         colorScheme: true,
+        thumbnailUrl: true,
         updatedAt: true,
         createdAt: true,
       },

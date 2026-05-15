@@ -569,6 +569,7 @@
       "rename_success": "Nombre actualizado",
       "rename_error": "Error al cambiar el nombre",
       "pdf_error": "Error al generar el PDF",
+      "thumbnail_error": "Error al generar la vista previa del CV",
       "welcome_pro_title": "¡Tu plan Pro está activo!",
       "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones.",
       "upgrade_relogin_subtitle": "Serás redirigido al login en 3 segundos para activar tu sesión Pro.",

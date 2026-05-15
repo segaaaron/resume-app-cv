@@ -1,6 +1,7 @@
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import { devtools } from "zustand/middleware"
+import { toast } from "sonner"
 import {
   ResumeSection,
   ResumeSections,
@@ -67,6 +68,7 @@ interface ResumeState {
   isSaving: boolean
   lastSaved: Date | null
   isDirty: boolean
+  lastThumbnailAt: number | null
 }
 
 interface ResumeActions {
@@ -119,6 +121,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
       isSaving: false,
       lastSaved: null,
       isDirty: false,
+      lastThumbnailAt: null,
 
       init: (resumeId, title, sections, sectionData, config) => {
         set((state) => {
@@ -218,6 +221,23 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             state.lastSaved = new Date()
             state.isDirty = false
           })
+          // Fire-and-forget thumbnail refresh (60s cooldown)
+          const { lastThumbnailAt } = get()
+          const now = Date.now()
+          if (!lastThumbnailAt || now - lastThumbnailAt > 60_000) {
+            set((state) => { state.lastThumbnailAt = now })
+            const locale = typeof window !== "undefined"
+              ? (["es", "en"].includes(window.location.pathname.split("/")[1]) ? window.location.pathname.split("/")[1] : "es")
+              : "es"
+            fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
+              .then(async (r) => {
+                if (!r.ok && r.status !== 503) {
+                  const body = await r.json().catch(() => ({})) as { error?: string }
+                  if (body.error) toast.error(body.error)
+                }
+              })
+              .catch(() => {})
+          }
         } catch {
           set((state) => { state.isSaving = false })
         }

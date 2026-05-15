@@ -100,6 +100,7 @@ model Resume {
   personalDetails Json            @default("{}")
   photoUrl        String?         @db.Text
   photoPosition   Int             @default(15)
+  thumbnailUrl    String?         @db.Text
   language        String          @default("es")
   isPublic        Boolean         @default(false)
   publicSlug      String?         @unique

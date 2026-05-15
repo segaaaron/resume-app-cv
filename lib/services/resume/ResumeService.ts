@@ -56,6 +56,7 @@ export interface ResumeListItem {
   title: string
   templateId: string | null
   colorScheme: string | null
+  thumbnailUrl: string | null
   updatedAt: Date
   createdAt: Date
 }
@@ -105,6 +106,7 @@ export class ResumeService {
         title: true,
         templateId: true,
         colorScheme: true,
+        thumbnailUrl: true,
         updatedAt: true,
         createdAt: true,
       },
