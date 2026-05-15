@@ -1,7 +1,7 @@
 import { timingSafeEqual } from "crypto"
 import type { FastifyInstance } from "fastify"
 
-const PUBLIC_ROUTES = new Set(["/health"])
+const PUBLIC_ROUTES = new Set(["/health", "/", "/favicon.ico"])
 
 /**
  * Registers the Bearer token auth hook on all non-public routes.

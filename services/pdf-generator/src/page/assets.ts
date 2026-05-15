@@ -20,7 +20,7 @@ export async function waitForFonts(page: Page): Promise<void> {
  * Waits for all img elements to finish loading.
  * Continues after timeoutMs to avoid blocking the render indefinitely.
  */
-export async function waitForImages(page: Page, timeoutMs = 3_000): Promise<void> {
+export async function waitForImages(page: Page, timeoutMs = 6_000): Promise<void> {
   await Promise.race([
     page.evaluate(evaluateImages),
     new Promise<void>((resolve) => setTimeout(() => {
