@@ -14,7 +14,7 @@ beforeEach(() => vi.clearAllMocks())
 
 describe("requireAuth", () => {
   it("no session → returns 401 NextResponse", async () => {
-    vi.mocked(auth).mockResolvedValue(null)
+    vi.mocked(auth).mockResolvedValue(null as never)
     const result = await requireAuth(new Request("http://localhost"))
     expect(result).toBeInstanceOf(NextResponse)
     const body = await (result as NextResponse).json()

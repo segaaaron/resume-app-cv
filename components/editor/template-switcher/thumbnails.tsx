@@ -1071,6 +1071,19 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "prism":          return <PrismThumb color={color} />
     case "tokyo":          return <TokyoThumb color={color} />
     case "vitae":          return <VitaeThumb color={color} />
+    case "ats":          return <ATSThumb color={color} />
+    case "blueprint":    return <BlueprintThumb color={color} />
+    case "casual":       return <CasualThumb color={color} />
+    case "circular":     return <CircularThumb color={color} />
+    case "coral":        return <CoralThumb color={color} />
+    case "fold":         return <FoldThumb color={color} />
+    case "luxurious":    return <LuxuriousThumb color={color} />
+    case "metro":        return <MetroThumb color={color} />
+    case "riviera":      return <RivieraThumb color={color} />
+    case "sharp":        return <SharpThumb color={color} />
+    case "simple":       return <SimpleThumb color={color} />
+    case "spark":        return <SparkThumb color={color} />
+    case "vogue":        return <VogueThumb color={color} />
     default:             return <ClassicThumb color={color} />
   }
 }
@@ -2521,7 +2534,7 @@ function FinanceTerminalThumb({ color }: { color: string }) {
 }
 
 function CampaignPosterThumb({ color }: { color: string }) {
-  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill={color} /><rect x="4" y="4" width="72" height="102" rx="2" fill="none" stroke="#fff" strokeWidth="1" opacity="0.4" /><rect x="6" y="14" width="68" height="16" rx="1" fill="#fff" opacity="0.95" /><rect x="8" y="16.5" width="52" height="11" rx="0.5" fill="#222" opacity="0.8" /><rect x="20" y="36" width="40" height="8" rx="100" fill="#ffd700" opacity="0.9" /><rect x="8" y="50" width="64" height="3" rx="0.5" fill="#fff" opacity="0.7" /><rect x="8" y="56" width="50" height="3" rx="0.5" fill="#fff" opacity="0.5" /><rect x="8" y="62" width="56" height="3" rx="0.5" fill="#fff" opacity="0.4" /><rect x="8" y="74" width="64" height="2" rx="0.5" fill="#fff" opacity="0.3" /><rect x="8" y="79" width="56" height="2" rx="0.5" fill="#fff" opacity="0.3" /></svg>)
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill={color} /><circle cx="95" cy="-15" r="55" fill="#ffd23f" opacity="0.95" /><rect x="8" y="28" width="56" height="16" rx="0.5" fill="#fff" opacity="0.95" /><rect x="8" y="46" width="48" height="16" rx="0.5" fill="#fff" opacity="0.95" /><rect x="14" y="67" width="32" height="7" rx="100" fill="#ffd23f" opacity="0.9" /><rect x="8" y="80" width="30" height="1.5" rx="0.3" fill="#fff" opacity="0.6" />{[84,88,92].map(y=><rect key={y} x="8" y={y} width="28" height="1.2" rx="0.3" fill="#fff" opacity="0.4" />)}<rect x="42" y="80" width="30" height="1.5" rx="0.3" fill="#fff" opacity="0.6" />{[84,88,92].map(y=><rect key={y} x="42" y={y} width="26" height="1.2" rx="0.3" fill="#fff" opacity="0.4" />)}</svg>)
 }
 
 function SalesPitchThumb({ color }: { color: string }) {
@@ -2910,4 +2923,56 @@ function FieldJournalThumb({ color }: { color: string }) {
       <line x1="4" y1="103" x2="76" y2="103" stroke="#1f1a0e" strokeWidth="0.6" />
     </svg>
   )
+}
+
+function ATSThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="8" y="8" width="40" height="4" rx="0.5" fill="#111" opacity="0.85" /><rect x="8" y="14" width="26" height="2" rx="0.5" fill="#666" opacity="0.5" /><rect x="8" y="21" width="64" height="1.5" rx="0" fill={color} opacity="0.65" /><rect x="8" y="27" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[31,35,39].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="47" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[51,55,59,63].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="71" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[75,79,83].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function BlueprintThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#f8fafc" /><rect x="0" y="0" width="26" height="28" fill={color} /><circle cx="13" cy="13" r="7" fill="#fff" opacity="0.25" /><rect x="3" y="22" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.8" /><rect x="0" y="28" width="26" height="82" fill="#fff" /><rect x="3" y="32" width="16" height="1.5" rx="0.5" fill={color} opacity="0.5" />{[37,41,45,51,55,59].map(y=><rect key={y} x="3" y={y} width="18" height="1" rx="0.3" fill="#999" opacity="0.4" />)}<rect x="30" y="8" width="44" height="3.5" rx="0.5" fill="#222" /><rect x="30" y="13" width="28" height="2" rx="0.5" fill="#555" opacity="0.6" /><rect x="30" y="22" width="16" height="1.5" rx="0.5" fill={color} opacity="0.6" />{[26,30,34,40,44,48,54,58,62].map(y=><rect key={y} x="30" y={y} width="44" height="1" rx="0.3" fill="#ccc" />)}</svg>)
+}
+
+function CasualThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="0" y="0" width="80" height="34" fill={color} /><circle cx="82" cy="-8" r="32" fill="#fff" opacity="0.07" /><circle cx="62" cy="32" r="16" fill="#fff" opacity="0.07" /><rect x="7" y="8" width="14" height="14" rx="2" fill="#fff" opacity="0.2" /><rect x="27" y="10" width="34" height="4" rx="0.5" fill="#fff" opacity="0.9" /><rect x="27" y="16" width="22" height="2" rx="0.5" fill="#fff" opacity="0.6" /><rect x="8" y="42" width="20" height="2" rx="0.5" fill={color} opacity="0.6" />{[47,51,55,59].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="67" width="20" height="2" rx="0.5" fill={color} opacity="0.6" />{[71,75,79,83].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function CircularThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><path d="M0,0 L80,0 L80,30 Q40,44 0,30 Z" fill={color} /><circle cx="40" cy="14" r="7" fill="#fff" opacity="0.25" /><rect x="20" y="26" width="40" height="1.5" rx="0.5" fill="#fff" opacity="0.6" /><rect x="4" y="50" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[54,58,62].map(y=><rect key={y} x="4" y={y} width="22" height="1" rx="0.3" fill="#ccc" />)}<rect x="30" y="50" width="20" height="2" rx="0.5" fill={color} opacity="0.6" />{[54,58,62].map(y=><rect key={y} x="30" y={y} width="20" height="1" rx="0.3" fill="#ccc" />)}<rect x="54" y="50" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[54,58,62].map(y=><rect key={y} x="54" y={y} width="18" height="1" rx="0.3" fill="#ccc" />)}</svg>)
+}
+
+function CoralThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="0" y="0" width="80" height="28" fill={color} /><circle cx="40" cy="13" r="7" fill="#fff" opacity="0.25" /><rect x="24" y="21" width="32" height="2" rx="0.5" fill="#fff" opacity="0.7" /><rect x="0" y="28" width="26" height="82" fill={color} opacity="0.06" /><rect x="3" y="33" width="16" height="1.5" rx="0.5" fill={color} opacity="0.5" />{[38,43,48,53,58,63].map(y=><rect key={y} x="3" y={y} width="18" height="1.2" rx="0.3" fill="#aaa" opacity="0.4" />)}<rect x="30" y="33" width="20" height="2" rx="0.5" fill={color} opacity="0.6" />{[38,42,46,52,56,60,66,70,74].map(y=><rect key={y} x="30" y={y} width="44" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function FoldThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="0" y="0" width="80" height="26" fill={color} opacity="0.07" /><rect x="0" y="26" width="80" height="3" fill={color} opacity="0.2" /><rect x="8" y="8" width="36" height="4" rx="0.5" fill="#111" opacity="0.75" /><rect x="8" y="14" width="24" height="2" rx="0.5" fill={color} opacity="0.6" />{[0,1,2].map(i=><g key={i}><rect x="0" y={32+i*20} width="80" height="20" fill={color} opacity={i%2===0?0.05:0} /><rect x="8" y={34+i*20} width="18" height="2" rx="0.5" fill={color} opacity="0.5" /><rect x="8" y={38+i*20} width="44" height="1.2" rx="0.3" fill="#ddd" /><rect x="8" y={41+i*20} width="36" height="1.2" rx="0.3" fill="#ddd" /></g>)}</svg>)
+}
+
+function LuxuriousThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#1a1a2e" /><rect x="0" y="0" width="80" height="32" fill="#16213e" /><rect x="0" y="32" width="80" height="2" fill={color} /><circle cx="16" cy="15" r="7" fill={color} opacity="0.25" /><rect x="28" y="9" width="36" height="4" rx="0.5" fill="#fff" opacity="0.85" /><rect x="28" y="15" width="22" height="2" rx="0.5" fill={color} opacity="0.7" /><rect x="8" y="42" width="22" height="2" rx="0.5" fill={color} opacity="0.7" />{[47,51,55,59].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#fff" opacity="0.15" />)}<rect x="8" y="68" width="22" height="2" rx="0.5" fill={color} opacity="0.7" />{[72,76,80,84].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#fff" opacity="0.15" />)}</svg>)
+}
+
+function MetroThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#f9fafb" /><rect x="0" y="0" width="5" height="110" fill={color} /><rect x="5" y="0" width="75" height="28" fill="#111827" /><rect x="10" y="8" width="36" height="4" rx="0.5" fill="#fff" opacity="0.9" /><rect x="10" y="14" width="22" height="2.5" rx="0.5" fill={color} opacity="0.8" /><rect x="5" y="28" width="75" height="10" fill={color} opacity="0.08" />{[0,1,2,3].map(i=><rect key={i} x={10+i*17} y="31" width="14" height="2" rx="0.5" fill={color} opacity="0.5" />)}<rect x="5" y="40" width="44" height="70" fill="#fff" /><rect x="10" y="44" width="18" height="2" rx="0.5" fill={color} opacity="0.6" />{[48,52,56,60,64].map(y=><rect key={y} x="10" y={y} width="34" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="53" y="40" width="27" height="70" fill="#f3f4f6" /><rect x="55" y="44" width="16" height="2" rx="0.5" fill={color} opacity="0.5" />{[48,52,56,60].map(y=><rect key={y} x="55" y={y} width="20" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function RivieraThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="0" y="0" width="26" height="110" fill="#1a2233" /><rect x="0" y="0" width="26" height="3" fill={color} /><circle cx="13" cy="18" r="8" fill={color} opacity="0.3" /><rect x="3" y="30" width="20" height="2" rx="0.5" fill="#fff" opacity="0.8" /><rect x="3" y="34" width="14" height="1.2" rx="0.5" fill="#fff" opacity="0.4" />{[42,46,50,54,60,64,68].map(y=><rect key={y} x="3" y={y} width="18" height="1" rx="0.3" fill="#fff" opacity="0.3" />)}<rect x="30" y="8" width="44" height="5" rx="0.5" fill="#111" /><rect x="30" y="15" width="28" height="2" rx="0.5" fill={color} opacity="0.6" /><rect x="30" y="24" width="18" height="1.5" rx="0.5" fill="#444" opacity="0.6" />{[28,32,36,42,46,50,56,60,64].map(y=><rect key={y} x="30" y={y} width="44" height="1" rx="0.3" fill="#ccc" />)}</svg>)
+}
+
+function SharpThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="0" y="0" width="80" height="36" fill={color} /><polygon points="0,36 80,28 80,36" fill="#fff" /><rect x="8" y="9" width="18" height="16" fill="#fff" opacity="0.2" style={{clipPath:"polygon(10% 0%,100% 0%,90% 100%,0% 100%)"}} /><rect x="32" y="11" width="34" height="4" rx="0.5" fill="#fff" opacity="0.9" /><rect x="32" y="17" width="22" height="2" rx="0.5" fill="#fff" opacity="0.6" /><rect x="8" y="44" width="20" height="2" rx="0.5" fill={color} opacity="0.6" />{[49,53,57,61].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="69" width="20" height="2" rx="0.5" fill={color} opacity="0.6" />{[73,77,81].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function SimpleThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="8" y="8" width="40" height="4.5" rx="0.5" fill="#111" opacity="0.85" /><rect x="8" y="14" width="28" height="2" rx="0.5" fill="#888" opacity="0.5" /><rect x="8" y="24" width="64" height="0.8" rx="0.4" fill="#ddd" /><rect x="8" y="28" width="18" height="2" rx="0.5" fill={color} opacity="0.6" />{[32,36,40].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="48" width="64" height="0.8" rx="0.4" fill="#ddd" /><rect x="8" y="52" width="18" height="2" rx="0.5" fill={color} opacity="0.6" />{[56,60,64,68].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="78" width="64" height="0.8" rx="0.4" fill="#ddd" /><rect x="8" y="82" width="18" height="2" rx="0.5" fill={color} opacity="0.6" />{[86,90].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function SparkThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><path d="M0,0 L80,0 L80,36 L0,28 Z" fill={color} /><circle cx="82" cy="-8" r="36" fill="#fff" opacity="0.1" /><circle cx="58" cy="34" r="18" fill="#fff" opacity="0.1" /><rect x="8" y="9" width="36" height="4" rx="0.5" fill="#fff" opacity="0.9" /><rect x="8" y="15" width="22" height="2.5" rx="0.5" fill="#fff" opacity="0.6" /><rect x="8" y="44" width="34" height="66" fill="#f9fafb" /><rect x="10" y="48" width="18" height="2" rx="0.5" fill={color} opacity="0.6" />{[52,56,60,64].map(y=><rect key={y} x="10" y={y} width="28" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="46" y="44" width="34" height="66" fill="#fff" /><rect x="48" y="48" width="18" height="2" rx="0.5" fill={color} opacity="0.5" />{[52,56,60,64].map(y=><rect key={y} x="48" y={y} width="28" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
+}
+
+function VogueThumb({ color }: { color: string }) {
+  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="60" y="0" width="20" height="20" fill={color} opacity="0.8" /><rect x="8" y="8" width="30" height="7" rx="0" fill={color} opacity="0.85" /><rect x="8" y="15" width="30" height="7" rx="0" fill="#111" opacity="0.85" /><rect x="8" y="24" width="28" height="2" rx="0.5" fill="#aaa" opacity="0.6" /><rect x="8" y="30" width="64" height="2" fill={color} /><rect x="8" y="37" width="20" height="1.5" rx="0.5" fill={color} opacity="0.6" />{[41,45,49,53].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="61" width="20" height="1.5" rx="0.5" fill={color} opacity="0.6" />{[65,69,73,77].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)
 }

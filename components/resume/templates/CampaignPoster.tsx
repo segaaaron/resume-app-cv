@@ -1,5 +1,6 @@
 "use client"
 
+import { Mail, Phone, Link2 } from "lucide-react"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { fmtDesc } from "@/lib/utils"
 
@@ -196,11 +197,13 @@ export default function CampaignPosterTemplate() {
         position: "relative", zIndex: 1,
         fontFamily: "'Inter Tight', sans-serif",
         fontSize: 12, fontWeight: 700,
-        display: "flex", justifyContent: "space-between",
+        display: "flex", flexWrap: "wrap", gap: 18, alignItems: "center",
       }}>
-        {pd.email && <span>{pd.email}</span>}
-        {pd.phone && <span>{pd.phone}</span>}
-        {pd.linkedin && <span>{pd.linkedin}</span>}
+        <span style={{ fontFamily: "'Archivo Black', sans-serif", fontSize: 13 }}>{firstName} {lastName}</span>
+        {pd.email && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={12} />{pd.email}</span>}
+        {pd.phone && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={12} />{pd.phone}</span>}
+        {pd.linkedin && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Link2 size={12} />{pd.linkedin}</span>}
+        {pd.github && <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Link2 size={12} />{pd.github}</span>}
       </footer>
     </div>
   )
