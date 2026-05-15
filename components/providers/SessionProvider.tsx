@@ -1,6 +1,7 @@
 "use client"
 
 import { SessionProvider as NextAuthSessionProvider, useSession, signOut } from "next-auth/react"
+import { logoutAction } from "@/lib/actions/logout"
 import type { Session } from "next-auth"
 import { useEffect, useRef } from "react"
 import { toast } from "sonner"
@@ -22,7 +23,7 @@ function SessionWatcher() {
     if (status === "loading") return
     if (status === "unauthenticated" && sessionStorage.getItem("wasAuthenticated")) {
       sessionStorage.removeItem("wasAuthenticated")
-      signOut({ redirect: true, callbackUrl: "/login" })
+      logoutAction("/login")
     }
   }, [status])
 

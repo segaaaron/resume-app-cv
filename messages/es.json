@@ -530,6 +530,7 @@
       "logout_confirm_desc": "Se cerrará tu sesión en este dispositivo.",
       "logout_confirm_action": "Cerrar sesión",
       "logout_cancel": "Cancelar",
+      "logout_error": "Error al cerrar sesión correctamente. Si tienes problemas para iniciar sesión, espera 30 minutos o usa la opción de sesión activa.",
       "admin": "Admin"
     },
     "upgrade_cta": {

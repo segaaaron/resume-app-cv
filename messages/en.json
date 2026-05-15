@@ -530,6 +530,7 @@
       "logout_confirm_desc": "You will be signed out of this device.",
       "logout_confirm_action": "Log out",
       "logout_cancel": "Cancel",
+      "logout_error": "Sign out did not complete cleanly. If you have trouble signing in, wait 30 minutes or use the active session option.",
       "admin": "Admin"
     },
     "upgrade_cta": {

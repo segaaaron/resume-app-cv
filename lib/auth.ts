@@ -26,7 +26,7 @@ class SessionChallengeBlockedError extends CredentialsSignin {
 const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
 const CACHE_TTL_MS        = 5 * 60 * 1000        // 5 minutes
-const INACTIVITY_LIMIT_MS = 8 * 60 * 60 * 1000   // 8 hours — used only in authorize stale-session check
+const INACTIVITY_LIMIT_MS = 30 * 60 * 1000        // 30 min — used only in authorize stale-session check
 
 interface UserPlanCacheEntry {
   plan:                string
@@ -231,7 +231,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     async signOut(message) {
       const token = "token" in message ? message.token : undefined
-      const sub = (token as { sub?: string } | null | undefined)?.sub
+      const sub = (token as { sub?: string; id?: string } | null | undefined)?.sub
+               ?? (token as { sub?: string; id?: string } | null | undefined)?.id
       if (sub) {
         await db.user.update({
           where: { id: sub },

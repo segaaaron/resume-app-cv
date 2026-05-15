@@ -3,6 +3,8 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
+import { clearSessionToken } from "@/lib/actions/logout"
+import { toast } from "sonner"
 import { FileText, Mail, Briefcase, Settings, LogOut, Shield } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
@@ -107,7 +109,11 @@ export default function DashboardNav({ user, isPro = false }: Props) {
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>{t("logout_cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={() => signOut({ callbackUrl: `/${locale}` })}>
+              <AlertDialogAction onClick={async () => {
+                const result = await clearSessionToken()
+                if (!result.ok) toast.error(t("logout_error"))
+                signOut({ callbackUrl: `/${locale}` })
+              }}>
                 {t("logout_confirm_action")}
               </AlertDialogAction>
             </AlertDialogFooter>
