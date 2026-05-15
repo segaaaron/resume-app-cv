@@ -3,7 +3,7 @@ import { FONTS_TIMEOUT_MS } from "../constants"
 
 /**
  * Waits for all custom fonts to finish loading.
- * Continues with fallback fonts if not ready within FONTS_TIMEOUT_MS.
+ * Continues with fallback fonts if not ready within FONTS_TIMEOUT_MS...
  */
 export async function waitForFonts(page: Page): Promise<void> {
   let timedOut = false
