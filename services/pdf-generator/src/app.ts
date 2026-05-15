@@ -2,6 +2,7 @@ import Fastify, { FastifyInstance } from "fastify"
 import { registerAuthHook } from "./routes/auth.hook"
 import { registerHealthRoute } from "./routes/health.route"
 import { registerGeneratePdfRoute } from "./routes/generate-pdf.route"
+import { registerGenerateScreenshotRoute } from "./routes/generate-screenshot.route"
 
 /**
  * Builds and returns a configured Fastify application instance.
@@ -13,6 +14,7 @@ export function buildApp(): FastifyInstance {
   registerAuthHook(app, secret)
   registerHealthRoute(app)
   registerGeneratePdfRoute(app)
+  registerGenerateScreenshotRoute(app)
   return app
 }
 
