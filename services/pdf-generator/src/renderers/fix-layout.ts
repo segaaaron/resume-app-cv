@@ -42,15 +42,21 @@ import { RESUME_PAGES_SELECTOR, RESUME_HEADING_SELECTOR } from "../contracts"
  *   3. Snap de altura del root a número entero de páginas.
  *   4. Corrige margin-top de headings en límites de página (artefacto de 8px).
  */
-export async function fixLayout(page: Page): Promise<void> {
-  await page.evaluate(browserFixLayout, USABLE_PX_PER_PAGE, FUDGE_PX, PDF_BOTTOM_MARGIN_PX, RESUME_PAGES_SELECTOR, RESUME_HEADING_SELECTOR)
+export async function fixLayout(page: Page): Promise<string | null> {
+  const grad = await page.evaluate(browserFixLayout, USABLE_PX_PER_PAGE, FUDGE_PX, PDF_BOTTOM_MARGIN_PX, RESUME_PAGES_SELECTOR, RESUME_HEADING_SELECTOR)
+  if (grad) {
+    await page.addStyleTag({
+      content: `html { background: ${grad} !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }`,
+    })
+  }
+  return grad
 }
 
 /**
  * Entry point running entirely in browser context.
  * Receives constants from Node.js via page.evaluate() argument passing.
  */
-function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: number, resumePagesSelector: string, resumeHeadingSelector: string): void {
+function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: number, resumePagesSelector: string, resumeHeadingSelector: string): string | null {
   function isDiscretePages(children: HTMLElement[], ppx: number, z: number): boolean {
     return children.length > 1 && children.every((c) => Math.abs(c.scrollHeight * z - ppx) < ppx * 0.15)
   }
@@ -78,47 +84,33 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
     }
     return null
   }
-  function paintSidebarGradient(root: HTMLElement): void {
+  function paintSidebarGradient(root: HTMLElement): string | null {
     const { sidebarEl, mainEl, side } = getSidebarConfig(root)
-    if (!sidebarEl || !mainEl || !side) return
-    const sidebarBg = getSolidBg(sidebarEl)
-    if (!sidebarBg) return
-    const ratio = (sidebarEl.getBoundingClientRect().width / root.getBoundingClientRect().width) * 100
+    if (!sidebarEl || !mainEl || !side) return null
+    const cs = window.getComputedStyle(root)
+    const varSidebarBg = cs.getPropertyValue("--pdf-sidebar-bg").trim()
+    const varMainBg = cs.getPropertyValue("--pdf-main-bg").trim()
+    const varWidth = cs.getPropertyValue("--pdf-sidebar-width").trim()
+    const sidebarBg = varSidebarBg || getSolidBg(sidebarEl)
+    if (!sidebarBg) return null
     const rawRootBg = window.getComputedStyle(root).backgroundColor
     const isOpaque = (bg: string) => !!bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"
-    const mainBg = getSolidBg(mainEl) ?? (isOpaque(rawRootBg) ? rawRootBg : "white")
+    const mainBg = varMainBg || (getSolidBg(mainEl) ?? (isOpaque(rawRootBg) ? rawRootBg : "white"))
+    let ratio: number
+    if (varWidth) {
+      const rootW = root.getBoundingClientRect().width
+      const sidebarPx = varWidth.endsWith("px")
+        ? parseFloat(varWidth)
+        : (parseFloat(varWidth) / 100) * rootW
+      ratio = rootW > 0 ? (sidebarPx / rootW) * 100 : 33
+    } else {
+      ratio = (sidebarEl.getBoundingClientRect().width / root.getBoundingClientRect().width) * 100
+    }
     const grad = side === "left"
       ? `linear-gradient(to right, ${sidebarBg} 0%, ${sidebarBg} ${ratio}%, ${mainBg} ${ratio}%, ${mainBg} 100%)`
       : `linear-gradient(to left, ${sidebarBg} 0%, ${sidebarBg} ${100 - ratio}%, ${mainBg} ${100 - ratio}%, ${mainBg} 100%)`
     root.style.setProperty("background", grad, "important")
-  }
-  function insertSpacerAt(col: HTMLElement, cx: number, boundaryY: number, paddingPx: number): void {
-    const hit = document.elementFromPoint(cx, boundaryY) as HTMLElement | null
-    if (!hit || !col.contains(hit)) return
-    let ancestor: HTMLElement = hit
-    while (ancestor.parentElement && ancestor.parentElement !== col) ancestor = ancestor.parentElement as HTMLElement
-    if (ancestor === col || ancestor.parentElement !== col || (ancestor as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer) return
-    const gap = parseFloat(window.getComputedStyle(ancestor.parentElement ?? col).gap) || 0
-    const spacerH = Math.max(0, paddingPx - gap)
-    if (spacerH <= 0) return
-    const spacer = document.createElement("div")
-    spacer.setAttribute("data-pdf-spacer", "true")
-    const colBg = window.getComputedStyle(col).backgroundColor
-    // eslint-disable-next-line no-restricted-syntax
-    spacer.style.cssText = `height:${spacerH}px;flex-shrink:0;background:${colBg && colBg !== "rgba(0, 0, 0, 0)" && colBg !== "transparent" ? colBg : "transparent"};`
-    col.insertBefore(spacer, ancestor)
-  }
-  function injectColumnSpacers(root: HTMLElement, wrapperTop: number, eff: number, numPages: number): void {
-    const { sidebarEl, mainEl } = getSidebarConfig(root)
-    const cols = [(mainEl ?? root), sidebarEl].filter(Boolean) as HTMLElement[]
-    cols.map((el) => ({ el, paddingPx: parseFloat(window.getComputedStyle(el).paddingTop) || 0 }))
-      .filter((c) => c.paddingPx > 0)
-      .forEach(({ el, paddingPx }) => {
-        const colRect = el.getBoundingClientRect()
-        const cx = colRect.left + colRect.width / 2
-        el.querySelectorAll("[data-pdf-spacer]").forEach((s) => s.remove())
-        for (let pN = numPages - 1; pN >= 1; pN--) insertSpacerAt(el, cx, wrapperTop + pN * eff, paddingPx)
-      })
+    return grad
   }
   function snapRootHeight(root: HTMLElement, contentBottomPx: number, eff: number, z: number): void {
     const numPages = Math.ceil(contentBottomPx / eff)
@@ -129,19 +121,16 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
     root.style.setProperty("min-height", lastFill < 0.05 ? "0" : `${h}px`, "important")
     root.style.setProperty("overflow", "hidden", "important")
   }
-
   const wrapper = document.querySelector<HTMLElement>(resumePagesSelector)
-  if (!wrapper) return
+  if (!wrapper) return null
   const root = wrapper.firstElementChild as HTMLElement | null
-  if (!root) return
+  if (!root) return null
   const zoom = parseFloat(root.style.zoom || "1") || 1
   const children = Array.from(root.children) as HTMLElement[]
-  if (isDiscretePages(children, pagePx, zoom)) { hideEmptyLastPage(children, pagePx, zoom, fudgePx); return }
+  if (isDiscretePages(children, pagePx, zoom)) { hideEmptyLastPage(children, pagePx, zoom, fudgePx); return null }
   const eff = pagePx - bottomMarginPx
-  paintSidebarGradient(root)
+  const grad = paintSidebarGradient(root)
   const contentBottomPx = root.scrollHeight * zoom - fudgePx
-  const numPages = Math.ceil(contentBottomPx / eff)
-  injectColumnSpacers(root, wrapper.getBoundingClientRect().top, eff, numPages)
   snapRootHeight(root, contentBottomPx, eff, zoom)
   Array.from(wrapper.querySelectorAll<HTMLElement>(resumeHeadingSelector))
     .filter((el) => !(el as HTMLElement & { dataset: DOMStringMap }).dataset.pdfSpacer)
@@ -149,4 +138,5 @@ function browserFixLayout(pagePx: number, fudgePx: number, bottomMarginPx: numbe
       const off = (el.getBoundingClientRect().top - wrapper.getBoundingClientRect().top) % eff
       if (off > 0 && off < 8) el.style.setProperty("margin-top", "0", "important")
     })
+  return grad
 }
