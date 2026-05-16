@@ -531,7 +531,8 @@
       "logout_confirm_action": "Log out",
       "logout_cancel": "Cancel",
       "logout_error": "Sign out did not complete cleanly. If you have trouble signing in, wait 30 minutes or use the active session option.",
-      "admin": "Admin"
+      "admin": "Admin",
+      "profile": "Profile"
     },
     "upgrade_cta": {
       "headline": "Unlock everything with Pro",
@@ -569,6 +570,7 @@
       "rename_success": "Name updated",
       "rename_error": "Error renaming CV",
       "pdf_error": "Error generating PDF",
+      "pdf_loading": "Generating PDF…",
       "thumbnail_error": "Error generating CV preview",
       "welcome_pro_title": "Your Pro plan is active!",
       "welcome_pro_subtitle": "You now have full access to all templates and features.",
@@ -724,7 +726,8 @@
       "content_tab": "Content",
       "design_tab": "Design",
       "hidden_sections": "Hidden sections",
-      "ats_tab": "ATS"
+      "ats_tab": "ATS",
+      "review_tab": "AI Review"
     },
     "section": {
       "hide": "Hide section",
@@ -904,6 +907,7 @@
       "title": "AI CV Review",
       "pro_badge": "Pro",
       "description": "Ask your CV a question or request a general review. The AI will analyze your full profile and give you concrete feedback.",
+      "empty_state_hint": "Type a question or leave empty for a general review, then press Analyze.",
       "placeholder": "E.g.: what do I need to apply for leadership roles? or leave empty for a general review",
       "analyze": "Review my CV",
       "analyzing": "Analyzing...",

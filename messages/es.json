@@ -531,7 +531,8 @@
       "logout_confirm_action": "Cerrar sesión",
       "logout_cancel": "Cancelar",
       "logout_error": "Error al cerrar sesión correctamente. Si tienes problemas para iniciar sesión, espera 30 minutos o usa la opción de sesión activa.",
-      "admin": "Admin"
+      "admin": "Admin",
+      "profile": "Perfil"
     },
     "upgrade_cta": {
       "headline": "Desbloquea todo con Pro",
@@ -569,6 +570,7 @@
       "rename_success": "Nombre actualizado",
       "rename_error": "Error al cambiar el nombre",
       "pdf_error": "Error al generar el PDF",
+      "pdf_loading": "Generando PDF…",
       "thumbnail_error": "Error al generar la vista previa del CV",
       "welcome_pro_title": "¡Tu plan Pro está activo!",
       "welcome_pro_subtitle": "Ya tienes acceso completo a todas las plantillas y funciones.",
@@ -724,7 +726,8 @@
       "content_tab": "Contenido",
       "design_tab": "Diseño",
       "hidden_sections": "Secciones ocultas",
-      "ats_tab": "ATS"
+      "ats_tab": "ATS",
+      "review_tab": "Revisión IA"
     },
     "section": {
       "hide": "Ocultar sección",
@@ -904,6 +907,7 @@
       "title": "Revisión IA del CV",
       "pro_badge": "Pro",
       "description": "Hazle una pregunta a tu CV o pide una revisión general. La IA analizará tu perfil completo y te dará feedback concreto.",
+      "empty_state_hint": "Escribe una pregunta o deja vacío para revisión general, luego pulsa Revisar.",
       "placeholder": "Ej: ¿qué me falta para aplicar a puestos de liderazgo? o deja vacío para revisión general",
       "analyze": "Revisar mi CV",
       "analyzing": "Analizando...",

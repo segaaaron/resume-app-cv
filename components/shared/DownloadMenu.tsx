@@ -86,6 +86,10 @@ export default function DownloadMenu({
   }, [options, filename, successLabel])
 
   useEffect(() => {
+    if (anyLoading) setOpen(false)
+  }, [anyLoading])
+
+  useEffect(() => {
     if (!open || anyLoading) return
     const close = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)

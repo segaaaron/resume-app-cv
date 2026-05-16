@@ -249,6 +249,14 @@
   100% { transform: scale(1); }
 }
 
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-card-in {
+  animation: card-in 0.25s ease-out forwards;
+}
+
 /* ── Scroll reveal ───────────────────────────────────────────────── */
 .animate-on-scroll {
   opacity: 0;

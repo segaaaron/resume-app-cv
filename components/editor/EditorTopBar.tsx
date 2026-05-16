@@ -16,7 +16,7 @@ interface Props {
 
 export default function EditorTopBar({ hasAccess }: Props) {
   const router = useRouter()
-  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId } = useResumeStore()
+  const { title, setTitle, save, triggerThumbnail, isSaving, lastSaved, isDirty, resumeId } = useResumeStore()
   const [editing, setEditing] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [publicSlug, setPublicSlug] = useState<string | null>(null)
@@ -126,7 +126,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
   async function handleDownloadPdf() {
     if (!resumeId) return
     if (isDirty && hasAccess) {
-      await save().catch(() => {})
+      // Skip thumbnail during save — will trigger after PDF completes to avoid concurrent Puppeteer calls
+      await save({ skipThumbnail: true }).catch(() => {})
     }
     setDownloadingPdf(true)
     try {
@@ -141,6 +142,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      // Thumbnail refresh fires AFTER PDF download — sequential, not concurrent
+      triggerThumbnail()
     } catch {
       toast.error(t("print.error_pdf"))
     } finally {

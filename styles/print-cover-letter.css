@@ -10,11 +10,12 @@
    ============================================================ */
 
 /* 1. PAGE BOX
-   Margen para window.print(). Puppeteer usa COVER_MARGIN_MM
-   en lib/pdf/renderers/cover-letter.ts. */
+   Puppeteer usa COVER_MARGIN_MM en lib/pdf/renderers/cover-letter.ts.
+   @page margin = 0: las plantillas manejan su propio padding interno.
+   Cualquier margen aquí reduce el área a <297mm y causa página vacía. */
 @page {
   size: A4;
-  margin: 10mm 0;
+  margin: 0;
 }
 
 /* 2. ROOT RESETS */

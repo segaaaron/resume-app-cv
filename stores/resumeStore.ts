@@ -88,7 +88,8 @@ interface ResumeActions {
   toggleSection: (id: string) => void
   togglePageBreak: (id: string) => void
   moveSectionToColumn: (id: string, column: "main" | "side") => void
-  save: () => Promise<void>
+  save: (opts?: { skipThumbnail?: boolean }) => Promise<void>
+  triggerThumbnail: () => void
 }
 
 const defaultConfig: ResumeConfig = {
@@ -197,7 +198,26 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         })
       },
 
-      save: async () => {
+      triggerThumbnail: () => {
+        const { resumeId, lastThumbnailAt } = get()
+        if (!resumeId) return
+        const now = Date.now()
+        if (lastThumbnailAt && now - lastThumbnailAt < 60_000) return
+        set((state) => { state.lastThumbnailAt = now })
+        const locale = typeof window !== "undefined"
+          ? (["es", "en"].includes(window.location.pathname.split("/")[1]) ? window.location.pathname.split("/")[1] : "es")
+          : "es"
+        fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
+          .then(async (r) => {
+            if (!r.ok && r.status !== 503) {
+              const body = await r.json().catch(() => ({})) as { error?: string }
+              if (body.error) toast.error(body.error)
+            }
+          })
+          .catch(() => {})
+      },
+
+      save: async (opts) => {
         const { resumeId, title, sections, sectionData, config } = get()
         if (!resumeId) return
         set((state) => { state.isSaving = true })
@@ -221,22 +241,8 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             state.lastSaved = new Date()
             state.isDirty = false
           })
-          // Fire-and-forget thumbnail refresh (60s cooldown)
-          const { lastThumbnailAt } = get()
-          const now = Date.now()
-          if (!lastThumbnailAt || now - lastThumbnailAt > 60_000) {
-            set((state) => { state.lastThumbnailAt = now })
-            const locale = typeof window !== "undefined"
-              ? (["es", "en"].includes(window.location.pathname.split("/")[1]) ? window.location.pathname.split("/")[1] : "es")
-              : "es"
-            fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
-              .then(async (r) => {
-                if (!r.ok && r.status !== 503) {
-                  const body = await r.json().catch(() => ({})) as { error?: string }
-                  if (body.error) toast.error(body.error)
-                }
-              })
-              .catch(() => {})
+          if (!opts?.skipThumbnail) {
+            get().triggerThumbnail()
           }
         } catch {
           set((state) => { state.isSaving = false })
