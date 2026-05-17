@@ -18,6 +18,7 @@ const protectedRoutes = ["/dashboard", "/editor", "/cover-letter", "/resume"]
 
 function getIsAuth(request: NextRequest): boolean {
   return !!(
+    request.cookies.get("__Host-authjs.session-token") ??
     request.cookies.get("authjs.session-token") ??
     request.cookies.get("__Secure-authjs.session-token") ??
     request.cookies.get("next-auth.session-token") ??
@@ -25,7 +26,7 @@ function getIsAuth(request: NextRequest): boolean {
   )
 }
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Redirect non-www to www in production
