@@ -65,7 +65,11 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     if (!isPro) { requirePro(); return }
     setCreating(true)
     try {
-      const res = await apiFetch("/api/cover-letters", { method: "POST" })
+      const res = await apiFetch("/api/cover-letters", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: t("new_letter_title") }),
+      })
       const data = await res.json()
       router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {

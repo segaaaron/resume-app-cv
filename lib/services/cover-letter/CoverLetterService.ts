@@ -59,11 +59,11 @@ export class CoverLetterService {
     return letter
   }
 
-  async create(userId: string) {
+  async create(userId: string, title?: string) {
     const letter = await db.coverLetter.create({
       data: {
         userId,
-        title: "Mi Carta de Presentación",
+        title: title ?? "Mi Carta de Presentación",
         content: {
           recipientName: "",
           recipientTitle: "",

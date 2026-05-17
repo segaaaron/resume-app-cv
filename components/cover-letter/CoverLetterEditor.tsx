@@ -115,10 +115,11 @@ export default function CoverLetterEditor({
   const [resumes, setResumes] = useState<{ id: string; title: string }[]>([])
   const [selectedResumeId, setSelectedResumeId] = useState("")
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
+  const [aiUserPrompt, setAiUserPrompt] = useState("")
 
 
   useEffect(() => {
-    fetch("/api/resumes")
+    apiFetch("/api/resumes")
       .then((r) => r.json())
       .then((data) => {
         if (Array.isArray(data)) setResumes(data.map((r: { id: string; title: string }) => ({ id: r.id, title: r.title })))
@@ -140,12 +141,9 @@ export default function CoverLetterEditor({
           recipientName: content.recipientName,
           recipientTitle: content.recipientTitle,
           company: content.company,
-          jobTitle: title,
           tone: aiTone,
           language,
-          userPrompt: content.body
-            ? content.body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
-            : undefined,
+          userPrompt: aiUserPrompt.trim() || undefined,
         }),
       })
       if (res.status === 429) { toast.error(t("ai_rate_limit")); return }
@@ -564,18 +562,36 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
           <Separator />
 
           {/* Body + AI unified */}
-          <div className="space-y-2">
+          <div className="space-y-3">
             <Label className="text-xs">{t("body_label")}</Label>
 
-            {isPro ? (
-              <div className="rounded-lg border border-indigo-200 bg-indigo-50/50 p-3 space-y-2.5">
+            {!isPro ? (
+              <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-4 py-4 flex flex-col items-center gap-2 text-center">
+                <Lock className="h-4 w-4 text-primary" />
+                <p className="text-xs font-semibold text-foreground">{t("pro_upgrade_title")}</p>
+                <p className="text-[11px] text-muted-foreground leading-relaxed">{t("pro_upgrade_desc")}</p>
+                <Button size="sm" className="gap-1.5 mt-1" onClick={() => setUpgradeOpen(true)}>
+                  <Sparkles className="h-3.5 w-3.5" /> {t("pro_upgrade_cta")}
+                </Button>
+              </div>
+            ) : !content.body || content.body.replace(/<[^>]+>/g, "").trim().length === 0 ? (
+              /* ── State A: no body → prompt + generate ── */
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-3">
+                {/* AI panel header */}
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+                    <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  </div>
+                  <p className="text-xs font-semibold text-foreground">{t("ai_generate")}</p>
+                </div>
+
                 {resumes.length > 0 && (
                   <div className="space-y-1">
                     <Label className="text-[11px] text-muted-foreground">{t("ai_resume_label")}</Label>
                     <select
                       value={selectedResumeId}
                       onChange={(e) => setSelectedResumeId(e.target.value)}
-                      className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5"
+                      className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
                     >
                       <option value="">{t("ai_resume_none")}</option>
                       {resumes.map((r) => (
@@ -593,10 +609,10 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                         key={v}
                         type="button"
                         onClick={() => setAiTone(v)}
-                        className={`flex-1 text-[10px] py-1 rounded border transition-colors ${
+                        className={`flex-1 text-[10px] py-1.5 rounded-md border font-medium transition-all ${
                           aiTone === v
-                            ? "bg-indigo-600 text-white border-indigo-600"
-                            : "bg-white text-muted-foreground border-input hover:border-indigo-400"
+                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                            : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
                         }`}
                       >
                         {l}
@@ -604,34 +620,52 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                     ))}
                   </div>
                 </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-4 py-4 flex flex-col items-center gap-2 text-center">
-                <Lock className="h-4 w-4 text-primary" />
-                <p className="text-xs font-semibold text-foreground">{t("pro_upgrade_title")}</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">{t("pro_upgrade_desc")}</p>
-                <Button size="sm" className="gap-1.5 mt-1" onClick={() => setUpgradeOpen(true)}>
-                  <Sparkles className="h-3.5 w-3.5" /> {t("pro_upgrade_cta")}
+
+                <div className="space-y-1.5">
+                  <Label className="text-[11px] text-muted-foreground">{t("ai_prompt_label")}</Label>
+                  <div className="relative">
+                    <textarea
+                      value={aiUserPrompt}
+                      onChange={(e) => setAiUserPrompt(e.target.value)}
+                      placeholder={t("ai_prompt_placeholder")}
+                      rows={4}
+                      maxLength={500}
+                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none pb-6"
+                    />
+                    <span className={`absolute bottom-2 right-2.5 text-[10px] tabular-nums ${aiUserPrompt.length >= 450 ? "text-amber-500" : "text-muted-foreground/50"}`}>
+                      {aiUserPrompt.length}/500
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  size="sm"
+                  className="w-full gap-1.5"
+                  onClick={handleGenerateAI}
+                  disabled={generating}
+                >
+                  {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+                  {generating ? t("ai_generating") : t("ai_generate")}
                 </Button>
               </div>
-            )}
-
-            <RichTextEditor
-              value={content.body}
-              onChange={(html) => updateContent("body", html)}
-              placeholder={t("body_placeholder")}
-            />
-
-            {isPro && (
-              <Button
-                size="sm"
-                className="w-full gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white"
-                onClick={handleGenerateAI}
-                disabled={generating}
-              >
-                {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {generating ? t("ai_generating") : t("ai_generate")}
-              </Button>
+            ) : (
+              /* ── State B: body exists → rich editor + start over ── */
+              <div className="space-y-2">
+                <RichTextEditor
+                  value={content.body}
+                  onChange={(html) => updateContent("body", html)}
+                  placeholder={t("body_placeholder")}
+                />
+                <button
+                  type="button"
+                  onClick={() => { updateContent("body", ""); setAiUserPrompt("") }}
+                  disabled={generating}
+                  className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
+                >
+                  <X className="h-3 w-3" />
+                  {t("ai_regenerate")}
+                </button>
+              </div>
             )}
           </div>
 

@@ -29,7 +29,9 @@ export async function POST(req: Request) {
     const proCheck = await requireProUser(session.user.id)
     if (proCheck) return proCheck
 
-    const letter = await coverLetterService.create(session.user.id)
+    const body = await req.json().catch(() => ({}))
+    const title = typeof body?.title === "string" ? body.title.slice(0, 200) : undefined
+    const letter = await coverLetterService.create(session.user.id, title)
     return NextResponse.json(letter, { status: 201 })
   } catch (err) {
     return handleError(err)
