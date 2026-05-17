@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 
 export default function ManageBillingButton() {
@@ -12,7 +13,7 @@ export default function ManageBillingButton() {
   async function handleClick() {
     setLoading(true)
     try {
-      const res = await fetch("/api/stripe/portal", {
+      const res = await apiFetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),

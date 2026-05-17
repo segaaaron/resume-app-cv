@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
@@ -59,7 +60,7 @@ export function useATSScore() {
 
     try {
       if (isQuestion(text)) {
-        const res = await fetch("/api/ai/review-cv", {
+        const res = await apiFetch("/api/ai/review-cv", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sectionData, question: text, language: config.language }),
@@ -72,7 +73,7 @@ export function useATSScore() {
         if (!res.ok) throw new Error(data.error)
         setReviewResult(data)
       } else {
-        const res = await fetch("/api/ai/ats-score", {
+        const res = await apiFetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jobDescription: text, sectionData, language: config.language }),

@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Plus } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 export default function KanbanBoard({ initialApplications }: { initialApplications: ApplicationCard[] }) {
   const t = useTranslations("kanban")
@@ -35,7 +36,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
     if (!jobTitle || !company) return
     setSaving(true)
     try {
-      const res = await fetch("/api/applications", {
+      const res = await apiFetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle, company }),

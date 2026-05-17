@@ -29,12 +29,21 @@ export class StripeBillingService {
     const user = await db.user.findUnique({ where: { id: userId }, select: { subscriptionId: true, subscriptionStatus: true } })
     if (!user?.subscriptionId) throw new AppError("no_active_subscription", 400)
     if (user.subscriptionStatus === "CANCELED") throw new AppError("already_canceled", 400)
+
     await this.stripeClient.updateSubscription(user.subscriptionId, { cancel_at_period_end: true })
-    await db.$transaction([
-      db.user.update({ where: { id: userId }, data: { subscriptionStatus: "CANCELED", sessionVersion: { increment: 1 } } }),
-      db.auditLog.create({ data: { userId, action: "CANCEL_SUBSCRIPTION", metadata: { source: "user_self_cancel", subscriptionId: user.subscriptionId } } }),
-    ])
-    purgeUserCache(userId)
+
+    // CAS prevents duplicate CANCELED writes from concurrent cancel requests.
+    const claimed = await db.user.updateMany({
+      where: { id: userId, subscriptionStatus: { not: "CANCELED" } },
+      data: { subscriptionStatus: "CANCELED", sessionVersion: { increment: 1 } },
+    })
+    if (claimed.count > 0) {
+      await db.auditLog.create({
+        data: { userId, action: "CANCEL_SUBSCRIPTION", metadata: { source: "user_self_cancel", subscriptionId: user.subscriptionId } },
+      })
+      purgeUserCache(userId)
+    }
+
     this.logger.info("StripeBillingService.cancelSubscription", { userId })
     return { success: true }
   }

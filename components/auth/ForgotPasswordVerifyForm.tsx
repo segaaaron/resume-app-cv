@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 import OtpInput from "@/components/auth/OtpInput"
 
@@ -53,7 +54,7 @@ export default function ForgotPasswordVerifyForm() {
   }
 
   async function onSubmit(data: FormData) {
-    const res = await fetch("/api/auth/reset-password/confirm", {
+    const res = await apiFetch("/api/auth/reset-password/confirm", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, code: data.code, password: data.password }),
@@ -78,7 +79,7 @@ export default function ForgotPasswordVerifyForm() {
     if (!email) return
     setResending(true)
     try {
-      await fetch("/api/auth/reset-password/request", {
+      await apiFetch("/api/auth/reset-password/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),

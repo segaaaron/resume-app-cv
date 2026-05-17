@@ -323,7 +323,9 @@
       "account_blocked_until": "Demasiados intentos fallidos. Bloqueado hasta las {time}.",
       "back_to_login": "← Volver al login",
       "error_session_blocked": "Cuenta bloqueada temporalmente por demasiados intentos.",
-      "forgot_password": "¿Olvidaste tu contraseña?"
+      "forgot_password": "¿Olvidaste tu contraseña?",
+      "session_check_error": "No se pudo verificar tu sesión. Por favor intenta iniciar sesión.",
+      "session_cleared": "Sesión inválida detectada. Por favor inicia sesión de nuevo."
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -370,7 +372,8 @@
       "fp_banner_credentials": "Ya tienes una cuenta con este email.",
       "fp_banner_credentials_cta": "Iniciar sesión",
       "fp_banner_google": "Esta cuenta fue creada con Google.",
-      "fp_banner_google_cta": "Continuar con Google"
+      "fp_banner_google_cta": "Continuar con Google",
+      "session_check_error": "No se pudo verificar tu sesión. Por favor intenta iniciar sesión."
     },
     "forgot_password": {
       "title": "¿Olvidaste tu contraseña?",
@@ -563,7 +566,9 @@
       "cancel": "Cancelar",
       "create_error": "Error al crear el CV",
       "delete_success": "CV eliminado",
+      "delete_error": "Error al eliminar el CV",
       "duplicate_success": "CV duplicado",
+      "duplicate_error": "Error al duplicar el CV",
       "rename": "Cambiar nombre",
       "rename_title": "Cambiar nombre del CV",
       "rename_confirm": "Guardar",
@@ -1411,6 +1416,11 @@
     "error_title": "500",
     "error_message": "Algo salió mal. Por favor intenta de nuevo.",
     "retry": "Reintentar",
-    "home": "Ir al inicio"
+    "home": "Ir al inicio",
+    "api_errors": {
+      "server_error": "Algo salió mal. Inténtalo de nuevo.",
+      "service_unavailable": "Servicio no disponible. Intenta en unos minutos.",
+      "network_error": "Sin conexión. Verifica tu internet."
+    }
   }
 }

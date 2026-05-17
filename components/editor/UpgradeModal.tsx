@@ -10,6 +10,7 @@ import {
   DialogContent,
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface Props {
   open: boolean
@@ -34,7 +35,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
   async function handleCheckout(plan: "monthly" | "annual") {
     setLoading(plan)
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await apiFetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),

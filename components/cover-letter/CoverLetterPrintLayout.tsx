@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Download, ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations } from "next-intl"
 import { useSearchParams } from "next/navigation"
 import ElegantTemplate from "./templates/ElegantTemplate"
@@ -49,7 +50,7 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
   async function handleDownload() {
     setDownloading(true)
     try {
-      const res = await fetch(`/api/cover-letters/${letterId}/pdf?locale=${locale}`)
+      const res = await apiFetch(`/api/cover-letters/${letterId}/pdf?locale=${locale}`)
       if (!res.ok) { toast.error(t("pdf_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { format } from "date-fns"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations } from "next-intl"
 import { RefreshCw, Shield, User, Crown, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -70,7 +71,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
   async function invalidateSession(userId: string) {
     setLoading(userId)
     try {
-      const res = await fetch("/api/admin/invalidate-session", {
+      const res = await apiFetch("/api/admin/invalidate-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),

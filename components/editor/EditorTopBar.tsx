@@ -8,6 +8,7 @@ import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, Al
 import { useState, useEffect } from "react"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import UnsavedChangesModal from "./UnsavedChangesModal"
 
 interface Props {
@@ -88,7 +89,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
     if (!resumeId) return
     setTogglingShare(true)
     try {
-      const res = await fetch("/api/resumes/share", {
+      const res = await apiFetch("/api/resumes/share", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ resumeId }),
@@ -131,7 +132,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
     }
     setDownloadingPdf(true)
     try {
-      const res = await fetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
+      const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
       if (!res.ok) { toast.error(t("print.error_pdf")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)

@@ -125,6 +125,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const userId = (token.id ?? user?.id) as string | undefined
       if (!userId) return token
 
+      // Google OAuth fresh login: assign single-session token.
+      // Credentials users get this in authorize(); Google users don't, so we set it here.
+      if (isFreshLogin && !token.activeSessionToken) {
+        const sessionExpiresAt = Date.now() + 24 * 60 * 60 * 1000
+        const googleSessionToken = `${crypto.randomUUID()}:${sessionExpiresAt}`
+        await db.user.update({ where: { id: userId }, data: { activeSessionToken: googleSessionToken } }).catch(() => {})
+        token.activeSessionToken = googleSessionToken
+      }
+
       const now = Date.now()
       const cached = userPlanCache.get(userId)
 

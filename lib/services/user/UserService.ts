@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { AppError } from "@/lib/services/auth/AppError"
 import { checkRateLimit } from "@/lib/ai-client"
+import { purgeUserCache } from "@/lib/auth"
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token"
 import { z } from "zod"
 
@@ -96,10 +97,12 @@ export class UserService {
       data: { userId, action: "DELETE_ACCOUNT" },
     })
 
+    const now = new Date()
     await db.user.update({
       where: { id: userId },
-      data: { deletedAt: new Date() },
+      data: { deletedAt: now, activeSessionToken: null, forceLogoutAt: now },
     })
+    purgeUserCache(userId)
 
     this.logger.info("UserService.deleteAccount: soft-deleted", { userId })
     return { success: true }

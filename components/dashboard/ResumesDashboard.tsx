@@ -2,7 +2,8 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { useSession, signOut } from "next-auth/react"
+import { useSession } from "next-auth/react"
+import { logoutAction } from "@/lib/actions/logout"
 import { useTranslations, useLocale } from "next-intl"
 import { es, enUS } from "date-fns/locale"
 import { useUserTimezone } from "@/hooks/useUserTimezone"
@@ -22,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { isActive } from "@/lib/plans"
 import CVCard, { type ResumeCard } from "./CVCard"
 import SectionHeader from "./SectionHeader"
@@ -91,6 +93,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     const MAX_MS = 30_000
     let intervalMs = 2_000
 
+    let logoutTimeout: ReturnType<typeof setTimeout> | null = null
+
     const poll = async () => {
       if (!upgradeActiveRef.current) return
       if (Date.now() - started > MAX_MS) {
@@ -104,7 +108,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           if (data.plan === "PRO" && (data.subscriptionStatus === "ACTIVE" || data.subscriptionStatus === "PAST_DUE")) {
             upgradeActiveRef.current = false
             setUpgradeState("confirmed")
-            setTimeout(() => signOut({ callbackUrl: `/${locale}/login` }), 3_000)
+            logoutTimeout = setTimeout(() => logoutAction(`/${locale}/login`), 3_000)
             return
           }
         }
@@ -114,7 +118,10 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     }
 
     poll()
-    return () => { upgradeActiveRef.current = false }
+    return () => {
+      upgradeActiveRef.current = false
+      if (logoutTimeout) clearTimeout(logoutTimeout)
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -127,7 +134,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     if (!isPro) { requirePro(); return }
     setCreating(true)
     try {
-      const res = await fetch("/api/resumes", { method: "POST" })
+      const res = await apiFetch("/api/resumes", { method: "POST" })
       if (!res.ok) { toast.error(t("create_error")); return }
       const data = await res.json()
       router.push(`/${locale}/editor/${data.id}?new=1`)
@@ -138,17 +145,22 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   async function deleteResume(id: string) {
-    await fetch(`/api/resumes/${id}`, { method: "DELETE" })
-    setResumes((prev) => prev.filter((r) => r.id !== id))
-    setDeleteId(null)
-    toast.success(t("delete_success"))
+    try {
+      const res = await apiFetch(`/api/resumes/${id}`, { method: "DELETE" })
+      if (!res.ok) { toast.error(t("delete_error")); return }
+      setResumes((prev) => prev.filter((r) => r.id !== id))
+      setDeleteId(null)
+      toast.success(t("delete_success"))
+    } catch {
+      toast.error(t("delete_error"))
+    }
   }
 
   async function confirmRename() {
     if (!renameId || !renameDraft.trim()) return
     setRenaming(true)
     try {
-      const res = await fetch(`/api/resumes/${renameId}`, {
+      const res = await apiFetch(`/api/resumes/${renameId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: renameDraft.trim() }),
@@ -168,11 +180,14 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   async function duplicateResume(id: string) {
-    const res = await fetch(`/api/resumes/${id}/duplicate`, { method: "POST" })
-    if (res.ok) {
+    try {
+      const res = await apiFetch(`/api/resumes/${id}/duplicate`, { method: "POST" })
+      if (!res.ok) { toast.error(t("duplicate_error")); return }
       const copy = await res.json()
       setResumes((prev) => [copy, ...prev])
       toast.success(t("duplicate_success"))
+    } catch {
+      toast.error(t("duplicate_error"))
     }
   }
 
@@ -181,7 +196,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     setDownloadingIds((prev) => new Set(prev).add(resume.id))
 
     const download = async () => {
-      const res = await fetch(`/api/resumes/${resume.id}/pdf?locale=${locale}`)
+      const res = await apiFetch(`/api/resumes/${resume.id}/pdf?locale=${locale}`)
       if (!res.ok) throw new Error(t("pdf_error"))
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -238,7 +253,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                 <p className="text-lg font-semibold">{t("timeout_title")}</p>
                 <p className="text-sm text-muted-foreground mt-1">{t("timeout_subtitle")}</p>
               </div>
-              <Button onClick={() => signOut({ callbackUrl: `/${locale}/login` })}>
+              <Button onClick={() => logoutAction(`/${locale}/login`)}>
                 {t("timeout_reload")}
               </Button>
             </>

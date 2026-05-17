@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
@@ -30,7 +31,7 @@ export function useCVReview() {
     setLoading(true)
     setResult(null)
     try {
-      const res = await fetch("/api/ai/review-cv", {
+      const res = await apiFetch("/api/ai/review-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, question: question.trim() || undefined, language: config.language }),

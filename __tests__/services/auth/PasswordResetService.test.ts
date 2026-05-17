@@ -8,6 +8,7 @@ import type { IRateLimitService } from "@/lib/interfaces/IRateLimitService"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
 vi.mock("@/lib/auth", () => ({ purgeUserCache: vi.fn() }))
+vi.mock("@/lib/db", () => ({ db: { user: { update: vi.fn().mockResolvedValue({}) } } }))
 
 const mockUsers: IUserRepository = {
   findByEmail: vi.fn(),
@@ -136,7 +137,7 @@ describe("PasswordResetService.confirmReset", () => {
     await expect(makeService().confirmReset(validInput)).rejects.toMatchObject({ code: "user_not_found", status: 400 })
   })
 
-  it("valid code → updates password, marks used, purges cache, returns { ok: true }", async () => {
+  it("valid code → updates password, marks used, clears session, purges cache, returns { ok: true }", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
@@ -144,10 +145,23 @@ describe("PasswordResetService.confirmReset", () => {
     vi.mocked(mockResets.incrementAttempts).mockResolvedValue()
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null })
     vi.mocked(mockUsers.updatePassword).mockResolvedValue()
-    vi.mocked(mockResets.markUsed).mockResolvedValue()
+    vi.mocked(mockResets.markUsed).mockResolvedValue(true)
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.update).mockResolvedValue({} as never)
+
     const result = await makeService().confirmReset(validInput)
+
     expect(result).toEqual({ ok: true })
     expect(mockUsers.updatePassword).toHaveBeenCalledWith("u1", expect.stringMatching(/^\$2b\$/))
     expect(mockResets.markUsed).toHaveBeenCalledWith("a@b.com")
+    expect(vi.mocked(db.user.update)).toHaveBeenCalledWith({
+      where: { id: "u1" },
+      data: {
+        activeSessionToken:           null,
+        sessionVersion:               { increment: 1 },
+        sessionChallengeBlockedUntil: null,
+        sessionChallengeAttempts:     0,
+      },
+    })
   })
 })

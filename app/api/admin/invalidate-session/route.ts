@@ -45,7 +45,7 @@ export async function POST(req: Request) {
   const now = new Date()
   const updated = await db.user.update({
     where: { id: userId },
-    data:  { sessionVersion: { increment: 1 }, forceLogoutAt: now },
+    data:  { sessionVersion: { increment: 1 }, forceLogoutAt: now, activeSessionToken: null },
     select: { sessionVersion: true },
   })
 

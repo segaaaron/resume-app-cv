@@ -15,8 +15,8 @@ export class PrismaPendingRegistrationRepository implements IPendingRegistration
     })
   }
 
-  async updateAttempts(email: string, attempts: number): Promise<void> {
-    await db.pendingRegistration.update({ where: { email }, data: { attempts } })
+  async updateAttempts(email: string, _attempts: number): Promise<void> {
+    await db.pendingRegistration.update({ where: { email }, data: { attempts: { increment: 1 } } })
   }
 
   async deleteByEmail(email: string): Promise<void> {

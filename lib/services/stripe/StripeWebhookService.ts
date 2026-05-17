@@ -84,8 +84,9 @@ export class StripeWebhookService {
 
     if (result.skip) return
     purgeUserCache(userId)
-    // Fire-and-forget: referral failure must not cause 500 → Stripe retry → idempotency skip → reward permanently lost
-    checkAndApplyReferralReward(userId).catch((e) =>
+    // Fire-and-forget: referral failure must not cause 500 → Stripe retry → idempotency skip → reward permanently lost.
+    // Promise.resolve() guards against synchronous throws or non-Promise returns crashing the handler.
+    Promise.resolve(checkAndApplyReferralReward(userId)).catch((e) =>
       this.logger.error("checkAndApplyReferralReward failed after checkout", { userId, eventId: event.id }, e instanceof Error ? e : undefined)
     )
   }
@@ -96,7 +97,11 @@ export class StripeWebhookService {
     const subDetails = invoice.parent?.type === "subscription_details" ? invoice.parent.subscription_details : null
     const subscriptionId = subDetails
       ? typeof subDetails.subscription === "string" ? subDetails.subscription : (subDetails.subscription as Stripe.Subscription | null)?.id ?? null
-      : null
+      // Fallback: older Stripe API versions use invoice.subscription (string or expanded object)
+      : (() => {
+          const sub = (invoice as unknown as Record<string, unknown>).subscription
+          return typeof sub === "string" ? sub : (sub as { id?: string } | null)?.id ?? null
+        })()
     if (!subscriptionId) return
 
     const subscription = await this.stripeClient.retrieveSubscription(subscriptionId)
@@ -150,8 +155,10 @@ export class StripeWebhookService {
         await tx.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { cancelAt: cancelAt?.toISOString() } } })
       } else if (sub.status === "active") {
         const periodEnd = sub.items.data[0]?.current_period_end
-        await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "ACTIVE", ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
-        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "ACTIVE", periodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null } } })
+        const interval = sub.items.data[0]?.price?.recurring?.interval
+        const planInterval = interval === "year" ? "annual" : "monthly"
+        await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "ACTIVE", planInterval, ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
+        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "ACTIVE", planInterval, periodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null } } })
       } else if (sub.status === "past_due" || sub.status === "unpaid") {
         await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "PAST_DUE", stripeStatus: sub.status } } })
@@ -320,6 +327,7 @@ export class StripeWebhookService {
       catch (e) { if (isDuplicate(e)) return { skip: true, user: null }; throw e }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, name: true, email: true } })
       if (!user) return { skip: false, user: null }
+      await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
       await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } } })
       return { skip: false, user }
     }, TX_OPTS)

@@ -7,6 +7,7 @@ vi.mock("@/lib/db", () => ({
     user: { findUnique: vi.fn() },
     aIRateLimit: { findUnique: vi.fn(), upsert: vi.fn(), update: vi.fn() },
     aIUsageLog: { create: vi.fn() },
+    $queryRaw: vi.fn().mockResolvedValue([]),
   },
 }))
 vi.mock("@/lib/ai-safety", () => ({
@@ -38,7 +39,10 @@ import { checkRateLimit } from "@/lib/ai-client"
 function makeRequest(body: Record<string, unknown> = { text: "Sample bullet point here" }) {
   return new Request("http://localhost/api/ai/improve-bullet", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "Origin": process.env.NEXT_PUBLIC_APP_URL ?? "https://readycvv.com",
+    },
     body: JSON.stringify(body),
   })
 }
@@ -95,9 +99,24 @@ describe("Pro gate — improve-bullet route", () => {
     expect(res.status).toBe(403)
   })
 
-  it("PRO + CANCELED → 403", async () => {
+  it("PRO + CANCELED + no subscriptionEndsAt → passes gate (200, grace period unknown end)", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-5" } })
     mockFindUnique.mockResolvedValue({ plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: null })
+    const res = await callHandler(makeRequest())
+    expect(res.status).toBe(200)
+  })
+
+  it("PRO + CANCELED + subscriptionEndsAt in past → 403", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-6" } })
+    const past = new Date(Date.now() - 86400 * 1000)
+    mockFindUnique.mockResolvedValue({ plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: past })
+    const res = await callHandler(makeRequest())
+    expect(res.status).toBe(403)
+  })
+
+  it("PRO + EXPIRED → 403", async () => {
+    mockAuth.mockResolvedValue({ user: { id: "user-7" } })
+    mockFindUnique.mockResolvedValue({ plan: "PRO", subscriptionStatus: "EXPIRED", subscriptionEndsAt: null })
     const res = await callHandler(makeRequest())
     expect(res.status).toBe(403)
   })

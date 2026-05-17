@@ -86,6 +86,15 @@ export class CronService {
 
     const results = await Promise.allSettled(
       users.map(async (user) => {
+        // Claim the reminder slot BEFORE sending email to prevent duplicate sends
+        // if this cron fires concurrently (Dokploy retry, overlapping run).
+        // If another instance already claimed it (count = 0), skip silently.
+        const claimed = await db.user.updateMany({
+          where: { id: user.id, OR: [{ renewalReminderSentAt: null }, { renewalReminderSentAt: { lt: sentSince } }] },
+          data: { renewalReminderSentAt: new Date() },
+        })
+        if (claimed.count === 0) return
+
         await this.emailClient!.emails.send({
           from: "READY CV <no-reply@readycvv.com>",
           to: user.email,
@@ -102,10 +111,6 @@ export class CronService {
             planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
             renewalDate: user.subscriptionEndsAt!,
           }),
-        })
-        await db.user.update({
-          where: { id: user.id },
-          data: { renewalReminderSentAt: new Date() },
         })
       }),
     )
@@ -143,6 +148,13 @@ export class CronService {
       if (!app.user.email) continue
 
       try {
+        // Claim before email — prevents duplicate sends on concurrent cron runs.
+        const claimed = await db.application.updateMany({
+          where: { id: app.id, reminderSentAt: null },
+          data: { reminderSentAt: now },
+        })
+        if (claimed.count === 0) continue
+
         if (this.isEmailEnabled && this.emailClient) {
           await this.emailClient.emails.send({
             from: "READY CV <no-reply@readycvv.com>",
@@ -166,11 +178,6 @@ export class CronService {
             }),
           })
         }
-
-        await db.application.update({
-          where: { id: app.id },
-          data: { reminderSentAt: now },
-        })
 
         sent++
       } catch (err) {

@@ -4,8 +4,10 @@ import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { resend, emailEnabled } from "@/lib/resend"
 import { createLogger } from "@/lib/logger"
+import { checkRateLimit } from "@/lib/ai-client"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
+import type Stripe from "stripe"
 
 const logger = createLogger("refunds")
 
@@ -29,6 +31,9 @@ export async function POST(req: Request) {
 
   if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
+  const allowed = await checkRateLimit(session.user.id, "refunds", 3)
+  if (!allowed) return NextResponse.json({ error: "Demasiados intentos. Intenta más tarde." }, { status: 429 })
+
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
@@ -45,56 +50,60 @@ export async function POST(req: Request) {
         plan: true,
         subscriptionStatus: true,
         subscriptionId: true,
+        subscriptionEndsAt: true,
         stripeCustomerId: true,
       },
     })
 
-    if (!user) {
-      return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-    }
+    if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
+    if (!user.stripeCustomerId) return NextResponse.json({ error: "No se encontró cuenta de pago asociada" }, { status: 400 })
+    if (!user.subscriptionId) return NextResponse.json({ error: "No se encontró suscripción activa" }, { status: 400 })
 
-    if (!user.stripeCustomerId) {
-      return NextResponse.json({ error: "No se encontró cuenta de pago asociada" }, { status: 400 })
-    }
+    // Step 1: Find the exact charge for this subscription via its latest invoice's payments.
+    // Using charges.list({ customer, limit: 1 }) was incorrect — it could match an
+    // unrelated charge if the customer had multiple payment methods or past charges.
+    // In Stripe API 2026-03-25.dahlia, invoice.charge was removed; payments are now
+    // accessed via InvoicePayment objects linked to the invoice.
+    const sub = await stripe.subscriptions.retrieve(user.subscriptionId)
+    const latestInvoiceId = typeof sub.latest_invoice === "string"
+      ? sub.latest_invoice
+      : (sub.latest_invoice as Stripe.Invoice | null)?.id ?? null
 
-    // Idempotency guard: already refunded/unsubscribed → return success to prevent double refund on double-click
-    if (user.plan === "UNSUBSCRIBED" || user.subscriptionStatus === "EXPIRED") {
-      return NextResponse.json({ error: "La suscripción ya fue cancelada o reembolsada" }, { status: 400 })
-    }
-
-    if (!user.subscriptionId) {
-      return NextResponse.json({ error: "No se encontró suscripción activa" }, { status: 400 })
-    }
-
-    const charges = await stripe.charges.list({
-      customer: user.stripeCustomerId,
-      limit: 1,
-    })
-
-    const lastCharge = charges.data.find((c) => c.paid && !c.refunded)
-    if (!lastCharge) {
+    if (!latestInvoiceId) {
       return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
     }
 
-    const periodStart = new Date(lastCharge.created * 1000)
-    const daysSincePeriodStart = Math.floor((Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24))
-    if (daysSincePeriodStart > 7) {
-      return NextResponse.json(
-        { error: "El período de reembolso de 7 días ha expirado" },
-        { status: 400 }
-      )
+    const invoicePayments = await stripe.invoicePayments.list({
+      invoice: latestInvoiceId,
+      status: "paid",
+      expand: ["data.payment.charge"],
+    })
+    const defaultPayment = invoicePayments.data.find((p) => p.is_default)
+    const paymentCharge = defaultPayment?.payment?.charge
+    const chargeId = typeof paymentCharge === "string"
+      ? paymentCharge
+      : (paymentCharge as Stripe.Charge | null)?.id ?? null
+
+    if (!chargeId) {
+      return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
     }
 
-    const chargeId = lastCharge.id
+    const charge = await stripe.charges.retrieve(chargeId)
+    if (!charge.paid || charge.refunded) {
+      return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+    }
 
-    const refund = await stripe.refunds.create({
-      charge: chargeId,
-      reason: reason === "duplicate_charge" ? "duplicate" : "requested_by_customer",
-      metadata: { userId, reason, details: details ?? "" },
-    })
+    // Step 2: Validate 7-day refund window BEFORE claiming the refund slot.
+    const periodStart = new Date(charge.created * 1000)
+    const daysSincePeriodStart = Math.floor((Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24))
+    if (daysSincePeriodStart > 7) {
+      return NextResponse.json({ error: "El período de reembolso de 7 días ha expirado" }, { status: 400 })
+    }
 
-    await db.user.update({
-      where: { id: userId },
+    // Step 3: Atomic CAS — claim the refund slot only after eligibility is confirmed.
+    // Prevents double-refund on concurrent requests: only the first writer wins.
+    const claimed = await db.user.updateMany({
+      where: { id: userId, plan: "PRO" },
       data: {
         plan: "UNSUBSCRIBED",
         subscriptionId: null,
@@ -103,13 +112,41 @@ export async function POST(req: Request) {
         sessionVersion: { increment: 1 },
       },
     })
+    if (claimed.count === 0) {
+      return NextResponse.json({ error: "La suscripción ya fue cancelada o reembolsada" }, { status: 400 })
+    }
     purgeUserCache(userId)
+
+    // Step 4: Issue refund. If it fails, roll back the DB state so the user is not
+    // left as UNSUBSCRIBED without actually receiving their money back.
+    let refund: Stripe.Refund
+    try {
+      refund = await stripe.refunds.create({
+        charge: chargeId,
+        reason: reason === "duplicate_charge" ? "duplicate" : "requested_by_customer",
+        metadata: { userId, reason, details: details ?? "" },
+      })
+    } catch (refundErr) {
+      logger.error("refunds: Stripe refund creation failed — rolling back DB state", { userId, chargeId }, refundErr instanceof Error ? refundErr : undefined)
+      await db.user.update({
+        where: { id: userId },
+        data: {
+          plan: "PRO",
+          subscriptionId: user.subscriptionId,
+          subscriptionEndsAt: user.subscriptionEndsAt,
+          subscriptionStatus: user.subscriptionStatus,
+          sessionVersion: { increment: 1 },
+        },
+      }).catch((dbErr) => logger.error("refunds: CRITICAL — plan rollback failed after refund error. User is UNSUBSCRIBED but no refund was issued.", { userId }, dbErr instanceof Error ? dbErr : undefined))
+      purgeUserCache(userId)
+      return NextResponse.json({ error: "Error procesando el reembolso" }, { status: 500 })
+    }
 
     await db.auditLog.create({
       data: {
         userId,
         action: "REFUND_ISSUED",
-        metadata: { refundId: refund.id, chargeId: lastCharge.id, reason, details: details ?? "" },
+        metadata: { refundId: refund.id, chargeId, reason, details: details ?? "" },
       },
     })
 

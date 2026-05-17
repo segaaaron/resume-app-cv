@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { AlertTriangle, X, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 export default function PastDueBanner() {
   const t = useTranslations("dashboard.past_due_banner")
@@ -16,7 +17,7 @@ export default function PastDueBanner() {
   async function openPortal() {
     setLoading(true)
     try {
-      const res = await fetch("/api/stripe/portal", {
+      const res = await apiFetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),

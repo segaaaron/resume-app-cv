@@ -3,7 +3,7 @@ import { StripeBillingService } from "@/lib/services/stripe/StripeBillingService
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
-vi.mock("@/lib/db", () => ({ db: { user: { findUnique: vi.fn(), update: vi.fn() }, auditLog: { create: vi.fn() } } }))
+vi.mock("@/lib/db", () => ({ db: { user: { findUnique: vi.fn(), update: vi.fn(), updateMany: vi.fn().mockResolvedValue({ count: 1 }) }, auditLog: { create: vi.fn() }, $transaction: vi.fn(async (queries: Promise<unknown>[]) => Promise.all(queries)) } }))
 vi.mock("@/lib/auth", () => ({ purgeUserCache: vi.fn() }))
 vi.mock("@/lib/stripe", () => ({ stripeEnabled: vi.fn().mockReturnValue(true) }))
 

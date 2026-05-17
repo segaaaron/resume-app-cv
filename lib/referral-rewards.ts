@@ -87,7 +87,24 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
 
     if (newTier === currentTier) return // no change
 
-    // Apply incremental credits for each tier crossed in this event
+    const isCycleComplete = newTier === 3
+
+    // Atomic compare-and-swap: claim the tier update before touching Stripe.
+    // If another concurrent call already updated the tier, count = 0 and we bail.
+    // This prevents double Stripe credits when two referrals convert simultaneously.
+    const claimed = isCycleComplete
+      ? await db.user.updateMany({
+          where: { id: referrer.id, referralRewardTier: currentTier },
+          data: { referralRewardTier: 0, referralCycleOffset: totalPaid },
+        })
+      : await db.user.updateMany({
+          where: { id: referrer.id, referralRewardTier: currentTier },
+          data: { referralRewardTier: newTier },
+        })
+
+    if (claimed.count === 0) return // concurrent call already claimed this tier update
+
+    // Apply incremental credits only after successfully claiming the update
     for (const tierDef of REFERRAL_TIERS) {
       if (tierDef.tier > currentTier && tierDef.tier <= newTier) {
         await applyStripeCredit(
@@ -98,24 +115,6 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
           referrer.id,
         )
       }
-    }
-
-    const isCycleComplete = newTier === 3
-
-    if (isCycleComplete) {
-      // Cycle complete — reset for next round
-      await db.user.update({
-        where: { id: referrer.id },
-        data: {
-          referralRewardTier: 0,
-          referralCycleOffset: totalPaid, // next cycle starts from here
-        },
-      })
-    } else {
-      await db.user.update({
-        where: { id: referrer.id },
-        data: { referralRewardTier: newTier },
-      })
     }
 
     // Send reward notification email

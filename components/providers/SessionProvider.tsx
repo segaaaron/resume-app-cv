@@ -1,6 +1,6 @@
 "use client"
 
-import { SessionProvider as NextAuthSessionProvider, useSession, signOut } from "next-auth/react"
+import { SessionProvider as NextAuthSessionProvider, useSession } from "next-auth/react"
 import { logoutAction } from "@/lib/actions/logout"
 import type { Session } from "next-auth"
 import { useEffect, useRef } from "react"
@@ -23,7 +23,8 @@ function SessionWatcher() {
     if (status === "loading") return
     if (status === "unauthenticated" && sessionStorage.getItem("wasAuthenticated")) {
       sessionStorage.removeItem("wasAuthenticated")
-      logoutAction("/login")
+      const lang = document.documentElement.lang ?? "es"
+      logoutAction(`/${lang}/login`)
     }
   }, [status])
 
@@ -40,7 +41,8 @@ function SessionWatcher() {
           const lang = document.documentElement.lang ?? "es"
           toast.error(SESSION_EXPIRED[lang] ?? SESSION_EXPIRED.es)
           sessionStorage.removeItem("wasAuthenticated")
-          setTimeout(() => signOut({ redirect: true, callbackUrl: "/login" }), 1_500)
+          const lang2 = document.documentElement.lang ?? "es"
+          setTimeout(() => logoutAction(`/${lang2}/login`), 1_500)
         } else {
           signingOut.current = false
         }

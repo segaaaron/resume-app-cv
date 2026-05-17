@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface Props {
   templateId: string
@@ -27,7 +28,7 @@ export default function UseTemplateButton({ templateId, label }: Props) {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/resumes", {
+      const res = await apiFetch("/api/resumes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId }),

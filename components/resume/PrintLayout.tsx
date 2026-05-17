@@ -11,6 +11,7 @@ import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { useTranslations, useLocale } from "next-intl"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface Props {
   resumeId: string
@@ -126,7 +127,7 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   async function handleDownloadPdf() {
     setDownloadingPdf(true)
     try {
-      const res = await fetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
+      const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
       if (!res.ok) { toast.error(t("error_pdf")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)

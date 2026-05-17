@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, AlertCircle } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
+import { apiFetch } from "@/lib/apiFetch"
 
 const schema = z.object({
   email: z.string().email(),
@@ -35,11 +36,16 @@ export default function ForgotPasswordForm() {
   async function onSubmit(data: FormData) {
     setGoogleError(false)
     setNotRegistered(false)
-    const res = await fetch("/api/auth/reset-password/request", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: data.email }),
-    })
+    let res: Response
+    try {
+      res = await apiFetch("/api/auth/reset-password/request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email }),
+      })
+    } catch {
+      return
+    }
 
     const body = await res.json().catch(() => ({}))
 

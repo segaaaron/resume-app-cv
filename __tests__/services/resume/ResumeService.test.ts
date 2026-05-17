@@ -4,8 +4,9 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 
 // ─── Mock DB ──────────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/db", () => ({
-  db: {
+vi.mock("@/lib/db", () => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db: any = {
     resume: {
       findMany:  vi.fn(),
       findFirst: vi.fn(),
@@ -30,9 +31,11 @@ vi.mock("@/lib/db", () => ({
     auditLog: {
       create: vi.fn(),
     },
-    $transaction: vi.fn(),
-  },
-}))
+  }
+  // $transaction executes the callback with the same mock db as the tx context
+  db.$transaction = vi.fn().mockImplementation((fn: (tx: typeof db) => unknown) => fn(db))
+  return { db }
+})
 
 // ─── Mock nanoid ──────────────────────────────────────────────────────────────
 

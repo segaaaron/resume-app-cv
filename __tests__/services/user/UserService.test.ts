@@ -24,6 +24,12 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 
+// ─── Mock auth ───────────────────────────────────────────────────────────────
+
+vi.mock("@/lib/auth", () => ({
+  purgeUserCache: vi.fn(),
+}))
+
 // ─── Mock ai-client (checkRateLimit) ─────────────────────────────────────────
 
 vi.mock("@/lib/ai-client", () => ({
@@ -92,8 +98,9 @@ describe("UserService.updateProfile", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("UserService.deleteAccount", () => {
-  it("creates audit log and soft-deletes user", async () => {
+  it("creates audit log and soft-deletes user, clears session and purges cache", async () => {
     const { db } = await import("@/lib/db")
+    const { purgeUserCache } = await import("@/lib/auth")
     vi.mocked(db.auditLog.create).mockResolvedValue({} as never)
     vi.mocked(db.user.update).mockResolvedValue({} as never)
 
@@ -104,9 +111,12 @@ describe("UserService.deleteAccount", () => {
       data: { userId: USER_ID, action: "DELETE_ACCOUNT" },
     })
 
-    const updateCall = vi.mocked(db.user.update).mock.calls[0][0] as { data: { deletedAt: Date }; where: { id: string } }
+    const updateCall = vi.mocked(db.user.update).mock.calls[0][0] as { data: { deletedAt: Date; activeSessionToken: null; forceLogoutAt: Date }; where: { id: string } }
     expect(updateCall.where.id).toBe(USER_ID)
     expect(updateCall.data.deletedAt).toBeInstanceOf(Date)
+    expect(updateCall.data.activeSessionToken).toBeNull()
+    expect(updateCall.data.forceLogoutAt).toBeInstanceOf(Date)
+    expect(purgeUserCache).toHaveBeenCalledWith(USER_ID)
   })
 
   it("creates audit log BEFORE the soft-delete (ordering)", async () => {

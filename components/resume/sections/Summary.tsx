@@ -7,6 +7,7 @@ import { useEditorPro } from "@/components/editor/EditorContext"
 import { Textarea } from "@/components/ui/textarea"
 import { Sparkles, Loader2, Lock, Wand2, Check } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
@@ -22,7 +23,7 @@ export default function SummarySection() {
     setGenerating(true)
     setVersions([])
     try {
-      const res = await fetch("/api/ai/generate-summary", {
+      const res = await apiFetch("/api/ai/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, language: config.language }),
@@ -51,7 +52,7 @@ export default function SummarySection() {
     setImproving(true)
     setVersions([])
     try {
-      const res = await fetch("/api/ai/improve-summary", {
+      const res = await apiFetch("/api/ai/improve-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

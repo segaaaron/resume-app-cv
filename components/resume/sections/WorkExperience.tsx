@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch"
 import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2, Lock, Check } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useEditorPro } from "@/components/editor/EditorContext"
 
 export default function WorkExperienceSection() {
@@ -34,7 +35,7 @@ export default function WorkExperienceSection() {
     setImprovingId(job.id)
     setAiVersions(null)
     try {
-      const res = await fetch("/api/ai/improve-bullet", {
+      const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: config.language }),

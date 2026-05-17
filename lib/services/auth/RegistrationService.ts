@@ -102,7 +102,12 @@ export class RegistrationService {
       if (referrer) referrerId = referrer.id
     }
 
-    await this.users.createFromPending(pending, nanoid(8), referrerId)
+    try {
+      await this.users.createFromPending(pending, nanoid(8), referrerId)
+    } catch (e: unknown) {
+      if ((e as { code?: string })?.code === "P2002") throw new AppError("email_taken", 409)
+      throw e
+    }
     this.logger.info("RegistrationService.confirmOtp: user created", { email: input.email })
     return { success: true }
   }

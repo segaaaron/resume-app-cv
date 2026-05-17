@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
@@ -21,7 +22,7 @@ export default function PricingButtons({ plan, isPro }: Props) {
     if (isPro) {
       setLoading(true)
       try {
-        const res = await fetch("/api/stripe/portal", {
+        const res = await apiFetch("/api/stripe/portal", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ locale }),
@@ -42,7 +43,7 @@ export default function PricingButtons({ plan, isPro }: Props) {
 
     setLoading(true)
     try {
-      const res = await fetch("/api/stripe/checkout", {
+      const res = await apiFetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ plan }),

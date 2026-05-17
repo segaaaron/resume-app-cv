@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { useRef, useState } from "react"
 import { Camera, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
 
 const COLOR_PALETTES: { labelKey: string; colors: { hex: string; nameKey: string }[] }[] = [
@@ -82,7 +83,7 @@ export default function DesignPanel() {
       }
       const form = new FormData()
       form.append("photo", uploadTarget, "photo.jpg")
-      const res = await fetch(`/api/resumes/${resumeId}/photo`, { method: "POST", body: form })
+      const res = await apiFetch(`/api/resumes/${resumeId}/photo`, { method: "POST", body: form })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? t("photo_upload_error"))
       setPhoto(data.photoUrl)
@@ -98,7 +99,7 @@ export default function DesignPanel() {
   async function handlePhotoRemove() {
     if (!resumeId) return
     try {
-      await fetch(`/api/resumes/${resumeId}/photo`, { method: "DELETE" })
+      await apiFetch(`/api/resumes/${resumeId}/photo`, { method: "DELETE" })
       setPhoto(null)
       toast.success(t("photo_deleted"))
     } catch {

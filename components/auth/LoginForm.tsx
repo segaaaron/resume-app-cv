@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -12,15 +12,24 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Eye, EyeOff, Zap, AlertTriangle, Lock } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 
 type FormState = "login" | "challenge" | "blocked"
 
-export default function LoginForm() {
+export default function LoginForm({ serverError }: { serverError?: boolean } = {}) {
   const t = useTranslations("auth.login")
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    if (serverError) toast.error(t("session_check_error"))
+  }, [serverError, t])
+
+  useEffect(() => {
+    if (searchParams.get("cleared") === "1") toast.warning(t("session_cleared"))
+  }, [searchParams, t])
   const router = useRouter()
   const locale = useLocale()
-  const searchParams = useSearchParams()
   const planParam = searchParams.get("plan")
   const [googleLoading, setGoogleLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -79,7 +88,7 @@ export default function LoginForm() {
   async function sendCode() {
     setSendingCode(true)
     try {
-      const res = await fetch("/api/auth/session-challenge", {
+      const res = await apiFetch("/api/auth/session-challenge", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: pendingEmail }),
@@ -101,7 +110,7 @@ export default function LoginForm() {
     if (otp.length !== 6) return
     setVerifyingCode(true)
     try {
-      const res = await fetch("/api/auth/session-challenge/verify", {
+      const res = await apiFetch("/api/auth/session-challenge/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: pendingEmail, code: otp }),

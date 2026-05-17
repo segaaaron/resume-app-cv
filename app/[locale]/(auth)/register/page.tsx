@@ -1,7 +1,8 @@
 import RegisterForm from "@/components/auth/RegisterForm"
 import type { Metadata } from "next"
-import { getTranslations } from "next-intl/server"
-import { setRequestLocale } from "next-intl/server"
+import { getTranslations, setRequestLocale } from "next-intl/server"
+import { redirect } from "next/navigation"
+import { auth } from "@/lib/auth"
 
 export async function generateMetadata({
   params,
@@ -31,5 +32,16 @@ export default async function RegisterPage({
 }) {
   const { locale } = await params
   setRequestLocale(locale)
-  return <RegisterForm />
+  let serverError = false
+  try {
+    const session = await auth()
+    if (session?.user?.id) redirect(`/${locale}/dashboard/resumes`)
+  } catch (e) {
+    // redirect() throws internally — re-throw so Next.js handles it
+    if (e instanceof Error && e.message === "NEXT_REDIRECT") throw e
+    const err = e as { digest?: string }
+    if (typeof err?.digest === "string" && err.digest.startsWith("NEXT_REDIRECT")) throw e
+    serverError = true
+  }
+  return <RegisterForm serverError={serverError} />
 }

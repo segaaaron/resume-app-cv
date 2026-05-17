@@ -18,7 +18,13 @@ export class PrismaPasswordResetRepository implements IPasswordResetRepository {
     await db.passwordReset.update({ where: { email }, data: { attempts: { increment: 1 } } })
   }
 
-  async markUsed(email: string): Promise<void> {
-    await db.passwordReset.update({ where: { email }, data: { usedAt: new Date() } })
+  async markUsed(email: string): Promise<boolean> {
+    // Atomic conditional update — only marks used if usedAt is still null.
+    // Returns false if a concurrent request already claimed this OTP.
+    const result = await db.passwordReset.updateMany({
+      where: { email, usedAt: null },
+      data: { usedAt: new Date() },
+    })
+    return result.count > 0
   }
 }

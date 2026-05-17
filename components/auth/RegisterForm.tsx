@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
@@ -12,13 +12,18 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, Eye, EyeOff, Zap, Mail, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 import OtpInput from "@/components/auth/OtpInput"
 
 type RegisterStep = "form" | "otp"
 
-export default function RegisterForm() {
+export default function RegisterForm({ serverError }: { serverError?: boolean } = {}) {
   const t = useTranslations("auth.register")
+
+  useEffect(() => {
+    if (serverError) toast.error(t("session_check_error"))
+  }, [serverError, t])
   const router = useRouter()
   const locale = useLocale()
   const searchParams = useSearchParams()
@@ -58,7 +63,7 @@ export default function RegisterForm() {
 
   async function onSubmit(data: FormData) {
     setEmailConflict(null)
-    const res = await fetch("/api/auth/register", {
+    const res = await apiFetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...data, referralCode: refParam ?? undefined }),
@@ -92,7 +97,7 @@ export default function RegisterForm() {
     if (otpCode.length !== 6) return
     setOtpLoading(true)
     try {
-      const res = await fetch("/api/auth/register/confirm", {
+      const res = await apiFetch("/api/auth/register/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: submittedEmail, code: otpCode }),
@@ -139,7 +144,7 @@ export default function RegisterForm() {
     if (!formSnapshot) return
     setResending(true)
     try {
-      const res = await fetch("/api/auth/register", {
+      const res = await apiFetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...formSnapshot, referralCode: refParam ?? undefined }),

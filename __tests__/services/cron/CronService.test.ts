@@ -9,12 +9,15 @@ vi.mock("@/lib/db", () => ({
     user: {
       findMany: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     application: {
       findMany: vi.fn(),
       update: vi.fn(),
+      updateMany: vi.fn().mockResolvedValue({ count: 1 }),
     },
     stripeEvent: {
+      findMany: vi.fn(),
       deleteMany: vi.fn(),
     },
   },
@@ -88,7 +91,7 @@ describe("CronService.sendRenewalReminders", () => {
       subscriptionEndsAt: new Date("2026-05-15"),
     }
     vi.mocked(db.user.findMany).mockResolvedValue([user] as never)
-    vi.mocked(db.user.update).mockResolvedValue({} as never)
+    vi.mocked(db.user.updateMany).mockResolvedValue({ count: 1 })
 
     const result = await makeService().sendRenewalReminders()
 
@@ -103,10 +106,12 @@ describe("CronService.sendRenewalReminders", () => {
         subject: "Tu plan se renueva en 2 días ⏰",
       }),
     )
-    expect(db.user.update).toHaveBeenCalledWith({
-      where: { id: "user-1" },
-      data: { renewalReminderSentAt: expect.any(Date) },
-    })
+    expect(db.user.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "user-1" }),
+        data: { renewalReminderSentAt: expect.any(Date) },
+      }),
+    )
   })
 
   it("counts failed when email send throws", async () => {
@@ -142,7 +147,7 @@ describe("CronService.sendRenewalReminders", () => {
       makeUser("u2", "b@example.com"),
       makeUser("u3", "c@example.com"),
     ] as never)
-    vi.mocked(db.user.update).mockResolvedValue({} as never)
+    vi.mocked(db.user.updateMany).mockResolvedValue({ count: 1 })
     vi.mocked(mockEmailClient.emails.send)
       .mockResolvedValueOnce({ id: "e1" })
       .mockRejectedValueOnce(new Error("fail"))
@@ -201,7 +206,7 @@ describe("CronService.sendApplicationReminders", () => {
       user: { id: "u2", name: "Laura", email: "laura@example.com" },
     }
     vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-    vi.mocked(db.application.update).mockResolvedValue({} as never)
+    vi.mocked(db.application.updateMany).mockResolvedValue({ count: 1 })
 
     const result = await makeService().sendApplicationReminders()
 
@@ -215,10 +220,12 @@ describe("CronService.sendApplicationReminders", () => {
         subject: "Recordatorio: seguimiento a Designer en Corp",
       }),
     )
-    expect(db.application.update).toHaveBeenCalledWith({
-      where: { id: "app-2" },
-      data: { reminderSentAt: expect.any(Date) },
-    })
+    expect(db.application.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ id: "app-2" }),
+        data: { reminderSentAt: expect.any(Date) },
+      }),
+    )
   })
 
   it("marks application even when email disabled", async () => {
@@ -232,14 +239,14 @@ describe("CronService.sendApplicationReminders", () => {
       user: { id: "u3", name: "Carlos", email: "carlos@example.com" },
     }
     vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-    vi.mocked(db.application.update).mockResolvedValue({} as never)
+    vi.mocked(db.application.updateMany).mockResolvedValue({ count: 1 })
 
     const result = await makeService(null, false).sendApplicationReminders()
 
     expect(result.sent).toBe(1)
     expect(result.failed).toBe(0)
     expect(mockEmailClient.emails.send).not.toHaveBeenCalled()
-    expect(db.application.update).toHaveBeenCalledOnce()
+    expect(db.application.updateMany).toHaveBeenCalledOnce()
   })
 
   it("counts failed when DB update throws", async () => {
@@ -253,7 +260,7 @@ describe("CronService.sendApplicationReminders", () => {
       user: { id: "u4", name: "Ali", email: "ali@example.com" },
     }
     vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-    vi.mocked(db.application.update).mockRejectedValueOnce(new Error("DB error"))
+    vi.mocked(db.application.updateMany).mockRejectedValueOnce(new Error("DB error"))
 
     const result = await makeService().sendApplicationReminders()
 
@@ -268,34 +275,39 @@ describe("CronService.sendApplicationReminders", () => {
 // ============================================================
 
 describe("CronService.purgeStripeEvents", () => {
-  it("returns deleted count", async () => {
+  it("returns deleted count from batch delete", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.stripeEvent.deleteMany).mockResolvedValue({ count: 42 })
+    // findMany returns a batch of 2 IDs, then empty (loop ends)
+    vi.mocked(db.stripeEvent.findMany)
+      .mockResolvedValueOnce([{ id: "evt_1" }, { id: "evt_2" }] as never)
+      .mockResolvedValueOnce([] as never)
+    vi.mocked(db.stripeEvent.deleteMany).mockResolvedValue({ count: 2 })
 
     const result = await makeService().purgeStripeEvents()
 
-    expect(result).toEqual({ deleted: 42 })
-    expect(db.stripeEvent.deleteMany).toHaveBeenCalledOnce()
+    expect(result).toEqual({ deleted: 2 })
+    expect(db.stripeEvent.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { processedAt: { lt: expect.any(Date) } },
+      select: { id: true },
+    }))
     expect(db.stripeEvent.deleteMany).toHaveBeenCalledWith({
-      where: {
-        processedAt: {
-          lt: expect.any(Date),
-        },
-      },
+      where: { id: { in: ["evt_1", "evt_2"] } },
     })
   })
 
   it("returns deleted=0 when nothing to purge", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.stripeEvent.deleteMany).mockResolvedValue({ count: 0 })
+    vi.mocked(db.stripeEvent.findMany).mockResolvedValue([] as never)
 
     const result = await makeService().purgeStripeEvents()
 
     expect(result).toEqual({ deleted: 0 })
+    expect(db.stripeEvent.deleteMany).not.toHaveBeenCalled()
   })
 
-  it("propagates DB errors", async () => {
+  it("propagates DB errors from deleteMany", async () => {
     const { db } = await import("@/lib/db")
+    vi.mocked(db.stripeEvent.findMany).mockResolvedValue([{ id: "evt_1" }] as never)
     vi.mocked(db.stripeEvent.deleteMany).mockRejectedValueOnce(new Error("DB down"))
 
     await expect(makeService().purgeStripeEvents()).rejects.toThrow("DB down")

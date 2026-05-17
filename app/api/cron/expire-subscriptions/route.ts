@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
+import { purgeUserCache } from "@/lib/auth"
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
@@ -49,6 +50,8 @@ export async function GET(req: Request) {
       sessionVersion: { increment: 1 },
     },
   })
+
+  for (const id of ids) purgeUserCache(id)
 
   return NextResponse.json({ downgraded: ids.length, canceledCount: canceled.length, stalePROCount: activeStale.length })
 }

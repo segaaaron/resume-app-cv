@@ -6,6 +6,7 @@ import { useApplicationStore } from "@/stores/applicationStore"
 import { Trash2, ExternalLink, Bell, BellOff } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 import { es, enUS } from "date-fns/locale"
 import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
@@ -29,7 +30,7 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
     const prev = applications.find((a) => a.id === id)?.status
     moveApplication(id, status)
     try {
-      const res = await fetch(`/api/applications/${id}`, {
+      const res = await apiFetch(`/api/applications/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status }),
@@ -44,7 +45,7 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
   async function handleDelete(id: string) {
     deleteApplication(id)
     try {
-      const res = await fetch(`/api/applications/${id}`, { method: "DELETE" })
+      const res = await apiFetch(`/api/applications/${id}`, { method: "DELETE" })
       if (!res.ok) throw new Error()
       toast.success(t("delete_success"))
     } catch {
@@ -55,7 +56,7 @@ export default function KanbanColumn({ columnId, label, color, applications }: P
   async function handleFollowUp(id: string, date: string | null) {
     try {
       const followUpAt = date ? new Date(date).toISOString() : null
-      const res = await fetch(`/api/applications/${id}`, {
+      const res = await apiFetch(`/api/applications/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ followUpAt }),

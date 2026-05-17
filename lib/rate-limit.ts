@@ -18,10 +18,22 @@ export async function checkRateLimit(userId: string, endpoint: string, limit = 2
 }
 
 /**
+ * Increments the usage counter for this key+endpoint.
+ * Call on every request (success or failure) to enforce the hourly cap.
+ */
+export async function recordRateLimitUsage(userId: string, endpoint: string): Promise<void> {
+  return recordUsage(userId, endpoint)
+}
+
+/**
  * Increments the failure counter for this key+endpoint.
- * Call ONLY when a request fails — successful requests never count.
+ * @deprecated Use recordRateLimitUsage instead.
  */
 export async function recordRateLimitFailure(userId: string, endpoint: string): Promise<void> {
+  return recordUsage(userId, endpoint)
+}
+
+async function recordUsage(userId: string, endpoint: string): Promise<void> {
   const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS)
   const now = new Date()
   await db.$queryRaw`

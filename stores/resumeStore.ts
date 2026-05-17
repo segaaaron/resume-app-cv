@@ -2,6 +2,7 @@ import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import { devtools } from "zustand/middleware"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import {
   ResumeSection,
   ResumeSections,
@@ -218,11 +219,13 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
       },
 
       save: async (opts) => {
-        const { resumeId, title, sections, sectionData, config } = get()
+        const { resumeId, isSaving: alreadySaving } = get()
         if (!resumeId) return
+        if (alreadySaving) return
+        const { title, sections, sectionData, config } = get()
         set((state) => { state.isSaving = true })
         try {
-          const res = await fetch(`/api/resumes/${resumeId}`, {
+          const res = await apiFetch(`/api/resumes/${resumeId}`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ title, sections, sectionData, config }),

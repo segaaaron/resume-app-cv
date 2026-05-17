@@ -71,6 +71,18 @@ export class PrismaUserRepository implements IUserRepository {
   }
 
   async updateSessionChallenge(userId: string, data: SessionChallengeUpdate): Promise<void> {
-    await db.user.update({ where: { id: userId }, data })
+    // Use { increment: 1 } when only incrementing attempts to avoid TOCTOU.
+    // The caller passes the raw number; we convert it to an atomic increment
+    // so concurrent wrong-code submissions can't skip attempt slots.
+    const { sessionChallengeAttempts, ...rest } = data
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        ...rest,
+        ...(sessionChallengeAttempts !== undefined
+          ? { sessionChallengeAttempts: { increment: 1 } }
+          : {}),
+      },
+    })
   }
 }

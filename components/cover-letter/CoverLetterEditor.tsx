@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
 import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
 import { ArrowLeft, Save, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp, Camera, X, Download, FileText, FileDown } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
@@ -131,7 +132,7 @@ export default function CoverLetterEditor({
   async function handleGenerateAI() {
     setGenerating(true)
     try {
-      const res = await fetch("/api/ai/generate-cover-letter", {
+      const res = await apiFetch("/api/ai/generate-cover-letter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -198,7 +199,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   const save = useCallback(async () => {
     setSaving(true)
     try {
-      const res = await fetch(`/api/cover-letters/${id}`, {
+      const res = await apiFetch(`/api/cover-letters/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title, content: buildContentPayload(), templateId: activeTemplate }),
@@ -228,7 +229,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     setDownloadingPdf(true)
     try {
       if (dirty) await save()
-      const res = await fetch(`/api/cover-letters/${id}/pdf?locale=${language}`)
+      const res = await apiFetch(`/api/cover-letters/${id}/pdf?locale=${language}`)
       if (!res.ok) { toast.error(t("pdf_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -247,7 +248,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   const downloadWord = useCallback(async () => {
     setDownloadingWord(true)
     try {
-      const res = await fetch(`/api/export/cover-letter-docx?id=${id}`)
+      const res = await apiFetch(`/api/export/cover-letter-docx?id=${id}`)
       if (!res.ok) { toast.error(t("word_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)

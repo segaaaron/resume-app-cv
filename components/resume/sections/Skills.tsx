@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Plus, X, Sparkles, Loader2 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
@@ -47,7 +48,7 @@ export default function SkillsSection() {
     setSuggesting(true)
     try {
       const existingSkills = skills.map((s) => s.name).filter(Boolean)
-      const res = await fetch("/api/ai/suggest-skills", {
+      const res = await apiFetch("/api/ai/suggest-skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle, existingSkills, language: config.language }),

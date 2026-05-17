@@ -8,6 +8,7 @@ import {
   AI_TEMPERATURE_CREATIVE,
   AI_TEMPERATURE_BALANCED,
   checkRateLimit,
+  recordRateLimitUsage,
   logAIUsage,
   buildResumeContext,
 } from "@/lib/ai-client"
@@ -300,6 +301,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
 
     logAIUsage(userId, "improve-bullet")
+    recordRateLimitUsage(userId, "improve-bullet")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
@@ -367,6 +369,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
 
     logAIUsage(userId, "generate-summary")
+    recordRateLimitUsage(userId, "generate-summary")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
@@ -461,6 +464,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
 
     logAIUsage(userId, "improve-summary")
+    recordRateLimitUsage(userId, "improve-summary")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
@@ -536,6 +540,7 @@ Reglas:
     }
 
     logAIUsage(userId, "ats-score")
+    recordRateLimitUsage(userId, "ats-score")
     return parsed
   }
 
@@ -664,6 +669,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       .join("")
 
     logAIUsage(userId, "generate-cover-letter")
+    recordRateLimitUsage(userId, "generate-cover-letter")
     return { body: html }
   }
 
@@ -738,6 +744,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
 
     logAIUsage(userId, "improve-cover-letter")
+    recordRateLimitUsage(userId, "improve-cover-letter")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
@@ -842,6 +849,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (!validated.success) {
       this.logger.warn("[AIService.reviewCV] Zod validation failed, returning without suggestions", { error: validated.error.flatten() })
       logAIUsage(userId, "review-cv")
+      recordRateLimitUsage(userId, "review-cv")
       return {
         summary: parsed.summary ?? "",
         strengths: (parsed.strengths ?? []).slice(0, 5).map((s: unknown) =>
@@ -855,6 +863,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     }
 
     logAIUsage(userId, "review-cv")
+    recordRateLimitUsage(userId, "review-cv")
     return {
       summary: validated.data.summary,
       strengths: validated.data.strengths.map(sanitizeItem),
@@ -983,6 +992,7 @@ Reglas:
     const validVolIds = new Set(((sd.volunteer ?? []) as { id: string }[]).map((v) => v.id))
 
     logAIUsage(userId, "fill-profile")
+    recordRateLimitUsage(userId, "fill-profile")
     return {
       summary: data.summary ?? null,
       jobTitle: data.jobTitle ?? null,
@@ -1066,6 +1076,7 @@ Rules:
       }))
 
     logAIUsage(userId, "suggest-skills")
+    recordRateLimitUsage(userId, "suggest-skills")
     return { skills }
   }
 }

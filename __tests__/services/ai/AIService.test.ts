@@ -11,6 +11,7 @@ vi.mock("@/lib/ai-client", () => ({
   AI_TEMPERATURE_CREATIVE: 0.7,
   AI_TEMPERATURE_BALANCED: 0.5,
   checkRateLimit: vi.fn().mockResolvedValue(true),
+  recordRateLimitUsage: vi.fn(),
   logAIUsage: vi.fn(),
   buildResumeContext: vi.fn().mockReturnValue("Nombre: Juan Garcia\nPuesto objetivo: Developer"),
 }))

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { logoutAction } from "@/lib/actions/logout"
 import { useTranslations, useLocale } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +20,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import { Card } from "@/components/ui/card"
 import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw, Download, Trash2, CreditCard } from "lucide-react"
 import { format } from "date-fns"
@@ -51,7 +53,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
   async function handleBillingPortal() {
     setPortalLoading(true)
     try {
-      const res = await fetch("/api/stripe/portal", {
+      const res = await apiFetch("/api/stripe/portal", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ locale }),
@@ -72,7 +74,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
   async function handleCancelSubscription() {
     setCancelLoading(true)
     try {
-      const res = await fetch("/api/stripe/cancel", { method: "POST" })
+      const res = await apiFetch("/api/stripe/cancel", { method: "POST" })
       const data = await res.json()
       if (res.ok && data.success) {
         setSubscriptionStatus("CANCELED")
@@ -90,7 +92,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
   async function handleDataExport() {
     setExportLoading(true)
     try {
-      const res = await fetch("/api/user/data-export")
+      const res = await apiFetch("/api/user/data-export")
       if (!res.ok) {
         toast.error(t("export_error"))
         return
@@ -112,10 +114,9 @@ export default function SettingsForm({ user }: { user: UserData }) {
   async function handleDeleteAccount() {
     setDeleteLoading(true)
     try {
-      const res = await fetch("/api/user/delete", { method: "DELETE" })
+      const res = await apiFetch("/api/user/delete", { method: "DELETE" })
       if (res.ok) {
-        const { signOut } = await import("next-auth/react")
-        await signOut({ callbackUrl: `/${locale}/` })
+        await logoutAction(`/${locale}/`)
       } else {
         toast.error(t("delete_error"))
       }
@@ -130,7 +131,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
     e.preventDefault()
     setSaving(true)
     try {
-      const res = await fetch("/api/user/profile", {
+      const res = await apiFetch("/api/user/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name }),

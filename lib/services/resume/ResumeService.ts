@@ -129,28 +129,32 @@ export class ResumeService {
   // ── CREATE ────────────────────────────────────────────────────────────────
 
   async create(userId: string, templateId?: string) {
-    // Plan limit check
     const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true } })
     const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
-    if (limits.maxResumes !== Infinity) {
-      const count = await db.resume.count({ where: { userId } })
-      if (count >= limits.maxResumes) {
-        throw new AppError(
-          `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.`,
-          403,
-        )
-      }
-    }
 
     const defaultData = ResumeSectionsSchema.parse({})
-    const resume = await db.resume.create({
-      data: {
-        userId,
-        title: "Mi CV",
-        sections: DEFAULT_SECTIONS as object[],
-        personalDetails: defaultData as object,
-        ...(templateId ? { templateId } : {}),
-      },
+
+    // Transaction ensures count-check and create are atomic — prevents two concurrent
+    // requests from both passing the limit check and creating two resumes.
+    const resume = await db.$transaction(async (tx) => {
+      if (limits.maxResumes !== Infinity) {
+        const count = await tx.resume.count({ where: { userId } })
+        if (count >= limits.maxResumes) {
+          throw new AppError(
+            `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.`,
+            403,
+          )
+        }
+      }
+      return tx.resume.create({
+        data: {
+          userId,
+          title: "Mi CV",
+          sections: DEFAULT_SECTIONS as object[],
+          personalDetails: defaultData as object,
+          ...(templateId ? { templateId } : {}),
+        },
+      })
     })
 
     this.logger.info("[ResumeService] create", { userId, resumeId: resume.id })
@@ -212,30 +216,32 @@ export class ResumeService {
     if (!original) throw new AppError("not_found", 404)
 
     const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
-    if (limits.maxResumes !== Infinity) {
-      const count = await db.resume.count({ where: { userId } })
-      if (count >= limits.maxResumes) {
-        throw new AppError(
-          `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.`,
-          403,
-        )
-      }
-    }
 
-    const copy = await db.resume.create({
-      data: {
-        userId,
-        title:          `${original.title} (copia)`,
-        templateId:     original.templateId,
-        colorScheme:    original.colorScheme,
-        fontFamily:     original.fontFamily,
-        fontSize:       original.fontSize,
-        spacing:        original.spacing,
-        sections:       original.sections ?? undefined,
-        personalDetails: original.personalDetails ?? undefined,
-        photoUrl:       original.photoUrl,
-        language:       original.language,
-      },
+    const copy = await db.$transaction(async (tx) => {
+      if (limits.maxResumes !== Infinity) {
+        const count = await tx.resume.count({ where: { userId } })
+        if (count >= limits.maxResumes) {
+          throw new AppError(
+            `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.`,
+            403,
+          )
+        }
+      }
+      return tx.resume.create({
+        data: {
+          userId,
+          title:           `${original.title} (copia)`,
+          templateId:      original.templateId,
+          colorScheme:     original.colorScheme,
+          fontFamily:      original.fontFamily,
+          fontSize:        original.fontSize,
+          spacing:         original.spacing,
+          sections:        original.sections ?? undefined,
+          personalDetails: original.personalDetails ?? undefined,
+          photoUrl:        original.photoUrl,
+          language:        original.language,
+        },
+      })
     })
 
     this.logger.info("[ResumeService] duplicate", { userId, originalId: resumeId, copyId: copy.id })
@@ -245,26 +251,28 @@ export class ResumeService {
   // ── SHARE (toggle public) ─────────────────────────────────────────────────
 
   async toggleShare(userId: string, resumeId: string): Promise<ShareToggleResult> {
-    const resume = await db.resume.findFirst({
-      where: { id: resumeId, userId },
-      select: { id: true, isPublic: true, publicSlug: true },
-    })
-    if (!resume) throw new AppError("not_found", 404)
+    return db.$transaction(async (tx) => {
+      const resume = await tx.resume.findFirst({
+        where: { id: resumeId, userId },
+        select: { id: true, isPublic: true, publicSlug: true },
+      })
+      if (!resume) throw new AppError("not_found", 404)
 
-    if (resume.isPublic) {
-      await db.resume.update({ where: { id: resumeId }, data: { isPublic: false } })
-      await db.auditLog.create({
-        data: { userId, action: "TOGGLE_PUBLIC_CV", metadata: { resumeId, isPublic: false } },
-      })
-      return { isPublic: false, publicSlug: resume.publicSlug }
-    } else {
-      const slug = resume.publicSlug ?? nanoid(10)
-      await db.resume.update({ where: { id: resumeId }, data: { isPublic: true, publicSlug: slug } })
-      await db.auditLog.create({
-        data: { userId, action: "TOGGLE_PUBLIC_CV", metadata: { resumeId, isPublic: true, slug } },
-      })
-      return { isPublic: true, publicSlug: slug }
-    }
+      if (resume.isPublic) {
+        await tx.resume.update({ where: { id: resumeId }, data: { isPublic: false } })
+        await tx.auditLog.create({
+          data: { userId, action: "TOGGLE_PUBLIC_CV", metadata: { resumeId, isPublic: false } },
+        })
+        return { isPublic: false, publicSlug: resume.publicSlug }
+      } else {
+        const slug = resume.publicSlug ?? nanoid(10)
+        await tx.resume.update({ where: { id: resumeId }, data: { isPublic: true, publicSlug: slug } })
+        await tx.auditLog.create({
+          data: { userId, action: "TOGGLE_PUBLIC_CV", metadata: { resumeId, isPublic: true, slug } },
+        })
+        return { isPublic: true, publicSlug: slug }
+      }
+    })
   }
 
   // ── VIEW STATS ────────────────────────────────────────────────────────────

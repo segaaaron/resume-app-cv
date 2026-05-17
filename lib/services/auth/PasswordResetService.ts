@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs"
 import { AppError } from "@/lib/services/auth/AppError"
 import { purgeUserCache } from "@/lib/auth"
+import { db } from "@/lib/db"
 import type { IUserRepository } from "@/lib/interfaces/IUserRepository"
 import type { IPasswordResetRepository } from "@/lib/interfaces/IPasswordResetRepository"
 import type { IEmailService } from "@/lib/interfaces/IEmailService"
@@ -74,9 +75,22 @@ export class PasswordResetService {
     const user = await this.users.findByEmail(input.email)
     if (!user) throw new AppError("user_not_found", 400)
 
+    // Claim the OTP atomically before hashing — prevents TOCTOU where two
+    // concurrent requests both pass the usedAt check and both reset the password.
+    const claimed = await this.resets.markUsed(input.email)
+    if (!claimed) throw new AppError("already_used", 400)
+
     const passwordHash = await bcrypt.hash(input.password, 12)
     await this.users.updatePassword(user.id, passwordHash)
-    await this.resets.markUsed(input.email)
+    await db.user.update({
+      where: { id: user.id },
+      data: {
+        activeSessionToken:           null,
+        sessionVersion:               { increment: 1 },
+        sessionChallengeBlockedUntil: null,
+        sessionChallengeAttempts:     0,
+      },
+    })
     purgeUserCache(user.id)
 
     this.logger.info("PasswordResetService.confirmReset: password updated", { email: input.email })

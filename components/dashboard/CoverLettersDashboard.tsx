@@ -26,6 +26,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 import UpgradeCTACard from "./UpgradeCTACard"
 import { isActive } from "@/lib/plans"
 import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
@@ -64,7 +65,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     if (!isPro) { requirePro(); return }
     setCreating(true)
     try {
-      const res = await fetch("/api/cover-letters", { method: "POST" })
+      const res = await apiFetch("/api/cover-letters", { method: "POST" })
       const data = await res.json()
       router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {
@@ -74,7 +75,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   }
 
   async function deleteLetter(id: string) {
-    const res = await fetch(`/api/cover-letters/${id}`, { method: "DELETE" })
+    const res = await apiFetch(`/api/cover-letters/${id}`, { method: "DELETE" })
     if (!res.ok) {
       toast.error(t("delete_error"))
       setDeleteId(null)

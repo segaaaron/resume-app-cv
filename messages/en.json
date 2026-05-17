@@ -323,7 +323,9 @@
       "account_blocked_until": "Too many failed attempts. Blocked until {time}.",
       "back_to_login": "← Back to login",
       "error_session_blocked": "Account temporarily blocked due to too many failed attempts.",
-      "forgot_password": "Forgot your password?"
+      "forgot_password": "Forgot your password?",
+      "session_check_error": "Could not verify your session. Please try signing in.",
+      "session_cleared": "Invalid session detected. Please sign in again."
     },
     "register": {
       "title": "Create your account",
@@ -370,7 +372,8 @@
       "fp_banner_credentials": "You already have an account with this email.",
       "fp_banner_credentials_cta": "Sign in",
       "fp_banner_google": "This account was created with Google.",
-      "fp_banner_google_cta": "Continue with Google"
+      "fp_banner_google_cta": "Continue with Google",
+      "session_check_error": "Could not verify your session. Please try signing in."
     },
     "forgot_password": {
       "title": "Forgot your password?",
@@ -563,7 +566,9 @@
       "cancel": "Cancel",
       "create_error": "Error creating CV",
       "delete_success": "CV deleted",
+      "delete_error": "Error deleting the CV",
       "duplicate_success": "CV duplicated",
+      "duplicate_error": "Error duplicating the CV",
       "rename": "Rename",
       "rename_title": "Rename CV",
       "rename_confirm": "Save",
@@ -1411,6 +1416,11 @@
     "error_title": "500",
     "error_message": "Something went wrong. Please try again.",
     "retry": "Retry",
-    "home": "Go home"
+    "home": "Go home",
+    "api_errors": {
+      "server_error": "Something went wrong. Please try again.",
+      "service_unavailable": "Service unavailable. Try again in a few minutes.",
+      "network_error": "No connection. Check your internet."
+    }
   }
 }

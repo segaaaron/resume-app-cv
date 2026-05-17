@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl"
 import { Upload, Loader2, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface Props {
   disabled?: boolean
@@ -32,7 +33,7 @@ export default function ImportResumeButton({ disabled }: Props) {
     formData.append("file", f)
 
     try {
-      const res = await fetch("/api/resumes/import", {
+      const res = await apiFetch("/api/resumes/import", {
         method: "POST",
         body: formData,
       })
