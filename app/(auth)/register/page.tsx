@@ -1,19 +1,10 @@
-import RegisterForm from "@/components/auth/RegisterForm"
-import type { Metadata } from "next"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
-export const metadata: Metadata = {
-  title: "Crear tu cuenta — READY CV",
-  description:
-    "Regístrate en READY CV y empieza a crear tu currículum vitae profesional hoy.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-  alternates: {
-    canonical: "https://readycvv.com/register",
-  },
-}
+export const dynamic = "force-dynamic"
 
-export default function RegisterPage() {
-  return <RegisterForm />
+export default async function RegisterPage() {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "es"
+  redirect(`/${locale}/register`)
 }

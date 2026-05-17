@@ -5,6 +5,8 @@ import EditorLayout from "@/components/editor/EditorLayout"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 
+export const dynamic = "force-dynamic"
+
 export default async function EditorPage({ params, searchParams }: { params: Promise<{ id: string; locale: string }>; searchParams: Promise<{ new?: string; upgraded?: string; session_id?: string }> }) {
   const session = await auth()
   const { id, locale } = await params

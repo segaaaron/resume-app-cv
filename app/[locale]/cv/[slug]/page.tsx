@@ -5,6 +5,8 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import PublicResumeView from "@/components/resume/PublicResumeView"
 
+export const dynamic = "force-dynamic"
+
 export async function generateMetadata({
   params,
 }: {

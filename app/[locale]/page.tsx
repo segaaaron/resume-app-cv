@@ -45,9 +45,7 @@ export async function generateMetadata({
           url: "https://readycvv.com/og-image.png",
           width: 1200,
           height: 630,
-          alt: locale === "es"
-            ? "ReadyCV — Constructor de CV con IA"
-            : "ReadyCV — AI Resume Builder",
+          alt: t("og_image_alt"),
         },
       ],
     },

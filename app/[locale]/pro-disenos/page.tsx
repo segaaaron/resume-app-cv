@@ -33,51 +33,6 @@ const PRO_VISUALS: Record<string, {
   consul:  { bg: "#eff6ff", accent: "#2563eb", headerBg: "#2563eb", headerText: "#fff",     gradient: "from-blue-600 to-indigo-400" },
 }
 
-const PRO_DESCRIPTIONS_ES: Record<string, { tagline: string; features: string[] }> = {
-  aurora:  {
-    tagline: "Diseño orgánico con ola SVG y arcos decorativos",
-    features: ["Header fluido con curva SVG", "Arcos decorativos dobles", "Degradado de color dinámico", "Ideal para creativos y diseñadores"],
-  },
-  helix:   {
-    tagline: "Sidebar oscuro con patrón hexagonal y progreso circular",
-    features: ["Patrón hexagonal SVG en sidebar", "Progreso circular para skills", "Foto hexagonal con clip-path", "Estilo tech y futurista"],
-  },
-  lumiere: {
-    tagline: "Art Deco de lujo con ornamentos SVG simétricos",
-    features: ["Ornamentos Art Deco personalizados", "Divisores de diamante SVG", "Tipografía editorial premium", "Para ejecutivos y directivos"],
-  },
-  prism:   {
-    tagline: "Sidebar oscuro con tab curvo SVG en section headers",
-    features: ["Banda oscura edge-to-edge", "Tab curvo bezier en accent color", "Dos arcos decorativos en header", "Estilo David Martin"],
-  },
-  consul:  {
-    tagline: "Gran flecha SVG con nombre y foto en el sidebar",
-    features: ["Pentágono/flecha SVG contenedor", "Nombre apilado en mayúsculas", "Foto circular con borde blanco", "Secciones con línea inferior"],
-  },
-}
-
-const PRO_DESCRIPTIONS_EN: Record<string, { tagline: string; features: string[] }> = {
-  aurora:  {
-    tagline: "Organic design with SVG wave and decorative arcs",
-    features: ["Fluid header with SVG curve", "Double decorative arcs", "Dynamic color gradient", "Ideal for creatives and designers"],
-  },
-  helix:   {
-    tagline: "Dark sidebar with hexagonal pattern and circular progress",
-    features: ["SVG hexagonal pattern in sidebar", "Circular progress for skills", "Hexagonal photo with clip-path", "Tech and futuristic style"],
-  },
-  lumiere: {
-    tagline: "Luxury Art Deco with symmetrical SVG ornaments",
-    features: ["Custom Art Deco ornaments", "SVG diamond dividers", "Premium editorial typography", "For executives and directors"],
-  },
-  prism:   {
-    tagline: "Dark sidebar with curved SVG tab in section headers",
-    features: ["Edge-to-edge dark band", "Bezier curved tab in accent color", "Two decorative arcs in header", "David Martin style"],
-  },
-  consul:  {
-    tagline: "Large SVG arrow with name and photo in sidebar",
-    features: ["Pentagon/arrow SVG container", "Stacked name in uppercase", "Circular photo with white border", "Sections with bottom line"],
-  },
-}
 
 export default async function ProDisenosPage({
   params,
@@ -89,7 +44,13 @@ export default async function ProDisenosPage({
   const t = await getTranslations("pro_designs_page")
 
   const proTemplates = TEMPLATES.filter((tmpl) => PRO_IDS.includes(tmpl.id))
-  const descriptions = locale === "en" ? PRO_DESCRIPTIONS_EN : PRO_DESCRIPTIONS_ES
+  const descriptions: Record<string, { tagline: string; features: string[] }> = {
+    aurora:  { tagline: t("aurora_tagline"),  features: [t("aurora_f1"),  t("aurora_f2"),  t("aurora_f3"),  t("aurora_f4")]  },
+    helix:   { tagline: t("helix_tagline"),   features: [t("helix_f1"),   t("helix_f2"),   t("helix_f3"),   t("helix_f4")]   },
+    lumiere: { tagline: t("lumiere_tagline"), features: [t("lumiere_f1"), t("lumiere_f2"), t("lumiere_f3"), t("lumiere_f4")] },
+    prism:   { tagline: t("prism_tagline"),   features: [t("prism_f1"),   t("prism_f2"),   t("prism_f3"),   t("prism_f4")]   },
+    consul:  { tagline: t("consul_tagline"),  features: [t("consul_f1"),  t("consul_f2"),  t("consul_f3"),  t("consul_f4")]  },
+  }
 
   return (
     <div className="flex flex-col min-h-screen">

@@ -4,6 +4,8 @@ import { db } from "@/lib/db"
 import { verifyPrintToken } from "@/lib/pdf/print-token"
 import CoverLetterPrintLayout from "@/components/cover-letter/CoverLetterPrintLayout"
 
+export const dynamic = "force-dynamic"
+
 export default async function CoverLetterPrintPage({
   params,
   searchParams,

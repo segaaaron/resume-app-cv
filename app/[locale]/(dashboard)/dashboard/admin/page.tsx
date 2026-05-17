@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import AdminUsersTable from "@/components/admin/AdminUsersTable"
 
+export const dynamic = "force-dynamic"
+
 export const metadata = { title: "Admin — Users", robots: { index: false, follow: false } }
 
 export default async function AdminPage({ params }: { params: Promise<{ locale: string }> }) {

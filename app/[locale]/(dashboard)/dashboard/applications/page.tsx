@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { getTranslations } from "next-intl/server"
 
+export const dynamic = "force-dynamic"
+
 export default async function ApplicationsPage() {
   const session = await auth()
   const t = await getTranslations("kanban")

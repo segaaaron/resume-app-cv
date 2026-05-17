@@ -27,7 +27,7 @@ export default function ForgotPasswordVerifyForm() {
   const [otpCode, setOtpCode] = useState("")
 
   const schema = z.object({
-    code: z.string().length(6, "6 dígitos").regex(/^\d{6}$/, "Solo números"),
+    code: z.string().length(6, t("otp_length")).regex(/^\d{6}$/, t("otp_digits_only")),
     password: z.string()
       .min(8, t("password_min"))
       .regex(/[A-Z]/, t("password_uppercase"))

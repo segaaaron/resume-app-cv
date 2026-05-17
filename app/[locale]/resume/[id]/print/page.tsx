@@ -7,6 +7,8 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import PrintLayout from "@/components/resume/PrintLayout"
 
+export const dynamic = "force-dynamic"
+
 const FONT_FILES: Record<string, string[]> = {
   Inter:              ["inter-400", "inter-600", "inter-700"],
   Poppins:            ["poppins-400", "poppins-600", "poppins-700"],

@@ -21,296 +21,27 @@ export default async function PrivacyPage({
 }) {
   const { locale } = await params
   setRequestLocale(locale)
+  const t = await getTranslations({ locale, namespace: "privacy_page" })
 
-  const isEn = locale === "en"
+  const b = (chunks: React.ReactNode) => <strong className="text-foreground">{chunks}</strong>
+  const contactEmail = "soporte@readycvv.com"
 
-  const sections = isEn
-    ? [
-        {
-          num: 1,
-          title: "Data Controller",
-          content: (
-            <>
-              <p className="text-muted-foreground leading-relaxed">
-                READY CV is operated by <strong className="text-foreground">MS Saravia Tech Stack LLC</strong>. We are responsible for processing the personal data collected through this platform. Contact us at{" "}
-                <a href="mailto:soporte@readycvv.com" className="text-primary underline underline-offset-4">soporte@readycvv.com</a>.
-              </p>
-            </>
-          ),
-        },
-        {
-          num: 2,
-          title: "Data We Collect",
-          content: (
-            <ul className="space-y-2">
-              {[
-                ["Account data", "name, email address and password (stored encrypted)."],
-                ["CV profile data", "all information you enter in your documents (experience, education, skills, photo, etc.)."],
-                ["Payment data", "processed exclusively by Stripe; READY CV does not store credit card data."],
-                ["Usage data", "activity and error logs to improve the service."],
-              ].map(([bold, rest]) => (
-                <li key={bold} className="flex items-start gap-2">
-                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  <span className="text-muted-foreground"><strong className="text-foreground">{bold}:</strong> {rest}</span>
-                </li>
-              ))}
-            </ul>
-          ),
-        },
-        {
-          num: 3,
-          title: "Purpose of Processing",
-          content: (
-            <ul className="space-y-2">
-              {[
-                "Provide and improve the READY CV service.",
-                "Manage your account and subscription.",
-                "Send you transactional communications (confirmations, account alerts).",
-                "Comply with legal obligations.",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  <span className="text-muted-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          ),
-        },
-        {
-          num: 4,
-          title: "Legal Basis",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              Processing is based on the execution of the service contract you accept when registering, as well as our legitimate interest in improving the platform.
-            </p>
-          ),
-        },
-        {
-          num: 5,
-          title: "Data Sharing & AI Providers",
-          highlight: "amber" as const,
-          content: (
-            <div className="space-y-3">
-              <p className="text-muted-foreground leading-relaxed">
-                We do not sell your data to third parties. We may share it with service providers necessary to operate the platform (Stripe for payments, hosting services), who are obligated to protect it.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                When you use AI-powered features, the relevant text from your resume or document is sent to third-party AI providers (such as OpenAI or Anthropic) via their secure APIs.{" "}
-                <strong className="text-foreground">No Training:</strong> Our integrations are configured so that the data you send is{" "}
-                <strong className="text-foreground">not used to train future AI models</strong> by these providers. Your data is used solely to process your current request.
-              </p>
-            </div>
-          ),
-        },
-        {
-          num: 6,
-          title: "Data Retention",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              We retain your data while your account is active. Upon account deletion, we will erase your data within <strong className="text-foreground">30 days</strong>, unless legally required to retain it longer.
-            </p>
-          ),
-        },
-        {
-          num: 7,
-          title: "Your Rights (GDPR)",
-          content: (
-            <div className="space-y-3">
-              <p className="text-muted-foreground">You have the following rights over your personal data:</p>
-              <ul className="space-y-2">
-                {[
-                  ["Access", "Request a copy of your data at any time."],
-                  ["Rectification", "Correct inaccurate or incomplete data."],
-                  ["Erasure", "Delete your account and all associated data."],
-                  ["Portability", "Export your data in machine-readable format."],
-                  ["Objection", "Object to certain types of processing."],
-                ].map(([bold, rest]) => (
-                  <li key={bold} className="flex items-start gap-2">
-                    <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                    <span className="text-muted-foreground"><strong className="text-foreground">{bold}:</strong> {rest}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-muted-foreground text-sm">
-                To exercise these rights, write to us at{" "}
-                <a href="mailto:soporte@readycvv.com" className="text-primary underline underline-offset-4">soporte@readycvv.com</a>.
-              </p>
-            </div>
-          ),
-        },
-        {
-          num: 8,
-          title: "Security",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              We implement appropriate technical and organizational measures to protect your data, including encryption in transit (HTTPS) and at rest. However,{" "}
-              <strong className="text-foreground">no transmission over the Internet is 100% secure</strong>. By using the Service, you acknowledge that you provide your information at your own risk.
-            </p>
-          ),
-        },
-        {
-          num: 9,
-          title: "Cookies",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              We use <strong className="text-foreground">essential cookies only</strong> for session functionality (NextAuth) and payment processing (Stripe). We do not use third-party tracking cookies for advertising purposes. See our{" "}
-              <a href="/cookie-policy" className="text-primary underline underline-offset-4">Cookie Policy</a> for details.
-            </p>
-          ),
-        },
-        {
-          num: 10,
-          title: "Changes to this Policy",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              We may update this policy periodically. We will notify you of relevant changes by email or through a notice on the platform at least <strong className="text-foreground">14 days</strong> before changes take effect.
-            </p>
-          ),
-        },
-      ]
-    : [
-        {
-          num: 1,
-          title: "Responsable del Tratamiento",
-          content: (
-            <>
-              <p className="text-muted-foreground leading-relaxed">
-                READY CV es operado por <strong className="text-foreground">MS Saravia Tech Stack LLC</strong>. Somos responsables del tratamiento de los datos personales que recopilamos a través de esta plataforma. Contáctanos en{" "}
-                <a href="mailto:soporte@readycvv.com" className="text-primary underline underline-offset-4">soporte@readycvv.com</a>.
-              </p>
-            </>
-          ),
-        },
-        {
-          num: 2,
-          title: "Datos que Recopilamos",
-          content: (
-            <ul className="space-y-2">
-              {[
-                ["Datos de cuenta", "nombre, correo electrónico y contraseña (almacenada de forma cifrada)."],
-                ["Datos de perfil de CV", "toda la información que introduces en tus documentos (experiencia, educación, habilidades, foto, etc.)."],
-                ["Datos de pago", "procesados exclusivamente por Stripe; READY CV no almacena datos de tarjetas de crédito."],
-                ["Datos de uso", "registros de actividad y errores para mejorar el servicio."],
-              ].map(([bold, rest]) => (
-                <li key={bold} className="flex items-start gap-2">
-                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  <span className="text-muted-foreground"><strong className="text-foreground">{bold}:</strong> {rest}</span>
-                </li>
-              ))}
-            </ul>
-          ),
-        },
-        {
-          num: 3,
-          title: "Finalidad del Tratamiento",
-          content: (
-            <ul className="space-y-2">
-              {[
-                "Prestar y mejorar el servicio de READY CV.",
-                "Gestionar tu cuenta y suscripción.",
-                "Enviarte comunicaciones transaccionales (confirmaciones, alertas de cuenta).",
-                "Cumplir con obligaciones legales.",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                  <span className="text-muted-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          ),
-        },
-        {
-          num: 4,
-          title: "Base Legal",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              El tratamiento se basa en la ejecución del contrato de servicio que aceptas al registrarte, así como en nuestro interés legítimo para mejorar la plataforma.
-            </p>
-          ),
-        },
-        {
-          num: 5,
-          title: "Compartición de Datos y Proveedores de IA",
-          highlight: "amber" as const,
-          content: (
-            <div className="space-y-3">
-              <p className="text-muted-foreground leading-relaxed">
-                No vendemos tus datos a terceros. Podemos compartirlos con proveedores de servicios necesarios para operar la plataforma (Stripe para pagos, servicios de hosting), quienes están obligados a protegerlos.
-              </p>
-              <p className="text-muted-foreground leading-relaxed">
-                Cuando utilizas funcionalidades de inteligencia artificial, el texto relevante de tu CV o documento se envía a proveedores de IA de terceros (como OpenAI o Anthropic) a través de sus APIs seguras.{" "}
-                <strong className="text-foreground">Sin Entrenamiento:</strong> Nuestras integraciones están configuradas para que los datos que envíes{" "}
-                <strong className="text-foreground">no se utilicen para entrenar futuros modelos de IA</strong> de dichos proveedores. Tus datos se usan únicamente para procesar tu solicitud actual.
-              </p>
-            </div>
-          ),
-        },
-        {
-          num: 6,
-          title: "Conservación de Datos",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              Conservamos tus datos mientras tu cuenta esté activa. Al eliminar tu cuenta, borraremos tus datos en un plazo de <strong className="text-foreground">30 días</strong>, salvo obligación legal de conservarlos por más tiempo.
-            </p>
-          ),
-        },
-        {
-          num: 7,
-          title: "Tus Derechos (GDPR)",
-          content: (
-            <div className="space-y-3">
-              <p className="text-muted-foreground">Tienes los siguientes derechos sobre tus datos personales:</p>
-              <ul className="space-y-2">
-                {[
-                  ["Acceso", "Solicitar una copia de tus datos en cualquier momento."],
-                  ["Rectificación", "Corregir datos incorrectos o incompletos."],
-                  ["Supresión", "Eliminar tu cuenta y todos los datos asociados."],
-                  ["Portabilidad", "Exportar tus datos en formato legible por máquina."],
-                  ["Oposición", "Oponerte a ciertos tipos de tratamiento."],
-                ].map(([bold, rest]) => (
-                  <li key={bold} className="flex items-start gap-2">
-                    <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
-                    <span className="text-muted-foreground"><strong className="text-foreground">{bold}:</strong> {rest}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="text-muted-foreground text-sm">
-                Para ejercer estos derechos, escríbenos a{" "}
-                <a href="mailto:soporte@readycvv.com" className="text-primary underline underline-offset-4">soporte@readycvv.com</a>.
-              </p>
-            </div>
-          ),
-        },
-        {
-          num: 8,
-          title: "Seguridad",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              Implementamos medidas técnicas y organizativas adecuadas para proteger tus datos, incluyendo cifrado en tránsito (HTTPS) y en reposo. Sin embargo,{" "}
-              <strong className="text-foreground">ninguna transmisión por Internet es 100% segura</strong>. Al utilizar el Servicio, aceptas que proporcionas tu información bajo tu propio riesgo.
-            </p>
-          ),
-        },
-        {
-          num: 9,
-          title: "Cookies",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              Utilizamos <strong className="text-foreground">únicamente cookies esenciales</strong> para el funcionamiento de la sesión (NextAuth) y el procesamiento de pagos (Stripe). No utilizamos cookies de seguimiento de terceros con fines publicitarios. Consulta nuestra{" "}
-              <a href="/cookie-policy" className="text-primary underline underline-offset-4">Política de Cookies</a> para más detalles.
-            </p>
-          ),
-        },
-        {
-          num: 10,
-          title: "Cambios en esta Política",
-          content: (
-            <p className="text-muted-foreground leading-relaxed">
-              Podemos actualizar esta política periódicamente. Te notificaremos sobre cambios relevantes por correo electrónico o mediante aviso en la plataforma con al menos <strong className="text-foreground">14 días</strong> de anticipación.
-            </p>
-          ),
-        },
-      ]
+  const s2Items = [
+    [t("s2_l1_bold"), t("s2_l1_rest")],
+    [t("s2_l2_bold"), t("s2_l2_rest")],
+    [t("s2_l3_bold"), t("s2_l3_rest")],
+    [t("s2_l4_bold"), t("s2_l4_rest")],
+  ]
+
+  const s3Items = [t("s3_i1"), t("s3_i2"), t("s3_i3"), t("s3_i4")]
+
+  const s7Items = [
+    [t("s7_l1_bold"), t("s7_l1_rest")],
+    [t("s7_l2_bold"), t("s7_l2_rest")],
+    [t("s7_l3_bold"), t("s7_l3_rest")],
+    [t("s7_l4_bold"), t("s7_l4_rest")],
+    [t("s7_l5_bold"), t("s7_l5_rest")],
+  ]
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -321,60 +52,159 @@ export default async function PrivacyPage({
           {/* Hero */}
           <div className="text-center space-y-3 pb-4">
             <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full">
-              {isEn ? "Legal" : "Legal"}
+              {t("badge")}
             </span>
             <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">
-              {isEn ? "Privacy Policy" : "Política de Privacidad"}
+              {t("title_h1")}
             </h1>
             <p className="text-muted-foreground text-sm">
-              {isEn
-                ? "Last updated: April 27, 2026 · MS Saravia Tech Stack LLC"
-                : "Última actualización: 27 de abril de 2026 · MS Saravia Tech Stack LLC"}
+              {t("last_updated")}
             </p>
           </div>
 
           {/* Intro */}
           <section className="rounded-xl border bg-card p-6">
             <p className="text-muted-foreground leading-relaxed">
-              {isEn
-                ? "At READY CV, we take your privacy seriously. This policy explains what data we collect, how we use it, and the rights you have over your personal information."
-                : "En READY CV nos tomamos tu privacidad en serio. Esta política explica qué datos recopilamos, cómo los usamos y los derechos que tienes sobre tu información personal."}
+              {t("intro")}
             </p>
           </section>
 
-          {/* Sections */}
-          {sections.map(({ num, title, content, highlight }) => (
-            <section
-              key={num}
-              className={`rounded-xl border bg-card p-6 space-y-3 ${
-                highlight === "amber"
-                  ? "border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20"
-                  : ""
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
-                  {num}
-                </span>
-                <h2 className="text-base font-semibold">{title}</h2>
-              </div>
-              <div>{content}</div>
-            </section>
-          ))}
+          {/* Section 1 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">1</span>
+              <h2 className="text-base font-semibold">{t("s1_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              {t.rich("s1_body_pre", { b })}{" "}
+              <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a>
+              {t("s1_body_post")}
+            </p>
+          </section>
+
+          {/* Section 2 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">2</span>
+              <h2 className="text-base font-semibold">{t("s2_title")}</h2>
+            </div>
+            <ul className="space-y-2">
+              {s2Items.map(([bold, rest]) => (
+                <li key={bold} className="flex items-start gap-2">
+                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  <span className="text-muted-foreground"><strong className="text-foreground">{bold}:</strong> {rest}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Section 3 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">3</span>
+              <h2 className="text-base font-semibold">{t("s3_title")}</h2>
+            </div>
+            <ul className="space-y-2">
+              {s3Items.map((item) => (
+                <li key={item} className="flex items-start gap-2">
+                  <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                  <span className="text-muted-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+
+          {/* Section 4 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">4</span>
+              <h2 className="text-base font-semibold">{t("s4_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">{t("s4_body")}</p>
+          </section>
+
+          {/* Section 5 — Amber highlight */}
+          <section className="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50/50 dark:bg-amber-950/20 p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">5</span>
+              <h2 className="text-base font-semibold">{t("s5_title")}</h2>
+            </div>
+            <div className="space-y-3">
+              <p className="text-muted-foreground leading-relaxed">{t("s5_body1")}</p>
+              <p className="text-muted-foreground leading-relaxed">{t.rich("s5_body2", { b })}</p>
+            </div>
+          </section>
+
+          {/* Section 6 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">6</span>
+              <h2 className="text-base font-semibold">{t("s6_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">{t.rich("s6_body", { b })}</p>
+          </section>
+
+          {/* Section 7 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">7</span>
+              <h2 className="text-base font-semibold">{t("s7_title")}</h2>
+            </div>
+            <div className="space-y-3">
+              <p className="text-muted-foreground">{t("s7_intro")}</p>
+              <ul className="space-y-2">
+                {s7Items.map(([bold, rest]) => (
+                  <li key={bold} className="flex items-start gap-2">
+                    <span className="mt-2 w-1.5 h-1.5 rounded-full bg-primary shrink-0" />
+                    <span className="text-muted-foreground"><strong className="text-foreground">{bold}:</strong> {rest}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-muted-foreground text-sm">
+                {t("s7_contact_pre")}{" "}
+                <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a>.
+              </p>
+            </div>
+          </section>
+
+          {/* Section 8 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">8</span>
+              <h2 className="text-base font-semibold">{t("s8_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">{t.rich("s8_body", { b })}</p>
+          </section>
+
+          {/* Section 9 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">9</span>
+              <h2 className="text-base font-semibold">{t("s9_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">
+              {t.rich("s9_body_pre", { b })}{" "}
+              <a href="/cookie-policy" className="text-primary underline underline-offset-4">{t("s9_body_link_label")}</a>{" "}
+              {t("s9_body_post")}
+            </p>
+          </section>
+
+          {/* Section 10 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">10</span>
+              <h2 className="text-base font-semibold">{t("s10_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">{t.rich("s10_body", { b })}</p>
+          </section>
 
           {/* Contact card */}
           <section className="rounded-xl border bg-primary/5 border-primary/20 p-6 space-y-2">
-            <h2 className="font-semibold text-base">
-              {isEn ? "Questions?" : "¿Preguntas?"}
-            </h2>
+            <h2 className="font-semibold text-base">{t("contact_title")}</h2>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              {isEn
-                ? "Contact our privacy team at "
-                : "Contacta a nuestro equipo de privacidad en "}
-              <a href="mailto:soporte@readycvv.com" className="text-primary underline underline-offset-4">
-                soporte@readycvv.com
-              </a>
-              {isEn ? "." : "."}
+              {t("contact_pre")}
+              <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a>
+              {t("contact_post")}
             </p>
           </section>
 

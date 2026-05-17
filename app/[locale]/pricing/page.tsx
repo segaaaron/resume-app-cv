@@ -14,14 +14,8 @@ import Link from "next/link"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 
-const jsonLdBreadcrumb = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Inicio", item: "https://readycvv.com" },
-    { "@type": "ListItem", position: 2, name: "Precios", item: "https://readycvv.com/pricing" },
-  ],
-}
+export const dynamic = "force-dynamic"
+
 
 const jsonLdSoftwareApp = {
   "@context": "https://schema.org",
@@ -109,6 +103,16 @@ export default async function PricingPage({
   const { locale } = await params
   setRequestLocale(locale)
   const t = await getTranslations("pricing")
+  const tCommon = await getTranslations("common")
+
+  const jsonLdBreadcrumb = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://readycvv.com" },
+      { "@type": "ListItem", position: 2, name: t("breadcrumb_pricing"), item: `https://readycvv.com/${locale}/pricing` },
+    ],
+  }
   const dateLocale = locale === "es" ? es : enUS
 
   const session = await auth()

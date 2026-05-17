@@ -54,70 +54,28 @@ export default async function CoverLetterArticlePage({
 }) {
   const { locale } = await params
   setRequestLocale(locale)
-  const isEn = locale === "en"
-  const t = await getTranslations("blog")
+  const t = await getTranslations("blog_cover_letter")
+  const tBlog = await getTranslations("blog")
 
-  const content = isEn ? {
-    tag: "Cover Letter",
-    title: "Cover Letter in 2026: Does It Still Matter?",
-    intro: "The short answer: sometimes yes, sometimes no, and knowing the difference is what separates candidates who get callbacks from those who don't.",
+  const content = {
+    tag: t("tag"),
+    title: t("title"),
+    intro: t("intro"),
     sections: [
-      {
-        heading: "The honest data",
-        body: "Studies consistently show a split: roughly 50% of hiring managers say they read cover letters; the other 50% skip them entirely unless the resume already impressed them.\n\nSo why bother? Because when it matters, it matters a lot. A well-written cover letter can be the difference between two equally qualified candidates.",
-      },
-      {
-        heading: "When a cover letter is mandatory",
-        body: "Include a cover letter when:\n• The job posting explicitly asks for one\n• You're applying to a small company or startup where culture fit matters\n• You're making a career change and need to explain the transition\n• You have a gap in your employment history\n• You're applying through a personal referral\n• The role is highly competitive and you need every edge\n\nIn any of these situations, skipping the cover letter costs you real opportunities.",
-      },
-      {
-        heading: "When you can skip it",
-        body: "You can skip the cover letter when:\n• The job posting specifically says \"no cover letter needed\"\n• You're applying through an ATS portal that doesn't have a field for it\n• You're applying to a large tech company that processes thousands of applications — they often don't read letters\n• The application is for a junior role and the volume is too high for letters to matter",
-      },
-      {
-        heading: "What a good cover letter actually does",
-        body: "A cover letter is not a restatement of your resume. It answers three questions the resume can't:\n\n1. Why do you want this specific role at this specific company?\n2. What makes you a better fit than other qualified candidates?\n3. Is there anything in your history that needs context (gap, career change, unconventional path)?\n\nIf your letter doesn't answer at least one of those questions, it's adding noise, not signal.",
-      },
-      {
-        heading: "The structure that works in 2026",
-        body: "Opening: Hook with something specific — a company achievement, a shared mission, something that shows you did your research. Not \"I am writing to apply for...\"\n\nBody (1-2 paragraphs): Connect one or two of your strongest experiences directly to what the job requires. Use specifics.\n\nClose: Clear ask. Express genuine interest. Keep it under 5 lines.\n\nTotal length: 250-350 words. No more. Recruiters don't read long letters.",
-      },
-      {
-        heading: "Use AI to write it faster, not lazier",
-        body: "ReadyCV's AI cover letter generator writes a personalized letter using your actual CV data and the job description. Choose formal, balanced, or dynamic tone. Done in 30 seconds.\n\nThe rule: always edit what the AI gives you. Add one specific detail about the company that only a person who researched them would know. That's what separates AI-assisted from AI-generated.",
-      },
-    ],
-  } : {
-    tag: "Carta",
-    title: "Carta de presentación en 2026: ¿todavía importa?",
-    intro: "La respuesta corta: a veces sí, a veces no, y saber la diferencia separa a los candidatos que reciben llamadas de los que no.",
-    sections: [
-      {
-        heading: "Los datos honestos",
-        body: "Los estudios muestran consistentemente una división: aproximadamente el 50% de los responsables de selección dice leer las cartas de presentación; el otro 50% las ignora por completo a menos que el CV ya les haya impresionado.\n\n¿Por qué molestarse entonces? Porque cuando importa, importa mucho. Una carta bien escrita puede marcar la diferencia entre dos candidatos igual de cualificados.",
-      },
-      {
-        heading: "Cuándo la carta de presentación es obligatoria",
-        body: "Incluye una carta de presentación cuando:\n• La oferta de empleo la pide explícitamente\n• Aplicas a una empresa pequeña o startup donde el encaje cultural importa\n• Estás haciendo un cambio de carrera y necesitas explicar la transición\n• Tienes una brecha en tu historial laboral\n• Aplicas a través de una referencia personal\n• El puesto es muy competitivo y necesitas cada ventaja\n\nEn cualquiera de estas situaciones, omitir la carta te cuesta oportunidades reales.",
-      },
-      {
-        heading: "Cuándo puedes omitirla",
-        body: "Puedes omitir la carta cuando:\n• La oferta indica específicamente que no se requiere carta\n• Aplicas a través de un portal ATS que no tiene campo para adjuntarla\n• Aplicas a una gran empresa tecnológica que procesa miles de candidaturas — suelen no leer cartas\n• La candidatura es para un puesto junior y el volumen es demasiado alto para que las cartas importen",
-      },
-      {
-        heading: "Qué hace realmente una buena carta",
-        body: "Una carta de presentación no es una repetición del CV. Responde tres preguntas que el CV no puede:\n\n1. ¿Por qué quieres este puesto específico en esta empresa específica?\n2. ¿Qué te hace mejor candidato que otros igual de cualificados?\n3. ¿Hay algo en tu historial que necesite contexto (brecha, cambio de carrera, trayectoria no convencional)?\n\nSi tu carta no responde al menos una de esas preguntas, está añadiendo ruido, no señal.",
-      },
-      {
-        heading: "La estructura que funciona en 2026",
-        body: "Apertura: Gancho con algo específico — un logro de la empresa, una misión compartida, algo que demuestre que investigaste. Nunca \"Me dirijo a usted para solicitar...\"\n\nCuerpo (1-2 párrafos): Conecta una o dos de tus experiencias más sólidas directamente con lo que requiere el puesto. Usa datos concretos.\n\nCierre: Petición clara. Interés genuino. Menos de 5 líneas.\n\nLongitud total: 250-350 palabras. No más. Los recruiters no leen cartas largas.",
-      },
-      {
-        heading: "Usa IA para escribirla más rápido, no de forma más perezosa",
-        body: "El generador de cartas de presentación con IA de ReadyCV escribe una carta personalizada usando los datos reales de tu CV y la descripción del puesto. Elige tono formal, equilibrado o dinámico. Listo en 30 segundos.\n\nLa regla: siempre edita lo que te da la IA. Añade un detalle específico sobre la empresa que solo alguien que la haya investigado conocería. Eso separa lo asistido por IA de lo generado por IA.",
-      },
+      { heading: t("s1_h"), body: t("s1_b") },
+      { heading: t("s2_h"), body: t("s2_b") },
+      { heading: t("s3_h"), body: t("s3_b") },
+      { heading: t("s4_h"), body: t("s4_b") },
+      { heading: t("s5_h"), body: t("s5_b") },
+      { heading: t("s6_h"), body: t("s6_b") },
     ],
   }
+
+  const relatedArticles = [
+    { slug: t("r1_slug"), title: t("r1_title") },
+    { slug: t("r2_slug"), title: t("r2_title") },
+    { slug: t("r3_slug"), title: t("r3_title") },
+  ]
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -125,7 +83,7 @@ export default async function CoverLetterArticlePage({
       <main className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-2xl mx-auto">
           <Link href={`/${locale}/blog`} className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-block mb-8">
-            {t("back")}
+            {tBlog("back")}
           </Link>
 
           <div className="mb-8">
@@ -148,16 +106,12 @@ export default async function CoverLetterArticlePage({
           </div>
 
           <div className="mt-10 border-t border-border pt-8">
-            <p className="font-semibold mb-4">{isEn ? "Related guides" : "Guías relacionadas"}</p>
+            <p className="font-semibold mb-4">{tBlog("related_guides")}</p>
             <ul className="space-y-2">
-              {[
-                { slug: "carta-de-presentacion-ejemplos", titleEs: "Ejemplos de carta de presentación 2026: plantillas que funcionan", titleEn: "Cover Letter Examples 2026: Templates That Actually Work" },
-                { slug: "como-hacer-un-cv-con-ia", titleEs: "Cómo hacer un CV con inteligencia artificial", titleEn: "How to Make a Resume with AI in 2026" },
-                { slug: "como-pasar-el-ats", titleEs: "Cómo pasar el ATS en 2026: tácticas probadas", titleEn: "How to Pass ATS Screening in 2026" },
-              ].map((a) => (
+              {relatedArticles.map((a) => (
                 <li key={a.slug}>
                   <Link href={`/${locale}/blog/${a.slug}`} className="text-primary hover:underline text-sm font-medium">
-                    {isEn ? a.titleEn : a.titleEs}
+                    {a.title}
                   </Link>
                 </li>
               ))}
@@ -165,13 +119,13 @@ export default async function CoverLetterArticlePage({
           </div>
 
           <div className="mt-12 bg-primary/5 border border-primary/20 rounded-2xl p-8 text-center">
-            <p className="font-semibold text-lg mb-2">{t("cta_title")}</p>
-            <p className="text-muted-foreground mb-6">{t("cta_desc")}</p>
+            <p className="font-semibold text-lg mb-2">{tBlog("cta_title")}</p>
+            <p className="text-muted-foreground mb-6">{tBlog("cta_desc")}</p>
             <Link
               href="/register"
               className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors text-sm"
             >
-              {t("cta_btn")} <ArrowRight className="h-4 w-4" />
+              {tBlog("cta_btn")} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </div>

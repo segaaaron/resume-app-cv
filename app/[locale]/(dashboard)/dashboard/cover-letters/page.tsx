@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import CoverLettersDashboard from "@/components/dashboard/CoverLettersDashboard"
 
+export const dynamic = "force-dynamic"
+
 export default async function CoverLettersPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const session = await auth()

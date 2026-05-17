@@ -40,99 +40,6 @@ export async function generateMetadata({
   }
 }
 
-const articles = [
-  {
-    slug: "que-es-ats-y-por-que-rechaza-tu-cv",
-    titleEs: "¿Qué es ATS y por qué rechaza tu CV?",
-    titleEn: "What is ATS and Why is It Rejecting Your Resume?",
-    descEs: "El 75% de los CVs son rechazados antes de llegar a un recruiter. Aprende qué es un sistema ATS, cómo funciona y qué cambiar para pasar el filtro.",
-    descEn: "75% of resumes are rejected before reaching a recruiter. Learn what ATS is, how it works and what to change to pass the filter.",
-    date: "2026-04-29",
-    readingTime: 7,
-    tag: "ATS",
-  },
-  {
-    slug: "como-escribir-bullets-de-cv",
-    titleEs: "Cómo escribir bullets de CV que consiguen entrevistas",
-    titleEn: "How to Write CV Bullet Points That Get Interviews",
-    descEs: "Guía práctica con ejemplos reales para redactar bullets de experiencia con verbos de acción, métricas y lenguaje orientado a resultados.",
-    descEn: "Practical guide with real examples to write experience bullets with action verbs, metrics and results-oriented language.",
-    date: "2026-04-29",
-    readingTime: 6,
-    tag: "Redacción",
-  },
-  {
-    slug: "constructores-de-cv-gratuitos-vs-pago",
-    titleEs: "Constructores de CV gratuitos vs de pago: ¿qué importa realmente?",
-    titleEn: "Free vs Paid CV Builders: What Actually Matters",
-    descEs: "Comparativa honesta de herramientas de CV gratuitas y de pago. Qué funciones cambian el resultado y cuándo vale la pena pagar.",
-    descEn: "Honest comparison of free and paid CV tools. Which features change outcomes and when is it worth paying.",
-    date: "2026-04-29",
-    readingTime: 5,
-    tag: "Herramientas",
-  },
-  {
-    slug: "carta-de-presentacion-2026",
-    titleEs: "Carta de presentación en 2026: ¿todavía importa?",
-    titleEn: "Cover Letter in 2026: Does It Still Matter?",
-    descEs: "¿Necesitas carta de presentación en 2026? Datos reales, cuándo incluirla y cómo escribir una que funcione con IA.",
-    descEn: "Do you need a cover letter in 2026? Real data, when to include one and how to write one that works with AI.",
-    date: "2026-04-29",
-    readingTime: 5,
-    tag: "Carta",
-  },
-  {
-    slug: "como-hacer-un-cv-con-ia",
-    titleEs: "Cómo hacer un CV con inteligencia artificial (paso a paso)",
-    titleEn: "How to Make a Resume with AI in 2026 (Step by Step)",
-    descEs: "Guía completa: usa IA para generar tu resumen, mejorar bullets, revisar el ATS Score y redactar tu carta de presentación en minutos.",
-    descEn: "Complete guide: use AI to generate your summary, improve bullets, check ATS Score and write your cover letter in minutes.",
-    date: "2026-05-02",
-    readingTime: 8,
-    tag: "IA",
-  },
-  {
-    slug: "cv-para-desarrolladores-de-software",
-    titleEs: "CV para desarrollador de software: guía completa 2026",
-    titleEn: "Software Developer Resume: Complete Guide 2026",
-    descEs: "Formato, sección de habilidades, bullets de impacto, proyectos y ATS Score. Todo lo que necesita tu CV para conseguir entrevistas en tech.",
-    descEn: "Format, skills section, impact bullets, projects and ATS Score. Everything your resume needs to land tech interviews.",
-    date: "2026-05-02",
-    readingTime: 9,
-    tag: "Tech",
-  },
-  {
-    slug: "como-pasar-el-ats",
-    titleEs: "Cómo pasar el ATS en 2026: tácticas probadas para tu CV",
-    titleEn: "How to Pass ATS Screening in 2026 (Proven Tactics)",
-    descEs: "El 75% de los CVs son rechazados por el ATS antes de llegar a un humano. Aprende las tácticas de formato, palabras clave y estructura que funcionan.",
-    descEn: "Over 75% of resumes are rejected by ATS before a human reads them. Learn the format, keyword and structure tactics that actually work.",
-    date: "2026-05-02",
-    readingTime: 7,
-    tag: "ATS",
-  },
-  {
-    slug: "cv-para-marketing",
-    titleEs: "CV para marketing 2026: formato, métricas y ejemplos",
-    titleEn: "Marketing Resume Guide 2026: Format, Metrics & Examples",
-    descEs: "Cómo estructurar tu CV de marketing, qué métricas incluir, herramientas que listar y cómo adaptarlo a cada oferta para conseguir más entrevistas.",
-    descEn: "How to structure your marketing resume, which metrics to include, tools to list and how to tailor it to each role to get more interviews.",
-    date: "2026-05-02",
-    readingTime: 8,
-    tag: "Marketing",
-  },
-  {
-    slug: "carta-de-presentacion-ejemplos",
-    titleEs: "Ejemplos de carta de presentación 2026: plantillas que funcionan",
-    titleEn: "Cover Letter Examples 2026: Templates That Actually Work",
-    descEs: "Ejemplos reales de cartas de presentación para tech, marketing y cambios de carrera. La estructura de 3 párrafos, aperturas ganadoras y los errores a evitar.",
-    descEn: "Real cover letter examples for tech, marketing and career changers. The 3-paragraph structure, winning openings and the mistakes to avoid.",
-    date: "2026-05-02",
-    readingTime: 7,
-    tag: "Carta",
-  },
-]
-
 export default async function BlogIndexPage({
   params,
 }: {
@@ -140,19 +47,31 @@ export default async function BlogIndexPage({
 }) {
   const { locale } = await params
   setRequestLocale(locale)
-  const isEn = locale === "en"
+
+  const t = await getTranslations("blog_index")
+  const tBlog = await getTranslations("blog")
+
+  const articles = [
+    { slug: "que-es-ats-y-por-que-rechaza-tu-cv", title: t("que-es-ats-y-por-que-rechaza-tu-cv.title"), desc: t("que-es-ats-y-por-que-rechaza-tu-cv.desc"), tag: t("que-es-ats-y-por-que-rechaza-tu-cv.tag"), date: "2026-04-29", readingTime: 7 },
+    { slug: "como-escribir-bullets-de-cv", title: t("como-escribir-bullets-de-cv.title"), desc: t("como-escribir-bullets-de-cv.desc"), tag: t("como-escribir-bullets-de-cv.tag"), date: "2026-04-29", readingTime: 6 },
+    { slug: "constructores-de-cv-gratuitos-vs-pago", title: t("constructores-de-cv-gratuitos-vs-pago.title"), desc: t("constructores-de-cv-gratuitos-vs-pago.desc"), tag: t("constructores-de-cv-gratuitos-vs-pago.tag"), date: "2026-04-29", readingTime: 5 },
+    { slug: "carta-de-presentacion-2026", title: t("carta-de-presentacion-2026.title"), desc: t("carta-de-presentacion-2026.desc"), tag: t("carta-de-presentacion-2026.tag"), date: "2026-04-29", readingTime: 5 },
+    { slug: "como-hacer-un-cv-con-ia", title: t("como-hacer-un-cv-con-ia.title"), desc: t("como-hacer-un-cv-con-ia.desc"), tag: t("como-hacer-un-cv-con-ia.tag"), date: "2026-05-02", readingTime: 8 },
+    { slug: "cv-para-desarrolladores-de-software", title: t("cv-para-desarrolladores-de-software.title"), desc: t("cv-para-desarrolladores-de-software.desc"), tag: t("cv-para-desarrolladores-de-software.tag"), date: "2026-05-02", readingTime: 9 },
+    { slug: "como-pasar-el-ats", title: t("como-pasar-el-ats.title"), desc: t("como-pasar-el-ats.desc"), tag: t("como-pasar-el-ats.tag"), date: "2026-05-02", readingTime: 7 },
+    { slug: "cv-para-marketing", title: t("cv-para-marketing.title"), desc: t("cv-para-marketing.desc"), tag: t("cv-para-marketing.tag"), date: "2026-05-02", readingTime: 8 },
+    { slug: "carta-de-presentacion-ejemplos", title: t("carta-de-presentacion-ejemplos.title"), desc: t("carta-de-presentacion-ejemplos.desc"), tag: t("carta-de-presentacion-ejemplos.tag"), date: "2026-05-02", readingTime: 7 },
+  ]
 
   const jsonLdBlogIndex = {
     "@context": "https://schema.org",
     "@type": "CollectionPage",
-    name: isEn ? "CV Tips and Job Search Guides — ReadyCV Blog" : "Guías de CV y Búsqueda de Empleo — Blog ReadyCV",
+    name: t("collection_name"),
     url: `https://readycvv.com/${locale}/blog`,
-    description: isEn
-      ? "Practical guides on optimizing your resume, passing ATS filters and getting more interviews."
-      : "Guías prácticas para optimizar tu CV, pasar filtros ATS y conseguir más entrevistas.",
+    description: t("collection_desc"),
     hasPart: articles.map((a) => ({
       "@type": "Article",
-      headline: isEn ? a.titleEn : a.titleEs,
+      headline: a.title,
       url: `https://readycvv.com/${locale}/blog/${a.slug}`,
     })),
   }
@@ -168,12 +87,10 @@ export default async function BlogIndexPage({
               Blog
             </span>
             <h1 className="text-3xl sm:text-4xl font-bold mb-3">
-              {isEn ? "CV tips and job search guides" : "Guías de CV y búsqueda de empleo"}
+              {t("index_title")}
             </h1>
             <p className="text-muted-foreground text-lg">
-              {isEn
-                ? "Practical advice to optimize your resume and get more interviews."
-                : "Consejos prácticos para optimizar tu CV y conseguir más entrevistas."}
+              {t("index_subtitle")}
             </p>
           </div>
 
@@ -191,14 +108,14 @@ export default async function BlogIndexPage({
                         {article.tag}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        {article.readingTime} {isEn ? "min read" : "min de lectura"}
+                        {article.readingTime} {tBlog("reading_time")}
                       </span>
                     </div>
                     <h2 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
-                      {isEn ? article.titleEn : article.titleEs}
+                      {article.title}
                     </h2>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      {isEn ? article.descEn : article.descEs}
+                      {article.desc}
                     </p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary shrink-0 mt-1 transition-colors" />

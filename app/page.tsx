@@ -1,7 +1,10 @@
 import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
-// The middleware handles locale redirects, but this is a safety fallback
-// for direct access to the root URL before middleware kicks in.
-export default function RootPage() {
-  redirect("/es")
+export const dynamic = "force-dynamic"
+
+export default async function RootPage() {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "es"
+  redirect(`/${locale}`)
 }

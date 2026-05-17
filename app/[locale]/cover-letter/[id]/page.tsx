@@ -4,6 +4,8 @@ import { db } from "@/lib/db"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor"
 
+export const dynamic = "force-dynamic"
+
 export default async function CoverLetterPage({ params, searchParams }: { params: Promise<{ id: string; locale: string }>; searchParams: Promise<{ new?: string }> }) {
   const session = await auth()
   const { id, locale } = await params

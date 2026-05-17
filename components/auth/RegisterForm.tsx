@@ -45,9 +45,9 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
     email: z.string().email(t("email_invalid")),
     password: z.string()
       .min(8, t("password_min"))
-      .regex(/[A-Z]/, "Must contain at least one uppercase letter")
-      .regex(/[a-z]/, "Must contain at least one lowercase letter")
-      .regex(/[0-9]/, "Must contain at least one number"),
+      .regex(/[A-Z]/, t("password_uppercase"))
+      .regex(/[a-z]/, t("password_lowercase"))
+      .regex(/[0-9]/, t("password_number")),
     consent: z.boolean().refine((v) => v === true, { message: t("consent_required") }),
     ageConsent: z.boolean().refine((v) => v === true, { message: t("age_required") }),
     marketingConsent: z.boolean().optional(),

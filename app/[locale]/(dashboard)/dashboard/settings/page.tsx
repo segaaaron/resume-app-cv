@@ -4,6 +4,8 @@ import { db } from "@/lib/db"
 import SettingsForm from "@/components/dashboard/SettingsForm"
 import ReferralCard from "@/components/dashboard/ReferralCard"
 
+export const dynamic = "force-dynamic"
+
 export default async function SettingsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params
   const session = await auth()

@@ -13,14 +13,8 @@ import { isActive, isSuperAdmin } from "@/lib/plans"
 import { Lock } from "lucide-react"
 import { PRO_IDS } from "@/components/editor/template-switcher"
 
-const jsonLdBreadcrumbTemplates = {
-  "@context": "https://schema.org",
-  "@type": "BreadcrumbList",
-  itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Inicio", item: "https://readycvv.com" },
-    { "@type": "ListItem", position: 2, name: "Plantillas de CV", item: "https://readycvv.com/es/templates" },
-  ],
-}
+export const dynamic = "force-dynamic"
+
 
 const jsonLdItemList = {
   "@context": "https://schema.org",
@@ -312,6 +306,17 @@ export default async function TemplatesPage({
   const { locale } = await params
   setRequestLocale(locale)
   const t = await getTranslations("templates_page")
+  const tCommon = await getTranslations("common")
+  const tTemplates = await getTranslations("templates")
+
+  const jsonLdBreadcrumbTemplates = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://readycvv.com" },
+      { "@type": "ListItem", position: 2, name: tTemplates("breadcrumb_templates"), item: `https://readycvv.com/${locale}/templates` },
+    ],
+  }
 
   const session = await auth()
   const dbUser = session?.user?.id
@@ -335,16 +340,16 @@ export default async function TemplatesPage({
   // PRO_IDS imported from @/components/editor/template-switcher (single source of truth)
 
   const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
-    { key: "featured", label: "Destacados", ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"] },
-    { key: "city", label: "Ciudad", ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
-    { key: "creative", label: "Creative", ids: ["risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical"] },
-    { key: "business", label: "Business", ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","boardingpass","magazinespread","terminalcv","iosappcv"] },
-    { key: "health", label: "Health & Science", ids: ["medicalchart","vitalsigns","vetcv","fieldjournal"] },
-    { key: "legal", label: "Legal & Academia", ids: ["legalbrief","engraved","chalkboard","academiccv","psychologist"] },
-    { key: "hospitality", label: "Hostelería", ids: ["chefmenu","sommelier","hotelcv","bartendercv","postcardcv"] },
-    { key: "engineering", label: "Ingeniería & Tech", ids: ["codeeditor","civileng","mechanical","devopsterminal","processflow","neon","sharp","bauhaus"] },
-    { key: "arts", label: "Artes & Medios", ids: ["frontpage","vinylcv","callsheet","copywritermag","animatorcv"] },
-    { key: "other", label: "Otros", ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
+    { key: "featured", label: t("cat_featured"), ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"] },
+    { key: "city", label: t("cat_city"), ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
+    { key: "creative", label: t("cat_creative"), ids: ["risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical"] },
+    { key: "business", label: t("cat_business"), ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","boardingpass","magazinespread","terminalcv","iosappcv"] },
+    { key: "health", label: t("cat_health"), ids: ["medicalchart","vitalsigns","vetcv","fieldjournal"] },
+    { key: "legal", label: t("cat_legal"), ids: ["legalbrief","engraved","chalkboard","academiccv","psychologist"] },
+    { key: "hospitality", label: t("cat_hospitality"), ids: ["chefmenu","sommelier","hotelcv","bartendercv","postcardcv"] },
+    { key: "engineering", label: t("cat_engineering"), ids: ["codeeditor","civileng","mechanical","devopsterminal","processflow","neon","sharp","bauhaus"] },
+    { key: "arts", label: t("cat_arts"), ids: ["frontpage","vinylcv","callsheet","copywritermag","animatorcv"] },
+    { key: "other", label: t("cat_other"), ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
   ]
 
   const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))

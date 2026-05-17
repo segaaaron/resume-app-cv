@@ -1,18 +1,10 @@
-import LoginForm from "@/components/auth/LoginForm"
-import type { Metadata } from "next"
+import { redirect } from "next/navigation"
+import { cookies } from "next/headers"
 
-export const metadata: Metadata = {
-  title: "Iniciar Sesión",
-  description: "Accede a tu cuenta de READY CV para continuar creando y editando tu currículum vitae profesional.",
-  robots: {
-    index: false,
-    follow: false,
-  },
-  alternates: {
-    canonical: "https://readycvv.com/login",
-  },
-}
+export const dynamic = "force-dynamic"
 
-export default function LoginPage() {
-  return <LoginForm />
+export default async function LoginPage() {
+  const cookieStore = await cookies()
+  const locale = cookieStore.get("NEXT_LOCALE")?.value ?? "es"
+  redirect(`/${locale}/login`)
 }

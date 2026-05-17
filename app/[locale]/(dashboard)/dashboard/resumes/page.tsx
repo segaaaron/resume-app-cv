@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import ResumesDashboard from "@/components/dashboard/ResumesDashboard"
 
+export const dynamic = "force-dynamic"
+
 export default async function ResumesPage({
   params,
 }: {
