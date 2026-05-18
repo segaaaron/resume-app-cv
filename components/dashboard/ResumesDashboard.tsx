@@ -40,6 +40,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     session?.user?.plan ?? "UNSUBSCRIBED",
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session?.user?.subscriptionStatus,
+    session?.user?.role,
   )
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)

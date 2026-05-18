@@ -29,6 +29,7 @@ export default function UpgradeCTACard() {
     session?.user?.plan ?? "UNSUBSCRIBED",
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session?.user?.subscriptionStatus,
+    session?.user?.role,
   )
 
   if (pro) return null

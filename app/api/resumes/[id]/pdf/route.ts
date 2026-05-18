@@ -26,7 +26,7 @@ export async function GET(req: Request, { params }: Params) {
     }),
     db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
     }),
   ])
 
@@ -37,7 +37,7 @@ export async function GET(req: Request, { params }: Params) {
     return new Response(null, { status: 304 })
   }
 
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

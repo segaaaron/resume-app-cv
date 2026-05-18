@@ -45,6 +45,7 @@ export default async function DashboardLayout({
     session.user.plan ?? "UNSUBSCRIBED",
     session.user.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session.user.subscriptionStatus ?? null,
+    session.user.role,
   )
 
   return (

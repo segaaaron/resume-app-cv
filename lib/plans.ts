@@ -34,8 +34,10 @@ export function isPro(plan: string): boolean {
 export function isActive(
   plan: string,
   subscriptionEndsAt?: Date | null,
-  subscriptionStatus?: string | null
+  subscriptionStatus?: string | null,
+  role?: string | null,
 ): boolean {
+  if (isSuperAdmin(role)) return true
   if (plan === "PRO") {
     if (subscriptionStatus === "EXPIRED") return false
     if (subscriptionEndsAt && new Date() > subscriptionEndsAt) return false

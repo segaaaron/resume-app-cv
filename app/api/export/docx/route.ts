@@ -24,10 +24,10 @@ export async function GET(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
   })
 
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

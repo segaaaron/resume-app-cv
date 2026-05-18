@@ -324,9 +324,9 @@ export class ResumeService {
     // Pro check
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
     })
-    if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus)) {
+    if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
       throw new AppError("pro_required", 403)
     }
 

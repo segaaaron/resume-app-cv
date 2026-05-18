@@ -51,6 +51,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     session?.user?.plan ?? "UNSUBSCRIBED",
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session?.user?.subscriptionStatus,
+    session?.user?.role,
   )
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)

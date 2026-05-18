@@ -123,10 +123,10 @@ export default async function PricingPage({
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, role: true },
     })
     if (dbUser) {
-      userIsPro = isActive(dbUser.plan, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus)
+      userIsPro = isActive(dbUser.plan, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus, dbUser.role)
       subscriptionEndsAt = dbUser.subscriptionEndsAt
       planInterval = dbUser.planInterval
     }
