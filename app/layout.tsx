@@ -3,6 +3,7 @@ import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import SessionProvider from "@/components/providers/SessionProvider"
+import { auth } from "@/lib/auth"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -38,6 +39,7 @@ export default async function RootLayout({
 }) {
   const resolvedParams = await params?.catch?.(() => undefined)
   const locale = resolvedParams?.locale ?? "es"
+  const session = await auth()
 
   return (
     <html
@@ -46,7 +48,7 @@ export default async function RootLayout({
       style={{ fontFamily: "var(--font-jakarta), sans-serif" }}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
-        <SessionProvider session={null}>
+        <SessionProvider session={session}>
           {children}
           <Toaster position="top-center" />
         </SessionProvider>

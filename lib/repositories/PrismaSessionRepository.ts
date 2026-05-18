@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { purgeUserCache } from "@/lib/auth"
 import type { ISessionRepository } from "@/lib/interfaces/ISessionRepository"
 
 export class PrismaSessionRepository implements ISessionRepository {
@@ -13,5 +14,6 @@ export class PrismaSessionRepository implements ISessionRepository {
         sessionChallengeBlockedUntil: null,
       },
     })
+    purgeUserCache(userId)
   }
 }

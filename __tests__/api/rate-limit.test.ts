@@ -9,13 +9,16 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 
-import { checkRateLimit, recordRateLimitFailure } from "@/lib/rate-limit"
+import { checkRateLimit, recordRateLimitFailure, clearRateLimitCache } from "@/lib/rate-limit"
 import { db } from "@/lib/db"
 
 const mockFindUnique = db.aIRateLimit.findUnique as ReturnType<typeof vi.fn>
 const mockQueryRaw   = db.$queryRaw as ReturnType<typeof vi.fn>
 
-beforeEach(() => vi.clearAllMocks())
+beforeEach(() => {
+  vi.clearAllMocks()
+  clearRateLimitCache()
+})
 
 describe("checkRateLimit (check-only — never increments)", () => {
   it("no row → returns true, does NOT write to DB", async () => {

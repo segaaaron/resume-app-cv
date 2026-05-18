@@ -68,6 +68,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const user = await db.user.findUnique({
           where: { email: credentials.email as string },
+          select: {
+            id:                           true,
+            email:                        true,
+            name:                         true,
+            image:                        true,
+            password:                     true,
+            deletedAt:                    true,
+            activeSessionToken:           true,
+            lastActiveAt:                 true,
+            sessionChallengeBlockedUntil: true,
+            plan:               true,
+            subscriptionStatus: true,
+            subscriptionEndsAt: true,
+            role:               true,
+            emailVerified:      true,
+            sessionVersion:     true,
+          },
         })
 
         if (!user || !user.password) {
@@ -89,11 +106,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // This lets authorize() detect natural JWT expiry without a DB migration or extra fields.
         if (user.activeSessionToken) {
           const storedExpiry = Number(user.activeSessionToken.split(":")[1])
-          const isExpired = !isNaN(storedExpiry) && Date.now() > storedExpiry
+          // Tokens without ":timestamp" suffix (old format) are treated as expired.
+          const isExpired = isNaN(storedExpiry) || Date.now() > storedExpiry
           const isStale = !user.lastActiveAt ||
             Date.now() - user.lastActiveAt.getTime() > INACTIVITY_LIMIT_MS
           if (!isStale && !isExpired) throw new ActiveSessionError()
-          await db.user.update({ where: { id: user.id }, data: { activeSessionToken: null } })
+          // No need to null the old token separately — single UPDATE below overwrites it.
         }
 
         // Embed expiry in token so authorize() can detect natural JWT expiry on next login attempt.
@@ -104,7 +122,20 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           data: { activeSessionToken, sessionChallengeAttempts: 0, sessionChallengeBlockedUntil: null },
         })
 
-        return { id: user.id, email: user.email, name: user.name, image: user.image, activeSessionToken }
+        // Return plan data so jwt() callback can skip the second DB read on fresh login.
+        return {
+          id:                 user.id,
+          email:              user.email,
+          name:               user.name,
+          image:              user.image,
+          activeSessionToken,
+          plan:               user.plan,
+          subscriptionStatus: user.subscriptionStatus,
+          subscriptionEndsAt: user.subscriptionEndsAt,
+          role:               user.role,
+          emailVerified:      user.emailVerified,
+          sessionVersion:     user.sessionVersion,
+        }
       },
     }),
   ],
@@ -115,6 +146,38 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id
         token.activeSessionToken = (user as { activeSessionToken?: string }).activeSessionToken ?? null
+
+        // Credentials login: authorize() pre-fetches plan data — skip the jwt DB read entirely.
+        // Google OAuth users won't have `plan` set on the user object, so they fall through.
+        const prefetched = user as {
+          plan?: string; subscriptionStatus?: string; subscriptionEndsAt?: Date | null
+          role?: string; emailVerified?: Date | null; sessionVersion?: number
+        }
+        if (prefetched.plan !== undefined && user.id) {
+          const now = Date.now()
+          token.plan               = prefetched.plan
+          token.subscriptionStatus = prefetched.subscriptionStatus ?? ""
+          token.subscriptionEndsAt = prefetched.subscriptionEndsAt?.toISOString() ?? null
+          token.role               = prefetched.role ?? "USER"
+          token.emailVerified      = prefetched.emailVerified?.toISOString() ?? null
+          token.sessionVersion     = prefetched.sessionVersion ?? 1
+          userPlanCache.set(user.id, {
+            plan:               prefetched.plan as string,
+            subscriptionStatus: prefetched.subscriptionStatus ?? "",
+            subscriptionEndsAt: prefetched.subscriptionEndsAt ?? null,
+            role:               prefetched.role ?? "USER",
+            emailVerified:      prefetched.emailVerified ?? null,
+            sessionVersion:     prefetched.sessionVersion ?? 1,
+            activeSessionToken: (token.activeSessionToken as string | null) ?? null,
+            expiresAt:          now + CACHE_TTL_MS,
+          })
+          const uid = user.id as string
+          db.user.update({ where: { id: uid }, data: { lastActiveAt: new Date() } })
+            .catch((e) => logger.error("lastActiveAt update failed", { userId: uid }, e instanceof Error ? e : undefined))
+          return token
+        }
+
+        // Google OAuth path: purge cache and fall through to DB read below.
         if (user.id) userPlanCache.delete(user.id)
       }
       if (trigger === "update") {
@@ -130,32 +193,43 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (isFreshLogin && !token.activeSessionToken) {
         const sessionExpiresAt = Date.now() + 24 * 60 * 60 * 1000
         const googleSessionToken = `${crypto.randomUUID()}:${sessionExpiresAt}`
-        await db.user.update({ where: { id: userId }, data: { activeSessionToken: googleSessionToken } }).catch(() => {})
-        token.activeSessionToken = googleSessionToken
+        let assigned = false
+        await db.user.update({ where: { id: userId }, data: { activeSessionToken: googleSessionToken } })
+          .then(() => { assigned = true })
+          .catch((e) => logger.error("Google OAuth: activeSessionToken assign failed", { userId }, e instanceof Error ? e : undefined))
+        if (assigned) token.activeSessionToken = googleSessionToken
       }
 
       const now = Date.now()
       const cached = userPlanCache.get(userId)
 
       if (cached && cached.expiresAt > now) {
-        // Concurrent session guard on cache hit
+        // Cache hit: if activeSessionToken diverged, the cache may be stale (race between
+        // replicas or a concurrent login). Never return null here — bust and re-read from DB.
         if (token.activeSessionToken && cached.activeSessionToken !== token.activeSessionToken) {
-          return null
-        }
-        // Cross-replica cache invalidation: if webhook incremented sessionVersion in DB, the JWT
-        // already carries the new version (set by the replica that processed the webhook).
-        // Bust the local cache so this replica also picks up the fresh state (e.g. plan downgrade).
-        const tokenVersion = (token.sessionVersion as number | undefined) ?? 0
-        if (tokenVersion !== 0 && tokenVersion !== cached.sessionVersion) {
+          logger.warn("jwt: cache hit token mismatch — busting cache, re-reading DB", {
+            userId,
+            tokenHas: token.activeSessionToken as string,
+            cacheHas: cached.activeSessionToken ?? undefined,
+          })
           userPlanCache.delete(userId)
           // fall through to DB read below
         } else {
-          token.plan               = cached.plan
-          token.subscriptionStatus = cached.subscriptionStatus
-          token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
-          token.role               = cached.role
-          token.emailVerified      = cached.emailVerified?.toISOString() ?? null
-          return token
+          // Cross-replica cache invalidation: if webhook incremented sessionVersion in DB, the JWT
+          // already carries the new version (set by the replica that processed the webhook).
+          // Bust the local cache so this replica also picks up the fresh state (e.g. plan downgrade).
+          const tokenVersion = (token.sessionVersion as number | undefined) ?? 0
+          if (tokenVersion !== 0 && tokenVersion !== cached.sessionVersion) {
+            userPlanCache.delete(userId)
+            // fall through to DB read below
+          } else {
+            token.plan               = cached.plan
+            token.subscriptionStatus = cached.subscriptionStatus
+            token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
+            token.role               = cached.role
+            token.emailVerified      = cached.emailVerified?.toISOString() ?? null
+            return token
+          }
         }
       }
 
@@ -175,17 +249,34 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         },
       })
 
-      if (!dbUser)          return null
-      if (dbUser.deletedAt) return null
+      if (!dbUser) {
+        logger.error("jwt: LOGOUT — user not found in DB", { userId })
+        return null
+      }
+      if (dbUser.deletedAt) {
+        logger.error("jwt: LOGOUT — user soft-deleted", { userId })
+        return null
+      }
 
       // Admin force-logout: any JWT issued before forceLogoutAt is invalidated immediately
-      if (dbUser.forceLogoutAt && token.iat && token.iat * 1000 < dbUser.forceLogoutAt.getTime()) return null
+      if (dbUser.forceLogoutAt && token.iat && token.iat * 1000 < dbUser.forceLogoutAt.getTime()) {
+        logger.error("jwt: LOGOUT — forceLogoutAt", { userId, forceLogoutAt: dbUser.forceLogoutAt?.toISOString(), iat: token.iat })
+        return null
+      }
 
-      // Concurrent session guard: if token was replaced (OTP verify), invalidate this JWT
+      // Concurrent session guard: if token was replaced (OTP verify or concurrent login), invalidate
+      // this JWT. Also clear the DB token so the user can re-login immediately without ActiveSessionError.
       if (
         token.activeSessionToken &&
         dbUser.activeSessionToken !== token.activeSessionToken
       ) {
+        logger.error("jwt: LOGOUT — activeSessionToken mismatch (clearing DB token for re-login)", {
+          userId,
+          tokenHas: token.activeSessionToken as string,
+          dbHas: dbUser.activeSessionToken ?? undefined,
+        })
+        await db.user.update({ where: { id: userId }, data: { activeSessionToken: null } }).catch(() => {})
+        purgeUserCache(userId)
         return null
       }
 
@@ -194,7 +285,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       // Stripe event (which increments sessionVersion) is wrong UX.
       const tokenVersion = (token.sessionVersion as number | undefined) ?? 0
       if (tokenVersion !== 0 && tokenVersion !== dbUser.sessionVersion) {
-        console.info(`[auth] sessionVersion refreshed for ${userId}: ${tokenVersion} → ${dbUser.sessionVersion}`)
+        logger.info("jwt: sessionVersion refreshed", { userId, from: tokenVersion, to: dbUser.sessionVersion })
       }
       token.sessionVersion = dbUser.sessionVersion
 

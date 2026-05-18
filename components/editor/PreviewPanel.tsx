@@ -40,7 +40,6 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
           }}
         >
           <div
-          className="pb-8"
             style={{
               transform: `scale(${scale})`,
               transformOrigin: "top left",

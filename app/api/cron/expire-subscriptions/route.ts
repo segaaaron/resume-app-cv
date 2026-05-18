@@ -12,27 +12,20 @@ export async function GET(req: Request) {
 
   const now = new Date()
 
-  // Users who canceled and whose period has now ended
-  const canceled = await db.user.findMany({
-    where: {
-      plan: "PRO",
-      subscriptionStatus: "CANCELED",
-      subscriptionEndsAt: { lt: now },
-    },
-    select: { id: true },
-  })
-
-  // Webhook drift guard: PRO/ACTIVE users whose subscriptionEndsAt is in the past
-  // (webhook subscription.deleted or invoice.paid failed to process)
-  // PAST_DUE excluded — Stripe smart-retry can run up to ~3 weeks; do not downgrade mid-retry
-  const activeStale = await db.user.findMany({
-    where: {
-      plan: "PRO",
-      subscriptionStatus: "ACTIVE",
-      subscriptionEndsAt: { lt: now },
-    },
-    select: { id: true },
-  })
+  // Parallelize both queries — independent, no shared state
+  const [canceled, activeStale] = await Promise.all([
+    // Users who canceled and whose period has now ended
+    db.user.findMany({
+      where: { plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: { lt: now } },
+      select: { id: true },
+    }),
+    // Webhook drift guard: PRO/ACTIVE users whose subscriptionEndsAt is in the past
+    // PAST_DUE excluded — Stripe smart-retry can run up to ~3 weeks; do not downgrade mid-retry
+    db.user.findMany({
+      where: { plan: "PRO", subscriptionStatus: "ACTIVE", subscriptionEndsAt: { lt: now } },
+      select: { id: true },
+    }),
+  ])
 
   const ids = [...new Set([...canceled, ...activeStale].map((u) => u.id))]
 

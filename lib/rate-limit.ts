@@ -1,32 +1,62 @@
 import { db } from "@/lib/db"
 
 const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
+const CACHE_TTL_MS         = 60 * 1000       // 1 min — safe: limit=20/hr, cache can be 1 min stale
+
+interface CacheEntry {
+  count:   number
+  resetAt: number  // ms timestamp
+  cachedAt: number
+}
+
+const rateLimitCache = new Map<string, CacheEntry>()
+
+export function clearRateLimitCache() {
+  rateLimitCache.clear()
+}
+
+function cacheKey(userId: string, endpoint: string) {
+  return `${userId}:${endpoint}`
+}
 
 /**
  * Checks current failure count WITHOUT incrementing.
  * Returns true if under limit, false if blocked.
- * Use at the start of a request to block already-penalized keys.
+ * Uses in-memory cache (1 min TTL) to avoid a DB round-trip on every AI request.
  */
 export async function checkRateLimit(userId: string, endpoint: string, limit = 20): Promise<boolean> {
+  const key  = cacheKey(userId, endpoint)
+  const now  = Date.now()
+  const hit  = rateLimitCache.get(key)
+
+  if (hit && now - hit.cachedAt < CACHE_TTL_MS) {
+    if (hit.resetAt < now) return true       // window expired in cache — allow
+    return hit.count < limit
+  }
+
   const row = await db.aIRateLimit.findUnique({
-    where: { userId_endpoint: { userId, endpoint } },
+    where:  { userId_endpoint: { userId, endpoint } },
     select: { count: true, resetAt: true },
   })
+
   if (!row) return true
-  if (row.resetAt < new Date()) return true
+
+  const resetAtMs = row.resetAt.getTime()
+  rateLimitCache.set(key, { count: row.count, resetAt: resetAtMs, cachedAt: now })
+
+  if (resetAtMs < now) return true
   return row.count < limit
 }
 
 /**
  * Increments the usage counter for this key+endpoint.
- * Call on every request (success or failure) to enforce the hourly cap.
+ * Also updates the in-memory cache so the next checkRateLimit call reflects the increment.
  */
 export async function recordRateLimitUsage(userId: string, endpoint: string): Promise<void> {
   return recordUsage(userId, endpoint)
 }
 
 /**
- * Increments the failure counter for this key+endpoint.
  * @deprecated Use recordRateLimitUsage instead.
  */
 export async function recordRateLimitFailure(userId: string, endpoint: string): Promise<void> {
@@ -35,7 +65,7 @@ export async function recordRateLimitFailure(userId: string, endpoint: string): 
 
 async function recordUsage(userId: string, endpoint: string): Promise<void> {
   const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS)
-  const now = new Date()
+  const now     = new Date()
   await db.$queryRaw`
     INSERT INTO "AIRateLimit" ("id", "userId", "endpoint", "count", "resetAt", "createdAt", "updatedAt")
     VALUES (gen_random_uuid()::text, ${userId}, ${endpoint}, 1, ${resetAt}, ${now}, ${now})
@@ -45,4 +75,8 @@ async function recordUsage(userId: string, endpoint: string): Promise<void> {
       "resetAt"   = CASE WHEN "AIRateLimit"."resetAt" < NOW() THEN ${resetAt} ELSE "AIRateLimit"."resetAt" END,
       "updatedAt" = ${now}
   `
+
+  // Invalidate cache on increment — local count increment is racy under concurrent requests.
+  // Next checkRateLimit will re-read DB and get the authoritative count.
+  rateLimitCache.delete(cacheKey(userId, endpoint))
 }

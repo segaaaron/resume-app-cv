@@ -64,11 +64,11 @@ export default function TemplateSwitcher({
         onConfirm={confirmSwitch}
         onCancel={cancelSwitch}
       />
-      <div className="shrink-0 bg-white/95 backdrop-blur border-t border-border px-4 py-3">
+      <div className="shrink-0 bg-card/95 backdrop-blur border-t border-border px-4 py-3">
         <div className="flex flex-col gap-3">
 
           {/* Regular designs */}
-          <div className="flex items-center gap-3 overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
             <div className="shrink-0 flex flex-col items-center gap-0.5">
               <span className="text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
                 {t("regular_designs_label")}
@@ -91,7 +91,7 @@ export default function TemplateSwitcher({
           </div>
 
           {/* Pro designs */}
-          <div className="flex items-center gap-3 pt-2 border-t border-border overflow-x-auto pb-1 scrollbar-hide">
+          <div className="flex items-center gap-3 pt-2 border-t border-border overflow-x-auto scrollbar-hide">
             <div className="shrink-0 flex flex-col items-center gap-0.5">
               <span className="text-[8px] font-extrabold uppercase tracking-widest bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent whitespace-nowrap">
                 {t("pro_designs_label")}

@@ -14,15 +14,18 @@ const SESSION_EXPIRED: Record<string, string> = {
 function SessionWatcher() {
   const { status } = useSession()
   const signingOut = useRef(false)
+  // useRef resets on every page load — prevents stale sessionStorage from triggering
+  // logoutAction on refresh when the user is still authenticated.
+  const wasAuthenticated = useRef(false)
 
   useEffect(() => {
     if (status === "authenticated") {
-      sessionStorage.setItem("wasAuthenticated", "1")
+      wasAuthenticated.current = true
       return
     }
     if (status === "loading") return
-    if (status === "unauthenticated" && sessionStorage.getItem("wasAuthenticated")) {
-      sessionStorage.removeItem("wasAuthenticated")
+    if (status === "unauthenticated" && wasAuthenticated.current) {
+      wasAuthenticated.current = false
       const lang = document.documentElement.lang ?? "es"
       logoutAction(`/${lang}/login`)
     }
@@ -33,14 +36,14 @@ function SessionWatcher() {
     const original = window.fetch
     window.fetch = async (...args) => {
       const res = await original(...args)
-      if (res.status === 401 && !signingOut.current && sessionStorage.getItem("wasAuthenticated")) {
+      if (res.status === 401 && !signingOut.current && wasAuthenticated.current) {
         signingOut.current = true
         const url = typeof args[0] === "string" ? args[0] : args[0] instanceof URL ? args[0].href : args[0] instanceof Request ? args[0].url : ""
         // Only intercept internal API calls, not NextAuth endpoints (avoid loop)
         if (url.startsWith("/api/") && !url.startsWith("/api/auth/")) {
           const lang = document.documentElement.lang ?? "es"
           toast.error(SESSION_EXPIRED[lang] ?? SESSION_EXPIRED.es)
-          sessionStorage.removeItem("wasAuthenticated")
+          wasAuthenticated.current = false
           const lang2 = document.documentElement.lang ?? "es"
           setTimeout(() => logoutAction(`/${lang2}/login`), 1_500)
         } else {
