@@ -1,7 +1,6 @@
 "use client"
 
-import { useInView } from "framer-motion"
-import { motion } from "framer-motion"
+import { useInView, motion, type TargetAndTransition } from "framer-motion"
 import { useRef } from "react"
 
 type AnimEl = "div" | "p" | "span" | "section" | "article"
@@ -11,8 +10,8 @@ interface TimelineContentProps {
   animationNum?: number
   timelineRef?: React.RefObject<HTMLElement | null>
   customVariants?: {
-    visible: (i: number) => object
-    hidden: object
+    visible: (i: number) => TargetAndTransition
+    hidden: TargetAndTransition
   }
   className?: string
   children: React.ReactNode

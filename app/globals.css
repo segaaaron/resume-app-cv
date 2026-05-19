@@ -369,3 +369,8 @@
   opacity: 1;
   transform: perspective(900px) rotateX(0deg) translateY(0) scale(1);
 }
+
+/* ── Template lazy-load skeleton shimmer ─────────────────────────── */
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}

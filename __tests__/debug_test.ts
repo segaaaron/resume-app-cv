@@ -57,8 +57,8 @@ describe("debug", () => {
     } catch (e) {
       console.log("Error:", e)
       // Check what the real error is
-      if (mockLogger.error.mock.calls.length > 0) {
-        console.log("Logger errors:", JSON.stringify(mockLogger.error.mock.calls))
+      if (vi.mocked(mockLogger.error).mock.calls.length > 0) {
+        console.log("Logger errors:", JSON.stringify(vi.mocked(mockLogger.error).mock.calls))
       }
     }
   })

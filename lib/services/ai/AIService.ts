@@ -298,7 +298,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      logAIUsage(userId, "improve-bullet:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "improve-bullet")
     recordRateLimitUsage(userId, "improve-bullet")
@@ -366,7 +369,10 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      logAIUsage(userId, "generate-summary:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "generate-summary")
     recordRateLimitUsage(userId, "generate-summary")
@@ -461,7 +467,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      logAIUsage(userId, "improve-summary:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "improve-summary")
     recordRateLimitUsage(userId, "improve-summary")
@@ -536,6 +545,7 @@ Reglas:
     const parsed = parseAIJson<ATSScoreResult>(raw)
 
     if (typeof parsed.score !== "number" || parsed.label === "off_topic") {
+      logAIUsage(userId, "ats-score:off_topic")
       throw new AppError("off_topic", 422)
     }
 
@@ -661,7 +671,10 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     const parsed = parseAIJson<{ body: string }>(raw)
 
     if (typeof parsed.body !== "string") throw new AppError("invalid_response_format", 500)
-    if (parsed.body.trim() === "") throw new AppError("off_topic", 422)
+    if (parsed.body.trim() === "") {
+      logAIUsage(userId, "generate-cover-letter:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     const html = parsed.body
       .split(/\n\n+/)
@@ -741,7 +754,10 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      logAIUsage(userId, "improve-cover-letter:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "improve-cover-letter")
     recordRateLimitUsage(userId, "improve-cover-letter")
@@ -833,7 +849,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const raw = response.choices[0]?.message?.content ?? ""
     const parsed = parseAIJson<ReviewResult & { answer: string }>(raw)
 
-    if (parsed.answer === "off_topic") throw new AppError("off_topic", 422)
+    if (parsed.answer === "off_topic") {
+      logAIUsage(userId, "review-cv:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     const sanitizePreview = (text: string) =>
       text.replace(/[*_`#>]/g, "").replace(/\n{3,}/g, "\n\n").trim()
@@ -981,7 +1000,10 @@ Reglas:
       parsed.workExperienceUpdates?.length || parsed.workExperienceNew?.length ||
       parsed.educationUpdates?.length || parsed.projectUpdates?.length || parsed.volunteerUpdates?.length
 
-    if (!hasContent) throw new AppError("off_topic", 422)
+    if (!hasContent) {
+      logAIUsage(userId, "fill-profile:off_topic")
+      throw new AppError("off_topic", 422)
+    }
 
     const validated = FillProfileResponseSchema.safeParse(parsed)
     const data = validated.success ? validated.data : parsed
@@ -1064,6 +1086,7 @@ Rules:
     const result = parseAIJson<{ skills?: { name: string; level: string }[] }>(content)
 
     if (!Array.isArray(result.skills) || result.skills.length === 0) {
+      logAIUsage(userId, "suggest-skills:off_topic")
       throw new AppError("off_topic", 422)
     }
 

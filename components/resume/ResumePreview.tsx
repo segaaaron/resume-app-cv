@@ -1,266 +1,159 @@
 "use client"
 
+import dynamic from "next/dynamic"
+import { useState, useEffect } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
-import ClassicTemplate from "./templates/Classic"
-import ModernTemplate from "./templates/Modern"
-import ProfessionalTemplate from "./templates/Professional"
-import ElegantTemplate from "./templates/Elegant"
-import CircularTemplate from "./templates/Circular"
-import VerticalTemplate from "./templates/Vertical"
-import HorizontalTemplate from "./templates/Horizontal"
-import SimpleTemplate from "./templates/Simple"
-import ChronoTemplate from "./templates/Chrono"
-import CasualTemplate from "./templates/Casual"
-import LuxuriousTemplate from "./templates/Luxurious"
-import MetroTemplate from "./templates/Metro"
-import ATSTemplate from "./templates/ATS"
-import SharpTemplate from "./templates/Sharp"
-import GlassTemplate from "./templates/Glass"
-import NeonTemplate from "./templates/Neon"
-import NordicTemplate from "./templates/Nordic"
-import ExecutiveTemplate from "./templates/Executive"
-import SidebarTemplate from "./templates/Sidebar"
-import FoldTemplate from "./templates/Fold"
-import BauhausTemplate from "./templates/Bauhaus"
-import OutlineTemplate from "./templates/Outline"
-import SparkTemplate from "./templates/Spark"
-import CarbonTemplate from "./templates/Carbon"
-import BlueprintTemplate from "./templates/Blueprint"
-import RivieraTemplate from "./templates/Riviera"
-import StripeTemplate from "./templates/Stripe"
-import VogueTemplate from "./templates/Vogue"
-import CoralTemplate from "./templates/Coral"
-import AuroraTemplate from "./templates/Aurora"
-import LumiereTemplate from "./templates/Lumiere"
-import ConsulTemplate from "./templates/Consul"
-import RoseTemplate from "./templates/Rose"
-import MinimalTemplate from "./templates/Minimal"
-import WaveTemplate from "./templates/Wave"
-import BannerTemplate from "./templates/Banner"
-import VertexTemplate from "./templates/Vertex"
-import PrestigeTemplate from "./templates/Prestige"
-import OsloTemplate from "./templates/Oslo"
-import KyotoTemplate from "./templates/Kyoto"
-import GenevaTemplate from "./templates/Geneva"
-import WindsorTemplate from "./templates/Windsor"
-import MilanTemplate from "./templates/Milan"
-import ZurichTemplate from "./templates/Zurich"
-import PortoTemplate from "./templates/Porto"
-import BarcelonaTemplate from "./templates/Barcelona"
-import ViennaTemplate from "./templates/Vienna"
-import BerlinTemplate from "./templates/Berlin"
-import StockholmTemplate from "./templates/Stockholm"
-import DublinTemplate from "./templates/Dublin"
-import HelsinkiTemplate from "./templates/Helsinki"
-import LagosTemplate from "./templates/Lagos"
-import SeoulTemplate from "./templates/Seoul"
-import CopenhagenTemplate from "./templates/Copenhagen"
-import GenevanoirTemplate from "./templates/GenevaNoir"
-import ReykjavikTemplate from "./templates/Reykjavik"
-import ApexTemplate from "./templates/Apex"
-import NovaTemplate from "./templates/Nova"
-import CascadeTemplate from "./templates/Cascade"
-import OnyxTemplate from "./templates/Onyx"
-import MosaicTemplate from "./templates/Mosaic"
-import LarssonTemplate from "./templates/Larsson"
-import ThompsonTemplate from "./templates/Thompson"
-import ClassicMonoTemplate from "./templates/ClassicMono"
-import EditorialSerifTemplate from "./templates/EditorialSerif"
-import BoldBlockTemplate from "./templates/BoldBlock"
-import TimelineVerticalTemplate from "./templates/TimelineVertical"
-import SwissGridTemplate from "./templates/SwissGrid"
-import CharcoalClassicTemplate from "./templates/CharcoalClassic"
-import NavyExecutiveTemplate from "./templates/NavyExecutive"
-import CoralSidebarTemplate from "./templates/CoralSidebar"
-import NeoBrutalistTemplate from "./templates/NeoBrutalist"
-import SageBotanicalTemplate from "./templates/SageBotanical"
-import TerminalCVTemplate from "./templates/TerminalCV"
-import IOSAppCVTemplate from "./templates/IOSAppCV"
-import DataDrivenTemplate from "./templates/DataDriven"
-import BoardingPassTemplate from "./templates/BoardingPass"
-import MagazineSpreadTemplate from "./templates/MagazineSpread"
-import LegalBriefTemplate from "./templates/LegalBrief"
-import EngravedTemplate from "./templates/Engraved"
-import ChalkboardTemplate from "./templates/Chalkboard"
-import AcademicCVTemplate from "./templates/AcademicCV"
-import PsychologistTemplate from "./templates/Psychologist"
-import ChefMenuTemplate from "./templates/ChefMenu"
-import SommelierTemplate from "./templates/Sommelier"
-import HotelCVTemplate from "./templates/HotelCV"
-import BartenderCVTemplate from "./templates/BartenderCV"
-import PostcardCVTemplate from "./templates/PostcardCV"
-import FrontPageTemplate from "./templates/FrontPage"
-import VinylCVTemplate from "./templates/VinylCV"
-import CallSheetTemplate from "./templates/CallSheet"
-import CopywriterMagTemplate from "./templates/CopywriterMag"
-import AnimatorCVTemplate from "./templates/AnimatorCV"
-import CodeEditorTemplate from "./templates/CodeEditor"
-import CivilEngTemplate from "./templates/CivilEng"
-import MechanicalTemplate from "./templates/Mechanical"
-import DevOpsTerminalTemplate from "./templates/DevOpsTerminal"
-import ProcessFlowTemplate from "./templates/ProcessFlow"
-import MedicalChartTemplate from "./templates/MedicalChart"
-import VitalSignsTemplate from "./templates/VitalSigns"
-import VetCVTemplate from "./templates/VetCV"
-import FieldJournalTemplate from "./templates/FieldJournal"
-import NotebookCVTemplate from "./templates/NotebookCV"
-import PilotLogTemplate from "./templates/PilotLog"
-import OnboardingFormTemplate from "./templates/OnboardingForm"
-import AthleteCardTemplate from "./templates/AthleteCard"
-import TranslatorCVTemplate from "./templates/TranslatorCV"
-import HerbariumCVTemplate from "./templates/HerbariumCV"
-import RisoDesignerTemplate from "./templates/RisoDesigner"
-import UXTokensTemplate from "./templates/UXTokens"
-import SketchbookIllustratorTemplate from "./templates/SketchbookIllustrator"
-import BlueprintCVTemplate from "./templates/BlueprintCV"
-import ContactSheetTemplate from "./templates/ContactSheet"
-import AnnualReportTemplate from "./templates/AnnualReport"
-import FinanceTerminalTemplate from "./templates/FinanceTerminal"
-import CampaignPosterTemplate from "./templates/CampaignPoster"
-import SalesPitchTemplate from "./templates/SalesPitch"
-import LedgerCVTemplate from "./templates/LedgerCV"
-import CobaltTemplate from "./templates/Cobalt"
-import DualityTemplate from "./templates/Duality"
-import HavanaTemplate from "./templates/Havana"
-import HelixTemplate from "./templates/Helix"
-import LisbonTemplate from "./templates/Lisbon"
-import NauticalTemplate from "./templates/Nautical"
-import ObsidianTemplate from "./templates/Obsidian"
-import PrismTemplate from "./templates/Prism"
-import TokyoTemplate from "./templates/Tokyo"
-import VitaeTemplate from "./templates/Vitae"
-import MeridianTemplate from "./templates/Meridian"
+
+function TemplateSkeleton() {
+  return (
+    <div className="w-full min-h-[297mm] bg-white relative overflow-hidden">
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-gray-100/80 to-transparent" />
+    </div>
+  )
+}
+
+function TemplateError({ retry }: { retry?: () => void }) {
+  return (
+    <div className="w-full min-h-[297mm] bg-white flex flex-col items-center justify-center gap-2 text-sm text-red-600">
+      <span>Template failed to load.</span>
+      {retry && <button onClick={retry} className="underline">Retry</button>}
+    </div>
+  )
+}
+
+const loading = ({ error, retry }: { error?: Error | null; retry?: () => void }) =>
+  error ? <TemplateError retry={retry} /> : <TemplateSkeleton />
 
 const TEMPLATE_MAP: Record<string, React.ComponentType> = {
-  classic: ClassicTemplate,
-  modern: ModernTemplate,
-  professional: ProfessionalTemplate,
-  elegant: ElegantTemplate,
-  circular: CircularTemplate,
-  vertical: VerticalTemplate,
-  horizontal: HorizontalTemplate,
-  simple: SimpleTemplate,
-  chrono: ChronoTemplate,
-  casual: CasualTemplate,
-  luxurious: LuxuriousTemplate,
-  metro: MetroTemplate,
-  ats: ATSTemplate,
-  sharp: SharpTemplate,
-  glass: GlassTemplate,
-  neon: NeonTemplate,
-  nordic: NordicTemplate,
-  executive: ExecutiveTemplate,
-  sidebar: SidebarTemplate,
-  fold: FoldTemplate,
-  bauhaus: BauhausTemplate,
-  outline: OutlineTemplate,
-  spark: SparkTemplate,
-  carbon: CarbonTemplate,
-  blueprint: BlueprintTemplate,
-  riviera: RivieraTemplate,
-  stripe: StripeTemplate,
-  vogue: VogueTemplate,
-  coral: CoralTemplate,
-  aurora: AuroraTemplate,
-  lumiere: LumiereTemplate,
-  consul: ConsulTemplate,
-  rose: RoseTemplate,
-  minimal: MinimalTemplate,
-  wave: WaveTemplate,
-  banner: BannerTemplate,
-  vertex: VertexTemplate,
-  prestige: PrestigeTemplate,
-  oslo: OsloTemplate,
-  kyoto: KyotoTemplate,
-  geneva: GenevaTemplate,
-  windsor: WindsorTemplate,
-  milan: MilanTemplate,
-  zurich: ZurichTemplate,
-  porto: PortoTemplate,
-  barcelona: BarcelonaTemplate,
-  vienna: ViennaTemplate,
-  berlin: BerlinTemplate,
-  stockholm: StockholmTemplate,
-  dublin: DublinTemplate,
-  helsinki: HelsinkiTemplate,
-  lagos: LagosTemplate,
-  seoul: SeoulTemplate,
-  copenhagen: CopenhagenTemplate,
-  genevanoir: GenevanoirTemplate,
-  reykjavik: ReykjavikTemplate,
-  apex: ApexTemplate,
-  nova: NovaTemplate,
-  cascade: CascadeTemplate,
-  onyx: OnyxTemplate,
-  mosaic: MosaicTemplate,
-  larsson: LarssonTemplate,
-  thompson: ThompsonTemplate,
-  classicmono: ClassicMonoTemplate,
-  editorialserif: EditorialSerifTemplate,
-  boldblock: BoldBlockTemplate,
-  timelinevertical: TimelineVerticalTemplate,
-  swissgrid: SwissGridTemplate,
-  charcoalclassic: CharcoalClassicTemplate,
-  navyexecutive: NavyExecutiveTemplate,
-  coralsidebar: CoralSidebarTemplate,
-  neobrutalist: NeoBrutalistTemplate,
-  sagebotanical: SageBotanicalTemplate,
-  terminalcv: TerminalCVTemplate,
-  iosappcv: IOSAppCVTemplate,
-  datadriven: DataDrivenTemplate,
-  boardingpass: BoardingPassTemplate,
-  magazinespread: MagazineSpreadTemplate,
-  legalbrief: LegalBriefTemplate,
-  engraved: EngravedTemplate,
-  chalkboard: ChalkboardTemplate,
-  academiccv: AcademicCVTemplate,
-  psychologist: PsychologistTemplate,
-  chefmenu: ChefMenuTemplate,
-  sommelier: SommelierTemplate,
-  hotelcv: HotelCVTemplate,
-  bartendercv: BartenderCVTemplate,
-  postcardcv: PostcardCVTemplate,
-  frontpage: FrontPageTemplate,
-  vinylcv: VinylCVTemplate,
-  callsheet: CallSheetTemplate,
-  copywritermag: CopywriterMagTemplate,
-  animatorcv: AnimatorCVTemplate,
-  codeeditor: CodeEditorTemplate,
-  civileng: CivilEngTemplate,
-  mechanical: MechanicalTemplate,
-  devopsterminal: DevOpsTerminalTemplate,
-  processflow: ProcessFlowTemplate,
-  medicalchart: MedicalChartTemplate,
-  vitalsigns: VitalSignsTemplate,
-  vetcv: VetCVTemplate,
-  fieldjournal: FieldJournalTemplate,
-  notebookcv: NotebookCVTemplate,
-  pilotlog: PilotLogTemplate,
-  onboardingform: OnboardingFormTemplate,
-  athletecard: AthleteCardTemplate,
-  translatorcv: TranslatorCVTemplate,
-  herbariumcv: HerbariumCVTemplate,
-  risodesigner: RisoDesignerTemplate,
-  uxtokens: UXTokensTemplate,
-  sketchbookillustrator: SketchbookIllustratorTemplate,
-  blueprintcv: BlueprintCVTemplate,
-  contactsheet: ContactSheetTemplate,
-  annualreport: AnnualReportTemplate,
-  financeterminal: FinanceTerminalTemplate,
-  campaignposter: CampaignPosterTemplate,
-  salespitch: SalesPitchTemplate,
-  ledgercv: LedgerCVTemplate,
-  cobalt: CobaltTemplate,
-  duality: DualityTemplate,
-  havana: HavanaTemplate,
-  helix: HelixTemplate,
-  lisbon: LisbonTemplate,
-  nautical: NauticalTemplate,
-  obsidian: ObsidianTemplate,
-  prism: PrismTemplate,
-  tokyo: TokyoTemplate,
-  vitae: VitaeTemplate,
-  meridian: MeridianTemplate,
+  classic:               dynamic(() => import("./templates/Classic"),               { ssr: false, loading }),
+  modern:                dynamic(() => import("./templates/Modern"),                { ssr: false, loading }),
+  professional:          dynamic(() => import("./templates/Professional"),          { ssr: false, loading }),
+  elegant:               dynamic(() => import("./templates/Elegant"),               { ssr: false, loading }),
+  circular:              dynamic(() => import("./templates/Circular"),              { ssr: false, loading }),
+  vertical:              dynamic(() => import("./templates/Vertical"),              { ssr: false, loading }),
+  horizontal:            dynamic(() => import("./templates/Horizontal"),            { ssr: false, loading }),
+  simple:                dynamic(() => import("./templates/Simple"),                { ssr: false, loading }),
+  chrono:                dynamic(() => import("./templates/Chrono"),                { ssr: false, loading }),
+  casual:                dynamic(() => import("./templates/Casual"),                { ssr: false, loading }),
+  luxurious:             dynamic(() => import("./templates/Luxurious"),             { ssr: false, loading }),
+  metro:                 dynamic(() => import("./templates/Metro"),                 { ssr: false, loading }),
+  ats:                   dynamic(() => import("./templates/ATS"),                   { ssr: false, loading }),
+  sharp:                 dynamic(() => import("./templates/Sharp"),                 { ssr: false, loading }),
+  glass:                 dynamic(() => import("./templates/Glass"),                 { ssr: false, loading }),
+  neon:                  dynamic(() => import("./templates/Neon"),                  { ssr: false, loading }),
+  nordic:                dynamic(() => import("./templates/Nordic"),                { ssr: false, loading }),
+  executive:             dynamic(() => import("./templates/Executive"),             { ssr: false, loading }),
+  sidebar:               dynamic(() => import("./templates/Sidebar"),               { ssr: false, loading }),
+  fold:                  dynamic(() => import("./templates/Fold"),                  { ssr: false, loading }),
+  bauhaus:               dynamic(() => import("./templates/Bauhaus"),               { ssr: false, loading }),
+  outline:               dynamic(() => import("./templates/Outline"),               { ssr: false, loading }),
+  spark:                 dynamic(() => import("./templates/Spark"),                 { ssr: false, loading }),
+  carbon:                dynamic(() => import("./templates/Carbon"),                { ssr: false, loading }),
+  blueprint:             dynamic(() => import("./templates/Blueprint"),             { ssr: false, loading }),
+  riviera:               dynamic(() => import("./templates/Riviera"),               { ssr: false, loading }),
+  stripe:                dynamic(() => import("./templates/Stripe"),                { ssr: false, loading }),
+  vogue:                 dynamic(() => import("./templates/Vogue"),                 { ssr: false, loading }),
+  coral:                 dynamic(() => import("./templates/Coral"),                 { ssr: false, loading }),
+  aurora:                dynamic(() => import("./templates/Aurora"),                { ssr: false, loading }),
+  lumiere:               dynamic(() => import("./templates/Lumiere"),               { ssr: false, loading }),
+  consul:                dynamic(() => import("./templates/Consul"),                { ssr: false, loading }),
+  rose:                  dynamic(() => import("./templates/Rose"),                  { ssr: false, loading }),
+  minimal:               dynamic(() => import("./templates/Minimal"),               { ssr: false, loading }),
+  wave:                  dynamic(() => import("./templates/Wave"),                  { ssr: false, loading }),
+  banner:                dynamic(() => import("./templates/Banner"),                { ssr: false, loading }),
+  vertex:                dynamic(() => import("./templates/Vertex"),                { ssr: false, loading }),
+  prestige:              dynamic(() => import("./templates/Prestige"),              { ssr: false, loading }),
+  oslo:                  dynamic(() => import("./templates/Oslo"),                  { ssr: false, loading }),
+  kyoto:                 dynamic(() => import("./templates/Kyoto"),                 { ssr: false, loading }),
+  geneva:                dynamic(() => import("./templates/Geneva"),                { ssr: false, loading }),
+  windsor:               dynamic(() => import("./templates/Windsor"),               { ssr: false, loading }),
+  milan:                 dynamic(() => import("./templates/Milan"),                 { ssr: false, loading }),
+  zurich:                dynamic(() => import("./templates/Zurich"),                { ssr: false, loading }),
+  porto:                 dynamic(() => import("./templates/Porto"),                 { ssr: false, loading }),
+  barcelona:             dynamic(() => import("./templates/Barcelona"),             { ssr: false, loading }),
+  vienna:                dynamic(() => import("./templates/Vienna"),                { ssr: false, loading }),
+  berlin:                dynamic(() => import("./templates/Berlin"),                { ssr: false, loading }),
+  stockholm:             dynamic(() => import("./templates/Stockholm"),             { ssr: false, loading }),
+  dublin:                dynamic(() => import("./templates/Dublin"),                { ssr: false, loading }),
+  helsinki:              dynamic(() => import("./templates/Helsinki"),              { ssr: false, loading }),
+  lagos:                 dynamic(() => import("./templates/Lagos"),                 { ssr: false, loading }),
+  seoul:                 dynamic(() => import("./templates/Seoul"),                 { ssr: false, loading }),
+  copenhagen:            dynamic(() => import("./templates/Copenhagen"),            { ssr: false, loading }),
+  genevanoir:            dynamic(() => import("./templates/GenevaNoir"),            { ssr: false, loading }),
+  reykjavik:             dynamic(() => import("./templates/Reykjavik"),             { ssr: false, loading }),
+  apex:                  dynamic(() => import("./templates/Apex"),                  { ssr: false, loading }),
+  nova:                  dynamic(() => import("./templates/Nova"),                  { ssr: false, loading }),
+  cascade:               dynamic(() => import("./templates/Cascade"),               { ssr: false, loading }),
+  onyx:                  dynamic(() => import("./templates/Onyx"),                  { ssr: false, loading }),
+  mosaic:                dynamic(() => import("./templates/Mosaic"),                { ssr: false, loading }),
+  larsson:               dynamic(() => import("./templates/Larsson"),               { ssr: false, loading }),
+  thompson:              dynamic(() => import("./templates/Thompson"),              { ssr: false, loading }),
+  classicmono:           dynamic(() => import("./templates/ClassicMono"),           { ssr: false, loading }),
+  editorialserif:        dynamic(() => import("./templates/EditorialSerif"),        { ssr: false, loading }),
+  boldblock:             dynamic(() => import("./templates/BoldBlock"),             { ssr: false, loading }),
+  timelinevertical:      dynamic(() => import("./templates/TimelineVertical"),      { ssr: false, loading }),
+  swissgrid:             dynamic(() => import("./templates/SwissGrid"),             { ssr: false, loading }),
+  charcoalclassic:       dynamic(() => import("./templates/CharcoalClassic"),       { ssr: false, loading }),
+  navyexecutive:         dynamic(() => import("./templates/NavyExecutive"),         { ssr: false, loading }),
+  coralsidebar:          dynamic(() => import("./templates/CoralSidebar"),          { ssr: false, loading }),
+  neobrutalist:          dynamic(() => import("./templates/NeoBrutalist"),          { ssr: false, loading }),
+  sagebotanical:         dynamic(() => import("./templates/SageBotanical"),         { ssr: false, loading }),
+  terminalcv:            dynamic(() => import("./templates/TerminalCV"),            { ssr: false, loading }),
+  iosappcv:              dynamic(() => import("./templates/IOSAppCV"),              { ssr: false, loading }),
+  datadriven:            dynamic(() => import("./templates/DataDriven"),            { ssr: false, loading }),
+  boardingpass:          dynamic(() => import("./templates/BoardingPass"),          { ssr: false, loading }),
+  magazinespread:        dynamic(() => import("./templates/MagazineSpread"),        { ssr: false, loading }),
+  legalbrief:            dynamic(() => import("./templates/LegalBrief"),            { ssr: false, loading }),
+  engraved:              dynamic(() => import("./templates/Engraved"),              { ssr: false, loading }),
+  chalkboard:            dynamic(() => import("./templates/Chalkboard"),            { ssr: false, loading }),
+  academiccv:            dynamic(() => import("./templates/AcademicCV"),            { ssr: false, loading }),
+  psychologist:          dynamic(() => import("./templates/Psychologist"),          { ssr: false, loading }),
+  chefmenu:              dynamic(() => import("./templates/ChefMenu"),              { ssr: false, loading }),
+  sommelier:             dynamic(() => import("./templates/Sommelier"),             { ssr: false, loading }),
+  hotelcv:               dynamic(() => import("./templates/HotelCV"),               { ssr: false, loading }),
+  bartendercv:           dynamic(() => import("./templates/BartenderCV"),           { ssr: false, loading }),
+  postcardcv:            dynamic(() => import("./templates/PostcardCV"),            { ssr: false, loading }),
+  frontpage:             dynamic(() => import("./templates/FrontPage"),             { ssr: false, loading }),
+  vinylcv:               dynamic(() => import("./templates/VinylCV"),               { ssr: false, loading }),
+  callsheet:             dynamic(() => import("./templates/CallSheet"),             { ssr: false, loading }),
+  copywritermag:         dynamic(() => import("./templates/CopywriterMag"),         { ssr: false, loading }),
+  animatorcv:            dynamic(() => import("./templates/AnimatorCV"),            { ssr: false, loading }),
+  codeeditor:            dynamic(() => import("./templates/CodeEditor"),            { ssr: false, loading }),
+  civileng:              dynamic(() => import("./templates/CivilEng"),              { ssr: false, loading }),
+  mechanical:            dynamic(() => import("./templates/Mechanical"),            { ssr: false, loading }),
+  devopsterminal:        dynamic(() => import("./templates/DevOpsTerminal"),        { ssr: false, loading }),
+  processflow:           dynamic(() => import("./templates/ProcessFlow"),           { ssr: false, loading }),
+  medicalchart:          dynamic(() => import("./templates/MedicalChart"),          { ssr: false, loading }),
+  vitalsigns:            dynamic(() => import("./templates/VitalSigns"),            { ssr: false, loading }),
+  vetcv:                 dynamic(() => import("./templates/VetCV"),                 { ssr: false, loading }),
+  fieldjournal:          dynamic(() => import("./templates/FieldJournal"),          { ssr: false, loading }),
+  notebookcv:            dynamic(() => import("./templates/NotebookCV"),            { ssr: false, loading }),
+  pilotlog:              dynamic(() => import("./templates/PilotLog"),              { ssr: false, loading }),
+  onboardingform:        dynamic(() => import("./templates/OnboardingForm"),        { ssr: false, loading }),
+  athletecard:           dynamic(() => import("./templates/AthleteCard"),           { ssr: false, loading }),
+  translatorcv:          dynamic(() => import("./templates/TranslatorCV"),          { ssr: false, loading }),
+  herbariumcv:           dynamic(() => import("./templates/HerbariumCV"),           { ssr: false, loading }),
+  risodesigner:          dynamic(() => import("./templates/RisoDesigner"),          { ssr: false, loading }),
+  uxtokens:              dynamic(() => import("./templates/UXTokens"),              { ssr: false, loading }),
+  sketchbookillustrator: dynamic(() => import("./templates/SketchbookIllustrator"), { ssr: false, loading }),
+  blueprintcv:           dynamic(() => import("./templates/BlueprintCV"),           { ssr: false, loading }),
+  contactsheet:          dynamic(() => import("./templates/ContactSheet"),          { ssr: false, loading }),
+  annualreport:          dynamic(() => import("./templates/AnnualReport"),          { ssr: false, loading }),
+  financeterminal:       dynamic(() => import("./templates/FinanceTerminal"),       { ssr: false, loading }),
+  campaignposter:        dynamic(() => import("./templates/CampaignPoster"),        { ssr: false, loading }),
+  salespitch:            dynamic(() => import("./templates/SalesPitch"),            { ssr: false, loading }),
+  ledgercv:              dynamic(() => import("./templates/LedgerCV"),              { ssr: false, loading }),
+  cobalt:                dynamic(() => import("./templates/Cobalt"),                { ssr: false, loading }),
+  duality:               dynamic(() => import("./templates/Duality"),               { ssr: false, loading }),
+  havana:                dynamic(() => import("./templates/Havana"),                { ssr: false, loading }),
+  helix:                 dynamic(() => import("./templates/Helix"),                 { ssr: false, loading }),
+  lisbon:                dynamic(() => import("./templates/Lisbon"),                { ssr: false, loading }),
+  nautical:              dynamic(() => import("./templates/Nautical"),              { ssr: false, loading }),
+  obsidian:              dynamic(() => import("./templates/Obsidian"),              { ssr: false, loading }),
+  prism:                 dynamic(() => import("./templates/Prism"),                 { ssr: false, loading }),
+  tokyo:                 dynamic(() => import("./templates/Tokyo"),                 { ssr: false, loading }),
+  vitae:                 dynamic(() => import("./templates/Vitae"),                 { ssr: false, loading }),
+  meridian:              dynamic(() => import("./templates/Meridian"),              { ssr: false, loading }),
 }
 
 // Google Fonts dynamic loader
@@ -277,8 +170,12 @@ const BASE_FONT = 14
 
 export default function ResumePreview({ overrideTemplateId }: { overrideTemplateId?: string }) {
   const { config } = useResumeStore()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => { setMounted(true) }, [])
+
   const effectiveTemplateId = overrideTemplateId ?? config.templateId
-  const Template = TEMPLATE_MAP[effectiveTemplateId as keyof typeof TEMPLATE_MAP] ?? ClassicTemplate
+  const Template = TEMPLATE_MAP[effectiveTemplateId] ?? TEMPLATE_MAP["classic"]
 
   const scale = config.fontSize / BASE_FONT
   // Compensated dimensions: visually always 210×297mm regardless of zoom
@@ -306,7 +203,7 @@ export default function ResumePreview({ overrideTemplateId }: { overrideTemplate
           lineHeight: config.spacing * 1.4,
         }}
       >
-        <Template />
+        {mounted ? <Template /> : <TemplateSkeleton />}
       </div>
     </>
   )
