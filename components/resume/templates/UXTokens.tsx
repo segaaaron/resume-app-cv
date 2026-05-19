@@ -40,7 +40,7 @@ export default function UXTokensTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              <span style={{ color: bg, fontWeight: 800, fontSize: 18 }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: bg, fontWeight: 800, fontSize: 18 }}>{initials || "N"}</span>}
             </div>
           )
         })()}

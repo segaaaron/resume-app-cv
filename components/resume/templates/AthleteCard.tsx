@@ -67,7 +67,7 @@ export default function AthleteCardTemplate() {
         </div>
         {/* Photo or decorative number */}
         <div style={{ width: 90, height: 90, borderRadius: "50%", border: `3px solid ${orange}`, flexShrink: 0, backgroundColor: orange + "22", display: "flex", alignItems: "center", justifyContent: "center", color: orange, fontWeight: 800, fontSize: 28 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
       </div>
 

@@ -40,7 +40,7 @@ export default function VogueTemplate() {
               className="w-full h-full flex items-center justify-center font-extrabold text-2xl text-white"
               style={{ backgroundColor: color }}
             >
-              {initials || "N"}
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
             </div>
         </div>
 

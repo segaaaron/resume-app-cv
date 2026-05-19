@@ -25,7 +25,7 @@ export default function LuxuriousTemplate() {
             className="w-24 h-24 rounded-full border-2 flex items-center justify-center shrink-0"
             style={{ borderColor: color, background: `${color}20` }}
           >
-            <span className="text-3xl font-extrabold" style={{ color }}>{initials || "N"}</span>
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span className="text-3xl font-extrabold" style={{ color }}>{initials || "N"}</span>}
           </div>
           <div className="flex-1">
             {fullName && <h1 className="text-3xl font-extrabold text-white tracking-wide">{fullName}</h1>}

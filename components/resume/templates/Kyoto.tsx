@@ -69,7 +69,7 @@ export default function KyotoTemplate() {
               display: "flex", alignItems: "center", justifyContent: "center",
               backgroundColor: `${charcoal}0d`,
             }}>
-              <span style={{ fontWeight: 700, fontSize: 32, color: charcoal }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ fontWeight: 700, fontSize: 32, color: charcoal }}>{initials || "N"}</span>}
             </div>
           )
         })()}

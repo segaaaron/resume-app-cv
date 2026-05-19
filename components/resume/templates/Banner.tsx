@@ -72,7 +72,7 @@ export default function BannerTemplate() {
         </div>
         <div style={{ width: 75, height: 75, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `2px solid ${navy}`, position: "relative" }}>
           <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: navy, fontWeight: 800, fontSize: 26 }}>
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
         </div>
       </div>

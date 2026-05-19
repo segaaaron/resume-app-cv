@@ -55,7 +55,7 @@ export default function NavyExecutiveTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 140, height: 140, borderRadius: "50%", background: "#1a3956", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: gold, fontWeight: 900, fontSize: 44 }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: gold, fontWeight: 900, fontSize: 44 }}>{initials || "N"}</span>}
             </div>
           )
         })()}

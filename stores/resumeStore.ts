@@ -210,12 +210,16 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
           : "es"
         fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
           .then(async (r) => {
-            if (!r.ok && r.status !== 503) {
-              const body = await r.json().catch(() => ({})) as { error?: string }
-              if (body.error) toast.error(body.error)
+            if (!r.ok) {
+              if (r.status === 503) {
+                console.warn("[thumbnail] PDF microservice unavailable (503)")
+              } else {
+                const body = await r.json().catch(() => ({})) as { error?: string }
+                if (body.error) toast.error(body.error)
+              }
             }
           })
-          .catch(() => {})
+          .catch((err) => { console.warn("[thumbnail] network error:", err) })
       },
 
       save: async (opts) => {

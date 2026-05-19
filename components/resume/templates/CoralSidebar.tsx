@@ -102,7 +102,7 @@ export default function CoralSidebarTemplate() {
       {/* Right sidebar */}
       <aside style={{ background: coral, color: cream, padding: "48px 28px", display: "flex", flexDirection: "column", gap: 28, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
         <div style={{ width: 180, height: 180, borderRadius: "50%", flexShrink: 0, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: cream, fontWeight: 800, fontSize: 52 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
 
         {/* Contact */}

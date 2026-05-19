@@ -49,7 +49,7 @@ export default function BerlinTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 70, height: 70, borderRadius: "50%", border: `2px solid ${accent}`, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: `${accent}18` }}>
-              <span style={{ fontFamily: mono, fontWeight: 700, fontSize: "20px", color: accent }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ fontFamily: mono, fontWeight: 700, fontSize: "20px", color: accent }}>{initials || "N"}</span>}
             </div>
           )
         })()}

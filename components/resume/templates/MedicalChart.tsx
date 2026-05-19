@@ -99,7 +99,7 @@ export default function MedicalChartTemplate() {
             const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
             return (
               <div style={{ width: 80, height: 80, borderRadius: 6, flexShrink: 0, backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <span style={{ color: "#fff", fontWeight: 800, fontSize: 26 }}>{initials || "N"}</span>
+                {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: "#fff", fontWeight: 800, fontSize: 26 }}>{initials || "N"}</span>}
               </div>
             )
           })()}

@@ -28,7 +28,7 @@ export default function ModernTemplate() {
             return (
               <div className="w-24 h-24 rounded-full bg-white/15 border-4 border-white/25 flex items-center justify-center">
                 <span className="text-3xl font-extrabold text-white/70">
-                  {initials || "N"}
+                  {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
                 </span>
               </div>
             )

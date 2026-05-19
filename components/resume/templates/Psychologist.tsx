@@ -47,7 +47,7 @@ export default function PsychologistTemplate() {
           printColorAdjust: "exact",
         }}>
           <div style={{ width: 80, height: 80, borderRadius: "50%", marginBottom: 12, border: `2px solid ${cream}`, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: cream, fontWeight: 800, fontSize: 24 }}>
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.25em" }}>★ CURRÍCULUM</div>
           <h1 style={{ fontFamily: "'Lora', serif", fontStyle: "italic", fontSize: 46, lineHeight: 1, margin: "12px 0 6px", fontWeight: 500 }}>

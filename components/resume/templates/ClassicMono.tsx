@@ -35,7 +35,7 @@ export default function ClassicMonoTemplate() {
       <aside style={{ padding: "44px 28px", borderRight: `1px solid ${rule}` }}>
         {/* Photo */}
         <div style={{ width: 150, height: 150, borderRadius: "50%", flexShrink: 0, backgroundColor: accent + "22", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 42 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
 
         {/* Name & title */}

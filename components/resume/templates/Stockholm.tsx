@@ -77,7 +77,7 @@ export default function StockholmTemplate() {
               display: "flex", alignItems: "center", justifyContent: "center",
               backgroundColor: `${skyBlue}20`,
             }}>
-              <span style={{ fontWeight: 800, fontSize: 24, color: skyBlue }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ fontWeight: 800, fontSize: 24, color: skyBlue }}>{initials || "N"}</span>}
             </div>
           )
         })()}

@@ -62,7 +62,7 @@ export default function LarssonTemplate() {
             display: "flex", alignItems: "center", justifyContent: "center",
             backgroundColor: `${accent}20`,
           }}>
-            <span style={{ color: accent, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: accent, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>}
           </div>
 
           <h1 style={{ fontSize: "13.5px", fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "0.02em", marginBottom: 5 }}>

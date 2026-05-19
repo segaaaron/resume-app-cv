@@ -28,7 +28,7 @@ export default function SharpTemplate() {
       <div className="relative overflow-hidden" style={{ backgroundColor: color }}>
         <div className="flex items-center gap-6 px-10 pt-8 pb-14">
           <div className="w-20 h-20 bg-white/20 border-4 border-white/30 flex items-center justify-center shrink-0 text-white font-black text-2xl" style={{ clipPath: "polygon(10% 0%, 100% 0%, 90% 100%, 0% 100%)" }}>
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
           <div>
             {fullName && <h1 className="text-3xl font-black text-white tracking-tight">{fullName}</h1>}

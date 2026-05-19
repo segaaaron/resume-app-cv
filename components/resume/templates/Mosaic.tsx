@@ -53,7 +53,7 @@ export default function MosaicTemplate() {
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
           <div style={{ width: "70px", height: "70px", marginBottom: 12, border: `3px solid ${accent}`, borderRadius: "8px", backgroundColor: accent + "22", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 22 }}>
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
           <h1 style={{
             fontSize: "28px", fontWeight: 900, color: "#111827",

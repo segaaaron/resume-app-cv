@@ -67,7 +67,7 @@ export default function OnyxTemplate() {
         display: "flex", alignItems: "center", gap: 20,
       }}>
         <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: `2px solid ${accent}`, flexShrink: 0, backgroundColor: accent + "22", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 24 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
         <div style={{ flex: 1 }}>
           <h1 style={{

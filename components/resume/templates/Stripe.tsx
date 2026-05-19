@@ -67,7 +67,7 @@ export default function StripeTemplate() {
                 color: "#fff",
               }}
             >
-              {initials || "N"}
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
             </div>
         </div>
       </div>

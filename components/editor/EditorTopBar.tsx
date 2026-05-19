@@ -133,7 +133,15 @@ export default function EditorTopBar({ hasAccess }: Props) {
     setDownloadingPdf(true)
     try {
       const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
-      if (!res.ok) { toast.error(t("print.error_pdf")); return }
+      if (!res.ok) {
+        const key = res.status === 403 ? "print.error_pdf_403"
+          : res.status === 429 ? "print.error_pdf_429"
+          : res.status === 404 ? "print.error_pdf_404"
+          : res.status >= 500 ? "print.error_pdf_500"
+          : "print.error_pdf"
+        toast.error(t(key))
+        return
+      }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")

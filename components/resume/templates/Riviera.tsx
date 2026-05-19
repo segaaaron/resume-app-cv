@@ -43,7 +43,7 @@ export default function RivieraTemplate() {
             className="rounded-full flex items-center justify-center font-extrabold text-2xl mb-4"
             style={{ width: 90, height: 90, border: `3px solid ${color}`, color, backgroundColor: "rgba(255,255,255,0.07)" }}
           >
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
         </div>
 

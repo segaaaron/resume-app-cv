@@ -90,9 +90,10 @@ export default function HelixTemplate() {
               </defs>
               {/* Hex background */}
               <polygon points="47,1 93,27 93,81 47,107 1,81 1,27" fill={DARK2} stroke={color} strokeWidth="2" />
-              <text x="47" y="64" textAnchor="middle" fill={color} fontSize="26" fontWeight="800">
-                {initials || "N"}
-              </text>
+              {config.photoUrl
+                ? <image href={config.photoUrl} x="1" y="1" width="92" height="106" preserveAspectRatio="xMidYMid slice" clipPath="url(#hex-photo-clip)" />
+                : <text x="47" y="64" textAnchor="middle" fill={color} fontSize="26" fontWeight="800">{initials || "N"}</text>
+              }
             </svg>
             {/* Outer dashed hex ring */}
             <svg

@@ -29,7 +29,7 @@ export default function CarbonTemplate() {
         {/* Avatar */}
         <div className="flex justify-center">
           <div className="w-20 h-20 rounded-full flex items-center justify-center font-extrabold text-xl border-2" style={{ borderColor: color, color, backgroundColor: color + "20" }}>
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
         </div>
 

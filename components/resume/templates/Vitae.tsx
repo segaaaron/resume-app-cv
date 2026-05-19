@@ -71,7 +71,7 @@ export default function VitaeTemplate() {
               display: "flex", alignItems: "center", justifyContent: "center",
               color: accent, fontWeight: 800, fontSize: "28px",
             }}>
-              {initials || "N"}
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
             </div>
           </div>
         </div>

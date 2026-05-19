@@ -31,7 +31,7 @@ export default function CasualTemplate() {
 
         <div className="relative flex items-center gap-6 z-10">
           <div className="w-20 h-20 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border-4 border-white/30">
-              <span className="text-2xl font-black text-white">{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span className="text-2xl font-black text-white">{initials || "N"}</span>}
             </div>
           <div>
             {fullName && <h1 className="text-3xl font-black text-white tracking-tight">{fullName}</h1>}

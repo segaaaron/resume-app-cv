@@ -1,16 +1,13 @@
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
-import { Check, BadgeCheck } from "lucide-react"
+import PricingClientSection from "@/components/marketing/PricingClientSection"
 import type { Metadata } from "next"
 import Script from "next/script"
-import PricingButtons from "@/components/marketing/PricingButtons"
-import ManageBillingButton from "@/components/marketing/ManageBillingButton"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
-import Link from "next/link"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 
@@ -159,83 +156,29 @@ export default async function PricingPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSoftwareApp) }}
       />
       <Navbar />
-      <main className="flex-1 py-12 sm:py-20 px-4">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-4">{t("title")}</h1>
-          <p className="text-muted-foreground text-base sm:text-lg mb-8 sm:mb-12">
-            {t("subtitle")}
-          </p>
-
-          {userIsPro && (
-            <div className="max-w-2xl mx-auto w-full mb-8 bg-primary/10 border border-primary/20 rounded-2xl px-6 py-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3 text-left">
-                <BadgeCheck className="h-8 w-8 text-primary shrink-0" />
-                <div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-bold text-foreground">{t("pro_member_title")}</p>
-                    {planInterval && (
-                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-primary/20 text-primary">
-                        {planInterval === "annual" ? t("plan_annual") : t("plan_monthly")}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    {subscriptionEndsAt
-                      ? `${t("pro_member_renews")} ${format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })}`
-                      : t("pro_member_active")}
-                  </p>
-                </div>
-              </div>
-              <ManageBillingButton />
-            </div>
-          )}
-
-          <div className="grid sm:grid-cols-2 gap-4 sm:gap-6 max-w-2xl mx-auto">
-            {/* Monthly */}
-            <div className="bg-white border-2 border-border rounded-2xl p-8 text-left">
-              <div className="mb-6">
-                <p className="text-sm font-medium text-muted-foreground mb-1">{t("monthly_label")}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">$15</span>
-                  <span className="text-muted-foreground">{t("monthly_period")}</span>
-                </div>
-              </div>
-              <ul className="space-y-2 mb-8">
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-foreground">
-                    <Check className="h-4 w-4 shrink-0 text-primary" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <PricingButtons plan="monthly" isPro={userIsPro} />
-              <p className="text-xs text-muted-foreground text-center mt-2">{t("cancel_anytime")}</p>
-            </div>
-
-            {/* Annual */}
-            <div className="bg-primary text-white rounded-2xl p-8 text-left">
-              <div className="mb-6">
-                <div className="flex items-center justify-between mb-1">
-                  <p className="text-sm font-medium text-white/70">{t("annual_label")}</p>
-                  <span className="text-xs bg-white/20 text-white px-2 py-0.5 rounded-full font-medium">{t("annual_badge")}</span>
-                </div>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-4xl font-bold">$144</span>
-                  <span className="text-white/70">{t("annual_period")}</span>
-                </div>
-                <p className="text-xs text-white/60 mt-1">{t("annual_equiv")}</p>
-              </div>
-              <ul className="space-y-2 mb-8">
-                {features.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-white/90">
-                    <Check className="h-4 w-4 shrink-0" /> {f}
-                  </li>
-                ))}
-              </ul>
-              <PricingButtons plan="annual" isPro={userIsPro} />
-              <p className="text-xs text-white/60 text-center mt-2">{t("cancel_anytime")}</p>
-            </div>
-          </div>
-        </div>
+      <main className="flex-1 py-12 sm:py-16">
+        <PricingClientSection
+          features={features}
+          userIsPro={userIsPro}
+          proMemberTitle={t("pro_member_title")}
+          proMemberRenews={t("pro_member_renews")}
+          proMemberActive={t("pro_member_active")}
+          planAnnual={t("plan_annual")}
+          planMonthly={t("plan_monthly")}
+          cancelAnytime={t("cancel_anytime")}
+          monthlyLabel={t("monthly_label")}
+          annualLabel={t("annual_label")}
+          annualBadge={t("annual_badge")}
+          annualEquiv={t("annual_equiv")}
+          titleText={t("title")}
+          subtitleText={t("subtitle")}
+          subscriptionEndsAt={
+            subscriptionEndsAt
+              ? format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })
+              : null
+          }
+          planInterval={planInterval}
+        />
       </main>
       <Footer />
     </div>

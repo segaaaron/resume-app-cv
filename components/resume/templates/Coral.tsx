@@ -42,7 +42,7 @@ export default function CoralTemplate() {
               className="rounded-full flex items-center justify-center font-extrabold text-2xl text-white"
               style={{ width: 84, height: 84, border: "3px solid rgba(255,255,255,0.4)", backgroundColor: "rgba(255,255,255,0.15)" }}
             >
-              {initials || "N"}
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
             </div>
         </div>
 

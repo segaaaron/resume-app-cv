@@ -82,7 +82,7 @@ export default function PrestigeTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 90, height: 90, borderRadius: "50%", flexShrink: 0, border: `3px solid ${copper}`, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ece6dd" }}>
-              <span style={{ fontWeight: 900, fontSize: 28, color: navy }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ fontWeight: 900, fontSize: 28, color: navy }}>{initials || "N"}</span>}
             </div>
           )
         })()}

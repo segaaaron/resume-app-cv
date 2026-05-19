@@ -47,7 +47,7 @@ export default function TimelineVerticalTemplate() {
       {/* Header */}
       <header style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", gap: 24, alignItems: "center", paddingBottom: 24, borderBottom: `1px solid ${ink}` }}>
         <div style={{ width: 120, height: 120, borderRadius: "50%", flexShrink: 0, backgroundColor: accent + "22", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 36 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
         <div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.2em", color: accent, textTransform: "uppercase" }}>Curriculum · {new Date().getFullYear()}</div>

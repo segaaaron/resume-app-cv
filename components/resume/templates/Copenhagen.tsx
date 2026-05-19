@@ -50,7 +50,7 @@ export default function CopenhagenTemplate() {
       <div style={{ marginBottom: 20 }}>
         {/* Photo with rounded-rect frame */}
         <div style={{ width: 80, height: 80, borderRadius: 12, float: "right", border: `2px solid ${accent}`, marginLeft: 16, backgroundColor: accent + "15", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 24 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
         <h1 style={{
           fontWeight: 700, fontSize: "26px", color: "#111827",
