@@ -63,14 +63,14 @@ export default function IOSAppCVTemplate() {
 
       {/* Profile card */}
       <div style={{ margin: "0 16px 16px", background: card, borderRadius: 16, padding: 18, display: "flex", gap: 14, alignItems: "center", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-        {config.photoUrl ? (
-          <div style={{ width: 68, height: 68, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{ width: 68, height: 68, borderRadius: "50%", background: "#c7c7cc", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-        )}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 68, height: 68, borderRadius: "50%", background: blue, flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 17, fontWeight: 700 }}>{pd.firstName || "First"} {pd.lastName || "Last"}</div>
           {pd.email && <div style={{ fontSize: 13, color: dim }}>{pd.email}</div>}

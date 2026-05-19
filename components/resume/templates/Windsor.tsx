@@ -83,17 +83,20 @@ export default function WindsorTemplate() {
             </div>
           </div>
 
-          {/* Photo with gold ring */}
-          {config.photoUrl && (
-            <div style={{
-              width: 80, height: 80, borderRadius: "50%",
-              border: `4px solid ${gold}`,
-              overflow: "hidden", flexShrink: 0,
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            </div>
-          )}
+          {/* Initials with gold ring */}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{
+                width: 80, height: 80, borderRadius: "50%",
+                border: `4px solid ${gold}`, flexShrink: 0,
+                backgroundColor: "rgba(255,255,255,0.1)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ color: gold, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
         </div>
       </div>
 

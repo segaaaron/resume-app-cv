@@ -90,42 +90,21 @@ export default function HotelCVTemplate() {
       </header>
 
       {/* Gold stats bar */}
-      {config.photoUrl && (
-        <div style={{
-          background: gold,
-          color: navy,
-          padding: "12px 40px",
-          display: "flex",
-          justifyContent: "center",
-          fontFamily: "ui-monospace, monospace",
-          fontSize: 10,
-          letterSpacing: "0.2em",
-          fontWeight: 700,
-          WebkitPrintColorAdjust: "exact",
-          printColorAdjust: "exact",
-        }}>
-          {/* Photo shown as a decorative row if available */}
-          <span style={{ letterSpacing: "0.3em" }}>· &nbsp; CURRICULUM VITAE &nbsp; ·</span>
-        </div>
-      )}
-
-      {/* No-photo gold divider */}
-      {!config.photoUrl && (
-        <div style={{
-          background: gold,
-          color: navy,
-          padding: "10px 40px",
-          textAlign: "center",
-          fontFamily: "ui-monospace, monospace",
-          fontSize: 10,
-          letterSpacing: "0.25em",
-          fontWeight: 700,
-          WebkitPrintColorAdjust: "exact",
-          printColorAdjust: "exact",
-        }}>
-          · &nbsp; CURRICULUM VITAE &nbsp; ·
-        </div>
-      )}
+      {/* Gold divider */}
+      <div style={{
+        background: gold,
+        color: navy,
+        padding: "10px 40px",
+        textAlign: "center",
+        fontFamily: "ui-monospace, monospace",
+        fontSize: 10,
+        letterSpacing: "0.25em",
+        fontWeight: 700,
+        WebkitPrintColorAdjust: "exact",
+        printColorAdjust: "exact",
+      }}>
+        · &nbsp; CURRICULUM VITAE &nbsp; ·
+      </div>
 
       {/* Main two-column */}
       <main style={{ padding: "30px 40px", display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 28, flex: 1 }}>

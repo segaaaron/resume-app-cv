@@ -59,16 +59,16 @@ export default function BoldBlockTemplate() {
           </div>
         </div>
 
-        {/* Photo */}
+        {/* Initials block */}
         <div style={{ position: "relative", zIndex: 1, flexShrink: 0 }}>
-          {config.photoUrl ? (
-            <div style={{ width: 180, height: 180, borderRadius: 12, overflow: "hidden" }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-            </div>
-          ) : (
-            <div style={{ width: 180, height: 180, borderRadius: 12, background: "repeating-linear-gradient(135deg, #2a2a2a 0 6px, #1a1a1a 6px 12px)", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-          )}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{ width: 180, height: 180, borderRadius: 12, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                <span style={{ fontWeight: 900, fontSize: 72, color: "#fff", lineHeight: 1 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
         </div>
       </header>
 

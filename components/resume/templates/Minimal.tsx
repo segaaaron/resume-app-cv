@@ -58,13 +58,14 @@ export default function MinimalTemplate() {
           <h1 style={{ fontSize: 36, fontWeight: 900, color: navy, lineHeight: 1.05 }}>{firstName}</h1>
           <h1 style={{ fontSize: 36, fontWeight: 900, color: navy, lineHeight: 1.05 }}>{lastName}</h1>
         </div>
-        <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", flexShrink: 0, backgroundColor: "#eee", position: "relative" }}>
-          {config.photoUrl ? (
-            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-          ) : (
-            <svg width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#e8e8e8" /><circle cx="40" cy="30" r="14" fill="#bbb" /><ellipse cx="40" cy="68" rx="24" ry="18" fill="#bbb" /></svg>
-          )}
-        </div>
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 80, height: 80, borderRadius: "50%", flexShrink: 0, backgroundColor: "#e8e8e8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontWeight: 900, fontSize: 24, color: navy }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
       </div>
 
       <div style={{ height: 2, backgroundColor: navy, marginBottom: 20 }} />

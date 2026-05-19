@@ -44,13 +44,15 @@ export default function BerlinTemplate() {
             {`// ${pd.jobTitle}`}
           </p>
         )}
-        {/* Photo if provided */}
-        {config.photoUrl && (
-          <div style={{ width: 70, height: 70, borderRadius: "50%", overflow: "hidden", border: `2px solid ${accent}`, marginBottom: 12 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        {/* Initials circle */}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 70, height: 70, borderRadius: "50%", border: `2px solid ${accent}`, marginBottom: 12, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: `${accent}18` }}>
+              <span style={{ fontFamily: mono, fontWeight: 700, fontSize: "20px", color: accent }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
         {/* Contact row */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 14px" }}>
           {pd.email    && <span style={{ fontFamily: mono, fontSize: "8px", color: "#6b7280", display: "flex", alignItems: "center", gap: 5 }}><Mail size={8} color={accent} />{pd.email}</span>}

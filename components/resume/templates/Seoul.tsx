@@ -9,6 +9,7 @@ export default function SeoulTemplate() {
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -68,18 +69,9 @@ export default function SeoulTemplate() {
         </svg>
 
         {/* Photo */}
-        {config.photoUrl && (
-          <div style={{
-            width: 80, height: 80, borderRadius: "50%",
-            overflow: "hidden", flexShrink: 0,
-            border: "4px solid rgba(255,255,255,0.2)",
-            marginBottom: 14, alignSelf: "center",
-            position: "relative", zIndex: 1,
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        <div style={{ width: 80, height: 80, borderRadius: "50%", flexShrink: 0, border: "4px solid rgba(255,255,255,0.2)", marginBottom: 14, alignSelf: "center", position: "relative", zIndex: 1, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 800, fontSize: 24 }}>
+          {initials || "N"}
+        </div>
 
         {/* Name */}
         <div style={{ textAlign: "center", marginBottom: 20, position: "relative", zIndex: 1 }}>

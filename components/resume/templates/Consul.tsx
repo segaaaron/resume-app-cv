@@ -93,12 +93,7 @@ export default function ConsulTemplate() {
               display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}>
-              {config.photoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-              ) : (
-                <span style={{ color: "#fff", fontWeight: 900, fontSize: 24 }}>{initials}</span>
-              )}
+              <span style={{ color: "#fff", fontWeight: 900, fontSize: 24 }}>{initials || "N"}</span>
             </div>
           </div>
         </div>

@@ -39,22 +39,12 @@ export default function RivieraTemplate() {
       >
         {/* Photo area */}
         <div className="flex flex-col items-center px-5 pt-8 pb-6 text-center" style={{ borderBottom: `3px solid ${color}` }}>
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt=""
-              className="rounded-full object-cover mb-4"
-              style={{ width: 90, height: 90, border: `3px solid ${color}`, objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div
-              className="rounded-full flex items-center justify-center font-extrabold text-2xl mb-4"
-              style={{ width: 90, height: 90, border: `3px solid ${color}`, color, backgroundColor: "rgba(255,255,255,0.07)" }}
-            >
-              {initials}
-            </div>
-          )}
+          <div
+            className="rounded-full flex items-center justify-center font-extrabold text-2xl mb-4"
+            style={{ width: 90, height: 90, border: `3px solid ${color}`, color, backgroundColor: "rgba(255,255,255,0.07)" }}
+          >
+            {initials || "N"}
+          </div>
         </div>
 
         {/* Sidebar sections */}

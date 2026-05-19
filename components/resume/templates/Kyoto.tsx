@@ -58,18 +58,21 @@ export default function KyotoTemplate() {
         padding: "32px 20px",
         display: "flex", flexDirection: "column", gap: 20,
       }}>
-        {/* Photo in thin square frame */}
-        {config.photoUrl && (
-          <div style={{
-            width: "100px", height: "100px",
-            border: `2px solid ${charcoal}`,
-            overflow: "hidden", flexShrink: 0,
-            alignSelf: "center",
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        {/* Initials in thin square frame */}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{
+              width: "100px", height: "100px",
+              border: `2px solid ${charcoal}`,
+              flexShrink: 0, alignSelf: "center",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backgroundColor: `${charcoal}0d`,
+            }}>
+              <span style={{ fontWeight: 700, fontSize: 32, color: charcoal }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
 
         {/* Name in sidebar */}
         <div style={{ textAlign: "center" }}>

@@ -51,14 +51,14 @@ export default function NavyExecutiveTemplate() {
     } as React.CSSProperties}>
       {/* Sidebar */}
       <aside style={{ background: navy, color: ivory, padding: "44px 24px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-        {config.photoUrl ? (
-          <div style={{ width: 140, height: 140, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{ width: 140, height: 140, borderRadius: "50%", background: "#1a3956", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-        )}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 140, height: 140, borderRadius: "50%", background: "#1a3956", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: gold, fontWeight: 900, fontSize: 44 }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
 
         <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, lineHeight: 1.05, margin: "22px 0 4px", color: ivory }}>
           {pd.firstName || "First"} {pd.lastName || "Last"}

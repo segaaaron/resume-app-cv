@@ -38,22 +38,12 @@ export default function CoralTemplate() {
       >
         {/* Photo */}
         <div className="mb-3">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt=""
-              className="rounded-full object-cover"
-              style={{ width: 84, height: 84, border: "3px solid rgba(255,255,255,0.5)", objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div
+          <div
               className="rounded-full flex items-center justify-center font-extrabold text-2xl text-white"
               style={{ width: 84, height: 84, border: "3px solid rgba(255,255,255,0.4)", backgroundColor: "rgba(255,255,255,0.15)" }}
             >
-              {initials}
+              {initials || "N"}
             </div>
-          )}
         </div>
 
         {fullName && (

@@ -68,29 +68,16 @@ export default function MeridianTemplate() {
       >
         {/* Photo */}
         <div className="flex justify-center">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt=""
-              className="w-20 h-20 rounded-full object-cover"
-              style={{
-                border: `2px solid ${GOLD}`,
-                objectPosition: `center ${config.photoPosition ?? 15}%`,
-              }}
-            />
-          ) : (
-            <div
-              className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl"
-              style={{
-                backgroundColor: "rgba(255,255,255,0.10)",
-                border: `2px solid ${GOLD}`,
-                fontFamily: serif,
-              }}
-            >
-              {initials || "?"}
-            </div>
-          )}
+          <div
+            className="w-20 h-20 rounded-full flex items-center justify-center text-white font-bold text-xl"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.10)",
+              border: `2px solid ${GOLD}`,
+              fontFamily: serif,
+            }}
+          >
+            {initials || "N"}
+          </div>
         </div>
 
         {/* Name + job title */}

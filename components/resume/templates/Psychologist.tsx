@@ -17,6 +17,7 @@ export default function PsychologistTemplate() {
   const cream = "#f6f0e6"
   const ink = "#2b2218"
   const olive = config.colorScheme || "#6f7a4a"
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const terracotta = "#c97a55"
 
   return (
@@ -45,12 +46,9 @@ export default function PsychologistTemplate() {
           WebkitPrintColorAdjust: "exact",
           printColorAdjust: "exact",
         }}>
-          {config.photoUrl && (
-            <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", marginBottom: 12, border: `2px solid ${cream}` }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-            </div>
-          )}
+          <div style={{ width: 80, height: 80, borderRadius: "50%", marginBottom: 12, border: `2px solid ${cream}`, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: cream, fontWeight: 800, fontSize: 24 }}>
+            {initials || "N"}
+          </div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.25em" }}>★ CURRÍCULUM</div>
           <h1 style={{ fontFamily: "'Lora', serif", fontStyle: "italic", fontSize: 46, lineHeight: 1, margin: "12px 0 6px", fontWeight: 500 }}>
             {pd.firstName || "Nombre"}<br />{pd.lastName || "Apellido"}

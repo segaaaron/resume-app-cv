@@ -15,6 +15,7 @@ export default function AthleteCardTemplate() {
   const present = config.language === "en" ? "Present" : "Presente"
 
   const orange = config.colorScheme || "#f5a623"
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const navy = "#0c1f3d"
   const cream = "#f4ebd5"
   const ink = "#101010"
@@ -65,21 +66,9 @@ export default function AthleteCardTemplate() {
           </div>
         </div>
         {/* Photo or decorative number */}
-        {config.photoUrl ? (
-          <div style={{ width: 90, height: 90, borderRadius: "50%", overflow: "hidden", border: `3px solid ${orange}`, flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{
-            fontFamily: "'Inter Tight', 'Inter', sans-serif",
-            fontWeight: 900, fontSize: 80, color: orange,
-            lineHeight: 1, letterSpacing: "-0.05em", flexShrink: 0,
-            WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
-          }}>
-            {jerseyDisplay}
-          </div>
-        )}
+        <div style={{ width: 90, height: 90, borderRadius: "50%", border: `3px solid ${orange}`, flexShrink: 0, backgroundColor: orange + "22", display: "flex", alignItems: "center", justifyContent: "center", color: orange, fontWeight: 800, fontSize: 28 }}>
+          {initials || "N"}
+        </div>
       </div>
 
       {/* Two-column stats + skills */}

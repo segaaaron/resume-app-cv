@@ -36,17 +36,12 @@ export default function VogueTemplate() {
 
         {/* Photo — absolute top-right */}
         <div className="absolute top-0 right-0" style={{ width: 110, height: 110 }}>
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          ) : (
-            <div
+          <div
               className="w-full h-full flex items-center justify-center font-extrabold text-2xl text-white"
               style={{ backgroundColor: color }}
             >
-              {initials}
+              {initials || "N"}
             </div>
-          )}
         </div>
 
         {/* Name — big editorial style */}

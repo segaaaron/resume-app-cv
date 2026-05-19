@@ -15,6 +15,7 @@ export default function MosaicTemplate() {
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -51,18 +52,9 @@ export default function MosaicTemplate() {
           padding: "28px 32px",
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
-          {config.photoUrl && (
-            <div style={{
-              width: "70px", height: "70px",
-              overflow: "hidden", marginBottom: 12,
-              border: `3px solid ${accent}`,
-              /* square with slight rounding */
-              borderRadius: "8px",
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            </div>
-          )}
+          <div style={{ width: "70px", height: "70px", marginBottom: 12, border: `3px solid ${accent}`, borderRadius: "8px", backgroundColor: accent + "22", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 22 }}>
+            {initials || "N"}
+          </div>
           <h1 style={{
             fontSize: "28px", fontWeight: 900, color: "#111827",
             lineHeight: 1.05, letterSpacing: "-0.02em", marginBottom: 5,

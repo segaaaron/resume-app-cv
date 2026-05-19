@@ -79,17 +79,20 @@ export default function NovaTemplate() {
           display: "flex", flexDirection: "column", justifyContent: "center", gap: 8,
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
-          {config.photoUrl && (
-            <div style={{
-              width: "64px", height: "64px",
-              border: "2px solid rgba(255,255,255,0.5)",
-              overflow: "hidden", borderRadius: "4px",
-              marginBottom: 8,
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            </div>
-          )}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{
+                width: "64px", height: "64px",
+                border: "2px solid rgba(255,255,255,0.5)",
+                borderRadius: "4px", marginBottom: 8,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.15)",
+              }}>
+                <span style={{ color: "#fff", fontWeight: 900, fontSize: 22 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
           {pd.email    && <div style={{ display: "flex", gap: 7, alignItems: "center" }}><Mail size={8} color="rgba(255,255,255,0.7)" /><span style={{ fontSize: "8px", color: "rgba(255,255,255,0.95)", wordBreak: "break-all" }}>{pd.email}</span></div>}
           {pd.phone    && <div style={{ display: "flex", gap: 7, alignItems: "center" }}><Phone size={8} color="rgba(255,255,255,0.7)" /><span style={{ fontSize: "8px", color: "rgba(255,255,255,0.95)" }}>{pd.phone}</span></div>}
           {(pd.city || pd.country) && <div style={{ display: "flex", gap: 7, alignItems: "center" }}><MapPin size={8} color="rgba(255,255,255,0.7)" /><span style={{ fontSize: "8px", color: "rgba(255,255,255,0.95)" }}>{[pd.city, pd.country].filter(Boolean).join(", ")}</span></div>}

@@ -85,21 +85,19 @@ export default function CascadeTemplate() {
       }}>
         {/* Photo area */}
         <div style={{ padding: "28px 20px 20px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          {config.photoUrl ? (
-            <div style={{
-              width: "88px", height: "88px", borderRadius: "50%",
-              overflow: "hidden", border: "3px solid rgba(255,255,255,0.4)",
-              marginBottom: 14,
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            </div>
-          ) : (
-            /* Decorative SVG ring when no photo */
-            <svg width="80" height="80" viewBox="0 0 80 80" aria-hidden="true" style={{ marginBottom: 14, opacity: 0.3 }}>
-              <circle cx="40" cy="40" r="36" stroke="white" strokeWidth="1" fill="none" strokeDasharray="4 4" />
-            </svg>
-          )}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{
+                width: "88px", height: "88px", borderRadius: "50%",
+                border: "3px solid rgba(255,255,255,0.4)",
+                marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center",
+                backgroundColor: "rgba(255,255,255,0.15)",
+              }}>
+                <span style={{ color: "#fff", fontWeight: 900, fontSize: 28 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
           <h1 style={{
             fontSize: "15px", fontWeight: 900, color: "#fff",
             textAlign: "center", lineHeight: 1.2, letterSpacing: "0.01em", marginBottom: 4,

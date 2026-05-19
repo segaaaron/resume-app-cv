@@ -21,22 +21,12 @@ export default function LuxuriousTemplate() {
       {/* Dark header */}
       <div className="px-10 py-9" style={{ background: "linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)", borderBottom: `2px solid ${color}` }}>
         <div className="flex items-center gap-7">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt="Foto"
-              className="w-24 h-24 rounded-full object-cover border-2 shrink-0"
-              style={{ borderColor: color, objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div
-              className="w-24 h-24 rounded-full border-2 flex items-center justify-center shrink-0"
-              style={{ borderColor: color, background: `${color}20` }}
-            >
-              <span className="text-3xl font-extrabold" style={{ color }}>{initials || "?"}</span>
-            </div>
-          )}
+          <div
+            className="w-24 h-24 rounded-full border-2 flex items-center justify-center shrink-0"
+            style={{ borderColor: color, background: `${color}20` }}
+          >
+            <span className="text-3xl font-extrabold" style={{ color }}>{initials || "N"}</span>
+          </div>
           <div className="flex-1">
             {fullName && <h1 className="text-3xl font-extrabold text-white tracking-wide">{fullName}</h1>}
             {pd.jobTitle && <p className="mt-1 text-[11px] tracking-widest uppercase font-semibold" style={{ color }}>{pd.jobTitle}</p>}

@@ -54,30 +54,20 @@ export default function LarssonTemplate() {
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
           {/* Diamond photo frame */}
-          {config.photoUrl ? (
-            <div style={{
-              width: "84px", height: "84px",
-              borderRadius: "50%",
-              overflow: "hidden",
-              border: `3px solid ${accent}`,
-              marginBottom: 14, flexShrink: 0,
-              WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={config.photoUrl} alt=""
-                style={{
-                  width: "100%", height: "100%",
-                  objectFit: "cover",
-                  objectPosition: `center ${config.photoPosition ?? 20}%`,
-                }}
-              />
-            </div>
-          ) : (
-            <div style={{
-              width: "84px", height: "84px", borderRadius: "50%",
-              border: `2px solid ${accent}`, marginBottom: 14, flexShrink: 0,
-            }} />
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{
+                width: "84px", height: "84px", borderRadius: "50%",
+                border: `3px solid ${accent}`, marginBottom: 14, flexShrink: 0,
+                WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                backgroundColor: `${accent}20`,
+              }}>
+                <span style={{ color: accent, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()
           )}
 
           <h1 style={{ fontSize: "13.5px", fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "0.02em", marginBottom: 5 }}>

@@ -22,22 +22,12 @@ export default function VerticalTemplate() {
       <div className="w-[40%] shrink-0 p-8" style={{ backgroundColor: color + "15", borderRight: `3px solid ${color}` }}>
         {/* Photo / Avatar */}
         <div className="mb-6 text-center">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt="Foto"
-              className="w-24 h-24 rounded-full mx-auto object-cover border-4"
-              style={{ borderColor: color, objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div
-              className="w-24 h-24 rounded-full mx-auto flex items-center justify-center border-4"
-              style={{ backgroundColor: color, borderColor: color }}
-            >
-              <span className="text-3xl font-bold text-white">{initials || "?"}</span>
-            </div>
-          )}
+          <div
+            className="w-24 h-24 rounded-full mx-auto flex items-center justify-center border-4"
+            style={{ backgroundColor: color, borderColor: color }}
+          >
+            <span className="text-3xl font-bold text-white">{initials || "N"}</span>
+          </div>
           {fullName && (
             <h1 className="text-xl font-bold mt-3 leading-tight">{fullName}</h1>
           )}

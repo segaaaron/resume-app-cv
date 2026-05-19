@@ -71,17 +71,21 @@ export default function TokyoTemplate() {
             WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
           }} />
           <div style={{ padding: "28px 18px 24px" }}>
-            {config.photoUrl && (
-              <div style={{
-                width: "72px", height: "72px", borderRadius: "50%",
-                overflow: "hidden", border: `2.5px solid ${accent}`,
-                marginBottom: 12, flexShrink: 0,
-                WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-              </div>
-            )}
+            {(() => {
+              const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+              return (
+                <div style={{
+                  width: "72px", height: "72px", borderRadius: "50%",
+                  border: `2.5px solid ${accent}`,
+                  marginBottom: 12, flexShrink: 0,
+                  WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
+                  backgroundColor: `${accent}20`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                  <span style={{ color: accent, fontWeight: 900, fontSize: 22 }}>{initials || "N"}</span>
+                </div>
+              )
+            })()}
             <h1 style={{
               fontSize: "15px", fontWeight: 900, color: "#fff",
               lineHeight: 1.15, letterSpacing: "0.01em", marginBottom: 3,

@@ -10,6 +10,7 @@ export default function VertexTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const name = [pd.firstName || "Kathlyn", pd.lastName || "Vivo"].join(" ")
   const title = pd.jobTitle || "Graphic Designer"
   const email = pd.email || "kathlyn@email.com"
@@ -76,11 +77,9 @@ export default function VertexTemplate() {
             <p style={{ fontSize: 12, color: gold, fontWeight: 600, marginTop: 4, opacity: 0.8 }}>{title}</p>
           </div>
           <div style={{ width: 80, height: 80, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${gold}`, position: "relative" }}>
-            {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-            ) : (
-              <svg width="80" height="80" viewBox="0 0 80 80"><rect width="80" height="80" fill="#f0f0f0" rx="40" /><circle cx="40" cy="30" r="13" fill="#ccc" /><ellipse cx="40" cy="66" rx="22" ry="18" fill="#ccc" /></svg>
-            )}
+            <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: gold, fontWeight: 800, fontSize: 26 }}>
+              {initials || "N"}
+            </div>
           </div>
         </div>
 

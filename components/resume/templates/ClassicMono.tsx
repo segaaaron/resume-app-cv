@@ -11,6 +11,7 @@ export default function ClassicMonoTemplate() {
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sd
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -33,14 +34,9 @@ export default function ClassicMonoTemplate() {
       {/* Sidebar */}
       <aside style={{ padding: "44px 28px", borderRight: `1px solid ${rule}` }}>
         {/* Photo */}
-        {config.photoUrl ? (
-          <div style={{ width: 150, height: 150, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{ width: 150, height: 150, borderRadius: "50%", background: "repeating-linear-gradient(135deg, #d8d4cc 0 6px, #c9c4ba 6px 12px)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-        )}
+        <div style={{ width: 150, height: 150, borderRadius: "50%", flexShrink: 0, backgroundColor: accent + "22", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 42 }}>
+          {initials || "N"}
+        </div>
 
         {/* Name & title */}
         <div style={{ marginTop: 28 }}>

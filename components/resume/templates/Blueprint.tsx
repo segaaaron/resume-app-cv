@@ -38,22 +38,12 @@ export default function BlueprintTemplate() {
         >
           {/* Photo / initials */}
           <div className="mb-4">
-            {config.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={config.photoUrl}
-                alt=""
-                className="rounded-full object-cover border-4 border-white/30"
-                style={{ width: 88, height: 88, objectPosition: `center ${config.photoPosition ?? 15}%` }}
-              />
-            ) : (
-              <div
-                className="rounded-full flex items-center justify-center font-extrabold text-2xl border-4"
-                style={{ width: 88, height: 88, borderColor: "rgba(255,255,255,0.3)", color: "#fff", backgroundColor: "rgba(255,255,255,0.15)" }}
-              >
-                {initials}
-              </div>
-            )}
+            <div
+              className="rounded-full flex items-center justify-center font-extrabold text-2xl border-4"
+              style={{ width: 88, height: 88, borderColor: "rgba(255,255,255,0.3)", color: "#fff", backgroundColor: "rgba(255,255,255,0.15)" }}
+            >
+              {initials || "N"}
+            </div>
           </div>
 
           {fullName && (

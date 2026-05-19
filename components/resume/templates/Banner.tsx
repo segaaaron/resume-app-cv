@@ -11,6 +11,7 @@ export default function BannerTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const name = [pd.firstName || "Carlos", pd.lastName || "Miass"].join(" ")
   const title = pd.jobTitle || "Graphic Designer"
   const email = pd.email || "carlos.m@email.com"
@@ -70,11 +71,9 @@ export default function BannerTemplate() {
           <p style={{ fontSize: 12, color: accent, fontWeight: 600, marginTop: 4 }}>{title}</p>
         </div>
         <div style={{ width: 75, height: 75, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `2px solid ${navy}`, position: "relative" }}>
-          {config.photoUrl ? (
-            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-          ) : (
-            <svg width="75" height="75" viewBox="0 0 75 75"><rect width="75" height="75" fill="#eef" /><circle cx="37" cy="28" r="13" fill="#bbc" /><ellipse cx="37" cy="64" rx="22" ry="18" fill="#bbc" /></svg>
-          )}
+          <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: navy, fontWeight: 800, fontSize: 26 }}>
+            {initials || "N"}
+          </div>
         </div>
       </div>
 

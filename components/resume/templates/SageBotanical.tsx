@@ -40,14 +40,14 @@ export default function SageBotanicalTemplate() {
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
       }}>
         <div style={{ display: "flex", gap: 28, alignItems: "center" }}>
-          {config.photoUrl ? (
-            <div style={{ width: 130, height: 130, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-            </div>
-          ) : (
-            <div style={{ width: 130, height: 130, borderRadius: "50%", background: "rgba(0,0,0,0.15)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-          )}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{ width: 130, height: 130, borderRadius: "50%", background: "rgba(0,0,0,0.15)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: bg, fontWeight: 900, fontSize: 44 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
           <div>
             <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontStyle: "italic", fontSize: 16, opacity: 0.85 }}>— curriculum vitæ</div>
             <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 52, lineHeight: 1, margin: "6px 0 4px", letterSpacing: "-0.02em" }}>

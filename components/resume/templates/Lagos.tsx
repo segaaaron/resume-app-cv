@@ -49,18 +49,21 @@ export default function LagosTemplate() {
         display: "flex", flexDirection: "column",
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
       }}>
-        {/* Photo circular with white border ring 6px */}
-        {config.photoUrl && (
-          <div style={{
-            width: 88, height: 88, borderRadius: "50%",
-            overflow: "hidden", flexShrink: 0,
-            border: "6px solid rgba(255,255,255,0.85)",
-            marginBottom: 16, alignSelf: "center",
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        {/* Initials circle */}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{
+              width: 88, height: 88, borderRadius: "50%", flexShrink: 0,
+              border: "6px solid rgba(255,255,255,0.85)",
+              marginBottom: 16, alignSelf: "center",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backgroundColor: "rgba(255,255,255,0.15)",
+            }}>
+              <span style={{ color: "#fff", fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
 
         {/* Name */}
         <div style={{ textAlign: "center", marginBottom: 16 }}>

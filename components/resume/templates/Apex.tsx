@@ -55,16 +55,19 @@ export default function ApexTemplate() {
         </svg>
 
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          {config.photoUrl && (
-            <div style={{
-              width: "82px", height: "82px", borderRadius: "50%",
-              overflow: "hidden", border: "3px solid rgba(255,255,255,0.6)",
-              flexShrink: 0,
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            </div>
-          )}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{
+                width: "82px", height: "82px", borderRadius: "50%",
+                border: "3px solid rgba(255,255,255,0.6)", flexShrink: 0,
+                backgroundColor: "rgba(255,255,255,0.15)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ color: "#fff", fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
           <div>
             <h1 style={{
               fontSize: "28px", fontWeight: 900, color: "#fff",

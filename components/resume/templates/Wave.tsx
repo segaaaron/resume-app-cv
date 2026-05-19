@@ -60,13 +60,14 @@ export default function WaveTemplate() {
       {/* Header with wave */}
       <div style={{ position: "relative", background: `linear-gradient(135deg, ${headerDark}, ${headerLight})`, paddingBottom: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18, padding: "28px 30px 0" }}>
-          <div style={{ width: 70, height: 70, borderRadius: "50%", overflow: "hidden", border: "3px solid " + cyan, flexShrink: 0, backgroundColor: headerDark, position: "relative" }}>
-            {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-            ) : (
-              <svg width="70" height="70" viewBox="0 0 70 70"><circle cx="35" cy="26" r="12" fill="#ffffff55" /><ellipse cx="35" cy="60" rx="20" ry="16" fill="#ffffff55" /></svg>
-            )}
-          </div>
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{ width: 70, height: 70, borderRadius: "50%", border: "3px solid " + cyan, flexShrink: 0, backgroundColor: headerDark, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <span style={{ color: cyan, fontWeight: 900, fontSize: 22 }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
           <div>
             <h1 style={{ fontSize: 28, fontWeight: 900, color: "#fff", lineHeight: 1.1 }}>{firstName} {lastName}</h1>
             <p style={{ fontSize: 12, color: cyan, fontWeight: 600, marginTop: 4 }}>{title}</p>

@@ -51,14 +51,14 @@ export default function CharcoalClassicTemplate() {
         padding: "16px 28px 16px 16px", display: "flex", alignItems: "center", gap: 22, marginBottom: 30,
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
       }}>
-        {config.photoUrl ? (
-          <div style={{ width: 108, height: 108, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{ width: 108, height: 108, borderRadius: "50%", background: "#cfd5db", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-        )}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 108, height: 108, borderRadius: "50%", background: "#cfd5db", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ fontWeight: 900, fontSize: 36, color: ink }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
         <div style={{ flex: 1 }}>
           <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1, color: bg }}>
             {(pd.firstName || "First").toUpperCase()} {(pd.lastName || "Last").toUpperCase()}

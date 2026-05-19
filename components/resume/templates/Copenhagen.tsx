@@ -13,6 +13,7 @@ export default function CopenhagenTemplate() {
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -48,16 +49,9 @@ export default function CopenhagenTemplate() {
       {/* Header */}
       <div style={{ marginBottom: 20 }}>
         {/* Photo with rounded-rect frame */}
-        {config.photoUrl && (
-          <div style={{
-            width: 80, height: 80, borderRadius: 12,
-            overflow: "hidden", float: "right",
-            border: `2px solid #e5e7eb`, marginLeft: 16,
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        <div style={{ width: 80, height: 80, borderRadius: 12, float: "right", border: `2px solid ${accent}`, marginLeft: 16, backgroundColor: accent + "15", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 24 }}>
+          {initials || "N"}
+        </div>
         <h1 style={{
           fontWeight: 700, fontSize: "26px", color: "#111827",
           lineHeight: 1.1, marginBottom: 4,

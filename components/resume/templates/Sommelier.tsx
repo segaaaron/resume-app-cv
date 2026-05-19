@@ -84,10 +84,7 @@ export default function SommelierTemplate() {
           printColorAdjust: "exact",
           overflow: "hidden",
         }}>
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          ) : initials}
+          {initials || "N"}
         </div>
 
         <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.4em", marginTop: 14, color: burgundy }}>

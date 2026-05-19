@@ -16,6 +16,7 @@ export default function CoralSidebarTemplate() {
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -100,14 +101,9 @@ export default function CoralSidebarTemplate() {
 
       {/* Right sidebar */}
       <aside style={{ background: coral, color: cream, padding: "48px 28px", display: "flex", flexDirection: "column", gap: 28, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-        {config.photoUrl ? (
-          <div style={{ width: 180, height: 180, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{ width: 180, height: 180, borderRadius: "50%", background: "rgba(0,0,0,0.15)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-        )}
+        <div style={{ width: 180, height: 180, borderRadius: "50%", flexShrink: 0, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: cream, fontWeight: 800, fontSize: 52 }}>
+          {initials || "N"}
+        </div>
 
         {/* Contact */}
         <div>

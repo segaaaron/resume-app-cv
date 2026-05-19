@@ -36,12 +36,14 @@ export default function UXTokensTemplate() {
           width: 8, height: 40, background: accent, borderRadius: 2, flexShrink: 0,
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }} />
-        {config.photoUrl && (
-          <div style={{ width: 56, height: 56, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        )}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 56, height: 56, borderRadius: "50%", flexShrink: 0, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+              <span style={{ color: bg, fontWeight: 800, fontSize: 18 }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
         <div style={{ flex: 1 }}>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, color: dim, letterSpacing: "0.2em" }}>
             token: identity/name

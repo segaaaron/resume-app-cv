@@ -49,13 +49,14 @@ export default function NauticalTemplate() {
       <div style={{ width: "28%", backgroundColor: sidebar, padding: "0", flexShrink: 0, color: "#fff" }}>
         {/* Photo area */}
         <div style={{ padding: "24px 20px", display: "flex", justifyContent: "center" }}>
-          <div style={{ width: 85, height: 85, borderRadius: "50%", overflow: "hidden", border: "3px solid " + accent, backgroundColor: sidebar, position: "relative" }}>
-            {config.photoUrl ? (
-              <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-            ) : (
-              <svg width="85" height="85" viewBox="0 0 85 85"><circle cx="42" cy="32" r="14" fill="#ffffff55" /><ellipse cx="42" cy="72" rx="22" ry="18" fill="#ffffff55" /></svg>
-            )}
-          </div>
+          {(() => {
+              const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+              return (
+                <div style={{ width: 85, height: 85, borderRadius: "50%", border: "3px solid " + accent, backgroundColor: sidebar, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: "#fff", fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+                </div>
+              )
+            })()}
         </div>
 
         <div style={{ padding: "0 18px 24px" }}>

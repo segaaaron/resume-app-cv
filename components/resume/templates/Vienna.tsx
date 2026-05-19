@@ -71,17 +71,20 @@ export default function ViennaTemplate() {
             </p>
           )}
 
-          {/* Photo */}
-          {config.photoUrl && (
-            <div style={{
-              position: "absolute", top: 0, right: 0,
-              width: 80, height: 80, borderRadius: "50%",
-              overflow: "hidden", border: `3px solid ${accent}`,
-            }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            </div>
-          )}
+          {/* Initials circle */}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div style={{
+                position: "absolute", top: 0, right: 0,
+                width: 80, height: 80, borderRadius: "50%",
+                border: `3px solid ${accent}`, backgroundColor: `${accent}18`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ fontWeight: 900, fontSize: 26, color: accent }}>{initials || "N"}</span>
+              </div>
+            )
+          })()}
 
           {/* Contact row */}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 18px" }}>

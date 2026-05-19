@@ -129,26 +129,21 @@ export default function SketchbookIllustratorTemplate() {
 
           {/* Right column — photo + tools */}
           <div style={{ width: 200, flexShrink: 0 }}>
-            {config.photoUrl ? (
-              <div style={{
-                width: 200, height: 200, borderRadius: 8, overflow: "hidden",
-                transform: "rotate(3deg)", boxShadow: "4px 6px 0 rgba(0,0,0,0.1)",
-              }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-              </div>
-            ) : (
-              <div style={{
-                width: 200, height: 200, background: "#e8d5b7", borderRadius: 8,
-                transform: "rotate(3deg)", display: "flex", alignItems: "center",
-                justifyContent: "center", fontFamily: "ui-monospace, monospace",
-                fontSize: 10, color: ink, letterSpacing: "0.18em",
-                boxShadow: "4px 6px 0 rgba(0,0,0,0.1)",
-                WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
-              }}>
-                {config.language === "en" ? "PORTRAIT ✏" : "RETRATO ✏"}
-              </div>
-            )}
+            {(() => {
+              const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+              return (
+                <div style={{
+                  width: 200, height: 200, background: "#e8d5b7", borderRadius: 8,
+                  transform: "rotate(3deg)", display: "flex", alignItems: "center",
+                  justifyContent: "center", fontFamily: "'Caveat', cursive",
+                  fontSize: 72, color: ink, fontWeight: 700,
+                  boxShadow: "4px 6px 0 rgba(0,0,0,0.1)",
+                  WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
+                }}>
+                  {initials || "N"}
+                </div>
+              )
+            })()}
 
             {visible("skills") && skills.length > 0 && (
               <div style={{ marginTop: 30, transform: "rotate(-2deg)", fontFamily: "'Caveat', cursive", fontSize: 20, lineHeight: 1.3 }}>

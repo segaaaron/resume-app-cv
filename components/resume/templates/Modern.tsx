@@ -23,16 +23,16 @@ export default function ModernTemplate() {
       <div className="w-[34%] shrink-0 text-white px-6 pt-8 pb-8 flex flex-col gap-6" style={{ backgroundColor: color }}>
         {/* Photo */}
         <div className="flex justify-center">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="Photo" className="w-24 h-24 rounded-full object-cover border-4 border-white/30" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          ) : (
-            <div className="w-24 h-24 rounded-full bg-white/15 border-4 border-white/25 flex items-center justify-center">
-              <span className="text-3xl font-extrabold text-white/70">
-                {pd.firstName?.charAt(0)?.toUpperCase() ?? "?"}
-              </span>
-            </div>
-          )}
+          {(() => {
+            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+            return (
+              <div className="w-24 h-24 rounded-full bg-white/15 border-4 border-white/25 flex items-center justify-center">
+                <span className="text-3xl font-extrabold text-white/70">
+                  {initials || "N"}
+                </span>
+              </div>
+            )
+          })()}
         </div>
 
         {/* Name block in sidebar */}

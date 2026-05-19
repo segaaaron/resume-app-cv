@@ -18,6 +18,7 @@ export default function OnyxTemplate() {
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -65,16 +66,9 @@ export default function OnyxTemplate() {
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         display: "flex", alignItems: "center", gap: 20,
       }}>
-        {config.photoUrl && (
-          <div style={{
-            width: "80px", height: "80px", borderRadius: "50%",
-            overflow: "hidden", border: `2px solid ${accent}`,
-            flexShrink: 0,
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        <div style={{ width: "80px", height: "80px", borderRadius: "50%", border: `2px solid ${accent}`, flexShrink: 0, backgroundColor: accent + "22", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 24 }}>
+          {initials || "N"}
+        </div>
         <div style={{ flex: 1 }}>
           <h1 style={{
             fontSize: "26px", fontWeight: 900, color: "#fff",

@@ -78,13 +78,14 @@ export default function PrestigeTemplate() {
             {github   && <span style={{ display: "flex", alignItems: "center", gap: 4 }}><GitFork size={9} color={copper} />{github}</span>}
           </div>
         </div>
-        <div style={{ width: 90, height: 90, borderRadius: "50%", overflow: "hidden", flexShrink: 0, border: `3px solid ${copper}`, position: "relative" }}>
-          {config.photoUrl ? (
-            <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-          ) : (
-            <svg width="90" height="90" viewBox="0 0 90 90"><rect width="90" height="90" fill="#ece6dd" rx="45" /><circle cx="45" cy="34" r="15" fill="#ccc" /><ellipse cx="45" cy="74" rx="24" ry="18" fill="#ccc" /></svg>
-          )}
-        </div>
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ width: 90, height: 90, borderRadius: "50%", flexShrink: 0, border: `3px solid ${copper}`, display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#ece6dd" }}>
+              <span style={{ fontWeight: 900, fontSize: 28, color: navy }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
       </div>
 
       {/* Quote/summary block */}

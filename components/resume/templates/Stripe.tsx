@@ -58,16 +58,7 @@ export default function StripeTemplate() {
 
         {/* Right: photo */}
         <div className="shrink-0">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt=""
-              className="object-cover"
-              style={{ width: 88, height: 88, borderRadius: "50%", border: "3px solid rgba(255,255,255,0.4)", objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div
+          <div
               className="flex items-center justify-center font-extrabold text-2xl"
               style={{
                 width: 88, height: 88, borderRadius: "50%",
@@ -76,9 +67,8 @@ export default function StripeTemplate() {
                 color: "#fff",
               }}
             >
-              {initials}
+              {initials || "N"}
             </div>
-          )}
         </div>
       </div>
 

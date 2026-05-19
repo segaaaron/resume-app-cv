@@ -84,12 +84,14 @@ export default function VetCVTemplate() {
             </div>
           )}
         </div>
-        {config.photoUrl && (
-          <div style={{ marginLeft: "auto", width: 80, height: 80, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        )}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{ marginLeft: "auto", width: 80, height: 80, borderRadius: "50%", flexShrink: 0, backgroundColor: "rgba(255,255,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <span style={{ color: sand, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
       </header>
 
       {/* Main */}

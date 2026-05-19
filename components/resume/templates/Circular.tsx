@@ -24,21 +24,12 @@ export default function CircularTemplate() {
         style={{ backgroundColor: color, borderRadius: "0 0 50% 50% / 0 0 40px 40px" }}
       >
         <div className="flex items-center gap-6">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt="Foto"
-              className="w-24 h-24 rounded-full object-cover border-4 border-white/30 shrink-0"
-              style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div
-              className="w-24 h-24 rounded-full border-4 border-white/30 flex items-center justify-center shrink-0"
-              style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
-            >
-              <span className="text-3xl font-extrabold">{initials || "?"}</span>
-            </div>
+          <div
+            className="w-24 h-24 rounded-full border-4 border-white/30 flex items-center justify-center shrink-0"
+            style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
+          >
+            <span className="text-3xl font-extrabold">{initials || "N"}</span>
+          </div>
           )}
           <div>
             {fullName && <h1 className="text-3xl font-extrabold mb-0.5 tracking-tight">{fullName}</h1>}

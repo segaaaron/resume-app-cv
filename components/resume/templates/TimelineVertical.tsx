@@ -8,6 +8,7 @@ export default function TimelineVerticalTemplate() {
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
   const accent = config.colorScheme
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -45,14 +46,9 @@ export default function TimelineVerticalTemplate() {
     }}>
       {/* Header */}
       <header style={{ display: "grid", gridTemplateColumns: "120px 1fr auto", gap: 24, alignItems: "center", paddingBottom: 24, borderBottom: `1px solid ${ink}` }}>
-        {config.photoUrl ? (
-          <div style={{ width: 120, height: 120, borderRadius: "50%", overflow: "hidden", flexShrink: 0 }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 20}%` }} />
-          </div>
-        ) : (
-          <div style={{ width: 120, height: 120, borderRadius: "50%", background: "repeating-linear-gradient(135deg, #d8d4cc 0 6px, #c9c4ba 6px 12px)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-        )}
+        <div style={{ width: 120, height: 120, borderRadius: "50%", flexShrink: 0, backgroundColor: accent + "22", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 36 }}>
+          {initials || "N"}
+        </div>
         <div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.2em", color: accent, textTransform: "uppercase" }}>Curriculum · {new Date().getFullYear()}</div>
           <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 52, lineHeight: 1, margin: "4px 0 6px", letterSpacing: "-0.02em" }}>

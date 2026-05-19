@@ -30,19 +30,9 @@ export default function CasualTemplate() {
         <div className="absolute right-16 bottom-2 w-20 h-20 rounded-full" style={{ backgroundColor: "rgba(255,255,255,0.07)" }} />
 
         <div className="relative flex items-center gap-6 z-10">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={config.photoUrl}
-              alt="Foto"
-              className="w-20 h-20 rounded-2xl object-cover border-4 border-white/40 shrink-0"
-              style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }}
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border-4 border-white/30">
-              <span className="text-2xl font-black text-white">{initials || "?"}</span>
+          <div className="w-20 h-20 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border-4 border-white/30">
+              <span className="text-2xl font-black text-white">{initials || "N"}</span>
             </div>
-          )}
           <div>
             {fullName && <h1 className="text-3xl font-black text-white tracking-tight">{fullName}</h1>}
             {pd.jobTitle && <p className="text-white/80 text-sm font-semibold mt-0.5">{pd.jobTitle}</p>}

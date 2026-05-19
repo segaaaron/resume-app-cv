@@ -57,32 +57,18 @@ export default function PostcardCVTemplate() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* Left: scenery illustration */}
           <div style={{ height: 220, background: sky, position: "relative", overflow: "hidden", border: `1px solid ${ink}` }}>
-            {config.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={config.photoUrl}
-                alt=""
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  objectPosition: `center ${config.photoPosition ?? 20}%`,
-                }}
-              />
-            ) : (
-              <svg width="100%" height="100%" viewBox="0 0 200 220">
-                <rect width="200" height="220" fill={sky} />
-                <polygon points="0,140 60,80 110,120 160,60 200,100 200,220 0,220" fill={green} opacity="0.6" />
-                <polygon points="0,170 80,110 140,140 200,120 200,220 0,220" fill={green} />
-                <circle cx="160" cy="50" r="18" fill="#ffd23f" />
-                <text x="100" y="195" fontSize="18" textAnchor="middle" fontFamily="'Caveat', cursive" fill="#fff" fontWeight="700">
-                  {config.language === "en" ? "Greetings from" : "Saludos desde"}
-                </text>
-                <text x="100" y="214" fontSize="11" textAnchor="middle" fontFamily="ui-monospace, monospace" fill="#fff" letterSpacing="0.3em">
-                  {location.slice(0, 18)}
-                </text>
-              </svg>
-            )}
+            <svg width="100%" height="100%" viewBox="0 0 200 220">
+              <rect width="200" height="220" fill={sky} />
+              <polygon points="0,140 60,80 110,120 160,60 200,100 200,220 0,220" fill={green} opacity="0.6" />
+              <polygon points="0,170 80,110 140,140 200,120 200,220 0,220" fill={green} />
+              <circle cx="160" cy="50" r="18" fill="#ffd23f" />
+              <text x="100" y="195" fontSize="18" textAnchor="middle" fontFamily="'Caveat', cursive" fill="#fff" fontWeight="700">
+                {config.language === "en" ? "Greetings from" : "Saludos desde"}
+              </text>
+              <text x="100" y="214" fontSize="11" textAnchor="middle" fontFamily="ui-monospace, monospace" fill="#fff" letterSpacing="0.3em">
+                {location.slice(0, 18)}
+              </text>
+            </svg>
           </div>
 
           {/* Right: postcard message */}

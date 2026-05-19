@@ -11,6 +11,7 @@ export default function ObsidianTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const name = [pd.firstName || "Michael", pd.lastName || "Larsson"].join(" ")
   const title = pd.jobTitle || "Community Manager"
   const email = pd.email || "michael@email.com"
@@ -58,11 +59,9 @@ export default function ObsidianTemplate() {
           {/* Photo */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: 16 }}>
             <div style={{ width: 85, height: 85, borderRadius: "50%", overflow: "hidden", border: `3px solid ${blue}`, position: "relative" }}>
-              {config.photoUrl ? (
-                <img src={config.photoUrl} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} alt="" />
-              ) : (
-                <svg width="85" height="85" viewBox="0 0 85 85"><rect width="85" height="85" fill="#1a2e40" rx="42" /><circle cx="42" cy="32" r="14" fill="#ffffff44" /><ellipse cx="42" cy="72" rx="22" ry="18" fill="#ffffff44" /></svg>
-              )}
+              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: blue, fontWeight: 800, fontSize: 28 }}>
+                {initials || "N"}
+              </div>
             </div>
           </div>
 

@@ -16,6 +16,34 @@ import {
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import { useAIProfileFill } from "./hooks/useAIProfileFill"
+import type { ResumeSections } from "@/types/resume"
+
+type SectionIntent =
+  | "summary" | "jobTitle" | "workExperience" | "education"
+  | "skills" | "languages" | "projects" | "volunteer" | "hobbies"
+  | null
+
+function detectSectionIntent(prompt: string): SectionIntent {
+  const p = prompt.toLowerCase()
+  if (/resumen|summary|perfil profesional|professional summary/.test(p)) return "summary"
+  if (/título|titulo|cargo|job title|puesto|posici[oó]n/.test(p)) return "jobTitle"
+  if (/experiencia|trabajo|laboral|work experience|empleo|empresa/.test(p)) return "workExperience"
+  if (/educaci[oó]n|estudio|universidad|carrera|grado|degree|school/.test(p)) return "education"
+  if (/habilidad|skill|competencia|conocimiento/.test(p)) return "skills"
+  if (/idioma|language|lengua/.test(p)) return "languages"
+  if (/proyecto|project/.test(p)) return "projects"
+  if (/voluntari|volunteer/.test(p)) return "volunteer"
+  if (/hobby|hobbie|inter[eé]s|pasatiempo/.test(p)) return "hobbies"
+  return null
+}
+
+function isCVEmpty(sectionData: ResumeSections): boolean {
+  const summary = (sectionData.summary as string) ?? ""
+  const workExp = (sectionData.workExperience as unknown[]) ?? []
+  const education = (sectionData.education as unknown[]) ?? []
+  const skills = (sectionData.skills as unknown[]) ?? []
+  return !summary.trim() && workExp.length === 0 && education.length === 0 && skills.length === 0
+}
 
 // ── Reusable diff block ────────────────────────────────────────────────────────
 function DiffBlock({
@@ -115,7 +143,12 @@ export default function AIProfileFillPanel() {
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set())
 
+  // Detect which section the user is asking about (set on generate, not on every keystroke)
+  const [sectionIntent, setSectionIntent] = useState<SectionIntent>(null)
+
   async function handleGenerate() {
+    // Detect section intent from current prompt before clearing state
+    setSectionIntent(detectSectionIntent(prompt))
     // Reset all applied UI state before generating
     setAppliedSummary(false); setAppliedJobTitle(false); setAppliedHobbies(false)
     setAppliedSkills(false); setAppliedLanguages(false)
@@ -128,6 +161,11 @@ export default function AIProfileFillPanel() {
       setSelectedLanguages(new Set((data.suggestedLanguages ?? []).map((l) => l.name)))
     }
   }
+
+  // Show all sections when CV is empty or user didn't mention a specific section
+  const cvIsEmpty = isCVEmpty(sectionData as ResumeSections)
+  const showAll = cvIsEmpty || !sectionIntent
+  function show(section: SectionIntent) { return showAll || sectionIntent === section }
 
   // ── Apply handlers ─────────────────────────────────────────────────────────
   function applySkills() {
@@ -226,7 +264,7 @@ export default function AIProfileFillPanel() {
           />
           <p className="text-[10px] text-muted-foreground">{prompt.length}/500</p>
 
-          <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white" onClick={handleGenerate} disabled={loading}>
+          <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white" onClick={handleGenerate} disabled={loading || prompt.trim().length < 10}>
             {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
             {loading ? t("btn_generating") : t("btn_generate")}
           </Button>
@@ -238,7 +276,7 @@ export default function AIProfileFillPanel() {
               </p>
 
               {/* Work experience */}
-              {result!.workExperienceUpdates?.map(u => {
+              {show("workExperience") && result!.workExperienceUpdates?.map(u => {
                 const job = workExps.find(j => j.id === u.id)
                 if (!job) return null
                 return (
@@ -257,7 +295,7 @@ export default function AIProfileFillPanel() {
               })}
 
               {/* New work experience entries */}
-              {result!.workExperienceNew?.map((entry, i) => (
+              {show("workExperience") && result!.workExperienceNew?.map((entry, i) => (
                 <div key={i} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
@@ -303,7 +341,7 @@ export default function AIProfileFillPanel() {
               ))}
 
               {/* Education */}
-              {result!.educationUpdates?.map(u => {
+              {show("education") && result!.educationUpdates?.map(u => {
                 const edu = educations.find(e => e.id === u.id)
                 if (!edu) return null
                 return (
@@ -322,7 +360,7 @@ export default function AIProfileFillPanel() {
               })}
 
               {/* Projects */}
-              {result!.projectUpdates?.map(u => {
+              {show("projects") && result!.projectUpdates?.map(u => {
                 const proj = projects.find(p => p.id === u.id)
                 if (!proj) return null
                 return (
@@ -341,7 +379,7 @@ export default function AIProfileFillPanel() {
               })}
 
               {/* Volunteer */}
-              {result!.volunteerUpdates?.map(u => {
+              {show("volunteer") && result!.volunteerUpdates?.map(u => {
                 const vol = volunteers.find(v => v.id === u.id)
                 if (!vol) return null
                 return (
@@ -360,7 +398,7 @@ export default function AIProfileFillPanel() {
               })}
 
               {/* Summary */}
-              {result!.summary && (
+              {show("summary") && result!.summary && (
                 <DiffBlock
                   icon={<span className="text-[10px]">📝</span>}
                   label={t("label_summary")}
@@ -380,7 +418,7 @@ export default function AIProfileFillPanel() {
               )}
 
               {/* Job title */}
-              {result!.jobTitle && (
+              {show("jobTitle") && result!.jobTitle && (
                 <DiffBlock
                   icon={<span className="text-[10px]">🏷️</span>}
                   label={t("label_job_title")}
@@ -401,7 +439,7 @@ export default function AIProfileFillPanel() {
               )}
 
               {/* Hobbies */}
-              {result!.hobbies && (
+              {show("hobbies") && result!.hobbies && (
                 <DiffBlock
                   icon={<span className="text-[10px]">🎯</span>}
                   label={t("label_hobbies")}
@@ -421,7 +459,7 @@ export default function AIProfileFillPanel() {
               )}
 
               {/* Skills */}
-              {(result!.suggestedSkills?.length ?? 0) > 0 && (
+              {show("skills") && (result!.suggestedSkills?.length ?? 0) > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground">{t("label_suggested_skills")}</p>
@@ -452,7 +490,7 @@ export default function AIProfileFillPanel() {
               )}
 
               {/* Languages */}
-              {(result!.suggestedLanguages?.length ?? 0) > 0 && (
+              {show("languages") && (result!.suggestedLanguages?.length ?? 0) > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">

@@ -28,14 +28,9 @@ export default function CarbonTemplate() {
       <div className="w-52 shrink-0 px-5 pt-8 pb-8 flex flex-col gap-5" style={{ backgroundColor: "#0f172a" }}>
         {/* Avatar */}
         <div className="flex justify-center">
-          {config.photoUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={config.photoUrl} alt="" className="w-20 h-20 rounded-full object-cover border-2" style={{ borderColor: color, objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          ) : (
-            <div className="w-20 h-20 rounded-full flex items-center justify-center font-extrabold text-xl border-2" style={{ borderColor: color, color, backgroundColor: color + "20" }}>
-              {initials || "?"}
-            </div>
-          )}
+          <div className="w-20 h-20 rounded-full flex items-center justify-center font-extrabold text-xl border-2" style={{ borderColor: color, color, backgroundColor: color + "20" }}>
+            {initials || "N"}
+          </div>
         </div>
 
         {fullName && (

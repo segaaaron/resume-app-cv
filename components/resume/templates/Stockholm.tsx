@@ -66,17 +66,21 @@ export default function StockholmTemplate() {
         padding: "28px 20px",
         display: "flex", flexDirection: "column",
       }}>
-        {/* Photo */}
-        {config.photoUrl && (
-          <div style={{
-            width: 80, height: 80, borderRadius: "50%",
-            overflow: "hidden", border: `3px solid ${skyBlue}`,
-            marginBottom: 16, alignSelf: "center", flexShrink: 0,
-          }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-          </div>
-        )}
+        {/* Initials circle */}
+        {(() => {
+          const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
+          return (
+            <div style={{
+              width: 80, height: 80, borderRadius: "50%",
+              border: `3px solid ${skyBlue}`,
+              marginBottom: 16, alignSelf: "center", flexShrink: 0,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              backgroundColor: `${skyBlue}20`,
+            }}>
+              <span style={{ fontWeight: 800, fontSize: 24, color: skyBlue }}>{initials || "N"}</span>
+            </div>
+          )
+        })()}
 
         {/* Contact */}
         <div style={{ marginBottom: 18 }}>
