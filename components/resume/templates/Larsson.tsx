@@ -35,6 +35,7 @@ export default function LarssonTemplate() {
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
+  const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const NAVY = "#1c2333"
   const NAVY_DARK = "#141824"
 
@@ -54,21 +55,15 @@ export default function LarssonTemplate() {
           WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
         }}>
           {/* Diamond photo frame */}
-          {(() => {
-            const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
-            return (
-              <div style={{
-                width: "84px", height: "84px", borderRadius: "50%",
-                border: `3px solid ${accent}`, marginBottom: 14, flexShrink: 0,
-                WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                backgroundColor: `${accent}20`,
-              }}>
-                <span style={{ color: accent, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
-              </div>
-            )
-          })()
-          )}
+          <div style={{
+            width: "84px", height: "84px", borderRadius: "50%",
+            border: `3px solid ${accent}`, marginBottom: 14, flexShrink: 0,
+            WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            backgroundColor: `${accent}20`,
+          }}>
+            <span style={{ color: accent, fontWeight: 900, fontSize: 26 }}>{initials || "N"}</span>
+          </div>
 
           <h1 style={{ fontSize: "13.5px", fontWeight: 800, color: "#fff", lineHeight: 1.2, letterSpacing: "0.02em", marginBottom: 5 }}>
             {[pd.firstName, pd.lastName].filter(Boolean).join(" ") || "Your Name"}

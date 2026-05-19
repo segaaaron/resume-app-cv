@@ -30,7 +30,6 @@ export default function CircularTemplate() {
           >
             <span className="text-3xl font-extrabold">{initials || "N"}</span>
           </div>
-          )}
           <div>
             {fullName && <h1 className="text-3xl font-extrabold mb-0.5 tracking-tight">{fullName}</h1>}
             {pd.jobTitle && <p className="text-white/75 text-sm font-medium">{pd.jobTitle}</p>}
