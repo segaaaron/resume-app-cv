@@ -24,7 +24,7 @@ export default function WorkExperienceSection() {
   const [openId, setOpenId] = useState<string | null>(null)
   useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [])
   const [improvingId, setImprovingId] = useState<string | null>(null)
-  const [aiVersions, setAiVersions] = useState<{ jobId: string; versions: string[] } | null>(null)
+  const [aiVersions, setAiVersions] = useState<{ jobId: string; bullets: string[] } | null>(null)
   const [improvedId, setImprovedId] = useState<string | null>(null)
 
   async function handleImprove(job: WorkExperienceItem) {
@@ -45,7 +45,15 @@ export default function WorkExperienceSection() {
       if (res.status === 422) { toast.error(ai("off_topic_bullet")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
-      setAiVersions({ jobId: job.id, versions: data.versions })
+      const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
+      if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
+      const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
+      const newContent = bullets.join("\n")
+      if (normalize(newContent) === normalize(job.description)) {
+        toast.info(ai("already_optimized"))
+        return
+      }
+      setAiVersions({ jobId: job.id, bullets })
     } catch {
       toast.error(ai("error_bullet"))
     } finally {
@@ -53,14 +61,14 @@ export default function WorkExperienceSection() {
     }
   }
 
-  function applyVersion(jobId: string, version: string) {
+  function applyBullets(jobId: string, bullets: string[]) {
     updateSectionData(
       "workExperience",
-      jobs.map((j) => (j.id === jobId ? { ...j, description: version } : j))
+      jobs.map((j) => (j.id === jobId ? { ...j, description: bullets.join("\n") } : j))
     )
     setAiVersions(null)
     setImprovedId(jobId)
-    toast.success(ai("summary_applied"))
+    toast.success(ai("apply_bullets"))
   }
 
   function addJob() {
@@ -167,34 +175,44 @@ export default function WorkExperienceSection() {
                   className="text-xs min-h-[80px] resize-none"
                 />
 
-                {/* AI versions panel */}
+                {/* AI bullets panel */}
                 {aiVersions?.jobId === job.id && (
                   <div className="mt-2 rounded-lg border border-indigo-200 bg-indigo-50/60 p-3 space-y-2">
                     <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" /> {ai("choose_version")}
+                      <Sparkles className="h-3 w-3" /> {ai("bullets_improved")} ({aiVersions.bullets.length})
                     </p>
-                    {aiVersions.versions.map((v, i) => (
-                      <div key={i} className="rounded-md bg-white border border-indigo-100 p-2.5 space-y-1.5">
-                        <p className="text-xs text-foreground leading-relaxed">{v}</p>
-                        <button
-                          type="button"
-                          onClick={() => applyVersion(job.id, v)}
-                          className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
-                        >
-                          {ai("use_version")}
-                        </button>
-                      </div>
-                    ))}
+                    <div className="rounded-md bg-white border border-indigo-100 p-2.5 space-y-1">
+                      {aiVersions.bullets.map((bullet, i) => (
+                        <p key={i} className="text-xs text-foreground leading-relaxed">{bullet}</p>
+                      ))}
+                    </div>
                     <p className="text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1.5 leading-relaxed">
                       ⚠ {ai("metrics_disclaimer")}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => setAiVersions(null)}
-                      className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
-                    >
-                      {ai("cancel")}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => applyBullets(job.id, aiVersions.bullets)}
+                        className="text-[11px] font-semibold text-indigo-600 hover:text-indigo-800 transition-colors"
+                      >
+                        {ai("apply_bullets")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setAiVersions(null); handleImprove(job) }}
+                        disabled={improvingId === job.id}
+                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                      >
+                        {ai("regenerate")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setAiVersions(null)}
+                        className="text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {ai("cancel")}
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

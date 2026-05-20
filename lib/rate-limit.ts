@@ -49,6 +49,31 @@ export async function checkRateLimit(userId: string, endpoint: string, limit = 2
 }
 
 /**
+ * Atomically increments the counter and returns whether the request is allowed.
+ * Replaces the check-then-act pattern (checkRateLimit + recordRateLimitUsage) with a
+ * single DB round-trip, eliminating the race condition where two concurrent requests
+ * both pass the check at count = limit - 1.
+ */
+export async function checkAndIncrementRateLimit(userId: string, endpoint: string, limit = 20): Promise<boolean> {
+  const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS)
+  const now = new Date()
+  const rows = await db.$queryRaw<Array<{ count: number; resetAt: Date }>>`
+    INSERT INTO "AIRateLimit" ("id", "userId", "endpoint", "count", "resetAt", "createdAt", "updatedAt")
+    VALUES (gen_random_uuid()::text, ${userId}, ${endpoint}, 1, ${resetAt}, ${now}, ${now})
+    ON CONFLICT ("userId", "endpoint") DO UPDATE
+    SET
+      "count"     = CASE WHEN "AIRateLimit"."resetAt" < NOW() THEN 1 ELSE "AIRateLimit"."count" + 1 END,
+      "resetAt"   = CASE WHEN "AIRateLimit"."resetAt" < NOW() THEN ${resetAt} ELSE "AIRateLimit"."resetAt" END,
+      "updatedAt" = ${now}
+    RETURNING count, "resetAt"
+  `
+  const row = rows[0]
+  if (!row) return true
+  rateLimitCache.delete(cacheKey(userId, endpoint))
+  return row.count <= limit
+}
+
+/**
  * Increments the usage counter for this key+endpoint.
  * Also updates the in-memory cache so the next checkRateLimit call reflects the increment.
  */

@@ -19,5 +19,9 @@ export async function GET(req: Request) {
     },
   })
 
+  await db.aIUsageLog.deleteMany({
+    where: { createdAt: { lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } }
+  })
+
   return NextResponse.json({ deleted: deleted.count })
 }

@@ -1,5 +1,6 @@
 "use client"
 
+import { memo } from "react"
 import { cn } from "@/lib/utils"
 import { Lock } from "lucide-react"
 import { ResumeThumbnail } from "./thumbnails"
@@ -13,7 +14,7 @@ interface TemplateCardProps {
   onSelect: (templateId: TemplateId, locked: boolean) => void
 }
 
-export function TemplateCard({
+export const TemplateCard = memo(function TemplateCard({
   template,
   locked,
   isSelected,
@@ -57,4 +58,4 @@ export function TemplateCard({
       </span>
     </button>
   )
-}
+})

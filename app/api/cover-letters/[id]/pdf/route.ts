@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { handleError, requireProUser } from "@/lib/controllers/shared"
 import { coverLetterService } from "@/lib/controllers/cover-letter-deps"
-import { checkRateLimit } from "@/lib/ai-client"
+import { checkAndIncrementRateLimit } from "@/lib/ai-client"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
 
@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: Params) {
 
     const letter = await coverLetterService.getPdfMeta(session.user.id, id)
 
-    const allowed = await checkRateLimit(session.user.id, "cover-letter-pdf-export", 20)
+    const allowed = await checkAndIncrementRateLimit(session.user.id, "cover-letter-pdf-export", 20)
     if (!allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
 
     const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"

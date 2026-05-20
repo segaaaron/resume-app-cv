@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import { devtools } from "zustand/middleware"
@@ -109,7 +110,7 @@ const defaultSectionData: ResumeSections = ResumeSectionsSchema.parse({})
 /** Hook for templates: returns sectionData sorted chronologically */
 export function useTemplateSectionData() {
   const raw = useResumeStore((s) => s.sectionData)
-  return applySectionOrder(raw)
+  return useMemo(() => applySectionOrder(raw), [raw])
 }
 
 export const useResumeStore = create<ResumeState & ResumeActions>()(

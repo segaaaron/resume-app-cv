@@ -284,16 +284,18 @@ export class ResumeService {
     })
     if (!resume) throw new AppError("not_found", 404)
 
-    const now = new Date()
-    const [total, last7d, last30d] = await Promise.all([
-      db.cVView.count({ where: { resumeId } }),
-      db.cVView.count({
-        where: { resumeId, viewedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-      }),
-      db.cVView.count({
-        where: { resumeId, viewedAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
-      }),
-    ])
+    const rows = await db.$queryRaw<Array<{ total: bigint; last7d: bigint; last30d: bigint }>>`
+      SELECT
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE "viewedAt" >= NOW() - INTERVAL '7 days') as last7d,
+        COUNT(*) FILTER (WHERE "viewedAt" >= NOW() - INTERVAL '30 days') as last30d
+      FROM "CVView"
+      WHERE "resumeId" = ${resumeId}
+    `
+    const row = rows[0]
+    const total = Number(row?.total ?? 0)
+    const last7d = Number(row?.last7d ?? 0)
+    const last30d = Number(row?.last30d ?? 0)
 
     return { total, last7d, last30d, isPublic: resume.isPublic, publicSlug: resume.publicSlug }
   }

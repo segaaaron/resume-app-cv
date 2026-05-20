@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import { useState } from "react"
+import { memo, useState } from "react"
 import { useSortable } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
 import { GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Eye, EyeOff, Scissors } from "lucide-react"
@@ -18,7 +18,7 @@ import type { ResumeSection } from "@/types/resume"
 import { cn } from "@/lib/utils"
 import SectionContent from "./SectionContent"
 
-export default function SectionBlock({ section }: { section: ResumeSection }) {
+const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSection }) {
   const t = useTranslations("editor")
   const [open, setOpen] = useState(section.type === "personalDetails")
   const { toggleSection, togglePageBreak, moveSectionToColumn } = useResumeStore()
@@ -102,4 +102,5 @@ export default function SectionBlock({ section }: { section: ResumeSection }) {
       )}
     </div>
   )
-}
+})
+export default SectionBlock

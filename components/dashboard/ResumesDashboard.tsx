@@ -59,7 +59,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       for (const resume of missing) {
         if (cancelled) break
         try {
-          const res = await fetch(`/api/resumes/${resume.id}/thumbnail?locale=${locale}`, { method: "POST" })
+          const res = await apiFetch(`/api/resumes/${resume.id}/thumbnail?locale=${locale}`, { method: "POST", silent: true })
           if (res.ok) {
             const data = await res.json() as { thumbnailUrl?: string }
             if (data.thumbnailUrl) {
@@ -103,7 +103,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
         return
       }
       try {
-        const res = await fetch("/api/billing/post-purchase-status")
+        const res = await apiFetch("/api/billing/post-purchase-status", { silent: true })
         if (res.ok) {
           const data = await res.json() as { plan: string; subscriptionStatus: string }
           if (data.plan === "PRO" && (data.subscriptionStatus === "ACTIVE" || data.subscriptionStatus === "PAST_DUE")) {

@@ -21,12 +21,13 @@ vi.mock("@/lib/ai-client", async (importOriginal) => {
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({
-            choices: [{ message: { content: '{"versions":["v1","v2","v3"]}' } }],
+            choices: [{ message: { content: '{"bullets":["• v1","• v2","• v3"]}' } }],
           }),
         },
       },
     })),
     checkRateLimit: vi.fn().mockResolvedValue(true),
+    checkAndIncrementRateLimit: vi.fn().mockResolvedValue(true),
     logAIUsage: vi.fn(),
   }
 })

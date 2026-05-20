@@ -53,6 +53,8 @@ model User {
 
   @@index([referredBy])
   @@index([deletedAt])
+  @@index([plan, subscriptionStatus, subscriptionEndsAt])
+  @@index([subscriptionStatus])
 }
 
 model Account {
@@ -197,6 +199,7 @@ model AIUsageLog {
   @@index([userId])
   @@index([endpoint])
   @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model ReferralConversion {
@@ -208,6 +211,8 @@ model ReferralConversion {
   referred   User     @relation("ReferredConversions", fields: [referredId], references: [id], onDelete: Cascade)
 
   @@unique([referrerId, referredId])
+  @@index([referrerId])
+  @@index([referredId])
 }
 
 model StripeEvent {

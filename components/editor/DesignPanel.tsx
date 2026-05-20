@@ -8,6 +8,7 @@ import { Slider } from "@/components/ui/slider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 import { useRef, useState } from "react"
+import { useShallow } from "zustand/react/shallow"
 import { Camera, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -62,7 +63,18 @@ const COLOR_PALETTES: { labelKey: string; colors: { hex: string; nameKey: string
 
 export default function DesignPanel() {
   const t = useTranslations("editor")
-  const { config, resumeId, setColor, setFont, setFontSize, setSpacing, setPhoto, setPhotoPosition } = useResumeStore()
+  const { config, resumeId, setColor, setFont, setFontSize, setSpacing, setPhoto, setPhotoPosition } = useResumeStore(
+    useShallow((s) => ({
+      config: s.config,
+      resumeId: s.resumeId,
+      setColor: s.setColor,
+      setFont: s.setFont,
+      setFontSize: s.setFontSize,
+      setSpacing: s.setSpacing,
+      setPhoto: s.setPhoto,
+      setPhotoPosition: s.setPhotoPosition,
+    }))
+  )
   const colorInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)

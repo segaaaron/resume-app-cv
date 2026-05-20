@@ -6,8 +6,8 @@ import { useResumeStore } from "@/stores/resumeStore"
 
 function TemplateSkeleton() {
   return (
-    <div className="w-full min-h-[297mm] bg-white relative overflow-hidden">
-      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-gray-100/80 to-transparent" />
+    <div className="w-full min-h-[297mm] bg-gray-100 relative overflow-hidden">
+      <div className="absolute inset-0 -translate-x-full animate-[shimmer_1.5s_infinite] bg-gradient-to-r from-transparent via-white/60 to-transparent" />
     </div>
   )
 }
@@ -174,6 +174,17 @@ export default function ResumePreview({ overrideTemplateId }: { overrideTemplate
 
   useEffect(() => { setMounted(true) }, [])
 
+  useEffect(() => {
+    const existingLink = document.head.querySelector(`link[data-font="${config.fontFamily}"]`)
+    if (existingLink) return
+    const link = document.createElement("link")
+    link.rel = "stylesheet"
+    link.href = buildFontUrl(config.fontFamily)
+    link.setAttribute("data-font", config.fontFamily)
+    document.head.appendChild(link)
+    // No remover — las fonts se acumulan en cache del browser, está bien
+  }, [config.fontFamily])
+
   const effectiveTemplateId = overrideTemplateId ?? config.templateId
   const Template = TEMPLATE_MAP[effectiveTemplateId] ?? TEMPLATE_MAP["classic"]
 
@@ -184,10 +195,6 @@ export default function ResumePreview({ overrideTemplateId }: { overrideTemplate
 
   return (
     <>
-      {/* Dynamically load the selected Google Font */}
-      {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-      <style>{`@import url('${buildFontUrl(config.fontFamily)}');`}</style>
-
       {/* web app — PDF contract class: "resume-pages" is queried by pdf-generator microservice.
           Do NOT rename without updating services/pdf-generator/src/contracts.ts */}
       <div

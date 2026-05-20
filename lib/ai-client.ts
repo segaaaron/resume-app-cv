@@ -2,7 +2,7 @@ import OpenAI from "openai"
 import { db } from "@/lib/db"
 
 // Re-export so existing AI routes don't need to change their import path
-export { checkRateLimit, recordRateLimitUsage } from "@/lib/rate-limit"
+export { checkRateLimit, recordRateLimitUsage, checkAndIncrementRateLimit } from "@/lib/rate-limit"
 
 // Lazy singleton — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
 let _openai: OpenAI | null = null

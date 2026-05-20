@@ -17,6 +17,7 @@ function SessionWatcher() {
   // useRef resets on every page load — prevents stale sessionStorage from triggering
   // logoutAction on refresh when the user is still authenticated.
   const wasAuthenticated = useRef(false)
+  const logoutTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (status === "authenticated") {
@@ -45,14 +46,17 @@ function SessionWatcher() {
           toast.error(SESSION_EXPIRED[lang] ?? SESSION_EXPIRED.es)
           wasAuthenticated.current = false
           const lang2 = document.documentElement.lang ?? "es"
-          setTimeout(() => logoutAction(`/${lang2}/login`), 1_500)
+          logoutTimeoutRef.current = setTimeout(() => logoutAction(`/${lang2}/login`), 1_500)
         } else {
           signingOut.current = false
         }
       }
       return res
     }
-    return () => { window.fetch = original }
+    return () => {
+      window.fetch = original
+      if (logoutTimeoutRef.current) clearTimeout(logoutTimeoutRef.current)
+    }
   }, [])
 
   return null

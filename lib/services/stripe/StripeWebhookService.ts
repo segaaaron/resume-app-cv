@@ -102,7 +102,10 @@ export class StripeWebhookService {
           const sub = (invoice as unknown as Record<string, unknown>).subscription
           return typeof sub === "string" ? sub : (sub as { id?: string } | null)?.id ?? null
         })()
-    if (!subscriptionId) return
+    if (!subscriptionId) {
+      this.logger.warn("handleInvoicePaid: no subscriptionId found — one-time or non-subscription invoice, skipping", { eventId: event.id, customerId })
+      return
+    }
 
     const subscription = await this.stripeClient.retrieveSubscription(subscriptionId)
     const firstItem = subscription.items.data[0]

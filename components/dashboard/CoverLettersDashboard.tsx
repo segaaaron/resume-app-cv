@@ -71,7 +71,17 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ title: t("new_letter_title") }),
       })
+      if (!res.ok) {
+        toast.error(t("create_error"))
+        setCreating(false)
+        return
+      }
       const data = await res.json()
+      if (!data?.id) {
+        toast.error(t("create_error"))
+        setCreating(false)
+        return
+      }
       router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))

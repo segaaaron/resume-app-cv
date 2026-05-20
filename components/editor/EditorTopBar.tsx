@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, AlertCircle } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useShallow } from "zustand/react/shallow"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -17,7 +18,18 @@ interface Props {
 
 export default function EditorTopBar({ hasAccess }: Props) {
   const router = useRouter()
-  const { title, setTitle, save, triggerThumbnail, isSaving, lastSaved, isDirty, resumeId } = useResumeStore()
+  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, triggerThumbnail } = useResumeStore(
+    useShallow((s) => ({
+      title: s.title,
+      setTitle: s.setTitle,
+      save: s.save,
+      isSaving: s.isSaving,
+      lastSaved: s.lastSaved,
+      isDirty: s.isDirty,
+      resumeId: s.resumeId,
+      triggerThumbnail: s.triggerThumbnail,
+    }))
+  )
   const [editing, setEditing] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [publicSlug, setPublicSlug] = useState<string | null>(null)
@@ -31,7 +43,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   useEffect(() => {
     if (!resumeId) return
-    fetch(`/api/resumes/${resumeId}`)
+    apiFetch(`/api/resumes/${resumeId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.isPublic !== undefined) {
@@ -44,7 +56,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   useEffect(() => {
     if (!resumeId || !isPublic) return
-    fetch(`/api/resumes/views?resumeId=${resumeId}`)
+    apiFetch(`/api/resumes/views?resumeId=${resumeId}`)
       .then((r) => r.json())
       .then((data) => setViewStats({ total: data.total ?? 0, last7d: data.last7d ?? 0 }))
       .catch(() => {})
@@ -72,7 +84,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
     if (hasAccess) {
       await save().catch(() => {})
       if (useResumeStore.getState().isDirty) {
-        toast.error(t("save_error") ?? "Error al guardar")
+        toast.error(t("save_error"))
         return
       }
     }
@@ -127,7 +139,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
   async function handleDownloadPdf() {
     if (!resumeId) return
     if (isDirty && hasAccess) {
-      // Skip thumbnail during save — will trigger after PDF completes to avoid concurrent Puppeteer calls
       await save({ skipThumbnail: true }).catch(() => {})
     }
     setDownloadingPdf(true)
@@ -151,7 +162,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      // Thumbnail refresh fires AFTER PDF download — sequential, not concurrent
       triggerThumbnail()
     } catch {
       toast.error(t("print.error_pdf"))
