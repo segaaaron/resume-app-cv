@@ -1,13 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { logoutAction } from "@/lib/actions/logout"
 import { useTranslations, useLocale } from "next-intl"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import ReferralCard from "@/components/dashboard/ReferralCard"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,10 +17,13 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
-import { Card } from "@/components/ui/card"
-import { User, Mail, Calendar, Crown, AlertCircle, BadgeCheck, Zap, Clock, CheckCircle2, Star, Sparkles, RefreshCcw, Download, Trash2, CreditCard } from "lucide-react"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
+import {
+  cardHeadStyle, cardIcoStyle, cardTitleStyle, cardSubStyle,
+  fieldLabelStyle, fieldHintStyle,
+  FieldInput, BtnGold, BtnGhost, DataCard,
+} from "./_settings-sub"
 
 interface UserData {
   id: string
@@ -38,17 +37,61 @@ interface UserData {
   createdAt: Date
 }
 
+// ─── Main component ───────────────────────────────────────────────────────────
+
 export default function SettingsForm({ user }: { user: UserData }) {
   const t = useTranslations("dashboard.settings")
+  const tRef = useTranslations("referral")
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
-  const [name, setName] = useState(user.name ?? "")
-  const [saving, setSaving] = useState(false)
-  const [cancelLoading, setCancelLoading] = useState(false)
+
+  const [name, setName]                 = useState(user.name ?? "")
+  const [saving, setSaving]             = useState(false)
   const [portalLoading, setPortalLoading] = useState(false)
-  const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscriptionStatus)
+  const [cancelLoading, setCancelLoading] = useState(false)
   const [exportLoading, setExportLoading] = useState(false)
   const [deleteLoading, setDeleteLoading] = useState(false)
+  const [subscriptionStatus, setSubscriptionStatus] = useState(user.subscriptionStatus)
+
+  const initials = (user.name ?? user.email)
+    .split(" ")
+    .slice(0, 2)
+    .map(w => w[0]?.toUpperCase() ?? "")
+    .join("") || "U"
+
+  const isPro    = user.plan === "PRO"
+  const isActive = subscriptionStatus === "ACTIVE"
+  const endsAt   = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
+
+  async function saveProfile() {
+    if (saving) return
+    setSaving(true)
+    try {
+      const res = await apiFetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) toast.success(t("save_success"))
+      else toast.error(t("save_error"))
+    } catch {
+      toast.error(t("save_error"))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    saveProfile()
+  }
+
+  useEffect(() => {
+    const handler = () => saveProfile()
+    document.addEventListener("settings-save", handler)
+    return () => document.removeEventListener("settings-save", handler)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [name])
 
   async function handleBillingPortal() {
     setPortalLoading(true)
@@ -59,10 +102,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
         body: JSON.stringify({ locale }),
       })
       const { url } = await res.json()
-      if (!res.ok || !url) {
-        toast.error(t("portal_error"))
-        return
-      }
+      if (!res.ok || !url) { toast.error(t("portal_error")); return }
       window.location.href = url
     } catch {
       toast.error(t("portal_error"))
@@ -93,10 +133,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
     setExportLoading(true)
     try {
       const res = await apiFetch("/api/user/data-export")
-      if (!res.ok) {
-        toast.error(t("export_error"))
-        return
-      }
+      if (!res.ok) { toast.error(t("export_error")); return }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -115,11 +152,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
     setDeleteLoading(true)
     try {
       const res = await apiFetch("/api/user/delete", { method: "DELETE" })
-      if (res.ok) {
-        await logoutAction(`/${locale}/`)
-      } else {
-        toast.error(t("delete_error"))
-      }
+      if (res.ok) await logoutAction(`/${locale}/`)
+      else toast.error(t("delete_error"))
     } catch {
       toast.error(t("delete_error"))
     } finally {
@@ -127,444 +161,295 @@ export default function SettingsForm({ user }: { user: UserData }) {
     }
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      const res = await apiFetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
-      })
-      if (res.ok) {
-        toast.success(t("save_success"))
-      } else {
-        toast.error(t("save_error"))
-      }
-    } catch {
-      toast.error(t("save_error"))
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const isCanceled = subscriptionStatus === "CANCELED"
-  const isActive = subscriptionStatus === "ACTIVE"
-
   return (
-    <div className="space-y-6">
-      {/* Page title */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold">{t("title")}</h1>
-        <p className="text-muted-foreground text-sm mt-1">{t("subtitle")}</p>
-      </div>
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "1fr 1fr",
+      gap: 16,
+      maxWidth: 820,
+    }}>
 
-      {/* Profile Card */}
-      <Card className="p-6 space-y-5">
-        <h2 className="font-semibold flex items-center gap-2">
-          <User className="h-4 w-4" />
-          {t("profile_section")}
-        </h2>
-
-        <div className="flex items-center gap-4">
-          <Avatar className="h-16 w-16">
-            <AvatarImage src={user.image ?? undefined} />
-            <AvatarFallback className="text-lg">
-              {user.name?.charAt(0)?.toUpperCase() ?? "U"}
-            </AvatarFallback>
-          </Avatar>
+      {/* ── Card 1: Perfil (full width) ── */}
+      <div style={{
+        gridColumn: "1 / -1",
+        background: "white", border: "1px solid #D9E1ED",
+        borderRadius: 10, overflow: "hidden",
+      }}>
+        <div style={cardHeadStyle}>
+          <div style={cardIcoStyle}>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <circle cx="7.5" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M2 13.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          </div>
           <div>
-            <p className="font-medium">{user.name ?? t("no_name")}</p>
-            <p className="text-sm text-muted-foreground">{user.email}</p>
+            <div style={cardTitleStyle}>{t("profile_section")}</div>
+            <div style={cardSubStyle}>{t("profile_subtitle")}</div>
           </div>
         </div>
-
-        <Separator />
-
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">{t("name_label")}</Label>
-            <Input
-              id="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder={t("name_placeholder")}
-              maxLength={100}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>{t("email_label")}</Label>
-            <div className="flex items-center gap-2">
-              <Input value={user.email} disabled className="bg-muted" />
-              <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+        <div style={{ padding: "18px 20px" }}>
+          {/* Profile row */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 14,
+            marginBottom: 18, paddingBottom: 18,
+            borderBottom: "1px solid #E8EDF6",
+          }}>
+            <div style={{
+              width: 52, height: 52, borderRadius: "50%",
+              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontFamily: "var(--dash-serif,Georgia,serif)",
+              fontSize: 18, fontWeight: 700, color: "white",
+              flexShrink: 0, border: "2px solid rgba(0,212,255,0.3)",
+            }}>
+              {initials}
             </div>
-            <p className="text-xs text-muted-foreground">{t("email_note")}</p>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 600, color: "#1a2e4a" }}>
+                {user.name ?? t("no_name")}
+              </div>
+              <div style={{ fontSize: 12, color: "#6B7A8C", fontFamily: "var(--mono,monospace)" }}>
+                {user.email}
+              </div>
+            </div>
           </div>
 
-          <Button type="submit" disabled={saving}>
-            {saving ? t("saving") : t("save_button")}
-          </Button>
-        </form>
-      </Card>
+          {/* 2-column field grid */}
+          <form onSubmit={handleSave}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+              <div style={{ marginBottom: 0 }}>
+                <div style={fieldLabelStyle}>{t("name_label")}</div>
+                <FieldInput
+                  value={name}
+                  onChange={setName}
+                  placeholder={t("name_placeholder")}
+                />
+              </div>
+              <div style={{ marginBottom: 0 }}>
+                <div style={fieldLabelStyle}>{t("email_label")}</div>
+                <FieldInput value={user.email} disabled />
+                <div style={fieldHintStyle}>{t("email_note")}</div>
+              </div>
+            </div>
+            <div style={{ marginTop: 16 }}>
+              <BtnGold type="submit" disabled={saving}>
+                {saving ? t("saving") : t("save_button")}
+              </BtnGold>
+            </div>
+          </form>
+        </div>
+      </div>
 
-      {/* Plan Card */}
-      {(() => {
-        const endsAt = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
-        const today = new Date()
-
-        const periodDays = user.planInterval === "annual" ? 365 : 30
-        const periodStart = endsAt
-          ? new Date(endsAt.getTime() - periodDays * 24 * 60 * 60 * 1000)
-          : null
-        const daysElapsed = periodStart
-          ? Math.max(0, Math.min(periodDays, Math.floor((today.getTime() - periodStart.getTime()) / (24 * 60 * 60 * 1000))))
-          : 0
-        const progressPercent = periodDays > 0 ? Math.round((daysElapsed / periodDays) * 100) : 0
-
-        const daysLeft = endsAt
-          ? Math.max(0, Math.ceil((endsAt.getTime() - today.getTime()) / (24 * 60 * 60 * 1000)))
-          : 0
-
-        // ── PRO ACTIVO ────────────────────────────────────────────────────
-        if (user.plan === "PRO" && isActive) {
-          return (
-            <div className="rounded-2xl overflow-hidden border border-indigo-200/60 shadow-sm">
-              <div className="bg-gradient-to-r from-indigo-600 via-blue-600 to-violet-600 px-6 py-5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-white/15 flex items-center justify-center">
-                      <Crown className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white/70 text-xs font-medium tracking-wide uppercase">{t("plan_section_label")}</p>
-                      <p className="text-white font-bold text-lg leading-tight">{t("plan_pro_label")}</p>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <span className="inline-flex items-center gap-1 bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                      <Sparkles className="h-3 w-3" />
+      {/* ── Card 2: Plan y cuenta ── */}
+      <div style={{
+        background: "white", border: "1px solid #D9E1ED",
+        borderRadius: 10, overflow: "hidden",
+      }}>
+        <div style={cardHeadStyle}>
+          <div style={cardIcoStyle}>
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <path d="M7.5 1l1.8 4.5H14l-3.7 2.7 1.4 4.3L7.5 10l-4.2 2.5 1.4-4.3L1 5.5h4.7L7.5 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+            </svg>
+          </div>
+          <div>
+            <div style={cardTitleStyle}>{t("plan_section_label")}</div>
+            <div style={cardSubStyle}>{t("plan_subtitle")}</div>
+          </div>
+        </div>
+        <div style={{ padding: "18px 20px" }}>
+          {/* Plan row */}
+          <div style={{
+            display: "flex", alignItems: "center", gap: 14,
+            padding: "14px 16px",
+            background: "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,212,255,0.02))",
+            border: "1px solid rgba(0,212,255,0.15)",
+            borderRadius: 6, marginBottom: 16,
+            position: "relative", overflow: "hidden",
+          }}>
+            {/* top shimmer line */}
+            <div style={{
+              position: "absolute", top: 0, left: 0, right: 0, height: 1,
+              background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
+              opacity: 0.4,
+            }} />
+            <div style={{
+              width: 36, height: 36, borderRadius: 9,
+              background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.2)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              color: "#00D4FF", flexShrink: 0,
+            }}>
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 1.5l1.8 4.2H14l-3.6 2.6 1.4 4.2L8 10.2l-3.8 2.3 1.4-4.2L2 5.7h4.2L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{
+                fontFamily: "var(--dash-serif,Georgia,serif)",
+                fontSize: 14, fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.02em",
+              }}>
+                {isPro ? t("plan_pro") : t("plan_free_label")}
+              </div>
+              <div style={{ fontSize: 11.5, color: "#6B7A8C", marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
+                {isPro && (
+                  <>
+                    <span style={{
+                      display: "inline-flex", alignItems: "center",
+                      background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)",
+                      borderRadius: 4, padding: "1px 7px",
+                      fontSize: 10, fontWeight: 600, color: "#00D4FF", letterSpacing: "0.04em",
+                    }}>
                       {user.planInterval === "annual" ? t("interval_annual") : t("interval_monthly")}
                     </span>
-                    <span className="inline-flex items-center bg-white/20 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                      {user.planInterval === "annual" ? "$144/yr" : "$15/mo"}
+                    <span style={{
+                      display: "inline-flex", alignItems: "center",
+                      background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)",
+                      borderRadius: 4, padding: "1px 7px",
+                      fontSize: 10, fontWeight: 600, color: "#00D4FF", letterSpacing: "0.04em",
+                    }}>
+                      {user.planInterval === "annual" ? t("price_annual") : t("price_monthly")}
                     </span>
-                    <span className="inline-flex items-center gap-1 bg-emerald-400/30 text-emerald-100 text-xs font-semibold px-2.5 py-1 rounded-full">
-                      <BadgeCheck className="h-3 w-3" />
-                      {t("status_active")}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-b from-indigo-50/60 to-white px-6 py-5 space-y-5">
-
-                {endsAt && (
-                  <div className="rounded-xl bg-white border border-indigo-100 shadow-sm px-4 py-4 flex items-center gap-4">
-                    <div className="h-10 w-10 rounded-lg bg-indigo-100 flex items-center justify-center shrink-0">
-                      <Clock className="h-5 w-5 text-indigo-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground font-medium">{t("renewal_notice")}</p>
-                      <p className="text-base font-bold text-indigo-700 mt-0.5">
-                        {format(endsAt, "d 'de' MMMM yyyy", { locale: dateLocale })}
-                      </p>
-                    </div>
-                  </div>
+                    {isActive && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center",
+                        background: "rgba(90,140,106,0.12)", border: "1px solid rgba(90,140,106,0.2)",
+                        borderRadius: 4, padding: "1px 7px",
+                        fontSize: 10, fontWeight: 600, color: "#7AAE8A", letterSpacing: "0.04em",
+                      }}>
+                        {t("status_active_badge")}
+                      </span>
+                    )}
+                    {subscriptionStatus === "CANCELED" && (
+                      <span style={{
+                        display: "inline-flex", alignItems: "center",
+                        background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)",
+                        borderRadius: 4, padding: "1px 7px",
+                        fontSize: 10, fontWeight: 600, color: "#D97706", letterSpacing: "0.04em",
+                      }}>
+                        {t("status_canceled_badge")}
+                      </span>
+                    )}
+                  </>
                 )}
-
-                {endsAt && (
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{t("billing_cycle")}</span>
-                      <span className="font-semibold text-indigo-600">{t("billing_days", { elapsed: daysElapsed, total: periodDays })}</span>
-                    </div>
-                    <div className="h-2 w-full rounded-full bg-indigo-100 overflow-hidden">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-500"
-                        style={{ width: `${progressPercent}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground text-right">{t("period_elapsed_pct", { pct: progressPercent })}</p>
-                  </div>
-                )}
-
-                <div className="rounded-xl bg-white border border-indigo-100 shadow-sm px-4 py-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
-                      <CreditCard className="h-4 w-4 text-indigo-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-foreground">{t("manage_billing")}</p>
-                      <p className="text-xs text-muted-foreground">{t("manage_billing_description")}</p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleBillingPortal}
-                    disabled={portalLoading}
-                    className="shrink-0 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 gap-1.5"
-                  >
-                    <CreditCard className="h-3.5 w-3.5" />
-                    {portalLoading ? t("opening_portal") : t("manage_billing")}
-                  </Button>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">{t("included_in_plan")}</p>
-                  <ul className="space-y-1.5">
-                    {([
-                      t("pro_benefit_1"),
-                      t("pro_benefit_2"),
-                      t("pro_benefit_3"),
-                      t("pro_benefit_4"),
-                    ]).map((benefit) => (
-                      <li key={benefit} className="flex items-center gap-2 text-sm text-foreground">
-                        <CheckCircle2 className="h-4 w-4 text-indigo-500 shrink-0" />
-                        {benefit}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <Separator />
-
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Calendar className="h-4 w-4" />
-                    {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
-                  </div>
-
-                  <AlertDialog>
-                    <AlertDialogTrigger
-                      render={
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-rose-500/80 hover:text-rose-600 hover:bg-rose-50 text-xs h-7 px-3"
-                          disabled={cancelLoading}
-                          type="button"
-                        />
-                      }
-                    >
-                      {cancelLoading ? t("canceling") : t("cancel_subscription")}
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>{t("cancel_dialog_title")}</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          {t("cancel_dialog_desc")}
-                          {endsAt && (
-                            <> <strong>{format(endsAt, "d 'de' MMMM yyyy", { locale: dateLocale })}</strong>.</>
-                          )}
-                          {" "}{t("cancel_dialog_after")}
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>{t("keep_subscription")}</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleCancelSubscription}
-                          className="bg-destructive text-white hover:bg-destructive/90"
-                        >
-                          {t("confirm_cancel")}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        // ── PRO CANCELADO ─────────────────────────────────────────────────
-        if (user.plan === "PRO" && isCanceled) {
-          return (
-            <div className="rounded-2xl overflow-hidden border border-amber-200 shadow-sm">
-              <div className="bg-gradient-to-r from-amber-400 to-orange-400 px-6 py-5">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center">
-                      <AlertCircle className="h-5 w-5 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-white/80 text-xs font-medium tracking-wide uppercase">{t("plan_section_label")}</p>
-                      <p className="text-white font-bold text-lg leading-tight">{t("plan_pro_canceled_label")}</p>
-                    </div>
-                  </div>
-                  <span className="inline-flex items-center gap-1 bg-white/25 text-white text-xs font-semibold px-2.5 py-1 rounded-full">
-                    <Clock className="h-3 w-3" />
-                    {t("access_until_expiry")}
+                {!isPro && (
+                  <span style={{
+                    display: "inline-flex", alignItems: "center",
+                    background: "#F5F7FB", border: "1px solid #E8EDF6",
+                    borderRadius: 4, padding: "1px 7px",
+                    fontSize: 10, fontWeight: 600, color: "#A0AABE", letterSpacing: "0.04em",
+                  }}>
+                    {t("status_no_subscription")}
                   </span>
-                </div>
-              </div>
-
-              <div className="bg-gradient-to-b from-amber-50/70 to-white px-6 py-5 space-y-5">
-
-                {endsAt && (
-                  <div className="rounded-xl bg-white border border-amber-200 shadow-sm px-4 py-4 flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-lg bg-amber-100 flex flex-col items-center justify-center shrink-0">
-                      <span className="text-xl font-extrabold text-amber-700 leading-none">{daysLeft}</span>
-                      <span className="text-[10px] text-amber-600 font-medium leading-none mt-0.5">{t("days")}</span>
-                    </div>
-                    <div>
-                      <p className="text-xs text-amber-700 font-semibold">{t("subscription_ends")}</p>
-                      <p className="text-base font-bold text-amber-800 mt-0.5">
-                        {format(endsAt, "d 'de' MMMM yyyy", { locale: dateLocale })}
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {t("subscription_ends_note")}
-                      </p>
-                    </div>
-                  </div>
                 )}
-
-                <Button
-                  className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold shadow-sm"
-                  onClick={() => window.location.href = `/${locale}/pricing`}
-                >
-                  <RefreshCcw className="h-4 w-4" />
-                  {t("reactivate_pro")}
-                </Button>
-
-                <Separator />
-
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
-                </div>
-              </div>
-            </div>
-          )
-        }
-
-        // ── SIN SUSCRIPCIÓN ───────────────────────────────────────────────
-        return (
-          <div className="rounded-2xl overflow-hidden border border-border shadow-sm">
-            <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-6 py-5">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl bg-white/10 flex items-center justify-center">
-                    <Zap className="h-5 w-5 text-slate-300" />
-                  </div>
-                  <div>
-                    <p className="text-slate-400 text-xs font-medium tracking-wide uppercase">{t("plan_section_label")}</p>
-                    <p className="text-white font-bold text-lg leading-tight">{t("no_subscription_title")}</p>
-                  </div>
-                </div>
-                <span className="inline-flex items-center bg-slate-600/60 text-slate-300 text-xs font-semibold px-2.5 py-1 rounded-full">
-                  {t("status_not_activated")}
-                </span>
-              </div>
-            </div>
-
-            <div className="bg-gradient-to-b from-slate-50/50 to-white px-6 py-5 space-y-5">
-
-              <div className="rounded-xl bg-gradient-to-br from-indigo-50 to-violet-50 border border-indigo-100 px-4 py-4">
-                <p className="text-sm font-semibold text-indigo-700 flex items-center gap-2">
-                  <Star className="h-4 w-4 fill-indigo-400 text-indigo-400" />
-                  {t("unlock_all_with_pro")}
-                </p>
-                <ul className="mt-3 space-y-2">
-                  {([
-                    t("free_benefit_1"),
-                    t("free_benefit_2"),
-                    t("free_benefit_3"),
-                    t("free_benefit_4"),
-                  ]).map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-sm text-slate-700">
-                      <CheckCircle2 className="h-4 w-4 text-indigo-400 shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-2xl font-extrabold text-indigo-700">$15</span>
-                  <span className="text-sm text-indigo-500 font-medium">{t("per_month")}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{t("annual_discount")}</span>
-                </div>
-              </div>
-
-              <Button
-                className="w-full gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-semibold shadow-md"
-                onClick={() => window.location.href = `/${locale}/pricing`}
-              >
-                <Crown className="h-4 w-4" />
-                {t("upgrade_button")}
-              </Button>
-
-              <Separator />
-
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
               </div>
             </div>
           </div>
-        )
-      })()}
 
-      {/* Data Export */}
-      <Card className="p-6 space-y-3">
-        <h2 className="font-semibold flex items-center gap-2">
-          <Download className="h-4 w-4" />
-          {t("export_section_title")}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {t("export_desc")}
-        </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleDataExport}
-          disabled={exportLoading}
-          className="gap-2"
-        >
-          <Download className="h-4 w-4" />
-          {exportLoading ? t("exporting") : t("export_button")}
-        </Button>
-      </Card>
+          {/* Feature list */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
+            {[
+              t("pro_benefit_1"),
+              t("pro_benefit_2"),
+              t("pro_benefit_3"),
+              t("pro_benefit_4"),
+            ].map(benefit => (
+              <div key={benefit} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "#1a2e4a" }}>
+                <span style={{
+                  width: 14, height: 14, borderRadius: "50%",
+                  background: "rgba(16,185,129,0.2) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath d='M1.5 4l2 2 3-3' stroke='%2310B981' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") no-repeat center",
+                  border: "1px solid rgba(16,185,129,0.3)",
+                  flexShrink: 0,
+                }} />
+                {benefit}
+              </div>
+            ))}
+          </div>
 
-      {/* Danger Zone */}
-      <Card className="p-6 space-y-3 border-destructive/30">
-        <h2 className="font-semibold text-destructive">{t("danger_zone")}</h2>
-        <p className="text-sm text-muted-foreground">{t("danger_desc")}</p>
+          {isPro ? (
+            <>
+              <BtnGhost onClick={handleBillingPortal} disabled={portalLoading} fullWidth>
+                {portalLoading ? t("opening_portal") : t("manage_billing")}
+              </BtnGhost>
+              {endsAt && (
+                <div style={{ fontSize: 11, color: "#A0AABE", marginTop: 10, textAlign: "center" }}>
+                  {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
+                  {isActive && (
+                    <>
+                      {" · "}
+                      <AlertDialog>
+                        <AlertDialogTrigger
+                          render={
+                            <span style={{ color: "#C08080", cursor: "pointer" }} />
+                          }
+                        >
+                          {cancelLoading ? t("canceling") : t("cancel_subscription")}
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>{t("cancel_dialog_title")}</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              {t("cancel_dialog_desc")}
+                              {endsAt && <> <strong>{format(endsAt, "d 'de' MMMM yyyy", { locale: dateLocale })}</strong>.</>}
+                              {" "}{t("cancel_dialog_after")}
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>{t("keep_subscription")}</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={handleCancelSubscription}
+                              className="bg-destructive text-white hover:bg-destructive/90"
+                            >
+                              {t("confirm_cancel")}
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </>
+                  )}
+                </div>
+              )}
+            </>
+          ) : (
+            <BtnGold onClick={() => { window.location.href = `/${locale}/pricing` }} fullWidth>
+              Activar PRO
+            </BtnGold>
+          )}
+        </div>
+      </div>
 
-        <AlertDialog>
-          <AlertDialogTrigger
-            render={
-              <Button
-                variant="outline"
-                size="sm"
-                className="border-destructive/50 text-destructive hover:bg-destructive/5 gap-2"
-                disabled={deleteLoading}
-                type="button"
-              />
-            }
-          >
-            <Trash2 className="h-4 w-4" />
-            {deleteLoading ? t("deleting") : t("delete_account")}
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("delete_dialog_title")}</AlertDialogTitle>
-              <AlertDialogDescription>
-                {t("delete_dialog_desc")}
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteAccount}
-                className="bg-destructive text-white hover:bg-destructive/90"
-              >
-                {t("confirm_delete")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </Card>
+      {/* ── Card 3: Mis datos ── */}
+      <DataCard
+        exportLoading={exportLoading}
+        deleteLoading={deleteLoading}
+        handleDataExport={handleDataExport}
+        handleDeleteAccount={handleDeleteAccount}
+      />
+
+      {/* ── Card 4: Programa de referidos (full width) ── */}
+      <div style={{
+        gridColumn: "1 / -1",
+        background: "white", border: "1px solid #D9E1ED",
+        borderRadius: 10, overflow: "hidden",
+      }}>
+        <div style={cardHeadStyle}>
+          <div style={cardIcoStyle}>
+            {/* share/link icon */}
+            <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+              <circle cx="12" cy="3" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <circle cx="12" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <circle cx="3" cy="7.5" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
+              <path d="M10.5 3.75L4.5 7M10.5 11.25L4.5 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+            </svg>
+          </div>
+          <div>
+            <div style={cardTitleStyle}>{tRef("title")}</div>
+            <div style={cardSubStyle}>{tRef("description")}</div>
+          </div>
+        </div>
+        <div style={{ padding: "18px 20px" }}>
+          <ReferralCard embeddedMode />
+        </div>
+      </div>
+
     </div>
   )
 }

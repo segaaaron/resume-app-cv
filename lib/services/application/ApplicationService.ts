@@ -7,16 +7,18 @@ import { z } from "zod"
 // ─── Schemas ──────────────────────────────────────────────────────────────────
 
 export const applicationCreateSchema = z.object({
-  jobTitle: z.string().min(1).max(255),
-  company:  z.string().min(1).max(255),
-  status:   z.enum(["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]).default("WISHLIST"),
-  notes:    z.string().max(5000).optional(),
-  url:      z.string().url().optional().or(z.literal("")),
-  salary:   z.string().max(100).optional(),
+  jobTitle:  z.string().min(1).max(255),
+  company:   z.string().min(1).max(255),
+  status:    z.enum(["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]).default("APPLIED"),
+  modalidad: z.string().max(50).optional(),
+  notes:     z.string().max(5000).optional(),
+  url:       z.string().url().optional().or(z.literal("")),
+  salary:    z.string().max(100).optional(),
 })
 
 export const applicationPatchSchema = z.object({
   status:     z.enum(["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]).optional(),
+  modalidad:  z.string().max(50).optional(),
   notes:      z.string().max(5000).optional(),
   url:        z.string().url().optional().or(z.literal("")),
   salary:     z.string().max(100).optional(),
@@ -69,6 +71,7 @@ export class ApplicationService {
       where: { id },
       data: {
         status:     patch.status     ?? undefined,
+        modalidad:  patch.modalidad  ?? undefined,
         notes:      patch.notes      ?? undefined,
         url:        patch.url        ?? undefined,
         salary:     patch.salary     ?? undefined,
@@ -76,11 +79,15 @@ export class ApplicationService {
         followUpAt: patch.followUpAt === null ? null
                   : patch.followUpAt ? new Date(patch.followUpAt)
                   : undefined,
-        // Reset reminderSentAt when followUpAt changes so reminder fires again
         ...(patch.followUpAt !== undefined ? { reminderSentAt: null } : {}),
       },
     })
     this.logger.info("application.update", { userId, appId: id })
+  }
+
+  async deleteAll(userId: string) {
+    await db.application.deleteMany({ where: { userId } })
+    this.logger.info("application.deleteAll", { userId })
   }
 
   async updateStatus(userId: string, id: string, status: ApplicationPatch["status"]) {

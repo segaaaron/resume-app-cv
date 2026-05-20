@@ -6,12 +6,11 @@ import { useSession } from "next-auth/react"
 import { logoutAction } from "@/lib/actions/logout"
 import { useTranslations, useLocale } from "next-intl"
 import { es, enUS } from "date-fns/locale"
-import { useUserTimezone } from "@/hooks/useUserTimezone"
-import { Plus, FileText, Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
+import { Plus, FileText, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import ImportResumeButton from "./ImportResumeButton"
 import UpgradeCTACard from "./UpgradeCTACard"
-import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,8 +24,8 @@ import {
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { isActive } from "@/lib/plans"
-import CVCard, { type ResumeCard } from "./CVCard"
-import SectionHeader from "./SectionHeader"
+import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
+import { ProBanner, GoldRule, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed } from "./_resume-sub"
 
 export default function ResumesDashboard({ initialResumes }: { initialResumes: ResumeCard[] }) {
   const t = useTranslations("dashboard.resumes")
@@ -35,7 +34,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const userTimezone = useUserTimezone()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { data: session } = useSession()
+  const { data: session, status } = useSession()
   const isPro = isActive(
     session?.user?.plan ?? "UNSUBSCRIBED",
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
@@ -49,6 +48,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const [portalLoading, setPortalLoading] = useState(false)
 
   // Generate thumbnails for CVs that don't have one yet (staggered, fire-and-forget)
   useEffect(() => {
@@ -93,15 +93,11 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     const started = Date.now()
     const MAX_MS = 30_000
     let intervalMs = 2_000
-
     let logoutTimeout: ReturnType<typeof setTimeout> | null = null
 
     const poll = async () => {
       if (!upgradeActiveRef.current) return
-      if (Date.now() - started > MAX_MS) {
-        setUpgradeState("timeout")
-        return
-      }
+      if (Date.now() - started > MAX_MS) { setUpgradeState("timeout"); return }
       try {
         const res = await apiFetch("/api/billing/post-purchase-status", { silent: true })
         if (res.ok) {
@@ -125,6 +121,24 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  async function handleBillingPortal() {
+    setPortalLoading(true)
+    try {
+      const res = await apiFetch("/api/stripe/portal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locale }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.url) { toast.error(t("portal_error")); return }
+      window.location.href = data.url
+    } catch {
+      toast.error(t("portal_error"))
+    } finally {
+      setPortalLoading(false)
+    }
+  }
 
   function requirePro() {
     router.push(`/${locale}/pricing`)
@@ -225,59 +239,45 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     })
   }
 
-  if (upgradeState === "waiting" || upgradeState === "confirmed" || upgradeState === "timeout") {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-6 text-center max-w-sm px-6">
-          {upgradeState === "waiting" && (
-            <>
-              <Loader2 className="h-12 w-12 text-primary animate-spin" />
-              <div>
-                <p className="text-lg font-semibold">{t("syncing_title")}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t("syncing_subtitle")}</p>
-              </div>
-            </>
-          )}
-          {upgradeState === "confirmed" && (
-            <>
-              <CheckCircle2 className="h-12 w-12 text-green-500" />
-              <div>
-                <p className="text-lg font-semibold">{t("welcome_pro_title")}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t("upgrade_relogin_subtitle")}</p>
-              </div>
-            </>
-          )}
-          {upgradeState === "timeout" && (
-            <>
-              <AlertCircle className="h-12 w-12 text-amber-500" />
-              <div>
-                <p className="text-lg font-semibold">{t("timeout_title")}</p>
-                <p className="text-sm text-muted-foreground mt-1">{t("timeout_subtitle")}</p>
-              </div>
-              <Button onClick={() => logoutAction(`/${locale}/login`)}>
-                {t("timeout_reload")}
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
-    )
+  // ── Upgrade flow overlay ────────────────────────────────────────────────────
+
+  if (upgradeState !== "idle") {
+    return <UpgradeStatusOverlay upgradeState={upgradeState} />
   }
+
+  // ── Main render ─────────────────────────────────────────────────────────────
+
+  const hasRecentEdit = resumes.length > 0 &&
+    new Date(resumes[0].updatedAt).getTime() !== new Date(resumes[0].createdAt).getTime()
 
   return (
     <div>
       <UpgradeCTACard />
-      <SectionHeader
-        title={t("title")}
-        count={resumes.length}
-        onNew={createResume}
-        newLabel={t("new")}
-        creating={creating}
-      >
-        <LocaleSwitcher />
-        <ImportResumeButton disabled={!isPro} />
-      </SectionHeader>
 
+      {/* ── Page head ── */}
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
+        <div>
+          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00D4FF", marginBottom: "6px", display: "flex", alignItems: "center", gap: "7px" }}>
+            <span style={{ width: "14px", height: "1.5px", background: "#00D4FF", opacity: 0.5, display: "inline-block", flexShrink: 0 }} />
+            {t("eyebrow")}
+          </div>
+          <h1 style={{ fontFamily: "'Playfair Display', 'Iowan Old Style', 'Charter', Georgia, serif", fontSize: "clamp(28px, 4vw, 32px)", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.035em", lineHeight: 1.1 }}>
+            {t("page_title")}
+          </h1>
+          <p style={{ fontSize: "13.5px", color: "#6B7A8C", marginTop: "6px" }}>
+            {resumes.length} {resumes.length === 1 ? t("active_document_one") : t("active_documents_other")}
+            {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
+          </p>
+        </div>
+      </div>
+
+      {/* ── Stats row ── */}
+      <StatsRow resumes={resumes} isPro={isPro} />
+
+      {/* ── Toolbar ── */}
+      <ResumesToolbar count={resumes.length} />
+
+      {/* ── CV grid or empty state ── */}
       {resumes.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-24 text-center">
           <div className="h-20 w-20 rounded-2xl bg-[var(--brand-50)] flex items-center justify-center mb-4">
@@ -295,18 +295,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-          <button
-            onClick={createResume}
-            disabled={creating}
-            className="aspect-[3/4] border-2 border-dashed border-[#7B2D42]/30 rounded-2xl flex flex-col items-center justify-center gap-3 text-[#7B2D42]/60 hover:border-[#7B2D42]/60 hover:text-[#7B2D42] hover:bg-[#7B2D42]/5 transition-all group cursor-pointer"
-          >
-            <div className="h-12 w-12 rounded-xl border-2 border-dashed border-current flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Plus className="h-6 w-6" />
-            </div>
-            <span className="text-sm font-medium">{t("new")}</span>
-          </button>
-
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "18px" }}>
           {resumes.map((resume, i) => (
             <CVCard
               key={resume.id}
@@ -323,9 +312,30 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
               onDelete={() => setDeleteId(resume.id)}
             />
           ))}
+          <NewCVCard creating={creating} index={resumes.length} onClick={createResume} />
         </div>
       )}
 
+      {/* ── Gold rule separator ── */}
+      <GoldRule />
+
+      {/* ── Activity feed ── */}
+      <ActivityFeed
+        resumes={resumes}
+        hasRecentEdit={hasRecentEdit}
+        userTimezone={userTimezone}
+        dateLocale={dateLocale}
+        formatFn={formatInTimezone}
+      />
+
+      {/* ── Pro banner ── */}
+      {status === "loading" ? (
+        <div style={{ height: "74px" }} aria-hidden="true" />
+      ) : isPro ? (
+        <ProBanner onManagePlan={handleBillingPortal} portalLoading={portalLoading} />
+      ) : null}
+
+      {/* ── Delete dialog ── */}
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -334,16 +344,14 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive hover:bg-destructive/90"
-              onClick={() => deleteId && deleteResume(deleteId)}
-            >
+            <AlertDialogAction className="bg-destructive hover:bg-destructive/90" onClick={() => deleteId && deleteResume(deleteId)}>
               {t("delete")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* ── Rename dialog ── */}
       <AlertDialog open={!!renameId} onOpenChange={(o) => !o && setRenameId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>

@@ -104,6 +104,23 @@
   --shadow-md: 0 4px 6px rgba(37,99,235,0.07), 0 2px 4px rgba(0,0,0,0.06);
   --shadow-lg: 0 10px 15px rgba(37,99,235,0.08), 0 4px 6px rgba(0,0,0,0.05);
 
+  /* Dashboard premium tokens */
+  --dash-navy:        #1a2e4a;
+  --dash-navy-light:  #3d5a7a;
+  --dash-cyan:        #00D4FF;
+  --dash-cyan-dim:    rgba(0,212,255,0.08);
+  --dash-cyan-glow:   rgba(0,212,255,0.15);
+  --dash-cyan-border: rgba(0,212,255,0.25);
+  --dash-gold:        #D4A574;
+  --dash-surface:     #F5F7FB;
+  --dash-surface2:    #EEF2F9;
+  --dash-surface3:    #E8EDF6;
+  --dash-muted:       #6B7A8C;
+  --dash-subtle:      #A0AABE;
+  --dash-border:      #D9E1ED;
+  --dash-border-s:    #E8EDF6;
+  --dash-sidebar-w:   240px;
+
   /* Sidebar */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -373,4 +390,47 @@
 /* ── Template lazy-load skeleton shimmer ─────────────────────────── */
 @keyframes shimmer {
   100% { transform: translateX(100%); }
+}
+
+/* ── Dashboard card entrance animation ──────────────────────────────────────── */
+@keyframes dashCardIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dash-card-in {
+  animation: dashCardIn 0.45s cubic-bezier(0.34,1.1,0.64,1) both;
+}
+
+/* Card bottom cyan glow line — appears on hover */
+.dash-card-glow {
+  position: relative;
+}
+.dash-card-glow::after {
+  content: "";
+  position: absolute;
+  bottom: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(0,212,255,0.5), transparent);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  border-radius: 0 0 10px 10px;
+}
+.dash-card-glow:hover::after {
+  opacity: 1;
+}
+
+/* ── Dashboard ambient background ───────────────────────────────────────────── */
+.dash-ambient-1 {
+  position: fixed; border-radius: 50%; filter: blur(120px);
+  pointer-events: none; z-index: 0;
+  width: 700px; height: 700px;
+  background: radial-gradient(circle, rgba(0,212,255,0.03) 0%, transparent 70%);
+  top: -200px; right: -100px;
+}
+.dash-ambient-2 {
+  position: fixed; border-radius: 50%; filter: blur(120px);
+  pointer-events: none; z-index: 0;
+  width: 500px; height: 500px;
+  background: radial-gradient(circle, rgba(0,212,255,0.02) 0%, transparent 70%);
+  bottom: -100px; left: 100px;
 }

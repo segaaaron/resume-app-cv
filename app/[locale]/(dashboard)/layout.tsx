@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
+import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
-import DashboardNav from "@/components/dashboard/DashboardNav"
-import BottomTabBar from "@/components/dashboard/BottomTabBar"
+import DashboardShell from "@/components/dashboard/DashboardShell"
 import PastDueBanner from "@/components/dashboard/PastDueBanner"
 
 export const metadata: Metadata = {
@@ -34,24 +34,27 @@ export default async function DashboardLayout({
     session.user.role,
   )
 
+  const pastDueBanner = session.user.subscriptionStatus === "PAST_DUE" ? <PastDueBanner /> : undefined
+
+  const [resumeCount, letterCount] = await Promise.all([
+    db.resume.count({ where: { userId: session.user.id } }),
+    db.coverLetter.count({ where: { userId: session.user.id } }),
+  ])
+
   return (
-    <div className="h-screen flex overflow-hidden dashboard-vintage">
-      <DashboardNav
-        user={{
-          name: session.user.name,
-          email: session.user.email,
-          image: session.user.image,
-          role: session.user.role,
-        }}
-        isPro={isPro}
-      />
-      <main className="flex-1 overflow-y-auto bg-background pb-16 md:pb-0">
-        {session.user.subscriptionStatus === "PAST_DUE" && <PastDueBanner />}
-        <div className="p-6 sm:p-8">
-          {children}
-        </div>
-      </main>
-      <BottomTabBar isPro={isPro} />
-    </div>
+    <DashboardShell
+      user={{
+        name: session.user.name,
+        email: session.user.email,
+        image: session.user.image,
+        role: session.user.role,
+      }}
+      isPro={isPro}
+      pastDueBanner={pastDueBanner}
+      resumeCount={resumeCount}
+      letterCount={letterCount}
+    >
+      {children}
+    </DashboardShell>
   )
 }

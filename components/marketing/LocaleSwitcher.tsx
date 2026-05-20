@@ -25,28 +25,49 @@ export default function LocaleSwitcher() {
     })
   }
 
+  const baseBtn = "px-2.5 py-1 rounded-[6px] text-xs font-semibold transition-all"
+
   return (
-    <div className="flex items-center gap-1 text-sm font-medium text-muted-foreground">
+    <div
+      className="flex items-center gap-1 rounded-[8px] p-0.5"
+      style={{
+        background: "var(--dash-surface)",
+        border: "1px solid var(--dash-border)",
+      }}
+    >
       <button
         onClick={() => switchLocale("es")}
         disabled={isPending}
-        className={`px-1.5 py-0.5 rounded transition-colors ${
+        className={baseBtn}
+        style={
           locale === "es"
-            ? "text-foreground font-semibold"
-            : "hover:text-foreground"
-        }`}
+            ? { background: "var(--dash-cyan)", color: "var(--dash-navy)" }
+            : { background: "transparent", color: "var(--dash-muted)" }
+        }
+        onMouseEnter={(e) => {
+          if (locale !== "es") e.currentTarget.style.color = "var(--dash-navy)"
+        }}
+        onMouseLeave={(e) => {
+          if (locale !== "es") e.currentTarget.style.color = "var(--dash-muted)"
+        }}
       >
         ES
       </button>
-      <span className="opacity-30">|</span>
       <button
         onClick={() => switchLocale("en")}
         disabled={isPending}
-        className={`px-1.5 py-0.5 rounded transition-colors ${
+        className={baseBtn}
+        style={
           locale === "en"
-            ? "text-foreground font-semibold"
-            : "hover:text-foreground"
-        }`}
+            ? { background: "var(--dash-cyan)", color: "var(--dash-navy)" }
+            : { background: "transparent", color: "var(--dash-muted)" }
+        }
+        onMouseEnter={(e) => {
+          if (locale !== "en") e.currentTarget.style.color = "var(--dash-navy)"
+        }}
+        onMouseLeave={(e) => {
+          if (locale !== "en") e.currentTarget.style.color = "var(--dash-muted)"
+        }}
       >
         EN
       </button>

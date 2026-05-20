@@ -1,175 +1,213 @@
 "use client"
 
-import { useState } from "react"
 import type { AppStatus, ApplicationCard } from "@/stores/applicationStore"
-import { useApplicationStore } from "@/stores/applicationStore"
-import { Trash2, ExternalLink, Bell, BellOff } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { toast } from "sonner"
-import { apiFetch } from "@/lib/apiFetch"
-import { useTranslations, useLocale } from "next-intl"
-import { es, enUS } from "date-fns/locale"
-import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
+import { C, KanbanCard } from "./_column-parts"
 
-interface Props {
+// ── Column config ────────────────────────────────────────────────────────────
+interface ColConfig {
+  topColor: string
+  badgeColor: string
+  badgeBg: string
+  badgeBorder: string
+  titleGradient?: boolean
+}
+
+const COL_CONFIG: Record<AppStatus | "FOUND", ColConfig> = {
+  WISHLIST: {
+    topColor: `linear-gradient(90deg,${C.gold},#F5D78B,${C.success},${C.gold})`,
+    badgeColor: "#92651A",
+    badgeBg: "linear-gradient(135deg,rgba(245,215,139,0.35),rgba(212,165,116,0.2))",
+    badgeBorder: "rgba(212,165,116,0.45)",
+    titleGradient: true,
+  },
+  APPLIED: {
+    topColor: "#6B8AC4",
+    badgeColor: "#6B8AC4",
+    badgeBg: "rgba(107,138,196,0.12)",
+    badgeBorder: "rgba(107,138,196,0.2)",
+  },
+  INTERVIEW: {
+    topColor: C.success,
+    badgeColor: "#10B981",
+    badgeBg: "rgba(16,185,129,0.12)",
+    badgeBorder: "rgba(16,185,129,0.2)",
+  },
+  OFFER: {
+    topColor: "#00A8CC",
+    badgeColor: "#00A8CC",
+    badgeBg: "rgba(0,168,204,0.12)",
+    badgeBorder: "rgba(0,168,204,0.2)",
+  },
+  REJECTED: {
+    topColor: C.danger,
+    badgeColor: "#EF4444",
+    badgeBg: "rgba(239,68,68,0.12)",
+    badgeBorder: "rgba(239,68,68,0.2)",
+  },
+  FOUND: {
+    topColor: `linear-gradient(90deg,${C.gold},#F5D78B,${C.success},${C.gold})`,
+    badgeColor: "#92651A",
+    badgeBg: "linear-gradient(135deg,rgba(245,215,139,0.35),rgba(212,165,116,0.2))",
+    badgeBorder: "rgba(212,165,116,0.45)",
+    titleGradient: true,
+  },
+}
+
+// ── Props ─────────────────────────────────────────────────────────────────────
+
+export interface ColumnProps {
   columnId: AppStatus
   label: string
   color: string
   applications: ApplicationCard[]
+  draggingId: string | null
+  dragOver: boolean
+  onDragStart: (id: string, status: AppStatus) => void
+  onDragEnd: () => void
+  onDragOver: () => void
+  onDragLeave: () => void
+  onDrop: () => void
+  onDelete: (id: string) => void
+  onAddClick?: () => void
 }
 
-export default function KanbanColumn({ columnId, label, color, applications }: Props) {
-  const t = useTranslations("kanban")
-  const locale = useLocale()
-  const userTimezone = useUserTimezone()
-  const dateLocale = locale === "es" ? es : enUS
-  const { moveApplication, deleteApplication, updateApplication } = useApplicationStore()
-  const [editingReminder, setEditingReminder] = useState<string | null>(null)
+// ── KanbanColumn ──────────────────────────────────────────────────────────────
 
-  async function handleMove(id: string, status: AppStatus) {
-    const prev = applications.find((a) => a.id === id)?.status
-    moveApplication(id, status)
-    try {
-      const res = await apiFetch(`/api/applications/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      })
-      if (!res.ok) throw new Error()
-    } catch {
-      if (prev) moveApplication(id, prev)
-      toast.error(t("move_error"))
-    }
-  }
+export default function KanbanColumn({
+  columnId, label, applications,
+  draggingId, dragOver,
+  onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
+  onDelete, onAddClick,
+}: ColumnProps) {
+  const isFound = columnId === "WISHLIST"
+  const isRejectedCol = columnId === "REJECTED"
+  const cfg = isFound ? COL_CONFIG["FOUND"] : COL_CONFIG[columnId]
 
-  async function handleDelete(id: string) {
-    deleteApplication(id)
-    try {
-      const res = await apiFetch(`/api/applications/${id}`, { method: "DELETE" })
-      if (!res.ok) throw new Error()
-      toast.success(t("delete_success"))
-    } catch {
-      toast.error(t("delete_error"))
-    }
-  }
+  const colStyle: React.CSSProperties = isFound
+    ? {
+        background: "linear-gradient(180deg,#FFFDF6 0%,#FFFFFF 60%)",
+        borderColor: dragOver ? C.cyan : "rgba(212,165,116,0.35)",
+        boxShadow: dragOver
+          ? `0 8px 24px rgba(0,212,255,0.12)`
+          : "inset 0 0 0 1px rgba(245,215,139,0.25),0 0 24px rgba(212,165,116,0.08)",
+        transition: "border-color 0.2s",
+      }
+    : {
+        background: "white",
+        borderColor: dragOver ? C.cyan : C.border,
+        boxShadow: dragOver ? "0 8px 24px rgba(0,212,255,0.12)" : "none",
+        transition: "border-color 0.2s",
+      }
 
-  async function handleFollowUp(id: string, date: string | null) {
-    try {
-      const followUpAt = date ? new Date(date).toISOString() : null
-      const res = await apiFetch(`/api/applications/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ followUpAt }),
-      })
-      if (!res.ok) throw new Error()
-      updateApplication(id, { followUpAt })
-      setEditingReminder(null)
-      toast.success(date ? t("follow_up_set") : t("follow_up_removed"))
-    } catch {
-      toast.error(t("follow_up_error"))
-    }
-  }
+  const cardsAreaStyle: React.CSSProperties = dragOver
+    ? { background: "rgba(0,212,255,0.05)", boxShadow: `inset 0 0 0 1.5px ${C.cyanBorder}` }
+    : {}
 
-  const STATUSES: AppStatus[] = ["WISHLIST", "APPLIED", "INTERVIEW", "OFFER", "REJECTED"]
-  const STATUS_LABELS: Record<AppStatus, string> = {
-    WISHLIST: t("status_wishlist"),
-    APPLIED: t("status_applied"),
-    INTERVIEW: t("status_interview"),
-    OFFER: t("status_offer"),
-    REJECTED: t("status_rejected"),
-  }
+  const isShimmer = isFound
+  const topBorderStyle: React.CSSProperties = isShimmer
+    ? {
+        position: "absolute", top: 0, left: 0, right: 0, height: 3,
+        borderRadius: "10px 10px 0 0",
+        background: `linear-gradient(90deg,${C.gold},#F5D78B,${C.success},${C.gold})`,
+        backgroundSize: "200% 100%",
+        animation: "shimmer 3s linear infinite",
+      }
+    : {
+        position: "absolute", top: 0, left: 0, right: 0, height: "2.5px",
+        borderRadius: "10px 10px 0 0",
+        background: cfg.topColor,
+      }
+
+  const titleStyle: React.CSSProperties = cfg.titleGradient
+    ? {
+        background: "linear-gradient(135deg,#B8860B 0%,#D4A574 50%,#10B981 100%)",
+        WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
+        fontWeight: 700, letterSpacing: "-0.01em",
+      }
+    : { color: C.muted }
 
   return (
-    <div className={cn("rounded-xl p-3 min-h-[400px] bg-white shadow-sm", color)}>
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-600">{label}</h3>
-          <span className="text-xs bg-neutral-100 text-neutral-600 font-semibold px-1.5 py-0.5 rounded-full">{applications.length}</span>
-        </div>
+    <div
+      style={{
+        background: "white", border: `1px solid ${C.border}`,
+        borderRadius: 10, overflow: "hidden", minHeight: 520,
+        display: "flex", flexDirection: "column", ...colStyle,
+      }}
+      onDragOver={(e) => { e.preventDefault(); onDragOver() }}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => { e.preventDefault(); onDrop() }}
+    >
+      <div style={{ padding: "13px 14px 10px", borderBottom: `1px solid ${C.borderS}`, display: "flex", alignItems: "center", gap: 8, position: "relative", flexShrink: 0 }}>
+        <div style={topBorderStyle} />
+        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", flex: 1, ...titleStyle }}>
+          {label}
+        </span>
+        <span style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "1px 7px", color: cfg.badgeColor, background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}` }}>
+          {applications.length}
+        </span>
       </div>
 
-      <div className="space-y-2">
+      <div
+        style={{
+          padding: 10, display: "flex", flexDirection: "column", gap: 8,
+          flex: 1, minHeight: 120,
+          transition: "background 0.18s ease,box-shadow 0.18s ease",
+          position: "relative", borderRadius: 6, ...cardsAreaStyle,
+        }}
+      >
         {applications.map((app) => (
-          <div
+          <KanbanCard
             key={app.id}
-            className="bg-white rounded-lg border border-border p-3 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <div className="flex items-start justify-between gap-1">
-              <div className="min-w-0">
-                <p className="text-sm font-medium truncate">{app.jobTitle}</p>
-                <p className="text-xs text-muted-foreground truncate">{app.company}</p>
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={() => setEditingReminder(editingReminder === app.id ? null : app.id)}
-                  className={cn(
-                    "transition-colors",
-                    app.followUpAt
-                      ? "text-primary hover:text-primary/70"
-                      : "text-muted-foreground hover:text-primary"
-                  )}
-                  title={t("follow_up_label")}
-                >
-                  {app.followUpAt ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
-                </button>
-                <button
-                  onClick={() => handleDelete(app.id)}
-                  className="text-muted-foreground hover:text-destructive transition-colors"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              </div>
-            </div>
-
-            {/* Reminder display */}
-            {app.followUpAt && editingReminder !== app.id && (
-              <p className="text-[10px] text-primary mt-1 flex items-center gap-1">
-                <Bell className="h-2.5 w-2.5" />
-                {formatInTimezone(app.followUpAt!, userTimezone, dateLocale, "d MMM")}
-              </p>
-            )}
-
-            {/* Reminder picker */}
-            {editingReminder === app.id && (
-              <div className="mt-2 flex items-center gap-1.5">
-                <input
-                  type="date"
-                  defaultValue={app.followUpAt ? app.followUpAt.slice(0, 10) : ""}
-                  min={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => handleFollowUp(app.id, e.target.value || null)}
-                  className="text-xs border border-border rounded px-1.5 py-0.5 flex-1 focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-                {app.followUpAt && (
-                  <button
-                    onClick={() => handleFollowUp(app.id, null)}
-                    className="text-[10px] text-destructive hover:underline"
-                  >
-                    {t("follow_up_removed")}
-                  </button>
-                )}
-              </div>
-            )}
-
-            {app.url && (
-              <a href={app.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1 text-xs text-primary mt-1.5 hover:underline">
-                <ExternalLink className="h-3 w-3" /> {t("view_offer")}
-              </a>
-            )}
-
-            {/* Move buttons */}
-            <div className="flex gap-1 mt-2 flex-wrap">
-              {STATUSES.filter((s) => s !== columnId).map((status) => (
-                <button
-                  key={status}
-                  onClick={() => handleMove(app.id, status)}
-                  className="text-[10px] text-muted-foreground hover:text-foreground border border-border rounded px-1.5 py-0.5 transition-colors"
-                >
-                  → {STATUS_LABELS[status]}
-                </button>
-              ))}
-            </div>
-          </div>
+            app={app}
+            isFound={isFound}
+            isRejected={isRejectedCol}
+            dragging={draggingId === app.id}
+            onDragStart={onDragStart}
+            onDragEnd={onDragEnd}
+            onDelete={onDelete}
+          />
         ))}
+
+        {applications.length === 0 && dragOver && (
+          <div style={{
+            position: "absolute", top: "50%", left: "50%",
+            transform: "translate(-50%,-50%)",
+            fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
+            textTransform: "uppercase", color: C.cyan, padding: "6px 12px",
+            border: `1px dashed ${C.cyanBorder}`, borderRadius: 6,
+            background: "white", pointerEvents: "none",
+          }}>
+            Suelta aquí
+          </div>
+        )}
+      </div>
+
+      <div style={{ margin: "8px 10px 10px" }}>
+        <button
+          onClick={onAddClick}
+          style={{
+            width: "100%", padding: 8, border: `1px dashed ${C.subtle}`,
+            borderRadius: 6, background: "transparent", color: C.subtle,
+            fontSize: 12, fontFamily: "inherit", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            transition: "all 0.15s ease",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = C.cyan
+            ;(e.currentTarget as HTMLButtonElement).style.color = C.cyan
+            ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(0,212,255,0.04)"
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.borderColor = C.subtle
+            ;(e.currentTarget as HTMLButtonElement).style.color = C.subtle
+            ;(e.currentTarget as HTMLButtonElement).style.background = "transparent"
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 5v14M5 12h14"/>
+          </svg>
+          Agregar
+        </button>
       </div>
     </div>
   )

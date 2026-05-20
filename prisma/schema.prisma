@@ -152,7 +152,8 @@ model Application {
   user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   jobTitle       String
   company        String
-  status         AppStatus @default(WISHLIST)
+  status         AppStatus @default(APPLIED)
+  modalidad      String?
   notes          String?   @db.Text
   url            String?
   salary         String?

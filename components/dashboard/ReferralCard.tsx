@@ -28,7 +28,7 @@ const TIERS = [
   { tier: 3, threshold: 9,  range: "9–10", labelKey: "reward_tier_3", color: "text-purple-600", bg: "bg-purple-50", border: "border-purple-200" },
 ]
 
-export default function ReferralCard() {
+export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: boolean }) {
   const t = useTranslations("referral")
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [copied, setCopied] = useState(false)
@@ -60,7 +60,7 @@ export default function ReferralCard() {
 
   if (loading) {
     return (
-      <div className="rounded-2xl border border-border bg-white p-6 animate-pulse">
+      <div className={cn("animate-pulse", !embeddedMode && "rounded-2xl border border-border bg-white p-6")}>
         <div className="h-5 w-32 bg-muted rounded mb-4" />
         <div className="h-32 w-full bg-muted rounded" />
       </div>
@@ -72,17 +72,19 @@ export default function ReferralCard() {
   const nextTier    = stats?.nextTier    ?? null
 
   return (
-    <div className="rounded-2xl border border-border bg-white p-6 space-y-5">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-          <Gift className="h-5 w-5 text-primary" />
+    <div className={cn("space-y-5", !embeddedMode && "rounded-2xl border border-border bg-white p-6")}>
+      {/* Header — hidden when rendered inside SettingsForm card shell */}
+      {!embeddedMode && (
+        <div className="flex items-start gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+            <Gift className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-sm">{t("title")}</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("description")}</p>
+          </div>
         </div>
-        <div>
-          <h3 className="font-semibold text-sm">{t("title")}</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">{t("description")}</p>
-        </div>
-      </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-3">

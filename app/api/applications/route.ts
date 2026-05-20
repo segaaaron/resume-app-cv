@@ -5,6 +5,18 @@ import { requireProUser, handleError } from "@/lib/controllers/shared"
 import { applicationService } from "@/lib/controllers/application-deps"
 import { applicationCreateSchema } from "@/lib/services/application/ApplicationService"
 
+export async function DELETE(req: Request) {
+  const session = await auth()
+  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  try {
+    await applicationService.deleteAll(session.user.id)
+    return NextResponse.json({ success: true })
+  } catch (err) {
+    return handleError(err)
+  }
+}
+
 export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

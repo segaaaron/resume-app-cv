@@ -8,6 +8,7 @@ export interface ApplicationCard {
   jobTitle: string
   company: string
   status: AppStatus
+  modalidad?: string
   notes?: string
   url?: string
   salary?: string
@@ -27,6 +28,7 @@ interface ApplicationActions {
   updateApplication: (id: string, data: Partial<ApplicationCard>) => void
   moveApplication: (id: string, status: AppStatus) => void
   deleteApplication: (id: string) => void
+  clearApplications: () => void
 }
 
 export const useApplicationStore = create<ApplicationState & ApplicationActions>()(
@@ -51,5 +53,7 @@ export const useApplicationStore = create<ApplicationState & ApplicationActions>
     deleteApplication: (id) => set((state) => {
       state.applications = state.applications.filter((a) => a.id !== id)
     }),
+
+    clearApplications: () => set((state) => { state.applications = [] }),
   }))
 )
