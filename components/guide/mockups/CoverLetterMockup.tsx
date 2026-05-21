@@ -7,7 +7,7 @@ export default function CoverLetterMockup({ locale = "es" }: Props) {
   const closing = isEs ? "Atentamente, Sarah Johnson" : "Sincerely, Sarah Johnson"
   const regenerate = isEs ? "✦ Regenerar" : "✦ Regenerate"
   const download = isEs ? "Descargar PDF" : "Download PDF"
-  const titleLabel = isEs ? "ReadyCV · Carta IA" : "ReadyCV · AI Letter"
+  const titleLabel = isEs ? "ReadyCVV · Carta IA" : "ReadyCVV · AI Letter"
 
   return (
     <div className="bg-white rounded-2xl border border-neutral-200 shadow-lg p-5 w-full max-w-sm mx-auto">

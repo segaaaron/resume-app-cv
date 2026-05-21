@@ -162,11 +162,17 @@ export default function SettingsForm({ user }: { user: UserData }) {
   }
 
   return (
-    <div style={{
+    <>
+    <style>{`
+      @media (max-width: 640px) {
+        .settings-grid { grid-template-columns: 1fr !important; }
+        .settings-grid > * { grid-column: 1 / -1 !important; }
+      }
+    `}</style>
+    <div className="settings-grid" style={{
       display: "grid",
       gridTemplateColumns: "1fr 1fr",
       gap: 16,
-      maxWidth: 820,
     }}>
 
       {/* ── Card 1: Perfil (full width) ── */}
@@ -198,7 +204,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
               width: 52, height: 52, borderRadius: "50%",
               background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
               display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--dash-serif,Georgia,serif)",
+              fontFamily: "var(--dash-serif)",
               fontSize: 18, fontWeight: 700, color: "white",
               flexShrink: 0, border: "2px solid rgba(0,212,255,0.3)",
             }}>
@@ -208,7 +214,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
               <div style={{ fontSize: 14, fontWeight: 600, color: "#1a2e4a" }}>
                 {user.name ?? t("no_name")}
               </div>
-              <div style={{ fontSize: 12, color: "#6B7A8C", fontFamily: "var(--mono,monospace)" }}>
+              <div style={{ fontSize: 12, color: "#6B7A8C", fontFamily: "var(--dash-mono)" }}>
                 {user.email}
               </div>
             </div>
@@ -284,7 +290,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
             </div>
             <div style={{ flex: 1 }}>
               <div style={{
-                fontFamily: "var(--dash-serif,Georgia,serif)",
+                fontFamily: "var(--dash-serif)",
                 fontSize: 14, fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.02em",
               }}>
                 {isPro ? t("plan_pro") : t("plan_free_label")}
@@ -451,5 +457,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
       </div>
 
     </div>
+    </>
   )
 }

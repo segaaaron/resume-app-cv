@@ -82,6 +82,7 @@ export default function CVCard({
         cursor: "pointer",
         display: "block",
         position: "relative",
+        zIndex: ddOpen ? 10 : "auto",
         transition: "border-color 0.22s ease, background 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.22s ease",
         transform: isHovered ? "translateY(-2px)" : "translateY(0)",
         boxShadow: isHovered ? "0 4px 20px rgba(0,212,255,0.12)" : "none",
@@ -269,10 +270,10 @@ export default function CVCard({
             position: "relative",
           }}
         >
-          {/* Primary: Editar */}
+          {/* Primary: Renombrar */}
           <button
             type="button"
-            onClick={onEdit}
+            onClick={onRename}
             style={{
               display: "inline-flex",
               alignItems: "center",
@@ -290,7 +291,7 @@ export default function CVCard({
             onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,212,255,0.15)" }}
             onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,212,255,0.1)" }}
           >
-            {t("edit")}
+            {t("rename")}
           </button>
 
           {/* More menu — pushed to right */}
@@ -352,11 +353,6 @@ export default function CVCard({
                 transformOrigin: "top right",
               }}
             >
-              <DDItem
-                onClick={() => { setDdOpen(false); onRename() }}
-                icon={<Pen style={{ width: "13px", height: "13px" }} />}
-                label={t("rename")}
-              />
               <DDItem
                 onClick={() => { setDdOpen(false); onDuplicate() }}
                 icon={<Copy style={{ width: "13px", height: "13px" }} />}

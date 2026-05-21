@@ -61,7 +61,7 @@ export async function generateMetadata({
 const jsonLdWebsite = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "ReadyCV",
+  name: "ReadyCVV",
   url: "https://readycvv.com",
   potentialAction: {
     "@type": "SearchAction",
@@ -76,7 +76,7 @@ const jsonLdWebsite = {
 const jsonLdOrganization = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "ReadyCV",
+  name: "ReadyCVV",
   url: "https://readycvv.com",
   logo: {
     "@type": "ImageObject",
@@ -97,7 +97,7 @@ const jsonLdOrganization = {
 const jsonLdWebApp = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "ReadyCV",
+  name: "ReadyCVV",
   url: "https://readycvv.com",
   description:
     "AI-powered resume builder with ATS analysis. 139+ professional templates, cover letter generator, job application tracker.",
@@ -147,58 +147,58 @@ const jsonLdFaq = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "What is ReadyCV?",
+      name: "What is ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes 139+ professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.",
+        text: "ReadyCVV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes 139+ professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.",
       },
     },
     {
       "@type": "Question",
-      name: "How does the AI work in ReadyCV?",
+      name: "How does the AI work in ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV uses GPT-4o-mini to power 7 AI tools: bullet point improvement, professional summary generation, ATS compatibility scoring, cover letter generation, CV review with actionable suggestions, skills suggestion, and AI profile filling from a free-text description.",
+        text: "ReadyCVV uses GPT-4o-mini to power 7 AI tools: bullet point improvement, professional summary generation, ATS compatibility scoring, cover letter generation, CV review with actionable suggestions, skills suggestion, and AI profile filling from a free-text description.",
       },
     },
     {
       "@type": "Question",
-      name: "Is ReadyCV compatible with ATS systems?",
+      name: "Is ReadyCVV compatible with ATS systems?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. ReadyCV includes a built-in ATS Score tool that analyzes your resume against a specific job description and scores compatibility. It also includes ATS-optimized templates that use clean formatting recruiters and ATS systems can parse correctly.",
+        text: "Yes. ReadyCVV includes a built-in ATS Score tool that analyzes your resume against a specific job description and scores compatibility. It also includes ATS-optimized templates that use clean formatting recruiters and ATS systems can parse correctly.",
       },
     },
     {
       "@type": "Question",
-      name: "How much does ReadyCV cost?",
+      name: "How much does ReadyCVV cost?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all 139+ templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.",
+        text: "ReadyCVV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all 139+ templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.",
       },
     },
     {
       "@type": "Question",
-      name: "In what languages is ReadyCV available?",
+      name: "In what languages is ReadyCVV available?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV is fully available in Spanish and English. The interface, AI tools, and templates work in both languages, making it the leading AI resume builder for Spanish-speaking professionals.",
+        text: "ReadyCVV is fully available in Spanish and English. The interface, AI tools, and templates work in both languages, making it the leading AI resume builder for Spanish-speaking professionals.",
       },
     },
     {
       "@type": "Question",
-      name: "¿Qué es ReadyCV?",
+      name: "¿Qué es ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye más de 139 plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.",
+        text: "ReadyCVV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye más de 139 plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.",
       },
     },
     {
       "@type": "Question",
-      name: "¿Cuánto cuesta ReadyCV?",
+      name: "¿Cuánto cuesta ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, todas las 139+ plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.",
+        text: "ReadyCVV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, todas las 139+ plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.",
       },
     },
   ],

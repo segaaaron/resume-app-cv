@@ -61,7 +61,7 @@ export class SessionChallengeService {
     if (!user) {
       // Equalize timing to prevent email enumeration
       await bcrypt.compare("dummy", "$2b$10$abcdefghijklmnopqrstuuabcdefghijklmnopqrstuuabcdefghijk")
-      throw new AppError("invalid", 400, { attemptsLeft: MAX_ATTEMPTS - 1 })
+      throw new AppError("invalid_or_no_challenge", 400, { attemptsLeft: MAX_ATTEMPTS - 1 })
     }
 
     if (user.sessionChallengeBlockedUntil && user.sessionChallengeBlockedUntil > new Date()) {

@@ -11,10 +11,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { useTranslations, useLocale } from "next-intl"
@@ -134,62 +130,28 @@ export default function DashboardNav({
             textDecoration: "none",
           }}
         >
-          {/* Logo ring */}
-          <div
+          {/* Logo icon */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.svg"
+            alt="ReadyCVV"
+            width={38}
+            height={38}
+            style={{ borderRadius: "10px", flexShrink: 0, display: "block" }}
+          />
+          {/* Brand text */}
+          <span
             style={{
-              width: "38px",
-              height: "38px",
-              border: "2px solid var(--dash-cyan)",
-              borderRadius: "50%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              position: "relative",
-              background:
-                "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,212,255,0.03) 100%)",
-              boxShadow: "0 0 0 1px rgba(0,212,255,0.1)",
+              fontFamily: "var(--dash-serif)",
+              fontSize: "15px",
+              fontWeight: 700,
+              color: "var(--dash-navy)",
+              letterSpacing: "-0.02em",
+              lineHeight: 1,
             }}
           >
-            <span
-              style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: "13px",
-                fontWeight: 700,
-                color: "var(--dash-cyan)",
-                letterSpacing: "0.02em",
-                lineHeight: 1,
-              }}
-            >
-              RC
-            </span>
-          </div>
-          {/* Brand text */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "2px" }}>
-            <span
-              style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: "15px",
-                fontWeight: 700,
-                color: "var(--dash-navy)",
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
-              }}
-            >
-              ReadyCV
-            </span>
-            <span
-              style={{
-                fontSize: "10px",
-                fontWeight: 500,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
-                color: "var(--dash-cyan)",
-              }}
-            >
-              Studio
-            </span>
-          </div>
+            ReadyCVV
+          </span>
         </Link>
       </div>
 
@@ -316,7 +278,7 @@ export default function DashboardNav({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontFamily: "'Playfair Display', Georgia, serif",
+            fontFamily: "var(--dash-serif)",
             fontSize: "12px",
             fontWeight: 700,
             color: "white",
@@ -397,23 +359,43 @@ export default function DashboardNav({
           >
             <LogOut style={{ width: 13, height: 13 }} />
           </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("logout_confirm_title")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("logout_confirm_desc")}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("logout_cancel")}</AlertDialogCancel>
+          <AlertDialogContent
+            className="p-0 overflow-hidden"
+            style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+          >
+            {/* Head */}
+            <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
+              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
+              {/* Icon */}
+              <div style={{ width: "60px", height: "60px", margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))", border: "1.5px solid rgba(0,212,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00D4FF", position: "relative" }}>
+                <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
+                  <path d="M10 22H5.5A1.5 1.5 0 014 20.5v-15A1.5 1.5 0 015.5 4H10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                  <path d="M17 18l5-5-5-5M22 13H10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+              </div>
+              <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "6px" }}>
+                {t("logout_confirm_title")}
+              </div>
+              <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "280px", margin: "0 auto" }}>
+                {t("logout_confirm_desc")}
+              </div>
+            </div>
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
+              <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>
+                {t("logout_cancel")}
+              </AlertDialogCancel>
               <AlertDialogAction
                 onClick={async () => {
                   const result = await clearSessionToken()
                   if (!result.ok) toast.error(t("logout_error"))
                   signOut({ callbackUrl: `/${locale}` })
                 }}
+                style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}
               >
                 {t("logout_confirm_action")}
               </AlertDialogAction>
-            </AlertDialogFooter>
+            </div>
           </AlertDialogContent>
         </AlertDialog>
       </div>
@@ -446,15 +428,16 @@ export default function DashboardNav({
           left: 0,
           bottom: 0,
           width: "290px",
-          zIndex: 960,
+          zIndex: 1000,
           transform: drawerOpen ? "translateX(0)" : "translateX(-105%)",
           transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
           boxShadow: "8px 0 32px rgba(15,25,45,0.18)",
-          background: "linear-gradient(180deg, #FAFBFD 0%, #F5F7FB 100%)",
+          background: "#FAFBFD",
           borderRight: "1px solid var(--dash-border)",
           display: "flex",
           flexDirection: "column",
           overflow: "hidden",
+          isolation: "isolate",
         }}
       >
         {sidebarContent}

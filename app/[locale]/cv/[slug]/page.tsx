@@ -20,12 +20,12 @@ export async function generateMetadata({
   if (!resume) return {}
 
   const title = resume.title
-    ? `${resume.title} — CV | ReadyCV`
-    : "CV profesional | ReadyCV"
+    ? `${resume.title} — CV | ReadyCVV`
+    : "CV profesional | ReadyCVV"
   const description =
     locale === "es"
-      ? `Mira el CV profesional creado con ReadyCV. Crea el tuyo con IA en minutos.`
-      : `View this professional resume created with ReadyCV. Build yours with AI in minutes.`
+      ? `Mira el CV profesional creado con ReadyCVV. Crea el tuyo con IA en minutos.`
+      : `View this professional resume created with ReadyCVV. Build yours with AI in minutes.`
   const url = `https://readycvv.com/${locale}/cv/${slug}`
 
   return {

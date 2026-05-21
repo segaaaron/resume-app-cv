@@ -3,7 +3,7 @@ interface Props { locale?: string }
 export default function CVReviewMockup({ locale = "es" }: Props) {
   const isEs = locale === "es"
 
-  const titleLabel = isEs ? "ReadyCV · Revisión IA" : "ReadyCV · AI Review"
+  const titleLabel = isEs ? "ReadyCVV · Revisión IA" : "ReadyCVV · AI Review"
   const applyLabel = isEs ? "Aplicar →" : "Apply →"
 
   const items = isEs

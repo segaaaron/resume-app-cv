@@ -28,7 +28,7 @@ export default function FillProfileMockup({ locale = "es" }: Props) {
         <div className="h-2 w-2 rounded-full bg-red-400" />
         <div className="h-2 w-2 rounded-full bg-yellow-400" />
         <div className="h-2 w-2 rounded-full bg-green-400" />
-        <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCV · {isEs ? "Ayúdate con la IA" : "AI Assistant"}</span>
+        <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCVV · {isEs ? "Ayúdate con la IA" : "AI Assistant"}</span>
       </div>
 
       <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] text-neutral-500 leading-relaxed">

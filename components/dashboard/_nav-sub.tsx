@@ -82,7 +82,7 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
       {count !== null && (
         <span style={{
           marginLeft: "auto",
-          fontFamily: "var(--font-mono, ui-monospace, Menlo, monospace)",
+          fontFamily: "var(--dash-mono)",
           fontSize: "11px", fontWeight: 700, color: "white",
           background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
           border: "none", borderRadius: "8px", padding: "3px 8px",

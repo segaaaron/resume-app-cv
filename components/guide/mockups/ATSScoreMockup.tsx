@@ -39,7 +39,7 @@ export default function ATSScoreMockup({ locale = "es" }: Props) {
           <div className="h-2 w-2 rounded-full bg-red-400" />
           <div className="h-2 w-2 rounded-full bg-yellow-400" />
           <div className="h-2 w-2 rounded-full bg-green-400" />
-          <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCV · ATS Score</span>
+          <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCVV · ATS Score</span>
         </div>
         <div className="flex flex-col items-center mb-4">
           <div className="relative h-20 w-20">

@@ -2,14 +2,14 @@ import { toast } from "sonner"
 
 const MESSAGES = {
   es: {
-    server_error: "Ocurrió un problema en el servidor. Por favor intenta de nuevo en unos momentos.",
-    service_unavailable: "El servicio está temporalmente no disponible. Intenta en unos minutos.",
-    network_error: "Sin conexión a internet. Verifica tu red e intenta de nuevo.",
+    server_error: "Algo salió mal. Inténtalo de nuevo.",
+    service_unavailable: "Servicio no disponible. Intenta en unos minutos.",
+    network_error: "Sin conexión. Verifica tu internet.",
   },
   en: {
-    server_error: "A server error occurred. Please try again in a moment.",
-    service_unavailable: "The service is temporarily unavailable. Try again in a few minutes.",
-    network_error: "No internet connection. Check your network and try again.",
+    server_error: "Something went wrong. Please try again.",
+    service_unavailable: "Service unavailable. Try again in a few minutes.",
+    network_error: "No connection. Check your internet.",
   },
 }
 

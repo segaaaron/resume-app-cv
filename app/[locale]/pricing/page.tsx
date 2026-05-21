@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic"
 const jsonLdSoftwareApp = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "ReadyCV",
+  name: "ReadyCVV",
   url: "https://readycvv.com",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",

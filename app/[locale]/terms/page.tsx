@@ -334,7 +334,7 @@ export default async function TermsPage({
                   {t("s18_title")}
                 </h2>
                 <div className="space-y-1 text-muted-foreground">
-                  <p><strong className="text-foreground">MS Saravia Tech Stack LLC</strong> — ReadyCV</p>
+                  <p><strong className="text-foreground">MS Saravia Tech Stack LLC</strong> — ReadyCVV</p>
                   <p>{t("s18_website_label")} <a href="https://www.readycvv.com" className="text-primary underline underline-offset-4">www.readycvv.com</a></p>
                   <p>{t("s18_email_label")} <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a></p>
                 </div>

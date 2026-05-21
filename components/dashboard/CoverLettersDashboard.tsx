@@ -13,8 +13,6 @@ import {
   AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
@@ -39,6 +37,9 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const [letters, setLetters] = useState(initialLetters)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
+  const [renameId, setRenameId] = useState<string | null>(null)
+  const [renameDraft, setRenameDraft] = useState("")
+  const [renaming, setRenaming] = useState(false)
 
   function requirePro() {
     router.push(`/${locale}/pricing`)
@@ -61,6 +62,29 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     } catch {
       toast.error(t("create_error"))
       setCreating(false)
+    }
+  }
+
+  async function confirmRename() {
+    if (!renameId || !renameDraft.trim()) return
+    setRenaming(true)
+    try {
+      const res = await apiFetch(`/api/cover-letters/${renameId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: renameDraft.trim() }),
+      })
+      if (res.ok) {
+        setLetters((prev) => prev.map((l) => l.id === renameId ? { ...l, title: renameDraft.trim() } : l))
+        toast.success(t("rename_success"))
+      } else {
+        toast.error(t("rename_error"))
+      }
+    } catch {
+      toast.error(t("rename_error"))
+    } finally {
+      setRenaming(false)
+      setRenameId(null)
     }
   }
 
@@ -108,25 +132,25 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
           <div>
             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00D4FF", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>
               <span style={{ width: 14, height: 1.5, background: "#00D4FF", opacity: 0.5, display: "inline-block" }} />
-              Documentos
+              {t("eyebrow")}
             </div>
-            <h1 style={{ fontFamily: "var(--font-serif, Georgia, serif)", fontSize: 32, fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.035em", lineHeight: 1.1, margin: 0 }}>
-              Cartas de Presentación
+            <h1 style={{ fontFamily: "var(--dash-serif)", fontSize: 32, fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.035em", lineHeight: 1.1, margin: 0 }}>
+              {t("title")}
             </h1>
             <p style={{ fontSize: 13.5, color: "#6B7A8C", marginTop: 6, marginBottom: 0 }}>
-              {letters.length} {letters.length === 1 ? "carta activa" : "cartas activas"} · Generadas con IA
-              {isPro ? " · Plan PRO" : ""}
+              {letters.length} {letters.length === 1 ? t("count_one") : t("count_other")} · {t("ai_generated")}
+              {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
             </p>
           </div>
         </div>
 
         {/* Toolbar */}
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-          <span style={{ fontFamily: "var(--font-serif, Georgia, serif)", fontSize: 16, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.025em", flex: 1 }}>
-            Mis cartas
+          <span style={{ fontFamily: "var(--dash-serif)", fontSize: 16, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.025em", flex: 1 }}>
+            {t("section_title")}
           </span>
-          <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: 11, color: "#6B7A8C", background: "#EEF2F9", border: "1px solid #E8EDF6", borderRadius: 8, padding: "2px 8px" }}>
-            {letters.length} de {letters.length}
+          <span style={{ fontFamily: "var(--dash-mono)", fontSize: 11, color: "#6B7A8C", background: "#EEF2F9", border: "1px solid #E8EDF6", borderRadius: 8, padding: "2px 8px" }}>
+            {letters.length} {t("of")} {letters.length}
           </span>
         </div>
 
@@ -141,6 +165,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
               userTimezone={userTimezone}
               dateLocale={dateLocale}
               onEdit={() => router.push(`/${locale}/cover-letter/${letter.id}`)}
+              onRename={() => { setRenameId(letter.id); setRenameDraft(letter.title) }}
               onDelete={() => setDeleteId(letter.id)}
             />
           ))}
@@ -186,31 +211,24 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 </svg>
               )}
             </div>
-            <span className="cl-new-lbl" style={{ fontSize: 13, fontWeight: 500, color: "#6B7A8C" }}>Nueva carta</span>
-            <span className="cl-new-hint" style={{ fontSize: 11, color: "#A0AABE", textAlign: "center" }}>Genera con IA o escribe desde cero</span>
+            <span className="cl-new-lbl" style={{ fontSize: 13, fontWeight: 500, color: "#6B7A8C" }}>{t("new")}</span>
+            <span className="cl-new-hint" style={{ fontSize: 11, color: "#A0AABE", textAlign: "center" }}>{t("new_hint")}</span>
           </button>
         </div>
 
-        {/* gold-rule */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "32px 0 24px" }}>
-          <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, transparent, #D9E1ED)" }} />
-          <span style={{ fontFamily: "var(--font-serif, Georgia, serif)", fontSize: 13, color: "#00D4FF", opacity: 0.3, letterSpacing: "0.2em", whiteSpace: "nowrap" }}>· · ·</span>
-          <div style={{ flex: 1, height: 1, background: "linear-gradient(90deg, #D9E1ED, transparent)" }} />
-        </div>
-
         {/* Activity section */}
-        <div>
-          <div style={{ fontFamily: "var(--font-serif, Georgia, serif)", fontSize: 15, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
-            Cartas recientes
+        <div style={{ marginTop: 40 }}>
+          <div style={{ fontFamily: "var(--dash-serif)", fontSize: 15, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+            {t("recent_title")}
             <div style={{ flex: 1, height: 1, background: "#E8EDF6" }} />
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
             {letters.length === 0 ? (
-              <p style={{ fontSize: 12.5, color: "#6B7A8C", padding: "8px 14px" }}>Sin actividad reciente</p>
+              <p style={{ fontSize: 12.5, color: "#6B7A8C", padding: "8px 14px" }}>{t("activity_empty")}</p>
             ) : (
               letters.slice(0, 3).map((l, i) => {
                 const isEdit = i === 0 && new Date(l.updatedAt).getTime() !== new Date(l.createdAt).getTime()
-                const name = l.title || "Sin título"
+                const name = l.title || t("untitled")
                 const time = formatInTimezone(isEdit ? l.updatedAt : l.createdAt, userTimezone, dateLocale)
                 return (
                   <LetterActivityItem
@@ -225,22 +243,59 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
           </div>
         </div>
 
+        {/* Rename dialog */}
+        <AlertDialog open={!!renameId} onOpenChange={(o) => !o && setRenameId(null)}>
+          <AlertDialogContent className="p-0 overflow-hidden" style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}>
+            <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
+              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
+              <div style={{ width: 60, height: 60, margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))", border: "1.5px solid rgba(0,212,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00D4FF" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
+                  <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+              </div>
+              <AlertDialogTitle className="sr-only">{t("rename_title")}</AlertDialogTitle>
+              <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em" }} aria-hidden="true">{t("rename_title")}</div>
+            </div>
+            <div style={{ padding: "18px 24px 22px" }}>
+              <input
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring mb-4"
+                value={renameDraft}
+                onChange={(e) => setRenameDraft(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && confirmRename()}
+                maxLength={200}
+                autoFocus
+              />
+              <div style={{ display: "flex", gap: "10px" }}>
+                <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>{t("cancel")}</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmRename} disabled={renaming || !renameDraft.trim()} style={{ flex: 1, background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,212,255,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: renaming || !renameDraft.trim() ? "not-allowed" : "pointer", justifyContent: "center" }}>
+                  {renaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("rename_confirm")}
+                </AlertDialogAction>
+              </div>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
+
         {/* Delete dialog */}
         <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{t("delete_title")}</AlertDialogTitle>
-              <AlertDialogDescription>{t("delete_description")}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction
-                className="bg-destructive hover:bg-destructive/90"
-                onClick={() => deleteId && deleteLetter(deleteId)}
-              >
-                {t("delete")}
-              </AlertDialogAction>
-            </AlertDialogFooter>
+          <AlertDialogContent className="p-0 overflow-hidden" style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}>
+            <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
+              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
+              <div style={{ width: 60, height: 60, margin: "0 auto 14px", borderRadius: "50%", background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444" }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+                  <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+                </svg>
+              </div>
+              <AlertDialogTitle className="sr-only">{t("delete_title")}</AlertDialogTitle>
+              <AlertDialogDescription className="sr-only">{t("delete_description")}</AlertDialogDescription>
+              <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "6px" }} aria-hidden="true">{t("delete_title")}</div>
+              <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "280px", margin: "0 auto" }} aria-hidden="true">{t("delete_description")}</div>
+            </div>
+            <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
+              <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>{t("cancel")}</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteId && deleteLetter(deleteId)} style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}>{t("delete")}</AlertDialogAction>
+            </div>
           </AlertDialogContent>
         </AlertDialog>
       </div>

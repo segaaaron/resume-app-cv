@@ -36,6 +36,7 @@ interface UserPlanCacheEntry {
   emailVerified:       Date | null
   sessionVersion:      number
   activeSessionToken:  string | null
+  termsAcceptedAt:     Date | null
   expiresAt:           number
 }
 
@@ -140,6 +141,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      if (account?.provider === "google" && user?.id) {
+        const dbUser = await db.user.findUnique({
+          where: { id: user.id as string },
+          select: { termsAcceptedAt: true },
+        })
+        if (dbUser && !dbUser.termsAcceptedAt) {
+          return "/accept-terms"
+        }
+      }
+      return true
+    },
     async jwt({ token, user, trigger }) {
       const isFreshLogin = !!user  // user arg only present on sign-in, not token refreshes
 
@@ -169,6 +182,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             emailVerified:      prefetched.emailVerified ?? null,
             sessionVersion:     prefetched.sessionVersion ?? 1,
             activeSessionToken: (token.activeSessionToken as string | null) ?? null,
+            termsAcceptedAt:    null,
             expiresAt:          now + CACHE_TTL_MS,
           })
           const uid = user.id as string
@@ -246,6 +260,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           forceLogoutAt:      true,
           lastActiveAt:       true,
           activeSessionToken:  true,
+          termsAcceptedAt:    true,
         },
       })
 
@@ -297,6 +312,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         emailVerified:      dbUser.emailVerified,
         sessionVersion:     dbUser.sessionVersion,
         activeSessionToken: dbUser.activeSessionToken,
+        termsAcceptedAt:    (dbUser as { termsAcceptedAt?: Date | null }).termsAcceptedAt ?? null,
         expiresAt:          now + CACHE_TTL_MS,
       })
 
@@ -306,6 +322,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token.role               = dbUser.role
       token.emailVerified      = dbUser.emailVerified?.toISOString() ?? null
       token.activeSessionToken = dbUser.activeSessionToken
+      token.termsAcceptedAt    = (dbUser as { termsAcceptedAt?: Date | null }).termsAcceptedAt?.toISOString() ?? null
 
       // fire-and-forget lastActiveAt update (runs at most every 5 min per user)
       db.user.update({
@@ -324,6 +341,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role               = token.role as string | undefined
         session.user.emailVerified      = (token.emailVerified ?? null) as unknown as (Date & string) | null
         session.user.sessionVersion     = token.sessionVersion as number | undefined
+        session.user.termsAcceptedAt    = token.termsAcceptedAt as string | null | undefined
       }
       return session
     },

@@ -15,7 +15,7 @@ export default function SummaryMockup({ locale = "es" }: Props) {
         <div className="h-2 w-2 rounded-full bg-red-400" />
         <div className="h-2 w-2 rounded-full bg-yellow-400" />
         <div className="h-2 w-2 rounded-full bg-green-400" />
-        <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCV · {isEs ? "Resumen IA" : "AI Summary"}</span>
+        <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCVV · {isEs ? "Resumen IA" : "AI Summary"}</span>
       </div>
       <div className="rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-4 space-y-2">
         <div className="flex items-center gap-2">

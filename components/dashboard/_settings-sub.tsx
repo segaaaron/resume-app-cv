@@ -7,10 +7,6 @@ import {
   AlertDialogAction,
   AlertDialogCancel,
   AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
@@ -30,7 +26,7 @@ export const cardIcoStyle: React.CSSProperties = {
 }
 
 export const cardTitleStyle: React.CSSProperties = {
-  fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)",
+  fontFamily: "var(--dash-serif)",
   fontSize: 14, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em",
 }
 
@@ -216,17 +212,35 @@ export function DataCard({ exportLoading, deleteLoading, handleDataExport, handl
               </svg>
               {deleteLoading ? t("deleting") : t("delete_account")}
             </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>{t("delete_dialog_title")}</AlertDialogTitle>
-                <AlertDialogDescription>{t("delete_dialog_desc")}</AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>{t("cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={handleDeleteAccount} className="bg-destructive text-white hover:bg-destructive/90">
+            <AlertDialogContent
+              className="p-0 overflow-hidden"
+              style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(239,68,68,0.08)" }}
+            >
+              <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #FFF5F5 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
+                <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #EF4444, transparent)", opacity: 0.5 }} />
+                <div style={{ width: "60px", height: "60px", margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.04))", border: "1.5px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", position: "relative" }}>
+                  <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                    <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </div>
+                <div style={{ fontFamily: "var(--dash-serif)", fontSize: "20px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "8px" }}>
+                  {t("delete_dialog_title")}
+                </div>
+                <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "300px", margin: "0 auto" }}>
+                  {t("delete_dialog_desc")}
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
+                <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>
+                  {t("cancel")}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={handleDeleteAccount}
+                  style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}
+                >
                   {t("confirm_delete")}
                 </AlertDialogAction>
-              </AlertDialogFooter>
+              </div>
             </AlertDialogContent>
           </AlertDialog>
         </div>

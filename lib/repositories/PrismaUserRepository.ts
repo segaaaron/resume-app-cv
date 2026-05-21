@@ -30,6 +30,7 @@ export class PrismaUserRepository implements IUserRepository {
           password:         pending.passwordHash,
           marketingConsent: pending.marketingConsent,
           ageVerified:      pending.ageConsent,
+          termsAcceptedAt:  new Date(),
           referralCode,
           emailVerified:    new Date(),
           ...(referrerId ? { referredBy: referrerId } : {}),

@@ -31,7 +31,7 @@ export default function PublicResumeView({ title, sections, sectionData, config 
       <div className="w-full max-w-[210mm] mb-4 flex items-center justify-between px-1">
         <p className="text-xs text-muted-foreground">
           {t("shared_via")}{" "}
-          <span className="font-semibold text-primary">ReadyCV</span>
+          <span className="font-semibold text-primary">ReadyCVV</span>
         </p>
         <a
           href="/"

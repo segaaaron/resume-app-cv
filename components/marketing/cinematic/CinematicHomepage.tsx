@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { FileText, Menu, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useSession } from "next-auth/react"
 import { useScrollReveal } from "@/hooks/useScrollReveal"
@@ -160,6 +160,9 @@ export default function CinematicHomepage({ children, locale }: Props) {
   const fgMuted    = isLight ? "rgba(255,255,255,0.75)" : "rgba(15,23,42,0.85)"
   const pillBg     = isLight ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)"
   const pillBorder = isLight ? "1px solid rgba(255,255,255,0.30)" : "1px solid rgba(0,0,0,0.20)"
+  // Navbar always floats over dark image — always white text regardless of act
+  const navFg      = "#FFFFFF"
+  const navFgMuted = "rgba(255,255,255,0.55)"
 
   const navLinks = [
     { href: `/${locale}/templates`,   label: nav("templates"),   special: false },
@@ -210,21 +213,18 @@ export default function CinematicHomepage({ children, locale }: Props) {
       <nav
         className="fixed top-0 left-0 right-0 z-50 px-6 h-16 flex items-center justify-between gap-6"
         style={{
-          background: isLight
-            ? "linear-gradient(to bottom, rgba(255,255,255,0.55) 0%, transparent 100%)"
-            : "linear-gradient(to bottom, rgba(0,0,0,0.35) 0%, transparent 100%)",
+          background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)",
           backdropFilter: "blur(6px)",
         }}
       >
         <Link
           href={`/${locale}`}
           className="flex items-center gap-2 font-bold text-xl shrink-0 transition-colors duration-700"
-          style={{ color: fg }}
+          style={{ color: navFg }}
         >
-          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-            <FileText className="h-4 w-4 text-white" />
-          </div>
-          ReadyCV
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="ReadyCVV" width={28} height={28} className="rounded-lg shrink-0" />
+          ReadyCVV
         </Link>
 
         <div className="hidden md:flex items-center gap-5 text-sm font-medium">
@@ -239,7 +239,7 @@ export default function CinematicHomepage({ children, locale }: Props) {
             ) : (
               <Link key={href} href={href}
                 className="transition-colors duration-700 hover:opacity-100"
-                style={{ color: fgMuted }}
+                style={{ color: navFgMuted }}
               >
                 {label}
               </Link>
@@ -248,20 +248,18 @@ export default function CinematicHomepage({ children, locale }: Props) {
         </div>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
-          <span style={{ filter: isLight ? "invert(1) brightness(2)" : "none" }}>
-            <LocaleSwitcher />
-          </span>
+          <LocaleSwitcher variant="marketing" inactiveColor={navFgMuted} />
           {session?.user ? (
             <Link href={`/${locale}/dashboard/resumes`}
               className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300"
-              style={{ background: pillBg, color: fg, backdropFilter: "blur(8px)", border: pillBorder }}
+              style={{ background: "rgba(255,255,255,0.15)", color: navFg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.25)" }}
             >
               {nav("dashboard")}
             </Link>
           ) : (
             <Link href={`/${locale}/register`}
               className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300"
-              style={{ background: pillBg, color: fg, backdropFilter: "blur(8px)", border: pillBorder }}
+              style={{ background: "rgba(255,255,255,0.15)", color: navFg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.25)" }}
             >
               {t("nav_cta")} →
             </Link>
@@ -301,7 +299,7 @@ export default function CinematicHomepage({ children, locale }: Props) {
               </Link>
             )
           )}
-          <div className="py-1"><LocaleSwitcher /></div>
+          <div className="py-1"><LocaleSwitcher variant="marketing" /></div>
           <hr style={{ borderColor: isLight ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.1)" }} />
           {session?.user ? (
             <Link href={`/${locale}/dashboard/resumes`} onClick={() => setMobileOpen(false)}

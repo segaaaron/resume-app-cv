@@ -1,6 +1,7 @@
 "use client"
 
 import type { AppStatus, ApplicationCard } from "@/stores/applicationStore"
+import { useTranslations } from "next-intl"
 import { C, KanbanCard } from "./_column-parts"
 
 // ── Column config ────────────────────────────────────────────────────────────
@@ -68,7 +69,6 @@ export interface ColumnProps {
   onDragLeave: () => void
   onDrop: () => void
   onDelete: (id: string) => void
-  onAddClick?: () => void
 }
 
 // ── KanbanColumn ──────────────────────────────────────────────────────────────
@@ -77,8 +77,9 @@ export default function KanbanColumn({
   columnId, label, applications,
   draggingId, dragOver,
   onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
-  onDelete, onAddClick,
+  onDelete,
 }: ColumnProps) {
+  const t = useTranslations("kanban")
   const isFound = columnId === "WISHLIST"
   const isRejectedCol = columnId === "REJECTED"
   const cfg = isFound ? COL_CONFIG["FOUND"] : COL_CONFIG[columnId]
@@ -142,7 +143,7 @@ export default function KanbanColumn({
         <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", flex: 1, ...titleStyle }}>
           {label}
         </span>
-        <span style={{ fontFamily: "monospace", fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "1px 7px", color: cfg.badgeColor, background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}` }}>
+        <span style={{ fontFamily: "var(--dash-mono)", fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "1px 7px", color: cfg.badgeColor, background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}` }}>
           {applications.length}
         </span>
       </div>
@@ -177,38 +178,11 @@ export default function KanbanColumn({
             border: `1px dashed ${C.cyanBorder}`, borderRadius: 6,
             background: "white", pointerEvents: "none",
           }}>
-            Suelta aquí
+            {t("drop_here")}
           </div>
         )}
       </div>
 
-      <div style={{ margin: "8px 10px 10px" }}>
-        <button
-          onClick={onAddClick}
-          style={{
-            width: "100%", padding: 8, border: `1px dashed ${C.subtle}`,
-            borderRadius: 6, background: "transparent", color: C.subtle,
-            fontSize: 12, fontFamily: "inherit", cursor: "pointer",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-            transition: "all 0.15s ease",
-          }}
-          onMouseEnter={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = C.cyan
-            ;(e.currentTarget as HTMLButtonElement).style.color = C.cyan
-            ;(e.currentTarget as HTMLButtonElement).style.background = "rgba(0,212,255,0.04)"
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget as HTMLButtonElement).style.borderColor = C.subtle
-            ;(e.currentTarget as HTMLButtonElement).style.color = C.subtle
-            ;(e.currentTarget as HTMLButtonElement).style.background = "transparent"
-          }}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M12 5v14M5 12h14"/>
-          </svg>
-          Agregar
-        </button>
-      </div>
     </div>
   )
 }

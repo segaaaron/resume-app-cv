@@ -32,7 +32,8 @@ export function getTagStyle(modalidad?: string): React.CSSProperties {
   const m = modalidad.toLowerCase()
   if (m === "remoto") return { background: "rgba(16,185,129,0.14)", color: "#10B981", border: "1px solid rgba(16,185,129,0.2)" }
   if (m === "híbrido" || m === "hibrido") return { background: "rgba(212,165,116,0.14)", color: "#D4A574", border: "1px solid rgba(212,165,116,0.2)" }
-  return { background: "rgba(107,138,196,0.14)", color: "#6B8AC4", border: "1px solid rgba(107,138,196,0.2)" }
+  if (m === "presencial") return { background: "rgba(107,138,196,0.14)", color: "#6B8AC4", border: "1px solid rgba(107,138,196,0.2)" }
+  return { background: "rgba(150,150,170,0.12)", color: "#6B7A8C", border: "1px solid rgba(150,150,170,0.2)" }
 }
 
 // ── GripSVG ───────────────────────────────────────────────────────────────────
@@ -98,9 +99,10 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
       boxShadow: "0 0 0 1px rgba(212,165,116,0.18) inset",
     }
     if (dragging) return {
-      opacity: 0.92, transform: "scale(1.02) rotate(-1.5deg)",
-      boxShadow: "0 18px 40px rgba(0,212,255,0.32),0 0 0 2px #00D4FF",
-      borderColor: C.cyan, background: "white", cursor: "grabbing", zIndex: 50,
+      opacity: 0.25, transform: "scale(0.97)",
+      boxShadow: "none", borderColor: C.border,
+      background: C.surface, cursor: "grabbing", zIndex: 50,
+      filter: "grayscale(0.4)",
     }
     if (hovered) return { borderColor: C.cyan, background: C.surface, boxShadow: "0 4px 16px rgba(0,212,255,0.1)", cursor: "grab" }
     return { cursor: "grab" }
@@ -123,7 +125,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
       {isRejected && (
         <div style={{
           position: "absolute", top: 8, left: 10,
-          fontFamily: "Georgia,serif", fontSize: "9.5px", fontWeight: 700,
+          fontFamily: "var(--dash-serif)", fontSize: "9.5px", fontWeight: 700,
           letterSpacing: "0.18em", textTransform: "uppercase", color: "#B91C1C",
           padding: "2px 8px 2px 7px", background: "rgba(254,242,242,0.85)",
           border: "1px solid rgba(220,38,38,0.4)", borderRadius: 3,
@@ -131,7 +133,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
           boxShadow: "0 1px 0 rgba(255,255,255,0.6) inset,0 1px 2px rgba(220,38,38,0.08)",
         }}>
           <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#DC2626", boxShadow: "0 0 0 2px rgba(220,38,38,0.18)", display: "inline-block" }} />
-          Rechazado
+          {t("card_rejected_badge")}
         </div>
       )}
 
@@ -141,7 +143,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
           <div style={{
             position: "absolute", top: "50%", left: "50%",
             transform: "translate(-50%,-50%) rotate(-14deg)",
-            fontFamily: "Georgia,serif", fontSize: 18, fontWeight: 700,
+            fontFamily: "var(--dash-serif)", fontSize: 18, fontWeight: 700,
             letterSpacing: "0.18em", textTransform: "uppercase",
             color: "rgba(160,32,32,0.78)", padding: "10px 18px",
             border: "2.5px solid rgba(160,32,32,0.72)", borderRadius: 6,
@@ -151,7 +153,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
             whiteSpace: "nowrap", animation: "stampIn 0.45s cubic-bezier(.34,1.56,.64,1) backwards",
             opacity: 0.92, pointerEvents: "none", zIndex: 10,
           }}>
-            ★ LOGRADO ★
+            {t("card_found_stamp")}
           </div>
         </>
       )}
@@ -195,7 +197,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
           </span>
         )}
         {dateStr && (
-          <span style={{ fontFamily: "monospace", fontSize: 10, color: C.subtle, marginLeft: "auto" }}>{dateStr}</span>
+          <span style={{ fontFamily: "var(--dash-mono)", fontSize: 10, color: C.subtle, marginLeft: "auto" }}>{dateStr}</span>
         )}
       </div>
 
@@ -222,7 +224,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
           </svg>
-          Ver detalle
+          {t("card_view_detail")}
         </button>
       )}
     </div>

@@ -47,6 +47,7 @@ model User {
   sessionChallengeExp          DateTime?
   sessionChallengeAttempts     Int       @default(0)
   sessionChallengeBlockedUntil DateTime?
+  termsAcceptedAt     DateTime?
   lastActiveAt        DateTime             @default(now())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

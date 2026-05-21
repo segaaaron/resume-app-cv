@@ -4,13 +4,10 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
 import { useApplicationStore, type AppStatus, type ApplicationCard } from "@/stores/applicationStore"
 import KanbanColumn from "./Column"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
-import { RejectModal, FoundJobModal, ClearBoardModal, REJECT_CHIPS } from "./_board-modals"
+import { RejectModal, FoundJobModal, ClearBoardModal } from "./_board-modals"
 
 // ── CSS variables ─────────────────────────────────────────────────────────────
 const C = {
@@ -22,7 +19,11 @@ const C = {
   danger:     "#EF4444",
 } as const
 
-const MODALIDADES = ["Directo", "Referido", "LinkedIn", "Job board", "Híbrido", "Remoto"]
+const MODALIDADES = [
+  { value: "Remoto",      labelKey: "modalidad_remote" as const },
+  { value: "Híbrido",     labelKey: "modalidad_hybrid" as const },
+  { value: "Presencial",  labelKey: "modalidad_presencial" as const },
+]
 
 // ── Confetti ──────────────────────────────────────────────────────────────────
 function burstConfetti() {
@@ -50,25 +51,24 @@ function burstConfetti() {
   setTimeout(() => { container.remove() }, 5000)
 }
 
-// ── Column definitions ────────────────────────────────────────────────────────
-const COLUMNS: { id: AppStatus; label: string }[] = [
-  { id: "WISHLIST",  label: "★ ¡Trabajo encontrado!" },
-  { id: "APPLIED",   label: "Postulados" },
-  { id: "INTERVIEW", label: "Entrevista" },
-  { id: "OFFER",     label: "Oferta" },
-  { id: "REJECTED",  label: "Rechazado" },
-]
-
 // ── Board ─────────────────────────────────────────────────────────────────────
 export default function KanbanBoard({ initialApplications }: { initialApplications: ApplicationCard[] }) {
   const t = useTranslations("kanban")
+
+  const COLUMNS: { id: AppStatus; label: string }[] = [
+    { id: "APPLIED",   label: t("column_applied") },
+    { id: "INTERVIEW", label: t("column_interview") },
+    { id: "OFFER",     label: t("column_offer") },
+    { id: "REJECTED",  label: t("column_rejected") },
+    { id: "WISHLIST",  label: t("column_wishlist") },
+  ]
   const { applications, setApplications, addApplication, moveApplication, deleteApplication, clearApplications, updateApplication } = useApplicationStore()
 
   // Add dialog
   const [addOpen, setAddOpen] = useState(false)
   const [jobTitle, setJobTitle] = useState("")
   const [company, setCompany] = useState("")
-  const [modalidad, setModalidad] = useState("Directo")
+  const [modalidad, setModalidad] = useState("Remoto")
   const [saving, setSaving] = useState(false)
 
   // Drag state
@@ -110,12 +110,13 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobTitle, company, modalidad, status: "APPLIED" }),
+        silent: true,
       })
       if (!res.ok) { toast.error(t("create_error")); return }
       const data: ApplicationCard = await res.json()
       addApplication(data)
       setAddOpen(false)
-      setJobTitle(""); setCompany(""); setModalidad("Directo")
+      setJobTitle(""); setCompany(""); setModalidad("Remoto")
       toast.success(t("create_success"))
     } catch {
       toast.error(t("create_error"))
@@ -217,10 +218,14 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
           100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1); opacity: 0.92; }
         }
         @keyframes sealSpin { to { transform: rotate(360deg); } }
+        @media (max-width: 768px) {
+          .kanban-header { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .kanban-grid   { grid-template-columns: 1fr !important; overflow-x: unset !important; }
+        }
       `}</style>
 
       {/* ── Page head ─────────────────────────────────────────────────────── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+      <div className="kanban-header" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
           {/* Eyebrow */}
           <div style={{
@@ -230,22 +235,24 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
             display: "flex", alignItems: "center", gap: 7,
           }}>
             <span style={{ width: 14, height: 1.5, background: C.cyan, opacity: 0.5, display: "inline-block" }} />
-            Seguimiento
+            {t("section_eyebrow")}
           </div>
 
           {/* Title */}
           <h1 style={{
-            fontFamily: "Georgia,serif",
+            fontFamily: "var(--dash-serif)",
             fontSize: 32, fontWeight: 700, color: C.navy,
             letterSpacing: "-0.035em", lineHeight: 1.1,
             margin: 0,
           }}>
-            Mis Candidaturas
+            {t("page_title")}
           </h1>
 
           {/* Subtitle */}
           <p style={{ fontSize: "13.5px", color: C.muted, marginTop: 6, margin: "6px 0 0" }}>
-            {totalCount} candidatura{totalCount !== 1 ? "s" : ""} activa{totalCount !== 1 ? "s" : ""} · Kanban de postulaciones
+            {totalCount !== 1
+              ? t("board_subtitle_other", { count: totalCount })
+              : t("board_subtitle_one", { count: totalCount })}
           </p>
         </div>
 
@@ -297,13 +304,13 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
               <path d="M10 11v6"/>
               <path d="M14 11v6"/>
             </svg>
-            <span style={{ position: "relative" }}>Limpiar tablero</span>
+            <span style={{ position: "relative" }}>{t("clear_board")}</span>
           </button>
         )}
       </div>
 
       {/* ── Kanban board ───────────────────────────────────────────────────── */}
-      <div style={{
+      <div className="kanban-grid" style={{
         display: "grid",
         gridTemplateColumns: "repeat(5, 1fr)",
         gap: 12,
@@ -327,56 +334,71 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
             onDrop={() => handleDrop(col.id)}
             onDelete={(id) => {
               deleteApplication(id)
-              apiFetch(`/api/applications/${id}`, { method: "DELETE" }).catch(() => {})
+              apiFetch(`/api/applications/${id}`, { method: "DELETE" }).catch(() => {
+                toast.error(t("delete_error"))
+              })
             }}
-            onAddClick={() => setAddOpen(true)}
           />
         ))}
       </div>
 
       {/* ── Add candidatura dialog ─────────────────────────────────────────── */}
-      <Dialog open={addOpen} onOpenChange={setAddOpen}>
-        <DialogContent className="sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{t("dialog_title")}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 mt-2">
-            <div>
-              <Label className="text-xs">{t("job_title_label")}</Label>
-              <Input
-                value={jobTitle}
-                onChange={(e) => setJobTitle(e.target.value)}
-                placeholder={t("job_title_placeholder")}
-                className="mt-1"
+      <Dialog open={addOpen} onOpenChange={(open) => { setAddOpen(open); if (!open) { setJobTitle(""); setCompany(""); setModalidad("Remoto") } }}>
+        <DialogContent
+          showCloseButton={false}
+          className="p-0 overflow-hidden"
+          style={{ borderRadius: "14px", maxWidth: "420px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+        >
+          <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1.5px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.3, pointerEvents: "none" }} />
+          <div style={{ padding: "28px" }}>
+            <DialogClose
+              style={{ position: "absolute", top: "16px", right: "16px", width: "28px", height: "28px", borderRadius: "6px", border: "1px solid #D9E1ED", background: "transparent", color: "#6B7A8C", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "all 0.15s ease" }}
+              onMouseEnter={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = "#EEF2F9"; el.style.borderColor = "#00D4FF"; el.style.color = "#1a2e4a" }}
+              onMouseLeave={(e) => { const el = e.currentTarget as HTMLElement; el.style.background = "transparent"; el.style.borderColor = "#D9E1ED"; el.style.color = "#6B7A8C" }}
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+            </DialogClose>
+
+            <div style={{ fontFamily: "var(--dash-serif)", fontSize: "18px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "18px" }}>
+              {t("dialog_title")}
+            </div>
+
+            <div style={{ marginBottom: "14px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6B7A8C", marginBottom: "5px" }}>{t("job_title_label")}</div>
+              <input value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} placeholder={t("job_title_placeholder")}
+                style={{ width: "100%", background: "#EEF2F9", border: "1px solid #D9E1ED", borderRadius: "6px", padding: "8px 12px", fontSize: "13px", color: "#1a2e4a", fontFamily: "inherit", outline: "none", transition: "border-color 0.15s ease, box-shadow 0.15s ease" }}
+                onFocus={(e) => { e.target.style.borderColor = "#00D4FF"; e.target.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.08)" }}
+                onBlur={(e) => { e.target.style.borderColor = "#D9E1ED"; e.target.style.boxShadow = "none" }}
               />
             </div>
-            <div>
-              <Label className="text-xs">{t("company_label")}</Label>
-              <Input
-                value={company}
-                onChange={(e) => setCompany(e.target.value)}
-                placeholder={t("company_placeholder")}
-                className="mt-1"
+
+            <div style={{ marginTop: "12px", marginBottom: "14px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6B7A8C", marginBottom: "5px" }}>{t("company_label")}</div>
+              <input value={company} onChange={(e) => setCompany(e.target.value)} placeholder={t("company_placeholder")}
+                style={{ width: "100%", background: "#EEF2F9", border: "1px solid #D9E1ED", borderRadius: "6px", padding: "8px 12px", fontSize: "13px", color: "#1a2e4a", fontFamily: "inherit", outline: "none", transition: "border-color 0.15s ease, box-shadow 0.15s ease" }}
+                onFocus={(e) => { e.target.style.borderColor = "#00D4FF"; e.target.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.08)" }}
+                onBlur={(e) => { e.target.style.borderColor = "#D9E1ED"; e.target.style.boxShadow = "none" }}
               />
             </div>
-            <div>
-              <Label className="text-xs">Modalidad</Label>
-              <select
-                value={modalidad}
-                onChange={(e) => setModalidad(e.target.value)}
-                className="mt-1 w-full rounded-md border px-3 py-2 text-sm focus:outline-none focus:ring-1"
-                style={{ borderColor: C.border }}
+
+            <div style={{ marginTop: "12px", marginBottom: "14px" }}>
+              <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.06em", textTransform: "uppercase", color: "#6B7A8C", marginBottom: "5px" }}>{t("modalidad_label")}</div>
+              <select value={modalidad} onChange={(e) => setModalidad(e.target.value)}
+                style={{ width: "100%", background: "#EEF2F9", border: "1px solid #D9E1ED", borderRadius: "6px", padding: "8px 12px", fontSize: "13px", color: "#1a2e4a", fontFamily: "inherit", outline: "none", transition: "border-color 0.15s ease, box-shadow 0.15s ease" }}
+                onFocus={(e) => { e.currentTarget.style.borderColor = "#00D4FF"; e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.08)" }}
+                onBlur={(e) => { e.currentTarget.style.borderColor = "#D9E1ED"; e.currentTarget.style.boxShadow = "none" }}
               >
-                {MODALIDADES.map((m) => <option key={m} value={m}>{m}</option>)}
+                {MODALIDADES.map((m) => <option key={m.value} value={m.value}>{t(m.labelKey)}</option>)}
               </select>
             </div>
-            <Button
-              className="w-full"
+
+            <button
               onClick={createApplication}
               disabled={saving || !jobTitle || !company}
+              style={{ width: "100%", marginTop: "20px", display: "flex", alignItems: "center", justifyContent: "center", background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", color: "white", padding: "11px 16px", fontSize: "13px", fontWeight: 600, border: "none", borderRadius: "6px", cursor: saving || !jobTitle || !company ? "not-allowed" : "pointer", opacity: saving || !jobTitle || !company ? 0.55 : 1, fontFamily: "inherit", transition: "all 0.18s ease" }}
             >
               {t("add")}
-            </Button>
+            </button>
           </div>
         </DialogContent>
       </Dialog>

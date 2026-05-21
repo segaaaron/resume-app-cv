@@ -288,10 +288,8 @@ export default function DashboardShell({
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(8,10,16,0.72)",
-          backdropFilter: "blur(6px)",
-          WebkitBackdropFilter: "blur(6px)",
-          zIndex: 950,
+          background: "rgba(8,10,16,0.55)",
+          zIndex: 990,
           opacity: drawerOpen ? 1 : 0,
           pointerEvents: drawerOpen ? "auto" : "none",
           transition: "opacity 0.24s ease",
@@ -305,7 +303,6 @@ export default function DashboardShell({
           height: "100vh",
           overflow: "hidden",
           position: "relative",
-          zIndex: 1,
           backgroundColor: "var(--dash-surface)",
         }}
       >
@@ -350,7 +347,7 @@ export default function DashboardShell({
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label={t("open_menu")}
-              className="lg:hidden"
+              className="flex lg:hidden"
               style={{
                 width: "40px",
                 height: "40px",
@@ -358,7 +355,6 @@ export default function DashboardShell({
                 border: "1px solid var(--dash-border)",
                 background: "white",
                 color: "var(--dash-navy)",
-                display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 cursor: "pointer",
@@ -377,46 +373,16 @@ export default function DashboardShell({
                 el.style.color = "var(--dash-navy)"
               }}
             >
-              {/* Hamburger SVG */}
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
               </svg>
             </button>
 
-            {/* Breadcrumb */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                flex: 1,
-              }}
-            >
-              <span
-                className="hidden sm:inline"
-                style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
-                  fontSize: "13px",
-                  fontWeight: 400,
-                  color: "var(--dash-muted)",
-                  letterSpacing: "-0.01em",
-                }}
-              >
-                ReadyCV
-              </span>
-              <span
-                className="hidden sm:inline"
-                style={{
-                  color: "var(--dash-subtle)",
-                  fontSize: "11px",
-                  opacity: 0.5,
-                }}
-              >
-                ›
-              </span>
+            {/* Page title */}
+            <div style={{ flex: 1 }}>
               <span
                 style={{
-                  fontFamily: "'Playfair Display', Georgia, serif",
+                  fontFamily: "var(--dash-serif)",
                   fontSize: "16px",
                   fontWeight: 700,
                   color: "var(--dash-navy)",

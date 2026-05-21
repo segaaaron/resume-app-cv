@@ -19,7 +19,7 @@ export const dynamic = "force-dynamic"
 const jsonLdItemList = {
   "@context": "https://schema.org",
   "@type": "ItemList",
-  name: "Professional Resume Templates — ReadyCV",
+  name: "Professional Resume Templates — ReadyCVV",
   description: "129+ ATS-optimized professional resume templates for every industry",
   url: "https://readycvv.com/templates",
   numberOfItems: 129,

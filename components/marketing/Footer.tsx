@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { FileText } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
 
 export default function Footer() {
@@ -24,10 +23,9 @@ export default function Footer() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
           <div className="col-span-2 md:col-span-1">
             <Link href={`/${locale}`} className="flex items-center gap-2 font-bold text-foreground mb-3">
-              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                <FileText className="h-4 w-4 text-white" />
-              </div>
-              ReadyCV
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.svg" alt="ReadyCVV" width={28} height={28} className="rounded-lg shrink-0" />
+              ReadyCVV
             </Link>
             <p className="text-sm text-muted-foreground leading-relaxed">{t("tagline")}</p>
           </div>

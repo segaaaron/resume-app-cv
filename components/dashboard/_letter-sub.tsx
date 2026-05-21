@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import { useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
 import { formatInTimezone } from "@/hooks/useUserTimezone"
@@ -20,6 +21,7 @@ export interface LetterCard {
 // ── LetterDropdown ────────────────────────────────────────────────────────────
 
 export function LetterDropdown({ onDelete }: { onDelete: () => void }) {
+  const t = useTranslations("dashboard.cover_letters")
   const [open, setOpen] = useState(false)
   const wrapRef = useRef<HTMLDivElement>(null)
 
@@ -71,21 +73,12 @@ export function LetterDropdown({ onDelete }: { onDelete: () => void }) {
         transformOrigin: "top right",
       }}>
         <div
-          style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 11px", borderRadius: 7, fontSize: 13, fontWeight: 500, color: "#1a2e4a", cursor: "pointer", transition: "all 0.12s ease" }}
-          onMouseEnter={(e) => { ;(e.currentTarget as HTMLDivElement).style.background = "rgba(0,212,255,0.08)"; ;(e.currentTarget as HTMLDivElement).style.color = "#00D4FF" }}
-          onMouseLeave={(e) => { ;(e.currentTarget as HTMLDivElement).style.background = "transparent"; ;(e.currentTarget as HTMLDivElement).style.color = "#1a2e4a" }}
-          onClick={(e) => { e.stopPropagation(); setOpen(false) }}
-        >
-          Duplicar
-        </div>
-        <div style={{ height: 1, background: "linear-gradient(90deg, transparent, #E8EDF6, transparent)", margin: "6px 0" }} />
-        <div
           style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 11px", borderRadius: 7, fontSize: 13, fontWeight: 500, color: "#EF4444", cursor: "pointer", transition: "all 0.12s ease" }}
           onMouseEnter={(e) => { ;(e.currentTarget as HTMLDivElement).style.background = "rgba(239,68,68,0.1)"; ;(e.currentTarget as HTMLDivElement).style.color = "#DC2626" }}
           onMouseLeave={(e) => { ;(e.currentTarget as HTMLDivElement).style.background = "transparent"; ;(e.currentTarget as HTMLDivElement).style.color = "#EF4444" }}
           onClick={(e) => { e.stopPropagation(); setOpen(false); onDelete() }}
         >
-          Eliminar
+          {t("delete")}
         </div>
       </div>
     </div>
@@ -156,10 +149,11 @@ export function CaBtn({ children, primary, onClick }: {
 // ── LetterActivityItem ────────────────────────────────────────────────────────
 
 export function LetterActivityItem({ type, name, time }: { type: "edit" | "create" | "down"; name: string; time: string }) {
+  const t = useTranslations("dashboard.cover_letters")
   const [hov, setHov] = useState(false)
   const dotColor = type === "edit" ? "#00D4FF" : type === "create" ? "#10B981" : "#6B8AC4"
   const dotShadow = type === "edit" ? "0 0 6px rgba(0,212,255,0.5)" : type === "create" ? "0 0 6px rgba(16,185,129,0.5)" : "0 0 6px rgba(107,138,196,0.4)"
-  const actionLabel = type === "edit" ? "Editaste" : type === "create" ? "Creaste" : "Descargaste PDF de"
+  const actionLabel = type === "edit" ? t("activity_edited") : type === "create" ? t("activity_created") : t("activity_downloaded")
   return (
     <div
       style={{
@@ -177,7 +171,7 @@ export function LetterActivityItem({ type, name, time }: { type: "edit" | "creat
           {actionLabel}{" "}<strong style={{ color: "#1a2e4a", fontWeight: 500 }}>{name}</strong>
         </div>
       </div>
-      <span style={{ fontSize: 11, color: "#A0AABE", flexShrink: 0, fontFamily: "var(--font-mono, monospace)" }}>{time}</span>
+      <span style={{ fontSize: 11, color: "#A0AABE", flexShrink: 0, fontFamily: "var(--dash-mono)" }}>{time}</span>
     </div>
   )
 }
@@ -191,10 +185,12 @@ interface LetterCardItemProps {
   userTimezone: string
   dateLocale: Locale
   onEdit: () => void
+  onRename: () => void
   onDelete: () => void
 }
 
-export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit, onDelete }: LetterCardItemProps) {
+export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit, onRename, onDelete }: LetterCardItemProps) {
+  const t = useTranslations("dashboard.cover_letters")
   const [hovered, setHovered] = useState(false)
   const animDelay = `${index * 0.08 + 0.05}s`
 
@@ -235,7 +231,7 @@ export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit
                 <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="cl-ov-label" style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.04em", color: "#00D4FF" }}>Editar</span>
+            <span className="cl-ov-label" style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.04em", color: "#00D4FF" }}>{t("edit")}</span>
           </div>
         </div>
       </div>
@@ -244,13 +240,12 @@ export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit
           {letter.title}
         </div>
         <div style={{ fontSize: 11.5, color: "#6B7A8C", display: "flex", alignItems: "center", gap: 5 }}>
-          <span>Generada con IA</span>
+          <span>{t("ai_generated")}</span>
           <span style={{ width: 2.5, height: 2.5, borderRadius: "50%", background: "#A0AABE", display: "inline-block", flexShrink: 0 }} />
           <span>{formatInTimezone(letter.updatedAt, userTimezone, dateLocale)}</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 11, paddingTop: 10, borderTop: "1px solid #E8EDF6", overflow: "visible", position: "relative" }}>
-          <CaBtn primary onClick={(e) => { e.stopPropagation(); onEdit() }}>Editar</CaBtn>
-          <CaBtn onClick={(e) => { e.stopPropagation() }}>PDF</CaBtn>
+          <CaBtn primary onClick={(e) => { e.stopPropagation(); onRename() }}>{t("rename")}</CaBtn>
           <LetterDropdown onDelete={onDelete} />
         </div>
       </div>

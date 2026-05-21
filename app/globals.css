@@ -120,6 +120,8 @@
   --dash-border:      #D9E1ED;
   --dash-border-s:    #E8EDF6;
   --dash-sidebar-w:   240px;
+  --dash-serif:       var(--font-playfair), Georgia, "Times New Roman", serif;
+  --dash-mono:        ui-monospace, "Cascadia Code", "Source Code Pro", Menlo, monospace;
 
   /* Sidebar */
   --sidebar: oklch(0.985 0 0);

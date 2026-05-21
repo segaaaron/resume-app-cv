@@ -96,7 +96,7 @@ export function ActivityItem({ type, name, time }: ActivityItemProps) {
       </div>
       <span style={{
         fontSize: "11px", color: "#A0AABE", flexShrink: 0,
-        fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace",
+        fontFamily: "var(--dash-mono)",
       }}>
         {time}
       </span>
@@ -154,7 +154,7 @@ export function ProBanner({ onManagePlan, portalLoading }: { onManagePlan: () =>
       </div>
       <div style={{ flex: 1 }}>
         <div style={{
-          fontFamily: "'Playfair Display', Georgia, serif", fontSize: "14px", fontWeight: 600,
+          fontFamily: "var(--dash-serif)", fontSize: "14px", fontWeight: 600,
           color: "#1a2e4a", letterSpacing: "-0.01em", marginBottom: "2px",
         }}>
           {t("pro_banner_title")}
@@ -164,26 +164,9 @@ export function ProBanner({ onManagePlan, portalLoading }: { onManagePlan: () =>
       <GhostButton label={portalLoading ? t("opening_portal") : t("pro_banner_manage")} onClick={onManagePlan} disabled={portalLoading} />
       <span style={{
         position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)",
-        fontFamily: "'Playfair Display', Georgia, serif", fontSize: "60px",
+        fontFamily: "var(--dash-serif)", fontSize: "60px",
         color: "#00D4FF", opacity: 0.04, pointerEvents: "none", userSelect: "none",
       }}>✦</span>
-    </div>
-  )
-}
-
-// ── GoldRule ──────────────────────────────────────────────────────────────────
-
-export function GoldRule() {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", margin: "32px 0 24px" }}>
-      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, transparent, #D9E1ED)" }} />
-      <span style={{
-        fontFamily: "'Playfair Display', Georgia, serif", fontSize: "13px",
-        color: "#00D4FF", opacity: 0.3, letterSpacing: "0.2em", whiteSpace: "nowrap",
-      }}>
-        · · ·
-      </span>
-      <div style={{ flex: 1, height: "1px", background: "linear-gradient(90deg, #D9E1ED, transparent)" }} />
     </div>
   )
 }
@@ -253,7 +236,7 @@ export function StatsRow({ resumes, isPro }: StatsRowProps) {
         <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7A8C", marginBottom: "8px" }}>
           {t("stat_cvs_created")}
         </div>
-        <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace", fontSize: "24px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.02em", lineHeight: 1 }}>
+        <div style={{ fontFamily: "var(--dash-mono)", fontSize: "24px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.02em", lineHeight: 1 }}>
           {resumes.length}
           <span style={{ fontFamily: "inherit", fontSize: "12px", fontWeight: 400, color: "#6B7A8C", marginLeft: "4px", letterSpacing: 0 }}>
             {t("stat_docs_unit")}
@@ -264,20 +247,20 @@ export function StatsRow({ resumes, isPro }: StatsRowProps) {
             ? t("stat_updated_this_week")
             : t("stat_no_changes")}
         </div>
-        <span style={{ position: "absolute", bottom: "10px", right: "12px", fontFamily: "'Playfair Display', Georgia, serif", fontSize: "28px", color: "#00D4FF", opacity: 0.05, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>§</span>
+        <span style={{ position: "absolute", bottom: "10px", right: "12px", fontFamily: "var(--dash-serif)", fontSize: "28px", color: "#00D4FF", opacity: 0.05, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>§</span>
       </StatCard>
 
       <StatCard animDelay="80ms" gold={true}>
         <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#00D4FF", marginBottom: "8px" }}>
           {t("stat_active_plan")}
         </div>
-        <div style={{ fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace", fontSize: "20px", fontWeight: 700, color: "#00D4FF", letterSpacing: "-0.02em", lineHeight: 1 }}>
+        <div style={{ fontFamily: "var(--dash-mono)", fontSize: "20px", fontWeight: 700, color: "#00D4FF", letterSpacing: "-0.02em", lineHeight: 1 }}>
           {isPro ? "PRO" : "FREE"}
         </div>
         <div style={{ marginTop: "8px", fontSize: "11px", color: "#6B7A8C", display: "flex", alignItems: "center", gap: "4px" }}>
           {isPro ? t("stat_plan_pro_desc") : t("stat_upgrade_plan")}
         </div>
-        <span style={{ position: "absolute", bottom: "10px", right: "12px", fontFamily: "'Playfair Display', Georgia, serif", fontSize: "28px", color: "#00D4FF", opacity: 0.05, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>✦</span>
+        <span style={{ position: "absolute", bottom: "10px", right: "12px", fontFamily: "var(--dash-serif)", fontSize: "28px", color: "#00D4FF", opacity: 0.05, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>✦</span>
       </StatCard>
     </div>
   )
@@ -289,10 +272,10 @@ export function ResumesToolbar({ count }: { count: number }) {
   const t = useTranslations("dashboard.resumes")
   return (
     <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
-      <span style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "16px", fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.025em", flex: 1 }}>
+      <span style={{ fontFamily: "var(--dash-serif)", fontSize: "16px", fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.025em", flex: 1 }}>
         {t("recent_documents")}
       </span>
-      <span style={{ fontFamily: "'JetBrains Mono', ui-monospace, Menlo, monospace", fontSize: "11px", color: "#6B7A8C", background: "#EEF2F9", border: "1px solid #E8EDF6", borderRadius: "8px", padding: "2px 8px" }}>
+      <span style={{ fontFamily: "var(--dash-mono)", fontSize: "11px", color: "#6B7A8C", background: "#EEF2F9", border: "1px solid #E8EDF6", borderRadius: "8px", padding: "2px 8px" }}>
         {count} {t("of")} {count}
       </span>
     </div>
@@ -314,8 +297,8 @@ import type { Locale } from "date-fns"
 export function ActivityFeed({ resumes, hasRecentEdit, userTimezone, dateLocale, formatFn }: ActivityFeedProps) {
   const t = useTranslations("dashboard.resumes")
   return (
-    <div>
-      <div style={{ fontFamily: "'Playfair Display', Georgia, serif", fontSize: "15px", fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em", marginBottom: "14px", display: "flex", alignItems: "center", gap: "10px" }}>
+    <div style={{ marginTop: "40px" }}>
+      <div style={{ fontFamily: "var(--dash-serif)", fontSize: "15px", fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em", marginBottom: "14px", display: "flex", alignItems: "center", gap: "10px" }}>
         {t("activity_title")}
         <div style={{ flex: 1, height: "1px", background: "#E8EDF6" }} />
       </div>
@@ -323,7 +306,7 @@ export function ActivityFeed({ resumes, hasRecentEdit, userTimezone, dateLocale,
         {resumes.slice(0, 3).map((r, i) => {
           const isEdit = i === 0 && hasRecentEdit
           const type = isEdit ? "edit" : "create"
-          const name = r.title || "Sin título"
+          const name = r.title || t("untitled")
           const time = formatFn(i === 0 ? r.updatedAt : r.createdAt, userTimezone, dateLocale)
           return <ActivityItem key={r.id} type={type} name={name} time={time} />
         })}
