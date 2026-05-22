@@ -119,13 +119,14 @@ export default function SkillsSection() {
       ))}
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={add}>
+        <Button variant="outline" size="sm" className="flex-1 gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={add}>
           <Plus className="h-3.5 w-3.5" /> {t("add_skill")}
         </Button>
         <Button
           variant="outline"
           size="sm"
-          className="flex-1 gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
+          className="flex-1 gap-1.5"
+          style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }}
           onClick={suggestSkills}
           disabled={suggesting}
         >

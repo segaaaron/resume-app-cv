@@ -439,12 +439,14 @@
 
 /* ── Editor section form inputs — match HTML reference design ────────────────── */
 .editor-section-body label {
-  font-size: 10px;
-  font-weight: 700;
+  font-size: 11px;
+  font-weight: 600;
   color: #6B8BAE;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  display: block;
+  text-transform: capitalize;
+  letter-spacing: 0.01em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin-bottom: 5px;
 }
 
@@ -459,7 +461,7 @@
   font-size: 13.5px !important;
   color: #0B1B3D;
   transition: border-bottom-color 0.25s ease, background 0.25s ease;
-  background: transparent !important;
+  background: #ffffff !important;
   width: 100%;
   outline: none !important;
   box-shadow: none !important;

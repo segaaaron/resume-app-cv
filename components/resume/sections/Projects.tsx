@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, FolderOpen, UserRound, Link, CalendarDays, FileText } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function ProjectsSection() {
@@ -38,9 +38,12 @@ export default function ProjectsSection() {
     <div className="space-y-2">
       {items.map((item) => (
         <div key={item.id} className="border border-border rounded-lg overflow-hidden">
-          <button
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50"
+          <div
+            role="button"
+            tabIndex={0}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 cursor-pointer"
             onClick={() => setOpenId(openId === item.id ? null : item.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenId(openId === item.id ? null : item.id) }}
           >
             <span className="font-medium truncate text-left">{item.name || t("new_project")}</span>
             <div className="flex items-center gap-1 shrink-0">
@@ -49,38 +52,38 @@ export default function ProjectsSection() {
               </button>
               {openId === item.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </div>
-          </button>
+          </div>
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
               <div className="col-span-2">
-                <Label className="text-xs mb-1 block text-muted-foreground">{t("projects.name")}</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground"><FolderOpen size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.name")}</Label>
                 <Input value={item.name} onChange={(e) => update(item.id, "name", e.target.value)} className="h-8 text-xs" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block text-muted-foreground">{t("projects.role")}</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground"><UserRound size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.role")}</Label>
                 <Input value={item.role} onChange={(e) => update(item.id, "role", e.target.value)} className="h-8 text-xs" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block text-muted-foreground">{t("projects.url")}</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground"><Link size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.url")}</Label>
                 <Input value={item.url} onChange={(e) => update(item.id, "url", e.target.value)} className="h-8 text-xs" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block text-muted-foreground">{t("projects.start_date")}</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground"><CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.start_date")}</Label>
                 <Input value={item.startDate} onChange={(e) => update(item.id, "startDate", e.target.value)} className="h-8 text-xs" />
               </div>
               <div>
-                <Label className="text-xs mb-1 block text-muted-foreground">{t("projects.end_date")}</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground"><CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.end_date")}</Label>
                 <Input value={item.endDate} onChange={(e) => update(item.id, "endDate", e.target.value)} className="h-8 text-xs" />
               </div>
               <div className="col-span-2">
-                <Label className="text-xs mb-1 block text-muted-foreground">{t("projects.description")}</Label>
+                <Label className="text-xs mb-1 block text-muted-foreground"><FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.description")}</Label>
                 <Textarea value={item.description} onChange={(e) => update(item.id, "description", e.target.value)} className="text-xs min-h-[60px] resize-none" />
               </div>
             </div>
           )}
         </div>
       ))}
-      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
+      <Button variant="outline" size="sm" className="w-full gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={add}>
         <Plus className="h-3.5 w-3.5" /> {t("add_project")}
       </Button>
     </div>

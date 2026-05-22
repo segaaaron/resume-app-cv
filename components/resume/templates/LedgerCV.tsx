@@ -1,5 +1,6 @@
 "use client"
 
+import React from "react"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -210,8 +211,8 @@ export default function LedgerCVTemplate() {
         </thead>
         <tbody>
           {rows.map((r, i) => (
-            <>
-              <tr key={i} style={{
+            <React.Fragment key={i}>
+              <tr style={{
                 background: i % 2 ? "#f0f0e6" : paper,
                 WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
               }}>
@@ -233,7 +234,7 @@ export default function LedgerCVTemplate() {
                   </td>
                 </tr>
               )}
-            </>
+            </React.Fragment>
           ))}
         </tbody>
         <tfoot>

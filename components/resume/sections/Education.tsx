@@ -9,7 +9,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, GraduationCap, Award, BookOpen, MapPin, CalendarDays } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function EducationSection() {
@@ -64,20 +65,20 @@ export default function EducationSection() {
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
               {([
-                { labelKey: "education.institution", field: "institution" as const },
-                { labelKey: "education.degree", field: "degree" as const },
-                { labelKey: "education.field_of_study", field: "fieldOfStudy" as const },
-                { labelKey: "education.city", field: "city" as const },
-                { labelKey: "education.start_date", field: "startDate" as const },
-              ] as const).map(({ labelKey, field }) => (
+                { labelKey: "education.institution", field: "institution" as const, icon: GraduationCap },
+                { labelKey: "education.degree", field: "degree" as const, icon: Award },
+                { labelKey: "education.field_of_study", field: "fieldOfStudy" as const, icon: BookOpen },
+                { labelKey: "education.city", field: "city" as const, icon: MapPin },
+                { labelKey: "education.start_date", field: "startDate" as const, icon: CalendarDays },
+              ] as const).map(({ labelKey, field, icon: Icon }) => (
                 <div key={field}>
-                  <Label className="text-xs mb-1 block text-muted-foreground">{t(labelKey)}</Label>
+                  <Label className="text-xs mb-1 block text-muted-foreground"><Icon size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t(labelKey)}</Label>
                   <Input value={item[field] as string} onChange={(e) => update(item.id, field, e.target.value)} className="h-8 text-xs" />
                 </div>
               ))}
               {!item.currentlyStudying && (
                 <div>
-                  <Label className="text-xs mb-1 block text-muted-foreground">{t("education.end_date")}</Label>
+                  <Label className="text-xs mb-1 block text-muted-foreground"><CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("education.end_date")}</Label>
                   <Input value={item.endDate} onChange={(e) => update(item.id, "endDate", e.target.value)} className="h-8 text-xs" />
                 </div>
               )}
@@ -89,7 +90,7 @@ export default function EducationSection() {
           )}
         </div>
       ))}
-      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
+      <Button variant="outline" size="sm" className="w-full gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={add}>
         <Plus className="h-3.5 w-3.5" /> {t("add_education")}
       </Button>
     </div>

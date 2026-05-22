@@ -15,7 +15,6 @@ import { CSS } from "@dnd-kit/utilities"
 import {
   GripVertical,
   ChevronRight,
-  MoreHorizontal,
   Eye,
   EyeOff,
   Scissors,
@@ -32,13 +31,6 @@ import {
   Globe,
   Layout,
 } from "lucide-react"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections } from "@/types/resume"
 import SectionContent from "./SectionContent"
@@ -70,17 +62,6 @@ const SURFACE2 = "#F1F5F9"
 const EXPANDED_GRADIENT =
   "linear-gradient(135deg, #E8F4FD 0%, #EDF6FB 50%, #E6F0FA 100%)"
 
-// ---- Single-active-dropdown context ----
-interface SectionDropdownContextValue {
-  openId: string | null
-  setOpenId: (id: string | null) => void
-}
-
-const SectionDropdownContext = createContext<SectionDropdownContextValue>({
-  openId: null,
-  setOpenId: () => {},
-})
-
 // ---- Single-active-accordion context ----
 interface SectionAccordionContextValue {
   expandedId: string | null
@@ -93,16 +74,12 @@ const SectionAccordionContext = createContext<SectionAccordionContextValue>({
 })
 
 export function SectionDropdownProvider({ children }: { children: ReactNode }) {
-  const [openId, setOpenId] = useState<string | null>(null)
   const [expandedId, setExpandedId] = useState<string | null>("personalDetails")
-  const dropdownValue = useMemo(() => ({ openId, setOpenId }), [openId])
   const accordionValue = useMemo(() => ({ expandedId, setExpandedId }), [expandedId])
   return (
-    <SectionDropdownContext.Provider value={dropdownValue}>
-      <SectionAccordionContext.Provider value={accordionValue}>
-        {children}
-      </SectionAccordionContext.Provider>
-    </SectionDropdownContext.Provider>
+    <SectionAccordionContext.Provider value={accordionValue}>
+      {children}
+    </SectionAccordionContext.Provider>
   )
 }
 
@@ -117,12 +94,10 @@ function getItemCount(section: ResumeSection, data: ResumeSections | undefined):
 const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSection }) {
   const t = useTranslations("editor")
   const [hovered, setHovered] = useState(false)
-  const { toggleSection, togglePageBreak, moveSectionToColumn, sectionData } = useResumeStore()
-  const { openId, setOpenId } = useContext(SectionDropdownContext)
+  const { sectionData } = useResumeStore()
   const { expandedId, setExpandedId } = useContext(SectionAccordionContext)
   const open = expandedId === section.id
   const setOpen = (val: boolean) => setExpandedId(val ? section.id : null)
-  const menuOpen = openId === section.id
 
   const {
     attributes,
@@ -153,7 +128,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     border: open || hovered ? "1px solid transparent" : `1px solid ${BORDER}`,
     borderRadius: 12,
     marginBottom: 12,
-    background: open ? EXPANDED_GRADIENT : "#FFFFFF",
+    background: open || hovered ? EXPANDED_GRADIENT : "#FFFFFF",
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     position: "relative",
     boxShadow: open
@@ -192,7 +167,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     width: 42,
     height: 42,
     borderRadius: 12,
-    background: hovered ? CYAN_DIM : SURFACE2,
+    background: hovered ? "rgba(0,100,180,0.18)" : SURFACE2,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -254,21 +229,6 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     flexShrink: 0,
   }
 
-  const moreBtnStyle: CSSProperties = {
-    width: 28,
-    height: 28,
-    border: "none",
-    background: hovered ? SURFACE2 : "transparent",
-    color: hovered ? NAVY : SUBTLE,
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "50%",
-    cursor: "pointer",
-    flexShrink: 0,
-  }
-
   const bodyStyle: CSSProperties = {
     display: "block",
     padding: "20px 24px 24px",
@@ -321,36 +281,6 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
           </div>
         </div>
 
-        <div data-no-toggle="">
-          <DropdownMenu
-            open={menuOpen}
-            onOpenChange={(o) => setOpenId(o ? section.id : null)}
-          >
-            <DropdownMenuTrigger
-              style={moreBtnStyle}
-              aria-label="Section actions"
-            >
-              <MoreHorizontal style={{ width: 16, height: 16 }} strokeWidth={2} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => toggleSection(section.id)}>
-                {section.visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                {section.visible ? t("section.hide") : t("section.show")}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => togglePageBreak(section.id)}>
-                <Scissors className="h-3.5 w-3.5" />
-                {section.pageBreakBefore ? t("section.remove_page_break") : t("section.add_page_break")}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => moveSectionToColumn(section.id, "main")}>
-                {t("section.move_to_main")}
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => moveSectionToColumn(section.id, "side")}>
-                {t("section.move_to_side")}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
 
         <button
           type="button"

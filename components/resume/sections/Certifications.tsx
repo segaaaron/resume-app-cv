@@ -8,7 +8,8 @@ import type { CertificationItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, Award, Building2, CalendarDays, Link } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function CertificationsSection() {
@@ -40,13 +41,23 @@ export default function CertificationsSection() {
     url: t("certifications.url"),
   }
 
+  const fieldIconMap: Record<"name" | "issuer" | "date" | "url", LucideIcon> = {
+    name: Award,
+    issuer: Building2,
+    date: CalendarDays,
+    url: Link,
+  }
+
   return (
     <div className="space-y-2">
       {items.map((item) => (
         <div key={item.id} className="border border-border rounded-lg overflow-hidden">
-          <button
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50"
+          <div
+            role="button"
+            tabIndex={0}
+            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 cursor-pointer"
             onClick={() => setOpenId(openId === item.id ? null : item.id)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenId(openId === item.id ? null : item.id) }}
           >
             <span className="font-medium truncate text-left">{item.name || t("new_certification")}</span>
             <div className="flex items-center gap-1 shrink-0">
@@ -55,12 +66,13 @@ export default function CertificationsSection() {
               </button>
               {openId === item.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
             </div>
-          </button>
+          </div>
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
               {(["name", "issuer", "date", "url"] as const).map((field) => (
                 <div key={field} className={field === "name" || field === "url" ? "col-span-2" : ""}>
                   <Label className="text-xs mb-1 block text-muted-foreground">
+                    {(() => { const Icon = fieldIconMap[field]; return <Icon size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} /> })()}
                     {fieldLabelMap[field]}
                   </Label>
                   <Input value={item[field]} onChange={(e) => update(item.id, field, e.target.value)} className="h-8 text-xs" />
@@ -70,7 +82,7 @@ export default function CertificationsSection() {
           )}
         </div>
       ))}
-      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
+      <Button variant="outline" size="sm" className="w-full gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={add}>
         <Plus className="h-3.5 w-3.5" /> {t("add_certification")}
       </Button>
     </div>

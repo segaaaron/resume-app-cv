@@ -55,7 +55,7 @@ export default function ReferencesSection() {
           </div>
         </div>
       ))}
-      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
+      <Button variant="outline" size="sm" className="w-full gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={add}>
         <Plus className="h-3.5 w-3.5" /> {t("add_reference")}
       </Button>
     </div>

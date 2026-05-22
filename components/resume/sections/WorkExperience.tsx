@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2, Lock, Check } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2, Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -129,13 +130,13 @@ export default function WorkExperienceSection() {
 
           {openId === job.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
-              <Field label={t("work.job_title")} value={job.jobTitle} onChange={(v) => updateJob(job.id, "jobTitle", v)} />
-              <Field label={t("work.employer")} value={job.employer} onChange={(v) => updateJob(job.id, "employer", v)} />
-              <Field label={t("work.city")} value={job.city} onChange={(v) => updateJob(job.id, "city", v)} />
+              <Field label={t("work.job_title")} value={job.jobTitle} onChange={(v) => updateJob(job.id, "jobTitle", v)} icon={Briefcase} />
+              <Field label={t("work.employer")} value={job.employer} onChange={(v) => updateJob(job.id, "employer", v)} icon={Building2} />
+              <Field label={t("work.city")} value={job.city} onChange={(v) => updateJob(job.id, "city", v)} icon={MapPin} />
               <div />
-              <Field label={t("work.start_date")} value={job.startDate} onChange={(v) => updateJob(job.id, "startDate", v)} placeholder={t("work.start_placeholder")} />
+              <Field label={t("work.start_date")} value={job.startDate} onChange={(v) => updateJob(job.id, "startDate", v)} placeholder={t("work.start_placeholder")} icon={CalendarDays} />
               {!job.currentlyWorking && (
-                <Field label={t("work.end_date")} value={job.endDate} onChange={(v) => updateJob(job.id, "endDate", v)} placeholder={t("work.end_placeholder")} />
+                <Field label={t("work.end_date")} value={job.endDate} onChange={(v) => updateJob(job.id, "endDate", v)} placeholder={t("work.end_placeholder")} icon={CalendarDays} />
               )}
               <div className="col-span-2 flex items-center gap-2">
                 <Switch
@@ -147,7 +148,7 @@ export default function WorkExperienceSection() {
               </div>
               <div className="col-span-2">
                 <div className="flex items-center justify-between mb-1">
-                  <Label className="text-xs text-muted-foreground">{t("description")}</Label>
+                  <Label className="text-xs text-muted-foreground"><FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("description")}</Label>
                   <button
                     type="button"
                     onClick={isPro ? () => handleImprove(job) : openUpgrade}
@@ -224,7 +225,7 @@ export default function WorkExperienceSection() {
         </div>
       ))}
 
-      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={addJob}>
+      <Button variant="outline" size="sm" className="w-full gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={addJob}>
         <Plus className="h-3.5 w-3.5" /> {t("add_experience")}
       </Button>
     </div>
@@ -236,15 +237,20 @@ function Field({
   value,
   onChange,
   placeholder,
+  icon: Icon,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
+  icon?: LucideIcon
 }) {
   return (
     <div>
-      <Label className="text-xs mb-1 block text-muted-foreground">{label}</Label>
+      <Label className="text-xs mb-1 block text-muted-foreground">
+        {Icon && <Icon size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />}
+        {label}
+      </Label>
       <Input
         value={value}
         onChange={(e) => onChange(e.target.value)}
