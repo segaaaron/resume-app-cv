@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { SkillItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +15,9 @@ import { apiFetch } from "@/lib/apiFetch"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData, config } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, config: s.config }))
+  )
   const skills = sectionData.skills
   const [suggesting, setSuggesting] = useState(false)
 

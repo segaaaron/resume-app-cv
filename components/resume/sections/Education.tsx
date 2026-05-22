@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { EducationItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,10 +14,12 @@ import { nanoid } from "nanoid"
 
 export default function EducationSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  )
   const items = sectionData.education
   const [openId, setOpenId] = useState<string | null>(null)
-  useEffect(() => { if (items[0]?.id) setOpenId(items[0].id) }, [])
+  useEffect(() => { if (items[0]?.id) setOpenId(items[0].id) }, [items[0]?.id])
 
   function add() {
     const newItem: EducationItem = {

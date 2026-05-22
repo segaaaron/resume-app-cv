@@ -1,6 +1,5 @@
 "use client"
 
-import { Mail, Phone, MapPin, Link2, Globe, Calendar } from "lucide-react"
 import { useTranslations } from "next-intl"
 import type { TemplateProps } from "./types"
 
@@ -9,87 +8,185 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
   const today = new Date().toLocaleDateString("es-ES", { year: "numeric", month: "long", day: "numeric" })
 
   const contacts = [
-    { icon: Mail, value: candidate.email },
-    { icon: Phone, value: candidate.phone },
-    { icon: MapPin, value: candidate.address },
-    { icon: Link2, value: candidate.linkedin },
-    { icon: Globe, value: candidate.website },
-  ].filter((c) => c.value)
+    candidate.email,
+    candidate.phone,
+    candidate.linkedin,
+    candidate.website,
+    candidate.address,
+  ].filter(Boolean)
+
+  const hex = colorScheme ?? "#2a72d7"
+  // Lateral padding matches DOCX BODY_INDENT: 1.1in = 27.94mm
+  const PAD_H = "27.94mm"
 
   return (
-    <div className="px-[25mm] pt-[14mm] pb-[14mm] print:min-h-[297mm]" style={{ fontFamily: "Calibri, Arial, sans-serif" }}>
-      {/* Header */}
-      <div className="text-center mb-2">
-        {candidate.photo && (
-          <img src={candidate.photo} alt={candidate.name}
-            className="w-16 h-16 rounded-full object-cover mx-auto mb-3 border-2"
-            style={{ borderColor: colorScheme, objectPosition: `center ${candidate.photoPosition ?? 50}%` }} />
-        )}
-        {candidate.name && (
-          <h1 className="font-light tracking-[0.15em] uppercase text-[26px]" style={{ color: colorScheme }}>
-            {candidate.name}
-          </h1>
-        )}
-        {candidate.jobTitle && (
-          <p className="text-[10px] tracking-[0.1em] uppercase text-gray-500 mt-0.5">{candidate.jobTitle}</p>
-        )}
+    <div style={{
+      fontFamily: "Calibri, 'Segoe UI', Arial, sans-serif",
+      minHeight: "297mm",
+      display: "flex",
+      flexDirection: "column",
+      fontSize: "11pt",
+      color: "#1a1a1a",
+    }}>
 
-        {/* Contact row with icons */}
-        {contacts.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 mt-2">
-            {contacts.map(({ icon: Icon, value }, i) => (
-              <span key={i} className="flex items-center gap-1">
-                <Icon className="h-2.5 w-2.5 shrink-0" style={{ color: colorScheme }} />
-                <span className="text-[9px] text-gray-500">{value}</span>
-              </span>
-            ))}
+      {/* ── HEADER — full-width color block ── */}
+      <div style={{
+        background: hex,
+        padding: `0.3in ${PAD_H} 0.3in`,
+        flexShrink: 0,
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          {candidate.photo && (
+            <img
+              src={candidate.photo}
+              alt={candidate.name}
+              style={{
+                width: 56, height: 56, borderRadius: "50%",
+                objectFit: "cover", flexShrink: 0,
+                border: "2px solid rgba(255,255,255,0.45)",
+                objectPosition: `center ${candidate.photoPosition ?? 50}%`,
+              }}
+            />
+          )}
+          <div style={{ flex: 1 }}>
+            {candidate.name && (
+              <div style={{
+                fontSize: "16pt", fontWeight: 700, color: "#FFFFFF",
+                letterSpacing: "0.01em", lineHeight: 1.15, marginBottom: 2,
+              }}>
+                {candidate.name.toUpperCase()}
+              </div>
+            )}
+            {candidate.jobTitle && (
+              <div style={{
+                fontSize: "10pt", color: "rgba(255,255,255,0.8)",
+                letterSpacing: "0.08em", textTransform: "uppercase",
+                marginBottom: contacts.length ? 8 : 0,
+              }}>
+                {candidate.jobTitle}
+              </div>
+            )}
+            {contacts.length > 0 && (
+              <div style={{
+                fontSize: "9pt", color: "rgba(255,255,255,0.7)",
+                display: "flex", flexWrap: "wrap", gap: "2px 0",
+                lineHeight: 1.6,
+              }}>
+                {contacts.map((c, i) => (
+                  <span key={i}>
+                    {c}
+                    {i < contacts.length - 1 && (
+                      <span style={{ color: "rgba(255,255,255,0.35)", margin: "0 8px" }}>|</span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-
-      {/* Decorative separator */}
-      <div className="flex items-center gap-3 my-4">
-        <div className="h-px flex-1" style={{ backgroundColor: colorScheme }} />
-        <div className="w-1.5 h-1.5 rotate-45" style={{ backgroundColor: colorScheme }} />
-        <div className="h-px flex-1" style={{ backgroundColor: colorScheme }} />
-      </div>
-
-      {/* Date */}
-      <div className="flex items-center justify-end gap-1 mb-4">
-        <Calendar className="h-2.5 w-2.5 text-gray-400" />
-        <p className="text-[10px] text-gray-500">{today}</p>
-      </div>
-
-      {/* Recipient block */}
-      {(content.recipientName || content.recipientTitle || content.company) && (
-        <div className="mb-4">
-          {content.recipientName && <p className="text-[11px] font-semibold">{content.recipientName}</p>}
-          {content.recipientTitle && <p className="text-[11px] text-gray-600">{content.recipientTitle}</p>}
-          {content.company && <p className="text-[11px] text-gray-600">{content.company}</p>}
         </div>
-      )}
+      </div>
 
-      {content.subject && (
-        <p className="text-[11px] font-semibold mb-4">
-          <span className="text-gray-500 font-normal">Asunto: </span>{content.subject}
-        </p>
-      )}
+      {/* ── Accent divider ── */}
+      <div style={{ height: 3, background: hex, flexShrink: 0, opacity: 0.85 }} />
 
-      <p className="text-[11px] mb-3">
-        {content.recipientName ? t("salutation_named", { name: content.recipientName }) : t("salutation_generic")}
-      </p>
+      {/* ── BODY — flex column, signature pinned to bottom ── */}
+      <div style={{
+        padding: `18pt ${PAD_H} 0`,
+        flex: 1,
+        display: "flex",
+        flexDirection: "column",
+      }}>
+        <div style={{ flex: 1 }}>
 
-      {content.body
-        ? <div className="text-[11px] text-gray-800 leading-[1.65] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>p]:indent-6 [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
-        : <p className="text-[11px] text-gray-300 italic mb-4">{t("body_placeholder_template")}</p>
-      }
+          {/* Date — right-aligned, italic, standard */}
+          <div style={{
+            textAlign: "right",
+            fontSize: "10pt",
+            color: "#666666",
+            fontStyle: "italic",
+            marginBottom: "12pt",
+            lineHeight: 1,
+          }}>
+            {today}
+          </div>
 
-      {content.closing && <p className="text-[11px] mb-8">{content.closing},</p>}
+          {/* Recipient block */}
+          {(content.recipientName || content.recipientTitle || content.company) && (
+            <div style={{ marginBottom: "12pt", lineHeight: 1.4 }}>
+              {content.recipientName && (
+                <div style={{ fontSize: "11pt", fontWeight: 700 }}>{content.recipientName}</div>
+              )}
+              {content.recipientTitle && (
+                <div style={{ fontSize: "11pt", color: "#444444" }}>{content.recipientTitle}</div>
+              )}
+              {content.company && (
+                <div style={{ fontSize: "11pt", color: "#444444" }}>{content.company}</div>
+              )}
+            </div>
+          )}
 
-      <div className="mt-2">
-        <div className="h-px w-28" style={{ backgroundColor: colorScheme }} />
-        {candidate.name && <p className="text-[11px] font-semibold mt-1.5">{candidate.name}</p>}
-        {candidate.jobTitle && <p className="text-[10px] text-gray-500">{candidate.jobTitle}</p>}
+          {/* Subject line — bold, colored label, standard ES format */}
+          {content.subject && (
+            <div style={{ fontSize: "11pt", fontWeight: 700, marginBottom: "12pt", lineHeight: 1.4 }}>
+              <span style={{ color: hex }}>Asunto: </span>
+              <span>{content.subject}</span>
+            </div>
+          )}
+
+          {/* Salutation — colon (ES standard) */}
+          <div style={{ fontSize: "11pt", marginBottom: "10pt", lineHeight: 1.4 }}>
+            {content.recipientName
+              ? t("salutation_named", { name: content.recipientName })
+              : t("salutation_generic")}
+          </div>
+
+          {/* Body — LEFT aligned, NO indent, single line spacing (ES standard) */}
+          {content.body ? (
+            <div
+              style={{ fontSize: "11pt", color: "#1a1a1a", lineHeight: 1.4, marginBottom: "10pt" }}
+              className="[&>p]:mb-[10pt] [&>p]:text-left [&>p]:indent-0 [&>ul]:mb-[10pt] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[10pt] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
+              dangerouslySetInnerHTML={{ __html: content.body }}
+            />
+          ) : (
+            <p style={{ fontSize: "11pt", color: "#cccccc", fontStyle: "italic", marginBottom: "10pt" }}>
+              {t("body_placeholder_template")}
+            </p>
+          )}
+
+          {/* Complimentary close */}
+          {content.closing && (
+            <div style={{ fontSize: "11pt", lineHeight: 1.4 }}>
+              {content.closing},
+            </div>
+          )}
+        </div>
+
+        {/* ── SIGNATURE — always pinned to bottom ── */}
+        <div style={{ marginTop: "auto", paddingTop: "28pt", paddingBottom: "0.75in" }}>
+          {/* Short accent line above name */}
+          <div style={{
+            height: "1.5px",
+            width: 100,
+            background: hex,
+            marginBottom: "6pt",
+            opacity: 0.8,
+          }} />
+          {candidate.name && (
+            <div style={{ fontSize: "11pt", fontWeight: 700, color: hex, lineHeight: 1.3 }}>
+              {candidate.name}
+            </div>
+          )}
+          {candidate.jobTitle && (
+            <div style={{ fontSize: "10pt", color: "#666666", marginTop: 2 }}>
+              {candidate.jobTitle}
+            </div>
+          )}
+          {candidate.phone && (
+            <div style={{ fontSize: "9pt", color: "#888888", marginTop: 1 }}>
+              {candidate.phone}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

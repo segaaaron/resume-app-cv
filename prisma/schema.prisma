@@ -166,6 +166,7 @@ model Application {
 
   @@index([userId])
   @@index([followUpAt])
+  @@index([userId, status])
 }
 
 model CVView {
@@ -176,6 +177,7 @@ model CVView {
 
   @@index([resumeId])
   @@index([viewedAt])
+  @@index([resumeId, viewedAt])
 }
 
 model AIRateLimit {

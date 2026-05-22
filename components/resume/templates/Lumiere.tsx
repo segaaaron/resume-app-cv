@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 52, advanced: 76, expert: 100 }
@@ -47,7 +48,9 @@ function DiamondOrnament({ color }: { color: string }) {
 }
 
 export default function LumiereTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

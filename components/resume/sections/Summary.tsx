@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { useEditorPro } from "@/components/editor/EditorContext"
 import { Textarea } from "@/components/ui/textarea"
 import { Sparkles, Loader2, Lock, Wand2, Check } from "lucide-react"
@@ -13,7 +14,9 @@ export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
-  const { sectionData, updateSectionData, config } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, config: s.config }))
+  )
   const [generating, setGenerating] = useState(false)
   const [improving, setImproving] = useState(false)
   const [versions, setVersions] = useState<string[]>([])

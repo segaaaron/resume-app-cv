@@ -257,6 +257,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         }
       },
     })),
-    { name: "resume-store" }
+    // M4: disable devtools serialization overhead in production
+    { name: "resume-store", enabled: process.env.NODE_ENV === "development" }
   )
 )

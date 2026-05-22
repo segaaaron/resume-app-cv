@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -26,7 +27,9 @@ function MainBlock({ title, navy, gold, children }: { title: string; navy: strin
 }
 
 export default function NavyExecutiveTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id

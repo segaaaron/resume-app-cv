@@ -2,11 +2,14 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function RoseTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false

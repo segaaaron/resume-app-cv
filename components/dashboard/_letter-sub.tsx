@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
@@ -18,70 +18,33 @@ export interface LetterCard {
   createdAt: Date
 }
 
-// ── LetterDropdown ────────────────────────────────────────────────────────────
+// ── DeleteBtn ─────────────────────────────────────────────────────────────────
 
-export function LetterDropdown({ onDelete }: { onDelete: () => void }) {
-  const t = useTranslations("dashboard.cover_letters")
-  const [open, setOpen] = useState(false)
-  const wrapRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!open) return
-    function handler(e: MouseEvent) {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
-    }
-    document.addEventListener("mousedown", handler)
-    return () => document.removeEventListener("mousedown", handler)
-  }, [open])
-
+export function DeleteBtn({ onDelete }: { onDelete: () => void }) {
+  const [hov, setHov] = useState(false)
   return (
-    <div ref={wrapRef} style={{ position: "relative", marginLeft: "auto" }}>
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v) }}
-        style={{
-          width: 26, height: 26, borderRadius: 5, border: "1px solid #D9E1ED",
-          background: "transparent", color: "#6B7A8C",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          cursor: "pointer", transition: "all 0.15s ease", flexShrink: 0,
-        }}
-        onMouseEnter={(e) => {
-          ;(e.currentTarget as HTMLButtonElement).style.background = "#EEF2F9"
-          ;(e.currentTarget as HTMLButtonElement).style.color = "#1a2e4a"
-        }}
-        onMouseLeave={(e) => {
-          ;(e.currentTarget as HTMLButtonElement).style.background = "transparent"
-          ;(e.currentTarget as HTMLButtonElement).style.color = "#6B7A8C"
-        }}
-      >
-        <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
-          <circle cx="5.5" cy="2" r="1" fill="currentColor" />
-          <circle cx="5.5" cy="5.5" r="1" fill="currentColor" />
-          <circle cx="5.5" cy="9" r="1" fill="currentColor" />
-        </svg>
-      </button>
-
-      <div style={{
-        position: "absolute", top: "calc(100% + 6px)", right: 0,
-        background: "white", border: "1px solid #D9E1ED", borderRadius: 10,
-        padding: 8, minWidth: 170, zIndex: 1000,
-        boxShadow: "0 8px 32px rgba(26,46,74,0.12), 0 0 0 1px rgba(0,212,255,0.15)",
-        opacity: open ? 1 : 0,
-        transform: open ? "translateY(0) scale(1)" : "translateY(-8px) scale(0.96)",
-        pointerEvents: open ? "all" : "none",
-        transition: "opacity 0.18s cubic-bezier(0.34,1.1,0.64,1), transform 0.18s cubic-bezier(0.34,1.1,0.64,1)",
-        transformOrigin: "top right",
-      }}>
-        <div
-          style={{ display: "flex", alignItems: "center", gap: 9, padding: "9px 11px", borderRadius: 7, fontSize: 13, fontWeight: 500, color: "#EF4444", cursor: "pointer", transition: "all 0.12s ease" }}
-          onMouseEnter={(e) => { ;(e.currentTarget as HTMLDivElement).style.background = "rgba(239,68,68,0.1)"; ;(e.currentTarget as HTMLDivElement).style.color = "#DC2626" }}
-          onMouseLeave={(e) => { ;(e.currentTarget as HTMLDivElement).style.background = "transparent"; ;(e.currentTarget as HTMLDivElement).style.color = "#EF4444" }}
-          onClick={(e) => { e.stopPropagation(); setOpen(false); onDelete() }}
-        >
-          {t("delete")}
-        </div>
-      </div>
-    </div>
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onDelete() }}
+      style={{
+        width: 28, height: 28, borderRadius: 6,
+        borderWidth: 1, borderStyle: "solid",
+        borderColor: hov ? "rgba(239,68,68,0.45)" : "rgba(239,68,68,0.2)",
+        background: hov ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.07)",
+        color: hov ? "#DC2626" : "#EF4444",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        cursor: "pointer", transition: "all 0.15s ease", flexShrink: 0, marginLeft: "auto",
+      }}
+      onMouseEnter={() => setHov(true)}
+      onMouseLeave={() => setHov(false)}
+      title="Eliminar"
+    >
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M3 6h18"/>
+        <path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+        <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
+      </svg>
+    </button>
   )
 }
 
@@ -198,55 +161,182 @@ export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit
     <div
       className="cl-card-wrap cl-card-anim"
       style={{
-        background: hovered ? "#F5F7FB" : "white",
-        border: `1px solid ${hovered ? "#00D4FF" : "#D9E1ED"}`,
-        borderRadius: 10, overflow: "visible", cursor: "pointer",
-        display: "block", textDecoration: "none",
-        transition: "border-color 0.22s ease, background 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.22s ease",
-        position: "relative", animationDelay: animDelay,
-        transform: hovered ? "translateY(-2px)" : "translateY(0)",
-        boxShadow: hovered ? "0 4px 20px rgba(0,212,255,0.12)" : "none",
+        background: "white",
+        borderWidth: 1,
+        borderStyle: "solid",
+        borderColor: hovered ? "rgba(0,212,255,0.55)" : "#E2E8F4",
+        borderRadius: 14,
+        overflow: "hidden",
+        cursor: "pointer",
+        display: "flex",
+        flexDirection: "column",
+        textDecoration: "none",
+        transition: "border-color 0.25s ease, transform 0.25s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.25s ease",
+        position: "relative",
+        animationDelay: animDelay,
+        transform: hovered ? "translateY(-4px)" : "translateY(0)",
+        boxShadow: hovered
+          ? "0 12px 40px rgba(0,212,255,0.14), 0 2px 8px rgba(26,46,74,0.08)"
+          : "0 1px 4px rgba(26,46,74,0.06)",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
+      {/* accent bar top */}
+      <div style={{
+        height: 3,
+        background: hovered
+          ? "linear-gradient(90deg, #00D4FF 0%, #6B8AC4 50%, #1a2e4a 100%)"
+          : "linear-gradient(90deg, #C8D8F0 0%, #E2E8F4 100%)",
+        transition: "background 0.35s ease",
+        flexShrink: 0,
+      }} />
+
+      {/* thumbnail zone */}
       <div
         style={{
           position: "relative",
-          background: "linear-gradient(135deg, #F5F7FB 0%, #EEF2F9 100%)",
+          background: "linear-gradient(160deg, #EFF3FB 0%, #E4EAF6 55%, #DDE4F0 100%)",
           display: "flex", alignItems: "flex-end", justifyContent: "center",
-          padding: "18px 28px 0", minHeight: 140, overflow: "hidden",
-          borderRadius: "10px 10px 0 0",
+          padding: "22px 32px 0", minHeight: 148, overflow: "hidden",
+          flexShrink: 0,
         }}
         onClick={onEdit}
       >
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.03) 0%, transparent 65%)", pointerEvents: "none" }} />
-        <div className="cl-thumb-hover" style={{ width: "100%", maxWidth: 118, aspectRatio: "210 / 297", borderRadius: "2px 2px 0 0", overflow: "hidden", boxShadow: "0 -2px 20px rgba(0,0,0,0.08), 0 0 0 1px #D9E1ED", position: "relative", zIndex: 1 }}>
+        {/* subtle dot grid */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          backgroundImage: "radial-gradient(circle, rgba(107,138,196,0.18) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
+          opacity: hovered ? 0.7 : 0.4,
+          transition: "opacity 0.3s ease",
+        }} />
+        {/* cyan radial glow */}
+        <div style={{
+          position: "absolute", inset: 0, pointerEvents: "none",
+          background: "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.08) 0%, transparent 60%)",
+          opacity: hovered ? 1 : 0,
+          transition: "opacity 0.3s ease",
+        }} />
+
+        {/* document thumbnail */}
+        <div
+          className="cl-thumb-hover"
+          style={{
+            width: "100%", maxWidth: 112,
+            aspectRatio: "210 / 297",
+            borderRadius: "3px 3px 0 0",
+            overflow: "hidden",
+            boxShadow: hovered
+              ? "0 -4px 28px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,212,255,0.3)"
+              : "0 -2px 16px rgba(0,0,0,0.1), 0 0 0 1px #D0D8EC",
+            position: "relative", zIndex: 1,
+            transition: "box-shadow 0.25s ease",
+          }}
+        >
           {letter.templateId ? <CoverLetterThumbnail id={letter.templateId} color={letter.colorScheme} /> : <LetterThumbSVG />}
         </div>
-        <div className="cl-overlay" style={{ position: "absolute", inset: 0, background: "rgba(26,46,74,0.4)", display: "flex", alignItems: "center", justifyContent: "center", gap: 8, zIndex: 5, backdropFilter: "blur(2px)" }} onClick={(e) => { e.stopPropagation(); onEdit() }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
-            <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(0,212,255,0.2)", border: "1px solid rgba(0,212,255,0.4)", color: "#00D4FF", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", transition: "all 0.15s ease" }}>
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+
+        {/* hover overlay */}
+        <div
+          className="cl-overlay"
+          style={{
+            position: "absolute", inset: 0,
+            background: "linear-gradient(160deg, rgba(15,30,60,0.55) 0%, rgba(0,50,80,0.45) 100%)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            zIndex: 5, backdropFilter: "blur(3px)",
+          }}
+          onClick={(e) => { e.stopPropagation(); onEdit() }}
+        >
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: "50%",
+              background: "linear-gradient(135deg, rgba(0,212,255,0.3) 0%, rgba(0,168,204,0.15) 100%)",
+              border: "1.5px solid rgba(0,212,255,0.6)",
+              color: "#00D4FF",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              boxShadow: "0 0 20px rgba(0,212,255,0.3)",
+            }}>
+              <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
+                <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="cl-ov-label" style={{ fontSize: 10, fontWeight: 600, letterSpacing: "0.04em", color: "#00D4FF" }}>{t("edit")}</span>
+            <span className="cl-ov-label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00D4FF" }}>{t("edit")}</span>
           </div>
         </div>
       </div>
-      <div style={{ padding: 16 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.01em", marginBottom: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+
+      {/* info + actions */}
+      <div style={{ padding: "14px 16px 15px", flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
+        {/* title */}
+        <div style={{
+          fontSize: 13.5, fontWeight: 700, color: "#111D2E",
+          letterSpacing: "-0.02em", lineHeight: 1.3,
+          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
+          marginBottom: 5,
+        }}>
           {letter.title}
         </div>
-        <div style={{ fontSize: 11.5, color: "#6B7A8C", display: "flex", alignItems: "center", gap: 5 }}>
-          <span>{t("ai_generated")}</span>
-          <span style={{ width: 2.5, height: 2.5, borderRadius: "50%", background: "#A0AABE", display: "inline-block", flexShrink: 0 }} />
-          <span>{formatInTimezone(letter.updatedAt, userTimezone, dateLocale)}</span>
+
+        {/* meta row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+          <span style={{
+            display: "inline-flex", alignItems: "center", gap: 3,
+            fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: "#00A8CC",
+            background: "rgba(0,212,255,0.08)",
+            borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,212,255,0.2)",
+            borderRadius: 4, padding: "2px 6px",
+          }}>
+            <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
+              <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.4"/>
+              <path d="M3.5 5l1 1 2-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            IA
+          </span>
+          <span style={{ width: 2, height: 2, borderRadius: "50%", background: "#C4CDD9", display: "inline-block", flexShrink: 0 }} />
+          <span style={{ fontSize: 11, color: "#8B98AB", fontVariantNumeric: "tabular-nums" }}>
+            {formatInTimezone(letter.updatedAt, userTimezone, dateLocale)}
+          </span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginTop: 11, paddingTop: 10, borderTop: "1px solid #E8EDF6", overflow: "visible", position: "relative" }}>
-          <CaBtn primary onClick={(e) => { e.stopPropagation(); onRename() }}>{t("rename")}</CaBtn>
-          <LetterDropdown onDelete={onDelete} />
+
+        {/* actions */}
+        <div style={{
+          display: "flex", alignItems: "center", gap: 6,
+          paddingTop: 10, borderTop: "1px solid #EDF0F7",
+          overflow: "visible", position: "relative",
+        }}>
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRename() }}
+            style={{
+              display: "inline-flex", alignItems: "center", gap: 5,
+              padding: "5px 11px", borderRadius: 6, fontSize: 11.5, fontFamily: "inherit",
+              fontWeight: 600, cursor: "pointer", transition: "all 0.15s ease",
+              background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)",
+              borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,212,255,0.28)",
+              color: "#00A8CC", letterSpacing: "-0.01em",
+            }}
+            onMouseEnter={(e) => {
+              const el = e.currentTarget
+              el.style.background = "linear-gradient(135deg, rgba(0,212,255,0.18) 0%, rgba(0,168,204,0.1) 100%)"
+              el.style.borderColor = "rgba(0,212,255,0.5)"
+              el.style.color = "#00D4FF"
+            }}
+            onMouseLeave={(e) => {
+              const el = e.currentTarget
+              el.style.background = "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)"
+              el.style.borderColor = "rgba(0,212,255,0.28)"
+              el.style.color = "#00A8CC"
+            }}
+          >
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            {t("rename")}
+          </button>
+          <DeleteBtn onDelete={onDelete} />
         </div>
       </div>
     </div>

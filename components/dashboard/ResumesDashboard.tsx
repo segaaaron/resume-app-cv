@@ -78,6 +78,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   type UpgradeState = "idle" | "waiting" | "confirmed" | "timeout"
   const [upgradeState, setUpgradeState] = useState<UpgradeState>("idle")
   const upgradeActiveRef = useRef(false)
+  // M5: track poll timer so it can be cancelled on unmount
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (searchParams.get("upgraded") !== "true") return
@@ -109,12 +111,14 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
         }
       } catch { /* transient error — keep polling */ }
       intervalMs = Math.min(intervalMs * 1.5, 8_000)
-      setTimeout(poll, intervalMs)
+      // M5: store timer ID so cleanup can cancel it
+      pollTimerRef.current = setTimeout(poll, intervalMs)
     }
 
     poll()
     return () => {
       upgradeActiveRef.current = false
+      if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
       if (logoutTimeout) clearTimeout(logoutTimeout)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps

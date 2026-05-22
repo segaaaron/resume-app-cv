@@ -7,6 +7,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
   Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane, Coffee,
@@ -27,7 +28,9 @@ const HOBBY_ICONS = [Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function PrismTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

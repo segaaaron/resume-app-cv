@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -35,7 +36,9 @@ function RingProgress({ pct, color, size = 30 }: { pct: number; color: string; s
 }
 
 export default function HelixTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

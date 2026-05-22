@@ -2,11 +2,14 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function ModernTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages } = sectionData
   const color = config.colorScheme

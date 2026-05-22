@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -105,7 +106,9 @@ const DARK2 = "#1f2329"   // slightly darker for contact strip
 // ─────────────────────────────────────────────────────────────────────────────
 
 export default function ThompsonTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience,

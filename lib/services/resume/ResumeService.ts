@@ -317,16 +317,17 @@ export class ResumeService {
     snapshot: ResumeSnapshot,
     label?: string,
   ) {
-    // Pro check
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
-    })
+    // Pro check — run both queries in parallel (no data dependency between them)
+    const [user, resume] = await Promise.all([
+      db.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+      }),
+      db.resume.findFirst({ where: { id: resumeId, userId } }),
+    ])
     if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
       throw new AppError("pro_required", 403)
     }
-
-    const resume = await db.resume.findFirst({ where: { id: resumeId, userId } })
     if (!resume) throw new AppError("not_found", 404)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

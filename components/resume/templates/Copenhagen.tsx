@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 // Alternating tinted section backgrounds
@@ -9,7 +10,9 @@ const SECTION_TINTS = ["#EFF6FF", "#F0FDF4", "#FFF7ED", "#FDF4FF", "#EFF6FF", "#
 const SECTION_BORDER_COLORS = ["#bfdbfe", "#bbf7d0", "#fed7aa", "#e9d5ff", "#bfdbfe", "#bbf7d0", "#fed7aa"]
 
 export default function CopenhagenTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
   const accent = config.colorScheme

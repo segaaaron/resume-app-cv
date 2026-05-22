@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form"
 import { useEffect, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { PersonalDetails } from "@/types/resume"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -21,8 +22,9 @@ function calcYearsOfExperience(workExperience: { startDate?: string }[]): string
 
 export default function PersonalDetailsSection() {
   const t = useTranslations("editor.sections_form")
-  const resumeId = useResumeStore((s) => s.resumeId)
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { resumeId, sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ resumeId: s.resumeId, sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  )
 
   const computedYears = useMemo(
     () => calcYearsOfExperience(sectionData.workExperience ?? []),

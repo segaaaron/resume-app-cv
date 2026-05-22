@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { WorkExperienceItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,10 +20,12 @@ export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
-  const { sectionData, updateSectionData, config } = useResumeStore()
+  const { sectionData, updateSectionData, config } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, config: s.config }))
+  )
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(null)
-  useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [])
+  useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [jobs[0]?.id])
   const [improvingId, setImprovingId] = useState<string | null>(null)
   const [aiVersions, setAiVersions] = useState<{ jobId: string; bullets: string[] } | null>(null)
   const [improvedId, setImprovedId] = useState<string | null>(null)

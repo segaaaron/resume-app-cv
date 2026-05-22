@@ -277,20 +277,33 @@ export default function CVCard({
             style={{
               display: "inline-flex",
               alignItems: "center",
-              gap: "4px",
-              padding: "4px 10px",
-              borderRadius: "5px",
-              border: "1px solid rgba(0,212,255,0.25)",
-              background: "rgba(0,212,255,0.1)",
-              color: "#00D4FF",
-              fontSize: "11px",
+              gap: "5px",
+              padding: "5px 11px",
+              borderRadius: "6px",
+              border: "1px solid rgba(0,212,255,0.28)",
+              background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)",
+              color: "#00A8CC",
+              fontSize: "11.5px",
+              fontWeight: 600,
               fontFamily: "inherit",
+              letterSpacing: "-0.01em",
               cursor: "pointer",
               transition: "all 0.15s ease",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,212,255,0.15)" }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,212,255,0.1)" }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, rgba(0,212,255,0.18) 0%, rgba(0,168,204,0.1) 100%)"
+              e.currentTarget.style.borderColor = "rgba(0,212,255,0.5)"
+              e.currentTarget.style.color = "#00D4FF"
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)"
+              e.currentTarget.style.borderColor = "rgba(0,212,255,0.28)"
+              e.currentTarget.style.color = "#00A8CC"
+            }}
           >
+            <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
             {t("rename")}
           </button>
 

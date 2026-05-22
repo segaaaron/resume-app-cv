@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { LanguageItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +12,9 @@ import { nanoid } from "nanoid"
 
 export default function LanguagesSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  )
   const languages = sectionData.languages
 
   const LEVELS = [

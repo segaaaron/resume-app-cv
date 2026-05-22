@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 function SH({ children, accentColor, style = {} }: { children: React.ReactNode; accentColor: string; style?: React.CSSProperties }) {
@@ -12,7 +13,9 @@ function SH({ children, accentColor, style = {} }: { children: React.ReactNode; 
 }
 
 export default function SageBotanicalTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id

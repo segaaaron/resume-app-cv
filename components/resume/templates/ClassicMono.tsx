@@ -1,13 +1,16 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 export default function ClassicMonoTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sd
   const accent = config.colorScheme

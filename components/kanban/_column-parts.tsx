@@ -116,7 +116,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
       onMouseEnter={() => !locked && setHovered(true)}
       onMouseLeave={() => { setHovered(false); setDelHovered(false) }}
       style={{
-        background: "white", border: `1px solid ${C.border}`, borderRadius: 6,
+        background: "white", borderWidth: 1, borderStyle: "solid", borderColor: C.border, borderRadius: 6,
         padding: "11px 12px", userSelect: "none", position: "relative",
         transition: "transform 0.18s ease,box-shadow 0.18s ease,border-color 0.18s ease,opacity 0.18s ease,background 0.18s ease",
         ...cardStyle,

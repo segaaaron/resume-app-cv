@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 function Col({ title, accent, rule, children }: { title: string; accent: string; rule: string; children: React.ReactNode }) {
@@ -24,7 +25,9 @@ function Entry({ y, h, s, accent, rule, children }: { y: string; h: string; s?: 
 }
 
 export default function MagazineSpreadTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id

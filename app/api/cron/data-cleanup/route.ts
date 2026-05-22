@@ -13,15 +13,15 @@ export async function GET(req: Request) {
 
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
 
-  const deleted = await db.user.deleteMany({
-    where: {
-      deletedAt: { lte: cutoff },
-    },
-  })
-
-  await db.aIUsageLog.deleteMany({
-    where: { createdAt: { lt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) } }
-  })
+  // M6: run both deletes in parallel — no data dependency between them
+  const [deleted] = await Promise.all([
+    db.user.deleteMany({
+      where: { deletedAt: { lte: cutoff } },
+    }),
+    db.aIUsageLog.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    }),
+  ])
 
   return NextResponse.json({ deleted: deleted.count })
 }

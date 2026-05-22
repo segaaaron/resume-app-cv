@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 
 const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 5 }
 const LANG_DOTS: Record<string, number> = { a1: 1, a2: 2, b1: 3, b2: 4, c1: 4, c2: 5, native: 5 }
@@ -24,7 +25,9 @@ function DotRating({ value, max = 5, filled, empty }: { value: number; max?: num
 }
 
 export default function LarssonTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

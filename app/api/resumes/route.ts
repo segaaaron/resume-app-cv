@@ -12,7 +12,9 @@ export async function GET(req: Request) {
 
   try {
     const result = await resumeService.list(authResult.userId, limit, cursor)
-    return NextResponse.json(result)
+    return NextResponse.json(result, {
+      headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=60" },
+    })
   } catch (err) {
     return handleError(err)
   }

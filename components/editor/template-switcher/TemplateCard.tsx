@@ -1,10 +1,15 @@
 "use client"
 
 import { memo } from "react"
+import dynamic from "next/dynamic"
 import { cn } from "@/lib/utils"
 import { Lock } from "lucide-react"
-import { ResumeThumbnail } from "./thumbnails"
 import { TEMPLATES, TemplateId } from "@/types/resume"
+
+const ResumeThumbnail = dynamic(
+  () => import("./thumbnails").then((m) => ({ default: m.ResumeThumbnail })),
+  { ssr: false, loading: () => <div className="w-full h-full bg-muted/40 animate-pulse" /> }
+)
 
 interface TemplateCardProps {
   template: (typeof TEMPLATES)[number]

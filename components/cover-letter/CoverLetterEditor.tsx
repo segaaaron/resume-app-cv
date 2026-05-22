@@ -15,22 +15,27 @@ import { ArrowLeft, Save, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp
 import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations } from "next-intl"
 import UpgradeModal from "@/components/editor/UpgradeModal"
-import SidebarTemplate from "./templates/SidebarTemplate"
-import ElegantTemplate from "./templates/ElegantTemplate"
-import SplitTemplate from "./templates/SplitTemplate"
-import ExecutiveBoldTemplate from "./templates/ExecutiveBoldTemplate"
-import MaterialCardTemplate from "./templates/MaterialCardTemplate"
-import GradientHorizonTemplate from "./templates/GradientHorizonTemplate"
-import MinimalLineTemplate from "./templates/MinimalLineTemplate"
-import TwoToneTemplate from "./templates/TwoToneTemplate"
-import TimelineTemplate from "./templates/TimelineTemplate"
-import MonogramTemplate from "./templates/MonogramTemplate"
-import ArchitectTemplate from "./templates/ArchitectTemplate"
-import DiagonalTemplate from "./templates/DiagonalTemplate"
-import NewspaperTemplate from "./templates/NewspaperTemplate"
-import RichTextEditor from "./RichTextEditor"
+import dynamic from "next/dynamic"
+const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
 import { CoverLetterThumbnail } from "./thumbnails"
-import type { CandidateData, CoverLetterContent } from "./templates/types"
+import type { CandidateData, CoverLetterContent, TemplateProps } from "./templates/types"
+
+const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = {
+  elegant:   dynamic(() => import("./templates/ElegantTemplate"),       { ssr: false }),
+  classic:   dynamic(() => import("./templates/ElegantTemplate"),       { ssr: false }),
+  sidebar:   dynamic(() => import("./templates/SidebarTemplate"),       { ssr: false }),
+  split:     dynamic(() => import("./templates/SplitTemplate"),         { ssr: false }),
+  executive: dynamic(() => import("./templates/ExecutiveBoldTemplate"), { ssr: false }),
+  material:  dynamic(() => import("./templates/MaterialCardTemplate"),  { ssr: false }),
+  gradient:  dynamic(() => import("./templates/GradientHorizonTemplate"), { ssr: false }),
+  minimal:   dynamic(() => import("./templates/MinimalLineTemplate"),   { ssr: false }),
+  twotone:   dynamic(() => import("./templates/TwoToneTemplate"),       { ssr: false }),
+  timeline:  dynamic(() => import("./templates/TimelineTemplate"),      { ssr: false }),
+  monogram:  dynamic(() => import("./templates/MonogramTemplate"),      { ssr: false }),
+  architect: dynamic(() => import("./templates/ArchitectTemplate"),     { ssr: false }),
+  diagonal:  dynamic(() => import("./templates/DiagonalTemplate"),      { ssr: false }),
+  newspaper: dynamic(() => import("./templates/NewspaperTemplate"),     { ssr: false }),
+}
 
 type TemplateId = "classic" | "sidebar" | "elegant" | "split" | "executive" | "material" | "gradient" | "minimal" | "twotone" | "timeline" | "monogram" | "architect" | "diagonal" | "newspaper"
 
@@ -680,30 +685,39 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
         </div>
 
         {/* Right: preview */}
-        <div className="flex-1 overflow-auto bg-[#e8e8e8] flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0">
+        <div className="flex-1 overflow-auto bg-[#d0d0d0] flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0">
+          <div style={{ position: "relative", display: "inline-block" }}>
           <div
             ref={templateRef}
-            className="bg-white shadow-2xl print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"
+            className="bg-white shadow-[0_4px_24px_rgba(0,0,0,0.18)] print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"
             style={{ width: "210mm", minHeight: "297mm" }}
           >
             {(() => {
               const candidateWithPosition = { ...candidate, photoPosition }
-              return <>
-                {(activeTemplate === "elegant" || activeTemplate === "classic") && <ElegantTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "sidebar" && <SidebarTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "split" && <SplitTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "executive" && <ExecutiveBoldTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "material" && <MaterialCardTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "gradient" && <GradientHorizonTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "twotone" && <TwoToneTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "timeline" && <TimelineTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "minimal" && <MinimalLineTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "monogram" && <MonogramTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "architect" && <ArchitectTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "diagonal" && <DiagonalTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "newspaper" && <NewspaperTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-              </>
+              const ActiveTemplate = TEMPLATE_COMPONENTS[activeTemplate] ?? TEMPLATE_COMPONENTS.elegant
+              return <ActiveTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />
             })()}
+            {/* Page break indicator at 297mm */}
+            <div className="print:hidden" style={{
+              position: "absolute", top: "297mm", left: 0, right: 0,
+              height: 0, pointerEvents: "none", zIndex: 10,
+            }}>
+              <div style={{ position: "relative", width: "100%" }}>
+                <div style={{
+                  position: "absolute", left: 0, right: 0, top: 0,
+                  borderTop: "1.5px dashed rgba(220,38,38,0.45)",
+                }} />
+                <span style={{
+                  position: "absolute", right: 6, top: 3,
+                  fontSize: 9, fontWeight: 600, color: "rgba(220,38,38,0.6)",
+                  letterSpacing: "0.05em", whiteSpace: "nowrap",
+                  fontFamily: "var(--font-mono, monospace)",
+                }}>
+                  — pág. 1
+                </span>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
       </div>

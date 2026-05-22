@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { VolunteerItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +14,9 @@ import { nanoid } from "nanoid"
 
 export default function VolunteerSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  )
   const items = sectionData.volunteer
   const [openId, setOpenId] = useState<string | null>(null)
 

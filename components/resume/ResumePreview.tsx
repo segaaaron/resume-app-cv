@@ -3,6 +3,7 @@
 import dynamic from "next/dynamic"
 import { useState, useEffect } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 
 function TemplateSkeleton() {
   return (
@@ -169,7 +170,7 @@ function buildFontUrl(family: string) {
 const BASE_FONT = 14
 
 export default function ResumePreview({ overrideTemplateId }: { overrideTemplateId?: string }) {
-  const { config } = useResumeStore()
+  const { config } = useResumeStore(useShallow((s) => ({ config: s.config })))
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => { setMounted(true) }, [])
