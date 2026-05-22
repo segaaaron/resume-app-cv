@@ -34,7 +34,10 @@ export type ResumeSnapshot = z.infer<typeof snapshotSchema>
 export const resumePatchSchema = z.object({
   title:       z.string().min(1).max(200).optional(),
   sections:    z.array(z.any()).optional(),
-  sectionData: z.any().optional(),
+  sectionData: z.record(z.string(), z.unknown()).optional().refine(
+    (val) => !val || JSON.stringify(val).length <= 500_000,
+    { message: "sectionData too large" }
+  ),
   config: z.object({
     templateId:    z.string().optional(),
     colorScheme:   z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),

@@ -8,7 +8,14 @@ import { z } from "zod"
 
 export const coverLetterPatchSchema = z.object({
   title:       z.string().max(200).optional(),
-  content:     z.any().optional(),
+  content:     z.object({
+    body:           z.string().max(50_000).optional(),
+    subject:        z.string().max(500).optional(),
+    closing:        z.string().max(500).optional(),
+    recipientName:  z.string().max(200).optional(),
+    recipientTitle: z.string().max(200).optional(),
+    company:        z.string().max(200).optional(),
+  }).optional(),
   colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
   fontFamily:  z.string().max(100).optional(),
   templateId:  z.string().max(50).optional(),

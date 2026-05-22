@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("resume-pdf")
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
 import { checkRateLimit } from "@/lib/ai-client"
@@ -62,13 +65,13 @@ export async function GET(req: Request, { params }: Params) {
     return new Response(new Uint8Array(pdf), {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${filename}.pdf"`,
+        "Content-Disposition": `attachment; filename*=UTF-8''${filename}.pdf`,
         "Cache-Control": "private, no-cache",
         "ETag": etag,
       },
     })
   } catch (err) {
-    console.error("[resume pdf] render failed", err)
+    logger.error("render failed", { resumeId: id, userId: session.user.id }, err instanceof Error ? err : undefined)
     return NextResponse.json({ error: "PDF render failed" }, { status: 500 })
   }
 }

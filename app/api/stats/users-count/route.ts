@@ -15,6 +15,6 @@ export async function GET() {
     const count = await getCachedUserCount()
     return NextResponse.json({ count })
   } catch {
-    return NextResponse.json({ count: 1200 })
+    return NextResponse.json({ error: "unavailable" }, { status: 503 })
   }
 }

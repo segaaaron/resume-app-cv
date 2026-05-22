@@ -2,6 +2,7 @@
 
 import { Mail, Phone, MapPin, Link2, Globe, Calendar, Building2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import DOMPurify from "isomorphic-dompurify"
 import type { TemplateProps } from "./types"
 
 export default function ExecutiveBoldTemplate({ content, colorScheme, candidate }: TemplateProps) {
@@ -82,7 +83,7 @@ export default function ExecutiveBoldTemplate({ content, colorScheme, candidate 
         </p>
 
         {content.body
-          ? <div className="text-[11.5px] text-gray-700 leading-[1.7] mb-5 [&>p]:mb-4 [&>p]:text-justify [&>ul]:mb-4 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:mb-4 [&>ol]:list-decimal [&>ol]:pl-6 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
+          ? <div className="text-[11.5px] text-gray-700 leading-[1.7] mb-5 [&>p]:mb-4 [&>p]:text-justify [&>ul]:mb-4 [&>ul]:list-disc [&>ul]:pl-6 [&>ol]:mb-4 [&>ol]:list-decimal [&>ol]:pl-6 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body ?? "") }} />
           : <p className="text-[11.5px] text-gray-200 italic mb-5">{t("body_placeholder_template")}</p>
         }
 

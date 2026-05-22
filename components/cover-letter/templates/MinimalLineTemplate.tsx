@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import DOMPurify from "isomorphic-dompurify"
 import type { TemplateProps } from "./types"
 
 export default function MinimalLineTemplate({ content, colorScheme, candidate }: TemplateProps) {
@@ -52,7 +53,7 @@ export default function MinimalLineTemplate({ content, colorScheme, candidate }:
       </p>
 
       {content.body
-        ? <div className="text-[11px] text-gray-700 leading-[2] mb-5 [&>p]:mb-5 [&>p]:text-justify [&>ul]:mb-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-5 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
+        ? <div className="text-[11px] text-gray-700 leading-[2] mb-5 [&>p]:mb-5 [&>p]:text-justify [&>ul]:mb-5 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-5 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body ?? "") }} />
         : <p className="text-[11px] text-gray-200 italic mb-5">{t("body_placeholder_template")}</p>
       }
 

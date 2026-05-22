@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import DOMPurify from "isomorphic-dompurify"
 import type { TemplateProps } from "./types"
 
 export default function ElegantTemplate({ content, colorScheme, candidate }: TemplateProps) {
@@ -145,7 +146,7 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
             <div
               style={{ fontSize: "11pt", color: "#1a1a1a", lineHeight: 1.4, marginBottom: "10pt" }}
               className="[&>p]:mb-[10pt] [&>p]:text-left [&>p]:indent-0 [&>ul]:mb-[10pt] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[10pt] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: content.body }}
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body ?? "") }}
             />
           ) : (
             <p style={{ fontSize: "11pt", color: "#cccccc", fontStyle: "italic", marginBottom: "10pt" }}>

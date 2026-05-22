@@ -11,7 +11,7 @@ export function getOpenAI(): OpenAI {
 }
 
 // Shared model config
-export const AI_MODEL = "gpt-4o-mini" as const
+export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4o-mini") as string
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_BALANCED = 0.5 as const  // profile fill — between deterministic and creative

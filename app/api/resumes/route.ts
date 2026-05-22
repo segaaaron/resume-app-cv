@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   if (authResult instanceof NextResponse) return authResult
 
   const { searchParams } = new URL(req.url)
-  const limit  = parseInt(searchParams.get("limit") ?? "50")
+  const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50") || 50, 100)
   const cursor = searchParams.get("cursor") ?? undefined
 
   try {

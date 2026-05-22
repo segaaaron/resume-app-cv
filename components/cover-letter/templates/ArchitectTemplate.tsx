@@ -2,6 +2,7 @@
 
 import { Mail, Phone, MapPin, Link2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import DOMPurify from "isomorphic-dompurify"
 import type { TemplateProps } from "./types"
 
 export default function ArchitectTemplate({ content, colorScheme, candidate }: TemplateProps) {
@@ -76,7 +77,7 @@ export default function ArchitectTemplate({ content, colorScheme, candidate }: T
         </p>
 
         {content.body
-          ? <div className="text-[11px] text-gray-700 leading-[1.7] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: content.body }} />
+          ? <div className="text-[11px] text-gray-700 leading-[1.7] mb-4 [&>p]:mb-3 [&>p]:text-justify [&>ul]:mb-3 [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-3 [&>ol]:list-decimal [&>ol]:pl-5 prose prose-sm max-w-none" dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body ?? "") }} />
           : <p className="text-[11px] text-gray-200 italic mb-4">{t("body_placeholder_template")}</p>
         }
 

@@ -40,7 +40,7 @@ export class StripeCheckoutService {
           this.logger.error("StripeCheckoutService: failed to cancel old sub before checkout", { userId, subscriptionId: oldSubId }, e instanceof Error ? e : undefined)
           if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
             await resend.emails.send({
-              from: "READY CV <no-reply@readycvv.com>",
+              from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
               to: process.env.ADMIN_EMAIL,
               subject: `[WARNING] Old subscription NOT canceled before new checkout: ${userId}`,
               text: `User ${userId} started a new checkout but the old subscription (${oldSubId}) could NOT be canceled.\n\nThis may result in two active subscriptions in Stripe.\n\nAction required:\n1. Check Stripe Dashboard for user with subscription ${oldSubId}\n2. Cancel the old subscription manually if still active\n\nError: ${String(e)}`,
@@ -71,7 +71,7 @@ export class StripeCheckoutService {
         this.logger.error("StripeCheckoutService: failed to save stripeCustomerId — orphan customer created", { userId, customerId }, e instanceof Error ? e : undefined)
         if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
           await resend.emails.send({
-            from: "READY CV <no-reply@readycvv.com>",
+            from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
             to: process.env.ADMIN_EMAIL,
             subject: `[WARNING] Orphan Stripe customer created: ${userId}`,
             text: `A Stripe customer (${customerId}) was created for user ${userId} but could NOT be saved to the database.\n\nThis customer is now orphaned in Stripe. Future checkouts may create duplicate customers.\n\nAction required:\n1. Manually set stripeCustomerId = '${customerId}' for user ${userId} in the database\n2. Or run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n\nError: ${String(e)}`,

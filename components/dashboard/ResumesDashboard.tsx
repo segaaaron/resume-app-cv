@@ -80,6 +80,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const upgradeActiveRef = useRef(false)
   // M5: track poll timer so it can be cancelled on unmount
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // B-5: store logout timer in a ref so cleanup can always cancel it
+  const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (searchParams.get("upgraded") !== "true") return
@@ -93,7 +95,6 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     const started = Date.now()
     const MAX_MS = 30_000
     let intervalMs = 2_000
-    let logoutTimeout: ReturnType<typeof setTimeout> | null = null
 
     const poll = async () => {
       if (!upgradeActiveRef.current) return
@@ -105,7 +106,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           if (data.plan === "PRO" && (data.subscriptionStatus === "ACTIVE" || data.subscriptionStatus === "PAST_DUE")) {
             upgradeActiveRef.current = false
             setUpgradeState("confirmed")
-            logoutTimeout = setTimeout(() => logoutAction(`/${locale}/login`), 3_000)
+            logoutTimerRef.current = setTimeout(() => logoutAction(`/${locale}/login`), 3_000)
             return
           }
         }
@@ -119,7 +120,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     return () => {
       upgradeActiveRef.current = false
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
-      if (logoutTimeout) clearTimeout(logoutTimeout)
+      if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

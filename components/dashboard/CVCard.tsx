@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import React, { useState, useEffect, useRef } from "react"
 import { Pen, Copy, Trash2, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { ResumeThumbnail } from "@/components/editor/template-switcher/thumbnails"
@@ -36,7 +36,7 @@ interface CVCardProps {
 }
 
 
-export default function CVCard({
+const CVCard = React.memo(function CVCard({
   resume,
   locale: _locale,
   userTimezone,
@@ -416,5 +416,7 @@ export default function CVCard({
       </div>
     </div>
   )
-}
+})
+
+export default CVCard
 

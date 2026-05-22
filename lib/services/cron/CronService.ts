@@ -109,7 +109,7 @@ export class CronService {
       if (claimed.count === 0) return
 
       await this.emailClient!.emails.send({
-        from: "READY CV <no-reply@readycvv.com>",
+        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: user.email,
         subject: "Tu plan se renueva en 2 días ⏰",
         html: renewalReminderHtml({
@@ -174,7 +174,7 @@ export class CronService {
 
         if (this.isEmailEnabled && this.emailClient) {
           await this.emailClient.emails.send({
-            from: "READY CV <no-reply@readycvv.com>",
+            from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
             to: app.user.email,
             subject: `Recordatorio: seguimiento a ${app.jobTitle} en ${app.company}`,
             html: applicationReminderHtml({

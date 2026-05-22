@@ -1,12 +1,15 @@
 import { NextResponse } from "next/server"
+import { timingSafeEqual } from "crypto"
 import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
   const cronSecret = process.env.CRON_SECRET
-
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const expected = Buffer.from(`Bearer ${cronSecret}`)
+  const received = Buffer.from(authHeader ?? "")
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 

@@ -227,6 +227,7 @@ model StripeEvent {
 
   @@index([processedAt])
   @@index([userId])
+  @@index([checkoutSessionId])
 }
 
 model AuditLog {
@@ -238,6 +239,8 @@ model AuditLog {
   createdAt DateTime    @default(now())
 
   @@index([userId])
+  @@index([userId, createdAt])
+  @@index([action])
 }
 
 enum AuditAction {

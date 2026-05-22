@@ -1,18 +1,17 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireAuth, requireUser, handleError } from "@/lib/controllers/shared"
 import { coverLetterService } from "@/lib/controllers/cover-letter-deps"
 
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
 
   try {
     const { searchParams } = new URL(req.url)
     const limit  = parseInt(searchParams.get("limit") ?? "50")
     const cursor = searchParams.get("cursor") ?? undefined
 
-    const result = await coverLetterService.list(session.user.id, limit, cursor)
+    const result = await coverLetterService.list(authResult.userId, limit, cursor)
     return NextResponse.json(result, {
       headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=60" },
     })

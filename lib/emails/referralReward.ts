@@ -49,7 +49,7 @@ export function referralRewardHtml({
           <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <a href="https://www.readycvv.com" style="text-decoration:none;">
+              <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}" style="text-decoration:none;">
                 <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">READY CV</span>
               </a>
             </td>
@@ -139,7 +139,7 @@ export function referralRewardHtml({
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                       <tr>
                         <td align="center">
-                          <a href="https://www.readycvv.com/dashboard/settings"
+                          <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/dashboard/settings`}"
                             style="display:inline-block;background:#2a72d7;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
                             Ver mis referidos →
                           </a>
@@ -151,7 +151,7 @@ export function referralRewardHtml({
                       El crédito se descontará automáticamente en tu próxima factura de Stripe.
                     </p>
                     <p style="font-size:12px;color:#9ca3af;margin-top:24px;text-align:center;">
-                      Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(userId)}&t=${generateUnsubscribeToken(userId)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
+                      Si no deseas recibir más correos, <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/api/user/unsubscribe?uid=${encodeURIComponent(userId)}&t=${generateUnsubscribeToken(userId)}`}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
                     </p>
 
                   </td>
@@ -168,9 +168,9 @@ export function referralRewardHtml({
                 © ${new Date().getFullYear()} READY CV · Todos los derechos reservados
               </p>
               <p style="margin:0;font-size:12px;color:#d1d5db;">
-                <a href="https://www.readycvv.com/privacy" style="color:#9ca3af;text-decoration:none;">Privacidad</a>
+                <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/privacy`}" style="color:#9ca3af;text-decoration:none;">Privacidad</a>
                 &nbsp;·&nbsp;
-                <a href="https://www.readycvv.com/terms" style="color:#9ca3af;text-decoration:none;">Términos</a>
+                <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/terms`}" style="color:#9ca3af;text-decoration:none;">Términos</a>
               </p>
             </td>
           </tr>
@@ -205,7 +205,7 @@ Crédito total acumulado: ${totalCredit}
 ${isCycleComplete ? "Tu contador se reinicia — sigue refiriendo amigos para ganar nuevas recompensas.\n" : ""}
 El crédito se descontará automáticamente en tu próxima factura.
 
-Ver tus referidos: https://www.readycvv.com/dashboard/settings
+Ver tus referidos: ${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/dashboard/settings
 
 © ${new Date().getFullYear()} READY CV`
 }

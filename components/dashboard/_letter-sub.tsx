@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
@@ -152,7 +152,7 @@ interface LetterCardItemProps {
   onDelete: () => void
 }
 
-export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit, onRename, onDelete }: LetterCardItemProps) {
+export const LetterCardItem = React.memo(function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit, onRename, onDelete }: LetterCardItemProps) {
   const t = useTranslations("dashboard.cover_letters")
   const [hovered, setHovered] = useState(false)
   const animDelay = `${index * 0.08 + 0.05}s`
@@ -341,4 +341,4 @@ export function LetterCardItem({ letter, index, userTimezone, dateLocale, onEdit
       </div>
     </div>
   )
-}
+})
