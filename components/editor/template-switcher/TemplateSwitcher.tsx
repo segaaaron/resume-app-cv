@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import { useEffect, useState } from "react"
 import { TEMPLATES } from "@/types/resume"
 import TemplateSwitchModal from "@/components/editor/TemplateSwitchModal"
 import UpgradeModal from "@/components/editor/UpgradeModal"
@@ -56,6 +57,21 @@ export default function TemplateSwitcher({
     cancelSwitch,
   } = useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role })
 
+  // Responsive: detect mobile (<=768px) for compact strip
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    const mq = window.matchMedia("(max-width: 768px)")
+    const apply = () => setIsMobile(mq.matches)
+    apply()
+    mq.addEventListener("change", apply)
+    return () => mq.removeEventListener("change", apply)
+  }, [])
+
+  const stripHeight = isMobile ? 220 : 250
+  const labelsWidth = isMobile ? 76 : 140
+  const labelsGap = isMobile ? 20 : 40
+
   return (
     <>
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
@@ -64,20 +80,95 @@ export default function TemplateSwitcher({
         onConfirm={confirmSwitch}
         onCancel={cancelSwitch}
       />
-      <div className="shrink-0 bg-card/95 backdrop-blur border-t border-border px-4 py-3">
-        <div className="flex flex-col gap-3">
 
-          {/* Regular designs */}
-          <div className="flex items-center gap-3 overflow-x-auto scrollbar-hide">
-            <div className="shrink-0 flex flex-col items-center gap-0.5">
-              <span className="text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
-                {t("regular_designs_label")}
-              </span>
-              <span className="text-[8px] font-extrabold uppercase tracking-widest text-muted-foreground whitespace-nowrap">
-                {t("regular_designs_label2")}
-              </span>
-            </div>
-            <div className="w-px self-stretch bg-border shrink-0" />
+      {/* hide horizontal scrollbar inside strip rows */}
+      <style>{`
+        .templates-strip-row::-webkit-scrollbar { display: none; }
+        .templates-strip-row { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
+
+      <div
+        className="templates-strip-wrapper"
+        style={{
+          flexShrink: 0,
+          height: stripHeight,
+          background: "rgba(255,255,255,0.9)",
+          backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)",
+          borderTop: "1px solid #E2E8F0",
+          display: "flex",
+          zIndex: 50,
+          boxShadow: "0 -8px 32px rgba(11,27,61,0.06)",
+        }}
+      >
+        {/* Labels column */}
+        <div
+          style={{
+            width: labelsWidth,
+            flexShrink: 0,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: labelsGap,
+            padding: "0 16px",
+            borderRight: "1px solid #E2E8F0",
+            background: "rgba(244,250,255,0.4)",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "#475569",
+              textAlign: "center",
+              lineHeight: 1.35,
+              whiteSpace: "pre-line",
+            }}
+          >
+            {`${t("regular_designs_label")}\n${t("regular_designs_label2")}`}
+          </span>
+          <span
+            style={{
+              fontSize: 9,
+              fontWeight: 800,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+              color: "#6D28D9",
+              textAlign: "center",
+              lineHeight: 1.35,
+              whiteSpace: "pre-line",
+            }}
+          >
+            {`${t("pro_designs_label")}\n${t("pro_designs_label2")}`}
+          </span>
+        </div>
+
+        {/* Content area: two rows */}
+        <div
+          style={{
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            padding: "20px 0 10px",
+            gap: 16,
+          }}
+        >
+          {/* Regular row */}
+          <div
+            className="templates-strip-row"
+            suppressHydrationWarning
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "0 20px",
+              overflowX: "auto",
+            }}
+          >
             {regularTemplates.map((tmpl) => (
               <TemplateCard
                 key={tmpl.id}
@@ -86,20 +177,24 @@ export default function TemplateSwitcher({
                 isSelected={tmpl.id === config.templateId}
                 colorScheme={config.colorScheme}
                 onSelect={handleSelectTemplate}
+                compact={isMobile}
               />
             ))}
           </div>
 
-          {/* Pro designs */}
-          <div className="flex items-center gap-3 pt-2 border-t border-border overflow-x-auto scrollbar-hide">
-            <div className="shrink-0 flex flex-col items-center gap-0.5">
-              <span className="text-[8px] font-extrabold uppercase tracking-widest bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent whitespace-nowrap">
-                {t("pro_designs_label")}
-              </span>
-              <span className="text-[8px] font-extrabold uppercase tracking-widest bg-gradient-to-r from-violet-500 to-cyan-500 bg-clip-text text-transparent whitespace-nowrap">
-                {t("pro_designs_label2")}
-              </span>
-            </div>
+          {/* Pro row */}
+          <div
+            className="templates-strip-row"
+            suppressHydrationWarning
+            style={{
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              gap: 12,
+              padding: "0 20px",
+              overflowX: "auto",
+            }}
+          >
             {proTemplates.map((tmpl) => (
               <TemplateCard
                 key={tmpl.id}
@@ -108,6 +203,7 @@ export default function TemplateSwitcher({
                 isSelected={tmpl.id === config.templateId}
                 colorScheme={config.colorScheme}
                 onSelect={handleSelectTemplate}
+                compact={isMobile}
               />
             ))}
           </div>

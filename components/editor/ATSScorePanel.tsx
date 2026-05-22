@@ -18,23 +18,50 @@ import { useATSScore, isQuestion } from "./hooks/useATSScore"
 import type { ReviewItem, ReviewResult } from "./hooks/useATSScore"
 
 function ScoreRing({ score }: { score: number }) {
-  const color =
-    score >= 80 ? "#16a34a" :
-    score >= 60 ? "#2563eb" :
-    score >= 40 ? "#d97706" : "#dc2626"
-  const radius = 36
+  const radius = 70
   const circumference = 2 * Math.PI * radius
   const offset = circumference - (score / 100) * circumference
   return (
-    <svg width="96" height="96" viewBox="0 0 96 96">
-      <circle cx="48" cy="48" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
-      <circle cx="48" cy="48" r={radius} fill="none" stroke={color} strokeWidth="8"
-        strokeDasharray={circumference} strokeDashoffset={offset}
-        strokeLinecap="round" transform="rotate(-90 48 48)"
-        style={{ transition: "stroke-dashoffset 0.8s ease" }} />
-      <text x="48" y="44" textAnchor="middle" dominantBaseline="middle" fontSize="18" fontWeight="bold" fill={color}>{score}</text>
-      <text x="48" y="60" textAnchor="middle" dominantBaseline="middle" fontSize="9" fill="#6b7280">/100</text>
-    </svg>
+    <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
+      <svg width="160" height="160" viewBox="0 0 160 160" style={{ filter: 'drop-shadow(0 8px 24px rgba(0,229,255,0.15))' }}>
+        <defs>
+          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style={{ stopColor: '#00E5FF' }} />
+            <stop offset="100%" style={{ stopColor: '#10B981' }} />
+          </linearGradient>
+        </defs>
+        <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="8" />
+        <circle cx="80" cy="80" r="70" fill="none" stroke="url(#scoreGrad)" strokeWidth="10"
+          strokeDasharray={circumference} strokeDashoffset={offset}
+          strokeLinecap="round"
+          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.8s ease' }} />
+      </svg>
+      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+        <div style={{ fontSize: 36, fontWeight: 800, color: '#0B1B3D', lineHeight: 1 }}>{score}</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Score</div>
+      </div>
+    </div>
+  )
+}
+
+function getBarStyle(pct: number): { color: string; gradient: string } {
+  if (pct >= 80) return { color: '#10B981', gradient: 'linear-gradient(90deg, #10B981, #00E5FF)' }
+  if (pct >= 60) return { color: '#00E5FF', gradient: 'linear-gradient(90deg, #00E5FF, #00D4FF)' }
+  return { color: '#F59E0B', gradient: 'linear-gradient(90deg, #F59E0B, #FCD34D)' }
+}
+
+function ScoreBar({ label, pct }: { label: string; pct: number }) {
+  const { color, gradient } = getBarStyle(pct)
+  return (
+    <div style={{ marginBottom: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 12, color: '#0F172A' }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color }}>{pct}%</span>
+      </div>
+      <div style={{ height: 4, background: 'rgba(0,212,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: gradient, borderRadius: 2 }} />
+      </div>
+    </div>
   )
 }
 
@@ -289,14 +316,31 @@ export default function ATSScorePanel() {
             {/* ATS Results */}
             {atsResult && (
               <div className="space-y-3 pt-1">
-                <div className="flex items-center gap-4 rounded-lg bg-gray-50 p-3">
-                  <div className="flex flex-col items-center gap-1">
-                    <ScoreRing score={atsResult.score} />
-                    <span className="text-xs font-semibold" style={{
-                      color: atsResult.score >= 80 ? "#16a34a" : atsResult.score >= 60 ? "#2563eb" : atsResult.score >= 40 ? "#d97706" : "#dc2626"
-                    }}>{atsResult.label}</span>
+                {/* Score section */}
+                <div style={{ textAlign: 'center', marginBottom: 0, marginTop: 0 }}>
+                  <ScoreRing score={atsResult.score} />
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0B1B3D', marginBottom: 2 }}>{atsResult.label}</div>
+                  <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.6 }}>{atsResult.summary}</div>
+                </div>
+
+                {/* Analysis bars */}
+                <div style={{ marginBottom: 12, padding: 12, background: '#F0F9FF', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 12 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#00E5FF', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {t("title")}
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed flex-1">{atsResult.summary}</p>
+                  <ScoreBar label={t("strengths")} pct={atsResult.score} />
+                  {atsResult.missingKeywords && (
+                    <ScoreBar
+                      label={t("missing_keywords")}
+                      pct={Math.max(0, 100 - Math.min(100, (atsResult.missingKeywords?.length ?? 0) * 10))}
+                    />
+                  )}
+                  {atsResult.gaps && (
+                    <ScoreBar
+                      label={t("gaps")}
+                      pct={Math.max(0, 100 - Math.min(100, (atsResult.gaps?.length ?? 0) * 15))}
+                    />
+                  )}
                 </div>
 
                 {atsResult.strengths?.length > 0 && (
@@ -362,14 +406,15 @@ export default function ATSScorePanel() {
                 )}
 
                 {atsResult.suggestions?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold text-indigo-700 flex items-center gap-1 mb-1.5">
+                  <div style={{ padding: 12, background: '#FFFBEB', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, fontSize: 11, color: '#B45309', lineHeight: 1.6 }}>
+                    <p style={{ fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
                       <Lightbulb className="h-3 w-3" /> {t("suggestions")}
                     </p>
-                    <ul className="space-y-1">
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                       {atsResult.suggestions.map((s, i) => (
-                        <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
-                          <span className="text-indigo-500 mt-0.5 shrink-0">→</span> {s}
+                        <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
+                          <span style={{ flexShrink: 0 }}>→</span>
+                          <span style={{ flex: 1 }}>{s}</span>
                         </li>
                       ))}
                     </ul>

@@ -10,7 +10,7 @@ import type {
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import {
-  Sparkles, Loader2, ChevronDown, ChevronUp, Check,
+  Sparkles, Loader2, ChevronDown, Check,
   ArrowRight, Briefcase, GraduationCap, FolderOpen, Heart, Globe, Info,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -230,47 +230,163 @@ export default function AIProfileFillPanel() {
     result.projectUpdates?.length || result.volunteerUpdates?.length
   )
 
+  const quickChips = ["iOS Developer", "5+ años exp.", "Swift & SwiftUI", "Lideré equipos", "Apps publicadas"]
+
+  function appendChip(text: string) {
+    const next = prompt.trim().length === 0 ? text : `${prompt.trim()} ${text}`
+    if (next.length <= 500) setPrompt(next)
+  }
+
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <button type="button" onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-muted/30 transition-colors">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet-600" />
-          <span className="text-sm font-semibold">{t("title")}</span>
-          <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Pro</span>
-        </div>
-        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-      </button>
-
-      {expanded && (
-        <div className="px-4 pb-4 space-y-3 bg-white border-t border-border">
-          <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">
-            {t("description")}
-          </p>
-
-          <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-            <Info className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-[11px] text-blue-700 leading-relaxed">
-              {t("review_hint")} <span className="font-semibold">{t("review_hint_tab")}</span> {t("review_hint_suffix")}
-            </p>
+    <>
+      <style>{`
+        @keyframes aiIconPulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.2); }
+          50% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
+        }
+        .ai-assistant-icon-anim { animation: aiIconPulse 3s ease-in-out infinite; }
+        .ai-chip { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px;
+          border: 1.5px solid rgba(139,92,246,0.3); background: rgba(139,92,246,0.06);
+          color: #6D28D9; cursor: pointer; transition: all 0.2s; }
+        .ai-chip:hover { background: rgba(139,92,246,0.15); border-color: #8B5CF6; color: #5B21B6; }
+        .ai-main-textarea { width: 100%; min-height: 90px; padding: 12px 14px 28px;
+          border: 1.5px solid rgba(139,92,246,0.25); border-radius: 12px;
+          background: rgba(139,92,246,0.03); font-size: 13px; color: #1e293b;
+          line-height: 1.6; resize: none; transition: border-color 0.2s; font-family: inherit; }
+        .ai-main-textarea:focus { outline: none; border-color: #8B5CF6;
+          box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
+        .ai-generate-btn { width: 100%; padding: 12px;
+          background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
+          color: #FFF; border: none; border-radius: 12px;
+          font-size: 14px; font-weight: 700; letter-spacing: -0.01em;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          cursor: pointer; transition: all 0.25s;
+          box-shadow: 0 4px 16px rgba(139,92,246,0.25); }
+        .ai-generate-btn:hover:not(:disabled) { transform: translateY(-2px);
+          box-shadow: 0 8px 24px rgba(139,92,246,0.35); }
+        .ai-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+      `}</style>
+      <div
+        className="ai-assistant-card"
+        style={{
+          margin: '16px 24px 20px',
+          borderRadius: 16,
+          overflow: 'hidden',
+          border: '1.5px solid transparent',
+          background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #8B5CF6, #06B6D4) border-box',
+          boxShadow: '0 4px 20px rgba(139,92,246,0.08)',
+        }}
+      >
+        <div
+          onClick={() => setExpanded(v => !v)}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            padding: '14px 16px', cursor: 'pointer', userSelect: 'none',
+            background: 'linear-gradient(135deg, rgba(139,92,246,0.06) 0%, rgba(6,182,212,0.06) 100%)',
+          }}
+        >
+          <div
+            className="ai-assistant-icon-anim"
+            style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'linear-gradient(135deg, #8B5CF6, #06B6D4)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#FFF', flexShrink: 0,
+            }}
+          >
+            <Sparkles className="h-4 w-4" />
           </div>
-
-          <Textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder={t("placeholder")}
-            className="text-xs min-h-[90px] resize-none"
-            maxLength={500}
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>
+              {t("title")}
+            </span>
+            <span
+              style={{
+                fontSize: 9, fontWeight: 800, letterSpacing: '0.06em',
+                background: 'linear-gradient(135deg, #8B5CF6, #06B6D4)',
+                color: '#FFF', padding: '2px 7px', borderRadius: 20,
+              }}
+            >
+              PRO
+            </span>
+          </div>
+          <ChevronDown
+            className="h-4 w-4"
+            style={{
+              color: '#8B5CF6',
+              transition: 'transform 0.3s ease',
+              transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)',
+            }}
           />
-          <p className="text-[10px] text-muted-foreground">{prompt.length}/500</p>
+        </div>
 
-          <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white" onClick={handleGenerate} disabled={loading || prompt.trim().length < 10}>
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {loading ? t("btn_generating") : t("btn_generate")}
-          </Button>
+        {expanded && (
+          <div style={{ padding: '0 16px 18px' }}>
+            <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.6, marginBottom: 14 }}>
+              {t("description")}
+            </p>
+
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 14 }}>
+              {quickChips.map(chip => (
+                <button
+                  key={chip}
+                  type="button"
+                  className="ai-chip"
+                  onClick={() => appendChip(chip)}
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: 10 }}>
+              <Textarea
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                placeholder={t("placeholder")}
+                className="ai-main-textarea"
+                maxLength={500}
+              />
+              <span
+                style={{
+                  position: 'absolute', bottom: 8, right: 10,
+                  fontSize: 10, fontWeight: 600, color: '#94A3B8',
+                  fontFamily: 'monospace', pointerEvents: 'none',
+                }}
+              >
+                {prompt.length}/500
+              </span>
+            </div>
+
+            <div
+              style={{
+                display: 'flex', gap: 8, alignItems: 'flex-start',
+                background: 'rgba(6,182,212,0.07)',
+                border: '1px solid rgba(6,182,212,0.25)',
+                borderRadius: 10, padding: '10px 12px', marginBottom: 14,
+                fontSize: 11, color: '#0E7490', lineHeight: 1.5,
+              }}
+            >
+              <Info
+                style={{ width: 14, height: 14, color: '#06B6D4', flexShrink: 0, marginTop: 1 }}
+              />
+              <span>
+                {t("review_hint")} <span style={{ fontWeight: 600 }}>{t("review_hint_tab")}</span> {t("review_hint_suffix")}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              className="ai-generate-btn"
+              onClick={handleGenerate}
+              disabled={loading || prompt.trim().length < 10}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {loading ? t("btn_generating") : t("btn_generate")}
+            </button>
 
           {hasAnyResult && (
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className="space-y-4" style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(139,92,246,0.15)' }}>
               <p className="text-[10px] text-muted-foreground pt-1">
                 {t("review_hint")}
               </p>
@@ -523,8 +639,9 @@ export default function AIProfileFillPanel() {
               )}
             </div>
           )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+    </>
   )
 }

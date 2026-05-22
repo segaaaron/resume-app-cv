@@ -3,63 +3,66 @@
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { FONT_OPTIONS } from "@/types/resume"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
 import { useRef, useState } from "react"
 import { useShallow } from "zustand/react/shallow"
-import { Camera, Trash2, Upload } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
 
-const COLOR_PALETTES: { labelKey: string; colors: { hex: string; nameKey: string }[] }[] = [
+const COLOR_PALETTES: { labelKey: string; icon: string; colors: { hex: string; nameKey: string }[] }[] = [
   {
     labelKey: "design.palette_professional",
+    icon: "🏢",
     colors: [
-      { hex: "#2a72d7", nameKey: "design.color_blue" },
-      { hex: "#1e3a5f", nameKey: "design.color_navy" },
-      { hex: "#0891b2", nameKey: "design.color_cyan" },
-      { hex: "#0f766e", nameKey: "design.color_teal" },
-      { hex: "#1d4ed8", nameKey: "design.color_indigo" },
-      { hex: "#475569", nameKey: "design.color_slate" },
+      { hex: "#0B5394", nameKey: "design.color_navy" },
+      { hex: "#1E3A5F", nameKey: "design.color_slate" },
+      { hex: "#2D3E50", nameKey: "design.color_charcoal" },
     ],
   },
   {
     labelKey: "design.palette_vibrant",
+    icon: "⚡",
     colors: [
-      { hex: "#9333ea", nameKey: "design.color_purple" },
-      { hex: "#ec4899", nameKey: "design.color_pink" },
-      { hex: "#dc2626", nameKey: "design.color_red" },
-      { hex: "#ea580c", nameKey: "design.color_orange" },
-      { hex: "#ca8a04", nameKey: "design.color_amber" },
-      { hex: "#16a34a", nameKey: "design.color_green" },
+      { hex: "#FF6B6B", nameKey: "design.color_red" },
+      { hex: "#4ECDC4", nameKey: "design.color_teal" },
+      { hex: "#FFD93D", nameKey: "design.color_gold" },
     ],
   },
   {
     labelKey: "design.palette_dark",
+    icon: "🌙",
     colors: [
-      { hex: "#111827", nameKey: "design.color_black" },
-      { hex: "#1d1d20", nameKey: "design.color_charcoal" },
-      { hex: "#1e293b", nameKey: "design.color_slate_dark" },
-      { hex: "#312e81", nameKey: "design.color_indigo_dark" },
-      { hex: "#4a1942", nameKey: "design.color_plum" },
-      { hex: "#292524", nameKey: "design.color_stone" },
+      { hex: "#0D0D0D", nameKey: "design.color_black" },
+      { hex: "#1a1a2e", nameKey: "design.color_indigo_dark" },
+      { hex: "#2C3E50", nameKey: "design.color_charcoal" },
     ],
   },
   {
     labelKey: "design.palette_soft",
+    icon: "🌸",
     colors: [
-      { hex: "#6366f1", nameKey: "design.color_violet" },
-      { hex: "#8b5cf6", nameKey: "design.color_lilac" },
-      { hex: "#06b6d4", nameKey: "design.color_sky" },
-      { hex: "#10b981", nameKey: "design.color_emerald" },
-      { hex: "#f59e0b", nameKey: "design.color_gold" },
-      { hex: "#64748b", nameKey: "design.color_gray" },
+      { hex: "#D4A5A5", nameKey: "design.color_pink" },
+      { hex: "#A8D8EA", nameKey: "design.color_sky" },
+      { hex: "#C4B5FD", nameKey: "design.color_lilac" },
     ],
   },
 ]
+
+const LABEL_STYLE: React.CSSProperties = {
+  fontSize: 10,
+  fontWeight: 700,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: "#6B8BAE",
+  display: "block",
+  marginBottom: 10,
+}
+
+const SECTION_DIVIDER: React.CSSProperties = {
+  borderBottom: "1px solid #E2E8F0",
+  paddingBottom: 20,
+  marginBottom: 20,
+}
 
 export default function DesignPanel() {
   const t = useTranslations("editor")
@@ -119,71 +122,102 @@ export default function DesignPanel() {
     }
   }
 
-  return (
-    <div className="divide-y divide-border">
+  const photoPos = config.photoPosition ?? 15
 
-      {/* ── Foto de perfil ─────────────────────────────────── */}
-      <section className="px-5 py-5 space-y-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {t("design.photo_section")}
-        </h3>
-        <div className="flex items-center gap-4">
-          <div
-            className="shrink-0 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-muted cursor-pointer hover:border-primary/50 transition-colors"
-            style={{ width: 80, height: 80 }}
-            onClick={() => photoInputRef.current?.click()}
-          >
-            {config.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={config.photoUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            ) : (
-              <Camera className="h-8 w-8 text-muted-foreground/60" />
-            )}
-          </div>
-          <div className="flex flex-col gap-2 flex-1">
-            <button
-              onClick={() => photoInputRef.current?.click()}
-              disabled={uploadingPhoto}
-              className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2.5 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50"
-            >
-              <Upload className="h-3.5 w-3.5" />
-              {uploadingPhoto ? t("design.uploading") : config.photoUrl ? t("design.change_photo") : t("design.upload_photo")}
-            </button>
-            {config.photoUrl && (
-              <button
-                onClick={handlePhotoRemove}
-                className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                {t("design.remove_photo")}
-              </button>
-            )}
-          </div>
+  return (
+    <div style={{ padding: "6px 24px 20px" }}>
+
+      {/* ── Foto de Perfil ─────────────────────────────────── */}
+      <section style={SECTION_DIVIDER}>
+        <span style={LABEL_STYLE}>{t("design.photo_section")}</span>
+
+        <div
+          onClick={() => photoInputRef.current?.click()}
+          style={{
+            width: 120,
+            height: 120,
+            borderRadius: "50%",
+            background: "#E2E8F0",
+            border: "2px solid #E2E8F0",
+            margin: "0 auto 12px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 40,
+            cursor: "pointer",
+            overflow: "hidden",
+          }}
+        >
+          {config.photoUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={config.photoUrl}
+              alt=""
+              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${photoPos}%` }}
+            />
+          ) : (
+            <span aria-hidden>👤</span>
+          )}
         </div>
+
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginBottom: 16 }}>
+          <button
+            onClick={() => photoInputRef.current?.click()}
+            disabled={uploadingPhoto}
+            style={{
+              padding: "8px 14px",
+              background: "#00E5FF",
+              color: "#FFF",
+              border: "none",
+              borderRadius: 8,
+              fontSize: 12,
+              fontWeight: 600,
+              cursor: uploadingPhoto ? "not-allowed" : "pointer",
+              opacity: uploadingPhoto ? 0.6 : 1,
+            }}
+          >
+            {uploadingPhoto ? t("design.uploading") : config.photoUrl ? t("design.change_photo") : t("design.upload_photo")}
+          </button>
+          {config.photoUrl && (
+            <button
+              onClick={handlePhotoRemove}
+              style={{
+                padding: "8px 14px",
+                background: "#EF4444",
+                color: "#FFF",
+                border: "none",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {t("design.remove_photo")}
+            </button>
+          )}
+        </div>
+
         {config.photoUrl && (
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {t("design.photo_position")}
-              </Label>
-              <span className="text-[10px] font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-                {config.photoPosition ?? 15}%
+          <div>
+            <span style={LABEL_STYLE}>{t("design.photo_position")}</span>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+              <span style={{ fontSize: 12, color: "#94A3B8" }}>
+                {t("design.photo_top")} ← → {t("design.photo_bottom")}
               </span>
+              <span style={{ fontSize: 12, fontWeight: 700, color: "#00E5FF" }}>{photoPos}%</span>
             </div>
-            <Slider
+            <input
+              type="range"
               min={0}
               max={100}
               step={5}
-              value={config.photoPosition ?? 15}
-              onValueChange={(v) => setPhotoPosition(Array.isArray(v) ? v[0] : v)}
+              value={photoPos}
+              onChange={(e) => setPhotoPosition(Number(e.target.value))}
+              style={{ width: "100%" }}
             />
-            <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-              <span>{t("design.photo_top")}</span>
-              <span>{t("design.photo_bottom")}</span>
-            </div>
           </div>
         )}
-        <p className="text-[10px] text-muted-foreground/70">{t("design.photo_hint")}</p>
+
         <input
           ref={photoInputRef}
           type="file"
@@ -194,124 +228,166 @@ export default function DesignPanel() {
       </section>
 
       {/* ── Color principal ────────────────────────────────── */}
-      <section className="px-5 py-5 space-y-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {t("design.color_section")}
-        </h3>
+      <section style={SECTION_DIVIDER}>
+        <span style={LABEL_STYLE}>{t("design.color_section")}</span>
 
-        <div className="space-y-4">
-          {COLOR_PALETTES.map((palette) => (
-            <div key={palette.labelKey}>
-              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest mb-2">
-                {t(palette.labelKey)}
-              </p>
-              <div className="grid grid-cols-6 gap-2">
-                {palette.colors.map(({ hex, nameKey }) => (
+        {COLOR_PALETTES.map((palette) => (
+          <div key={palette.labelKey} style={{ marginBottom: 16 }}>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: "#6B8BAE",
+                marginBottom: 8,
+              }}
+            >
+              {palette.icon} {t(palette.labelKey)}
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              {palette.colors.map(({ hex, nameKey }) => {
+                const active = config.colorScheme.toLowerCase() === hex.toLowerCase()
+                return (
                   <button
                     key={hex}
                     title={t(nameKey)}
                     onClick={() => setColor(hex)}
-                    className={cn(
-                      "h-8 w-full rounded-lg border-2 transition-all hover:scale-105 hover:shadow-md",
-                      config.colorScheme === hex
-                        ? "border-foreground ring-2 ring-foreground/30 ring-offset-1 scale-105"
-                        : "border-transparent hover:border-foreground/20"
-                    )}
-                    style={{ backgroundColor: hex }}
-                  />
-                ))}
-              </div>
+                    style={{
+                      padding: 10,
+                      background: "#F3F4F6",
+                      border: active ? "2px solid #00E5FF" : "1px solid #E2E8F0",
+                      borderRadius: 10,
+                      textAlign: "center",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: "50%",
+                        margin: "0 auto 6px",
+                        background: hex,
+                      }}
+                    />
+                    <div style={{ fontSize: 10, fontWeight: 600 }}>{t(nameKey)}</div>
+                  </button>
+                )
+              })}
             </div>
-          ))}
-        </div>
-
-        {/* Custom color picker */}
-        <div
-          className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/30 cursor-pointer transition-colors"
-          onClick={() => colorInputRef.current?.click()}
-        >
-          <div
-            className="h-9 w-9 rounded-lg border border-border shrink-0 shadow-sm"
-            style={{ backgroundColor: config.colorScheme }}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold">{t("design.custom_color")}</p>
-            <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{config.colorScheme.toUpperCase()}</p>
           </div>
-          <input
-            ref={colorInputRef}
-            type="color"
-            value={config.colorScheme}
-            onChange={(e) => setColor(e.target.value)}
-            className="sr-only"
-          />
-          <span className="text-[10px] font-medium text-primary">{t("design.edit_color")}</span>
+        ))}
+
+        {/* Custom color editor */}
+        <div
+          style={{
+            padding: 14,
+            background: "#F9FAFB",
+            borderRadius: 10,
+            border: "1px solid #E2E8F0",
+          }}
+        >
+          <span style={LABEL_STYLE}>🎨 {t("design.custom_color")}</span>
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <input
+              ref={colorInputRef}
+              type="color"
+              value={config.colorScheme}
+              onChange={(e) => setColor(e.target.value)}
+              style={{
+                width: 50,
+                height: 40,
+                border: "1px solid #E2E8F0",
+                borderRadius: 8,
+                cursor: "pointer",
+                padding: 0,
+                background: "transparent",
+              }}
+            />
+            <input
+              type="text"
+              value={config.colorScheme.toUpperCase()}
+              onChange={(e) => {
+                const v = e.target.value.trim()
+                if (/^#[0-9A-Fa-f]{6}$/.test(v)) setColor(v)
+              }}
+              style={{
+                flex: 1,
+                fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
+                fontSize: 12,
+                padding: "8px 12px",
+                border: "1px solid #E2E8F0",
+                borderRadius: 8,
+                color: "#0B1B3D",
+                background: "#FFFFFF",
+              }}
+            />
+          </div>
         </div>
       </section>
 
       {/* ── Tipografía ─────────────────────────────────────── */}
-      <section className="px-5 py-5 space-y-3">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {t("design.typography_section")}
-        </h3>
-        <Select value={config.fontFamily} onValueChange={(v) => { if (v) setFont(v) }}>
-          <SelectTrigger className="h-10 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {FONT_OPTIONS.map((font) => (
-              <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                {font}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <section style={SECTION_DIVIDER}>
+        <span style={LABEL_STYLE}>{t("design.typography_section")}</span>
+        <select
+          value={config.fontFamily}
+          onChange={(e) => { if (e.target.value) setFont(e.target.value) }}
+          style={{
+            padding: "10px 14px",
+            border: "none",
+            borderBottom: "2px solid #C8DCF0",
+            fontSize: 13.5,
+            color: "#0B1B3D",
+            background: "transparent",
+            width: "100%",
+            outline: "none",
+            fontFamily: config.fontFamily,
+          }}
+        >
+          {FONT_OPTIONS.map((font) => (
+            <option key={font} value={font} style={{ fontFamily: font }}>
+              {font}
+            </option>
+          ))}
+        </select>
       </section>
 
-      {/* ── Tamaño y espaciado ─────────────────────────────── */}
-      <section className="px-5 py-5 space-y-6">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("design.font_size_section")}
-            </h3>
-            <span className="text-xs font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-              {config.fontSize}px
-            </span>
+      {/* ── Espaciado ──────────────────────────────────────── */}
+      <section>
+        <span style={LABEL_STYLE}>{t("design.spacing_section")}</span>
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+          <span style={{ fontSize: 12, color: "#94A3B8" }}>
+            {t("spacing_compact")} ← → {t("spacing_spacious")}
+          </span>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "#00E5FF" }}>
+            {config.spacing.toFixed(1)}x
+          </span>
+        </div>
+        <input
+          type="range"
+          min={0.8}
+          max={1.4}
+          step={0.1}
+          value={config.spacing}
+          onChange={(e) => setSpacing(Number(e.target.value))}
+          style={{ width: "100%" }}
+        />
+
+        {/* Font size (preserved existing logic) */}
+        <div style={{ marginTop: 20 }}>
+          <span style={LABEL_STYLE}>{t("design.font_size_section")}</span>
+          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
+            <span style={{ fontSize: 12, color: "#94A3B8" }}>10px ← → 18px</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#00E5FF" }}>{config.fontSize}px</span>
           </div>
-          <Slider
+          <input
+            type="range"
             min={10}
             max={18}
             step={1}
             value={config.fontSize}
-            onValueChange={(v) => setFontSize(Array.isArray(v) ? v[0] : v)}
+            onChange={(e) => setFontSize(Number(e.target.value))}
+            style={{ width: "100%" }}
           />
-          <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-            <span>10px</span>
-            <span>18px</span>
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("design.spacing_section")}
-            </h3>
-            <span className="text-xs font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-              {config.spacing.toFixed(1)}×
-            </span>
-          </div>
-          <Slider
-            min={0.8}
-            max={1.5}
-            step={0.1}
-            value={config.spacing}
-            onValueChange={(v) => setSpacing(Array.isArray(v) ? v[0] : v)}
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-            <span>{t("spacing_compact")}</span>
-            <span>{t("spacing_spacious")}</span>
-          </div>
         </div>
       </section>
 

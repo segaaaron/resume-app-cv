@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, AlertCircle } from "lucide-react"
+import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, AlertCircle, Pencil } from "lucide-react"
 import { useState, useEffect } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { useLocale, useTranslations } from "next-intl"
@@ -170,12 +170,86 @@ export default function EditorTopBar({ hasAccess }: Props) {
     }
   }
 
+  const iconBtnStyle: React.CSSProperties = {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    border: '1px solid #E2E8F0',
+    background: '#FFFFFF',
+    color: '#475569',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    flexShrink: 0,
+  }
+
+  const ghostBtnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 16px',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    background: 'transparent',
+    border: '1px solid #E2E8F0',
+    color: '#0B1B3D',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  }
+
+  const primaryBtnStyle: React.CSSProperties = {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    padding: '8px 16px',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    background: '#0B1B3D',
+    color: '#FFFFFF',
+    border: '1px solid #0B1B3D',
+    boxShadow: '0 4px 12px rgba(11,27,61,0.15)',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  }
+
   return (
-    <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4 gap-4 shrink-0 relative">
-      <div className="flex items-center gap-3 min-w-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <header
+      className="flex items-center justify-between border-b shrink-0 z-[100] relative px-3 sm:px-6"
+      style={{
+        height: 64,
+        borderBottom: '1px solid #E2E8F0',
+        background: 'rgba(255,255,255,0.95)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
+        flexShrink: 0,
+        zIndex: 100,
+      }}
+    >
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+        <button
+          onClick={handleBack}
+          aria-label="Back"
+          style={iconBtnStyle}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = '#F8FAFC'
+            e.currentTarget.style.color = '#00E5FF'
+            e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'
+            e.currentTarget.style.transform = 'translateY(-1px)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = '#FFFFFF'
+            e.currentTarget.style.color = '#475569'
+            e.currentTarget.style.borderColor = '#E2E8F0'
+            e.currentTarget.style.transform = 'translateY(0)'
+          }}
+        >
+          <ArrowLeft size={18} />
+        </button>
 
         {editing ? (
           <Input
@@ -184,41 +258,108 @@ export default function EditorTopBar({ hasAccess }: Props) {
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => setEditing(false)}
             onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
-            className="h-7 text-sm font-medium max-w-[200px]"
+            className="max-w-[120px] sm:max-w-[260px]"
+            style={{
+              border: 'none',
+              borderBottom: '2px solid #00E5FF',
+              borderRadius: 0,
+              background: 'transparent',
+              fontSize: 15,
+              fontWeight: 600,
+              color: '#0B1B3D',
+              outline: 'none',
+              padding: '4px 0',
+              height: 'auto',
+              boxShadow: 'none',
+            }}
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="text-sm font-medium truncate hover:text-primary transition-colors max-w-[200px]"
+            className="group truncate max-w-[110px] sm:max-w-[260px]"
+            style={{
+              fontSize: 15,
+              fontWeight: 600,
+              color: '#0B1B3D',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              cursor: 'pointer',
+              background: 'transparent',
+              border: 'none',
+            }}
           >
-            {title}
+            <span className="truncate">{title}</span>
+            <Pencil
+              size={14}
+              style={{ color: '#00E5FF', opacity: 0.6, transition: 'opacity 0.2s ease' }}
+              className="group-hover:!opacity-100"
+            />
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
         {/* Share button */}
         {hasAccess && (
           <div className="flex items-center gap-1">
-            <Button
-              variant={isPublic ? "default" : "outline"}
-              size="sm"
-              className={`gap-1.5 ${isPublic ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}`}
+            <button
               onClick={handleToggleShare}
               disabled={togglingShare || !resumeId}
               aria-label={isPublic ? t("share.public") : t("share.button")}
+              style={{
+                ...ghostBtnStyle,
+                ...(isPublic
+                  ? { background: '#0B1B3D', color: '#FFFFFF', borderColor: '#0B1B3D' }
+                  : {}),
+                opacity: togglingShare || !resumeId ? 0.6 : 1,
+              }}
+              onMouseEnter={(e) => {
+                if (togglingShare || !resumeId) return
+                if (!isPublic) {
+                  e.currentTarget.style.borderColor = '#00E5FF'
+                  e.currentTarget.style.color = '#00E5FF'
+                  e.currentTarget.style.background = '#F8FAFC'
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isPublic) {
+                  e.currentTarget.style.borderColor = '#E2E8F0'
+                  e.currentTarget.style.color = '#0B1B3D'
+                  e.currentTarget.style.background = 'transparent'
+                }
+              }}
             >
-              {togglingShare ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline text-xs">{isPublic ? t("share.public") : t("share.button")}</span>
-            </Button>
+              {togglingShare ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+              <span className="hidden sm:inline">{isPublic ? t("share.public") : t("share.button")}</span>
+            </button>
             {isPublic && publicSlug && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyLink} title={t("share.copy_link")}>
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
+              <button
+                onClick={handleCopyLink}
+                title={t("share.copy_link")}
+                aria-label={t("share.copy_link")}
+                style={iconBtnStyle}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#F8FAFC'
+                  e.currentTarget.style.color = '#00E5FF'
+                  e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = '#FFFFFF'
+                  e.currentTarget.style.color = '#475569'
+                  e.currentTarget.style.borderColor = '#E2E8F0'
+                }}
+              >
+                <Copy size={14} />
+              </button>
             )}
             {isPublic && viewStats !== null && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground px-1" title={t("share.views_tooltip", { total: viewStats.total })}>
-                <Eye className="h-3 w-3" />
+              <span
+                className="hidden sm:flex items-center gap-1 px-2"
+                style={{ fontSize: 12, color: '#475569' }}
+                title={t("share.views_tooltip", { total: viewStats.total })}
+              >
+                <Eye size={12} />
                 {viewStats.last7d}
               </span>
             )}
@@ -230,23 +371,34 @@ export default function EditorTopBar({ hasAccess }: Props) {
           <button
             onClick={() => { if (isDirty && !isSaving) save().catch(() => {}) }}
             disabled={isSaving || !isDirty}
-            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md transition-colors disabled:cursor-default cursor-pointer hover:bg-neutral-100"
+            className="flex items-center gap-1.5 disabled:cursor-default cursor-pointer"
+            style={{
+              fontSize: 12,
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              color: '#475569',
+              transition: 'background 0.2s ease',
+            }}
+            onMouseEnter={(e) => { if (isDirty && !isSaving) e.currentTarget.style.background = '#F8FAFC' }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
             title={isDirty ? t("unsaved") : lastSaved ? t("saved") : ""}
           >
             {isSaving ? (
               <>
-                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                <span className="hidden sm:inline text-muted-foreground">{t("saving")}</span>
+                <Loader2 size={12} className="animate-spin" style={{ color: '#475569' }} />
+                <span className="hidden sm:inline">{t("saving")}</span>
               </>
             ) : isDirty ? (
               <>
-                <AlertCircle className="h-3 w-3 text-amber-500" />
-                <span className="hidden sm:inline text-amber-600 hover:text-amber-700">{t("unsaved")}</span>
+                <AlertCircle size={12} style={{ color: '#f59e0b' }} />
+                <span className="hidden sm:inline" style={{ color: '#d97706' }}>{t("unsaved")}</span>
               </>
             ) : lastSaved ? (
               <>
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                <span className="hidden sm:inline text-muted-foreground">
+                <CheckCircle2 size={12} style={{ color: '#22c55e' }} />
+                <span className="hidden sm:inline">
                   {t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}
                 </span>
               </>
@@ -255,23 +407,56 @@ export default function EditorTopBar({ hasAccess }: Props) {
         ) : (
           <button
             onClick={handleLockedClick}
-            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md opacity-50 cursor-pointer"
+            className="flex items-center gap-1.5 cursor-pointer"
+            style={{
+              fontSize: 12,
+              padding: '6px 10px',
+              borderRadius: 8,
+              background: 'transparent',
+              border: 'none',
+              color: '#475569',
+              opacity: 0.5,
+            }}
           >
-            <Lock className="h-3 w-3" />
+            <Lock size={12} />
             <span className="hidden sm:inline">{t("save")}</span>
           </button>
         )}
 
         {hasAccess ? (
-          <Button size="sm" className="gap-1.5" disabled={!resumeId || downloadingPdf} onClick={handleDownloadPdf}>
-            {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            {downloadingPdf ? t("download_generating_pdf") : t("print.print_pdf")}
-          </Button>
+          <button
+            disabled={!resumeId || downloadingPdf}
+            onClick={handleDownloadPdf}
+            style={{
+              ...primaryBtnStyle,
+              opacity: !resumeId || downloadingPdf ? 0.7 : 1,
+              cursor: !resumeId || downloadingPdf ? 'not-allowed' : 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              if (!resumeId || downloadingPdf) return
+              e.currentTarget.style.background = '#1A365D'
+              e.currentTarget.style.borderColor = '#1A365D'
+              e.currentTarget.style.transform = 'translateY(-1px)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#0B1B3D'
+              e.currentTarget.style.borderColor = '#0B1B3D'
+              e.currentTarget.style.transform = 'translateY(0)'
+            }}
+          >
+            {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            <span className="hidden sm:inline">
+              {downloadingPdf ? t("download_generating_pdf") : t("print.print_pdf")}
+            </span>
+          </button>
         ) : (
-          <Button size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
-            <Lock className="h-3.5 w-3.5" />
-            {t("print.print_pdf")}
-          </Button>
+          <button
+            onClick={handleLockedClick}
+            style={{ ...primaryBtnStyle, opacity: 0.5 }}
+          >
+            <Lock size={14} />
+            <span className="hidden sm:inline">{t("print.print_pdf")}</span>
+          </button>
         )}
       </div>
 

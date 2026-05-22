@@ -17,6 +17,7 @@ interface TemplateCardProps {
   isSelected: boolean
   colorScheme: string
   onSelect: (templateId: TemplateId, locked: boolean) => void
+  compact?: boolean
 }
 
 export const TemplateCard = memo(function TemplateCard({
@@ -25,6 +26,7 @@ export const TemplateCard = memo(function TemplateCard({
   isSelected,
   colorScheme,
   onSelect,
+  compact = false,
 }: TemplateCardProps) {
   return (
     <button
@@ -34,7 +36,8 @@ export const TemplateCard = memo(function TemplateCard({
       <div
         suppressHydrationWarning
         className={cn(
-          "w-12 h-16 rounded-lg border-2 overflow-hidden transition-all relative",
+          "rounded-lg border-2 overflow-hidden transition-all relative",
+          compact ? "w-9 h-12" : "w-12 h-16",
           locked
             ? "border-border opacity-50 cursor-not-allowed"
             : isSelected

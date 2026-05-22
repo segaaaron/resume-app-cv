@@ -44,9 +44,17 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
   }
 }
 
+const CARD_COLORS = [
+  { bg: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.05))', border: 'rgba(139,92,246,0.3)', left: '#8B5CF6', title: '#7C3AED', action: '#8B5CF6' },
+  { bg: 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05))', border: 'rgba(0,212,255,0.3)', left: '#00D4FF', title: '#00B4D8', action: '#00D4FF' },
+  { bg: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05))', border: 'rgba(16,185,129,0.3)', left: '#10B981', title: '#059669', action: '#10B981' },
+  { bg: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05))', border: 'rgba(245,158,11,0.3)', left: '#F59E0B', title: '#D97706', action: '#F59E0B' },
+] as const
+
 function ReviewItemRow({
   item,
   itemKey,
+  index,
   applied,
   t,
   tAts,
@@ -54,35 +62,57 @@ function ReviewItemRow({
 }: {
   item: ReviewItem
   itemKey: string
+  index: number
   applied: boolean
   t: ReturnType<typeof useTranslations>
   tAts: ReturnType<typeof useTranslations>
   onApply: (item: ReviewItem, key: string) => void
 }) {
+  const colors = CARD_COLORS[index % CARD_COLORS.length]
   const isStrength = itemKey.startsWith("strength")
+  const [hover, setHover] = useState(false)
+  const canApply = Boolean(item.suggestion) && !applied
+
+  function handleCardClick() {
+    if (canApply) onApply(item, itemKey)
+  }
+
   return (
-    <div className={`flex gap-3 p-3 rounded-lg border text-sm leading-relaxed transition-colors ${
-      isStrength
-        ? "bg-green-50/60 border-green-100"
-        : "bg-amber-50/60 border-amber-100"
-    }`}>
-      <span className={`shrink-0 mt-0.5 ${isStrength ? "text-green-600" : "text-amber-500"}`}>
-        {isStrength ? <CheckCircle2 className="h-4 w-4" /> : <Lightbulb className="h-4 w-4" />}
-      </span>
-      <span className="flex-1 text-foreground">{item.text}</span>
-      {item.suggestion && !applied && (
-        <button
-          type="button"
-          onClick={() => onApply(item, itemKey)}
-          className="shrink-0 self-start flex items-center gap-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md px-2 py-1 transition-colors font-medium"
-        >
-          <Wand2 className="h-3 w-3" /> {t("apply_button")}
-        </button>
+    <div
+      onClick={handleCardClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        padding: '12px 12px 10px',
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        borderLeft: `4px solid ${colors.left}`,
+        borderRadius: 10,
+        cursor: canApply ? 'pointer' : 'default',
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        marginBottom: 8,
+        transform: hover && canApply ? 'translateY(-2px)' : 'none',
+        boxShadow: hover && canApply ? '0 8px 20px rgba(0,0,0,0.08)' : 'none',
+      }}
+    >
+      <div style={{ fontSize: 12, fontWeight: 700, color: colors.title, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+        {isStrength
+          ? <CheckCircle2 className="h-3.5 w-3.5" />
+          : <Lightbulb className="h-3.5 w-3.5" />}
+        <span>{isStrength ? t("strengths_label") : t("improvements_label")}</span>
+      </div>
+      <div style={{ fontSize: 11, lineHeight: 1.5, color: '#0F172A', marginBottom: 4 }}>
+        {item.text}
+      </div>
+      {canApply && (
+        <div style={{ fontSize: 10, color: colors.action, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <Wand2 className="h-2.5 w-2.5" /> {t("apply_button")}
+        </div>
       )}
       {applied && (
-        <span className="shrink-0 self-start flex items-center gap-1 text-xs bg-green-50 text-green-700 border border-green-200 rounded-md px-2 py-1 font-medium">
-          <Check className="h-3 w-3" /> {tAts("toast_change_applied")}
-        </span>
+        <div style={{ fontSize: 10, color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <Check className="h-2.5 w-2.5" /> {tAts("toast_change_applied")}
+        </div>
       )}
     </div>
   )
@@ -164,16 +194,16 @@ export default function CVReviewPanel() {
     <>
       <div className="flex flex-col gap-4 p-4">
 
-        {/* Hero banner */}
-        <div className="rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 p-4 text-white shadow-sm">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="bg-white/20 rounded-lg p-1.5">
-              <MessageSquare className="h-4 w-4 text-white" />
+        {/* Hero header */}
+        <div style={{ marginBottom: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
+            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #8B5CF6, #00D4FF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <Sparkles size={16} color="white" strokeWidth={2.5} />
             </div>
-            <span className="font-semibold text-sm">{t("title")}</span>
-            <span className="ml-auto text-[10px] bg-white/20 px-2 py-0.5 rounded-full font-medium">{t("pro_badge")}</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: '#0B1B3D' }}>{t("title")}</span>
+            <span style={{ marginLeft: 'auto', fontSize: 10, background: 'rgba(139,92,246,0.1)', color: '#7C3AED', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>{t("pro_badge")}</span>
           </div>
-          <p className="text-xs text-white/80 leading-relaxed">{t("description")}</p>
+          <div style={{ fontSize: 11, color: '#475569' }}>{t("description")}</div>
         </div>
 
         {/* Input area */}
@@ -263,6 +293,7 @@ export default function CVReviewPanel() {
                     key={i}
                     item={item}
                     itemKey={`strength-${i}`}
+                    index={i}
                     applied={appliedItems.has(`strength-${i}`)}
                     t={t}
                     tAts={tAts}
@@ -283,6 +314,7 @@ export default function CVReviewPanel() {
                     key={i}
                     item={item}
                     itemKey={`improvement-${i}`}
+                    index={i + (result.strengths?.length ?? 0)}
                     applied={appliedItems.has(`improvement-${i}`)}
                     t={t}
                     tAts={tAts}

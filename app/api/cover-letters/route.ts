@@ -8,7 +8,7 @@ export async function GET(req: Request) {
 
   try {
     const { searchParams } = new URL(req.url)
-    const limit  = parseInt(searchParams.get("limit") ?? "50")
+    const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50") || 50, 100)
     const cursor = searchParams.get("cursor") ?? undefined
 
     const result = await coverLetterService.list(authResult.userId, limit, cursor)

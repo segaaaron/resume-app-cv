@@ -436,3 +436,51 @@
   background: radial-gradient(circle, rgba(0,212,255,0.02) 0%, transparent 70%);
   bottom: -100px; left: 100px;
 }
+
+/* ── Editor section form inputs — match HTML reference design ────────────────── */
+.editor-section-body label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #6B8BAE;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.editor-section-body input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]),
+.editor-section-body textarea,
+.editor-section-body select {
+  padding: 10px 0 8px;
+  border: none !important;
+  border-bottom: 2px solid #C8DCF0 !important;
+  border-radius: 0 !important;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13.5px !important;
+  color: #0B1B3D;
+  transition: border-bottom-color 0.25s ease, background 0.25s ease;
+  background: transparent !important;
+  width: 100%;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.editor-section-body input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="range"]):focus,
+.editor-section-body textarea:focus,
+.editor-section-body select:focus {
+  border-bottom-color: #1A56A4 !important;
+  background: rgba(26, 86, 164, 0.03) !important;
+  box-shadow: none !important;
+}
+
+.editor-section-body input::placeholder,
+.editor-section-body textarea::placeholder {
+  color: #A8C4DC;
+  font-style: italic;
+}
+
+.editor-section-body textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.6;
+}
