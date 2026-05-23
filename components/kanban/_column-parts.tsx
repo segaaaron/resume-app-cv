@@ -71,9 +71,10 @@ interface CardProps {
   onDragStart: (id: string, status: AppStatus) => void
   onDragEnd: () => void
   onDelete: (id: string) => void
+  onViewDetail?: (app: ApplicationCard) => void
 }
 
-export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, onDragEnd, onDelete }: CardProps) {
+export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, onDragEnd, onDelete, onViewDetail }: CardProps) {
   const [hovered, setHovered] = useState(false)
   const [delHovered, setDelHovered] = useState(false)
   const [infoHovered, setInfoHovered] = useState(false)
@@ -206,6 +207,7 @@ export function KanbanCard({ app, isFound, isRejected, dragging, onDragStart, on
       )}
       {isRejected && (
         <button
+          onClick={() => onViewDetail?.(app)}
           onMouseEnter={() => setInfoHovered(true)}
           onMouseLeave={() => setInfoHovered(false)}
           style={{

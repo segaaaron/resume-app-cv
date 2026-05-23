@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useSession } from "next-auth/react"
 import { useTranslations } from "next-intl"
-import { Copy, Check, Users, TrendingUp, Gift, Star, Trophy, RefreshCw } from "lucide-react"
+import { Copy, Check, Users, TrendingUp, Gift, Star, Trophy, RefreshCw, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { isActive } from "@/lib/plans"
 
 interface NextTier {
   tier: number
@@ -30,6 +32,13 @@ const TIERS = [
 
 export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: boolean }) {
   const t = useTranslations("referral")
+  const { data: session } = useSession()
+  const isPro = isActive(
+    session?.user?.plan ?? "UNSUBSCRIBED",
+    session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
+    session?.user?.subscriptionStatus,
+    session?.user?.role,
+  )
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -200,26 +209,36 @@ export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: 
       </div>
 
       {/* Referral link */}
-      <div>
-        <p className="text-xs font-medium mb-2">{t("your_link")}</p>
-        <div className="flex gap-2">
-          <div className="flex-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground truncate select-all">
-            {referralUrl || "..."}
+      {isPro ? (
+        <>
+          <div>
+            <p className="text-xs font-medium mb-2">{t("your_link")}</p>
+            <div className="flex gap-2">
+              <div className="flex-1 rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground truncate select-all">
+                {referralUrl || "..."}
+              </div>
+              <Button size="sm" variant="outline" className="shrink-0 gap-1.5" onClick={handleCopy}>
+                {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
+                {copied ? t("copied_short") : t("copy")}
+              </Button>
+            </div>
           </div>
-          <Button size="sm" variant="outline" className="shrink-0 gap-1.5" onClick={handleCopy}>
-            {copied ? <Check className="h-3.5 w-3.5 text-green-600" /> : <Copy className="h-3.5 w-3.5" />}
-            {copied ? t("copied_short") : t("copy")}
-          </Button>
-        </div>
-      </div>
 
-      {/* How it works */}
-      <div className="rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-xs text-muted-foreground space-y-1">
-        <p className="font-medium text-foreground">{t("how_it_works_title")}</p>
-        <p>1. {t("how_step_1")}</p>
-        <p>2. {t("how_step_2")}</p>
-        <p>3. {t("how_step_3")}</p>
-      </div>
+          {/* How it works */}
+          <div className="rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 text-xs text-muted-foreground space-y-1">
+            <p className="font-medium text-foreground">{t("how_it_works_title")}</p>
+            <p>1. {t("how_step_1")}</p>
+            <p>2. {t("how_step_2")}</p>
+            <p>3. {t("how_step_3")}</p>
+          </div>
+        </>
+      ) : (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-6 flex flex-col items-center gap-2 text-center">
+          <Lock className="h-5 w-5 text-muted-foreground" />
+          <p className="text-sm font-medium text-foreground">{t("link_locked_title")}</p>
+          <p className="text-xs text-muted-foreground">{t("link_locked_desc")}</p>
+        </div>
+      )}
     </div>
   )
 }

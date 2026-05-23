@@ -69,6 +69,7 @@ export interface ColumnProps {
   onDragLeave: () => void
   onDrop: () => void
   onDelete: (id: string) => void
+  onViewDetail?: (app: ApplicationCard) => void
 }
 
 // ── KanbanColumn ──────────────────────────────────────────────────────────────
@@ -77,7 +78,7 @@ export default function KanbanColumn({
   columnId, label, applications,
   draggingId, dragOver,
   onDragStart, onDragEnd, onDragOver, onDragLeave, onDrop,
-  onDelete,
+  onDelete, onViewDetail,
 }: ColumnProps) {
   const t = useTranslations("kanban")
   const isFound = columnId === "WISHLIST"
@@ -166,6 +167,7 @@ export default function KanbanColumn({
             onDragStart={onDragStart}
             onDragEnd={onDragEnd}
             onDelete={onDelete}
+            onViewDetail={onViewDetail}
           />
         ))}
 

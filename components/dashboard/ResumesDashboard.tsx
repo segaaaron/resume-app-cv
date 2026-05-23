@@ -7,9 +7,7 @@ import { logoutAction } from "@/lib/actions/logout"
 import { useTranslations, useLocale } from "next-intl"
 import { es, enUS } from "date-fns/locale"
 import { useUserTimezone, formatInTimezone } from "@/hooks/useUserTimezone"
-import { Plus, FileText, Loader2 } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import ImportResumeButton from "./ImportResumeButton"
+import { Loader2 } from "lucide-react"
 import UpgradeCTACard from "./UpgradeCTACard"
 import {
   AlertDialog,
@@ -290,44 +288,26 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       {/* ── Toolbar ── */}
       <ResumesToolbar count={resumes.length} />
 
-      {/* ── CV grid or empty state ── */}
-      {resumes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="h-20 w-20 rounded-2xl bg-[var(--brand-50)] flex items-center justify-center mb-4">
-            <FileText className="h-10 w-10 text-primary" />
-          </div>
-          <h2 className="text-xl font-semibold mb-2">{t("empty_title")}</h2>
-          <p className="text-muted-foreground mb-6 max-w-sm">{t("empty_subtitle")}</p>
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <Button onClick={createResume} disabled={creating} size="lg" className="gap-2">
-              <Plus className="h-4 w-4" />
-              {t("create_from_scratch")}
-            </Button>
-            <span className="text-xs text-muted-foreground">{t("or")}</span>
-            <ImportResumeButton disabled={!isPro} />
-          </div>
-        </div>
-      ) : (
-        <div className="grid gap-[18px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
-          {resumes.map((resume, i) => (
-            <CVCard
-              key={resume.id}
-              resume={resume}
-              locale={locale}
-              userTimezone={userTimezone}
-              dateLocale={dateLocale}
-              isDownloading={downloadingIds.has(resume.id)}
-              index={i}
-              onEdit={() => router.push(`/${locale}/editor/${resume.id}`)}
-              onRename={() => { setRenameId(resume.id); setRenameDraft(resume.title) }}
-              onDuplicate={() => duplicateResume(resume.id)}
-              onDownload={() => downloadPdf(resume)}
-              onDelete={() => setDeleteId(resume.id)}
-            />
-          ))}
-          <NewCVCard creating={creating} index={resumes.length} onClick={createResume} />
-        </div>
-      )}
+      {/* ── CV grid ── */}
+      <div className="grid gap-[18px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
+        {resumes.map((resume, i) => (
+          <CVCard
+            key={resume.id}
+            resume={resume}
+            locale={locale}
+            userTimezone={userTimezone}
+            dateLocale={dateLocale}
+            isDownloading={downloadingIds.has(resume.id)}
+            index={i}
+            onEdit={() => router.push(`/${locale}/editor/${resume.id}`)}
+            onRename={() => { setRenameId(resume.id); setRenameDraft(resume.title) }}
+            onDuplicate={() => duplicateResume(resume.id)}
+            onDownload={() => downloadPdf(resume)}
+            onDelete={() => setDeleteId(resume.id)}
+          />
+        ))}
+        <NewCVCard creating={creating} index={resumes.length} onClick={createResume} />
+      </div>
 
       {/* ── Activity feed ── */}
       <ActivityFeed

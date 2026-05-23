@@ -7,7 +7,7 @@ import KanbanColumn from "./Column"
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
-import { RejectModal, FoundJobModal, ClearBoardModal } from "./_board-modals"
+import { RejectModal, FoundJobModal, ClearBoardModal, RejectionDetailModal } from "./_board-modals"
 
 // ── CSS variables ─────────────────────────────────────────────────────────────
 const C = {
@@ -87,6 +87,9 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
   // Clear modal
   const [clearOpen, setClearOpen] = useState(false)
   const [clearing, setClearing] = useState(false)
+
+  // Rejection detail modal
+  const [detailApp, setDetailApp] = useState<ApplicationCard | null>(null)
 
   // Clear button hover state
   const [clearBtnHover, setClearBtnHover] = useState(false)
@@ -338,6 +341,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
                 toast.error(t("delete_error"))
               })
             }}
+            onViewDetail={(app) => setDetailApp(app)}
           />
         ))}
       </div>
@@ -413,6 +417,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
         onCancel={cancelReject}
       />
       <FoundJobModal foundCard={foundCard} onClose={() => setFoundCard(null)} />
+      <RejectionDetailModal app={detailApp} onClose={() => setDetailApp(null)} />
       <ClearBoardModal
         open={clearOpen}
         onClose={() => setClearOpen(false)}

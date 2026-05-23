@@ -63,7 +63,7 @@ export default function DashboardNav({
       icon: Briefcase,
       proOnly: true,
       count: null as number | null,
-      isNew: true,
+      isNew: false,
     },
   ]
 
