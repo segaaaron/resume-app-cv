@@ -128,16 +128,19 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
         <UpgradeCTACard />
 
         {/* Page head */}
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+        <div className="flex items-start justify-between mb-7">
           <div>
-            <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00D4FF", marginBottom: 6, display: "flex", alignItems: "center", gap: 7 }}>
-              <span style={{ width: 14, height: 1.5, background: "#00D4FF", opacity: 0.5, display: "inline-block" }} />
+            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#00D4FF] mb-[6px] flex items-center gap-[7px]">
+              <span className="inline-block bg-[#00D4FF] opacity-50" style={{ width: 14, height: 1.5 }} />
               {t("eyebrow")}
             </div>
-            <h1 style={{ fontFamily: "var(--dash-serif)", fontSize: 32, fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.035em", lineHeight: 1.1, margin: 0 }}>
+            <h1
+              className="font-bold text-[#1a2e4a] leading-[1.1] m-0"
+              style={{ fontFamily: "var(--dash-serif)", fontSize: 32, letterSpacing: "-0.035em" }}
+            >
               {t("title")}
             </h1>
-            <p style={{ fontSize: 13.5, color: "#6B7A8C", marginTop: 6, marginBottom: 0 }}>
+            <p className="text-[13.5px] text-[#6B7A8C] mt-[6px] mb-0">
               {letters.length} {letters.length === 1 ? t("count_one") : t("count_other")} · {t("ai_generated")}
               {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
             </p>
@@ -145,17 +148,23 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
         </div>
 
         {/* Toolbar */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-          <span style={{ fontFamily: "var(--dash-serif)", fontSize: 16, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.025em", flex: 1 }}>
+        <div className="flex items-center gap-[10px] mb-[18px]">
+          <span
+            className="font-semibold text-[#1a2e4a] flex-1"
+            style={{ fontFamily: "var(--dash-serif)", fontSize: 16, letterSpacing: "-0.025em" }}
+          >
             {t("section_title")}
           </span>
-          <span style={{ fontFamily: "var(--dash-mono)", fontSize: 11, color: "#6B7A8C", background: "#EEF2F9", border: "1px solid #E8EDF6", borderRadius: 8, padding: "2px 8px" }}>
+          <span
+            className="text-[11px] text-[#6B7A8C] bg-[#EEF2F9] border border-[#E8EDF6] rounded-lg px-2 py-[2px]"
+            style={{ fontFamily: "var(--dash-mono)" }}
+          >
             {letters.length} {t("of")} {letters.length}
           </span>
         </div>
 
         {/* cv-grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
+        <div className="grid gap-[18px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
           {letters.map((letter, i) => (
             <LetterCardItem
               key={letter.id}
@@ -175,11 +184,8 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
             type="button"
             onClick={createLetter}
             disabled={creating || !isPro}
-            className="cl-new-card cl-card-anim"
+            className="cl-new-card cl-card-anim flex flex-col items-center justify-center gap-3 rounded-[10px] border border-dashed border-[#A0AABE] bg-transparent min-h-[286px]"
             style={{
-              border: "1px dashed #A0AABE", borderRadius: 10, background: "transparent",
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              minHeight: 286, gap: 12,
               cursor: creating || !isPro ? "not-allowed" : "pointer",
               opacity: creating || !isPro ? 0.5 : 1,
               transition: "border-color 0.22s ease, background 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.22s ease",
@@ -202,7 +208,10 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
               el.style.boxShadow = "none"
             }}
           >
-            <div className="cl-new-ico" style={{ width: 46, height: 46, borderRadius: "50%", border: "1.5px solid #A0AABE", display: "flex", alignItems: "center", justifyContent: "center", color: "#6B7A8C" }}>
+            <div
+              className="cl-new-ico flex items-center justify-center rounded-full border-[1.5px] border-[#A0AABE] text-[#6B7A8C]"
+              style={{ width: 46, height: 46 }}
+            >
               {creating ? (
                 <Loader2 style={{ width: 20, height: 20, animation: "spin 1s linear infinite" }} />
               ) : (
@@ -211,20 +220,23 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 </svg>
               )}
             </div>
-            <span className="cl-new-lbl" style={{ fontSize: 13, fontWeight: 500, color: "#6B7A8C" }}>{t("new")}</span>
-            <span className="cl-new-hint" style={{ fontSize: 11, color: "#A0AABE", textAlign: "center" }}>{t("new_hint")}</span>
+            <span className="cl-new-lbl text-sm font-medium text-[#6B7A8C]">{t("new")}</span>
+            <span className="cl-new-hint text-[11px] text-[#A0AABE] text-center">{t("new_hint")}</span>
           </button>
         </div>
 
         {/* Activity section */}
-        <div style={{ marginTop: 40 }}>
-          <div style={{ fontFamily: "var(--dash-serif)", fontSize: 15, fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em", marginBottom: 14, display: "flex", alignItems: "center", gap: 10 }}>
+        <div className="mt-10">
+          <div
+            className="font-semibold text-[#1a2e4a] mb-[14px] flex items-center gap-[10px]"
+            style={{ fontFamily: "var(--dash-serif)", fontSize: 15, letterSpacing: "-0.02em" }}
+          >
             {t("recent_title")}
-            <div style={{ flex: 1, height: 1, background: "#E8EDF6" }} />
+            <div className="flex-1 h-px bg-[#E8EDF6]" />
           </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 1 }}>
+          <div className="flex flex-col gap-px">
             {letters.length === 0 ? (
-              <p style={{ fontSize: 12.5, color: "#6B7A8C", padding: "8px 14px" }}>{t("activity_empty")}</p>
+              <p className="text-[12.5px] text-[#6B7A8C] px-[14px] py-2">{t("activity_empty")}</p>
             ) : (
               letters.slice(0, 3).map((l, i) => {
                 const isEdit = i === 0 && new Date(l.updatedAt).getTime() !== new Date(l.createdAt).getTime()
@@ -245,17 +257,48 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
         {/* Rename dialog */}
         <AlertDialog open={!!renameId} onOpenChange={(o) => !o && setRenameId(null)}>
-          <AlertDialogContent className="p-0 overflow-hidden" style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}>
-            <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
-              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
-              <div style={{ width: 60, height: 60, margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))", border: "1.5px solid rgba(0,212,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00D4FF" }}>
+          <AlertDialogContent
+            className="p-0 overflow-hidden"
+            style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+          >
+            <div
+              className="text-center relative border-b border-[#E8EDF6]"
+              style={{
+                padding: "30px 28px 16px",
+                background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)",
+              }}
+            >
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 opacity-60"
+                style={{
+                  width: "60%",
+                  height: "1px",
+                  background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
+                }}
+              />
+              <div
+                className="flex items-center justify-center text-[#00D4FF] mx-auto mb-[14px]"
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))",
+                  border: "1.5px solid rgba(0,212,255,0.25)",
+                }}
+              >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                   <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
               </div>
               <AlertDialogTitle className="sr-only">{t("rename_title")}</AlertDialogTitle>
-              <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em" }} aria-hidden="true">{t("rename_title")}</div>
+              <div
+                className="font-bold text-[#1a2e4a]"
+                style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", letterSpacing: "-0.03em" }}
+                aria-hidden="true"
+              >
+                {t("rename_title")}
+              </div>
             </div>
             <div style={{ padding: "18px 24px 22px" }}>
               <input
@@ -266,9 +309,29 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
                 maxLength={200}
                 autoFocus
               />
-              <div style={{ display: "flex", gap: "10px" }}>
-                <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>{t("cancel")}</AlertDialogCancel>
-                <AlertDialogAction onClick={confirmRename} disabled={renaming || !renameDraft.trim()} style={{ flex: 1, background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,212,255,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: renaming || !renameDraft.trim() ? "not-allowed" : "pointer", justifyContent: "center" }}>
+              <div className="flex gap-[10px]">
+                <AlertDialogCancel
+                  style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}
+                >
+                  {t("cancel")}
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  onClick={confirmRename}
+                  disabled={renaming || !renameDraft.trim()}
+                  style={{
+                    flex: 1,
+                    background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+                    color: "white",
+                    fontWeight: 600,
+                    boxShadow: "0 2px 8px rgba(0,212,255,0.25)",
+                    border: "none",
+                    padding: "11px 16px",
+                    fontSize: "13px",
+                    fontFamily: "inherit",
+                    cursor: renaming || !renameDraft.trim() ? "not-allowed" : "pointer",
+                    justifyContent: "center",
+                  }}
+                >
                   {renaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("rename_confirm")}
                 </AlertDialogAction>
               </div>
@@ -278,10 +341,35 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
         {/* Delete dialog */}
         <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-          <AlertDialogContent className="p-0 overflow-hidden" style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}>
-            <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
-              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
-              <div style={{ width: 60, height: 60, margin: "0 auto 14px", borderRadius: "50%", background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444" }}>
+          <AlertDialogContent
+            className="p-0 overflow-hidden"
+            style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+          >
+            <div
+              className="text-center relative border-b border-[#E8EDF6]"
+              style={{
+                padding: "30px 28px 16px",
+                background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)",
+              }}
+            >
+              <div
+                className="absolute top-0 left-1/2 -translate-x-1/2 opacity-60"
+                style={{
+                  width: "60%",
+                  height: "1px",
+                  background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
+                }}
+              />
+              <div
+                className="flex items-center justify-center text-[#EF4444] mx-auto mb-[14px]"
+                style={{
+                  width: 60,
+                  height: 60,
+                  borderRadius: "50%",
+                  background: "rgba(239,68,68,0.08)",
+                  border: "1.5px solid rgba(239,68,68,0.2)",
+                }}
+              >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                   <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -289,12 +377,45 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
               </div>
               <AlertDialogTitle className="sr-only">{t("delete_title")}</AlertDialogTitle>
               <AlertDialogDescription className="sr-only">{t("delete_description")}</AlertDialogDescription>
-              <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "6px" }} aria-hidden="true">{t("delete_title")}</div>
-              <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "280px", margin: "0 auto" }} aria-hidden="true">{t("delete_description")}</div>
+              <div
+                className="font-bold text-[#1a2e4a] mb-[6px]"
+                style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", letterSpacing: "-0.03em" }}
+                aria-hidden="true"
+              >
+                {t("delete_title")}
+              </div>
+              <div
+                className="text-sm text-[#6B7A8C] leading-[1.5] mx-auto"
+                style={{ maxWidth: "280px" }}
+                aria-hidden="true"
+              >
+                {t("delete_description")}
+              </div>
             </div>
-            <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
-              <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={() => deleteId && deleteLetter(deleteId)} style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}>{t("delete")}</AlertDialogAction>
+            <div className="flex gap-[10px]" style={{ padding: "18px 24px 22px" }}>
+              <AlertDialogCancel
+                style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}
+              >
+                {t("cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => deleteId && deleteLetter(deleteId)}
+                style={{
+                  flex: 1,
+                  background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
+                  color: "white",
+                  fontWeight: 600,
+                  boxShadow: "0 2px 8px rgba(220,38,38,0.25)",
+                  border: "none",
+                  padding: "11px 16px",
+                  fontSize: "13px",
+                  fontFamily: "inherit",
+                  cursor: "pointer",
+                  justifyContent: "center",
+                }}
+              >
+                {t("delete")}
+              </AlertDialogAction>
             </div>
           </AlertDialogContent>
         </AlertDialog>

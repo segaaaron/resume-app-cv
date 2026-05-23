@@ -45,175 +45,144 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
   const activeToday  = users.filter(u => new Date(u.lastActiveAt) > yesterday).length
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+    <div className="flex flex-col gap-0">
 
       {/* Page head */}
-      <div className="dash-card-in" style={{ animationDelay: "0ms", marginBottom: 28 }}>
-        <div style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-          color: "#00D4FF", marginBottom: 6,
-          display: "flex", alignItems: "center", gap: 7,
-        }}>
-          <span style={{ width: 14, height: 1.5, background: "#00D4FF", opacity: 0.5, display: "inline-block" }} />
-          {t("eyebrow")}
+      <div className="dash-card-in" style={{ animationDelay: "0ms" }}>
+        <div className="mb-7 flex flex-col">
+          <div className="flex items-center gap-[7px] text-[10px] font-bold tracking-[0.1em] uppercase text-[#00D4FF] mb-[6px]">
+            <span className="inline-block w-[14px] h-[1.5px] bg-[#00D4FF] opacity-50" />
+            {t("eyebrow")}
+          </div>
+          <h1
+            className="text-[32px] font-bold text-[#1a2e4a] tracking-[-0.035em] leading-[1.1] m-0"
+            style={{ fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)" }}
+          >
+            {t("page_title")}
+          </h1>
+          <p className="text-[13.5px] text-[#6B7A8C] mt-[6px]">
+            {t("subtitle", { count: totalUsers })}
+          </p>
         </div>
-        <h1 style={{
-          fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)",
-          fontSize: 32, fontWeight: 700, color: "#1a2e4a",
-          letterSpacing: "-0.035em", lineHeight: 1.1, margin: 0,
-        }}>
-          {t("page_title")}
-        </h1>
-        <p style={{ fontSize: 13.5, color: "#6B7A8C", marginTop: 6 }}>
-          {t("subtitle", { count: totalUsers })}
-        </p>
       </div>
 
       {/* Stats grid */}
-      <div className="dash-card-in" style={{
-        animationDelay: "60ms",
-        display: "grid",
-        gridTemplateColumns: "repeat(4, 1fr)",
-        gap: 12,
-        marginBottom: 28,
-      }}>
+      <div
+        className="dash-card-in grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-7"
+        style={{ animationDelay: "60ms" }}
+      >
         {/* Total usuarios */}
-        <div style={{
-          background: "white", border: "1px solid #D9E1ED",
-          borderRadius: 10, padding: 20,
-          position: "relative", overflow: "hidden",
-          transition: "all 0.2s ease",
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase", color: "#6B7A8C", marginBottom: 8,
-          }}>
+        <div className="bg-white border border-[#D9E1ED] rounded-[10px] p-5 relative overflow-hidden transition-all duration-200">
+          <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-[#6B7A8C] mb-2">
             {t("stat_total_users")}
           </div>
-          <div style={{
-            fontFamily: "var(--mono,monospace)", fontSize: 24, fontWeight: 700,
-            color: "#1a2e4a", letterSpacing: "-0.02em", lineHeight: 1,
-          }}>
+          <div
+            className="text-[24px] font-bold text-[#1a2e4a] tracking-[-0.02em] leading-none"
+            style={{ fontFamily: "var(--mono,monospace)" }}
+          >
             {totalUsers}
-            <span style={{
-              fontFamily: "var(--sans,inherit)", fontSize: 12, fontWeight: 400,
-              color: "#6B7A8C", marginLeft: 4, letterSpacing: 0,
-            }}>{t("stat_total_accounts")}</span>
+            <span
+              className="text-[12px] font-normal text-[#6B7A8C] ml-1 tracking-normal"
+              style={{ fontFamily: "var(--sans,inherit)" }}
+            >
+              {t("stat_total_accounts")}
+            </span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: "#6B7A8C" }}>
+          <div className="mt-2 text-[11px] text-[#6B7A8C]">
             {t("stat_total_note")}
           </div>
-          <span style={{
-            position: "absolute", bottom: 10, right: 12,
-            fontSize: 28, color: "#00D4FF", opacity: 0.05,
-            fontFamily: "var(--dash-serif,Georgia,serif)", lineHeight: 1,
-            pointerEvents: "none", userSelect: "none",
-          }}>§</span>
+          <span
+            className="absolute bottom-[10px] right-3 text-[28px] text-[#00D4FF] opacity-[0.05] leading-none pointer-events-none select-none"
+            style={{ fontFamily: "var(--dash-serif,Georgia,serif)" }}
+          >
+            §
+          </span>
         </div>
 
         {/* Suscriptores PRO */}
-        <div style={{
-          background: "linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(0,212,255,0.02) 100%)",
-          border: "1px solid rgba(0,212,255,0.15)",
-          borderRadius: 10, padding: 20,
-          position: "relative", overflow: "hidden",
-          transition: "all 0.2s ease",
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase", color: "#00D4FF", marginBottom: 8, opacity: 1,
-          }}>
+        <div className="bg-gradient-to-br from-[rgba(0,212,255,0.05)] to-[rgba(0,212,255,0.02)] border border-[rgba(0,212,255,0.15)] rounded-[10px] p-5 relative overflow-hidden transition-all duration-200">
+          <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-[#00D4FF] mb-2">
             {t("stat_pro_subscribers")}
           </div>
-          <div style={{
-            fontFamily: "var(--mono,monospace)", fontSize: 20, fontWeight: 700,
-            color: "#00D4FF", letterSpacing: "-0.02em", lineHeight: 1,
-          }}>
+          <div
+            className="text-[20px] font-bold text-[#00D4FF] tracking-[-0.02em] leading-none"
+            style={{ fontFamily: "var(--mono,monospace)" }}
+          >
             {proCount} {t("stat_pro_unit")}
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: "#6B7A8C" }}>
+          <div className="mt-2 text-[11px] text-[#6B7A8C]">
             {t("stat_conv_rate", { rate: convRate })}
           </div>
-          <span style={{
-            position: "absolute", bottom: 10, right: 12,
-            fontSize: 28, color: "#00D4FF", opacity: 0.05,
-            fontFamily: "var(--dash-serif,Georgia,serif)", lineHeight: 1,
-            pointerEvents: "none", userSelect: "none",
-          }}>◆</span>
+          <span
+            className="absolute bottom-[10px] right-3 text-[28px] text-[#00D4FF] opacity-[0.05] leading-none pointer-events-none select-none"
+            style={{ fontFamily: "var(--dash-serif,Georgia,serif)" }}
+          >
+            ◆
+          </span>
         </div>
 
         {/* Activos hoy */}
-        <div style={{
-          background: "white", border: "1px solid #D9E1ED",
-          borderRadius: 10, padding: 20,
-          position: "relative", overflow: "hidden",
-          transition: "all 0.2s ease",
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase", color: "#6B7A8C", marginBottom: 8,
-          }}>
+        <div className="bg-white border border-[#D9E1ED] rounded-[10px] p-5 relative overflow-hidden transition-all duration-200">
+          <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-[#6B7A8C] mb-2">
             {t("stat_active_today")}
           </div>
-          <div style={{
-            fontFamily: "var(--mono,monospace)", fontSize: 24, fontWeight: 700,
-            color: "#1a2e4a", letterSpacing: "-0.02em", lineHeight: 1,
-          }}>
+          <div
+            className="text-[24px] font-bold text-[#1a2e4a] tracking-[-0.02em] leading-none"
+            style={{ fontFamily: "var(--mono,monospace)" }}
+          >
             {activeToday}
-            <span style={{
-              fontFamily: "var(--sans,inherit)", fontSize: 12, fontWeight: 400,
-              color: "#6B7A8C", marginLeft: 4, letterSpacing: 0,
-            }}>{t("stat_sessions")}</span>
+            <span
+              className="text-[12px] font-normal text-[#6B7A8C] ml-1 tracking-normal"
+              style={{ fontFamily: "var(--sans,inherit)" }}
+            >
+              {t("stat_sessions")}
+            </span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: "#6B7A8C" }}>
+          <div className="mt-2 text-[11px] text-[#6B7A8C]">
             {t("stat_active_24h")}
           </div>
-          <span style={{
-            position: "absolute", bottom: 10, right: 12,
-            fontSize: 28, color: "#00D4FF", opacity: 0.05,
-            fontFamily: "var(--dash-serif,Georgia,serif)", lineHeight: 1,
-            pointerEvents: "none", userSelect: "none",
-          }}>◈</span>
+          <span
+            className="absolute bottom-[10px] right-3 text-[28px] text-[#00D4FF] opacity-[0.05] leading-none pointer-events-none select-none"
+            style={{ fontFamily: "var(--dash-serif,Georgia,serif)" }}
+          >
+            ◈
+          </span>
         </div>
 
         {/* MRR */}
-        <div style={{
-          background: "white", border: "1px solid #D9E1ED",
-          borderRadius: 10, padding: 20,
-          position: "relative", overflow: "hidden",
-          transition: "all 0.2s ease",
-        }}>
-          <div style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase", color: "#6B7A8C", marginBottom: 8,
-          }}>
+        <div className="bg-white border border-[#D9E1ED] rounded-[10px] p-5 relative overflow-hidden transition-all duration-200">
+          <div className="text-[11px] font-bold tracking-[0.08em] uppercase text-[#6B7A8C] mb-2">
             {t("stat_mrr")}
           </div>
-          <div style={{
-            fontFamily: "var(--mono,monospace)", fontSize: 24, fontWeight: 700,
-            color: "#1a2e4a", letterSpacing: "-0.02em", lineHeight: 1,
-          }}>
+          <div
+            className="text-[24px] font-bold text-[#1a2e4a] tracking-[-0.02em] leading-none"
+            style={{ fontFamily: "var(--mono,monospace)" }}
+          >
             ${mrr}
-            <span style={{
-              fontFamily: "var(--sans,inherit)", fontSize: 12, fontWeight: 400,
-              color: "#6B7A8C", marginLeft: 4, letterSpacing: 0,
-            }}>{t("stat_mrr_unit")}</span>
+            <span
+              className="text-[12px] font-normal text-[#6B7A8C] ml-1 tracking-normal"
+              style={{ fontFamily: "var(--sans,inherit)" }}
+            >
+              {t("stat_mrr_unit")}
+            </span>
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: "#6B7A8C" }}>
+          <div className="mt-2 text-[11px] text-[#6B7A8C]">
             {t("stat_mrr_note", { count: proCount })}
           </div>
-          <span style={{
-            position: "absolute", bottom: 10, right: 12,
-            fontSize: 28, color: "#00D4FF", opacity: 0.05,
-            fontFamily: "var(--dash-serif,Georgia,serif)", lineHeight: 1,
-            pointerEvents: "none", userSelect: "none",
-          }}>$</span>
+          <span
+            className="absolute bottom-[10px] right-3 text-[28px] text-[#00D4FF] opacity-[0.05] leading-none pointer-events-none select-none"
+            style={{ fontFamily: "var(--dash-serif,Georgia,serif)" }}
+          >
+            $
+          </span>
         </div>
       </div>
 
-      {/* Table */}
-      <div className="dash-card-in" style={{ animationDelay: "120ms" }}>
-        <AdminUsersTable users={users} />
+      {/* Table — horizontal scroll on mobile */}
+      <div className="dash-card-in overflow-x-auto" style={{ animationDelay: "120ms" }}>
+        <div className="min-w-[600px]">
+          <AdminUsersTable users={users} />
+        </div>
       </div>
 
     </div>

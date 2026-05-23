@@ -686,7 +686,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
         {/* Right: preview */}
         <div className="flex-1 overflow-auto bg-[#d0d0d0] flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0">
-          <div style={{ position: "relative", display: "inline-block" }}>
+          <div className="relative inline-block">
           <div
             ref={templateRef}
             className="bg-white shadow-[0_4px_24px_rgba(0,0,0,0.18)] print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"

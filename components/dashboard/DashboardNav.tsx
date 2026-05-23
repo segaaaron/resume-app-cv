@@ -101,34 +101,13 @@ export default function DashboardNav({
 
   // ── Sidebar content ───────────────────────────────────────────────────────────
   const sidebarContent = (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        overflow: "hidden",
-      }}
-    >
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Logo */}
-      <div
-        style={{
-          padding: "24px 20px 20px",
-          display: "flex",
-          alignItems: "center",
-          gap: "12px",
-          borderBottom: "1px solid var(--dash-border-s)",
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex items-center gap-3 px-5 pt-6 pb-5 border-b border-[var(--dash-border-s)] shrink-0">
         <Link
           href={`/${locale}`}
           onClick={onDrawerClose}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "12px",
-            textDecoration: "none",
-          }}
+          className="flex items-center gap-3 no-underline"
         >
           {/* Logo icon */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -137,7 +116,7 @@ export default function DashboardNav({
             alt="ReadyCVV"
             width={38}
             height={38}
-            style={{ borderRadius: "10px", flexShrink: 0, display: "block" }}
+            className="rounded-[10px] shrink-0 block"
           />
           {/* Brand text */}
           <span
@@ -157,16 +136,8 @@ export default function DashboardNav({
 
       {/* Nav */}
       <nav
-        style={{
-          flex: 1,
-          padding: "14px 10px",
-          display: "flex",
-          flexDirection: "column",
-          gap: "1px",
-          overflowY: "auto",
-          scrollbarWidth: "thin",
-          scrollbarColor: "var(--dash-subtle) transparent",
-        }}
+        className="flex-1 flex flex-col gap-px overflow-y-auto px-[10px] py-[14px]"
+        style={{ scrollbarWidth: "thin", scrollbarColor: "var(--dash-subtle) transparent" }}
       >
         <SectionLabel label={t("section_documents")} />
         {documentos.map((item) => (
@@ -191,17 +162,17 @@ export default function DashboardNav({
 
         <NavSeparator />
 
-        {/* Settings item */}
+        {/* Settings item — hover effects applied imperatively via onMouseEnter/Leave */}
         <Link
           href={settingsHref}
           onClick={onDrawerClose}
+          className="relative cursor-pointer no-underline"
           style={{
             display: "flex",
             alignItems: "center",
             gap: "10px",
             padding: "9px 11px",
             borderRadius: "6px",
-            textDecoration: "none",
             fontSize: "13.5px",
             fontWeight: settingsActive ? 600 : 500,
             color: settingsActive ? "var(--dash-cyan)" : "var(--dash-muted)",
@@ -210,8 +181,6 @@ export default function DashboardNav({
               ? "1px solid var(--dash-cyan-border)"
               : "1px solid transparent",
             transition: "all 0.15s ease",
-            position: "relative",
-            cursor: "pointer",
           }}
           onMouseEnter={(e) => {
             if (!settingsActive) {
@@ -231,58 +200,30 @@ export default function DashboardNav({
           }}
         >
           {settingsActive && (
-            <span
-              style={{
-                position: "absolute",
-                left: "-1px",
-                top: "50%",
-                transform: "translateY(-50%)",
-                width: "3px",
-                height: "18px",
-                background: "var(--dash-cyan)",
-                borderRadius: "0 2px 2px 0",
-              }}
-            />
+            <span className="absolute left-[-1px] top-1/2 -translate-y-1/2 w-[3px] h-[18px] bg-[var(--dash-cyan)] rounded-[0_2px_2px_0]" />
           )}
           <Settings
+            className="shrink-0 transition-opacity duration-150"
             style={{
               width: 16,
               height: 16,
-              flexShrink: 0,
               opacity: settingsActive ? 1 : 0.6,
-              transition: "opacity 0.15s ease",
             }}
           />
-          <span style={{ flex: 1 }}>{t("settings")}</span>
+          <span className="flex-1">{t("settings")}</span>
         </Link>
       </nav>
 
       {/* Footer */}
-      <div
-        style={{
-          padding: "14px 16px",
-          borderTop: "1px solid var(--dash-border-s)",
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          flexShrink: 0,
-        }}
-      >
+      <div className="flex items-center gap-[10px] px-4 py-[14px] border-t border-[var(--dash-border-s)] shrink-0">
         {/* Avatar */}
         <div
+          className="flex items-center justify-center shrink-0 rounded-full text-white font-bold text-xs"
           style={{
             width: "34px",
             height: "34px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             fontFamily: "var(--dash-serif)",
-            fontSize: "12px",
-            fontWeight: 700,
-            color: "white",
-            flexShrink: 0,
+            background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
             border: "2px solid rgba(0,212,255,0.3)",
             boxShadow: "0 2px 8px rgba(0,212,255,0.12)",
           }}
@@ -291,58 +232,28 @@ export default function DashboardNav({
         </div>
 
         {/* User info */}
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div
-            style={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: "var(--dash-navy)",
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
+        <div className="flex-1 min-w-0">
+          <div className="text-xs font-semibold text-[var(--dash-navy)] whitespace-nowrap overflow-hidden text-ellipsis">
             {user.name ?? user.email}
           </div>
           {isPro && (
-            <div
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "4px",
-                background: "rgba(16,185,129,0.1)",
-                border: "1px solid rgba(16,185,129,0.2)",
-                borderRadius: "4px",
-                padding: "2px 6px",
-                fontSize: "8px",
-                fontWeight: 700,
-                letterSpacing: "0.06em",
-                textTransform: "uppercase",
-                color: "#10B981",
-                marginTop: "2px",
-              }}
-            >
+            <div className="inline-flex items-center gap-1 rounded-[4px] px-[6px] py-[2px] text-[8px] font-bold tracking-[0.06em] uppercase mt-[2px] bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.2)] text-[#10B981]">
               PRO
             </div>
           )}
         </div>
 
-        {/* Logout button */}
+        {/* Logout button — hover effects applied imperatively */}
         <AlertDialog>
           <AlertDialogTrigger
+            onClick={onDrawerClose}
+            className="flex items-center justify-center shrink-0 cursor-pointer transition-all duration-150 rounded-[6px]"
             style={{
               width: "28px",
               height: "28px",
-              borderRadius: "6px",
               border: "1px solid var(--dash-border)",
               background: "transparent",
               color: "var(--dash-muted)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "all 0.15s ease",
-              flexShrink: 0,
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget as HTMLElement
@@ -360,29 +271,31 @@ export default function DashboardNav({
             <LogOut style={{ width: 13, height: 13 }} />
           </AlertDialogTrigger>
           <AlertDialogContent
-            className="p-0 overflow-hidden"
-            style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+            className="p-0 overflow-hidden rounded-2xl max-w-[400px] border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.08)]"
           >
             {/* Head */}
-            <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
-              <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
+            <div className="relative text-center px-7 pt-[30px] pb-4 border-b border-[#E8EDF6] bg-gradient-to-b from-[#F5F7FB] to-white">
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-60" />
               {/* Icon */}
-              <div style={{ width: "60px", height: "60px", margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))", border: "1.5px solid rgba(0,212,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00D4FF", position: "relative" }}>
+              <div className="flex items-center justify-center w-[60px] h-[60px] mx-auto mb-[14px] rounded-full relative text-[#00D4FF] bg-gradient-to-br from-[rgba(0,212,255,0.12)] to-[rgba(0,168,204,0.04)] border-[1.5px] border-[rgba(0,212,255,0.25)]">
                 <svg width="26" height="26" viewBox="0 0 26 26" fill="none" aria-hidden="true">
                   <path d="M10 22H5.5A1.5 1.5 0 014 20.5v-15A1.5 1.5 0 015.5 4H10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
                   <path d="M17 18l5-5-5-5M22 13H10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "6px" }}>
+              <div
+                className="text-[22px] font-bold text-[#1a2e4a] tracking-[-0.03em] mb-[6px]"
+                style={{ fontFamily: "var(--dash-serif)" }}
+              >
                 {t("logout_confirm_title")}
               </div>
-              <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "280px", margin: "0 auto" }}>
+              <div className="text-[13px] text-[#6B7A8C] leading-[1.5] max-w-[280px] mx-auto">
                 {t("logout_confirm_desc")}
               </div>
             </div>
             {/* Actions */}
-            <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
-              <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>
+            <div className="flex gap-[10px] px-6 pt-[18px] pb-[22px]">
+              <AlertDialogCancel className="flex-1 flex justify-center px-4 py-[11px] text-[13px] font-medium">
                 {t("logout_cancel")}
               </AlertDialogCancel>
               <AlertDialogAction
@@ -391,7 +304,7 @@ export default function DashboardNav({
                   if (!result.ok) toast.error(t("logout_error"))
                   signOut({ callbackUrl: `/${locale}` })
                 }}
-                style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}
+                className="flex-1 flex justify-center px-4 py-[11px] text-[13px] font-semibold text-white cursor-pointer border-none bg-gradient-to-br from-[#DC2626] to-[#B91C1C] shadow-[0_2px_8px_rgba(220,38,38,0.25)]"
               >
                 {t("logout_confirm_action")}
               </AlertDialogAction>
@@ -406,38 +319,17 @@ export default function DashboardNav({
     <>
       {/* Desktop sidebar — hidden on ≤1024px */}
       <aside
-        className="lg:flex hidden flex-col"
-        style={{
-          width: "240px",
-          flexShrink: 0,
-          background: "linear-gradient(180deg, #FAFBFD 0%, #F5F7FB 100%)",
-          borderRight: "1px solid var(--dash-border)",
-          height: "100%",
-          overflow: "hidden",
-        }}
+        className="lg:flex hidden flex-col w-[240px] shrink-0 h-full overflow-hidden border-r border-[var(--dash-border)] bg-gradient-to-b from-[#FAFBFD] to-[#F5F7FB]"
       >
         {sidebarContent}
       </aside>
 
       {/* Mobile drawer — off-canvas, shown on ≤1024px */}
       <aside
-        className="lg:hidden"
+        className="lg:hidden fixed top-0 left-0 bottom-0 w-[290px] z-[1000] flex flex-col overflow-hidden isolation-isolate border-r border-[var(--dash-border)] bg-[#FAFBFD] shadow-[8px_0_32px_rgba(15,25,45,0.18)]"
         style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          bottom: 0,
-          width: "290px",
-          zIndex: 1000,
           transform: drawerOpen ? "translateX(0)" : "translateX(-105%)",
           transition: "transform 0.28s cubic-bezier(0.4,0,0.2,1)",
-          boxShadow: "8px 0 32px rgba(15,25,45,0.18)",
-          background: "#FAFBFD",
-          borderRight: "1px solid var(--dash-border)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          isolation: "isolate",
         }}
       >
         {sidebarContent}

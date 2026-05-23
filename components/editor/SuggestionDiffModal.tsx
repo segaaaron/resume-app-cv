@@ -4,12 +4,8 @@ import { useTranslations } from "next-intl"
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { ArrowRight } from "lucide-react"
+import { ArrowDown } from "lucide-react"
 
 export type SuggestionField =
   | "summary"
@@ -61,42 +57,72 @@ export default function SuggestionDiffModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="text-sm font-semibold">
-            {t("diff_title")} — {t(FIELD_KEYS[suggestion.field])}
-          </DialogTitle>
-          <p className="text-xs text-muted-foreground mt-1">{suggestion.reason}</p>
-        </DialogHeader>
+      <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-[480px] border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.08)] gap-0">
+        {/* Head */}
+        <div className="relative px-7 pt-[26px] pb-5 border-b border-[#E8EDF6] bg-gradient-to-b from-[#F5F7FB] to-white">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-60" />
+          <div className="flex items-center gap-3 mb-1">
+            <div className="flex items-center justify-center w-9 h-9 rounded-xl text-[#00D4FF] bg-gradient-to-br from-[rgba(0,212,255,0.12)] to-[rgba(0,168,204,0.04)] border border-[rgba(0,212,255,0.25)] shrink-0">
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+                <path d="M2 4h12M2 8h8M2 12h5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+                <path d="M12 10l2 2-2 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <path d="M14 12H9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <div
+                className="text-[16px] font-bold text-[#1a2e4a] tracking-[-0.02em]"
+                style={{ fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)" }}
+              >
+                {t("diff_title")} — {t(FIELD_KEYS[suggestion.field])}
+              </div>
+              <div className="text-[11.5px] text-[#6B7A8C] mt-[2px]">{suggestion.reason}</div>
+            </div>
+          </div>
+        </div>
 
-        <div className="space-y-3 py-1">
+        {/* Diff content */}
+        <div className="px-7 py-5 space-y-3 bg-white">
           {/* Before */}
-          <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{t("diff_before")}</p>
-            <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-xs text-muted-foreground leading-relaxed min-h-[48px]">
-              {currentValue || <span className="italic">{t("diff_empty")}</span>}
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
+            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3.5 py-3 text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px]">
+              {currentValue || <span className="italic opacity-60">{t("diff_empty")}</span>}
             </div>
           </div>
 
           <div className="flex justify-center">
-            <ArrowRight className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
+              <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
+            </div>
           </div>
 
           {/* After */}
-          <div className="space-y-1">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-emerald-700">{t("diff_after")}</p>
-            <div className="rounded-lg border border-emerald-300 bg-emerald-50/60 px-3 py-2.5 text-xs text-foreground leading-relaxed min-h-[48px]">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{t("diff_after")}</p>
+            <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3.5 py-3 text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px]">
               {afterValue}
             </div>
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="ghost" size="sm" onClick={onClose}>{t("diff_cancel")}</Button>
-          <Button size="sm" onClick={onConfirm} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+        {/* Actions */}
+        <div className="flex gap-[10px] px-6 pt-3 pb-[22px] border-t border-[#E8EDF6] bg-white">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 flex justify-center px-4 py-[11px] text-[13px] font-medium rounded-xl border border-[#E2E8F0] bg-white text-[#6B7A8C] cursor-pointer transition-all duration-150 hover:border-[#CBD5E1] hover:text-[#1a2e4a]"
+          >
+            {t("diff_cancel")}
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            className="flex-1 flex justify-center px-4 py-[11px] text-[13px] font-semibold text-white rounded-xl border-none cursor-pointer bg-gradient-to-br from-emerald-500 to-teal-600 shadow-[0_2px_8px_rgba(16,185,129,0.3)] transition-all duration-150 hover:shadow-[0_4px_14px_rgba(16,185,129,0.4)] hover:-translate-y-px"
+          >
             {t("diff_confirm")}
-          </Button>
-        </DialogFooter>
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   )

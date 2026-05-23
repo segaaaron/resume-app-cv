@@ -54,32 +54,22 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
 
   return (
     <EditorProvider isPro={hasAccess}>
-      <div
-        className="flex flex-col overflow-hidden"
-        style={{
-          height: "100dvh",
-          background: "#FAFCFF",
-          color: "#0F172A",
-          fontFamily: "Inter, system-ui, sans-serif",
-        }}
-      >
+      {/* Root shell: full dynamic viewport height, navy-tinted off-white bg */}
+      <div className="flex flex-col overflow-hidden h-dvh bg-[#FAFCFF] text-[#0F172A]">
         <EditorTopBar hasAccess={hasAccess} />
 
-        {/* Main body */}
-        <div
-          className="flex flex-1 overflow-hidden"
-          style={{ height: "calc(100dvh - 64px)" }}
-        >
+        {/* Main body — fills remaining height below 64px top bar */}
+        <div className="flex flex-1 overflow-hidden h-[calc(100dvh-64px)]">
           {/* Form panel — full width on mobile, fixed 380px on md+ */}
           <div
             className={`${
               mobileView === "preview" ? "hidden" : "flex"
-            } md:flex w-full md:w-[380px] flex-shrink-0 flex-col overflow-hidden pb-14 md:pb-0`}
+            } md:flex w-full md:w-[380px] shrink-0 flex-col overflow-hidden pb-14 md:pb-0`}
           >
             <FormPanel />
           </div>
 
-          {/* Preview panel — full width on mobile, flex-1 on md+ */}
+          {/* Preview panel — hidden on mobile, flex-1 on md+ */}
           <div
             className={`${
               mobileView === "form" ? "hidden" : "flex"
@@ -95,80 +85,32 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
         </div>
 
         {/* Mobile bottom toggle bar — hidden on md+ */}
-        <div
-          className="md:hidden fixed bottom-0 left-0 right-0 flex"
-          style={{
-            height: 56,
-            background: "#0B1B3D",
-            borderTop: "1px solid rgba(0,229,255,0.15)",
-            boxShadow: "0 -4px 24px rgba(11,27,61,0.35)",
-            zIndex: 50,
-            cursor: "pointer",
-          }}
-        >
+        <div className="md:hidden fixed bottom-0 left-0 right-0 flex h-14 bg-[#0B1B3D] border-t border-[rgba(0,229,255,0.15)] shadow-[0_-4px_24px_rgba(11,27,61,0.35)] z-50">
           <button
             type="button"
             onClick={() => setMobileView("form")}
-            style={{
-              flex: 1,
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: mobileView === "form" ? "#00E5FF" : "rgba(255,255,255,0.45)",
-              background: "transparent",
-              borderTop: "none",
-              borderLeft: "none",
-              borderRight: "none",
-              borderBottomWidth: 2,
-              borderBottomStyle: "solid",
-              borderBottomColor: mobileView === "form" ? "#00E5FF" : "transparent",
-              cursor: "pointer",
-              touchAction: "manipulation",
-              WebkitTapHighlightColor: "rgba(0,229,255,0.1)",
-              transition: "color 0.2s ease, border-bottom-color 0.2s ease",
-              padding: "0 16px",
-            }}
+            style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }}
+            className={`flex-1 h-full flex items-center justify-center gap-2 text-[13px] font-bold tracking-[0.06em] uppercase bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer touch-manipulation px-4 transition-[color,border-bottom-color] duration-200 ${
+              mobileView === "form"
+                ? "text-[#00E5FF] border-b-[#00E5FF]"
+                : "text-[rgba(255,255,255,0.45)] border-b-transparent"
+            }`}
           >
-            <FileText style={{ width: 18, height: 18, strokeWidth: 2, pointerEvents: "none" }} />
-            <span style={{ pointerEvents: "none" }}>Editar</span>
+            <FileText className="w-[18px] h-[18px] pointer-events-none" strokeWidth={2} />
+            <span className="pointer-events-none">Editar</span>
           </button>
           <button
             type="button"
             onClick={() => setMobileView("preview")}
-            style={{
-              flex: 1,
-              height: "100%",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 8,
-              fontSize: 13,
-              fontWeight: 700,
-              letterSpacing: "0.06em",
-              textTransform: "uppercase",
-              color: mobileView === "preview" ? "#00E5FF" : "rgba(255,255,255,0.45)",
-              background: "transparent",
-              borderTop: "none",
-              borderLeft: "none",
-              borderRight: "none",
-              borderBottomWidth: 2,
-              borderBottomStyle: "solid",
-              borderBottomColor: mobileView === "preview" ? "#00E5FF" : "transparent",
-              cursor: "pointer",
-              touchAction: "manipulation",
-              WebkitTapHighlightColor: "rgba(0,229,255,0.1)",
-              transition: "color 0.2s ease, border-bottom-color 0.2s ease",
-              padding: "0 16px",
-            }}
+            style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }}
+            className={`flex-1 h-full flex items-center justify-center gap-2 text-[13px] font-bold tracking-[0.06em] uppercase bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer touch-manipulation px-4 transition-[color,border-bottom-color] duration-200 ${
+              mobileView === "preview"
+                ? "text-[#00E5FF] border-b-[#00E5FF]"
+                : "text-[rgba(255,255,255,0.45)] border-b-transparent"
+            }`}
           >
-            <Eye style={{ width: 18, height: 18, strokeWidth: 2, pointerEvents: "none" }} />
-            <span style={{ pointerEvents: "none" }}>Vista previa</span>
+            <Eye className="w-[18px] h-[18px] pointer-events-none" strokeWidth={2} />
+            <span className="pointer-events-none">Vista previa</span>
           </button>
         </div>
       </div>

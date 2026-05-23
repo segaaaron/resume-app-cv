@@ -1,7 +1,7 @@
 "use client"
 
 import { useForm } from "react-hook-form"
-import { useEffect, useMemo } from "react"
+import { useEffect, useMemo, useRef } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
@@ -43,11 +43,6 @@ export default function PersonalDetailsSection() {
   })
 
   useEffect(() => {
-    reset(sectionData.personalDetails)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resumeId])
-
-  useEffect(() => {
     if (!sectionData.personalDetails?.yearsOfExperience && computedYears) {
       setValue("yearsOfExperience", computedYears)
       updateSectionData("personalDetails", {
@@ -58,46 +53,57 @@ export default function PersonalDetailsSection() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [computedYears])
 
+  const updateRef = useRef(updateSectionData)
+  updateRef.current = updateSectionData
+  const skipRef = useRef(false)
+
   useEffect(() => {
+    skipRef.current = true
+    reset(sectionData.personalDetails)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resumeId])
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>
     const sub = watch((values) => {
-      updateSectionData("personalDetails", values as PersonalDetails)
+      if (skipRef.current) { skipRef.current = false; return }
+      clearTimeout(timer)
+      timer = setTimeout(() => {
+        updateRef.current("personalDetails", values as PersonalDetails)
+      }, 120)
     })
-    return () => sub.unsubscribe()
-  }, [watch, updateSectionData])
+    return () => { sub.unsubscribe(); clearTimeout(timer) }
+  }, [watch])
 
   return (
     <div className="flex flex-col gap-5">
 
       {/* ── Identidad ── */}
-      <Group label="Identidad">
+      <Group label={t("personal.group_identity")}>
         <Field label={t("personal.first_name")} id="firstName" autoComplete="given-name"         register={register("firstName")} icon={UserRound} />
         <Field label={t("personal.last_name")}  id="lastName"  autoComplete="family-name"        register={register("lastName")}  icon={UserRound} />
         <Field label={t("personal.job_title")}  id="jobTitle"  autoComplete="organization-title" register={register("jobTitle")}  icon={Briefcase} span2 />
       </Group>
 
-      {/* ── Contacto ── */}
-      <Group label="Contacto">
+      <Group label={t("personal.group_contact")}>
         <Field label={t("personal.email")} id="email" type="email" autoComplete="email" register={register("email")} icon={AtSign} />
         <Field label={t("personal.phone")} id="phone" type="tel"   autoComplete="tel"   register={register("phone")} icon={Smartphone} />
       </Group>
 
-      {/* ── Ubicación ── */}
-      <Group label="Ubicación">
+      <Group label={t("personal.group_location")}>
         <Field label={t("personal.city")}        id="city"       autoComplete="address-level2" register={register("city")}       icon={MapPin} />
         <Field label={t("personal.country")}     id="country"    autoComplete="country-name"   register={register("country")}   icon={Globe2} />
         <Field label={t("personal.postal_code")} id="postalCode" autoComplete="postal-code"    register={register("postalCode")} icon={Hash} />
         <Field label={t("personal.address")}     id="address"    autoComplete="street-address" register={register("address")}   icon={Building2} />
       </Group>
 
-      {/* ── Online ── */}
-      <Group label="Online">
+      <Group label={t("personal.group_online")}>
         <Field label={t("personal.website")}  id="website"  autoComplete="url" register={register("website")}  icon={Globe}    span2 />
         <Field label={t("personal.linkedin")} id="linkedin" autoComplete="off" register={register("linkedin")} icon={Network}  span2 />
         <Field label={t("personal.github")}   id="github"   autoComplete="off" register={register("github")}   icon={Code2}    span2 />
       </Group>
 
-      {/* ── Experiencia ── */}
-      <Group label="Experiencia">
+      <Group label={t("personal.group_experience")}>
         <Field label={t("personal.years_of_experience")} id="yearsOfExperience" type="number" autoComplete="off" register={register("yearsOfExperience")} icon={TrendingUp} span2 />
       </Group>
 
@@ -146,8 +152,8 @@ function Field({
         id={id}
         type={type}
         autoComplete={autoComplete}
-        className="h-9 text-sm transition-all w-full"
-        style={{ color: "#1A2E4A" }}
+        className="h-9 text-sm w-full"
+        style={{ color: "#1A2E4A", paddingLeft: 12, paddingRight: 12 }}
         {...register}
       />
     </div>

@@ -162,25 +162,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
   }
 
   return (
-    <>
-    <style>{`
-      @media (max-width: 640px) {
-        .settings-grid { grid-template-columns: 1fr !important; }
-        .settings-grid > * { grid-column: 1 / -1 !important; }
-      }
-    `}</style>
-    <div className="settings-grid" style={{
-      display: "grid",
-      gridTemplateColumns: "1fr 1fr",
-      gap: 16,
-    }}>
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
       {/* ── Card 1: Perfil (full width) ── */}
-      <div style={{
-        gridColumn: "1 / -1",
-        background: "white", border: "1px solid #D9E1ED",
-        borderRadius: 10, overflow: "hidden",
-      }}>
+      <div className="col-span-1 sm:col-span-2 bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
         <div style={cardHeadStyle}>
           <div style={cardIcoStyle}>
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -193,28 +178,24 @@ export default function SettingsForm({ user }: { user: UserData }) {
             <div style={cardSubStyle}>{t("profile_subtitle")}</div>
           </div>
         </div>
-        <div style={{ padding: "18px 20px" }}>
+        <div className="px-5 py-[18px]">
           {/* Profile row */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 14,
-            marginBottom: 18, paddingBottom: 18,
-            borderBottom: "1px solid #E8EDF6",
-          }}>
-            <div style={{
-              width: 52, height: 52, borderRadius: "50%",
-              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              fontFamily: "var(--dash-serif)",
-              fontSize: 18, fontWeight: 700, color: "white",
-              flexShrink: 0, border: "2px solid rgba(0,212,255,0.3)",
-            }}>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-[14px] mb-[18px] pb-[18px] border-b border-[#E8EDF6]">
+            <div
+              className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 border-2"
+              style={{
+                fontFamily: "var(--dash-serif)",
+                background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+                borderColor: "rgba(0,212,255,0.3)",
+              }}
+            >
               {initials}
             </div>
             <div>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#1a2e4a" }}>
+              <div className="text-sm font-semibold text-[#1a2e4a]">
                 {user.name ?? t("no_name")}
               </div>
-              <div style={{ fontSize: 12, color: "#6B7A8C", fontFamily: "var(--dash-mono)" }}>
+              <div className="text-xs text-[#6B7A8C]" style={{ fontFamily: "var(--dash-mono)" }}>
                 {user.email}
               </div>
             </div>
@@ -222,8 +203,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
           {/* 2-column field grid */}
           <form onSubmit={handleSave}>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
-              <div style={{ marginBottom: 0 }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
+              <div>
                 <div style={fieldLabelStyle}>{t("name_label")}</div>
                 <FieldInput
                   value={name}
@@ -231,13 +212,13 @@ export default function SettingsForm({ user }: { user: UserData }) {
                   placeholder={t("name_placeholder")}
                 />
               </div>
-              <div style={{ marginBottom: 0 }}>
+              <div>
                 <div style={fieldLabelStyle}>{t("email_label")}</div>
                 <FieldInput value={user.email} disabled />
                 <div style={fieldHintStyle}>{t("email_note")}</div>
               </div>
             </div>
-            <div style={{ marginTop: 16 }}>
+            <div className="mt-4">
               <BtnGold type="submit" disabled={saving}>
                 {saving ? t("saving") : t("save_button")}
               </BtnGold>
@@ -247,10 +228,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       </div>
 
       {/* ── Card 2: Plan y cuenta ── */}
-      <div style={{
-        background: "white", border: "1px solid #D9E1ED",
-        borderRadius: 10, overflow: "hidden",
-      }}>
+      <div className="bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
         <div style={cardHeadStyle}>
           <div style={cardIcoStyle}>
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -262,87 +240,75 @@ export default function SettingsForm({ user }: { user: UserData }) {
             <div style={cardSubStyle}>{t("plan_subtitle")}</div>
           </div>
         </div>
-        <div style={{ padding: "18px 20px" }}>
+        <div className="px-5 py-[18px]">
           {/* Plan row */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 14,
-            padding: "14px 16px",
-            background: "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,212,255,0.02))",
-            border: "1px solid rgba(0,212,255,0.15)",
-            borderRadius: 6, marginBottom: 16,
-            position: "relative", overflow: "hidden",
-          }}>
+          <div
+            className="flex items-center gap-[14px] px-4 py-[14px] rounded-md mb-4 relative overflow-hidden border"
+            style={{
+              background: "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,212,255,0.02))",
+              borderColor: "rgba(0,212,255,0.15)",
+            }}
+          >
             {/* top shimmer line */}
-            <div style={{
-              position: "absolute", top: 0, left: 0, right: 0, height: 1,
-              background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
-              opacity: 0.4,
-            }} />
-            <div style={{
-              width: 36, height: 36, borderRadius: 9,
-              background: "rgba(0,212,255,0.1)", border: "1px solid rgba(0,212,255,0.2)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              color: "#00D4FF", flexShrink: 0,
-            }}>
+            <div
+              className="absolute top-0 left-0 right-0 h-px opacity-40"
+              style={{ background: "linear-gradient(90deg, transparent, #00D4FF, transparent)" }}
+            />
+            <div
+              className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[#00D4FF] flex-shrink-0 border"
+              style={{
+                background: "rgba(0,212,255,0.1)",
+                borderColor: "rgba(0,212,255,0.2)",
+              }}
+            >
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1.5l1.8 4.2H14l-3.6 2.6 1.4 4.2L8 10.2l-3.8 2.3 1.4-4.2L2 5.7h4.2L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
               </svg>
             </div>
-            <div style={{ flex: 1 }}>
-              <div style={{
-                fontFamily: "var(--dash-serif)",
-                fontSize: 14, fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.02em",
-              }}>
+            <div className="flex-1">
+              <div
+                className="text-sm font-bold text-[#1a2e4a] tracking-[-0.02em]"
+                style={{ fontFamily: "var(--dash-serif)" }}
+              >
                 {isPro ? t("plan_pro") : t("plan_free_label")}
               </div>
-              <div style={{ fontSize: 11.5, color: "#6B7A8C", marginTop: 2, display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <div className="text-[11.5px] text-[#6B7A8C] mt-[2px] flex gap-[10px] flex-wrap">
                 {isPro && (
                   <>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center",
-                      background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)",
-                      borderRadius: 4, padding: "1px 7px",
-                      fontSize: 10, fontWeight: 600, color: "#00D4FF", letterSpacing: "0.04em",
-                    }}>
+                    <span
+                      className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#00D4FF] tracking-[0.04em]"
+                      style={{ background: "rgba(0,212,255,0.08)", borderColor: "rgba(0,212,255,0.15)" }}
+                    >
                       {user.planInterval === "annual" ? t("interval_annual") : t("interval_monthly")}
                     </span>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center",
-                      background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.15)",
-                      borderRadius: 4, padding: "1px 7px",
-                      fontSize: 10, fontWeight: 600, color: "#00D4FF", letterSpacing: "0.04em",
-                    }}>
+                    <span
+                      className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#00D4FF] tracking-[0.04em]"
+                      style={{ background: "rgba(0,212,255,0.08)", borderColor: "rgba(0,212,255,0.15)" }}
+                    >
                       {user.planInterval === "annual" ? t("price_annual") : t("price_monthly")}
                     </span>
                     {isActive && (
-                      <span style={{
-                        display: "inline-flex", alignItems: "center",
-                        background: "rgba(90,140,106,0.12)", border: "1px solid rgba(90,140,106,0.2)",
-                        borderRadius: 4, padding: "1px 7px",
-                        fontSize: 10, fontWeight: 600, color: "#7AAE8A", letterSpacing: "0.04em",
-                      }}>
+                      <span
+                        className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#7AAE8A] tracking-[0.04em]"
+                        style={{ background: "rgba(90,140,106,0.12)", borderColor: "rgba(90,140,106,0.2)" }}
+                      >
                         {t("status_active_badge")}
                       </span>
                     )}
                     {subscriptionStatus === "CANCELED" && (
-                      <span style={{
-                        display: "inline-flex", alignItems: "center",
-                        background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)",
-                        borderRadius: 4, padding: "1px 7px",
-                        fontSize: 10, fontWeight: 600, color: "#D97706", letterSpacing: "0.04em",
-                      }}>
+                      <span
+                        className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#D97706] tracking-[0.04em]"
+                        style={{ background: "rgba(245,158,11,0.1)", borderColor: "rgba(245,158,11,0.2)" }}
+                      >
                         {t("status_canceled_badge")}
                       </span>
                     )}
                   </>
                 )}
                 {!isPro && (
-                  <span style={{
-                    display: "inline-flex", alignItems: "center",
-                    background: "#F5F7FB", border: "1px solid #E8EDF6",
-                    borderRadius: 4, padding: "1px 7px",
-                    fontSize: 10, fontWeight: 600, color: "#A0AABE", letterSpacing: "0.04em",
-                  }}>
+                  <span
+                    className="inline-flex items-center rounded border border-[#E8EDF6] px-[7px] py-[1px] text-[10px] font-semibold text-[#A0AABE] tracking-[0.04em] bg-[#F5F7FB]"
+                  >
                     {t("status_no_subscription")}
                   </span>
                 )}
@@ -351,20 +317,22 @@ export default function SettingsForm({ user }: { user: UserData }) {
           </div>
 
           {/* Feature list */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
+          <div className="flex flex-col gap-[7px] mb-4">
             {[
               t("pro_benefit_1"),
               t("pro_benefit_2"),
               t("pro_benefit_3"),
               t("pro_benefit_4"),
             ].map(benefit => (
-              <div key={benefit} style={{ display: "flex", alignItems: "center", gap: 9, fontSize: 12.5, color: "#1a2e4a" }}>
-                <span style={{
-                  width: 14, height: 14, borderRadius: "50%",
-                  background: "rgba(16,185,129,0.2) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath d='M1.5 4l2 2 3-3' stroke='%2310B981' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") no-repeat center",
-                  border: "1px solid rgba(16,185,129,0.3)",
-                  flexShrink: 0,
-                }} />
+              <div key={benefit} className="flex items-center gap-[9px] text-[12.5px] text-[#1a2e4a]">
+                {/* background URL is a static data URI — keep inline */}
+                <span
+                  className="w-[14px] h-[14px] rounded-full flex-shrink-0 border"
+                  style={{
+                    background: "rgba(16,185,129,0.2) url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8' viewBox='0 0 8 8'%3E%3Cpath d='M1.5 4l2 2 3-3' stroke='%2310B981' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E\") no-repeat center",
+                    borderColor: "rgba(16,185,129,0.3)",
+                  }}
+                />
                 {benefit}
               </div>
             ))}
@@ -376,7 +344,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
                 {portalLoading ? t("opening_portal") : t("manage_billing")}
               </BtnGhost>
               {endsAt && (
-                <div style={{ fontSize: 11, color: "#A0AABE", marginTop: 10, textAlign: "center" }}>
+                <div className="text-[11px] text-[#A0AABE] mt-[10px] text-center">
                   {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
                   {isActive && (
                     <>
@@ -384,7 +352,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
                       <AlertDialog>
                         <AlertDialogTrigger
                           render={
-                            <span style={{ color: "#C08080", cursor: "pointer" }} />
+                            <span className="text-[#C08080] cursor-pointer" />
                           }
                         >
                           {cancelLoading ? t("canceling") : t("cancel_subscription")}
@@ -431,11 +399,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       />
 
       {/* ── Card 4: Programa de referidos (full width) ── */}
-      <div style={{
-        gridColumn: "1 / -1",
-        background: "white", border: "1px solid #D9E1ED",
-        borderRadius: 10, overflow: "hidden",
-      }}>
+      <div className="col-span-1 sm:col-span-2 bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
         <div style={cardHeadStyle}>
           <div style={cardIcoStyle}>
             {/* share/link icon */}
@@ -451,12 +415,11 @@ export default function SettingsForm({ user }: { user: UserData }) {
             <div style={cardSubStyle}>{tRef("description")}</div>
           </div>
         </div>
-        <div style={{ padding: "18px 20px" }}>
+        <div className="px-5 py-[18px]">
           <ReferralCard embeddedMode />
         </div>
       </div>
 
     </div>
-    </>
   )
 }

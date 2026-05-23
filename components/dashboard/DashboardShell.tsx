@@ -19,42 +19,12 @@ interface DashboardShellProps {
   children: React.ReactNode
 }
 
-// ── Shared button base styles ────────────────────────────────────────────────
-const btnGoldStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
-  padding: "8px 16px",
-  borderRadius: "6px",
-  fontSize: "13px",
-  fontWeight: 600,
-  cursor: "pointer",
-  transition: "all 0.2s ease",
-  border: "none",
-  whiteSpace: "nowrap",
-  lineHeight: 1,
-  background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-  color: "white",
-  letterSpacing: "0.005em",
-  boxShadow: "0 2px 8px rgba(0,212,255,0.25)",
-}
+// ── Shared Tailwind base classes for topbar action buttons ────────────────────
+const btnGoldClass =
+  "inline-flex items-center gap-1.5 px-4 py-2 rounded-[6px] text-[13px] font-semibold text-white cursor-pointer border-none whitespace-nowrap leading-none tracking-[0.005em] bg-gradient-to-br from-[#00D4FF] to-[#00A8CC] shadow-[0_2px_8px_rgba(0,212,255,0.25)] transition-all duration-200"
 
-const btnGhostStyle: React.CSSProperties = {
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "6px",
-  padding: "8px 16px",
-  borderRadius: "6px",
-  fontSize: "13px",
-  fontWeight: 500,
-  cursor: "pointer",
-  transition: "all 0.18s ease",
-  whiteSpace: "nowrap",
-  lineHeight: 1,
-  background: "transparent",
-  border: "1px solid var(--dash-border)",
-  color: "var(--dash-muted)",
-}
+const btnGhostClass =
+  "inline-flex items-center gap-1.5 px-4 py-2 rounded-[6px] text-[13px] font-medium cursor-pointer whitespace-nowrap leading-none bg-transparent border border-[var(--dash-border)] text-[var(--dash-muted)] transition-all duration-[180ms]"
 
 // ── Topbar action buttons ─────────────────────────────────────────────────────
 
@@ -82,7 +52,8 @@ function TopbarNewCVButton({ locale, isPro }: { locale: string; isPro: boolean }
       type="button"
       onClick={createResume}
       disabled={creating}
-      style={{ ...btnGoldStyle, opacity: creating ? 0.6 : 1 }}
+      className={btnGoldClass}
+      style={{ opacity: creating ? 0.6 : 1 }}
       onMouseEnter={(e) => {
         if (!creating) {
           const el = e.currentTarget
@@ -134,7 +105,8 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
       type="button"
       onClick={createLetter}
       disabled={creating}
-      style={{ ...btnGoldStyle, opacity: creating ? 0.6 : 1 }}
+      className={btnGoldClass}
+      style={{ opacity: creating ? 0.6 : 1 }}
       onMouseEnter={(e) => {
         if (!creating) {
           const el = e.currentTarget
@@ -164,7 +136,7 @@ function TopbarAddApplicationButton() {
     <button
       type="button"
       onClick={() => document.dispatchEvent(new CustomEvent("kanban-open-add"))}
-      style={btnGoldStyle}
+      className={btnGoldClass}
       onMouseEnter={(e) => {
         const el = e.currentTarget
         el.style.boxShadow = "0 4px 16px rgba(0,212,255,0.35)"
@@ -188,7 +160,7 @@ function TopbarExportUsersButton() {
     <button
       type="button"
       onClick={() => document.dispatchEvent(new CustomEvent("admin-export-users"))}
-      style={btnGoldStyle}
+      className={btnGoldClass}
       onMouseEnter={(e) => {
         const el = e.currentTarget
         el.style.boxShadow = "0 4px 16px rgba(0,212,255,0.35)"
@@ -212,7 +184,7 @@ function TopbarSaveSettingsButton() {
     <button
       type="button"
       onClick={() => document.dispatchEvent(new CustomEvent("settings-save"))}
-      style={btnGhostStyle}
+      className={btnGhostClass}
       onMouseEnter={(e) => {
         const el = e.currentTarget
         el.style.background = "var(--dash-surface2)"
@@ -271,13 +243,10 @@ export default function DashboardShell({
       {/* ── Body::before radial gradient effect ── */}
       <div
         aria-hidden="true"
+        className="fixed inset-0 pointer-events-none z-0"
         style={{
-          position: "fixed",
-          inset: 0,
           backgroundImage:
             "radial-gradient(circle at 20% 50%, rgba(0,212,255,0.02) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(212,165,116,0.01) 0%, transparent 50%)",
-          pointerEvents: "none",
-          zIndex: 0,
         }}
       />
 
@@ -285,26 +254,17 @@ export default function DashboardShell({
       <div
         aria-hidden="true"
         onClick={() => setDrawerOpen(false)}
+        className="fixed inset-0 z-[990] transition-opacity duration-[240ms] ease-[ease]"
         style={{
-          position: "fixed",
-          inset: 0,
           background: "rgba(8,10,16,0.55)",
-          zIndex: 990,
           opacity: drawerOpen ? 1 : 0,
           pointerEvents: drawerOpen ? "auto" : "none",
-          transition: "opacity 0.24s ease",
         }}
       />
 
       {/* ── App layout ── */}
       <div
-        style={{
-          display: "flex",
-          height: "100vh",
-          overflow: "hidden",
-          position: "relative",
-          backgroundColor: "var(--dash-surface)",
-        }}
+        className="flex h-screen overflow-hidden relative bg-[var(--dash-surface)]"
       >
         {/* Sidebar / drawer */}
         <DashboardNav
@@ -317,29 +277,14 @@ export default function DashboardShell({
         />
 
         {/* Main column */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            minWidth: 0,
-          }}
-        >
+        <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           {/* Topbar */}
           <header
+            className="h-14 shrink-0 flex items-center gap-[14px] px-4 sm:px-7 border-b border-[var(--dash-border)] z-30"
             style={{
-              height: "56px",
-              flexShrink: 0,
-              borderBottom: "1px solid var(--dash-border)",
-              display: "flex",
-              alignItems: "center",
-              padding: "0 28px",
-              gap: "14px",
               background: "rgba(255,255,255,0.85)",
               backdropFilter: "blur(10px)",
               WebkitBackdropFilter: "blur(10px)",
-              zIndex: 30,
             }}
           >
             {/* Mobile burger — visible on ≤1024px */}
@@ -347,21 +292,7 @@ export default function DashboardShell({
               type="button"
               onClick={() => setDrawerOpen(true)}
               aria-label={t("open_menu")}
-              className="flex lg:hidden"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "10px",
-                border: "1px solid var(--dash-border)",
-                background: "white",
-                color: "var(--dash-navy)",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                flexShrink: 0,
-                transition: "all 0.18s ease",
-                boxShadow: "0 1px 2px rgba(15,25,45,0.04)",
-              }}
+              className="flex lg:hidden w-10 h-10 items-center justify-center rounded-[10px] border border-[var(--dash-border)] bg-white text-[var(--dash-navy)] cursor-pointer shrink-0 transition-all duration-[180ms] shadow-[0_1px_2px_rgba(15,25,45,0.04)]"
               onMouseEnter={(e) => {
                 const el = e.currentTarget
                 el.style.borderColor = "var(--dash-cyan)"
@@ -379,28 +310,17 @@ export default function DashboardShell({
             </button>
 
             {/* Page title */}
-            <div style={{ flex: 1 }}>
+            <div className="flex-1">
               <span
-                style={{
-                  fontFamily: "var(--dash-serif)",
-                  fontSize: "16px",
-                  fontWeight: 700,
-                  color: "var(--dash-navy)",
-                  letterSpacing: "-0.025em",
-                }}
+                className="text-base font-bold text-[var(--dash-navy)] tracking-[-0.025em]"
+                style={{ fontFamily: "var(--dash-serif)" }}
               >
                 {pageTitle}
               </span>
             </div>
 
             {/* Right side */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
+            <div className="flex items-center gap-2">
               {/* Lang switcher */}
               <div className="hidden sm:flex">
                 <LocaleSwitcher />
@@ -426,19 +346,11 @@ export default function DashboardShell({
 
           {/* Content area */}
           <main
-            style={{
-              flex: 1,
-              overflowY: "auto",
-              scrollbarWidth: "thin",
-              scrollbarColor: "var(--dash-subtle) transparent",
-            }}
+            className="flex-1 overflow-y-auto"
+            style={{ scrollbarWidth: "thin", scrollbarColor: "var(--dash-subtle) transparent" }}
           >
             {pastDueBanner}
-            <div
-              style={{
-                padding: "30px 28px 60px",
-              }}
-            >
+            <div className="px-4 sm:px-7 pt-[30px] pb-[60px]">
               {children}
             </div>
           </main>

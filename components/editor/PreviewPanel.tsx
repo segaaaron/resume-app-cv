@@ -17,17 +17,7 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
   const [scale, setScale] = useState(0.5)
 
   return (
-    <div
-      className="canvas-and-strip"
-      style={{
-        flex: 1,
-        position: "relative",
-        display: "flex",
-        flexDirection: "column",
-        background: "linear-gradient(135deg, #E0F2F7 0%, #D4EBF5 100%)",
-        overflow: "hidden",
-      }}
-    >
+    <div className="canvas-and-strip flex-1 relative flex flex-col bg-gradient-to-br from-[#E0F2F7] to-[#D4EBF5] overflow-hidden">
       {/* Ambient drift keyframes (screen-only editor UI; not used in print) */}
       <style>{`
         @keyframes ambientDrift {
@@ -43,15 +33,13 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
         }
       `}</style>
 
-      {/* Cyan ambient light */}
+      {/* Cyan ambient light — decorative, static position, keep inline for filter/animation */}
       <div
         aria-hidden
+        className="absolute rounded-full pointer-events-none"
         style={{
-          position: "absolute",
-          borderRadius: "50%",
           filter: "blur(120px)",
           opacity: 0.4,
-          pointerEvents: "none",
           background: "#00E5FF",
           width: 600,
           height: 600,
@@ -64,12 +52,10 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
       {/* Purple ambient light */}
       <div
         aria-hidden
+        className="absolute rounded-full pointer-events-none"
         style={{
-          position: "absolute",
-          borderRadius: "50%",
           filter: "blur(120px)",
           opacity: 0.4,
-          pointerEvents: "none",
           background: "#B300FF",
           width: 800,
           height: 800,
@@ -81,76 +67,22 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
       />
 
       {/* Zoom controls */}
-      <div
-        className="zoom-controls"
-        style={{
-          position: "absolute",
-          top: 24,
-          right: 24,
-          display: "flex",
-          alignItems: "center",
-          background: "rgba(255,255,255,0.85)",
-          backdropFilter: "blur(16px)",
-          WebkitBackdropFilter: "blur(16px)",
-          border: "1px solid #E2E8F0",
-          borderRadius: 24,
-          padding: 4,
-          zIndex: 100,
-          boxShadow: "0 4px 16px rgba(11,27,61,0.08)",
-        }}
-      >
+      <div className="zoom-controls absolute top-6 right-6 flex items-center bg-white/85 backdrop-blur-[16px] border border-[#E2E8F0] rounded-[24px] p-1 z-[100] shadow-[0_4px_16px_rgba(11,27,61,0.08)]">
         <button
           type="button"
           onClick={() => setScale((s) => Math.max(0.3, s - 0.1))}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            border: "none",
-            background: "transparent",
-            color: "#0B1B3D",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "background 0.15s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(11,27,61,0.06)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          className="w-8 h-8 rounded-full border-none bg-transparent text-[#0B1B3D] cursor-pointer flex items-center justify-center transition-[background] duration-[150ms] hover:bg-[rgba(11,27,61,0.06)]"
           aria-label="Zoom out"
         >
           <ZoomOut size={16} />
         </button>
-        <span
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            color: "#0B1B3D",
-            padding: "0 12px",
-            minWidth: 54,
-            textAlign: "center",
-          }}
-        >
+        <span className="text-[13px] font-bold text-[#0B1B3D] px-3 min-w-[54px] text-center">
           {Math.round(scale * 100)}%
         </span>
         <button
           type="button"
           onClick={() => setScale((s) => Math.min(1.2, s + 0.1))}
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            border: "none",
-            background: "transparent",
-            color: "#0B1B3D",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "background 0.15s ease",
-          }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(11,27,61,0.06)")}
-          onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          className="w-8 h-8 rounded-full border-none bg-transparent text-[#0B1B3D] cursor-pointer flex items-center justify-center transition-[background] duration-[150ms] hover:bg-[rgba(11,27,61,0.06)]"
           aria-label="Zoom in"
         >
           <ZoomIn size={16} />
@@ -158,43 +90,20 @@ export default function PreviewPanel({ plan, subscriptionStatus, subscriptionEnd
       </div>
 
       {/* Canvas scroller */}
-      <div
-        className="canvas-scroller"
-        style={{
-          flex: 1,
-          minHeight: 0,
-          overflow: "auto",
-          display: "flex",
-          flexDirection: "column",
-          position: "relative",
-          zIndex: 1,
-        }}
-      >
+      <div className="canvas-scroller flex-1 min-h-0 overflow-auto flex flex-col relative z-[1]">
         {/* Canvas centerer — bottom padding clears the 230px absolute strip */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "flex-start",
-            justifyContent: "center",
-            minHeight: "100%",
-            minWidth: "100%",
-            padding: "24px 40px 320px",
-          }}
-        >
-          {/* CV sheet wrapper (scaled dimensions so the scroll area matches the visual size) */}
+        <div className="flex items-start justify-center min-h-full min-w-full px-10 pt-6 pb-[320px]">
+          {/* CV sheet wrapper — dimensions driven by scale state: KEEP inline */}
           <div
+            className="shrink-0 relative rounded-[4px] bg-transparent"
             style={{
               width: `calc(210mm * ${scale})`,
               height: `calc(297mm * ${scale})`,
-              flexShrink: 0,
-              position: "relative",
               transition: "width 0.2s ease, height 0.2s ease",
-              boxShadow:
-                "0 30px 80px rgba(11,27,61,0.18), 0 10px 30px rgba(11,27,61,0.10)",
-              borderRadius: 4,
-              background: "transparent",
+              boxShadow: "0 30px 80px rgba(11,27,61,0.18), 0 10px 30px rgba(11,27,61,0.10)",
             }}
           >
+            {/* Scale transform is computed from state — KEEP inline */}
             <div
               style={{
                 transform: `scale(${scale})`,

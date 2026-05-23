@@ -19,33 +19,25 @@ export function StatCard({ children, gold, animDelay }: StatCardProps) {
   const [hovered, setHovered] = useState(false)
   return (
     <div
-      className="dash-card-in"
+      className="dash-card-in relative overflow-hidden rounded-[10px] p-5 border transition-all duration-200"
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       style={{
         background: gold
           ? "linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(0,212,255,0.02) 100%)"
           : hovered ? "#F5F7FB" : "white",
-        border: `1px solid ${
-          gold
-            ? hovered ? "rgba(0,212,255,0.35)" : "rgba(0,212,255,0.15)"
-            : hovered ? "#00D4FF" : "#D9E1ED"
-        }`,
-        borderRadius: "10px",
-        padding: "20px",
-        position: "relative",
-        overflow: "hidden",
-        transition: "all 0.2s ease",
+        borderColor: gold
+          ? hovered ? "rgba(0,212,255,0.35)" : "rgba(0,212,255,0.15)"
+          : hovered ? "#00D4FF" : "#D9E1ED",
         animationDelay: animDelay,
       }}
     >
+      {/* top shimmer line — dynamic opacity, keep inline */}
       <div
+        className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none transition-opacity duration-200"
         style={{
-          position: "absolute", top: 0, left: 0, right: 0, height: "2px",
           background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
           opacity: hovered ? 1 : 0,
-          transition: "opacity 0.2s",
-          pointerEvents: "none",
         }}
       />
       {children}
@@ -76,28 +68,24 @@ export function ActivityItem({ type, name, time }: ActivityItemProps) {
     <div
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="flex items-center gap-3 px-[14px] py-[10px] rounded-md border transition-[background,border-color] duration-150"
       style={{
-        display: "flex", alignItems: "center", gap: "12px",
-        padding: "10px 14px", borderRadius: "6px",
-        border: `1px solid ${hovered ? "#E8EDF6" : "transparent"}`,
+        borderColor: hovered ? "#E8EDF6" : "transparent",
         background: hovered ? "#EEF2F9" : "transparent",
-        transition: "background 0.15s ease, border-color 0.15s ease",
       }}
     >
-      <span style={{
-        width: "6px", height: "6px", borderRadius: "50%", flexShrink: 0,
-        marginTop: "1px", background: dot.bg, boxShadow: dot.shadow, display: "inline-block",
-      }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: "12.5px", color: "#1a2e4a" }}>
+      {/* dot color/shadow are fully dynamic — keep inline */}
+      <span
+        className="inline-block w-[6px] h-[6px] rounded-full flex-shrink-0 mt-px"
+        style={{ background: dot.bg, boxShadow: dot.shadow }}
+      />
+      <div className="flex-1">
+        <div className="text-[12.5px] text-[#1a2e4a]">
           {type === "edit" ? t("activity_edited") : t("activity_created")}{" "}
-          <strong style={{ color: "#1a2e4a", fontWeight: 500 }}>{name}</strong>
+          <strong className="text-[#1a2e4a] font-medium">{name}</strong>
         </div>
       </div>
-      <span style={{
-        fontSize: "11px", color: "#A0AABE", flexShrink: 0,
-        fontFamily: "var(--dash-mono)",
-      }}>
+      <span className="text-[11px] text-[#A0AABE] flex-shrink-0 font-[var(--dash-mono)]">
         {time}
       </span>
     </div>
@@ -115,14 +103,13 @@ export function GhostButton({ label, onClick, disabled }: { label: string; onCli
       disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="inline-flex items-center gap-[6px] px-4 py-2 rounded-md text-xs font-medium whitespace-nowrap flex-shrink-0 transition-all duration-[180ms] border"
       style={{
-        display: "inline-flex", alignItems: "center", gap: "6px",
-        padding: "8px 16px", borderRadius: "6px", fontSize: "12px", fontWeight: 500,
-        cursor: disabled ? "not-allowed" : "pointer", transition: "all 0.18s ease",
-        border: `1px solid ${hovered && !disabled ? "#00D4FF" : "#D9E1ED"}`,
+        cursor: disabled ? "not-allowed" : "pointer",
+        borderColor: hovered && !disabled ? "#00D4FF" : "#D9E1ED",
         background: hovered && !disabled ? "#EEF2F9" : "transparent",
         color: hovered && !disabled ? "#1a2e4a" : "#6B7A8C",
-        whiteSpace: "nowrap", flexShrink: 0, opacity: disabled ? 0.65 : 1,
+        opacity: disabled ? 0.65 : 1,
       }}
     >
       {label}
@@ -135,38 +122,48 @@ export function GhostButton({ label, onClick, disabled }: { label: string; onCli
 export function ProBanner({ onManagePlan, portalLoading }: { onManagePlan: () => void; portalLoading: boolean }) {
   const t = useTranslations("dashboard.resumes")
   return (
-    <div style={{
-      display: "flex", alignItems: "center", gap: "16px",
-      background: "linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(0,212,255,0.02) 100%)",
-      border: "1px solid rgba(0,212,255,0.15)", borderRadius: "10px",
-      padding: "16px 20px", marginTop: "32px", position: "relative", overflow: "hidden",
-    }}>
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: "1px",
-        background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.4, pointerEvents: "none" }} />
-      <div style={{
-        width: "40px", height: "40px", borderRadius: "10px",
-        background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)",
-        display: "flex", alignItems: "center", justifyContent: "center", color: "#00D4FF", flexShrink: 0,
-      }}>
+    <div
+      className="flex items-center gap-4 rounded-[10px] px-5 py-4 mt-8 relative overflow-hidden border"
+      style={{
+        background: "linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(0,212,255,0.02) 100%)",
+        borderColor: "rgba(0,212,255,0.15)",
+      }}
+    >
+      {/* top shimmer line — static opacity, keep inline for gradient */}
+      <div
+        className="absolute top-0 left-0 right-0 h-px pointer-events-none opacity-40"
+        style={{ background: "linear-gradient(90deg, transparent, #00D4FF, transparent)" }}
+      />
+      <div
+        className="w-10 h-10 rounded-[10px] flex items-center justify-center text-[#00D4FF] flex-shrink-0 border"
+        style={{
+          background: "rgba(0,212,255,0.08)",
+          borderColor: "rgba(0,212,255,0.2)",
+        }}
+      >
         <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
           <path d="M10 2l2 5.5H18l-4.5 3.5 1.7 5.5L10 13.5 4.8 16.5l1.7-5.5L2 7.5h6L10 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
         </svg>
       </div>
-      <div style={{ flex: 1 }}>
-        <div style={{
-          fontFamily: "var(--dash-serif)", fontSize: "14px", fontWeight: 600,
-          color: "#1a2e4a", letterSpacing: "-0.01em", marginBottom: "2px",
-        }}>
+      <div className="flex-1">
+        <div
+          className="text-sm font-semibold text-[#1a2e4a] tracking-[-0.01em] mb-[2px]"
+          style={{ fontFamily: "var(--dash-serif)" }}
+        >
           {t("pro_banner_title")}
         </div>
-        <div style={{ fontSize: "12px", color: "#6B7A8C" }}>{t("pro_banner_desc")}</div>
+        <div className="text-xs text-[#6B7A8C]">{t("pro_banner_desc")}</div>
       </div>
       <GhostButton label={portalLoading ? t("opening_portal") : t("pro_banner_manage")} onClick={onManagePlan} disabled={portalLoading} />
-      <span style={{
-        position: "absolute", right: "20px", top: "50%", transform: "translateY(-50%)",
-        fontFamily: "var(--dash-serif)", fontSize: "60px",
-        color: "#00D4FF", opacity: 0.04, pointerEvents: "none", userSelect: "none",
-      }}>✦</span>
+      {/* decorative glyph — position/font-size/opacity are static design values, keep inline */}
+      <span
+        className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none select-none text-[#00D4FF]"
+        style={{
+          fontFamily: "var(--dash-serif)",
+          fontSize: "60px",
+          opacity: 0.04,
+        }}
+      >✦</span>
     </div>
   )
 }
@@ -231,36 +228,52 @@ interface StatsRowProps {
 export function StatsRow({ resumes, isPro }: StatsRowProps) {
   const t = useTranslations("dashboard.resumes")
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "28px" }}>
+    <div className="grid grid-cols-2 gap-3 mb-7">
       <StatCard animDelay="0ms" gold={false}>
-        <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#6B7A8C", marginBottom: "8px" }}>
+        <div className="text-[11px] font-bold tracking-wider uppercase text-[#6B7A8C] mb-2">
           {t("stat_cvs_created")}
         </div>
-        <div style={{ fontFamily: "var(--dash-mono)", fontSize: "24px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.02em", lineHeight: 1 }}>
+        <div
+          className="text-2xl font-bold text-[#1a2e4a] tracking-[-0.02em] leading-none"
+          style={{ fontFamily: "var(--dash-mono)" }}
+        >
           {resumes.length}
-          <span style={{ fontFamily: "inherit", fontSize: "12px", fontWeight: 400, color: "#6B7A8C", marginLeft: "4px", letterSpacing: 0 }}>
+          <span
+            className="text-xs font-normal text-[#6B7A8C] ml-1 tracking-normal"
+            style={{ fontFamily: "inherit" }}
+          >
             {t("stat_docs_unit")}
           </span>
         </div>
-        <div style={{ marginTop: "8px", fontSize: "11px", color: "#6B7A8C", display: "flex", alignItems: "center", gap: "4px" }}>
+        <div className="mt-2 text-[11px] text-[#6B7A8C] flex items-center gap-1">
           {resumes.some((r) => Date.now() - new Date(r.updatedAt).getTime() < 7 * 24 * 60 * 60 * 1000)
             ? t("stat_updated_this_week")
             : t("stat_no_changes")}
         </div>
-        <span style={{ position: "absolute", bottom: "10px", right: "12px", fontFamily: "var(--dash-serif)", fontSize: "28px", color: "#00D4FF", opacity: 0.05, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>§</span>
+        {/* decorative glyph — font-size is a large design value, keep inline */}
+        <span
+          className="absolute bottom-[10px] right-3 pointer-events-none select-none text-[#00D4FF] leading-none"
+          style={{ fontFamily: "var(--dash-serif)", fontSize: "28px", opacity: 0.05 }}
+        >§</span>
       </StatCard>
 
       <StatCard animDelay="80ms" gold={true}>
-        <div style={{ fontSize: "11px", fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "#00D4FF", marginBottom: "8px" }}>
+        <div className="text-[11px] font-bold tracking-wider uppercase text-[#00D4FF] mb-2">
           {t("stat_active_plan")}
         </div>
-        <div style={{ fontFamily: "var(--dash-mono)", fontSize: "20px", fontWeight: 700, color: "#00D4FF", letterSpacing: "-0.02em", lineHeight: 1 }}>
+        <div
+          className="text-xl font-bold text-[#00D4FF] tracking-[-0.02em] leading-none"
+          style={{ fontFamily: "var(--dash-mono)" }}
+        >
           {isPro ? "PRO" : "FREE"}
         </div>
-        <div style={{ marginTop: "8px", fontSize: "11px", color: "#6B7A8C", display: "flex", alignItems: "center", gap: "4px" }}>
+        <div className="mt-2 text-[11px] text-[#6B7A8C] flex items-center gap-1">
           {isPro ? t("stat_plan_pro_desc") : t("stat_upgrade_plan")}
         </div>
-        <span style={{ position: "absolute", bottom: "10px", right: "12px", fontFamily: "var(--dash-serif)", fontSize: "28px", color: "#00D4FF", opacity: 0.05, lineHeight: 1, pointerEvents: "none", userSelect: "none" }}>✦</span>
+        <span
+          className="absolute bottom-[10px] right-3 pointer-events-none select-none text-[#00D4FF] leading-none"
+          style={{ fontFamily: "var(--dash-serif)", fontSize: "28px", opacity: 0.05 }}
+        >✦</span>
       </StatCard>
     </div>
   )
@@ -271,11 +284,17 @@ export function StatsRow({ resumes, isPro }: StatsRowProps) {
 export function ResumesToolbar({ count }: { count: number }) {
   const t = useTranslations("dashboard.resumes")
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "18px" }}>
-      <span style={{ fontFamily: "var(--dash-serif)", fontSize: "16px", fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.025em", flex: 1 }}>
+    <div className="flex items-center gap-[10px] mb-[18px]">
+      <span
+        className="text-base font-semibold text-[#1a2e4a] tracking-[-0.025em] flex-1"
+        style={{ fontFamily: "var(--dash-serif)" }}
+      >
         {t("recent_documents")}
       </span>
-      <span style={{ fontFamily: "var(--dash-mono)", fontSize: "11px", color: "#6B7A8C", background: "#EEF2F9", border: "1px solid #E8EDF6", borderRadius: "8px", padding: "2px 8px" }}>
+      <span
+        className="text-[11px] text-[#6B7A8C] bg-[#EEF2F9] border border-[#E8EDF6] rounded-lg px-2 py-[2px]"
+        style={{ fontFamily: "var(--dash-mono)" }}
+      >
         {count} {t("of")} {count}
       </span>
     </div>
@@ -297,12 +316,15 @@ import type { Locale } from "date-fns"
 export function ActivityFeed({ resumes, hasRecentEdit, userTimezone, dateLocale, formatFn }: ActivityFeedProps) {
   const t = useTranslations("dashboard.resumes")
   return (
-    <div style={{ marginTop: "40px" }}>
-      <div style={{ fontFamily: "var(--dash-serif)", fontSize: "15px", fontWeight: 600, color: "#1a2e4a", letterSpacing: "-0.02em", marginBottom: "14px", display: "flex", alignItems: "center", gap: "10px" }}>
+    <div className="mt-10">
+      <div
+        className="text-[15px] font-semibold text-[#1a2e4a] tracking-[-0.02em] mb-[14px] flex items-center gap-[10px]"
+        style={{ fontFamily: "var(--dash-serif)" }}
+      >
         {t("activity_title")}
-        <div style={{ flex: 1, height: "1px", background: "#E8EDF6" }} />
+        <div className="flex-1 h-px bg-[#E8EDF6]" />
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: "1px" }}>
+      <div className="flex flex-col gap-px">
         {resumes.slice(0, 3).map((r, i) => {
           const isEdit = i === 0 && hasRecentEdit
           const type = isEdit ? "edit" : "create"
@@ -311,7 +333,7 @@ export function ActivityFeed({ resumes, hasRecentEdit, userTimezone, dateLocale,
           return <ActivityItem key={r.id} type={type} name={name} time={time} />
         })}
         {resumes.length === 0 && (
-          <p style={{ fontSize: "12.5px", padding: "8px 14px", color: "#6B7A8C" }}>{t("activity_empty")}</p>
+          <p className="text-[12.5px] px-[14px] py-2 text-[#6B7A8C]">{t("activity_empty")}</p>
         )}
       </div>
     </div>

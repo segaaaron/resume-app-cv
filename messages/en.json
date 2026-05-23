@@ -1011,6 +1011,10 @@
     "pro_designs_label": "Pro",
     "pro_designs_label2": "Designs",
     "saving": "Saving...",
+    "section_item_one": "{count} item",
+    "section_item_other": "{count} items",
+    "section_collapse": "Collapse section",
+    "section_expand": "Expand section",
     "unsaved": "Unsaved",
     "saved": "Saved",
     "save": "Save",
@@ -1333,7 +1337,17 @@
         "job_title": "Job title",
         "linkedin": "LinkedIn",
         "github": "GitHub",
-        "years_of_experience": "Years of experience for the position"
+        "years_of_experience": "Years of experience for the position",
+        "group_identity": "Identity",
+        "group_contact": "Contact",
+        "group_location": "Location",
+        "group_online": "Online",
+        "group_experience": "Experience"
+      },
+      "date": {
+        "clear": "Clear",
+        "this_month": "This month",
+        "select": "Select"
       },
       "work": {
         "job_title": "Job title",
@@ -1393,7 +1407,8 @@
         "name": "Name",
         "company": "Company",
         "phone": "Phone",
-        "email": "Email"
+        "email": "Email",
+        "delete": "Delete reference"
       },
       "suggest_skills_rate_limit": "You've reached the hourly suggestions limit. Please try again later.",
       "toast_pro_only": "This feature requires a Pro plan"

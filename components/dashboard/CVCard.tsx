@@ -71,17 +71,12 @@ const CVCard = React.memo(function CVCard({
 
   return (
     <div
-      className="dash-card-in"
+      className="dash-card-in block relative overflow-visible cursor-pointer rounded-[10px]"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
         background: isHovered ? "#F5F7FB" : "white",
         border: `1px solid ${isHovered ? "#00D4FF" : "#D9E1ED"}`,
-        borderRadius: "10px",
-        overflow: "visible",
-        cursor: "pointer",
-        display: "block",
-        position: "relative",
         zIndex: ddOpen ? 10 : "auto",
         transition: "border-color 0.22s ease, background 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.22s ease",
         transform: isHovered ? "translateY(-2px)" : "translateY(0)",
@@ -91,9 +86,8 @@ const CVCard = React.memo(function CVCard({
     >
       {/* Bottom glow line — simulates ::after */}
       <div
+        className="absolute bottom-0 pointer-events-none"
         style={{
-          position: "absolute",
-          bottom: 0,
           left: "20%",
           right: "20%",
           height: "1px",
@@ -101,7 +95,6 @@ const CVCard = React.memo(function CVCard({
           filter: "blur(2px)",
           opacity: isHovered ? 0.4 : 0,
           transition: "opacity 0.25s ease",
-          pointerEvents: "none",
           zIndex: 0,
         }}
       />
@@ -109,38 +102,29 @@ const CVCard = React.memo(function CVCard({
       {/* Thumbnail wrap */}
       <div
         onClick={onEdit}
+        className="relative flex items-end justify-center overflow-hidden rounded-t-[10px]"
         style={{
-          position: "relative",
           background: "linear-gradient(135deg, #F5F7FB 0%, #EEF2F9 100%)",
-          display: "flex",
-          alignItems: "flex-end",
-          justifyContent: "center",
           padding: "18px 28px 0",
           minHeight: "140px",
-          overflow: "hidden",
-          borderRadius: "10px 10px 0 0",
         }}
       >
         {/* Radial glow overlay — simulates ::before */}
         <div
+          className="absolute inset-0 pointer-events-none"
           style={{
-            position: "absolute",
-            inset: 0,
             background: "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.03) 0%, transparent 65%)",
-            pointerEvents: "none",
           }}
         />
 
         {/* Paper thumbnail */}
         <div
+          className="w-full overflow-hidden relative"
           style={{
-            width: "100%",
             maxWidth: "118px",
             aspectRatio: "210 / 297",
             borderRadius: "2px 2px 0 0",
-            overflow: "hidden",
             boxShadow: "0 -2px 20px rgba(0,0,0,0.08), 0 0 0 1px #D9E1ED",
-            position: "relative",
             zIndex: 1,
             transition: "transform 0.22s cubic-bezier(0.34,1.2,0.64,1)",
             transform: isHovered ? "translateY(-6px) scale(1.03)" : "translateY(0) scale(1)",
@@ -151,7 +135,8 @@ const CVCard = React.memo(function CVCard({
             <img
               src={resume.thumbnailUrl}
               alt={resume.title}
-              style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "top", display: "block" }}
+              className="w-full h-full block"
+              style={{ objectFit: "cover", objectPosition: "top" }}
             />
           ) : (
             <ResumeThumbnail id={resume.templateId} color={resume.colorScheme} />
@@ -160,24 +145,21 @@ const CVCard = React.memo(function CVCard({
 
         {/* Hover overlay */}
         <div
+          className="absolute inset-0 flex items-center justify-center"
           style={{
-            position: "absolute",
-            inset: 0,
             background: "rgba(26,46,74,0.4)",
             backdropFilter: "blur(2px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
             gap: "8px",
             opacity: isHovered ? 1 : 0,
             transition: "opacity 0.2s ease",
             zIndex: 5,
           }}
         >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "5px" }}>
+          <div className="flex flex-col items-center" style={{ gap: "5px" }}>
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); onEdit() }}
+              className="flex items-center justify-center cursor-pointer"
               style={{
                 width: "36px",
                 height: "36px",
@@ -185,10 +167,6 @@ const CVCard = React.memo(function CVCard({
                 background: "rgba(0,212,255,0.2)",
                 border: "1px solid rgba(0,212,255,0.4)",
                 color: "#00D4FF",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
@@ -203,11 +181,9 @@ const CVCard = React.memo(function CVCard({
               <Pen style={{ width: "14px", height: "14px" }} />
             </button>
             <span
+              className="text-[10px] font-semibold text-[#00D4FF]"
               style={{
-                fontSize: "10px",
-                fontWeight: 600,
                 letterSpacing: "0.04em",
-                color: "#00D4FF",
                 opacity: isHovered ? 1 : 0,
                 transition: "opacity 0.2s ease 0.05s",
               }}
@@ -219,64 +195,36 @@ const CVCard = React.memo(function CVCard({
       </div>
 
       {/* Meta */}
-      <div style={{ padding: "16px" }}>
+      <div className="p-4">
         <div
-          style={{
-            fontSize: "13px",
-            fontWeight: 600,
-            color: "#1a2e4a",
-            letterSpacing: "-0.01em",
-            marginBottom: "3px",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
+          className="text-sm font-semibold text-[#1a2e4a] whitespace-nowrap overflow-hidden text-ellipsis mb-[3px]"
+          style={{ letterSpacing: "-0.01em" }}
         >
           {resume.title || t("default_template")}
         </div>
         <div
-          style={{
-            fontSize: "11.5px",
-            color: "#6B7A8C",
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-          }}
+          className="flex items-center text-[#6B7A8C]"
+          style={{ fontSize: "11.5px", gap: "5px" }}
         >
           <span>{templateName}</span>
           <span
-            style={{
-              width: "2.5px",
-              height: "2.5px",
-              borderRadius: "50%",
-              background: "#A0AABE",
-              flexShrink: 0,
-              display: "inline-block",
-            }}
+            className="inline-block flex-shrink-0 rounded-full bg-[#A0AABE]"
+            style={{ width: "2.5px", height: "2.5px" }}
           />
           <span>{formatInTimezone(resume.updatedAt, userTimezone, dateLocale)}</span>
         </div>
 
         {/* Actions */}
         <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "5px",
-            marginTop: "11px",
-            paddingTop: "10px",
-            borderTop: "1px solid #E8EDF6",
-            overflow: "visible",
-            position: "relative",
-          }}
+          className="flex items-center relative overflow-visible mt-[11px] pt-[10px] border-t border-[#E8EDF6]"
+          style={{ gap: "5px" }}
         >
           {/* Primary: Renombrar */}
           <button
             type="button"
             onClick={onRename}
+            className="inline-flex items-center font-semibold cursor-pointer min-h-[36px]"
             style={{
-              display: "inline-flex",
-              alignItems: "center",
               gap: "5px",
               padding: "5px 11px",
               borderRadius: "6px",
@@ -287,7 +235,6 @@ const CVCard = React.memo(function CVCard({
               fontWeight: 600,
               fontFamily: "inherit",
               letterSpacing: "-0.01em",
-              cursor: "pointer",
               transition: "all 0.15s ease",
             }}
             onMouseEnter={(e) => {
@@ -310,11 +257,12 @@ const CVCard = React.memo(function CVCard({
           {/* More menu — pushed to right */}
           <div
             ref={ddRef}
-            style={{ marginLeft: "auto", position: "relative" }}
+            className="relative ml-auto"
           >
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setDdOpen((o) => !o) }}
+              className="flex items-center justify-center cursor-pointer min-h-[36px]"
               style={{
                 width: "26px",
                 height: "26px",
@@ -322,10 +270,6 @@ const CVCard = React.memo(function CVCard({
                 border: "1px solid #D9E1ED",
                 background: "transparent",
                 color: "#6B7A8C",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
                 transition: "all 0.15s ease",
               }}
               onMouseEnter={(e) => {
@@ -348,14 +292,10 @@ const CVCard = React.memo(function CVCard({
 
             {/* Dropdown menu */}
             <div
+              className="absolute right-0 bg-white rounded-[10px] p-2"
               style={{
-                position: "absolute",
                 top: "calc(100% + 6px)",
-                right: 0,
-                background: "white",
                 border: "1px solid #D9E1ED",
-                borderRadius: "10px",
-                padding: "8px",
                 minWidth: "170px",
                 zIndex: 1000,
                 boxShadow: "0 8px 32px rgba(26,46,74,0.12), 0 0 0 1px rgba(0,212,255,0.15)",
@@ -372,10 +312,10 @@ const CVCard = React.memo(function CVCard({
                 label={t("duplicate")}
               />
               <div
+                className="my-[6px]"
                 style={{
                   height: "1px",
                   background: "linear-gradient(90deg, transparent, #E8EDF6, transparent)",
-                  margin: "6px 0",
                 }}
               />
               {isDownloading ? (
@@ -398,10 +338,10 @@ const CVCard = React.memo(function CVCard({
                 />
               )}
               <div
+                className="my-[6px]"
                 style={{
                   height: "1px",
                   background: "linear-gradient(90deg, transparent, #E8EDF6, transparent)",
-                  margin: "6px 0",
                 }}
               />
               <DDItem
@@ -419,4 +359,3 @@ const CVCard = React.memo(function CVCard({
 })
 
 export default CVCard
-

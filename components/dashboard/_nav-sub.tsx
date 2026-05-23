@@ -22,18 +22,12 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
   if (locked) {
     return (
       <span
-        style={{
-          display: "flex", alignItems: "center", gap: "10px",
-          padding: "9px 11px", borderRadius: "6px",
-          color: "var(--dash-muted)", border: "1px solid transparent",
-          fontSize: "13.5px", fontWeight: 500,
-          cursor: "not-allowed", opacity: 0.4, userSelect: "none",
-          textDecoration: "none", position: "relative",
-        }}
+        className="flex items-center gap-[10px] px-[11px] py-[9px] rounded-md border border-transparent text-[13.5px] font-medium cursor-not-allowed opacity-40 select-none relative no-underline"
+        style={{ color: "var(--dash-muted)" }}
         title={label}
       >
-        <Icon style={{ width: 16, height: 16, flexShrink: 0, opacity: 0.6 }} />
-        <span style={{ flex: 1 }}>{label}</span>
+        <Icon className="w-4 h-4 flex-shrink-0 opacity-60" />
+        <span className="flex-1">{label}</span>
         {isNew && <NewBadge t={t} />}
       </span>
     )
@@ -44,15 +38,12 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
       href={href}
       title={label}
       onClick={onClick}
+      className="flex items-center gap-[10px] px-[11px] py-[9px] rounded-md no-underline text-[13.5px] relative cursor-pointer transition-all duration-150 border"
       style={{
-        display: "flex", alignItems: "center", gap: "10px",
-        padding: "9px 11px", borderRadius: "6px",
-        textDecoration: "none", fontSize: "13.5px",
         fontWeight: active ? 600 : 500,
         color: active ? "var(--dash-cyan)" : "var(--dash-muted)",
         backgroundColor: active ? "var(--dash-cyan-dim)" : "transparent",
-        border: active ? "1px solid var(--dash-cyan-border)" : "1px solid transparent",
-        transition: "all 0.15s ease", position: "relative", cursor: "pointer",
+        borderColor: active ? "var(--dash-cyan-border)" : "transparent",
       }}
       onMouseEnter={(e) => {
         if (!active) {
@@ -72,24 +63,25 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
       }}
     >
       {active && (
-        <span style={{
-          position: "absolute", left: "-1px", top: "50%", transform: "translateY(-50%)",
-          width: "3px", height: "18px", background: "var(--dash-cyan)", borderRadius: "0 2px 2px 0",
-        }} />
+        <span
+          className="absolute left-[-1px] top-1/2 -translate-y-1/2 w-[3px] h-[18px] rounded-[0_2px_2px_0]"
+          style={{ background: "var(--dash-cyan)" }}
+        />
       )}
-      <Icon style={{ width: 16, height: 16, flexShrink: 0, opacity: active ? 1 : 0.6, transition: "opacity 0.15s ease" }} />
-      <span style={{ flex: 1 }}>{label}</span>
+      <Icon
+        className="w-4 h-4 flex-shrink-0 transition-opacity duration-150"
+        style={{ opacity: active ? 1 : 0.6 }}
+      />
+      <span className="flex-1">{label}</span>
       {count !== null && (
-        <span style={{
-          marginLeft: "auto",
-          fontFamily: "var(--dash-mono)",
-          fontSize: "11px", fontWeight: 700, color: "white",
-          background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-          border: "none", borderRadius: "8px", padding: "3px 8px",
-          boxShadow: "0 2px 8px rgba(0,212,255,0.3)",
-          display: "inline-flex", alignItems: "center", justifyContent: "center",
-          minWidth: "22px", height: "20px",
-        }}>
+        <span
+          className="ml-auto text-[11px] font-bold text-white rounded-lg px-2 py-[3px] inline-flex items-center justify-center min-w-[22px] h-5 border-none"
+          style={{
+            fontFamily: "var(--dash-mono)",
+            background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+            boxShadow: "0 2px 8px rgba(0,212,255,0.3)",
+          }}
+        >
           {count}
         </span>
       )}
@@ -100,14 +92,13 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
 
 function NewBadge({ t }: { t: ReturnType<typeof useTranslations> }) {
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center", gap: "3px",
-      marginLeft: "auto",
-      background: "rgba(16,185,129,0.1)", border: "1px solid rgba(16,185,129,0.2)",
-      borderRadius: "8px", padding: "2px 6px",
-      fontSize: "8px", fontWeight: 700, letterSpacing: "0.06em",
-      textTransform: "uppercase", color: "#10B981",
-    }}>
+    <span
+      className="inline-flex items-center gap-[3px] ml-auto rounded-lg px-[6px] py-[2px] text-[8px] font-bold tracking-[0.06em] uppercase text-[#10B981] border"
+      style={{
+        background: "rgba(16,185,129,0.1)",
+        borderColor: "rgba(16,185,129,0.2)",
+      }}
+    >
       {t("new_badge")}
     </span>
   )
@@ -117,11 +108,10 @@ function NewBadge({ t }: { t: ReturnType<typeof useTranslations> }) {
 
 export function SectionLabel({ label }: { label: string }) {
   return (
-    <p style={{
-      fontSize: "9px", fontWeight: 700, letterSpacing: "0.1em",
-      textTransform: "uppercase", color: "var(--dash-subtle)",
-      padding: "10px 10px 6px",
-    }}>
+    <p
+      className="text-[9px] font-bold tracking-[0.1em] uppercase px-[10px] pt-[10px] pb-[6px]"
+      style={{ color: "var(--dash-subtle)" }}
+    >
       {label}
     </p>
   )
@@ -131,6 +121,9 @@ export function SectionLabel({ label }: { label: string }) {
 
 export function NavSeparator() {
   return (
-    <div style={{ height: "1px", background: "var(--dash-border-s)", margin: "8px 10px" }} />
+    <div
+      className="h-px my-2 mx-[10px]"
+      style={{ background: "var(--dash-border-s)" }}
+    />
   )
 }

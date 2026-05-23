@@ -3,8 +3,6 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
 import {
   MessageSquare, Loader2, CheckCircle2, TrendingUp,
   Lightbulb, Check, Wand2, Sparkles, RotateCcw,
@@ -44,11 +42,11 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
   }
 }
 
-const CARD_COLORS = [
-  { bg: 'linear-gradient(135deg, rgba(139,92,246,0.1), rgba(139,92,246,0.05))', border: 'rgba(139,92,246,0.3)', left: '#8B5CF6', title: '#7C3AED', action: '#8B5CF6' },
-  { bg: 'linear-gradient(135deg, rgba(0,212,255,0.1), rgba(0,212,255,0.05))', border: 'rgba(0,212,255,0.3)', left: '#00D4FF', title: '#00B4D8', action: '#00D4FF' },
-  { bg: 'linear-gradient(135deg, rgba(16,185,129,0.1), rgba(16,185,129,0.05))', border: 'rgba(16,185,129,0.3)', left: '#10B981', title: '#059669', action: '#10B981' },
-  { bg: 'linear-gradient(135deg, rgba(245,158,11,0.1), rgba(245,158,11,0.05))', border: 'rgba(245,158,11,0.3)', left: '#F59E0B', title: '#D97706', action: '#F59E0B' },
+const REVIEW_COLORS = [
+  { ring: 'ring-violet-200', bg: 'from-violet-50/80 to-purple-50/60', border: 'border-violet-100', accent: 'text-violet-600', bar: '#8B5CF6' },
+  { ring: 'ring-cyan-200', bg: 'from-cyan-50/80 to-blue-50/60', border: 'border-cyan-100', accent: 'text-cyan-600', bar: '#00D4FF' },
+  { ring: 'ring-emerald-200', bg: 'from-emerald-50/80 to-teal-50/60', border: 'border-emerald-100', accent: 'text-emerald-600', bar: '#10B981' },
+  { ring: 'ring-amber-200', bg: 'from-amber-50/80 to-orange-50/60', border: 'border-amber-100', accent: 'text-amber-600', bar: '#F59E0B' },
 ] as const
 
 function ReviewItemRow({
@@ -68,51 +66,39 @@ function ReviewItemRow({
   tAts: ReturnType<typeof useTranslations>
   onApply: (item: ReviewItem, key: string) => void
 }) {
-  const colors = CARD_COLORS[index % CARD_COLORS.length]
+  const colors = REVIEW_COLORS[index % REVIEW_COLORS.length]
   const isStrength = itemKey.startsWith("strength")
-  const [hover, setHover] = useState(false)
   const canApply = Boolean(item.suggestion) && !applied
-
-  function handleCardClick() {
-    if (canApply) onApply(item, itemKey)
-  }
 
   return (
     <div
-      onClick={handleCardClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        padding: '12px 12px 10px',
-        background: colors.bg,
-        border: `1px solid ${colors.border}`,
-        borderLeft: `4px solid ${colors.left}`,
-        borderRadius: 10,
-        cursor: canApply ? 'pointer' : 'default',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        marginBottom: 8,
-        transform: hover && canApply ? 'translateY(-2px)' : 'none',
-        boxShadow: hover && canApply ? '0 8px 20px rgba(0,0,0,0.08)' : 'none',
-      }}
+      onClick={() => canApply && onApply(item, itemKey)}
+      className={`relative rounded-2xl border bg-gradient-to-br ${colors.bg} ${colors.border} p-3.5 transition-all duration-200 ${
+        canApply ? "cursor-pointer hover:shadow-md hover:-translate-y-0.5" : ""
+      } ${applied ? "opacity-80" : ""}`}
     >
-      <div style={{ fontSize: 12, fontWeight: 700, color: colors.title, marginBottom: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full" style={{ background: colors.bar }} />
+
+      <div className={`flex items-center gap-1.5 mb-1.5 ${colors.accent}`}>
         {isStrength
-          ? <CheckCircle2 className="h-3.5 w-3.5" />
-          : <Lightbulb className="h-3.5 w-3.5" />}
-        <span>{isStrength ? t("strengths_label") : t("improvements_label")}</span>
+          ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+          : <Lightbulb className="h-3.5 w-3.5 shrink-0" />}
+        <span className="text-[10px] font-black tracking-widest uppercase">
+          {isStrength ? t("strengths_label") : t("improvements_label")}
+        </span>
       </div>
-      <div style={{ fontSize: 11, lineHeight: 1.5, color: '#0F172A', marginBottom: 4 }}>
-        {item.text}
-      </div>
+
+      <p className="text-xs text-slate-700 leading-relaxed mb-2">{item.text}</p>
+
       {canApply && (
-        <div style={{ fontSize: 10, color: colors.action, fontWeight: 600, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full ${colors.accent} bg-white/70 ring-1 ${colors.ring}`}>
           <Wand2 className="h-2.5 w-2.5" /> {t("apply_button")}
-        </div>
+        </span>
       )}
       {applied && (
-        <div style={{ fontSize: 10, color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-emerald-700 bg-emerald-50 ring-1 ring-emerald-200">
           <Check className="h-2.5 w-2.5" /> {tAts("toast_change_applied")}
-        </div>
+        </span>
       )}
     </div>
   )
@@ -192,72 +178,95 @@ export default function CVReviewPanel() {
 
   return (
     <>
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-4 pb-4">
 
         {/* Hero header */}
-        <div style={{ marginBottom: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 2 }}>
-            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #8B5CF6, #00D4FF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Sparkles size={16} color="white" strokeWidth={2.5} />
+        <div className="flex items-start gap-3">
+          <div className="relative shrink-0">
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-400 to-cyan-400 blur-lg opacity-40 animate-pulse" />
+            <div className="relative flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-violet-500 to-cyan-500 shadow-lg">
+              <Sparkles className="h-5 w-5 text-white" strokeWidth={2.5} />
             </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: '#0B1B3D' }}>{t("title")}</span>
-            <span style={{ marginLeft: 'auto', fontSize: 10, background: 'rgba(139,92,246,0.1)', color: '#7C3AED', padding: '2px 8px', borderRadius: 999, fontWeight: 600 }}>{t("pro_badge")}</span>
           </div>
-          <div style={{ fontSize: 11, color: '#475569' }}>{t("description")}</div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm font-black text-slate-800">{t("title")}</span>
+              <span className="text-[9px] font-black tracking-widest uppercase bg-gradient-to-r from-violet-500 to-cyan-500 text-white px-2.5 py-1 rounded-full">{t("pro_badge")}</span>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">{t("description")}</p>
+          </div>
         </div>
 
-        {/* Input area */}
-        <div className="space-y-3">
-          <Textarea
-            value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            placeholder={t("placeholder")}
-            className="text-sm min-h-[88px] resize-none focus-visible:ring-emerald-500"
-            maxLength={300}
-          />
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              size="sm"
-              className="gap-2 bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none"
-              onClick={handleReview}
-              disabled={loading}
+        {/* Textarea */}
+        <textarea
+          value={question}
+          onChange={(e) => setQuestion(e.target.value)}
+          placeholder={t("placeholder")}
+          maxLength={300}
+          className="w-full min-h-[88px] resize-none rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-violet-300 focus:border-transparent shadow-sm transition-all"
+        />
+
+        {/* Buttons row */}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleReview}
+            disabled={loading}
+            className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-violet-500 to-cyan-500 text-white text-xs font-bold shadow-lg shadow-violet-200 hover:shadow-violet-300 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
+          >
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            {loading ? t("analyzing") : t("analyze")}
+          </button>
+          {result && (
+            <button
+              type="button"
+              onClick={() => { reset(); setAppliedItems(new Set()) }}
+              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors shrink-0 px-3 py-2.5 rounded-2xl hover:bg-slate-100"
             >
-              {loading
-                ? <Loader2 className="h-4 w-4 animate-spin" />
-                : <Sparkles className="h-4 w-4" />}
-              {loading ? t("analyzing") : t("analyze")}
-            </Button>
-            {result && (
-              <button
-                type="button"
-                onClick={() => { reset(); setAppliedItems(new Set()) }}
-                className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                <RotateCcw className="h-3.5 w-3.5" /> {t("clear")}
-              </button>
-            )}
-          </div>
+              <RotateCcw className="h-3.5 w-3.5" /> {t("clear")}
+            </button>
+          )}
         </div>
 
         {/* Empty state */}
         {!result && !loading && (
-          <div className="rounded-xl border border-dashed border-border p-6 text-center space-y-2">
-            <div className="flex justify-center">
-              <div className="bg-muted rounded-full p-3">
-                <MessageSquare className="h-5 w-5 text-muted-foreground" />
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="relative">
+                <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-violet-100 to-cyan-100 blur-xl opacity-60" />
+                <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-slate-100">
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="url(#cvReviewGrad)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <defs>
+                      <linearGradient id="cvReviewGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#8B5CF6" />
+                        <stop offset="100%" stopColor="#00D4FF" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
+                    <path d="M8 10h8M8 14h5" />
+                  </svg>
+                </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              {t("empty_state_hint")}
-            </p>
+            <p className="text-xs font-semibold text-slate-600 mb-1">{t("empty_state_hint")}</p>
+            <p className="text-[11px] text-slate-400 leading-relaxed max-w-[200px] mx-auto">Escribe una pregunta o deja en blanco para una revisión completa</p>
           </div>
         )}
 
         {/* Loading skeleton */}
         {loading && (
-          <div className="space-y-3 animate-pulse">
-            {[80, 60, 72, 64].map((w, i) => (
-              <div key={i} className="h-3 bg-muted rounded" style={{ width: `${w}%` }} />
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="rounded-2xl border border-slate-100 bg-white p-4 animate-pulse">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="h-3 w-3 rounded-full bg-slate-200" />
+                  <div className="h-2.5 rounded-full bg-slate-200" style={{ width: `${40 + i * 15}px` }} />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-2 rounded-full bg-slate-100" style={{ width: `${75 + i * 5}%` }} />
+                  <div className="h-2 rounded-full bg-slate-100" style={{ width: `${55 + i * 8}%` }} />
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -268,59 +277,63 @@ export default function CVReviewPanel() {
 
             {/* Answer */}
             {result.answer && (
-              <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
-                <p className="text-xs font-semibold text-emerald-700 mb-2 flex items-center gap-1.5">
+              <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 backdrop-blur-sm p-4">
+                <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 flex items-center gap-1.5 mb-2.5">
                   <MessageSquare className="h-3.5 w-3.5" /> {t("answer_label")}
                 </p>
-                <p className="text-sm text-foreground leading-relaxed">{result.answer}</p>
+                <p className="text-xs text-slate-700 leading-relaxed">{result.answer}</p>
               </div>
             )}
 
             {/* Summary */}
-            <div className="rounded-xl border border-border bg-muted/30 p-4">
-              <p className="text-xs font-semibold text-foreground mb-2">{t("summary_label")}</p>
-              <p className="text-sm text-muted-foreground leading-relaxed">{result.summary}</p>
+            <div className="rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-4">
+              <p className="text-[10px] font-black tracking-widest uppercase text-slate-500 mb-2">{t("summary_label")}</p>
+              <p className="text-xs text-slate-600 leading-relaxed">{result.summary}</p>
             </div>
 
             {/* Strengths */}
             {result.strengths.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" /> {t("strengths_label")}
+              <div>
+                <p className="text-[10px] font-black tracking-widest uppercase text-emerald-600 flex items-center gap-1.5 mb-2.5">
+                  <CheckCircle2 className="h-3.5 w-3.5" /> {t("strengths_label")}
                 </p>
-                {result.strengths.map((item, i) => (
-                  <ReviewItemRow
-                    key={i}
-                    item={item}
-                    itemKey={`strength-${i}`}
-                    index={i}
-                    applied={appliedItems.has(`strength-${i}`)}
-                    t={t}
-                    tAts={tAts}
-                    onApply={openDiffModal}
-                  />
-                ))}
+                <div className="space-y-2">
+                  {result.strengths.map((item, i) => (
+                    <ReviewItemRow
+                      key={i}
+                      item={item}
+                      itemKey={`strength-${i}`}
+                      index={i}
+                      applied={appliedItems.has(`strength-${i}`)}
+                      t={t}
+                      tAts={tAts}
+                      onApply={openDiffModal}
+                    />
+                  ))}
+                </div>
               </div>
             )}
 
             {/* Improvements */}
             {result.improvements.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-foreground flex items-center gap-1.5">
-                  <TrendingUp className="h-4 w-4 text-amber-600" /> {t("improvements_label")}
+              <div>
+                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
+                  <TrendingUp className="h-4 w-4" /> {t("improvements_label")}
                 </p>
-                {result.improvements.map((item, i) => (
-                  <ReviewItemRow
-                    key={i}
-                    item={item}
-                    itemKey={`improvement-${i}`}
-                    index={i + (result.strengths?.length ?? 0)}
-                    applied={appliedItems.has(`improvement-${i}`)}
-                    t={t}
-                    tAts={tAts}
-                    onApply={openDiffModal}
-                  />
-                ))}
+                <div className="space-y-2">
+                  {result.improvements.map((item, i) => (
+                    <ReviewItemRow
+                      key={i}
+                      item={item}
+                      itemKey={`improvement-${i}`}
+                      index={i + (result.strengths?.length ?? 0)}
+                      applied={appliedItems.has(`improvement-${i}`)}
+                      t={t}
+                      tAts={tAts}
+                      onApply={openDiffModal}
+                    />
+                  ))}
+                </div>
               </div>
             )}
 

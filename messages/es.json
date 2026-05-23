@@ -1011,6 +1011,10 @@
     "pro_designs_label": "Pro",
     "pro_designs_label2": "Diseños",
     "saving": "Guardando...",
+    "section_item_one": "{count} elemento",
+    "section_item_other": "{count} elementos",
+    "section_collapse": "Colapsar sección",
+    "section_expand": "Expandir sección",
     "unsaved": "Sin guardar",
     "saved": "Guardado",
     "save": "Guardar",
@@ -1333,7 +1337,17 @@
         "job_title": "Cargo actual",
         "linkedin": "LinkedIn",
         "github": "GitHub",
-        "years_of_experience": "Años de experiencia para el puesto"
+        "years_of_experience": "Años de experiencia para el puesto",
+        "group_identity": "Identidad",
+        "group_contact": "Contacto",
+        "group_location": "Ubicación",
+        "group_online": "Online",
+        "group_experience": "Experiencia"
+      },
+      "date": {
+        "clear": "Limpiar",
+        "this_month": "Este mes",
+        "select": "Seleccionar"
       },
       "work": {
         "job_title": "Cargo",
@@ -1393,7 +1407,8 @@
         "name": "Nombre",
         "company": "Empresa",
         "phone": "Teléfono",
-        "email": "Email"
+        "email": "Email",
+        "delete": "Eliminar referencia"
       },
       "suggest_skills_rate_limit": "Has alcanzado el límite de sugerencias por hora. Intenta de nuevo más tarde.",
       "toast_pro_only": "Esta función requiere plan Pro"

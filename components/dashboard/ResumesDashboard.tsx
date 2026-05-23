@@ -258,16 +258,23 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       <UpgradeCTACard />
 
       {/* ── Page head ── */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: "28px" }}>
+      <div className="flex items-start justify-between mb-7">
         <div>
-          <div style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00D4FF", marginBottom: "6px", display: "flex", alignItems: "center", gap: "7px" }}>
-            <span style={{ width: "14px", height: "1.5px", background: "#00D4FF", opacity: 0.5, display: "inline-block", flexShrink: 0 }} />
+          <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#00D4FF] mb-[6px] flex items-center gap-[7px]">
+            <span className="inline-block flex-shrink-0 bg-[#00D4FF] opacity-50" style={{ width: "14px", height: "1.5px" }} />
             {t("eyebrow")}
           </div>
-          <h1 style={{ fontFamily: "var(--dash-serif)", fontSize: "clamp(28px, 4vw, 32px)", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.035em", lineHeight: 1.1 }}>
+          <h1
+            className="font-bold text-[#1a2e4a] leading-[1.1]"
+            style={{
+              fontFamily: "var(--dash-serif)",
+              fontSize: "clamp(28px, 4vw, 32px)",
+              letterSpacing: "-0.035em",
+            }}
+          >
             {t("page_title")}
           </h1>
-          <p style={{ fontSize: "13.5px", color: "#6B7A8C", marginTop: "6px" }}>
+          <p className="text-[13.5px] text-[#6B7A8C] mt-[6px]">
             {resumes.length} {resumes.length === 1 ? t("active_document_one") : t("active_documents_other")}
             {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
           </p>
@@ -301,7 +308,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           </div>
         </div>
       ) : (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "18px" }}>
+        <div className="grid gap-[18px]" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))" }}>
           {resumes.map((resume, i) => (
             <CVCard
               key={resume.id}
@@ -334,10 +341,35 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
       {/* ── Delete dialog ── */}
       <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
-        <AlertDialogContent className="p-0 overflow-hidden" style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}>
-          <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
-            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
-            <div style={{ width: 60, height: 60, margin: "0 auto 14px", borderRadius: "50%", background: "rgba(239,68,68,0.08)", border: "1.5px solid rgba(239,68,68,0.2)", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444" }}>
+        <AlertDialogContent
+          className="p-0 overflow-hidden"
+          style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+        >
+          <div
+            className="text-center relative border-b border-[#E8EDF6]"
+            style={{
+              padding: "30px 28px 16px",
+              background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)",
+            }}
+          >
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 opacity-60"
+              style={{
+                width: "60%",
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
+              }}
+            />
+            <div
+              className="flex items-center justify-center text-[#EF4444] mx-auto mb-[14px]"
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "rgba(239,68,68,0.08)",
+                border: "1.5px solid rgba(239,68,68,0.2)",
+              }}
+            >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M3 6h18"/><path d="M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
                 <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/>
@@ -345,29 +377,93 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             </div>
             <AlertDialogTitle className="sr-only">{t("delete_title")}</AlertDialogTitle>
             <AlertDialogDescription className="sr-only">{t("delete_description")}</AlertDialogDescription>
-            <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "6px" }} aria-hidden="true">{t("delete_title")}</div>
-            <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "280px", margin: "0 auto" }} aria-hidden="true">{t("delete_description")}</div>
+            <div
+              className="font-bold text-[#1a2e4a] mb-[6px]"
+              style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", letterSpacing: "-0.03em" }}
+              aria-hidden="true"
+            >
+              {t("delete_title")}
+            </div>
+            <div
+              className="text-sm text-[#6B7A8C] leading-[1.5] mx-auto"
+              style={{ maxWidth: "280px" }}
+              aria-hidden="true"
+            >
+              {t("delete_description")}
+            </div>
           </div>
-          <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
-            <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>{t("cancel")}</AlertDialogCancel>
-            <AlertDialogAction onClick={() => deleteId && deleteResume(deleteId)} style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}>{t("delete")}</AlertDialogAction>
+          <div className="flex gap-[10px]" style={{ padding: "18px 24px 22px" }}>
+            <AlertDialogCancel
+              style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}
+            >
+              {t("cancel")}
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteId && deleteResume(deleteId)}
+              style={{
+                flex: 1,
+                background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
+                color: "white",
+                fontWeight: 600,
+                boxShadow: "0 2px 8px rgba(220,38,38,0.25)",
+                border: "none",
+                padding: "11px 16px",
+                fontSize: "13px",
+                fontFamily: "inherit",
+                cursor: "pointer",
+                justifyContent: "center",
+              }}
+            >
+              {t("delete")}
+            </AlertDialogAction>
           </div>
         </AlertDialogContent>
       </AlertDialog>
 
       {/* ── Rename dialog ── */}
       <AlertDialog open={!!renameId} onOpenChange={(o) => !o && setRenameId(null)}>
-        <AlertDialogContent className="p-0 overflow-hidden" style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}>
-          <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
-            <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.6 }} />
-            <div style={{ width: 60, height: 60, margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))", border: "1.5px solid rgba(0,212,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#00D4FF" }}>
+        <AlertDialogContent
+          className="p-0 overflow-hidden"
+          style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(0,212,255,0.08)" }}
+        >
+          <div
+            className="text-center relative border-b border-[#E8EDF6]"
+            style={{
+              padding: "30px 28px 16px",
+              background: "linear-gradient(180deg, #F5F7FB 0%, white 100%)",
+            }}
+          >
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 opacity-60"
+              style={{
+                width: "60%",
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, #00D4FF, transparent)",
+              }}
+            />
+            <div
+              className="flex items-center justify-center text-[#00D4FF] mx-auto mb-[14px]"
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))",
+                border: "1.5px solid rgba(0,212,255,0.25)",
+              }}
+            >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
                 <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
               </svg>
             </div>
             <AlertDialogTitle className="sr-only">{t("rename_title")}</AlertDialogTitle>
-            <div style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em" }} aria-hidden="true">{t("rename_title")}</div>
+            <div
+              className="font-bold text-[#1a2e4a]"
+              style={{ fontFamily: "var(--dash-serif)", fontSize: "22px", letterSpacing: "-0.03em" }}
+              aria-hidden="true"
+            >
+              {t("rename_title")}
+            </div>
           </div>
           <div style={{ padding: "18px 24px 22px" }}>
             <input
@@ -378,9 +474,29 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
               maxLength={200}
               autoFocus
             />
-            <div style={{ display: "flex", gap: "10px" }}>
-              <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>{t("cancel")}</AlertDialogCancel>
-              <AlertDialogAction onClick={confirmRename} disabled={renaming || !renameDraft.trim()} style={{ flex: 1, background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(0,212,255,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: renaming || !renameDraft.trim() ? "not-allowed" : "pointer", justifyContent: "center" }}>
+            <div className="flex gap-[10px]">
+              <AlertDialogCancel
+                style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}
+              >
+                {t("cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmRename}
+                disabled={renaming || !renameDraft.trim()}
+                style={{
+                  flex: 1,
+                  background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+                  color: "white",
+                  fontWeight: 600,
+                  boxShadow: "0 2px 8px rgba(0,212,255,0.25)",
+                  border: "none",
+                  padding: "11px 16px",
+                  fontSize: "13px",
+                  fontFamily: "inherit",
+                  cursor: renaming || !renameDraft.trim() ? "not-allowed" : "pointer",
+                  justifyContent: "center",
+                }}
+              >
                 {renaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("rename_confirm")}
               </AlertDialogAction>
             </div>

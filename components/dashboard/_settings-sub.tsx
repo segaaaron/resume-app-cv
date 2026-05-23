@@ -10,7 +10,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 
-// ── Shared style constants ────────────────────────────────────────────────────
+// ── Shared style constants (kept as CSSProperties for SettingsForm.tsx compat) ─
 
 export const cardHeadStyle: React.CSSProperties = {
   padding: "16px 20px 12px",
@@ -62,13 +62,11 @@ export function FieldInput({ value, onChange, type = "text", disabled = false, p
       onChange={e => onChange?.(e.target.value)}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
+      className="w-full min-h-[44px] bg-[#EEF2F9] rounded-md px-3 py-2 text-[13px] outline-none transition-[border-color] duration-150 border"
       style={{
-        width: "100%", background: "#EEF2F9",
-        border: `1px solid ${focused ? "#00D4FF" : "#D9E1ED"}`,
-        borderRadius: 6, padding: "8px 12px",
-        fontSize: 13, color: disabled ? "#6B7A8C" : "#1a2e4a",
-        fontFamily: "inherit", outline: "none",
-        transition: "border-color 0.15s ease",
+        fontFamily: "inherit",
+        borderColor: focused ? "#00D4FF" : "#D9E1ED",
+        color: disabled ? "#6B7A8C" : "#1a2e4a",
         boxShadow: focused ? "0 0 0 2px rgba(0,212,255,0.08)" : "none",
         cursor: disabled ? "default" : "text",
       }}
@@ -93,19 +91,17 @@ export function BtnGold({ children, onClick, disabled, type = "button", fullWidt
       disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="inline-flex items-center gap-[6px] px-4 py-2 rounded-md border-none text-white font-semibold text-[13px] transition-all duration-200"
       style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        padding: "8px 16px", borderRadius: 6, border: "none",
+        fontFamily: "inherit",
         background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-        color: "white", fontWeight: 600, letterSpacing: "0.005em",
-        fontSize: 13, cursor: disabled ? "not-allowed" : "pointer",
+        letterSpacing: "0.005em",
+        cursor: disabled ? "not-allowed" : "pointer",
         boxShadow: hovered ? "0 4px 16px rgba(0,212,255,0.35)" : "0 2px 8px rgba(0,212,255,0.25)",
         transform: hovered ? "translateY(-1px)" : "none",
-        transition: "all 0.2s ease",
         opacity: disabled ? 0.65 : 1,
         width: fullWidth ? "100%" : undefined,
         justifyContent: fullWidth ? "center" : undefined,
-        fontFamily: "inherit",
       }}
     >
       {children}
@@ -130,19 +126,16 @@ export function BtnGhost({ children, onClick, disabled, fullWidth = false, dange
       disabled={disabled}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      className="inline-flex items-center gap-[6px] px-4 py-2 rounded-md font-medium text-[13px] transition-all duration-[180ms] border"
       style={{
-        display: "inline-flex", alignItems: "center", gap: 6,
-        padding: "8px 16px", borderRadius: 6,
-        border: danger ? "1px solid rgba(239,68,68,0.25)" : `1px solid ${hovered ? "#00D4FF" : "#D9E1ED"}`,
+        fontFamily: "inherit",
+        borderColor: danger ? "rgba(239,68,68,0.25)" : hovered ? "#00D4FF" : "#D9E1ED",
         background: danger ? hovered ? "rgba(239,68,68,0.2)" : "rgba(239,68,68,0.1)" : hovered ? "#EEF2F9" : "transparent",
         color: danger ? "#DC2626" : hovered ? "#1a2e4a" : "#6B7A8C",
-        fontWeight: 500, fontSize: 13,
         cursor: disabled ? "not-allowed" : "pointer",
-        transition: "all 0.18s ease",
         opacity: disabled ? 0.65 : 1,
         width: fullWidth ? "100%" : undefined,
         justifyContent: fullWidth ? "center" : undefined,
-        fontFamily: "inherit",
       }}
     >
       {children}
@@ -162,7 +155,7 @@ interface DataCardProps {
 export function DataCard({ exportLoading, deleteLoading, handleDataExport, handleDeleteAccount }: DataCardProps) {
   const t = useTranslations("dashboard.settings")
   return (
-    <div style={{ background: "white", border: "1px solid #D9E1ED", borderRadius: 10, overflow: "hidden" }}>
+    <div className="bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
       <div style={cardHeadStyle}>
         <div style={cardIcoStyle}>
           <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
@@ -175,8 +168,8 @@ export function DataCard({ exportLoading, deleteLoading, handleDataExport, handl
           <div style={cardSubStyle}>Exportar y eliminar cuenta</div>
         </div>
       </div>
-      <div style={{ padding: "18px 20px" }}>
-        <p style={{ fontSize: 12.5, color: "#6B7A8C", marginBottom: 14, lineHeight: 1.6 }}>
+      <div className="px-5 py-[18px]">
+        <p className="text-[12.5px] text-[#6B7A8C] mb-[14px] leading-relaxed">
           {t("export_desc")}
         </p>
         <BtnGhost onClick={handleDataExport} disabled={exportLoading} fullWidth>
@@ -187,24 +180,35 @@ export function DataCard({ exportLoading, deleteLoading, handleDataExport, handl
           {exportLoading ? t("exporting") : t("export_button")}
         </BtnGhost>
 
-        <div style={{ background: "rgba(239,68,68,0.05)", border: "1px solid rgba(239,68,68,0.15)", borderRadius: 6, padding: "14px 16px", marginTop: 20 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.04em", color: "#EF4444", marginBottom: 5 }}>
+        <div
+          className="rounded-md px-4 py-[14px] mt-5 border"
+          style={{
+            background: "rgba(239,68,68,0.05)",
+            borderColor: "rgba(239,68,68,0.15)",
+          }}
+        >
+          <div className="text-xs font-semibold tracking-[0.04em] text-[#EF4444] mb-[5px]">
             {t("danger_zone")}
           </div>
-          <p style={{ fontSize: 12.5, color: "#6B7A8C", marginBottom: 12, lineHeight: 1.5 }}>
+          <p className="text-[12.5px] text-[#6B7A8C] mb-3 leading-[1.5]">
             {t("danger_desc")}
           </p>
           <AlertDialog>
             <AlertDialogTrigger
-              render={<button type="button" disabled={deleteLoading} style={{
-                display: "inline-flex", alignItems: "center", gap: 6,
-                padding: "8px 16px", borderRadius: 6,
-                border: "1px solid rgba(239,68,68,0.25)", background: "rgba(239,68,68,0.1)",
-                color: "#DC2626", fontWeight: 500, fontSize: 13,
-                cursor: deleteLoading ? "not-allowed" : "pointer",
-                transition: "all 0.18s ease", opacity: deleteLoading ? 0.65 : 1,
-                width: "100%", justifyContent: "center", fontFamily: "inherit",
-              }} />}
+              render={
+                <button
+                  type="button"
+                  disabled={deleteLoading}
+                  className="inline-flex items-center justify-center gap-[6px] w-full px-4 py-2 rounded-md text-[13px] font-medium text-[#DC2626] border transition-all duration-[180ms]"
+                  style={{
+                    fontFamily: "inherit",
+                    borderColor: "rgba(239,68,68,0.25)",
+                    background: "rgba(239,68,68,0.1)",
+                    cursor: deleteLoading ? "not-allowed" : "pointer",
+                    opacity: deleteLoading ? 0.65 : 1,
+                  }}
+                />
+              }
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
                 <path d="M2.5 3.5h7M5 2h2M4.5 9l-.5-4.5M7.5 9l.5-4.5" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round"/>
@@ -213,30 +217,56 @@ export function DataCard({ exportLoading, deleteLoading, handleDataExport, handl
               {deleteLoading ? t("deleting") : t("delete_account")}
             </AlertDialogTrigger>
             <AlertDialogContent
-              className="p-0 overflow-hidden"
-              style={{ borderRadius: "16px", maxWidth: "400px", border: "1px solid #D9E1ED", boxShadow: "0 40px 100px rgba(239,68,68,0.08)" }}
+              className="p-0 overflow-hidden rounded-[16px] max-w-[400px] border border-[#D9E1ED]"
+              style={{ boxShadow: "0 40px 100px rgba(239,68,68,0.08)" }}
             >
-              <div style={{ padding: "30px 28px 16px", textAlign: "center", background: "linear-gradient(180deg, #FFF5F5 0%, white 100%)", borderBottom: "1px solid #E8EDF6", position: "relative" }}>
-                <div style={{ position: "absolute", top: 0, left: "50%", transform: "translateX(-50%)", width: "60%", height: "1px", background: "linear-gradient(90deg, transparent, #EF4444, transparent)", opacity: 0.5 }} />
-                <div style={{ width: "60px", height: "60px", margin: "0 auto 14px", borderRadius: "50%", background: "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.04))", border: "1.5px solid rgba(239,68,68,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#EF4444", position: "relative" }}>
+              <div
+                className="px-7 pt-[30px] pb-4 text-center border-b border-[#E8EDF6] relative"
+                style={{
+                  background: "linear-gradient(180deg, #FFF5F5 0%, white 100%)",
+                }}
+              >
+                {/* top accent line */}
+                <div
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px opacity-50"
+                  style={{ background: "linear-gradient(90deg, transparent, #EF4444, transparent)" }}
+                />
+                <div
+                  className="w-[60px] h-[60px] mx-auto mb-[14px] rounded-full flex items-center justify-center text-[#EF4444] relative border"
+                  style={{
+                    background: "linear-gradient(135deg, rgba(239,68,68,0.12), rgba(220,38,38,0.04))",
+                    borderColor: "rgba(239,68,68,0.25)",
+                  }}
+                >
                   <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                     <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                 </div>
-                <div style={{ fontFamily: "var(--dash-serif)", fontSize: "20px", fontWeight: 700, color: "#1a2e4a", letterSpacing: "-0.03em", marginBottom: "8px" }}>
+                <div
+                  className="text-xl font-bold text-[#1a2e4a] tracking-[-0.03em] mb-2"
+                  style={{ fontFamily: "var(--dash-serif)" }}
+                >
                   {t("delete_dialog_title")}
                 </div>
-                <div style={{ fontSize: "13px", color: "#6B7A8C", lineHeight: 1.5, maxWidth: "300px", margin: "0 auto" }}>
+                <div className="text-[13px] text-[#6B7A8C] leading-[1.5] max-w-[300px] mx-auto">
                   {t("delete_dialog_desc")}
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "10px", padding: "18px 24px 22px" }}>
-                <AlertDialogCancel style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}>
+              <div className="flex gap-[10px] px-6 pt-[18px] pb-[22px]">
+                <AlertDialogCancel
+                  className="flex-1 px-4 py-[11px] text-[13px] font-medium justify-center"
+                  style={{ fontFamily: "inherit" }}
+                >
                   {t("cancel")}
                 </AlertDialogCancel>
                 <AlertDialogAction
                   onClick={handleDeleteAccount}
-                  style={{ flex: 1, background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)", color: "white", fontWeight: 600, boxShadow: "0 2px 8px rgba(220,38,38,0.25)", border: "none", padding: "11px 16px", fontSize: "13px", fontFamily: "inherit", cursor: "pointer", justifyContent: "center" }}
+                  className="flex-1 text-white font-semibold px-4 py-[11px] text-[13px] border-none cursor-pointer justify-center"
+                  style={{
+                    fontFamily: "inherit",
+                    background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)",
+                    boxShadow: "0 2px 8px rgba(220,38,38,0.25)",
+                  }}
                 >
                   {t("confirm_delete")}
                 </AlertDialogAction>

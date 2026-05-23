@@ -26,14 +26,11 @@ export function DeleteBtn({ onDelete }: { onDelete: () => void }) {
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); onDelete() }}
+      className="w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all duration-150 flex-shrink-0 ml-auto border"
       style={{
-        width: 28, height: 28, borderRadius: 6,
-        borderWidth: 1, borderStyle: "solid",
         borderColor: hov ? "rgba(239,68,68,0.45)" : "rgba(239,68,68,0.2)",
         background: hov ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.07)",
         color: hov ? "#DC2626" : "#EF4444",
-        display: "flex", alignItems: "center", justifyContent: "center",
-        cursor: "pointer", transition: "all 0.15s ease", flexShrink: 0, marginLeft: "auto",
       }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
@@ -52,7 +49,7 @@ export function DeleteBtn({ onDelete }: { onDelete: () => void }) {
 
 export function LetterThumbSVG() {
   return (
-    <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" style={{ width: "100%", height: "100%", display: "block" }}>
+    <svg viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" className="w-full h-full block">
       <rect width="210" height="297" fill="#F9F7F4" />
       <rect x="18" y="18" width="174" height="36" rx="2" fill="#3B5A9A" opacity="0.9" />
       <rect x="26" y="26" width="90" height="6" rx="1" fill="rgba(255,255,255,0.9)" />
@@ -92,10 +89,9 @@ export function CaBtn({ children, primary, onClick }: {
   return (
     <button
       type="button"
+      className="inline-flex items-center gap-1 px-[10px] py-1 rounded-[5px] text-[11px] cursor-pointer transition-all duration-150 border"
       style={{
-        display: "inline-flex", alignItems: "center", gap: 4,
-        padding: "4px 10px", borderRadius: 5, fontSize: 11, fontFamily: "inherit",
-        cursor: "pointer", transition: "all 0.15s ease", border: "1px solid",
+        fontFamily: "inherit",
         background: primary ? hov ? "rgba(0,212,255,0.15)" : "rgba(0,212,255,0.1)" : hov ? "#EEF2F9" : "transparent",
         borderColor: primary ? "rgba(0,212,255,0.25)" : hov ? "#00D4FF" : "#D9E1ED",
         color: primary ? "#00D4FF" : hov ? "#1a2e4a" : "#6B7A8C",
@@ -119,22 +115,28 @@ export function LetterActivityItem({ type, name, time }: { type: "edit" | "creat
   const actionLabel = type === "edit" ? t("activity_edited") : type === "create" ? t("activity_created") : t("activity_downloaded")
   return (
     <div
+      className="flex items-center gap-3 px-[14px] py-[10px] rounded-md border transition-[background,border-color] duration-150 cursor-default"
       style={{
-        display: "flex", alignItems: "center", gap: 12, padding: "10px 14px",
-        borderRadius: 6, border: `1px solid ${hov ? "#E8EDF6" : "transparent"}`,
+        borderColor: hov ? "#E8EDF6" : "transparent",
         background: hov ? "#EEF2F9" : "transparent",
-        transition: "background 0.15s ease, border-color 0.15s ease", cursor: "default",
       }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
     >
-      <span style={{ width: 6, height: 6, borderRadius: "50%", flexShrink: 0, marginTop: 1, background: dotColor, boxShadow: dotShadow, display: "inline-block" }} />
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12.5, color: "#374151" }}>
-          {actionLabel}{" "}<strong style={{ color: "#1a2e4a", fontWeight: 500 }}>{name}</strong>
+      {/* dot color/shadow are fully dynamic — keep inline */}
+      <span
+        className="inline-block w-[6px] h-[6px] rounded-full flex-shrink-0 mt-px"
+        style={{ background: dotColor, boxShadow: dotShadow }}
+      />
+      <div className="flex-1">
+        <div className="text-[12.5px] text-[#374151]">
+          {actionLabel}{" "}<strong className="text-[#1a2e4a] font-medium">{name}</strong>
         </div>
       </div>
-      <span style={{ fontSize: 11, color: "#A0AABE", flexShrink: 0, fontFamily: "var(--dash-mono)" }}>{time}</span>
+      <span
+        className="text-[11px] text-[#A0AABE] flex-shrink-0"
+        style={{ fontFamily: "var(--dash-mono)" }}
+      >{time}</span>
     </div>
   )
 }
@@ -159,79 +161,67 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
 
   return (
     <div
-      className="cl-card-wrap cl-card-anim"
+      className="cl-card-wrap cl-card-anim relative overflow-hidden rounded-[14px] cursor-pointer flex flex-col transition-[border-color,transform,box-shadow] duration-[250ms]"
       style={{
         background: "white",
+        textDecoration: "none",
         borderWidth: 1,
         borderStyle: "solid",
         borderColor: hovered ? "rgba(0,212,255,0.55)" : "#E2E8F4",
-        borderRadius: 14,
-        overflow: "hidden",
-        cursor: "pointer",
-        display: "flex",
-        flexDirection: "column",
-        textDecoration: "none",
-        transition: "border-color 0.25s ease, transform 0.25s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.25s ease",
-        position: "relative",
         animationDelay: animDelay,
         transform: hovered ? "translateY(-4px)" : "translateY(0)",
         boxShadow: hovered
           ? "0 12px 40px rgba(0,212,255,0.14), 0 2px 8px rgba(26,46,74,0.08)"
           : "0 1px 4px rgba(26,46,74,0.06)",
+        transition: "border-color 0.25s ease, transform 0.25s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.25s ease",
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      {/* accent bar top */}
-      <div style={{
-        height: 3,
-        background: hovered
-          ? "linear-gradient(90deg, #00D4FF 0%, #6B8AC4 50%, #1a2e4a 100%)"
-          : "linear-gradient(90deg, #C8D8F0 0%, #E2E8F4 100%)",
-        transition: "background 0.35s ease",
-        flexShrink: 0,
-      }} />
+      {/* accent bar top — gradient values are dynamic, keep inline */}
+      <div
+        className="h-[3px] flex-shrink-0 transition-[background] duration-[350ms]"
+        style={{
+          background: hovered
+            ? "linear-gradient(90deg, #00D4FF 0%, #6B8AC4 50%, #1a2e4a 100%)"
+            : "linear-gradient(90deg, #C8D8F0 0%, #E2E8F4 100%)",
+        }}
+      />
 
       {/* thumbnail zone */}
       <div
+        className="relative flex items-end justify-center px-8 pt-[22px] min-h-[148px] overflow-hidden flex-shrink-0"
         style={{
-          position: "relative",
           background: "linear-gradient(160deg, #EFF3FB 0%, #E4EAF6 55%, #DDE4F0 100%)",
-          display: "flex", alignItems: "flex-end", justifyContent: "center",
-          padding: "22px 32px 0", minHeight: 148, overflow: "hidden",
-          flexShrink: 0,
         }}
         onClick={onEdit}
       >
         {/* subtle dot grid */}
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          backgroundImage: "radial-gradient(circle, rgba(107,138,196,0.18) 1px, transparent 1px)",
-          backgroundSize: "18px 18px",
-          opacity: hovered ? 0.7 : 0.4,
-          transition: "opacity 0.3s ease",
-        }} />
-        {/* cyan radial glow */}
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          background: "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.08) 0%, transparent 60%)",
-          opacity: hovered ? 1 : 0,
-          transition: "opacity 0.3s ease",
-        }} />
-
-        {/* document thumbnail */}
         <div
-          className="cl-thumb-hover"
+          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
           style={{
-            width: "100%", maxWidth: 112,
+            backgroundImage: "radial-gradient(circle, rgba(107,138,196,0.18) 1px, transparent 1px)",
+            backgroundSize: "18px 18px",
+            opacity: hovered ? 0.7 : 0.4,
+          }}
+        />
+        {/* cyan radial glow — opacity is dynamic, keep inline */}
+        <div
+          className="absolute inset-0 pointer-events-none transition-opacity duration-300"
+          style={{
+            background: "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.08) 0%, transparent 60%)",
+            opacity: hovered ? 1 : 0,
+          }}
+        />
+
+        {/* document thumbnail — box-shadow is dynamic, keep inline */}
+        <div
+          className="cl-thumb-hover w-full max-w-[112px] rounded-t-[3px] overflow-hidden relative z-[1] transition-[box-shadow] duration-[250ms]"
+          style={{
             aspectRatio: "210 / 297",
-            borderRadius: "3px 3px 0 0",
-            overflow: "hidden",
             boxShadow: hovered
               ? "0 -4px 28px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,212,255,0.3)"
               : "0 -2px 16px rgba(0,0,0,0.1), 0 0 0 1px #D0D8EC",
-            position: "relative", zIndex: 1,
-            transition: "box-shadow 0.25s ease",
           }}
         >
           {letter.templateId ? <CoverLetterThumbnail id={letter.templateId} color={letter.colorScheme} /> : <LetterThumbSVG />}
@@ -239,84 +229,70 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
 
         {/* hover overlay */}
         <div
-          className="cl-overlay"
+          className="cl-overlay absolute inset-0 flex items-center justify-center z-[5] backdrop-blur-[3px]"
           style={{
-            position: "absolute", inset: 0,
             background: "linear-gradient(160deg, rgba(15,30,60,0.55) 0%, rgba(0,50,80,0.45) 100%)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            zIndex: 5, backdropFilter: "blur(3px)",
           }}
           onClick={(e) => { e.stopPropagation(); onEdit() }}
         >
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
-            <div style={{
-              width: 40, height: 40, borderRadius: "50%",
-              background: "linear-gradient(135deg, rgba(0,212,255,0.3) 0%, rgba(0,168,204,0.15) 100%)",
-              border: "1.5px solid rgba(0,212,255,0.6)",
-              color: "#00D4FF",
-              display: "flex", alignItems: "center", justifyContent: "center",
-              boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-            }}>
+          <div className="flex flex-col items-center gap-[7px]">
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-[#00D4FF]"
+              style={{
+                background: "linear-gradient(135deg, rgba(0,212,255,0.3) 0%, rgba(0,168,204,0.15) 100%)",
+                border: "1.5px solid rgba(0,212,255,0.6)",
+                boxShadow: "0 0 20px rgba(0,212,255,0.3)",
+              }}
+            >
               <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
                 <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="cl-ov-label" style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#00D4FF" }}>{t("edit")}</span>
+            <span className="cl-ov-label text-[10px] font-bold tracking-[0.1em] uppercase text-[#00D4FF]">{t("edit")}</span>
           </div>
         </div>
       </div>
 
       {/* info + actions */}
-      <div style={{ padding: "14px 16px 15px", flex: 1, display: "flex", flexDirection: "column", gap: 0 }}>
+      <div className="px-4 pt-[14px] pb-[15px] flex-1 flex flex-col gap-0">
         {/* title */}
-        <div style={{
-          fontSize: 13.5, fontWeight: 700, color: "#111D2E",
-          letterSpacing: "-0.02em", lineHeight: 1.3,
-          whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
-          marginBottom: 5,
-        }}>
+        <div
+          className="text-[13.5px] font-bold text-[#111D2E] tracking-[-0.02em] leading-[1.3] whitespace-nowrap overflow-hidden text-ellipsis mb-[5px]"
+        >
           {letter.title}
         </div>
 
         {/* meta row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 3,
-            fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em",
-            textTransform: "uppercase",
-            color: "#00A8CC",
-            background: "rgba(0,212,255,0.08)",
-            borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,212,255,0.2)",
-            borderRadius: 4, padding: "2px 6px",
-          }}>
+        <div className="flex items-center gap-[6px] mb-3">
+          <span
+            className="inline-flex items-center gap-[3px] text-[9.5px] font-bold tracking-wider uppercase text-[#00A8CC] rounded border px-[6px] py-[2px]"
+            style={{
+              background: "rgba(0,212,255,0.08)",
+              borderColor: "rgba(0,212,255,0.2)",
+            }}
+          >
             <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
               <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.4"/>
               <path d="M3.5 5l1 1 2-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             IA
           </span>
-          <span style={{ width: 2, height: 2, borderRadius: "50%", background: "#C4CDD9", display: "inline-block", flexShrink: 0 }} />
-          <span style={{ fontSize: 11, color: "#8B98AB", fontVariantNumeric: "tabular-nums" }}>
+          <span className="inline-block w-[2px] h-[2px] rounded-full bg-[#C4CDD9] flex-shrink-0" />
+          <span className="text-[11px] text-[#8B98AB] tabular-nums">
             {formatInTimezone(letter.updatedAt, userTimezone, dateLocale)}
           </span>
         </div>
 
         {/* actions */}
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          paddingTop: 10, borderTop: "1px solid #EDF0F7",
-          overflow: "visible", position: "relative",
-        }}>
+        <div className="flex items-center gap-[6px] pt-[10px] border-t border-[#EDF0F7] overflow-visible relative">
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onRename() }}
+            className="inline-flex items-center gap-[5px] px-[11px] py-[5px] rounded-md text-[11.5px] font-semibold cursor-pointer transition-all duration-150 border tracking-[-0.01em] text-[#00A8CC]"
             style={{
-              display: "inline-flex", alignItems: "center", gap: 5,
-              padding: "5px 11px", borderRadius: 6, fontSize: 11.5, fontFamily: "inherit",
-              fontWeight: 600, cursor: "pointer", transition: "all 0.15s ease",
+              fontFamily: "inherit",
               background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)",
-              borderWidth: 1, borderStyle: "solid", borderColor: "rgba(0,212,255,0.28)",
-              color: "#00A8CC", letterSpacing: "-0.01em",
+              borderColor: "rgba(0,212,255,0.28)",
             }}
             onMouseEnter={(e) => {
               const el = e.currentTarget

@@ -10,10 +10,7 @@ import {
   type CSSProperties,
   type ReactNode,
 } from "react"
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
 import {
-  GripVertical,
   ChevronRight,
   Eye,
   EyeOff,
@@ -59,6 +56,8 @@ const SUBTLE = "#94A3B8"
 const SUCCESS = "#10B981"
 const SURFACE2 = "#F1F5F9"
 
+const COLLAPSED_BG = "linear-gradient(135deg, rgba(236,254,255,0.7) 0%, rgba(239,246,255,0.5) 100%)"
+const COLLAPSED_BORDER = "#cffafe"
 const EXPANDED_GRADIENT =
   "linear-gradient(135deg, #E8F4FD 0%, #EDF6FB 50%, #E6F0FA 100%)"
 
@@ -74,7 +73,9 @@ const SectionAccordionContext = createContext<SectionAccordionContextValue>({
 })
 
 export function SectionDropdownProvider({ children }: { children: ReactNode }) {
-  const [expandedId, setExpandedId] = useState<string | null>("personalDetails")
+  const pd = useResumeStore.getState().sectionData.personalDetails as Record<string, string> | undefined
+  const hasData = pd && (pd.firstName || pd.lastName || pd.email || pd.jobTitle)
+  const [expandedId, setExpandedId] = useState<string | null>(hasData ? null : "personalDetails")
   const accordionValue = useMemo(() => ({ expandedId, setExpandedId }), [expandedId])
   return (
     <SectionAccordionContext.Provider value={accordionValue}>
@@ -94,41 +95,29 @@ function getItemCount(section: ResumeSection, data: ResumeSections | undefined):
 const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSection }) {
   const t = useTranslations("editor")
   const [hovered, setHovered] = useState(false)
-  const { sectionData } = useResumeStore()
+  const itemCount = useResumeStore((s) => {
+    const val = (s.sectionData as unknown as Record<string, unknown>)[section.type]
+    return Array.isArray(val) ? val.length : null
+  })
   const { expandedId, setExpandedId } = useContext(SectionAccordionContext)
   const open = expandedId === section.id
   const setOpen = (val: boolean) => setExpandedId(val ? section.id : null)
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: section.id })
-
-  const sortableStyle: CSSProperties = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : section.visible ? 1 : 0.6,
-  }
+  const sortableStyle: CSSProperties = {}
 
   const SectionIcon =
     SECTION_ICONS[section.type] ?? <Layout className="w-5 h-5" strokeWidth={1.8} />
-
-  const itemCount = getItemCount(section, sectionData as ResumeSections | undefined)
   const descriptionText =
     itemCount !== null && itemCount > 0
-      ? `${itemCount} ${itemCount === 1 ? "item" : "items"}`
+      ? t(itemCount === 1 ? "section_item_one" : "section_item_other", { count: itemCount })
       : section.label
 
-  // Container styles
+  // Container — all values are conditional on state, keep inline
   const containerStyle: CSSProperties = {
-    border: open || hovered ? "1px solid transparent" : `1px solid ${BORDER}`,
+    border: open || hovered ? "1px solid transparent" : `1px solid ${COLLAPSED_BORDER}`,
     borderRadius: 12,
     marginBottom: 12,
-    background: open || hovered ? EXPANDED_GRADIENT : "#FFFFFF",
+    background: open || hovered ? EXPANDED_GRADIENT : COLLAPSED_BG,
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     position: "relative",
     boxShadow: open
@@ -142,27 +131,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     ...sortableStyle,
   }
 
-  const headStyle: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    padding: "14px 16px",
-    cursor: "pointer",
-    userSelect: "none",
-    gap: 12,
-  }
-
-  const gripStyle: CSSProperties = {
-    color: hovered ? NAVY : SUBTLE,
-    opacity: hovered ? 0.8 : 0.3,
-    cursor: "grab",
-    transition: "all 0.2s ease",
-    display: "flex",
-    alignItems: "center",
-    background: "transparent",
-    border: "none",
-    padding: 0,
-  }
-
+  // Icon box — transform/bg are state-driven, keep inline
   const iconBoxStyle: CSSProperties = {
     width: 42,
     height: 42,
@@ -179,46 +148,13 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     flexShrink: 0,
   }
 
-  const infoStyle: CSSProperties = {
-    flex: 1,
-    marginLeft: 4,
-    minWidth: 0,
-  }
-
-  const nameStyle: CSSProperties = {
-    fontSize: 14,
-    fontWeight: 700,
-    color: NAVY,
-    letterSpacing: "-0.015em",
-    lineHeight: 1.2,
-  }
-
-  const descStyle: CSSProperties = {
-    display: "flex",
-    alignItems: "center",
-    gap: 6,
-    fontSize: 11,
-    color: MUTED,
-    fontWeight: 500,
-    marginTop: 3,
-  }
-
-  const dotStyle: CSSProperties = {
-    width: 6,
-    height: 6,
-    background: SUCCESS,
-    borderRadius: "50%",
-    boxShadow: "0 0 6px rgba(16,185,129,0.5)",
-    display: "inline-block",
-    flexShrink: 0,
-  }
-
+  // Expand button — bg/color/rotation are state-driven, keep inline
   const expandBtnStyle: CSSProperties = {
     width: 32,
     height: 32,
     border: "none",
     background: open ? CYAN_DIM : hovered ? SURFACE2 : "transparent",
-    color: open ? CYAN : hovered ? NAVY : SUBTLE,
+    color: open ? NAVY : SUBTLE,
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     display: "flex",
     alignItems: "center",
@@ -229,17 +165,17 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     flexShrink: 0,
   }
 
+  // Body bg is state-driven, keep inline
   const bodyStyle: CSSProperties = {
     display: "block",
     padding: "20px 24px 24px",
     borderTop: `1px solid ${SURFACE2}`,
-    background: open ? EXPANDED_GRADIENT : "#FFF",
+    background: "#ffffff",
     borderRadius: "0 0 12px 12px",
   }
 
   return (
     <div
-      ref={setNodeRef}
       style={containerStyle}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
@@ -247,40 +183,30 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     >
       {/* Header */}
       <div
-        style={headStyle}
+        className="flex items-center gap-3 px-4 py-[14px] cursor-pointer select-none"
         onClick={(e) => {
           if ((e.target as Element).closest("[data-no-toggle]")) return
           setOpen(!open)
         }}
       >
-        <button
-          {...attributes}
-          {...listeners}
-          style={gripStyle}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Drag to reorder"
-        >
-          <GripVertical style={{ width: 14, height: 20 }} />
-        </button>
-
         <div style={iconBoxStyle}>{SectionIcon}</div>
 
-        <div style={infoStyle}>
-          <div style={nameStyle}>{section.label}</div>
-          <div style={descStyle}>
-            {section.visible && <span style={dotStyle} />}
-            <span
-              style={{
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-              }}
-            >
+        <div className="flex-1 ml-1 min-w-0">
+          <div className="text-[14px] font-bold text-[#0B1B3D] tracking-[-0.015em] leading-[1.2]">
+            {section.label}
+          </div>
+          <div className="flex items-center gap-[6px] text-[11px] text-[#475569] font-medium mt-[3px]">
+            {section.visible && (
+              <span
+                className="w-[6px] h-[6px] rounded-full shrink-0 inline-block"
+                style={{ background: SUCCESS, boxShadow: "0 0 6px rgba(16,185,129,0.5)" }}
+              />
+            )}
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
               {descriptionText}
             </span>
           </div>
         </div>
-
 
         <button
           type="button"
@@ -289,7 +215,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
             e.stopPropagation()
             setOpen(!open)
           }}
-          aria-label={open ? "Collapse section" : "Expand section"}
+          aria-label={open ? t("section_collapse") : t("section_expand")}
           aria-expanded={open}
         >
           <ChevronRight style={{ width: 20, height: 20 }} strokeWidth={2} />

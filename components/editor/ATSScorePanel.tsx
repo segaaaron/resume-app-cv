@@ -3,42 +3,37 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import {
-  Target, Loader2, ChevronDown, ChevronUp,
-  CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check,
-  MessageSquare, TrendingUp, Wand2,
-} from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, RotateCcw } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
-import type { ReviewItem, ReviewResult } from "./hooks/useATSScore"
+import type { ReviewItem } from "./hooks/useATSScore"
 
 function ScoreRing({ score }: { score: number }) {
-  const radius = 70
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference - (score / 100) * circumference
+  const r = 70
+  const c = 2 * Math.PI * r
+  const offset = c - (score / 100) * c
   return (
-    <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
-      <svg width="160" height="160" viewBox="0 0 160 160" style={{ filter: 'drop-shadow(0 8px 24px rgba(0,229,255,0.15))' }}>
-        <defs>
-          <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" style={{ stopColor: '#00E5FF' }} />
-            <stop offset="100%" style={{ stopColor: '#10B981' }} />
-          </linearGradient>
-        </defs>
-        <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="8" />
-        <circle cx="80" cy="80" r="70" fill="none" stroke="url(#scoreGrad)" strokeWidth="10"
-          strokeDasharray={circumference} strokeDashoffset={offset}
-          strokeLinecap="round"
-          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.8s ease' }} />
-      </svg>
-      <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-        <div style={{ fontSize: 36, fontWeight: 800, color: '#0B1B3D', lineHeight: 1 }}>{score}</div>
-        <div style={{ fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em', marginTop: 4 }}>Score</div>
+    <div className="relative flex flex-col items-center gap-2 py-4">
+      <div className="relative inline-block" style={{ filter: 'drop-shadow(0 0 20px rgba(0,212,255,0.3))' }}>
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <defs>
+            <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" style={{ stopColor: '#00E5FF' }} />
+              <stop offset="100%" style={{ stopColor: '#10B981' }} />
+            </linearGradient>
+          </defs>
+          <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="8" />
+          <circle cx="80" cy="80" r="70" fill="none" stroke="url(#scoreGrad)" strokeWidth="10"
+            strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.8s ease' }} />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center">
+          <div className="text-4xl font-black text-[#1a2e4a] leading-none">{score}</div>
+          <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mt-1">Score</div>
+        </div>
       </div>
     </div>
   )
@@ -53,13 +48,21 @@ function getBarStyle(pct: number): { color: string; gradient: string } {
 function ScoreBar({ label, pct }: { label: string; pct: number }) {
   const { color, gradient } = getBarStyle(pct)
   return (
-    <div style={{ marginBottom: 14 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 12, color: '#0F172A' }}>{label}</span>
-        <span style={{ fontSize: 11, fontWeight: 700, color }}>{pct}%</span>
+    <div className="mb-3">
+      <div className="flex justify-between items-center mb-1.5">
+        <span className="text-[11px] font-semibold text-slate-700">{label}</span>
+        <span
+          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+          style={{ background: `${color}1A`, color }}
+        >
+          {pct}%
+        </span>
       </div>
-      <div style={{ height: 4, background: 'rgba(0,212,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: gradient, borderRadius: 2 }} />
+      <div className="h-1.5 bg-cyan-50 rounded-full overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-700"
+          style={{ width: `${pct}%`, background: gradient }}
+        />
       </div>
     </div>
   )
@@ -67,8 +70,8 @@ function ScoreBar({ label, pct }: { label: string; pct: number }) {
 
 function ATSErrorBlock({ title, description }: { title: string; description: string }) {
   return (
-    <div className="flex flex-col items-center gap-3 rounded-xl border border-red-300 bg-red-50 px-4 py-6 text-center">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100">
+    <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-6 text-center backdrop-blur-sm">
+      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 ring-4 ring-red-50">
         <AlertCircle className="h-5 w-5 text-red-600" />
       </div>
       <div className="space-y-1">
@@ -120,7 +123,6 @@ export default function ATSScorePanel() {
     analyze,
     reset,
   } = useATSScore()
-  const [expanded, setExpanded] = useState(true)
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
@@ -174,14 +176,8 @@ export default function ATSScorePanel() {
           updateSectionData("workExperience", items)
         }
 
-      } else if (field === "languages") {
-        toast.info(t("toast_update_languages"))
-        setAppliedItems((prev) => new Set(prev).add(itemKey))
-        setModal(null)
-        return
-
-      } else if (field === "certifications") {
-        toast.info(t("toast_update_certifications"))
+      } else if (field === "languages" || field === "certifications") {
+        toast.info(t(field === "languages" ? "toast_update_languages" : "toast_update_certifications"))
         setAppliedItems((prev) => new Set(prev).add(itemKey))
         setModal(null)
         return
@@ -235,21 +231,27 @@ export default function ATSScorePanel() {
     iconColor: string
   }) {
     const applied = appliedItems.has(itemKey)
+    const clickable = !!item.suggestion && !applied
     return (
-      <li className="flex items-start gap-1.5">
+      <li
+        className={`flex items-start gap-2 p-2.5 rounded-xl transition-all duration-200 ${
+          clickable ? "hover:bg-slate-50 cursor-pointer" : ""
+        }`}
+        onClick={clickable ? () => openDiffModal(item, itemKey) : undefined}
+      >
         <span className={`mt-0.5 shrink-0 ${iconColor}`}>{icon}</span>
-        <span className="text-xs text-foreground leading-relaxed flex-1">{item.text}</span>
+        <span className="text-xs text-slate-700 leading-relaxed flex-1">{item.text}</span>
         {item.suggestion && !applied && (
           <button
             type="button"
-            onClick={() => openDiffModal(item, itemKey)}
-            className="shrink-0 flex items-center gap-0.5 text-[10px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded px-1.5 py-0.5 transition-colors"
+            onClick={(e) => { e.stopPropagation(); openDiffModal(item, itemKey) }}
+            className="shrink-0 flex items-center gap-1 text-[10px] font-bold bg-gradient-to-r from-cyan-50 to-blue-50 hover:from-cyan-100 hover:to-blue-100 text-cyan-700 border border-cyan-200 rounded-full px-2 py-0.5 transition-all"
           >
             <Wand2 className="h-2.5 w-2.5" /> {t("apply_button")}
           </button>
         )}
         {applied && (
-          <span className="shrink-0 flex items-center gap-0.5 text-[10px] bg-green-50 text-green-700 border border-green-200 rounded px-1.5 py-0.5">
+          <span className="shrink-0 flex items-center gap-1 text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
             <Check className="h-2.5 w-2.5" /> {t("applied")}
           </span>
         )}
@@ -259,236 +261,225 @@ export default function ATSScorePanel() {
 
   return (
     <>
-      <div className="border border-border rounded-xl overflow-hidden">
-        {/* Header */}
-        <button
-          type="button"
-          onClick={() => setExpanded((v) => !v)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-muted/30 transition-colors"
-        >
-          <div className="flex items-center gap-2">
-            <Target className="h-4 w-4 text-indigo-600" />
-            <span className="text-sm font-semibold">{t("title")}</span>
-            <span className="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded font-medium">{t("pro_badge")}</span>
+      <div className="flex flex-col gap-3 pb-4">
+        {/* Section header */}
+        <div className="flex items-center gap-2.5 mb-1">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-200">
+            <Target className="h-4 w-4 text-white" />
           </div>
-          {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
+          <div className="flex-1">
+            <span className="text-sm font-bold text-slate-800">{t("title")}</span>
+          </div>
+          <span className="text-[9px] font-black tracking-widest uppercase bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-2.5 py-1 rounded-full shadow-sm">
+            PRO
+          </span>
+        </div>
+        <p className="text-[11px] text-slate-500 leading-relaxed mb-3">{t("panel_description")}</p>
+
+        {/* Textarea */}
+        <div className="relative">
+          <textarea
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={t("placeholder")}
+            className="w-full min-h-[110px] resize-none rounded-2xl border border-cyan-100 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent shadow-sm transition-all"
+          />
+          {input.trim().length > 0 && (
+            <span className={`absolute bottom-2.5 right-3 text-[9px] px-2 py-0.5 rounded-full font-bold ${
+              inputIsQuestion
+                ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
+                : "bg-cyan-100 text-cyan-700 ring-1 ring-cyan-200"
+            }`}>
+              {inputIsQuestion ? t("badge_consulta") : t("badge_ats")}
+            </span>
+          )}
+        </div>
+
+        {!inputIsQuestion && input.trim().length > 0 && (
+          <p className="text-[10px] text-slate-400 flex items-start gap-1.5 leading-relaxed">
+            <Lightbulb className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />
+            {t("hint")}
+          </p>
+        )}
+
+        {/* Analyze button */}
+        <button type="button" onClick={handleSubmit} disabled={loading}
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
+          {loading ? t("analyzing") : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
         </button>
 
-        {expanded && (
-          <div className="px-4 pb-4 space-y-3 bg-white border-t border-border">
-            <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">
-              {t("panel_description")}
-            </p>
+        {offTopic && (
+          <ATSErrorBlock title={t("off_topic_title")} description={t("off_topic_description")} />
+        )}
 
-            <div className="relative">
-              <Textarea
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder={t("placeholder")}
-                className="text-xs min-h-[110px] resize-none"
-              />
-              {input.trim().length > 0 && (
-                <span className={`absolute bottom-2 right-2 text-[9px] px-1.5 py-0.5 rounded font-medium ${
-                  inputIsQuestion ? "bg-emerald-100 text-emerald-700" : "bg-indigo-100 text-indigo-700"
-                }`}>
-                  {inputIsQuestion ? t("badge_consulta") : t("badge_ats")}
-                </span>
+        {/* ATS Results */}
+        {atsResult && (
+          <div className="space-y-3 pt-1">
+            {/* Score section */}
+            <div className="flex flex-col items-center gap-1 py-2">
+              <ScoreRing score={atsResult.score} />
+              <p className="text-sm font-bold text-slate-800">{atsResult.label}</p>
+              <p className="text-[11px] text-slate-500 text-center leading-relaxed max-w-[240px]">{atsResult.summary}</p>
+            </div>
+
+            {/* Analysis bars */}
+            <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 backdrop-blur-sm p-4">
+              <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("title")}</p>
+              <ScoreBar label={t("strengths")} pct={atsResult.score} />
+              {atsResult.missingKeywords && (
+                <ScoreBar
+                  label={t("missing_keywords")}
+                  pct={Math.max(0, 100 - Math.min(100, (atsResult.missingKeywords?.length ?? 0) * 10))}
+                />
+              )}
+              {atsResult.gaps && (
+                <ScoreBar
+                  label={t("gaps")}
+                  pct={Math.max(0, 100 - Math.min(100, (atsResult.gaps?.length ?? 0) * 15))}
+                />
               )}
             </div>
 
-            {!inputIsQuestion && input.trim().length > 0 && (
-              <p className="text-[10px] text-muted-foreground leading-relaxed">💡 {t("hint")}</p>
+            {atsResult.strengths?.length > 0 && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-emerald-600 flex items-center gap-1.5 mb-2.5">
+                  <CheckCircle2 className="h-3 w-3" /> {t("strengths")}
+                </p>
+                <ul className="space-y-1.5">
+                  {atsResult.strengths.map((s, i) => (
+                    <li key={i} className="text-xs text-slate-700 flex items-start gap-2">
+                      <span className="text-emerald-500 mt-0.5 shrink-0 font-bold">✓</span> {s}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
-            <Button size="sm" className="w-full gap-2" onClick={handleSubmit} disabled={loading}>
-              {loading
-                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                : inputIsQuestion && input.trim().length > 0
-                  ? <MessageSquare className="h-3.5 w-3.5" />
-                  : <Target className="h-3.5 w-3.5" />}
-              {loading ? t("analyzing") : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
-            </Button>
-
-            {offTopic && (
-              <ATSErrorBlock title={t("off_topic_title")} description={t("off_topic_description")} />
+            {atsResult.gaps?.length > 0 && (
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
+                  <AlertCircle className="h-3 w-3" /> {t("gaps")}
+                </p>
+                <ul className="space-y-1.5">
+                  {atsResult.gaps.map((g, i) => (
+                    <li key={i} className="text-xs text-slate-700 flex items-start gap-2">
+                      <span className="text-amber-500 mt-0.5 shrink-0 font-bold">!</span> {g}
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
 
-            {/* ATS Results */}
-            {atsResult && (
-              <div className="space-y-3 pt-1">
-                {/* Score section */}
-                <div style={{ textAlign: 'center', marginBottom: 0, marginTop: 0 }}>
-                  <ScoreRing score={atsResult.score} />
-                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0B1B3D', marginBottom: 2 }}>{atsResult.label}</div>
-                  <div style={{ fontSize: 11, color: '#475569', lineHeight: 1.6 }}>{atsResult.summary}</div>
+            {atsResult.missingKeywords?.length > 0 && (
+              <div className="rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5">
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-[10px] font-black tracking-widest uppercase text-slate-600 flex items-center gap-1.5">
+                    <Tag className="h-3 w-3" /> {t("missing_keywords")}
+                  </p>
+                  <button type="button" onClick={addAllKeywords}
+                    className="text-[10px] font-bold text-cyan-600 hover:text-cyan-800 transition-colors bg-cyan-50 hover:bg-cyan-100 px-2 py-0.5 rounded-full">
+                    + {t("button_add_all")}
+                  </button>
                 </div>
-
-                {/* Analysis bars */}
-                <div style={{ marginBottom: 12, padding: 12, background: '#F0F9FF', border: '1px solid rgba(0,212,255,0.2)', borderRadius: 12 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#00E5FF', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {t("title")}
-                  </div>
-                  <ScoreBar label={t("strengths")} pct={atsResult.score} />
-                  {atsResult.missingKeywords && (
-                    <ScoreBar
-                      label={t("missing_keywords")}
-                      pct={Math.max(0, 100 - Math.min(100, (atsResult.missingKeywords?.length ?? 0) * 10))}
-                    />
-                  )}
-                  {atsResult.gaps && (
-                    <ScoreBar
-                      label={t("gaps")}
-                      pct={Math.max(0, 100 - Math.min(100, (atsResult.gaps?.length ?? 0) * 15))}
-                    />
-                  )}
-                </div>
-
-                {atsResult.strengths?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1 mb-1.5">
-                      <CheckCircle2 className="h-3 w-3" /> {t("strengths")}
-                    </p>
-                    <ul className="space-y-1">
-                      {atsResult.strengths.map((s, i) => (
-                        <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
-                          <span className="text-green-500 mt-0.5 shrink-0">✓</span> {s}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {atsResult.gaps?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold text-amber-700 flex items-center gap-1 mb-1.5">
-                      <AlertCircle className="h-3 w-3" /> {t("gaps")}
-                    </p>
-                    <ul className="space-y-1">
-                      {atsResult.gaps.map((g, i) => (
-                        <li key={i} className="text-xs text-foreground flex items-start gap-1.5">
-                          <span className="text-amber-500 mt-0.5 shrink-0">!</span> {g}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {atsResult.missingKeywords?.length > 0 && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <p className="text-[11px] font-semibold text-red-700 flex items-center gap-1">
-                        <Tag className="h-3 w-3" /> {t("missing_keywords")}
-                      </p>
-                      <button type="button" onClick={addAllKeywords}
-                        className="text-[10px] text-indigo-600 hover:text-indigo-800 font-medium transition-colors">
-                        {t("button_add_all")}
+                <div className="flex flex-wrap gap-1.5">
+                  {atsResult.missingKeywords.map((kw, i) => {
+                    const added = addedKeywords.has(kw)
+                    return (
+                      <button key={i} type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
+                        className={`flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 transition-all ${added ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 cursor-default" : "bg-slate-100 text-slate-700 ring-1 ring-slate-200 hover:bg-cyan-100 hover:text-cyan-700 hover:ring-cyan-200 cursor-pointer"}`}>
+                        {added ? <Check className="h-2.5 w-2.5" /> : <Plus className="h-2.5 w-2.5" />}
+                        {kw}
                       </button>
-                    </div>
-                    <div className="flex flex-wrap gap-1">
-                      {atsResult.missingKeywords.map((kw, i) => {
-                        const added = addedKeywords.has(kw)
-                        return (
-                          <button key={i} type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
-                            className={`flex items-center gap-1 text-[10px] border rounded px-1.5 py-0.5 transition-colors ${
-                              added ? "bg-green-50 text-green-700 border-green-300 cursor-default"
-                                : "bg-red-50 text-red-700 border-red-200 hover:bg-red-100 cursor-pointer"
-                            }`}>
-                            {added ? <Check className="h-2.5 w-2.5" /> : <Plus className="h-2.5 w-2.5" />}
-                            {kw}
-                          </button>
-                        )
-                      })}
-                    </div>
-                    <p className="text-[10px] text-muted-foreground mt-1.5">
-                      {t("keyword_hint")}
-                    </p>
-                  </div>
-                )}
-
-                {atsResult.suggestions?.length > 0 && (
-                  <div style={{ padding: 12, background: '#FFFBEB', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, fontSize: 11, color: '#B45309', lineHeight: 1.6 }}>
-                    <p style={{ fontWeight: 700, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <Lightbulb className="h-3 w-3" /> {t("suggestions")}
-                    </p>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-                      {atsResult.suggestions.map((s, i) => (
-                        <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-                          <span style={{ flexShrink: 0 }}>→</span>
-                          <span style={{ flex: 1 }}>{s}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
+                    )
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">{t("keyword_hint")}</p>
               </div>
             )}
 
-            {/* Review Results */}
-            {reviewResult && (
-              <div className="space-y-3 pt-1">
-                {reviewResult.answer && (
-                  <div className="rounded-lg border border-indigo-200 bg-indigo-50/60 p-3">
-                    <p className="text-[11px] font-semibold text-indigo-700 mb-1.5 flex items-center gap-1">
-                      <MessageSquare className="h-3 w-3" /> {t("label_respuesta")}
-                    </p>
-                    <p className="text-xs text-foreground leading-relaxed">{reviewResult.answer}</p>
-                  </div>
-                )}
-
-                {!reviewResult.answer && reviewResult.summary && (
-                  <div className="rounded-lg border border-border bg-muted/30 p-3">
-                    <p className="text-xs text-muted-foreground leading-relaxed">{reviewResult.summary}</p>
-                  </div>
-                )}
-
-                {reviewResult.strengths?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold text-green-700 flex items-center gap-1 mb-1.5">
-                      <CheckCircle2 className="h-3 w-3" /> {t("strengths")}
-                    </p>
-                    <ul className="space-y-2">
-                      {reviewResult.strengths.map((item, i) => (
-                        <ReviewItemRow
-                          key={i}
-                          item={item}
-                          itemKey={`strength-${i}`}
-                          icon="✓"
-                          iconColor="text-green-500"
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {reviewResult.improvements?.length > 0 && (
-                  <div>
-                    <p className="text-[11px] font-semibold text-amber-700 flex items-center gap-1 mb-1.5">
-                      <TrendingUp className="h-3 w-3" /> {t("label_areas_mejora")}
-                    </p>
-                    <ul className="space-y-2">
-                      {reviewResult.improvements.map((item, i) => (
-                        <ReviewItemRow
-                          key={i}
-                          item={item}
-                          itemKey={`improvement-${i}`}
-                          icon={<Lightbulb className="h-3 w-3 text-amber-500" />}
-                          iconColor=""
-                        />
-                      ))}
-                    </ul>
-                  </div>
-                )}
+            {atsResult.suggestions?.length > 0 && (
+              <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/80 to-orange-50/60 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
+                  <Lightbulb className="h-3 w-3" /> {t("suggestions")}
+                </p>
+                <ul className="space-y-1.5">
+                  {atsResult.suggestions.map((s, i) => (
+                    <li key={i} className="text-xs text-slate-700 flex items-start gap-2 leading-relaxed">
+                      <span className="text-amber-400 shrink-0 mt-0.5 font-bold">→</span>
+                      <span>{s}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            )}
-
-            {hasResult && (
-              <button type="button"
-                onClick={() => { reset(); setAddedKeywords(new Set()); setAppliedItems(new Set()) }}
-                className="text-[11px] text-muted-foreground hover:text-foreground transition-colors">
-                {t("clear")}
-              </button>
             )}
           </div>
+        )}
+
+        {/* Review Results */}
+        {reviewResult && (
+          <div className="space-y-3 pt-1">
+            {reviewResult.answer && (
+              <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 backdrop-blur-sm p-4">
+                <p className="text-[10px] font-black tracking-widest uppercase text-blue-600 flex items-center gap-1.5 mb-2.5">
+                  <MessageSquare className="h-3.5 w-3.5" /> {t("label_respuesta")}
+                </p>
+                <p className="text-xs text-slate-700 leading-relaxed">{reviewResult.answer}</p>
+              </div>
+            )}
+
+            {!reviewResult.answer && reviewResult.summary && (
+              <div className="rounded-2xl border border-slate-100 bg-white/60 backdrop-blur-sm p-4">
+                <p className="text-xs text-slate-600 leading-relaxed">{reviewResult.summary}</p>
+              </div>
+            )}
+
+            {reviewResult.strengths?.length > 0 && (
+              <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-emerald-600 flex items-center gap-1.5 mb-2.5">
+                  <CheckCircle2 className="h-3 w-3" /> {t("strengths")}
+                </p>
+                <ul className="space-y-1">
+                  {reviewResult.strengths.map((item, i) => (
+                    <ReviewItemRow
+                      key={i}
+                      item={item}
+                      itemKey={`strength-${i}`}
+                      icon="✓"
+                      iconColor="text-emerald-500 font-bold"
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {reviewResult.improvements?.length > 0 && (
+              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
+                  <TrendingUp className="h-3 w-3" /> {t("label_areas_mejora")}
+                </p>
+                <ul className="space-y-1">
+                  {reviewResult.improvements.map((item, i) => (
+                    <ReviewItemRow
+                      key={i}
+                      item={item}
+                      itemKey={`improvement-${i}`}
+                      icon={<Lightbulb className="h-3 w-3 text-amber-500" />}
+                      iconColor=""
+                    />
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        )}
+
+        {hasResult && (
+          <button type="button"
+            onClick={() => { reset(); setAddedKeywords(new Set()); setAppliedItems(new Set()) }}
+            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-600 transition-colors mx-auto">
+            <RotateCcw className="h-3 w-3" /> {t("clear")}
+          </button>
         )}
       </div>
 

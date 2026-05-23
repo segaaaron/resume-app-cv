@@ -18,29 +18,25 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
   if (!user) redirect(`/${locale}/login`)
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+    <div className="flex flex-col gap-0">
       {/* Page head */}
-      <div className="dash-card-in" style={{ animationDelay: "0ms", marginBottom: 28 }}>
-        <div style={{
-          fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase",
-          color: "#00D4FF", marginBottom: 6,
-          display: "flex", alignItems: "center", gap: 7,
-        }}>
-          <span style={{ width: 14, height: 1.5, background: "#00D4FF", opacity: 0.5, display: "inline-block" }} />
+      <div className="dash-card-in px-4 py-4 sm:px-8 w-full mb-3" style={{ animationDelay: "0ms" }}>
+        <div className="flex items-center gap-[7px] text-[10px] font-bold tracking-[0.1em] uppercase text-[#00D4FF] mb-[6px]">
+          {/* decorative rule — width/height are design values that map to no standard utility, keep inline */}
+          <span className="inline-block opacity-50 bg-[#00D4FF]" style={{ width: 14, height: 1.5 }} />
           Cuenta
         </div>
-        <h1 style={{
-          fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)",
-          fontSize: 32, fontWeight: 700, color: "#1a2e4a",
-          letterSpacing: "-0.035em", lineHeight: 1.1, margin: 0,
-        }}>
+        <h1
+          className="text-[32px] font-bold text-[#1a2e4a] tracking-[-0.035em] leading-[1.1] m-0"
+          style={{ fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)" }}
+        >
           Configuración
         </h1>
-        <p style={{ fontSize: 13.5, color: "#6B7A8C", marginTop: 6 }}>
+        <p className="text-[13.5px] text-[#6B7A8C] mt-[6px]">
           Gestiona tu perfil y preferencias de cuenta
         </p>
       </div>
-      <div className="dash-card-in" style={{ animationDelay: "80ms" }}>
+      <div className="dash-card-in px-4 sm:px-8 w-full" style={{ animationDelay: "80ms" }}>
         <SettingsForm user={user} />
       </div>
     </div>

@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect, useRef } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
@@ -11,10 +12,17 @@ export default function HobbiesSection() {
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
 
+  const [local, setLocal] = useState(sectionData.hobbies)
+  const commitRef = useRef(updateSectionData)
+  commitRef.current = updateSectionData
+
+  useEffect(() => { setLocal(sectionData.hobbies) }, [sectionData.hobbies])
+
   return (
     <Textarea
-      value={sectionData.hobbies}
-      onChange={(e) => updateSectionData("hobbies", e.target.value)}
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={() => commitRef.current("hobbies", local)}
       placeholder={t("hobbies_placeholder")}
       className="text-sm min-h-[80px] resize-none"
     />

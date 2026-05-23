@@ -2,9 +2,11 @@
 
 import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, AlertCircle, Pencil } from "lucide-react"
+import {
+  ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye,
+  CheckCircle2, AlertCircle, Pencil, FileText,
+} from "lucide-react"
 import { useState, useEffect } from "react"
 import { useShallow } from "zustand/react/shallow"
 import { useLocale, useTranslations } from "next-intl"
@@ -40,7 +42,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const locale = useLocale()
   const t = useTranslations("editor")
 
-
   useEffect(() => {
     if (!resumeId) return
     apiFetch(`/api/resumes/${resumeId}`)
@@ -72,10 +73,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
   }, [isDirty])
 
   function handleBack() {
-    if (isDirty) {
-      setShowExitModal(true)
-      return
-    }
+    if (isDirty) { setShowExitModal(true); return }
     router.push(`/${locale}/dashboard/resumes`)
   }
 
@@ -83,10 +81,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
     setShowExitModal(false)
     if (hasAccess) {
       await save().catch(() => {})
-      if (useResumeStore.getState().isDirty) {
-        toast.error(t("save_error"))
-        return
-      }
+      if (useResumeStore.getState().isDirty) { toast.error(t("save_error")); return }
     }
     router.push(`/${locale}/dashboard/resumes`)
   }
@@ -95,7 +90,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
     setShowExitModal(false)
     router.push(`/${locale}/dashboard/resumes`)
   }
-
 
   async function handleToggleShare() {
     if (!resumeId) return
@@ -138,9 +132,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   async function handleDownloadPdf() {
     if (!resumeId) return
-    if (isDirty && hasAccess) {
-      await save({ skipThumbnail: true }).catch(() => {})
-    }
+    if (isDirty && hasAccess) await save({ skipThumbnail: true }).catch(() => {})
     setDownloadingPdf(true)
     try {
       const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
@@ -150,8 +142,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
           : res.status === 404 ? "print.error_pdf_404"
           : res.status >= 500 ? "print.error_pdf_500"
           : "print.error_pdf"
-        toast.error(t(key))
-        return
+        toast.error(t(key)); return
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -170,93 +161,65 @@ export default function EditorTopBar({ hasAccess }: Props) {
     }
   }
 
-  const iconBtnStyle: React.CSSProperties = {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#E2E8F0',
-    background: '#FFFFFF',
-    color: '#475569',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-    flexShrink: 0,
-  }
-
-  const ghostBtnStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 16px',
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 600,
-    background: 'transparent',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#E2E8F0',
-    color: '#0B1B3D',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  }
-
-  const primaryBtnStyle: React.CSSProperties = {
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 8,
-    padding: '8px 16px',
-    borderRadius: 8,
-    fontSize: 13,
-    fontWeight: 600,
-    background: '#0B1B3D',
-    color: '#FFFFFF',
-    borderWidth: 1,
-    borderStyle: 'solid',
-    borderColor: '#0B1B3D',
-    boxShadow: '0 4px 12px rgba(11,27,61,0.15)',
-    cursor: 'pointer',
-    transition: 'all 0.2s ease',
-  }
-
   return (
     <header
-      className="flex items-center justify-between border-b shrink-0 z-[100] relative px-3 sm:px-6"
+      className="h-[58px] flex items-center justify-between shrink-0 z-[100] relative px-3 sm:px-5"
       style={{
-        height: 64,
-        borderBottom: '1px solid #E2E8F0',
-        background: 'rgba(255,255,255,0.95)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.02)',
-        flexShrink: 0,
-        zIndex: 100,
+        background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)",
+        borderBottom: "1px solid rgba(0,212,255,0.2)",
+        boxShadow: "0 1px 0 rgba(0,212,255,0.12), 0 4px 16px rgba(0,0,0,0.06)",
       }}
     >
-      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-2">
+      {/* Subtle cyan glow line at bottom */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+        style={{ background: "linear-gradient(90deg, transparent 0%, #00D4FF 30%, #00E5FF 50%, #00D4FF 70%, transparent 100%)", opacity: 0.35 }}
+      />
+      {/* Ambient top-right glow */}
+      <div
+        className="absolute top-0 right-0 w-64 h-full pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at 100% 50%, rgba(0,212,255,0.12) 0%, rgba(0,168,204,0.05) 50%, transparent 70%)" }}
+      />
+
+      {/* ── Left: back + title ── */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-3 relative z-10">
         <button
           onClick={handleBack}
           aria-label="Back"
-          style={iconBtnStyle}
+          className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 cursor-pointer transition-all duration-200"
+          style={{
+            background: "rgba(255,255,255,0.7)",
+            border: "1px solid rgba(0,212,255,0.2)",
+            color: "#1a2e4a",
+          }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.background = '#F8FAFC'
-            e.currentTarget.style.color = '#00E5FF'
-            e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'
-            e.currentTarget.style.transform = 'translateY(-1px)'
+            const el = e.currentTarget
+            el.style.background = "rgba(0,212,255,0.12)"
+            el.style.borderColor = "rgba(0,212,255,0.4)"
+            el.style.color = "#00A8CC"
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.background = '#FFFFFF'
-            e.currentTarget.style.color = '#475569'
-            e.currentTarget.style.borderColor = '#E2E8F0'
-            e.currentTarget.style.transform = 'translateY(0)'
+            const el = e.currentTarget
+            el.style.background = "rgba(255,255,255,0.7)"
+            el.style.borderColor = "rgba(0,212,255,0.2)"
+            el.style.color = "#1a2e4a"
           }}
         >
-          <ArrowLeft size={18} />
+          <ArrowLeft size={16} />
         </button>
 
+        {/* CV icon badge */}
+        <div
+          className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg shrink-0"
+          style={{
+            background: "linear-gradient(135deg, rgba(0,212,255,0.2) 0%, rgba(0,168,204,0.1) 100%)",
+            border: "1px solid rgba(0,212,255,0.25)",
+          }}
+        >
+          <FileText size={13} style={{ color: "#00D4FF" }} />
+        </div>
+
+        {/* Title */}
         {editing ? (
           <Input
             autoFocus
@@ -264,193 +227,170 @@ export default function EditorTopBar({ hasAccess }: Props) {
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => setEditing(false)}
             onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
-            className="max-w-[120px] sm:max-w-[260px]"
-            style={{
-              border: 'none',
-              borderBottom: '2px solid #00E5FF',
-              borderRadius: 0,
-              background: 'transparent',
-              fontSize: 15,
-              fontWeight: 600,
-              color: '#0B1B3D',
-              outline: 'none',
-              padding: '4px 0',
-              height: 'auto',
-              boxShadow: 'none',
-            }}
+            className="max-w-[120px] sm:max-w-[240px] border-0 border-b border-b-[#00D4FF] rounded-none bg-transparent text-[14px] font-semibold text-[#1a2e4a] outline-none py-1 px-0 h-auto shadow-none focus-visible:ring-0"
+            style={{ caretColor: "#00D4FF" }}
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="group truncate max-w-[110px] sm:max-w-[260px]"
-            style={{
-              fontSize: 15,
-              fontWeight: 600,
-              color: '#0B1B3D',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 8,
-              cursor: 'pointer',
-              background: 'transparent',
-              border: 'none',
-            }}
+            className="group flex items-center gap-1.5 truncate max-w-[110px] sm:max-w-[240px] cursor-pointer bg-transparent border-none"
           >
-            <span className="truncate">{title}</span>
+            <span
+              className="truncate text-[14px] font-semibold tracking-[-0.01em]"
+              style={{ color: "#1a2e4a" }}
+            >
+              {title}
+            </span>
             <Pencil
-              size={14}
-              style={{ color: '#00E5FF', opacity: 0.6, transition: 'opacity 0.2s ease' }}
-              className="group-hover:!opacity-100"
+              size={12}
+              className="shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100"
+              style={{ color: "#00D4FF" }}
             />
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-1 sm:gap-3 flex-shrink-0">
-        {/* Share button */}
+      {/* ── Right: actions ── */}
+      <div className="flex items-center gap-2 shrink-0 relative z-10">
+
+        {/* Save status pill */}
+        {hasAccess ? (
+          <button
+            onClick={() => { if (isDirty && !isSaving) save().catch(() => {}) }}
+            disabled={isSaving || !isDirty}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-medium cursor-pointer border transition-all duration-200 disabled:cursor-default"
+            style={{
+              background: isSaving
+                ? "rgba(148,163,184,0.1)"
+                : isDirty
+                ? "rgba(245,158,11,0.1)"
+                : lastSaved
+                ? "rgba(16,185,129,0.1)"
+                : "transparent",
+              borderColor: isSaving
+                ? "rgba(148,163,184,0.2)"
+                : isDirty
+                ? "rgba(245,158,11,0.25)"
+                : lastSaved
+                ? "rgba(16,185,129,0.25)"
+                : "transparent",
+              color: isSaving ? "#94A3B8" : isDirty ? "#F59E0B" : lastSaved ? "#10B981" : "transparent",
+            }}
+          >
+            {isSaving ? (
+              <><Loader2 size={11} className="animate-spin" /><span className="hidden sm:inline">{t("saving")}</span></>
+            ) : isDirty ? (
+              <><AlertCircle size={11} /><span className="hidden sm:inline">{t("unsaved")}</span></>
+            ) : lastSaved ? (
+              <><CheckCircle2 size={11} /><span className="hidden sm:inline">{t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}</span></>
+            ) : null}
+          </button>
+        ) : (
+          <button
+            onClick={handleLockedClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] cursor-pointer border transition-all duration-200"
+            style={{ background: "rgba(255,255,255,0.5)", borderColor: "rgba(0,212,255,0.15)", color: "#94A3B8" }}
+          >
+            <Lock size={11} />
+            <span className="hidden sm:inline">{t("save")}</span>
+          </button>
+        )}
+
+        {/* Share */}
         {hasAccess && (
           <div className="flex items-center gap-1">
             <button
               onClick={handleToggleShare}
               disabled={togglingShare || !resumeId}
               aria-label={isPublic ? t("share.public") : t("share.button")}
+              className="inline-flex items-center gap-2 px-3 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition-all duration-200 disabled:opacity-50"
               style={{
-                ...ghostBtnStyle,
-                ...(isPublic
-                  ? { background: '#0B1B3D', color: '#FFFFFF', borderColor: '#0B1B3D' }
-                  : {}),
-                opacity: togglingShare || !resumeId ? 0.6 : 1,
+                background: isPublic ? "rgba(0,212,255,0.12)" : "rgba(255,255,255,0.7)",
+                border: isPublic ? "1px solid rgba(0,212,255,0.35)" : "1px solid rgba(0,212,255,0.2)",
+                color: isPublic ? "#00A8CC" : "#1a2e4a",
               }}
               onMouseEnter={(e) => {
-                if (togglingShare || !resumeId) return
-                if (!isPublic) {
-                  e.currentTarget.style.borderColor = '#00E5FF'
-                  e.currentTarget.style.color = '#00E5FF'
-                  e.currentTarget.style.background = '#F8FAFC'
-                }
+                if (isPublic) return
+                const el = e.currentTarget
+                el.style.background = "rgba(0,212,255,0.1)"
+                el.style.borderColor = "rgba(0,212,255,0.4)"
+                el.style.color = "#00A8CC"
               }}
               onMouseLeave={(e) => {
-                if (!isPublic) {
-                  e.currentTarget.style.borderColor = '#E2E8F0'
-                  e.currentTarget.style.color = '#0B1B3D'
-                  e.currentTarget.style.background = 'transparent'
-                }
+                if (isPublic) return
+                const el = e.currentTarget
+                el.style.background = "rgba(255,255,255,0.7)"
+                el.style.borderColor = "rgba(0,212,255,0.2)"
+                el.style.color = "#1a2e4a"
               }}
             >
-              {togglingShare ? <Loader2 size={14} className="animate-spin" /> : <Share2 size={14} />}
+              {togglingShare ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
               <span className="hidden sm:inline">{isPublic ? t("share.public") : t("share.button")}</span>
             </button>
+
             {isPublic && publicSlug && (
               <button
                 onClick={handleCopyLink}
                 title={t("share.copy_link")}
-                aria-label={t("share.copy_link")}
-                style={iconBtnStyle}
+                className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200"
+                style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(0,212,255,0.2)", color: "#1a2e4a" }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#F8FAFC'
-                  e.currentTarget.style.color = '#00E5FF'
-                  e.currentTarget.style.borderColor = 'rgba(0,229,255,0.4)'
+                  const el = e.currentTarget
+                  el.style.background = "rgba(0,212,255,0.1)"
+                  el.style.borderColor = "rgba(0,212,255,0.4)"
+                  el.style.color = "#00A8CC"
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = '#FFFFFF'
-                  e.currentTarget.style.color = '#475569'
-                  e.currentTarget.style.borderColor = '#E2E8F0'
+                  const el = e.currentTarget
+                  el.style.background = "rgba(255,255,255,0.7)"
+                  el.style.borderColor = "rgba(0,212,255,0.2)"
+                  el.style.color = "#1a2e4a"
                 }}
               >
-                <Copy size={14} />
+                <Copy size={13} />
               </button>
             )}
+
             {isPublic && viewStats !== null && (
               <span
-                className="hidden sm:flex items-center gap-1 px-2"
-                style={{ fontSize: 12, color: '#475569' }}
+                className="hidden sm:flex items-center gap-1 px-2 text-[11px]"
+                style={{ color: "#94A3B8" }}
                 title={t("share.views_tooltip", { total: viewStats.total })}
               >
-                <Eye size={12} />
-                {viewStats.last7d}
+                <Eye size={11} /> {viewStats.last7d}
               </span>
             )}
           </div>
         )}
 
-        {/* Save status indicator */}
-        {hasAccess ? (
-          <button
-            onClick={() => { if (isDirty && !isSaving) save().catch(() => {}) }}
-            disabled={isSaving || !isDirty}
-            className="flex items-center gap-1.5 disabled:cursor-default cursor-pointer"
-            style={{
-              fontSize: 12,
-              padding: '6px 10px',
-              borderRadius: 8,
-              background: 'transparent',
-              border: 'none',
-              color: '#475569',
-              transition: 'background 0.2s ease',
-            }}
-            onMouseEnter={(e) => { if (isDirty && !isSaving) e.currentTarget.style.background = '#F8FAFC' }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent' }}
-            title={isDirty ? t("unsaved") : lastSaved ? t("saved") : ""}
-          >
-            {isSaving ? (
-              <>
-                <Loader2 size={12} className="animate-spin" style={{ color: '#475569' }} />
-                <span className="hidden sm:inline">{t("saving")}</span>
-              </>
-            ) : isDirty ? (
-              <>
-                <AlertCircle size={12} style={{ color: '#f59e0b' }} />
-                <span className="hidden sm:inline" style={{ color: '#d97706' }}>{t("unsaved")}</span>
-              </>
-            ) : lastSaved ? (
-              <>
-                <CheckCircle2 size={12} style={{ color: '#22c55e' }} />
-                <span className="hidden sm:inline">
-                  {t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}
-                </span>
-              </>
-            ) : null}
-          </button>
-        ) : (
-          <button
-            onClick={handleLockedClick}
-            className="flex items-center gap-1.5 cursor-pointer"
-            style={{
-              fontSize: 12,
-              padding: '6px 10px',
-              borderRadius: 8,
-              background: 'transparent',
-              border: 'none',
-              color: '#475569',
-              opacity: 0.5,
-            }}
-          >
-            <Lock size={12} />
-            <span className="hidden sm:inline">{t("save")}</span>
-          </button>
-        )}
-
+        {/* Download PDF */}
         {hasAccess ? (
           <button
             disabled={!resumeId || downloadingPdf}
             onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
-              ...primaryBtnStyle,
-              opacity: !resumeId || downloadingPdf ? 0.7 : 1,
-              cursor: !resumeId || downloadingPdf ? 'not-allowed' : 'pointer',
+              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+              border: "1px solid rgba(0,212,255,0.3)",
+              color: "#0a1a35",
+              boxShadow: "0 4px_16px rgba(0,212,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
             }}
             onMouseEnter={(e) => {
-              if (!resumeId || downloadingPdf) return
-              e.currentTarget.style.background = '#1A365D'
-              e.currentTarget.style.borderColor = '#1A365D'
-              e.currentTarget.style.transform = 'translateY(-1px)'
+              if (!downloadingPdf) {
+                const el = e.currentTarget
+                el.style.transform = "translateY(-1px)"
+                el.style.boxShadow = "0 6px 20px rgba(0,212,255,0.45), inset 0 1px 0 rgba(255,255,255,0.2)"
+              }
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = '#0B1B3D'
-              e.currentTarget.style.borderColor = '#0B1B3D'
-              e.currentTarget.style.transform = 'translateY(0)'
+              const el = e.currentTarget
+              el.style.transform = "translateY(0)"
+              el.style.boxShadow = "0 4px 16px rgba(0,212,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)"
             }}
           >
-            {downloadingPdf ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {downloadingPdf
+              ? <Loader2 size={13} className="animate-spin" />
+              : <Download size={13} />}
             <span className="hidden sm:inline">
               {downloadingPdf ? t("download_generating_pdf") : t("print.print_pdf")}
             </span>
@@ -458,9 +398,14 @@ export default function EditorTopBar({ hasAccess }: Props) {
         ) : (
           <button
             onClick={handleLockedClick}
-            style={{ ...primaryBtnStyle, opacity: 0.5 }}
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer opacity-40"
+            style={{
+              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+              border: "1px solid rgba(0,212,255,0.3)",
+              color: "#0a1a35",
+            }}
           >
-            <Lock size={14} />
+            <Lock size={13} />
             <span className="hidden sm:inline">{t("print.print_pdf")}</span>
           </button>
         )}

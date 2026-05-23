@@ -6,11 +6,9 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { ProjectItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, ChevronDown, ChevronRight, FolderOpen, UserRound, Link, CalendarDays, FileText } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, FolderOpen, UserRound, Link } from "lucide-react"
 import { nanoid } from "nanoid"
+import { PField, DateField, PTextarea } from "./shared"
 
 export default function ProjectsSection() {
   const t = useTranslations("editor.sections_form")
@@ -32,15 +30,15 @@ export default function ProjectsSection() {
 
   function remove(id: string) {
     updateSectionData("projects", items.filter((i) => i.id !== id))
+    if (openId === id) setOpenId(null)
   }
 
   return (
     <div className="space-y-2">
       {items.map((item) => (
-        <div key={item.id} className="border border-border rounded-lg overflow-hidden">
+        <div key={item.id} className="border border-border rounded-lg bg-white">
           <div
-            role="button"
-            tabIndex={0}
+            role="button" tabIndex={0}
             className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 cursor-pointer"
             onClick={() => setOpenId(openId === item.id ? null : item.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenId(openId === item.id ? null : item.id) }}
@@ -55,37 +53,19 @@ export default function ProjectsSection() {
           </div>
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
-              <div className="col-span-2">
-                <Label className="text-xs mb-1 block text-muted-foreground"><FolderOpen size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.name")}</Label>
-                <Input value={item.name} onChange={(e) => update(item.id, "name", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block text-muted-foreground"><UserRound size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.role")}</Label>
-                <Input value={item.role} onChange={(e) => update(item.id, "role", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block text-muted-foreground"><Link size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.url")}</Label>
-                <Input value={item.url} onChange={(e) => update(item.id, "url", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block text-muted-foreground"><CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.start_date")}</Label>
-                <Input value={item.startDate} onChange={(e) => update(item.id, "startDate", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div>
-                <Label className="text-xs mb-1 block text-muted-foreground"><CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.end_date")}</Label>
-                <Input value={item.endDate} onChange={(e) => update(item.id, "endDate", e.target.value)} className="h-8 text-xs" />
-              </div>
-              <div className="col-span-2">
-                <Label className="text-xs mb-1 block text-muted-foreground"><FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />{t("projects.description")}</Label>
-                <Textarea value={item.description} onChange={(e) => update(item.id, "description", e.target.value)} className="text-xs min-h-[60px] resize-none" />
-              </div>
+              <PField label={t("projects.name")} value={item.name} onChange={(v) => update(item.id, "name", v)} icon={FolderOpen} span2 />
+              <PField label={t("projects.role")} value={item.role} onChange={(v) => update(item.id, "role", v)} icon={UserRound} />
+              <PField label={t("projects.url")}  value={item.url}  onChange={(v) => update(item.id, "url", v)}  icon={Link} />
+              <DateField label={t("projects.start_date")} value={item.startDate} onChange={(v) => update(item.id, "startDate", v)} />
+              <DateField label={t("projects.end_date")}   value={item.endDate}   onChange={(v) => update(item.id, "endDate", v)} />
+              <PTextarea label={t("projects.description")} value={item.description} onChange={(v) => update(item.id, "description", v)} />
             </div>
           )}
         </div>
       ))}
-      <Button variant="outline" size="sm" className="w-full gap-1.5" style={{ background: "#0B1B3D", color: "#FFFFFF", borderColor: "#0B1B3D" }} onClick={add}>
+      <button onClick={add} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors duration-200 hover:border-[#00D4FF] hover:text-[#1a2e4a] hover:bg-[rgba(0,212,255,0.04)]" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
         <Plus className="h-3.5 w-3.5" /> {t("add_project")}
-      </Button>
+      </button>
     </div>
   )
 }

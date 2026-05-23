@@ -14,19 +14,19 @@ import { useTemplateSwitcher } from "./hooks/useTemplateSwitcher"
 const ARROW_BASE: React.CSSProperties = {
   position: "absolute",
   zIndex: 3,
-  width: 44,
-  height: 34,
-  borderRadius: 10,
-  background: "rgba(239,80,48,0.82)",
+  width: 36,
+  height: 30,
+  borderRadius: 8,
+  background: "linear-gradient(135deg, #1a2e4a 0%, #0f2040 100%)",
   backdropFilter: "blur(12px)",
   WebkitBackdropFilter: "blur(12px)",
   borderWidth: 1,
   borderStyle: "solid",
-  borderColor: "rgba(255,120,80,0.5)",
-  boxShadow: "none",
+  borderColor: "rgba(0,212,255,0.3)",
+  boxShadow: "0 4px 16px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,212,255,0.2), 0 2px 8px rgba(0,212,255,0.18)",
   cursor: "pointer",
-  color: "#FFFFFF",
-  transition: "background 0.2s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.2s ease, border-color 0.2s ease, color 0.2s ease",
+  color: "#00D4FF",
+  transition: "transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease",
   touchAction: "manipulation",
 }
 
@@ -64,7 +64,7 @@ function CarouselRow({ children, compact }: { children: ReactNode; compact: bool
       {/* Left fade — desktop only */}
       <div suppressHydrationWarning className="hidden md:block" style={{
         position: "absolute", left: 0, top: 0, bottom: 0, width: 64, zIndex: 2,
-        background: "linear-gradient(to right, rgba(255,255,255,0.98) 35%, transparent)",
+        background: "linear-gradient(to right, rgba(240,248,255,0.98) 35%, transparent)",
         pointerEvents: "none", opacity: canLeft ? 1 : 0, transition: "opacity 0.2s ease",
       }} />
 
@@ -75,20 +75,6 @@ function CarouselRow({ children, compact }: { children: ReactNode; compact: bool
         aria-label="Scroll left"
         className="hidden md:flex items-center justify-center"
         style={{ ...ARROW_BASE, left: 8, opacity: canLeft ? 1 : 0, pointerEvents: canLeft ? "auto" : "none", transform: canLeft ? "scale(1)" : "scale(0.6)" }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(239,80,48,1)"
-          e.currentTarget.style.borderColor = "rgba(255,140,100,0.7)"
-          e.currentTarget.style.color = "#FFFFFF"
-          e.currentTarget.style.boxShadow = "none"
-          e.currentTarget.style.transform = "scale(1.06)"
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(239,80,48,0.82)"
-          e.currentTarget.style.borderColor = "rgba(255,120,80,0.5)"
-          e.currentTarget.style.color = "#FFFFFF"
-          e.currentTarget.style.boxShadow = "none"
-          e.currentTarget.style.transform = canLeft ? "scale(1)" : "scale(0.6)"
-        }}
       >
         <ChevronLeft style={{ width: 15, height: 15, strokeWidth: 2.5, pointerEvents: "none" }} />
       </button>
@@ -106,7 +92,7 @@ function CarouselRow({ children, compact }: { children: ReactNode; compact: bool
       {/* Right fade — desktop only */}
       <div suppressHydrationWarning className="hidden md:block" style={{
         position: "absolute", right: 0, top: 0, bottom: 0, width: 64, zIndex: 2,
-        background: "linear-gradient(to left, rgba(255,255,255,0.98) 35%, transparent)",
+        background: "linear-gradient(to left, rgba(237,246,251,0.98) 35%, transparent)",
         pointerEvents: "none", opacity: canRight ? 1 : 0, transition: "opacity 0.2s ease",
       }} />
 
@@ -117,19 +103,7 @@ function CarouselRow({ children, compact }: { children: ReactNode; compact: bool
         aria-label="Scroll right"
         className={`hidden md:flex items-center justify-center${canRight ? " arrow-hint-pulse" : ""}`}
         style={{ ...ARROW_BASE, right: 8, opacity: canRight ? 1 : 0, pointerEvents: canRight ? "auto" : "none", transform: canRight ? "scale(1)" : "scale(0.6)" }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = "rgba(239,80,48,1)"
-          e.currentTarget.style.borderColor = "rgba(255,140,100,0.7)"
-          e.currentTarget.style.color = "#FFFFFF"
-          e.currentTarget.style.boxShadow = "none"
-          e.currentTarget.style.transform = "scale(1.06)"
-          e.currentTarget.style.animation = "none"
-        }}
         onMouseLeave={(e) => {
-          e.currentTarget.style.background = "rgba(239,80,48,0.82)"
-          e.currentTarget.style.borderColor = "rgba(255,120,80,0.5)"
-          e.currentTarget.style.color = "#FFFFFF"
-          e.currentTarget.style.boxShadow = "none"
           e.currentTarget.style.transform = canRight ? "scale(1)" : "scale(0.6)"
           e.currentTarget.style.animation = ""
         }}
@@ -217,8 +191,8 @@ export default function TemplateSwitcher({
         .templates-strip-row { -ms-overflow-style: none; scrollbar-width: none; }
 
         @keyframes arrowPulse {
-          0%, 100% { border-color: rgba(255,120,80,0.5); }
-          50%       { border-color: rgba(255,160,120,0.9); }
+          0%, 100% { border-color: rgba(0,212,255,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+          50%       { border-color: rgba(0,212,255,0.65); box-shadow: 0 2px 12px rgba(0,212,255,0.25); }
         }
         .arrow-hint-pulse { animation: arrowPulse 2.2s ease-in-out infinite; }
         .arrow-hint-pulse:hover { animation: none !important; }
@@ -229,21 +203,22 @@ export default function TemplateSwitcher({
         style={{
           flexShrink: 0,
           height: stripHeight,
-          background: "rgba(255,255,255,0.9)",
+          background: "linear-gradient(180deg, #f0f8ff 0%, #e8f4fb 50%, #edf6fb 100%)",
           backdropFilter: "blur(24px)",
           WebkitBackdropFilter: "blur(24px)",
-          borderTop: "1px solid #E2E8F0",
+          borderTop: "1px solid rgba(0,212,255,0.18)",
           display: "flex",
           zIndex: 50,
-          boxShadow: "0 -8px 32px rgba(11,27,61,0.06)",
+          boxShadow: "0 -4px 24px rgba(0,212,255,0.08), 0 -1px 0 rgba(0,212,255,0.12)",
         }}
       >
         {/* Labels column */}
         <div
           className={cn(
-            "shrink-0 flex flex-col items-center md:justify-center justify-around border-r border-[#E2E8F0] bg-[rgba(244,250,255,0.4)]",
+            "shrink-0 flex flex-col items-center justify-evenly border-r border-[rgba(0,212,255,0.15)]",
             isMobile ? "w-[76px] gap-5 px-1.5" : "w-[140px] gap-10 px-4"
           )}
+          style={{ background: "linear-gradient(180deg, rgba(240,248,255,0.8) 0%, rgba(232,244,251,0.6) 100%)" }}
         >
           <span
             style={{
@@ -251,7 +226,7 @@ export default function TemplateSwitcher({
               fontWeight: 800,
               textTransform: "uppercase",
               letterSpacing: isMobile ? "0.04em" : "0.1em",
-              color: "#475569",
+              color: "#1a2e4a",
               textAlign: "center",
               lineHeight: 1.35,
               whiteSpace: "pre-line",
@@ -267,7 +242,10 @@ export default function TemplateSwitcher({
               fontWeight: 800,
               textTransform: "uppercase",
               letterSpacing: isMobile ? "0.04em" : "0.1em",
-              color: "#6D28D9",
+              background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              backgroundClip: "text",
               textAlign: "center",
               lineHeight: 1.35,
               whiteSpace: "pre-line",
