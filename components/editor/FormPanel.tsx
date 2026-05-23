@@ -9,12 +9,12 @@ import ATSScorePanel from "./ATSScorePanel"
 import CVReviewPanel from "./CVReviewPanel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
-import { LayoutTemplate, Settings2, Target, MessageSquare } from "lucide-react"
+import { LayoutTemplate, Settings2, Target, MessageSquare, Sparkles } from "lucide-react"
 
 // Tokens (kept for sidebar container)
 const BORDER = "#E2E8F0"
 
-type TabKey = "content" | "design" | "ats" | "review"
+type TabKey = "content" | "design" | "ats" | "review" | "ai"
 
 interface TabDef {
   key: TabKey
@@ -49,6 +49,11 @@ export default function FormPanel() {
       key: "review",
       label: t("form.review_tab") || "AI Review",
       icon: <MessageSquare className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+    },
+    {
+      key: "ai",
+      label: t("form.ai_tab") || "AI Fill",
+      icon: <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.8} />,
     },
   ]
 
@@ -138,11 +143,6 @@ export default function FormPanel() {
                 </div>
               )}
 
-              <div className="mt-5 rounded-2xl border border-dashed border-violet-200 bg-violet-50/40 overflow-hidden">
-                <AIProGate>
-                  <AIProfileFillPanel />
-                </AIProGate>
-              </div>
             </SectionDropdownProvider>
           </div>
         )}
@@ -165,6 +165,14 @@ export default function FormPanel() {
           <div style={otherPadStyle}>
             <AIProGate>
               <CVReviewPanel />
+            </AIProGate>
+          </div>
+        )}
+
+        {activeTab === "ai" && (
+          <div style={otherPadStyle}>
+            <AIProGate>
+              <AIProfileFillPanel inTab />
             </AIProGate>
           </div>
         )}

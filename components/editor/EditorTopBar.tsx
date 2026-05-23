@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Input } from "@/components/ui/input"
 import {
-  ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye,
+  ArrowLeft, Download, Loader2, Lock, Save, Share2, Copy, Eye,
   CheckCircle2, AlertCircle, Pencil, FileText,
 } from "lucide-react"
 import { useState, useEffect } from "react"
@@ -256,8 +256,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
         {/* Save status pill */}
         {hasAccess ? (
           <button
-            onClick={() => { if (isDirty && !isSaving) save().catch(() => {}) }}
-            disabled={isSaving || !isDirty}
+            onClick={() => { if (!isSaving) save().catch(() => {}) }}
+            disabled={isSaving}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-medium cursor-pointer border transition-all duration-200 disabled:cursor-default"
             style={{
               background: isSaving
@@ -266,15 +266,15 @@ export default function EditorTopBar({ hasAccess }: Props) {
                 ? "rgba(245,158,11,0.1)"
                 : lastSaved
                 ? "rgba(16,185,129,0.1)"
-                : "transparent",
+                : "rgba(255,255,255,0.7)",
               borderColor: isSaving
                 ? "rgba(148,163,184,0.2)"
                 : isDirty
                 ? "rgba(245,158,11,0.25)"
                 : lastSaved
                 ? "rgba(16,185,129,0.25)"
-                : "transparent",
-              color: isSaving ? "#94A3B8" : isDirty ? "#F59E0B" : lastSaved ? "#10B981" : "transparent",
+                : "rgba(0,212,255,0.2)",
+              color: isSaving ? "#94A3B8" : isDirty ? "#F59E0B" : lastSaved ? "#10B981" : "#1a2e4a",
             }}
           >
             {isSaving ? (
@@ -283,7 +283,9 @@ export default function EditorTopBar({ hasAccess }: Props) {
               <><AlertCircle size={11} /><span className="hidden sm:inline">{t("unsaved")}</span></>
             ) : lastSaved ? (
               <><CheckCircle2 size={11} /><span className="hidden sm:inline">{t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}</span></>
-            ) : null}
+            ) : (
+              <><Save size={11} /><span className="hidden sm:inline">{t("save")}</span></>
+            )}
           </button>
         ) : (
           <button

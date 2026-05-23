@@ -463,7 +463,7 @@ export const FONT_OPTIONS = [
 
 // ─── Section labels by language ───────────────────────────────────────────────
 
-const SECTION_LABELS: Record<"es" | "en", Record<string, string>> = {
+export const SECTION_LABELS: Record<"es" | "en", Record<string, string>> = {
   es: {
     personalDetails: "Información Personal",
     summary:         "Perfil Profesional",

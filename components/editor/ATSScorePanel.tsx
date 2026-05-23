@@ -129,6 +129,11 @@ export default function ATSScorePanel() {
 
   const inputIsQuestion = isQuestion(input)
 
+  const summary = (sectionData.summary as string) ?? ""
+  const workExp = (sectionData.workExperience as unknown[]) ?? []
+  const skills = (sectionData.skills as unknown[]) ?? []
+  const cvReady = summary.trim().length > 0 && workExp.length > 0 && skills.length > 0
+
   async function handleSubmit() {
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
@@ -276,13 +281,39 @@ export default function ATSScorePanel() {
         </div>
         <p className="text-[11px] text-slate-500 leading-relaxed mb-3">{t("panel_description")}</p>
 
+        {/* Incomplete CV warning */}
+        {!cvReady && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 flex flex-col gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+              <span className="text-xs font-bold text-amber-800">{t("cv_incomplete_title")}</span>
+            </div>
+            <p className="text-[11px] text-amber-700 leading-relaxed">{t("cv_incomplete_desc")}</p>
+            <div className="flex flex-col gap-1 mt-0.5">
+              {[
+                { label: t("cv_incomplete_summary"), done: summary.trim().length > 0 },
+                { label: t("cv_incomplete_skills"), done: skills.length > 0 },
+                { label: t("cv_incomplete_experience"), done: workExp.length > 0 },
+              ].map(({ label, done }) => (
+                <div key={label} className="flex items-center gap-1.5 text-[11px]">
+                  {done
+                    ? <Check className="h-3 w-3 text-emerald-500 shrink-0" />
+                    : <span className="h-3 w-3 rounded-full border-2 border-amber-300 shrink-0 inline-block" />}
+                  <span className={done ? "text-emerald-700 font-semibold" : "text-amber-700"}>{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Textarea */}
         <div className="relative">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={t("placeholder")}
-            className="w-full min-h-[110px] resize-none rounded-2xl border border-cyan-100 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent shadow-sm transition-all"
+            disabled={!cvReady}
+            className="w-full min-h-[110px] resize-none rounded-2xl border border-cyan-100 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
           {input.trim().length > 0 && (
             <span className={`absolute bottom-2.5 right-3 text-[9px] px-2 py-0.5 rounded-full font-bold ${
@@ -303,7 +334,7 @@ export default function ATSScorePanel() {
         )}
 
         {/* Analyze button */}
-        <button type="button" onClick={handleSubmit} disabled={loading}
+        <button type="button" onClick={handleSubmit} disabled={loading || input.trim().length < 15 || !cvReady}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
           {loading ? t("analyzing") : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}

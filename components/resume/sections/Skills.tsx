@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { SkillItem } from "@/types/resume"
@@ -14,8 +14,9 @@ import { apiFetch } from "@/lib/apiFetch"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData, config } = useResumeStore(
-    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, config: s.config }))
+  const locale = useLocale()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
   const skills = sectionData.skills
   const [suggesting, setSuggesting] = useState(false)
@@ -53,7 +54,7 @@ export default function SkillsSection() {
       const res = await apiFetch("/api/ai/suggest-skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobTitle, existingSkills, language: config.language }),
+        body: JSON.stringify({ jobTitle, existingSkills, language: locale }),
       })
 
       if (res.status === 429) {

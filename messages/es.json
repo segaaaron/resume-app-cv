@@ -1032,7 +1032,8 @@
       "design_tab": "Diseño",
       "hidden_sections": "Secciones ocultas",
       "ats_tab": "ATS",
-      "review_tab": "Revisión IA"
+      "review_tab": "Revisión IA",
+      "ai_tab": "IA"
     },
     "section": {
       "hide": "Ocultar sección",
@@ -1214,7 +1215,12 @@
       "toast_change_error": "No se pudo aplicar el cambio",
       "label_respuesta": "Respuesta",
       "label_areas_mejora": "Áreas de mejora",
-      "rate_limit_exceeded": "Has alcanzado el límite de análisis por hora. Intenta de nuevo más tarde."
+      "rate_limit_exceeded": "Has alcanzado el límite de análisis por hora. Intenta de nuevo más tarde.",
+      "cv_incomplete_title": "Completa tu CV antes de continuar",
+      "cv_incomplete_desc": "Para un análisis preciso, necesitas tener al menos estos tres apartados con información:",
+      "cv_incomplete_summary": "Resumen personal",
+      "cv_incomplete_skills": "Habilidades",
+      "cv_incomplete_experience": "Experiencia laboral"
     },
     "cv_review": {
       "title": "Revisión IA del CV",
@@ -1248,16 +1254,21 @@
       "field_work_description": "Descripción de experiencia",
       "field_work_job_title": "Cargo",
       "field_languages": "Idiomas",
-      "field_certifications": "Certificaciones"
+      "field_certifications": "Certificaciones",
+      "cv_incomplete_title": "Completa tu CV antes de continuar",
+      "cv_incomplete_desc": "Para obtener una revisión precisa, necesitas tener al menos estos tres apartados con información:",
+      "cv_incomplete_summary": "Resumen personal",
+      "cv_incomplete_skills": "Habilidades",
+      "cv_incomplete_experience": "Experiencia laboral"
     },
     "ai_profile_fill": {
       "title": "Ayúdate con la IA",
       "pro_badge": "Pro",
-      "description": "Describe tu perfil profesional con tus palabras y la IA generará tu resumen, título y habilidades sugeridas.",
-      "review_hint": "Revisa cada sugerencia y aplícala de forma independiente.",
-      "review_hint_tab": "Revisión",
-      "review_hint_suffix": "y pide sugerencias de mejora o detecta secciones que te faltan.",
-      "placeholder": "Ej: Soy desarrollador React con 5 años de experiencia en startups, especializado en performance y accesibilidad.",
+      "description": "Cuéntanos quién eres y la IA construirá tu curriculum completo: resumen personal, título profesional, habilidades, experiencia laboral y más. También encontrarás IA adicional dentro de las secciones Resumen y Experiencia Laboral para afinar cada detalle.",
+      "review_hint": "Cada sección se aplica de forma independiente — revisa antes de confirmar.",
+      "review_hint_tab": "Resumen personal y Experiencia laboral",
+      "review_hint_suffix": "también tienen IA integrada para refinar el contenido con más precisión.",
+      "placeholder": "Ej: Soy iOS developer con 7 años de experiencia en startups. He liderado equipos de 4 personas, publicado apps con +50k descargas y tengo dominio de Swift, SwiftUI y arquitecturas MVVM y VIPER.",
       "generate": "Generar con IA",
       "generating": "Generando...",
       "pro_only": "Esta función es exclusiva del plan Pro",
@@ -1295,7 +1306,13 @@
       "toast_hobbies_updated": "Intereses actualizados",
       "label_suggested_skills": "Habilidades sugeridas",
       "btn_add_count": "Agregar ({count})",
-      "label_suggested_languages": "Idiomas sugeridos"
+      "label_suggested_languages": "Idiomas sugeridos",
+      "cv_complete_title": "¡Tu currículum ya está completo!",
+      "cv_complete_desc": "Ya tienes resumen personal, habilidades y experiencia laboral. La IA ha detectado que las secciones clave ya están listas — no es necesario regenerarlas.",
+      "cv_complete_summary": "Resumen personal completado",
+      "cv_complete_skills": "Habilidades completadas",
+      "cv_complete_experience": "Experiencia laboral completada",
+      "cv_complete_hint": "¿Quieres mejorar algo específico? Usa la IA dentro de la sección Resumen o Experiencia Laboral para refinar los detalles con mayor precisión."
     },
     "sections_form": {
       "add": "Agregar",
@@ -1519,6 +1536,11 @@
     "ai_tone_creative": "Creativo",
     "ai_prompt_label": "Cuéntale a la IA sobre ti y el puesto",
     "ai_prompt_placeholder": "Ej: Soy desarrollador iOS con 7 años de experiencia, especializado en SwiftUI. Aplico para una posición senior en una startup fintech que busca modernizar su app móvil.",
+    "tab_content": "Contenido",
+    "tab_templates": "Planillas",
+    "tab_ai": "Generar con IA",
+    "body_go_to_ai": "Generar con IA",
+    "ai_subtitle": "Genera el cuerpo de tu carta automáticamente",
     "ai_generate": "Generar cuerpo",
     "ai_generating": "Generando...",
     "ai_regenerate": "Regenerar carta",
@@ -1545,7 +1567,7 @@
     "print": "Imprimir",
     "save_success": "Carta guardada",
     "save_error": "Error al guardar",
-    "content_section": "Contenido",
+    "content_section": "Info de la Carta",
     "recipient_label": "Destinatario",
     "recipient_placeholder": "Nombre del responsable",
     "recipient_title_label": "Cargo del destinatario",
@@ -1559,6 +1581,7 @@
     "closing_label": "Despedida",
     "closing_placeholder": "Ej: Atentamente",
     "template_label": "Plantilla",
+    "template_label_free": "Gratis",
     "template_sidebar": "Con sidebar",
     "template_elegant": "Elegante",
     "template_split": "Cabecera ancha",
@@ -1614,7 +1637,14 @@
     "pdf_error": "Error al generar el PDF",
     "word_error": "Error al generar el archivo Word",
     "word_download_error": "Error al descargar el archivo Word",
-    "word_label": "Word (.docx)"
+    "word_label": "Word (.docx)",
+    "ai_generated_title": "¡Tu carta está lista!",
+    "ai_generated_desc": "La IA aplicó el contenido a tu carta. Revísala en la vista previa y guarda cuando estés listo.",
+    "ai_regenerate_clear": "Limpiar y generar de nuevo",
+    "body_complete_title": "¡El cuerpo de tu carta ya está listo!",
+    "body_complete_desc": "Ya tienes contenido en el cuerpo de la carta. Si deseas reemplazarlo con una nueva versión generada por IA, limpia el contenido actual primero.",
+    "body_complete_clear": "Limpiar cuerpo y generar de nuevo",
+    "tab_assistant": "Asistente IA"
   },
   "public_cv": {
     "shared_via": "CV compartido via",

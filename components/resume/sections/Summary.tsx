@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { useEditorPro } from "@/components/editor/EditorContext"
@@ -13,8 +13,9 @@ export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
-  const { sectionData, updateSectionData, config } = useResumeStore(
-    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, config: s.config }))
+  const locale = useLocale()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
   const [local, setLocal] = useState(sectionData.summary as string ?? "")
   const commitRef = useRef(updateSectionData)
@@ -36,7 +37,7 @@ export default function SummarySection() {
       const res = await apiFetch("/api/ai/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionData, language: config.language }),
+        body: JSON.stringify({ sectionData, language: locale }),
       })
       if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }
@@ -64,7 +65,7 @@ export default function SummarySection() {
       const res = await apiFetch("/api/ai/improve-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary: currentSummary, sectionData, language: config.language }),
+        body: JSON.stringify({ summary: currentSummary, sectionData, language: locale }),
       })
       if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }

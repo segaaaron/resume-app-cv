@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useLayoutEffect, useRef } from "react"
 import { createPortal } from "react-dom"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { WorkExperienceItem } from "@/types/resume"
@@ -23,8 +23,9 @@ export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
-  const { sectionData, updateSectionData, config } = useResumeStore(
-    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, config: s.config }))
+  const locale = useLocale()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(null)
@@ -41,7 +42,7 @@ export default function WorkExperienceSection() {
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: config.language }),
+        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: locale }),
       })
       if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }

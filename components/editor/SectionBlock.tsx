@@ -1,6 +1,7 @@
 "use client"
 
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
+import { SECTION_LABELS } from "@/types/resume"
 import {
   createContext,
   memo,
@@ -94,6 +95,8 @@ function getItemCount(section: ResumeSection, data: ResumeSections | undefined):
 
 const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSection }) {
   const t = useTranslations("editor")
+  const locale = useLocale()
+  const localizedLabel = SECTION_LABELS[locale as "es" | "en"]?.[section.type] ?? section.label
   const [hovered, setHovered] = useState(false)
   const itemCount = useResumeStore((s) => {
     const val = (s.sectionData as unknown as Record<string, unknown>)[section.type]
@@ -110,7 +113,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
   const descriptionText =
     itemCount !== null && itemCount > 0
       ? t(itemCount === 1 ? "section_item_one" : "section_item_other", { count: itemCount })
-      : section.label
+      : localizedLabel
 
   // Container — all values are conditional on state, keep inline
   const containerStyle: CSSProperties = {
@@ -193,7 +196,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
 
         <div className="flex-1 ml-1 min-w-0">
           <div className="text-[14px] font-bold text-[#0B1B3D] tracking-[-0.015em] leading-[1.2]">
-            {section.label}
+            {localizedLabel}
           </div>
           <div className="flex items-center gap-[6px] text-[11px] text-[#475569] font-medium mt-[3px]">
             {section.visible && (

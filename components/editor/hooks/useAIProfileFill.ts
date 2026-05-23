@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 
 interface SuggestedLanguage { name: string; level: string }
 
@@ -31,7 +31,8 @@ export interface FillProfileResult {
 
 export function useAIProfileFill() {
   const t = useTranslations("editor.ai_profile_fill")
-  const { sectionData, config } = useResumeStore()
+  const locale = useLocale()
+  const { sectionData } = useResumeStore()
 
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)
@@ -48,7 +49,7 @@ export function useAIProfileFill() {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: config.language }),
+        body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: locale }),
       })
       if (res.status === 429) { toast.error(t("toast_rate_limit")); return undefined }
       if (res.status === 403) { toast.error(t("toast_pro_only")); return undefined }
@@ -64,7 +65,7 @@ export function useAIProfileFill() {
     } finally {
       setLoading(false)
     }
-  }, [prompt, sectionData, config.language, t])
+  }, [prompt, sectionData, locale, t])
 
   const reset = useCallback(() => {
     setResult(null)

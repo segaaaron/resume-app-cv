@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
 
 export interface ATSResult {
@@ -39,7 +39,8 @@ export function isQuestion(text: string): boolean {
 
 export function useATSScore() {
   const t = useTranslations("editor.ats")
-  const { sectionData, config } = useResumeStore()
+  const locale = useLocale()
+  const { sectionData } = useResumeStore()
 
   const [input, setInput] = useState("")
   const [loading, setLoading] = useState(false)
@@ -63,7 +64,7 @@ export function useATSScore() {
         const res = await apiFetch("/api/ai/review-cv", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectionData, question: text, language: config.language }),
+          body: JSON.stringify({ sectionData, question: text, language: locale }),
         })
         if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
         if (res.status === 403) { toast.error(t("pro_only")); return }
@@ -76,7 +77,7 @@ export function useATSScore() {
         const res = await apiFetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobDescription: text, sectionData, language: config.language }),
+          body: JSON.stringify({ jobDescription: text, sectionData, language: locale }),
         })
         if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
         if (res.status === 403) { toast.error(t("pro_only")); return }
@@ -91,7 +92,7 @@ export function useATSScore() {
     } finally {
       setLoading(false)
     }
-  }, [input, sectionData, config.language, t])
+  }, [input, sectionData, locale, t])
 
   const reset = useCallback(() => {
     setAtsResult(null)

@@ -1032,7 +1032,8 @@
       "design_tab": "Design",
       "hidden_sections": "Hidden sections",
       "ats_tab": "ATS",
-      "review_tab": "AI Review"
+      "review_tab": "AI Review",
+      "ai_tab": "AI Fill"
     },
     "section": {
       "hide": "Hide section",
@@ -1214,7 +1215,12 @@
       "toast_change_error": "Could not apply change",
       "label_respuesta": "Answer",
       "label_areas_mejora": "Areas to improve",
-      "rate_limit_exceeded": "You've reached the hourly analysis limit. Please try again later."
+      "rate_limit_exceeded": "You've reached the hourly analysis limit. Please try again later.",
+      "cv_incomplete_title": "Complete your CV before continuing",
+      "cv_incomplete_desc": "For an accurate analysis, you need at least these three sections filled in:",
+      "cv_incomplete_summary": "Personal summary",
+      "cv_incomplete_skills": "Skills",
+      "cv_incomplete_experience": "Work experience"
     },
     "cv_review": {
       "title": "AI CV Review",
@@ -1248,16 +1254,21 @@
       "field_work_description": "Work experience description",
       "field_work_job_title": "Job position",
       "field_languages": "Languages",
-      "field_certifications": "Certifications"
+      "field_certifications": "Certifications",
+      "cv_incomplete_title": "Complete your CV before continuing",
+      "cv_incomplete_desc": "To get an accurate review, you need at least these three sections filled in:",
+      "cv_incomplete_summary": "Personal summary",
+      "cv_incomplete_skills": "Skills",
+      "cv_incomplete_experience": "Work experience"
     },
     "ai_profile_fill": {
       "title": "AI Assistant",
       "pro_badge": "Pro",
-      "description": "Describe your professional profile in your own words and the AI will generate your summary, title, and suggested skills.",
-      "review_hint": "Review each suggestion and apply it independently.",
-      "review_hint_tab": "Review",
-      "review_hint_suffix": "tab to get improvement suggestions and detect missing sections.",
-      "placeholder": "E.g.: I'm a React developer with 5 years of experience in startups, specialized in performance and accessibility.",
+      "description": "Tell us who you are and the AI will build your complete resume: personal summary, job title, skills, work experience and more. You'll also find additional AI inside the Summary and Work Experience sections to fine-tune every detail.",
+      "review_hint": "Each section is applied independently — review before confirming.",
+      "review_hint_tab": "Personal Summary and Work Experience",
+      "review_hint_suffix": "also have built-in AI to refine your content with greater precision.",
+      "placeholder": "E.g.: I'm an iOS developer with 7 years of experience in startups. I've led teams of 4, shipped apps with 50k+ downloads, and have deep expertise in Swift, SwiftUI, MVVM and VIPER architectures.",
       "generate": "Generate with AI",
       "generating": "Generating...",
       "pro_only": "This feature is exclusive to the Pro plan",
@@ -1295,7 +1306,13 @@
       "toast_hobbies_updated": "Interests updated",
       "label_suggested_skills": "Suggested skills",
       "btn_add_count": "Add ({count})",
-      "label_suggested_languages": "Suggested languages"
+      "label_suggested_languages": "Suggested languages",
+      "cv_complete_title": "Your resume is already complete!",
+      "cv_complete_desc": "You already have a personal summary, skills, and work experience. The AI detected that your key sections are ready — no need to regenerate them.",
+      "cv_complete_summary": "Personal summary completed",
+      "cv_complete_skills": "Skills completed",
+      "cv_complete_experience": "Work experience completed",
+      "cv_complete_hint": "Want to improve something specific? Use the AI inside the Summary or Work Experience sections to refine the details with greater precision."
     },
     "sections_form": {
       "add": "Add",
@@ -1519,6 +1536,11 @@
     "ai_tone_creative": "Creative",
     "ai_prompt_label": "Tell the AI about yourself and the position",
     "ai_prompt_placeholder": "E.g.: I'm an iOS developer with 7 years of experience, specialized in SwiftUI. I'm applying for a senior position at a fintech startup looking to modernize their mobile app.",
+    "tab_content": "Content",
+    "tab_templates": "Templates",
+    "tab_ai": "Generate with AI",
+    "body_go_to_ai": "Generate with AI",
+    "ai_subtitle": "Automatically generate your cover letter body",
     "ai_generate": "Generate body",
     "ai_generating": "Generating...",
     "ai_regenerate": "Regenerate letter",
@@ -1545,7 +1567,7 @@
     "print": "Print",
     "save_success": "Cover letter saved",
     "save_error": "Error saving",
-    "content_section": "Content",
+    "content_section": "Letter Info",
     "recipient_label": "Recipient",
     "recipient_placeholder": "Hiring manager's name",
     "recipient_title_label": "Recipient's title",
@@ -1559,6 +1581,7 @@
     "closing_label": "Closing",
     "closing_placeholder": "E.g. Sincerely",
     "template_label": "Template",
+    "template_label_free": "Free",
     "template_sidebar": "Sidebar",
     "template_elegant": "Elegant",
     "template_split": "Wide header",
@@ -1614,7 +1637,14 @@
     "pdf_error": "Error generating the PDF",
     "word_error": "Error generating the Word file",
     "word_download_error": "Error downloading the Word file",
-    "word_label": "Word (.docx)"
+    "word_label": "Word (.docx)",
+    "ai_generated_title": "Your letter is ready!",
+    "ai_generated_desc": "The AI applied the content to your letter. Review it in the preview and save when ready.",
+    "ai_regenerate_clear": "Clear and generate again",
+    "body_complete_title": "Your letter body is already ready!",
+    "body_complete_desc": "You already have content in the letter body. If you want to replace it with a new AI-generated version, clear the current content first.",
+    "body_complete_clear": "Clear body and generate again",
+    "tab_assistant": "AI Assistant"
   },
   "public_cv": {
     "shared_via": "CV shared via",
