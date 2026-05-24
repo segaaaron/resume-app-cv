@@ -3,13 +3,15 @@ interface Props { locale?: string }
 export default function ImproveBulletMockup({ locale = "es" }: Props) {
   const isEs = locale === "es"
 
-  const company = "Brightwell Media"
-  const role = isEs ? "Analista de Marketing" : "Marketing Analyst"
-  const descLabel = isEs ? "Descripción" : "Description"
+  const company      = "Brightwell Media"
+  const role         = isEs ? "Analista de Marketing" : "Marketing Analyst"
+  const descLabel    = isEs ? "Descripción" : "Description"
   const improvedLabel = isEs ? "Descripción mejorada" : "Improved description"
-  const applyLabel = isEs ? "Aplicar" : "Apply"
-  const improvedByAI = isEs ? "✦ Mejorado por IA" : "✦ Improved by AI"
-  const improveBtn = isEs ? "✦ Mejorar con IA" : "✦ Improve with AI"
+  const applyLabel   = isEs ? "Aplicar" : "Apply"
+  const improvedByAI = isEs ? "✦ Mejorado por IA · 3 versiones" : "✦ Improved by AI · 3 versions"
+  const improveBtn   = isEs ? "✦ Mejorar con IA" : "✦ Improve with AI"
+  const beforeNote   = isEs ? "Antes — genérico" : "Before — generic"
+  const afterNote    = isEs ? "Después — con métricas" : "After — with metrics"
 
   const bullets = isEs
     ? [
@@ -25,56 +27,117 @@ export default function ImproveBulletMockup({ locale = "es" }: Props) {
 
   const improved = isEs
     ? [
-        "Coordiné 8 campañas digitales generando 320k+ impresiones y un aumento del 22% en conversiones.",
-        "Diseñé 15+ dashboards ejecutivos adoptados en toda la empresa, reduciendo el tiempo de reportes 3 hrs/semana.",
-        "Resolví 200+ consultas de clientes/mes manteniendo un índice de satisfacción del 97% durante 2 trimestres.",
+        "Coordiné 8 campañas digitales generando 320k+ impresiones y +22% en conversiones.",
+        "Diseñé 15+ dashboards ejecutivos adoptados en toda la empresa, ahorrando 3 hrs/semana.",
+        "Resolví 200+ consultas/mes con índice de satisfacción del 97% en 2 trimestres.",
       ]
     : [
         "Coordinated 8 digital campaigns generating 320k+ impressions and a 22% increase in conversions.",
         "Designed 15+ executive dashboards adopted company-wide, reducing reporting time by 3 hrs/week.",
-        "Resolved 200+ customer inquiries/month maintaining a 97% satisfaction score for 2 consecutive quarters.",
+        "Resolved 200+ customer inquiries/month with a 97% satisfaction score for 2 consecutive quarters.",
       ]
 
   return (
-    <div className="w-full max-w-sm mx-auto space-y-3">
-      <div className="bg-white rounded-2xl border border-neutral-200 shadow-md p-4 space-y-3">
-        <div className="flex items-center gap-2 mb-1">
-          <div className="h-2 w-2 rounded-full bg-red-400" />
-          <div className="h-2 w-2 rounded-full bg-yellow-400" />
-          <div className="h-2 w-2 rounded-full bg-green-400" />
-          <span className="text-xs text-muted-foreground ml-2 font-mono">{role} · {company}</span>
+    <div style={{ width: "100%", maxWidth: 360, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 }}>
+      {/* Before card */}
+      <div style={{
+        background: "white", borderRadius: 18, border: "1.5px solid #E8EEF8",
+        boxShadow: "0 4px 20px rgba(26,46,74,0.07)", padding: "16px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 12 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57" }} />
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e" }} />
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840" }} />
+          <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 8, fontFamily: "monospace" }}>
+            {role} · {company}
+          </span>
         </div>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="rounded-md border border-neutral-200 px-2 py-1.5 text-[11px] text-neutral-600 bg-neutral-50">{role}</div>
-          <div className="rounded-md border border-neutral-200 px-2 py-1.5 text-[11px] text-neutral-600 bg-neutral-50">{company}</div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+          {[role, company].map((val) => (
+            <div key={val} style={{
+              borderRadius: 7, border: "1px solid #E2E8F0",
+              background: "#F8FAFC", padding: "5px 8px",
+              fontSize: 10, color: "#64748B",
+            }}>{val}</div>
+          ))}
         </div>
+
         <div>
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] font-semibold text-neutral-500">{descLabel}</span>
-            <span className="text-[9px] font-bold text-indigo-600">{improveBtn}</span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                {descLabel}
+              </span>
+              <span style={{
+                fontSize: 8, color: "#94A3B8", background: "#F1F5F9",
+                border: "1px solid #E2E8F0", borderRadius: 4, padding: "1px 5px",
+              }}>
+                {beforeNote}
+              </span>
+            </div>
+            <span style={{ fontSize: 9, fontWeight: 800, color: "#00D4FF", cursor: "pointer" }}>{improveBtn}</span>
           </div>
-          <div className="rounded-md border border-neutral-200 bg-neutral-50 px-2.5 py-2 space-y-1">
+          <div style={{ borderRadius: 8, border: "1px solid #E2E8F0", background: "#F8FAFC", padding: "8px 10px" }}>
             {bullets.map((b, i) => (
-              <p key={i} className="text-[10px] text-neutral-500 leading-relaxed">• {b}</p>
+              <p key={i} style={{ fontSize: 10, color: "#94A3B8", lineHeight: 1.55, marginBottom: i < bullets.length - 1 ? 3 : 0 }}>
+                • {b}
+              </p>
             ))}
           </div>
         </div>
       </div>
 
-      <div className="flex justify-center">
-        <div className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[9px] font-bold px-3 py-1 rounded-full shadow">
+      {/* AI badge connector */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 4 }}>
+        <div style={{ width: 1, height: 8, background: "rgba(0,212,255,0.3)" }} />
+        <span style={{
+          fontSize: 9, fontWeight: 800, letterSpacing: "0.06em",
+          color: "white", background: "linear-gradient(135deg, #1a2e4a 0%, #0a1e35 100%)",
+          borderRadius: 999, padding: "4px 12px",
+          boxShadow: "0 2px 12px rgba(0,212,255,0.25)", border: "1px solid rgba(0,212,255,0.3)",
+        }}>
           {improvedByAI}
-        </div>
+        </span>
+        <div style={{ width: 1, height: 8, background: "rgba(0,212,255,0.3)" }} />
       </div>
 
-      <div className="bg-white rounded-2xl border border-emerald-200 shadow-md p-4">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-[10px] font-semibold text-emerald-700">{improvedLabel}</span>
-          <button className="text-[9px] font-bold text-white bg-emerald-500 rounded-md px-2 py-0.5">{applyLabel}</button>
+      {/* After card */}
+      <div style={{
+        background: "white", borderRadius: 18,
+        border: "1.5px solid rgba(0,212,255,0.25)",
+        boxShadow: "0 4px 24px rgba(0,212,255,0.1)",
+        padding: "14px",
+      }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+            <span style={{ fontSize: 10, fontWeight: 700, color: "#1a2e4a" }}>{improvedLabel}</span>
+            <span style={{
+              fontSize: 8, color: "#00D4FF", background: "rgba(0,212,255,0.08)",
+              border: "1px solid rgba(0,212,255,0.2)", borderRadius: 4, padding: "1px 5px",
+            }}>
+              {afterNote}
+            </span>
+          </div>
+          <button style={{
+            fontSize: 9, fontWeight: 700, color: "white",
+            background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
+            border: "none", borderRadius: 6, padding: "3px 10px", cursor: "pointer",
+          }}>
+            {applyLabel}
+          </button>
         </div>
-        <div className="space-y-1">
+        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
           {improved.map((b, i) => (
-            <p key={i} className="text-[10px] text-neutral-700 leading-relaxed font-medium">• {b}</p>
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 6 }}>
+              <div style={{
+                width: 14, height: 14, borderRadius: "50%", flexShrink: 0, marginTop: 2,
+                background: "rgba(0,212,255,0.12)", display: "flex", alignItems: "center", justifyContent: "center",
+              }}>
+                <span style={{ fontSize: 7, color: "#00D4FF", fontWeight: 800 }}>✓</span>
+              </div>
+              <p style={{ fontSize: 10, color: "#1a2e4a", lineHeight: 1.55, fontWeight: 500 }}>{b}</p>
+            </div>
           ))}
         </div>
       </div>

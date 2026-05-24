@@ -44,6 +44,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const [showPersonalUseWarning, setShowPersonalUseWarning] = useState(false)
+  const [personalUseConsented, setPersonalUseConsented] = useState(false)
+  const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
 
   // Generate thumbnails for CVs that don't have one yet (staggered, fire-and-forget)
@@ -146,8 +149,22 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     toast.info(t("require_pro_toast"))
   }
 
-  async function createResume() {
+  function requirePersonalUseConsent(action: () => Promise<void>) {
+    setPersonalUseConsented(false)
+    setPendingAction(() => action)
+    setShowPersonalUseWarning(true)
+  }
+
+  function createResume() {
     if (!isPro) { requirePro(); return }
+    if (resumes.length >= 1) {
+      requirePersonalUseConsent(doCreateResume)
+      return
+    }
+    doCreateResume()
+  }
+
+  async function doCreateResume() {
     setCreating(true)
     try {
       const res = await apiFetch("/api/resumes", { method: "POST" })
@@ -195,7 +212,11 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     }
   }
 
-  async function duplicateResume(id: string) {
+  function duplicateResume(id: string) {
+    requirePersonalUseConsent(() => doDuplicateResume(id))
+  }
+
+  async function doDuplicateResume(id: string) {
     try {
       const res = await apiFetch(`/api/resumes/${id}/duplicate`, { method: "POST" })
       if (!res.ok) { toast.error(t("duplicate_error")); return }
@@ -478,6 +499,105 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
                 }}
               >
                 {renaming ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("rename_confirm")}
+              </AlertDialogAction>
+            </div>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Personal use warning dialog (shown on 2nd+ CV creation) ── */}
+      <AlertDialog open={showPersonalUseWarning} onOpenChange={(o) => !o && setShowPersonalUseWarning(false)}>
+        <AlertDialogContent
+          className="p-0 overflow-hidden"
+          style={{ borderRadius: "16px", maxWidth: "420px", border: "1px solid #FCD34D", boxShadow: "0 40px 100px rgba(245,158,11,0.12)" }}
+        >
+          <div
+            className="text-center relative border-b border-[#FEF3C7]"
+            style={{
+              padding: "30px 28px 16px",
+              background: "linear-gradient(180deg, #FFFBEB 0%, white 100%)",
+            }}
+          >
+            <div
+              className="absolute top-0 left-1/2 -translate-x-1/2 opacity-60"
+              style={{
+                width: "60%",
+                height: "1px",
+                background: "linear-gradient(90deg, transparent, #F59E0B, transparent)",
+              }}
+            />
+            <div
+              className="flex items-center justify-center text-[#D97706] mx-auto mb-[14px]"
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: "50%",
+                background: "rgba(245,158,11,0.1)",
+                border: "1.5px solid rgba(245,158,11,0.3)",
+              }}
+            >
+              <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <AlertDialogTitle className="sr-only">{t("personal_use_warning_title")}</AlertDialogTitle>
+            <AlertDialogDescription className="sr-only">{t("personal_use_warning_desc")}</AlertDialogDescription>
+            <div
+              className="font-bold text-[#1a2e4a] mb-[6px]"
+              style={{ fontFamily: "var(--dash-serif)", fontSize: "20px", letterSpacing: "-0.03em" }}
+              aria-hidden="true"
+            >
+              {t("personal_use_warning_title")}
+            </div>
+            <div
+              className="text-sm text-[#6B7A8C] leading-[1.6] mx-auto"
+              style={{ maxWidth: "320px" }}
+              aria-hidden="true"
+            >
+              {t("personal_use_warning_desc")}
+            </div>
+          </div>
+          <div style={{ padding: "18px 24px 22px" }}>
+            <label className="flex items-start gap-3 cursor-pointer mb-5 rounded-lg p-3" style={{ background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.2)" }}>
+              <input
+                type="checkbox"
+                checked={personalUseConsented}
+                onChange={(e) => setPersonalUseConsented(e.target.checked)}
+                className="mt-0.5 shrink-0 w-4 h-4 accent-amber-500"
+              />
+              <span className="text-xs text-[#4B5563] leading-[1.6]">
+                {t("personal_use_consent_label")}
+              </span>
+            </label>
+            <div className="flex gap-[10px]">
+              <AlertDialogCancel
+                onClick={() => setShowPersonalUseWarning(false)}
+                style={{ flex: 1, padding: "11px 16px", fontSize: "13px", fontWeight: 500, fontFamily: "inherit", justifyContent: "center" }}
+              >
+                {t("cancel")}
+              </AlertDialogCancel>
+              <AlertDialogAction
+                disabled={!personalUseConsented}
+                onClick={() => { setShowPersonalUseWarning(false); pendingAction?.() }}
+                style={{
+                  flex: 1,
+                  background: personalUseConsented
+                    ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)"
+                    : "#E5E7EB",
+                  color: personalUseConsented ? "white" : "#9CA3AF",
+                  fontWeight: 600,
+                  boxShadow: personalUseConsented ? "0 2px 8px rgba(0,212,255,0.25)" : "none",
+                  border: "none",
+                  padding: "11px 16px",
+                  fontSize: "13px",
+                  fontFamily: "inherit",
+                  cursor: personalUseConsented ? "pointer" : "not-allowed",
+                  justifyContent: "center",
+                  transition: "all 0.2s",
+                }}
+              >
+                {t("personal_use_confirm")}
               </AlertDialogAction>
             </div>
           </div>

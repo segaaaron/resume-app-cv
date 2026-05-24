@@ -153,7 +153,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       }
       return true
     },
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, session }) {
       const isFreshLogin = !!user  // user arg only present on sign-in, not token refreshes
 
       if (user) {
@@ -197,6 +197,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (trigger === "update") {
         const uid = token.id as string | undefined
         if (uid) userPlanCache.delete(uid)
+        // Fast path: if termsAcceptedAt was passed in the update() call, set it immediately
+        // without a DB roundtrip. The API route already validated + saved it to DB.
+        const sessionData = session as { termsAcceptedAt?: string } | undefined
+        if (sessionData?.termsAcceptedAt) {
+          token.termsAcceptedAt = sessionData.termsAcceptedAt
+          return token
+        }
       }
 
       const userId = (token.id ?? user?.id) as string | undefined

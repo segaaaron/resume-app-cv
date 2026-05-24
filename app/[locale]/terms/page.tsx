@@ -34,7 +34,7 @@ export default async function TermsPage({
   ]
 
   const s2Items = [t("s2_i1"), t("s2_i2"), t("s2_i3"), t("s2_i4"), t("s2_i5"), t("s2_i6")]
-  const s9Items = [t("s9_i1"), t("s9_i2"), t("s9_i3"), t("s9_i4"), t("s9_i5"), t("s9_i6"), t("s9_i7"), t("s9_i8"), t("s9_i9")]
+  const s9Items = [t("s9_i1"), t("s9_i2"), t("s9_i3"), t("s9_i4"), t("s9_i5"), t("s9_i6"), t("s9_i7"), t("s9_i8"), t("s9_i9"), t("s9_i10"), t("s9_i11")]
 
   const contactEmail = "soporte@readycvv.com"
 
@@ -276,6 +276,10 @@ export default async function TermsPage({
                   {t("s12_title")}
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">{t("s12_body")}</p>
+                <div className="rounded-lg border border-red-200 dark:border-red-900 bg-red-50/50 dark:bg-red-950/20 p-4 space-y-1">
+                  <p className="text-sm font-semibold text-foreground">{t("s12_misuse_title")}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{t("s12_misuse_body")}</p>
+                </div>
               </section>
 
               {/* Section 13 */}
@@ -285,6 +289,7 @@ export default async function TermsPage({
                   {t("s13_title")}
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">{t.rich("s13_body", { b })}</p>
+                <p className="text-muted-foreground leading-relaxed text-sm border-t pt-3">{t("s13_body2")}</p>
               </section>
 
               {/* Section 14 */}
@@ -316,6 +321,9 @@ export default async function TermsPage({
                   <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a>.{" "}
                   {t.rich("s16_body_mid", { b })}
                 </p>
+                <p className="text-muted-foreground leading-relaxed text-sm border-t pt-3">
+                  {t("s16_jurisdiction")}
+                </p>
               </section>
 
               {/* Section 17 */}
@@ -325,6 +333,7 @@ export default async function TermsPage({
                   {t("s17_title")}
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">{t.rich("s17_body", { b })}</p>
+                <p className="text-muted-foreground leading-relaxed text-sm border-t pt-3">{t("s17_body2")}</p>
               </section>
 
               {/* Section 18 — Contact */}

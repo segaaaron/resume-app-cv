@@ -257,7 +257,7 @@ export default async function HomePage({
         />
         <ActFeatureScene
           scene="act-fill"
-          badge="IA · Fill Profile"
+          badge={t("feature_fill_badge")}
           headline={t("feature_fill_headline")}
           body={t("feature_fill_body")}
           mockup={<FillProfileMockup locale={locale} />}
@@ -265,7 +265,7 @@ export default async function HomePage({
         />
         <ActFeatureScene
           scene="act-bullets"
-          badge="IA · Improve Bullets"
+          badge={t("feature_bullets_badge")}
           headline={t("feature_bullets_headline")}
           body={t("feature_bullets_body")}
           mockup={<ImproveBulletMockup locale={locale} />}
@@ -273,7 +273,7 @@ export default async function HomePage({
         />
         <ActFeatureScene
           scene="act-summary"
-          badge="IA · Summary"
+          badge={t("feature_summary_badge")}
           headline={t("feature_summary_headline")}
           body={t("feature_summary_body")}
           mockup={<SummaryMockup locale={locale} />}
@@ -281,7 +281,7 @@ export default async function HomePage({
         />
         <ActFeatureScene
           scene="act-ats"
-          badge="IA · ATS Score"
+          badge={t("feature_ats_badge")}
           headline={t("feature_ats_headline")}
           body={t("feature_ats_body")}
           mockup={<ATSScoreMockup locale={locale} />}
@@ -289,7 +289,7 @@ export default async function HomePage({
         />
         <ActFeatureScene
           scene="act-cover"
-          badge="IA · Cover Letter"
+          badge={t("feature_cover_badge")}
           headline={t("feature_cover_headline")}
           body={t("feature_cover_body")}
           mockup={<CoverLetterMockup locale={locale} />}
@@ -297,7 +297,7 @@ export default async function HomePage({
         />
         <ActFeatureScene
           scene="act-review"
-          badge="IA · CV Review"
+          badge={t("feature_review_badge")}
           headline={t("feature_review_headline")}
           body={t("feature_review_body")}
           mockup={<CVReviewMockup locale={locale} />}

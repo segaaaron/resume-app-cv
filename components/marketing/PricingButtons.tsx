@@ -14,6 +14,7 @@ interface Props {
 
 export default function PricingButtons({ plan, isPro }: Props) {
   const [loading, setLoading] = useState(false)
+  const [consented, setConsented] = useState(false)
   const locale = useLocale()
   const router = useRouter()
   const t = useTranslations("pricing")
@@ -75,9 +76,30 @@ export default function PricingButtons({ plan, isPro }: Props) {
     }
   }
 
+  if (isPro) {
+    return (
+      <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
+        {loading ? t("btn_loading") : t("pro_member_manage")}
+      </Button>
+    )
+  }
+
   return (
-    <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-      {loading ? t("btn_loading") : isPro ? t("pro_member_manage") : t("btn_start")}
-    </Button>
+    <div className="flex flex-col gap-3">
+      <label className="flex items-start gap-2.5 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={consented}
+          onChange={(e) => setConsented(e.target.checked)}
+          className="mt-0.5 shrink-0 accent-current w-3.5 h-3.5"
+        />
+        <span style={{ fontSize: 11, lineHeight: 1.5, opacity: 0.75 }}>
+          {t("checkout_consent")}
+        </span>
+      </label>
+      <Button size="lg" className="w-full" onClick={handleClick} disabled={loading || !consented}>
+        {loading ? t("btn_loading") : t("btn_start")}
+      </Button>
+    </div>
   )
 }

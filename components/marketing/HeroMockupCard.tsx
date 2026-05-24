@@ -78,7 +78,7 @@ export default function HeroMockupCard() {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">ATS Score</p>
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">{t("ats_score_label")}</p>
             <p className="text-sm font-bold text-green-600">{t("mockup_ats_compat")}</p>
             <div className="flex gap-1 mt-1">
               {["React", "TS", "Git"].map(k => (

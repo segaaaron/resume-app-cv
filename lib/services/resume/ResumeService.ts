@@ -132,10 +132,18 @@ export class ResumeService {
   // ── CREATE ────────────────────────────────────────────────────────────────
 
   async create(userId: string, templateId?: string) {
-    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true } })
+    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, name: true } })
     const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
 
     const defaultData = ResumeSectionsSchema.parse({})
+
+    // Pre-populate name from account profile so first CV always reflects the account owner.
+    if (user?.name?.trim()) {
+      const parts = user.name.trim().split(/\s+/)
+      const pd = defaultData.personalDetails as Record<string, unknown>
+      pd.firstName = parts[0] ?? ""
+      pd.lastName  = parts.slice(1).join(" ")
+    }
 
     // Transaction ensures count-check and create are atomic — prevents two concurrent
     // requests from both passing the limit check and creating two resumes.
@@ -161,6 +169,11 @@ export class ResumeService {
     })
 
     this.logger.info("[ResumeService] create", { userId, resumeId: resume.id })
+
+    db.auditLog.create({
+      data: { userId, action: "CREATE_RESUME", metadata: { resumeId: resume.id } },
+    }).catch(() => {})
+
     return resume
   }
 

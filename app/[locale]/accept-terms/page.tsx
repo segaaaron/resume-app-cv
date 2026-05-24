@@ -32,8 +32,10 @@ export default function AcceptTermsPage() {
     try {
       const res = await apiFetch("/api/auth/accept-terms", { method: "POST" })
       if (!res.ok) { toast.error(t("error")); setAccepting(false); return }
-      await update()
-      router.push(`/${locale}/dashboard/resumes`)
+      // Pass termsAcceptedAt so the JWT callback skips the DB roundtrip (fast path).
+      // Hard navigation ensures the browser sends the updated cookie to middleware.
+      await update({ termsAcceptedAt: new Date().toISOString() })
+      window.location.href = `/${locale}/dashboard/resumes`
     } catch {
       toast.error(t("error"))
       setAccepting(false)

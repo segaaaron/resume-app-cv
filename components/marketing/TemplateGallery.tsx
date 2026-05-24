@@ -703,15 +703,13 @@ function NovaPreview() {
   )
 }
 
-// ─── Static showcase data ─────────────────────────────────────────────────────
-
-const SHOWCASE = [
-  { id: "classic", name: "Clásico", Preview: ClassicPreview },
-  { id: "modern", name: "Moderno", Preview: ModernPreview },
-  { id: "aurora", name: "Aurora", Preview: AuroraPreview },
-  { id: "consul", name: "Consul", Preview: ConsulPreview },
-  { id: "minimal", name: "Minimal", Preview: MinimalPreview },
-  { id: "nova", name: "Nova", Preview: NovaPreview },
+const SHOWCASE_PREVIEWS = [
+  { id: "classic", key: "name_classic", Preview: ClassicPreview },
+  { id: "modern",  key: "name_modern",  Preview: ModernPreview },
+  { id: "aurora",  key: "name_aurora",  Preview: AuroraPreview },
+  { id: "consul",  key: "name_consul",  Preview: ConsulPreview },
+  { id: "minimal", key: "name_minimal", Preview: MinimalPreview },
+  { id: "nova",    key: "name_nova",    Preview: NovaPreview },
 ]
 
 export default async function TemplateGallery() {
@@ -724,13 +722,13 @@ export default async function TemplateGallery() {
         <p className="text-center text-muted-foreground mb-12">{t("subtitle")}</p>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mb-10">
-          {SHOWCASE.map(({ id, name, Preview }) => (
+          {SHOWCASE_PREVIEWS.map(({ id, key, Preview }) => (
             <Link key={id} href={`/templates#${id}`} className="group cursor-pointer">
               <div className="aspect-[3/4] rounded-xl border-2 border-border group-hover:border-primary/60 transition-all overflow-hidden shadow-sm">
                 <Preview />
               </div>
               <p className="text-xs font-medium text-center mt-2 group-hover:text-primary transition-colors">
-                {name}
+                {t(key as Parameters<typeof t>[0])}
               </p>
             </Link>
           ))}

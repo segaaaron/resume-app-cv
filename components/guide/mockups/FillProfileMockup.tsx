@@ -7,49 +7,124 @@ export default function FillProfileMockup({ locale = "es" }: Props) {
     ? '"Soy desarrolladora React con 4 años en startups, especializada en performance y accesibilidad."'
     : '"I\'m a React developer with 4 years in startups, specialized in performance and accessibility."'
 
-  const aiGenerated = isEs ? "✦ IA generó 3 sugerencias" : "✦ AI generated 3 suggestions"
-  const applyLabel = isEs ? "Aplicar" : "Apply"
+  const aiGenerated  = isEs ? "✦ IA generó 3 sugerencias" : "✦ AI generated 3 suggestions"
+  const applyLabel   = isEs ? "Aplicar" : "Apply"
+  const inputHint    = isEs ? "Describe tu trayectoria (máx. 500 caracteres)" : "Describe your background (max 500 chars)"
 
   const results = isEs
     ? [
-        { label: "📝 Resumen profesional", suggested: "Desarrolladora frontend con 4 años de experiencia en startups SaaS. Especializada en React, rendimiento web y accesibilidad, con historial de reducir tiempos de carga un 35%." },
-        { label: "🏷️ Título del puesto", suggested: "Frontend Developer · React & Accesibilidad" },
-        { label: "🛠️ Habilidades sugeridas", suggested: "React, TypeScript, Tailwind CSS, Figma, Jest, Accesibilidad WCAG" },
+        {
+          icon: "📝",
+          label: "Resumen profesional",
+          badge: "Generado por IA",
+          suggested: "Desarrolladora frontend con 4 años en startups SaaS. Especializada en React, rendimiento web y accesibilidad, reduciendo tiempos de carga un 35%.",
+        },
+        {
+          icon: "🏷️",
+          label: "Título del puesto",
+          badge: "Sugerido",
+          suggested: "Frontend Developer · React & Accesibilidad",
+        },
+        {
+          icon: "🛠️",
+          label: "Habilidades sugeridas",
+          badge: "Extraídas",
+          suggested: "React, TypeScript, Tailwind CSS, Figma, Jest, Accesibilidad WCAG",
+        },
       ]
     : [
-        { label: "📝 Professional summary", suggested: "Frontend developer with 4 years of experience at SaaS startups. Specialized in React, web performance and accessibility, with a track record of reducing load times by 35%." },
-        { label: "🏷️ Job title", suggested: "Frontend Developer · React & Accessibility" },
-        { label: "🛠️ Suggested skills", suggested: "React, TypeScript, Tailwind CSS, Figma, Jest, WCAG Accessibility" },
+        {
+          icon: "📝",
+          label: "Professional summary",
+          badge: "AI generated",
+          suggested: "Frontend developer with 4 years at SaaS startups. Specialized in React, web performance and accessibility, reducing load times by 35%.",
+        },
+        {
+          icon: "🏷️",
+          label: "Job title",
+          badge: "Suggested",
+          suggested: "Frontend Developer · React & Accessibility",
+        },
+        {
+          icon: "🛠️",
+          label: "Suggested skills",
+          badge: "Extracted",
+          suggested: "React, TypeScript, Tailwind CSS, Figma, Jest, WCAG Accessibility",
+        },
       ]
 
   return (
-    <div className="bg-white rounded-2xl border border-neutral-200 shadow-lg p-5 space-y-3 w-full max-w-sm mx-auto">
-      <div className="flex items-center gap-2 mb-1">
-        <div className="h-2 w-2 rounded-full bg-red-400" />
-        <div className="h-2 w-2 rounded-full bg-yellow-400" />
-        <div className="h-2 w-2 rounded-full bg-green-400" />
-        <span className="text-xs text-muted-foreground ml-2 font-mono">ReadyCVV · {isEs ? "Ayúdate con la IA" : "AI Assistant"}</span>
+    <div style={{
+      background: "white", borderRadius: 20,
+      border: "1.5px solid #E8EEF8",
+      boxShadow: "0 8px 40px rgba(26,46,74,0.10)",
+      padding: "18px 18px 16px", width: "100%", maxWidth: 340, margin: "0 auto",
+    }}>
+      {/* Chrome bar */}
+      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14 }}>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57" }} />
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e" }} />
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840" }} />
+        <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 8, fontFamily: "monospace" }}>
+          ReadyCVV · {isEs ? "Completar con IA" : "AI Assistant"}
+        </span>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-[11px] text-neutral-500 leading-relaxed">
-        {prompt}
+      {/* Input box */}
+      <div style={{
+        borderRadius: 10, border: "1.5px solid #E2E8F0",
+        background: "#F8FAFC", padding: "10px 12px", marginBottom: 10,
+      }}>
+        <p style={{ fontSize: 10, color: "#64748B", lineHeight: 1.5, marginBottom: 4 }}>{inputHint}</p>
+        <p style={{ fontSize: 11, color: "#1a2e4a", fontStyle: "italic", lineHeight: 1.5 }}>{prompt}</p>
       </div>
 
-      <div className="flex justify-center py-0.5">
-        <span className="text-[9px] font-bold text-violet-600 bg-violet-50 border border-violet-200 rounded-full px-2 py-0.5">{aiGenerated}</span>
+      {/* AI badge */}
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
+        <span style={{
+          fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
+          color: "#00D4FF", background: "rgba(0,212,255,0.08)",
+          border: "1px solid rgba(0,212,255,0.25)", borderRadius: 999,
+          padding: "3px 10px",
+        }}>
+          {aiGenerated}
+        </span>
       </div>
 
-      {results.map((r) => (
-        <div key={r.label} className="rounded-lg border border-indigo-100 bg-indigo-50/40 p-3 space-y-1.5">
-          <p className="text-[10px] font-semibold text-indigo-700">{r.label}</p>
-          <p className="text-[11px] text-neutral-700 leading-relaxed">{r.suggested}</p>
-          <div className="flex justify-end">
-            <button className="text-[10px] font-semibold text-white bg-indigo-500 hover:bg-indigo-600 rounded-md px-2.5 py-1">
-              {applyLabel}
-            </button>
+      {/* Result cards */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {results.map((r) => (
+          <div key={r.label} style={{
+            borderRadius: 10, border: "1.5px solid rgba(26,46,74,0.08)",
+            background: "rgba(26,46,74,0.02)", padding: "10px 12px",
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                <span style={{ fontSize: 10 }}>{r.icon}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: "#1a2e4a" }}>{r.label}</span>
+              </div>
+              <span style={{
+                fontSize: 8, fontWeight: 700, color: "#00D4FF",
+                background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)",
+                borderRadius: 999, padding: "1px 6px",
+              }}>
+                {r.badge}
+              </span>
+            </div>
+            <p style={{ fontSize: 11, color: "#475569", lineHeight: 1.55, marginBottom: 8 }}>{r.suggested}</p>
+            <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <button style={{
+                fontSize: 10, fontWeight: 700, color: "white",
+                background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
+                border: "none", borderRadius: 7, padding: "4px 12px", cursor: "pointer",
+                boxShadow: "0 2px 8px rgba(26,46,74,0.2)",
+              }}>
+                {applyLabel}
+              </button>
+            </div>
           </div>
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   )
 }

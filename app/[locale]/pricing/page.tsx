@@ -172,6 +172,7 @@ export default async function PricingPage({
           annualEquiv={t("annual_equiv")}
           titleText={t("title")}
           subtitleText={t("subtitle")}
+          accentLabel={t("accent_label")}
           subscriptionEndsAt={
             subscriptionEndsAt
               ? format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })

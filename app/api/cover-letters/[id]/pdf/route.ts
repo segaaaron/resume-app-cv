@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server"
 import { requireUser, handleError } from "@/lib/controllers/shared"
 import { coverLetterService } from "@/lib/controllers/cover-letter-deps"
-import { checkAndIncrementRateLimit } from "@/lib/ai-client"
+import { checkAndIncrementRateLimit, PDF_RATE_LIMIT_WINDOW_MS } from "@/lib/rate-limit"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
 import { createLogger } from "@/lib/logger"
+import { db } from "@/lib/db"
 
 const logger = createLogger("cover-letter-pdf")
+const PDF_DAILY_LIMIT = 15
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -23,8 +25,8 @@ export async function GET(req: Request, { params }: Params) {
 
     const letter = await coverLetterService.getPdfMeta(authResult.userId, id)
 
-    const allowed = await checkAndIncrementRateLimit(authResult.userId, "cover-letter-pdf-export", 20)
-    if (!allowed) return NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 })
+    const allowed = await checkAndIncrementRateLimit(authResult.userId, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
+    if (!allowed) return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
 
     const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
     const printToken = createPrintToken(authResult.userId, id)
@@ -36,6 +38,10 @@ export async function GET(req: Request, { params }: Params) {
       stretchPages: false,
       letterTitle: letter.title ?? undefined,
     })
+    db.auditLog.create({
+      data: { userId: authResult.userId, action: "EXPORT_PDF", metadata: { coverLetterId: id } },
+    }).catch(() => {})
+
     const filename = encodeURIComponent(letter.title || "carta")
     return new Response(new Uint8Array(pdf), {
       headers: {

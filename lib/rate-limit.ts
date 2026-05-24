@@ -1,7 +1,8 @@
 import { db } from "@/lib/db"
 
-const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000 // 1 hour
-const CACHE_TTL_MS         = 60 * 1000       // 1 min — safe: limit=20/hr, cache can be 1 min stale
+const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000      // 1 hour (default for AI endpoints)
+export const PDF_RATE_LIMIT_WINDOW_MS = 24 * 60 * 60 * 1000  // 24 hours for PDF exports
+const CACHE_TTL_MS         = 60 * 1000            // 1 min — safe: limit=20/hr, cache can be 1 min stale
 
 interface CacheEntry {
   count:   number
@@ -54,8 +55,8 @@ export async function checkRateLimit(userId: string, endpoint: string, limit = 2
  * single DB round-trip, eliminating the race condition where two concurrent requests
  * both pass the check at count = limit - 1.
  */
-export async function checkAndIncrementRateLimit(userId: string, endpoint: string, limit = 20): Promise<boolean> {
-  const resetAt = new Date(Date.now() + RATE_LIMIT_WINDOW_MS)
+export async function checkAndIncrementRateLimit(userId: string, endpoint: string, limit = 20, windowMs = RATE_LIMIT_WINDOW_MS): Promise<boolean> {
+  const resetAt = new Date(Date.now() + windowMs)
   const now = new Date()
   const rows = await db.$queryRaw<Array<{ count: number; resetAt: Date }>>`
     INSERT INTO "AIRateLimit" ("id", "userId", "endpoint", "count", "resetAt", "createdAt", "updatedAt")
