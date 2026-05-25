@@ -10,25 +10,16 @@ import UpgradeModal from "@/components/editor/UpgradeModal"
 import { TemplateCard } from "./TemplateCard"
 import { useTemplateSwitcher } from "./hooks/useTemplateSwitcher"
 
-// ── Arrow shared style ──────────────────────────────────────────────
-const ARROW_BASE: React.CSSProperties = {
-  position: "absolute",
-  zIndex: 3,
-  width: 36,
-  height: 30,
-  borderRadius: 8,
-  background: "linear-gradient(135deg, #1a2e4a 0%, #0f2040 100%)",
-  backdropFilter: "blur(12px)",
-  WebkitBackdropFilter: "blur(12px)",
-  borderWidth: 1,
-  borderStyle: "solid",
-  borderColor: "rgba(0,212,255,0.3)",
-  boxShadow: "0 4px 16px rgba(0,0,0,0.35), 0 0 0 1px rgba(0,212,255,0.2), 0 2px 8px rgba(0,212,255,0.18)",
-  cursor: "pointer",
-  color: "#00D4FF",
-  transition: "transform 0.2s cubic-bezier(0.34,1.56,0.64,1), opacity 0.2s ease",
-  touchAction: "manipulation",
-}
+const ARROW_CLS = [
+  "absolute z-[3] w-9 h-[30px] rounded-[8px]",
+  "bg-[linear-gradient(135deg,#1a2e4a_0%,#0f2040_100%)]",
+  "backdrop-blur-md",
+  "border border-dash-cyan/30",
+  "shadow-[0_4px_16px_rgba(0,0,0,0.35),0_0_0_1px_rgba(0,212,255,0.2),0_2px_8px_rgba(0,212,255,0.18)]",
+  "cursor-pointer text-dash-cyan",
+  "transition-[transform,opacity] duration-200 ease-[cubic-bezier(0.34,1.56,0.64,1)]",
+  "touch-manipulation",
+].join(" ")
 
 function CarouselRow({ children, compact }: { children: ReactNode; compact: boolean }) {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -60,55 +51,61 @@ function CarouselRow({ children, compact }: { children: ReactNode; compact: bool
   }
 
   return (
-    <div suppressHydrationWarning style={{ position: "relative", flex: 1, display: "flex", alignItems: "center", minWidth: 0 }}>
+    <div suppressHydrationWarning className="relative flex-1 flex items-center min-w-0">
       {/* Left fade — desktop only */}
-      <div suppressHydrationWarning className="hidden md:block" style={{
-        position: "absolute", left: 0, top: 0, bottom: 0, width: 64, zIndex: 2,
-        background: "linear-gradient(to right, rgba(240,248,255,0.98) 35%, transparent)",
-        pointerEvents: "none", opacity: canLeft ? 1 : 0, transition: "opacity 0.2s ease",
-      }} />
+      <div suppressHydrationWarning className={cn(
+        "hidden md:block absolute left-0 top-0 bottom-0 w-16 z-[2] pointer-events-none",
+        "bg-[linear-gradient(to_right,rgba(240,248,255,0.98)_35%,transparent)]",
+        "transition-opacity duration-200",
+        canLeft ? "opacity-100" : "opacity-0"
+      )} />
 
       {/* Left arrow — desktop only */}
       <button
         type="button"
         onClick={() => scroll("left")}
         aria-label="Scroll left"
-        className="hidden md:flex items-center justify-center"
-        style={{ ...ARROW_BASE, left: 8, opacity: canLeft ? 1 : 0, pointerEvents: canLeft ? "auto" : "none", transform: canLeft ? "scale(1)" : "scale(0.6)" }}
+        className={cn(
+          "hidden md:flex items-center justify-center",
+          ARROW_CLS,
+          "left-2",
+          canLeft ? "opacity-100 scale-100 pointer-events-auto" : "opacity-0 scale-[0.6] pointer-events-none"
+        )}
       >
-        <ChevronLeft style={{ width: 15, height: 15, strokeWidth: 2.5, pointerEvents: "none" }} />
+        <ChevronLeft className="w-[15px] h-[15px] pointer-events-none" strokeWidth={2.5} />
       </button>
 
       {/* Scroll content */}
       <div
         ref={scrollRef}
         suppressHydrationWarning
-        className="templates-strip-row"
-        style={{ flex: 1, display: "flex", alignItems: "center", gap: 12, padding: "0 20px", overflowX: "auto" }}
+        className="scrollbar-hide flex-1 flex items-center gap-3 px-5 overflow-x-auto"
       >
         {children}
       </div>
 
       {/* Right fade — desktop only */}
-      <div suppressHydrationWarning className="hidden md:block" style={{
-        position: "absolute", right: 0, top: 0, bottom: 0, width: 64, zIndex: 2,
-        background: "linear-gradient(to left, rgba(237,246,251,0.98) 35%, transparent)",
-        pointerEvents: "none", opacity: canRight ? 1 : 0, transition: "opacity 0.2s ease",
-      }} />
+      <div suppressHydrationWarning className={cn(
+        "hidden md:block absolute right-0 top-0 bottom-0 w-16 z-[2] pointer-events-none",
+        "bg-[linear-gradient(to_left,rgba(237,246,251,0.98)_35%,transparent)]",
+        "transition-opacity duration-200",
+        canRight ? "opacity-100" : "opacity-0"
+      )} />
 
       {/* Right arrow — desktop only */}
       <button
         type="button"
         onClick={() => scroll("right")}
         aria-label="Scroll right"
-        className={`hidden md:flex items-center justify-center${canRight ? " arrow-hint-pulse" : ""}`}
-        style={{ ...ARROW_BASE, right: 8, opacity: canRight ? 1 : 0, pointerEvents: canRight ? "auto" : "none", transform: canRight ? "scale(1)" : "scale(0.6)" }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = canRight ? "scale(1)" : "scale(0.6)"
-          e.currentTarget.style.animation = ""
-        }}
+        className={cn(
+          "hidden md:flex items-center justify-center",
+          ARROW_CLS,
+          "right-2",
+          canRight ? "opacity-100 scale-100 pointer-events-auto arrow-hint-pulse" : "opacity-0 scale-[0.6] pointer-events-none"
+        )}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = "" }}
       >
-        <ChevronRight style={{ width: 15, height: 15, strokeWidth: 2.5, pointerEvents: "none" }} />
+        <ChevronRight className="w-[15px] h-[15px] pointer-events-none" strokeWidth={2.5} />
       </button>
     </div>
   )
@@ -163,7 +160,6 @@ export default function TemplateSwitcher({
     cancelSwitch,
   } = useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role })
 
-  // Responsive: detect mobile (<=768px) for compact strip
   const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
     if (typeof window === "undefined") return
@@ -185,90 +181,41 @@ export default function TemplateSwitcher({
         onCancel={cancelSwitch}
       />
 
-      {/* hide horizontal scrollbar inside strip rows */}
-      <style>{`
-        .templates-strip-row::-webkit-scrollbar { display: none; }
-        .templates-strip-row { -ms-overflow-style: none; scrollbar-width: none; }
-
-        @keyframes arrowPulse {
-          0%, 100% { border-color: rgba(0,212,255,0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-          50%       { border-color: rgba(0,212,255,0.65); box-shadow: 0 2px 12px rgba(0,212,255,0.25); }
-        }
-        .arrow-hint-pulse { animation: arrowPulse 2.2s ease-in-out infinite; }
-        .arrow-hint-pulse:hover { animation: none !important; }
-      `}</style>
-
       <div
-        className="templates-strip-wrapper"
-        style={{
-          flexShrink: 0,
-          height: stripHeight,
-          background: "linear-gradient(180deg, #f0f8ff 0%, #e8f4fb 50%, #edf6fb 100%)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          borderTop: "1px solid rgba(0,212,255,0.18)",
-          display: "flex",
-          zIndex: 50,
-          boxShadow: "0 -4px 24px rgba(0,212,255,0.08), 0 -1px 0 rgba(0,212,255,0.12)",
-        }}
+        className={cn(
+          "templates-strip-wrapper shrink-0 flex z-50",
+          "border-t border-dash-cyan/[0.18]",
+          "backdrop-blur-[24px]",
+          "bg-[linear-gradient(180deg,#f0f8ff_0%,#e8f4fb_50%,#edf6fb_100%)]",
+          "shadow-[0_-4px_24px_rgba(0,212,255,0.08),0_-1px_0_rgba(0,212,255,0.12)]"
+        )}
+        style={{ height: stripHeight }}
       >
         {/* Labels column */}
         <div
           className={cn(
-            "shrink-0 flex flex-col items-center justify-evenly border-r border-[rgba(0,212,255,0.15)]",
+            "shrink-0 flex flex-col items-center justify-evenly",
+            "border-r border-dash-cyan/15",
+            "bg-[linear-gradient(180deg,rgba(240,248,255,0.8)_0%,rgba(232,244,251,0.6)_100%)]",
             isMobile ? "w-[76px] gap-5 px-1.5" : "w-[140px] gap-10 px-4"
           )}
-          style={{ background: "linear-gradient(180deg, rgba(240,248,255,0.8) 0%, rgba(232,244,251,0.6) 100%)" }}
         >
-          <span
-            style={{
-              fontSize: isMobile ? 7.5 : 9,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: isMobile ? "0.04em" : "0.1em",
-              color: "#1a2e4a",
-              textAlign: "center",
-              lineHeight: 1.35,
-              whiteSpace: "pre-line",
-              overflow: "hidden",
-              wordBreak: "break-word",
-            }}
-          >
+          <span className={cn(
+            "font-extrabold uppercase text-center leading-[1.35] whitespace-pre-line overflow-hidden break-words text-dash-navy",
+            isMobile ? "text-[7.5px] tracking-[0.04em]" : "text-[9px] tracking-[0.1em]"
+          )}>
             {`${t("regular_designs_label")}\n${t("regular_designs_label2")}`}
           </span>
-          <span
-            style={{
-              fontSize: isMobile ? 7.5 : 9,
-              fontWeight: 800,
-              textTransform: "uppercase",
-              letterSpacing: isMobile ? "0.04em" : "0.1em",
-              background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-              backgroundClip: "text",
-              textAlign: "center",
-              lineHeight: 1.35,
-              whiteSpace: "pre-line",
-              overflow: "hidden",
-              wordBreak: "break-word",
-            }}
-          >
+          <span className={cn(
+            "text-gradient-purple font-extrabold uppercase text-center leading-[1.35] whitespace-pre-line overflow-hidden break-words",
+            isMobile ? "text-[7.5px] tracking-[0.04em]" : "text-[9px] tracking-[0.1em]"
+          )}>
             {`${t("pro_designs_label")}\n${t("pro_designs_label2")}`}
           </span>
         </div>
 
-        {/* Content area: two rows */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-            padding: "20px 0 10px",
-            gap: 16,
-          }}
-        >
-          {/* Regular row */}
+        {/* Content: two rows */}
+        <div className="flex-1 flex flex-col overflow-hidden pt-5 pb-2.5 gap-4">
           <CarouselRow compact={isMobile}>
             {regularTemplates.map((tmpl) => (
               <TemplateCard
@@ -283,7 +230,6 @@ export default function TemplateSwitcher({
             ))}
           </CarouselRow>
 
-          {/* Pro row */}
           <CarouselRow compact={isMobile}>
             {proTemplates.map((tmpl) => (
               <TemplateCard

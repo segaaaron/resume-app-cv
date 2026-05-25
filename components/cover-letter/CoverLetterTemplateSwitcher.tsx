@@ -134,43 +134,33 @@ export default function CoverLetterTemplateSwitcher({ activeTemplate, isPro, col
   }
 
   return (
-    <>
-      <style>{`
-        .cl-strip-row::-webkit-scrollbar { display: none; }
-        .cl-strip-row { -ms-overflow-style: none; scrollbar-width: none; }
-      `}</style>
-      <div
-        suppressHydrationWarning
-        style={{
-          background: "linear-gradient(180deg, #f0f8ff 0%, #e8f4fb 50%, #edf6fb 100%)",
-          borderBottom: "1px solid rgba(0,212,255,0.18)",
-          padding: "12px 0 12px",
-        }}
-      >
-        {/* Free row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 0 }}>
-          <span style={{ width: 54, flexShrink: 0, fontSize: 8, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "#1a2e4a", textAlign: "center", lineHeight: 1.35, paddingLeft: 4 }}>
-            {t("template_label_free")}
-          </span>
-          <CarouselRow>
-            {FREE_TEMPLATES.map((tpl) => (
-              <TemplateCard key={tpl.id} id={tpl.id} labelKey={tpl.labelKey} locked={false} />
-            ))}
-          </CarouselRow>
-        </div>
-
-        {/* Pro row */}
-        <div style={{ display: "flex", alignItems: "center", gap: 0, marginTop: 10 }}>
-          <span style={{ width: 54, flexShrink: 0, fontSize: 8, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", textAlign: "center", lineHeight: 1.35, background: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", paddingLeft: 4 }}>
-            Pro
-          </span>
-          <CarouselRow>
-            {PRO_TEMPLATES.map((tpl) => (
-              <TemplateCard key={tpl.id} id={tpl.id} labelKey={tpl.labelKey} locked={!isPro} />
-            ))}
-          </CarouselRow>
-        </div>
+    <div
+      suppressHydrationWarning
+      className="bg-[linear-gradient(180deg,#f0f8ff_0%,#e8f4fb_50%,#edf6fb_100%)] border-b border-dash-cyan/[0.18] py-3"
+    >
+      {/* Free row */}
+      <div className="flex items-center">
+        <span className="w-[54px] shrink-0 text-[8px] font-extrabold uppercase tracking-[0.08em] text-dash-navy text-center leading-[1.35] pl-1">
+          {t("template_label_free")}
+        </span>
+        <CarouselRow>
+          {FREE_TEMPLATES.map((tpl) => (
+            <TemplateCard key={tpl.id} id={tpl.id} labelKey={tpl.labelKey} locked={false} />
+          ))}
+        </CarouselRow>
       </div>
-    </>
+
+      {/* Pro row */}
+      <div className="flex items-center mt-2.5">
+        <span className="w-[54px] shrink-0 text-[8px] font-extrabold uppercase tracking-[0.08em] text-center leading-[1.35] pl-1 text-gradient-purple">
+          Pro
+        </span>
+        <CarouselRow>
+          {PRO_TEMPLATES.map((tpl) => (
+            <TemplateCard key={tpl.id} id={tpl.id} labelKey={tpl.labelKey} locked={!isPro} />
+          ))}
+        </CarouselRow>
+      </div>
+    </div>
   )
 }

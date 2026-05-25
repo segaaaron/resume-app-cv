@@ -98,32 +98,6 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
 
   return (
     <>
-      <style>{`
-        @keyframes cardIn {
-          from { opacity: 0; transform: translateY(14px); }
-          to   { opacity: 1; transform: translateY(0); }
-        }
-        .cl-card-anim { animation: cardIn 0.45s cubic-bezier(0.34,1.1,0.64,1) both; }
-        .cl-thumb-hover { transition: transform 0.22s cubic-bezier(0.34,1.2,0.64,1); }
-        .cl-card-wrap:hover .cl-thumb-hover { transform: translateY(-6px) scale(1.03); }
-        .cl-overlay { opacity: 0; transition: opacity 0.2s ease; }
-        .cl-card-wrap:hover .cl-overlay { opacity: 1; }
-        .cl-ov-label { opacity: 0; transition: opacity 0.2s ease 0.05s; }
-        .cl-card-wrap:hover .cl-ov-label { opacity: 1; }
-        .cl-card-wrap::after {
-          content: ''; position: absolute; bottom: 0; left: 20%; right: 20%;
-          height: 1px; background: #00D4FF; opacity: 0;
-          transition: opacity 0.25s ease; filter: blur(2px);
-        }
-        .cl-card-wrap:hover::after { opacity: 0.4; }
-        .cl-new-ico { transition: all 0.2s ease; }
-        .cl-new-card:hover .cl-new-ico { border-color: #00D4FF !important; color: #00D4FF !important; background: rgba(0,212,255,0.08) !important; }
-        .cl-new-lbl { transition: color 0.2s ease; }
-        .cl-new-card:hover .cl-new-lbl { color: #00D4FF !important; }
-        .cl-new-hint { transition: color 0.2s ease; }
-        .cl-new-card:hover .cl-new-hint { color: #6B7A8C !important; }
-      `}</style>
-
       <div>
         <UpgradeCTACard />
 

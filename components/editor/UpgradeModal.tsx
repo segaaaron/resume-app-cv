@@ -68,8 +68,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#00D4FF] opacity-10 blur-3xl pointer-events-none" />
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-40" />
 
-          <div className="flex items-center justify-center w-12 h-12 rounded-2xl mb-4 relative"
-            style={{ background: "rgba(0,212,255,0.18)", border: "1.5px solid rgba(0,212,255,0.35)" }}>
+          <div className="flex items-center justify-center w-12 h-12 rounded-2xl mb-4 relative bg-[rgba(0,212,255,0.18)] border-[1.5px] border-[rgba(0,212,255,0.35)]">
             <Crown className="h-6 w-6 text-[#00D4FF]" />
           </div>
           <h2

@@ -73,7 +73,11 @@ export class StripeWebhookService {
       ? session.subscription
       : (session.subscription as Stripe.Subscription | null)?.id ?? null
 
-    const planInterval = (session.metadata?.planInterval === "annual" ? "annual" : "monthly") as "monthly" | "annual"
+    const rawInterval = session.metadata?.planInterval
+    if (rawInterval !== "annual" && rawInterval !== "monthly") {
+      this.logger.warn("StripeWebhookService: unexpected planInterval metadata, defaulting to monthly", { rawInterval, sessionId: session.id })
+    }
+    const planInterval = (rawInterval === "annual" ? "annual" : "monthly") as "monthly" | "annual"
 
     let subscriptionEndsAt: Date | undefined
     if (subscriptionId) {

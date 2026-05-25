@@ -89,15 +89,13 @@ export default function KanbanColumn({
     ? {
         background: "linear-gradient(180deg,#FFFDF6 0%,#FFFFFF 60%)",
         borderColor: dragOver ? C.cyan : "rgba(212,165,116,0.35)",
-        boxShadow: dragOver
-          ? `0 8px 24px rgba(0,212,255,0.12)`
-          : "inset 0 0 0 1px rgba(245,215,139,0.25),0 0 24px rgba(212,165,116,0.08)",
+        boxShadow: dragOver ? "0 8px 24px rgba(0,212,255,0.12)" : "inset 0 0 0 1px rgba(245,215,139,0.25),0 0 24px rgba(212,165,116,0.08)",
         transition: "border-color 0.2s",
       }
     : {
         background: "white",
         borderColor: dragOver ? C.cyan : C.border,
-        boxShadow: dragOver ? "0 8px 24px rgba(0,212,255,0.12)" : "none",
+        boxShadow: dragOver ? "0 8px 24px rgba(0,212,255,0.12)" : undefined,
         transition: "border-color 0.2s",
       }
 
@@ -105,20 +103,11 @@ export default function KanbanColumn({
     ? { background: "rgba(0,212,255,0.05)", boxShadow: `inset 0 0 0 1.5px ${C.cyanBorder}` }
     : {}
 
-  const isShimmer = isFound
-  const topBorderStyle: React.CSSProperties = isShimmer
-    ? {
-        position: "absolute", top: 0, left: 0, right: 0, height: 3,
-        borderRadius: "10px 10px 0 0",
-        background: `linear-gradient(90deg,${C.gold},#F5D78B,${C.success},${C.gold})`,
-        backgroundSize: "200% 100%",
-        animation: "shimmer 3s linear infinite",
-      }
-    : {
-        position: "absolute", top: 0, left: 0, right: 0, height: "2.5px",
-        borderRadius: "10px 10px 0 0",
-        background: cfg.topColor,
-      }
+  const topBorderStyle: React.CSSProperties = {
+    position: "absolute", top: 0, left: 0, right: 0, height: isFound ? 3 : "2.5px",
+    borderRadius: "10px 10px 0 0",
+    background: cfg.topColor,
+  }
 
   const titleStyle: React.CSSProperties = cfg.titleGradient
     ? {
@@ -130,31 +119,30 @@ export default function KanbanColumn({
 
   return (
     <div
-      style={{
-        background: "white", border: `1px solid ${C.border}`,
-        borderRadius: 10, overflow: "hidden", minHeight: 520,
-        display: "flex", flexDirection: "column", ...colStyle,
-      }}
+      className="rounded-[10px] overflow-hidden min-h-[520px] flex flex-col border"
+      style={colStyle}
       onDragOver={(e) => { e.preventDefault(); onDragOver() }}
       onDragLeave={onDragLeave}
       onDrop={(e) => { e.preventDefault(); onDrop() }}
     >
-      <div style={{ padding: "13px 14px 10px", borderBottom: `1px solid ${C.borderS}`, display: "flex", alignItems: "center", gap: 8, position: "relative", flexShrink: 0 }}>
+      <div className="px-[14px] pt-[13px] pb-[10px] border-b border-[#E8EDF6] flex items-center gap-2 relative shrink-0">
         <div style={topBorderStyle} />
-        <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", flex: 1, ...titleStyle }}>
+        <span className="text-[10px] font-bold tracking-[0.1em] uppercase flex-1" style={titleStyle}>
           {label}
         </span>
-        <span style={{ fontFamily: "var(--dash-mono)", fontSize: 10, fontWeight: 600, borderRadius: 8, padding: "1px 7px", color: cfg.badgeColor, background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}` }}>
+        <span
+          className="[font-family:var(--dash-mono)] text-[10px] font-semibold rounded-lg px-[7px] py-px"
+          style={{ color: cfg.badgeColor, background: cfg.badgeBg, border: `1px solid ${cfg.badgeBorder}` }}
+        >
           {applications.length}
         </span>
       </div>
 
       <div
+        className="p-[10px] flex flex-col gap-2 flex-1 min-h-[120px] relative rounded-[6px]"
         style={{
-          padding: 10, display: "flex", flexDirection: "column", gap: 8,
-          flex: 1, minHeight: 120,
           transition: "background 0.18s ease,box-shadow 0.18s ease",
-          position: "relative", borderRadius: 6, ...cardsAreaStyle,
+          ...cardsAreaStyle,
         }}
       >
         {applications.map((app) => (
@@ -172,14 +160,7 @@ export default function KanbanColumn({
         ))}
 
         {applications.length === 0 && dragOver && (
-          <div style={{
-            position: "absolute", top: "50%", left: "50%",
-            transform: "translate(-50%,-50%)",
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.08em",
-            textTransform: "uppercase", color: C.cyan, padding: "6px 12px",
-            border: `1px dashed ${C.cyanBorder}`, borderRadius: 6,
-            background: "white", pointerEvents: "none",
-          }}>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[11px] font-semibold tracking-[0.08em] uppercase text-dash-cyan py-1.5 px-3 border border-dashed border-dash-cyan/25 rounded-[6px] bg-white pointer-events-none">
             {t("drop_here")}
           </div>
         )}

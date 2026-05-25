@@ -5,14 +5,6 @@ import { createPortal } from "react-dom"
 import { useTranslations } from "next-intl"
 import type { ApplicationCard, AppStatus } from "@/stores/applicationStore"
 
-const C = {
-  navy:   "#1a2e4a",
-  cyan:   "#00D4FF",
-  muted:  "#6B7A8C",
-  border: "#D9E1ED",
-  danger: "#EF4444",
-} as const
-
 // ── RejectModal ───────────────────────────────────────────────────────────────
 
 interface RejectModalProps {
@@ -37,28 +29,27 @@ export function RejectModal({ rejectState, rejectChip, setRejectChip, rejectNote
   ]
   if (!rejectState) return null
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}>
-      <div style={{ background: "white", borderRadius: 16, boxShadow: "0 24px 64px rgba(26,46,74,0.18)", padding: 24, maxWidth: 384, width: "100%", margin: "0 16px" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", margin: "0 auto 16px", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl mx-4 w-full max-w-sm p-6" style={{ boxShadow: "0 24px 64px rgba(26,46,74,0.18)" }}>
+        <div className="w-12 h-12 rounded-full mx-auto mb-4 bg-red-500/10 flex items-center justify-center">
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </div>
-        <h2 style={{ fontFamily: "var(--dash-serif)", fontSize: 18, fontWeight: 700, textAlign: "center", marginBottom: 4, color: C.navy }}>
+        <h2 className="text-lg font-bold text-center mb-1 text-dash-navy" style={{ fontFamily: "var(--dash-serif)" }}>
           {t("reject_reason_title")}
         </h2>
-        <p style={{ fontSize: 12, textAlign: "center", marginBottom: 16, color: C.muted }}>{t("reject_reason_subtitle")}</p>
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 16 }}>
+        <p className="text-xs text-center mb-4 text-dash-muted">{t("reject_reason_subtitle")}</p>
+        <div className="flex flex-wrap gap-2 mb-4">
           {chips.map((chip) => (
             <button
               key={chip}
               onClick={() => setRejectChip(rejectChip === chip ? "" : chip)}
+              className="text-xs px-3 py-1.5 rounded-full cursor-pointer transition-all duration-150"
               style={{
-                fontSize: 12, padding: "6px 12px", borderRadius: 999,
-                border: rejectChip === chip ? `1px solid ${C.cyan}` : `1px solid ${C.border}`,
+                border: rejectChip === chip ? "1px solid #00D4FF" : "1px solid #D9E1ED",
                 background: rejectChip === chip ? "rgba(0,212,255,0.1)" : "transparent",
-                color: rejectChip === chip ? C.navy : C.muted,
-                cursor: "pointer", transition: "all 0.15s ease",
+                color: rejectChip === chip ? "#1a2e4a" : "#6B7A8C",
               }}
             >
               {chip}
@@ -70,13 +61,19 @@ export function RejectModal({ rejectState, rejectChip, setRejectChip, rejectNote
           onChange={(e) => setRejectNotes(e.target.value)}
           placeholder={t("reject_notes_placeholder")}
           rows={2}
-          style={{ width: "100%", fontSize: 13, border: `1px solid ${C.border}`, borderRadius: 10, padding: "8px 12px", marginBottom: 16, resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+          className="w-full text-[13px] border border-dash-border rounded-[10px] px-3 py-2 mb-4 resize-none outline-none box-border font-[inherit]"
         />
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onCancel} style={{ flex: 1, fontSize: 13, padding: "8px 0", borderRadius: 10, border: `1px solid ${C.border}`, color: C.muted, background: "transparent", cursor: "pointer", transition: "background 0.15s ease" }}>
+        <div className="flex gap-2">
+          <button
+            onClick={onCancel}
+            className="flex-1 text-[13px] py-2 rounded-[10px] border border-dash-border text-dash-muted bg-transparent cursor-pointer transition-[background] duration-150"
+          >
             {t("reject_cancel")}
           </button>
-          <button onClick={onConfirm} style={{ flex: 1, fontSize: 13, padding: "8px 0", borderRadius: 10, border: "none", fontWeight: 600, color: "white", background: C.danger, cursor: "pointer" }}>
+          <button
+            onClick={onConfirm}
+            className="flex-1 text-[13px] py-2 rounded-[10px] border-none font-semibold text-white bg-red-500 cursor-pointer"
+          >
             {t("reject_confirm")}
           </button>
         </div>
@@ -91,15 +88,16 @@ export function FoundJobModal({ foundCard, onClose }: { foundCard: ApplicationCa
   const t = useTranslations("kanban")
   if (!foundCard) return null
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.3)", backdropFilter: "blur(4px)" }}>
-      <div style={{ background: "white", borderRadius: 16, boxShadow: "0 24px 64px rgba(26,46,74,0.18)", padding: 32, maxWidth: 384, width: "100%", margin: "0 16px", textAlign: "center" }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>🎉</div>
-        <h2 style={{ fontFamily: "var(--dash-serif)", fontSize: 24, fontWeight: 900, marginBottom: 8, color: C.navy }}>{t("found_title")}</h2>
-        <p style={{ fontSize: 14, fontWeight: 600, marginBottom: 4, color: C.cyan }}>{foundCard.jobTitle} @ {foundCard.company}</p>
-        <p style={{ fontSize: 14, marginBottom: 24, color: C.muted }}>{t("found_subtitle")}</p>
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/30 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl mx-4 w-full max-w-sm p-8 text-center" style={{ boxShadow: "0 24px 64px rgba(26,46,74,0.18)" }}>
+        <div className="text-5xl mb-4">🎉</div>
+        <h2 className="text-2xl font-black mb-2 text-dash-navy" style={{ fontFamily: "var(--dash-serif)" }}>{t("found_title")}</h2>
+        <p className="text-sm font-semibold mb-1 text-dash-cyan">{foundCard.jobTitle} @ {foundCard.company}</p>
+        <p className="text-sm mb-6 text-dash-muted">{t("found_subtitle")}</p>
         <button
           onClick={onClose}
-          style={{ width: "100%", padding: "10px 0", borderRadius: 12, fontWeight: 700, fontSize: 14, color: "white", border: "none", background: "linear-gradient(135deg,#00D4FF,#00A8CC)", cursor: "pointer" }}
+          className="w-full py-2.5 rounded-xl font-bold text-sm text-white border-none cursor-pointer"
+          style={{ background: "linear-gradient(135deg,#00D4FF,#00A8CC)" }}
         >
           {t("found_thanks")}
         </button>
@@ -127,80 +125,87 @@ export function RejectionDetailModal({ app, onClose }: { app: ApplicationCard | 
   const modal = (
     <div
       onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
-      style={{ position: "fixed", inset: 0, zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)", backdropFilter: "blur(6px)" }}
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-md"
     >
-      <div style={{ background: "white", borderRadius: 20, boxShadow: "0 32px 80px rgba(26,46,74,0.22)", maxWidth: 440, width: "100%", margin: "0 16px", overflow: "hidden" }}>
+      <div className="bg-white rounded-[20px] mx-4 w-full max-w-[440px] overflow-hidden" style={{ boxShadow: "0 32px 80px rgba(26,46,74,0.22)" }}>
 
         {/* ── Header ── */}
-        <div style={{ background: "linear-gradient(180deg,#FFF1F2 0%,#FFFFFF 100%)", padding: "32px 28px 24px", textAlign: "center", borderBottom: "1px solid #F3E4E4" }}>
+        <div
+          className="px-7 pt-8 pb-6 text-center border-b border-[#F3E4E4]"
+          style={{ background: "linear-gradient(180deg,#FFF1F2 0%,#FFFFFF 100%)" }}
+        >
           {/* Icon with dashed ring */}
-          <div style={{ position: "relative", width: 72, height: 72, margin: "0 auto 16px" }}>
-            <svg viewBox="0 0 72 72" fill="none" style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
+          <div className="relative w-[72px] h-[72px] mx-auto mb-4">
+            <svg viewBox="0 0 72 72" fill="none" className="absolute inset-0 w-full h-full">
               <circle cx="36" cy="36" r="34" stroke="#EF4444" strokeWidth="1.5" strokeDasharray="5 4" strokeOpacity="0.5"/>
             </svg>
-            <div style={{ position: "absolute", inset: 8, borderRadius: "50%", background: "linear-gradient(135deg,#EF4444,#DC2626)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 8px 20px rgba(239,68,68,0.4)" }}>
+            <div
+              className="absolute inset-2 rounded-full flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg,#EF4444,#DC2626)", boxShadow: "0 8px 20px rgba(239,68,68,0.4)" }}
+            >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </div>
           </div>
-          <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "#EF4444", marginBottom: 8 }}>{t("detail_eyebrow")}</p>
-          <h2 style={{ fontFamily: "var(--dash-serif)", fontSize: 22, fontWeight: 800, color: C.navy, marginBottom: 6, letterSpacing: "-0.02em" }}>{app.jobTitle}</h2>
-          <p style={{ fontSize: 13, color: C.muted, lineHeight: 1.5 }}>{app.company} · {t("detail_subtitle")}</p>
+          <p className="text-[10px] font-bold tracking-[0.12em] uppercase text-red-500 mb-2">{t("detail_eyebrow")}</p>
+          <h2 className="text-[22px] font-extrabold text-dash-navy mb-1.5 tracking-[-0.02em]" style={{ fontFamily: "var(--dash-serif)" }}>{app.jobTitle}</h2>
+          <p className="text-[13px] text-dash-muted leading-[1.5]">{app.company} · {t("detail_subtitle")}</p>
         </div>
 
         {/* ── Body ── */}
-        <div style={{ padding: "20px 28px 0" }}>
+        <div className="px-7 pt-5">
 
           {/* Motivo */}
           {reason && (
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <span style={{ width: 14, height: 2, background: "#EF4444", borderRadius: 2, flexShrink: 0 }} />
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted }}>{t("detail_reason_label")}</span>
+            <div className="mb-[18px]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-3.5 h-0.5 bg-red-500 rounded-sm shrink-0" />
+                <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-dash-muted">{t("detail_reason_label")}</span>
               </div>
-              <p style={{ fontSize: 15, fontWeight: 700, color: "#DC2626", margin: 0, lineHeight: 1.4 }}>{reason}</p>
+              <p className="text-[15px] font-bold text-[#DC2626] m-0 leading-[1.4]">{reason}</p>
             </div>
           )}
 
           {/* Notas */}
           {personalNotes && (
-            <div style={{ marginBottom: 18 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-                <span style={{ width: 14, height: 2, background: "#EF4444", borderRadius: 2, flexShrink: 0 }} />
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted }}>{t("detail_notes_label")}</span>
+            <div className="mb-[18px]">
+              <div className="flex items-center gap-1.5 mb-2">
+                <span className="w-3.5 h-0.5 bg-red-500 rounded-sm shrink-0" />
+                <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-dash-muted">{t("detail_notes_label")}</span>
               </div>
-              <div style={{ background: "#F8F9FB", borderRadius: 8, padding: "10px 14px", borderLeft: "3px solid #D9E1ED" }}>
-                <p style={{ fontSize: 13, color: "#6B7A8C", margin: 0, lineHeight: 1.55, fontStyle: "italic" }}>{personalNotes}</p>
+              <div className="bg-[#F8F9FB] rounded-lg px-3.5 py-2.5 border-l-[3px] border-dash-border">
+                <p className="text-[13px] text-dash-muted m-0 leading-[1.55] italic">{personalNotes}</p>
               </div>
             </div>
           )}
 
           {/* Archivada */}
-          <div style={{ marginBottom: 18 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
-              <span style={{ width: 14, height: 2, background: "#EF4444", borderRadius: 2, flexShrink: 0 }} />
-              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: C.muted }}>{t("detail_archived_label")}</span>
+          <div className="mb-[18px]">
+            <div className="flex items-center gap-1.5 mb-2">
+              <span className="w-3.5 h-0.5 bg-red-500 rounded-sm shrink-0" />
+              <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-dash-muted">{t("detail_archived_label")}</span>
             </div>
-            <p style={{ fontSize: 15, fontWeight: 700, color: C.navy, margin: 0 }}>{archivedDate}</p>
+            <p className="text-[15px] font-bold text-dash-navy m-0">{archivedDate}</p>
           </div>
 
           {/* Info box */}
-          <div style={{ background: "rgba(0,212,255,0.07)", border: "1px solid rgba(0,212,255,0.2)", borderRadius: 10, padding: "12px 14px", marginBottom: 20, display: "flex", gap: 10, alignItems: "flex-start" }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0097B2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+          <div
+            className="rounded-[10px] px-3.5 py-3 mb-5 flex gap-2.5 items-start"
+            style={{ background: "rgba(0,212,255,0.07)", border: "1px solid rgba(0,212,255,0.2)" }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0097B2" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-px">
               <circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
             </svg>
-            <p style={{ fontSize: 12.5, color: "#0B5D70", margin: 0, lineHeight: 1.6 }}>{t("detail_advice")} <b>{t("detail_advice_bold")}</b></p>
+            <p className="text-[12.5px] text-[#0B5D70] m-0 leading-[1.6]">{t("detail_advice")} <b>{t("detail_advice_bold")}</b></p>
           </div>
         </div>
 
         {/* ── Footer ── */}
-        <div style={{ padding: "0 28px 24px" }}>
+        <div className="px-7 pb-6">
           <button
             onClick={onClose}
-            style={{ width: "100%", padding: "11px 0", borderRadius: 10, fontWeight: 600, fontSize: 13.5, color: C.navy, border: "1px solid #D9E1ED", background: "#F5F7FB", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 6, transition: "background 0.15s ease" }}
-            onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.background = "#EEF2F9" }}
-            onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.background = "#F5F7FB" }}
+            className="w-full py-[11px] rounded-[10px] font-semibold text-[13.5px] text-dash-navy border border-dash-border bg-dash-surface cursor-pointer flex items-center justify-center gap-1.5 transition-[background] duration-150 hover:bg-dash-surface2"
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
@@ -229,22 +234,30 @@ export function ClearBoardModal({ open, onClose, onConfirm, clearing, totalCount
   const t = useTranslations("kanban")
   if (!open) return null
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 5000, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.2)", backdropFilter: "blur(4px)" }}>
-      <div style={{ background: "white", borderRadius: 16, boxShadow: "0 24px 64px rgba(26,46,74,0.18)", padding: 24, maxWidth: 384, width: "100%", margin: "0 16px" }}>
-        <div style={{ width: 48, height: 48, borderRadius: "50%", margin: "0 auto 16px", background: "rgba(239,68,68,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+      <div className="bg-white rounded-2xl mx-4 w-full max-w-sm p-6" style={{ boxShadow: "0 24px 64px rgba(26,46,74,0.18)" }}>
+        <div className="w-12 h-12 rounded-full mx-auto mb-4 bg-red-500/10 flex items-center justify-center">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#EF4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
             <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
             <path d="M10 11v6"/><path d="M14 11v6"/>
           </svg>
         </div>
-        <h2 style={{ fontFamily: "var(--dash-serif)", fontSize: 18, fontWeight: 700, textAlign: "center", marginBottom: 4, color: C.navy }}>{t("clear_confirm_title")}</h2>
-        <p style={{ fontSize: 12, textAlign: "center", marginBottom: 24, color: C.muted }}>{t("clear_confirm_desc", { count: totalCount })}</p>
-        <div style={{ display: "flex", gap: 8 }}>
-          <button onClick={onClose} style={{ flex: 1, fontSize: 13, padding: "8px 0", borderRadius: 10, border: `1px solid ${C.border}`, color: C.muted, background: "transparent", cursor: "pointer" }}>
+        <h2 className="text-lg font-bold text-center mb-1 text-dash-navy" style={{ fontFamily: "var(--dash-serif)" }}>{t("clear_confirm_title")}</h2>
+        <p className="text-xs text-center mb-6 text-dash-muted">{t("clear_confirm_desc", { count: totalCount })}</p>
+        <div className="flex gap-2">
+          <button
+            onClick={onClose}
+            className="flex-1 text-[13px] py-2 rounded-[10px] border border-dash-border text-dash-muted bg-transparent cursor-pointer"
+          >
             {t("clear_cancel")}
           </button>
-          <button onClick={onConfirm} disabled={clearing} style={{ flex: 1, fontSize: 13, padding: "8px 0", borderRadius: 10, border: "none", fontWeight: 600, color: "white", background: C.danger, cursor: "pointer", opacity: clearing ? 0.6 : 1 }}>
+          <button
+            onClick={onConfirm}
+            disabled={clearing}
+            className="flex-1 text-[13px] py-2 rounded-[10px] border-none font-semibold text-white bg-red-500 cursor-pointer"
+            style={{ opacity: clearing ? 0.6 : 1 }}
+          >
             {clearing ? t("clear_yes_cleaning") : t("clear_yes")}
           </button>
         </div>

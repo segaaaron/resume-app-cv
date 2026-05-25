@@ -18,13 +18,13 @@ export default function Footer() {
   ]
 
   return (
-    <footer style={{ background: "#0d1b2e" }}>
+    <footer className="bg-[#0d1b2e]">
       <div className="max-w-6xl mx-auto px-6 pt-12 pb-0">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8" style={{ paddingBottom: 28 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pb-7">
 
           {/* Brand */}
           <div>
-            <Link href={`/${locale}`} className="flex items-center gap-2 mb-3 no-underline" style={{ textDecoration: "none" }}>
+            <Link href={`/${locale}`} className="flex items-center gap-2 mb-3 no-underline">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.svg"
@@ -34,7 +34,7 @@ export default function Footer() {
                 className="rounded-lg shrink-0"
                 style={{ boxShadow: "0 2px 10px rgba(0,212,255,0.3)" }}
               />
-              <span style={{ color: "white", fontSize: 15, fontWeight: 800, letterSpacing: "-0.01em" }}>
+              <span className="text-white text-[15px] font-extrabold tracking-[-0.01em]">
                 ReadyCVV
               </span>
             </Link>
@@ -42,7 +42,7 @@ export default function Footer() {
 
           {/* Product */}
           <div>
-            <h4 style={{ color: "#94A3B8", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>
+            <h4 className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-[.1em] mb-3.5">
               {t("product")}
             </h4>
             <ul className="space-y-2.5 list-none p-0 m-0">
@@ -50,8 +50,7 @@ export default function Footer() {
                 <li key={href}>
                   <Link
                     href={href}
-                    style={{ color: "#94A3B8", fontSize: 13, textDecoration: "none" }}
-                    className="hover:!text-white transition-colors duration-200"
+                    className="text-[#94A3B8] text-[13px] no-underline hover:!text-white transition-colors duration-200"
                   >
                     {label}
                   </Link>
@@ -62,7 +61,7 @@ export default function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 style={{ color: "#94A3B8", fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: ".1em", marginBottom: 14 }}>
+            <h4 className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-[.1em] mb-3.5">
               {t("legal")}
             </h4>
             <ul className="space-y-2.5 list-none p-0 m-0">
@@ -70,8 +69,7 @@ export default function Footer() {
                 <li key={href}>
                   <Link
                     href={href}
-                    style={{ color: "#94A3B8", fontSize: 13, textDecoration: "none" }}
-                    className="hover:!text-white transition-colors duration-200"
+                    className="text-[#94A3B8] text-[13px] no-underline hover:!text-white transition-colors duration-200"
                   >
                     {label}
                   </Link>
@@ -83,10 +81,10 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div
-          className="flex items-center justify-between"
-          style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "14px 0" }}
+          className="flex items-center justify-between py-3.5"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
         >
-          <p style={{ color: "#94A3B8", fontSize: 12 }}>
+          <p className="text-[#94A3B8] text-xs">
             {t("copyright", { year: new Date().getFullYear() })}
           </p>
         </div>

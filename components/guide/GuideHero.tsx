@@ -12,77 +12,85 @@ export default async function GuideHero({ locale }: { locale: string }) {
   ]
 
   return (
-    <section style={{ position: "relative", overflow: "hidden", background: "linear-gradient(160deg, #071525 0%, #0a1e35 60%, #071525 100%)", padding: "80px 16px 100px" }}>
+    <section className="relative overflow-hidden px-4 pt-20 pb-24"
+      style={{ background: "linear-gradient(160deg, #071525 0%, #0a1e35 60%, #071525 100%)" }}
+    >
       {/* Tech grid */}
-      <div style={{
-        position: "absolute", inset: 0, pointerEvents: "none",
-        backgroundImage: "linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px)",
-        backgroundSize: "40px 40px",
-      }} />
+      <div className="absolute inset-0 pointer-events-none"
+        style={{
+          backgroundImage: "linear-gradient(rgba(0,212,255,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.04) 1px, transparent 1px)",
+          backgroundSize: "40px 40px",
+        }}
+      />
 
       {/* Glow orbs */}
-      <div style={{ position: "absolute", top: -80, right: -60, width: 320, height: 320, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
-      <div style={{ position: "absolute", bottom: -60, left: "20%", width: 240, height: 240, borderRadius: "50%", background: "radial-gradient(circle, rgba(0,102,255,0.08) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div className="absolute pointer-events-none rounded-full"
+        style={{ top: -80, right: -60, width: 320, height: 320, background: "radial-gradient(circle, rgba(0,212,255,0.12) 0%, transparent 70%)" }}
+      />
+      <div className="absolute pointer-events-none rounded-full"
+        style={{ bottom: -60, left: "20%", width: 240, height: 240, background: "radial-gradient(circle, rgba(0,102,255,0.08) 0%, transparent 70%)" }}
+      />
 
-      <div style={{ position: "relative", maxWidth: 760, margin: "0 auto", textAlign: "center" }}>
+      <div className="relative max-w-[760px] mx-auto text-center">
         {/* Badge */}
-        <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 28 }}>
-          <div style={{ width: 20, height: 1.5, background: "#00D4FF", borderRadius: 2 }} />
-          <span style={{
-            fontSize: 10, fontWeight: 800, letterSpacing: "0.16em", textTransform: "uppercase",
-            color: "#00D4FF", padding: "4px 14px", borderRadius: 999,
-            background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.25)",
-          }}>
+        <div className="inline-flex items-center gap-2 mb-7">
+          <div className="w-5 h-px bg-dash-cyan rounded-sm" />
+          <span className="text-[10px] font-extrabold tracking-[0.16em] uppercase text-dash-cyan px-3.5 py-1 rounded-full"
+            style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.25)" }}
+          >
             {t("badge")}
           </span>
-          <div style={{ width: 20, height: 1.5, background: "#00D4FF", borderRadius: 2 }} />
+          <div className="w-5 h-px bg-dash-cyan rounded-sm" />
         </div>
 
         {/* H1 */}
-        <h1 style={{
-          fontSize: "clamp(28px, 5vw, 48px)", fontWeight: 800, lineHeight: 1.15,
-          letterSpacing: "-0.025em", marginBottom: 20, color: "white",
-        }}>
+        <h1 className="text-[clamp(28px,5vw,48px)] font-extrabold leading-[1.15] tracking-[-0.025em] mb-5 text-white">
           {t("h1")}
         </h1>
 
         {/* Subtitle */}
-        <p style={{ fontSize: "clamp(15px, 2.5vw, 18px)", color: "rgba(255,255,255,0.65)", maxWidth: 580, margin: "0 auto 36px", lineHeight: 1.7 }}>
+        <p className="text-[clamp(15px,2.5vw,18px)] max-w-[580px] mx-auto mb-9 leading-[1.7]"
+          style={{ color: "rgba(255,255,255,0.65)" }}
+        >
           {t("subtitle")}
         </p>
 
         {/* Stat pills */}
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 8, marginBottom: 44 }}>
+        <div className="flex flex-wrap justify-center gap-2 mb-11">
           {stats.map((s) => (
-            <span key={s} style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)",
-              color: "rgba(255,255,255,0.8)", fontSize: 12, fontWeight: 600,
-              padding: "6px 14px", borderRadius: 999, backdropFilter: "blur(8px)",
-            }}>
-              <span style={{ color: "#00D4FF", fontSize: 10 }}>✦</span>
+            <span key={s} className="inline-flex items-center gap-1.5 text-xs font-semibold px-3.5 py-1.5 rounded-full backdrop-blur-sm"
+              style={{
+                background: "rgba(255,255,255,0.05)",
+                border: "1px solid rgba(255,255,255,0.12)",
+                color: "rgba(255,255,255,0.8)",
+              }}
+            >
+              <span className="text-[10px] text-dash-cyan">✦</span>
               {s}
             </span>
           ))}
         </div>
 
         {/* CTAs */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: 12, justifyContent: "center" }}>
-          <Link href={`/${locale}/register`} style={{
-            display: "inline-flex", alignItems: "center", gap: 8,
-            background: "linear-gradient(135deg, #00D4FF 0%, #0099CC 100%)",
-            color: "#071525", fontWeight: 800, fontSize: 14,
-            padding: "13px 28px", borderRadius: 12, textDecoration: "none",
-            boxShadow: "0 0 24px rgba(0,212,255,0.3), 0 4px 12px rgba(0,0,0,0.2)",
-          }}>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <Link href={`/${locale}/register`}
+            className="inline-flex items-center gap-2 font-extrabold text-sm px-7 py-3.5 rounded-xl no-underline"
+            style={{
+              background: "linear-gradient(135deg, #00D4FF 0%, #0099CC 100%)",
+              color: "#071525",
+              boxShadow: "0 0 24px rgba(0,212,255,0.3), 0 4px 12px rgba(0,0,0,0.2)",
+            }}
+          >
             {t("cta_primary")} →
           </Link>
-          <Link href={`/${locale}/pricing`} style={{
-            display: "inline-flex", alignItems: "center",
-            background: "transparent", border: "1.5px solid rgba(255,255,255,0.2)",
-            color: "rgba(255,255,255,0.85)", fontWeight: 600, fontSize: 14,
-            padding: "13px 28px", borderRadius: 12, textDecoration: "none",
-          }}>
+          <Link href={`/${locale}/pricing`}
+            className="inline-flex items-center font-semibold text-sm px-7 py-3.5 rounded-xl no-underline"
+            style={{
+              background: "transparent",
+              border: "1.5px solid rgba(255,255,255,0.2)",
+              color: "rgba(255,255,255,0.85)",
+            }}
+          >
             {t("cta_secondary")}
           </Link>
         </div>

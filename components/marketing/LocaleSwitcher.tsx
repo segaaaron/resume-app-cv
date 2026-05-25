@@ -33,7 +33,7 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
         {(["es", "en"] as const).map((lang, i) => (
           <React.Fragment key={lang}>
             {i > 0 && (
-              <span style={{ color: mutedColor, fontSize: "10px", opacity: 0.4, userSelect: "none" }}>|</span>
+              <span className="text-[10px] opacity-40 select-none" style={{ color: mutedColor }}>|</span>
             )}
             <button
               onClick={() => switchLocale(lang)}
@@ -52,11 +52,7 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
             >
               {lang.toUpperCase()}
               {locale === lang && (
-                <span style={{
-                  position: "absolute", bottom: 0, left: "50%",
-                  transform: "translateX(-50%)", width: "16px", height: "2px",
-                  borderRadius: "2px", background: "var(--primary)",
-                }} />
+                <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-4 h-0.5 rounded-sm bg-[var(--primary)]" />
               )}
             </button>
           </React.Fragment>

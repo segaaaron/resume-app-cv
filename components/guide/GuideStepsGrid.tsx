@@ -19,59 +19,29 @@ interface Step {
 
 export default function GuideStepsGrid({ steps, title }: { steps: Step[]; title: string }) {
   return (
-    <section style={{ background: "#f8fafc", padding: "80px 16px" }}>
-      <style>{`
-        .guide-step-card {
-          background: white;
-          border: 1.5px solid #E8EEF8;
-          border-radius: 20px;
-          padding: 28px 24px 24px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          text-align: center;
-          box-shadow: 0 2px 16px rgba(26,46,74,0.05);
-          position: relative;
-          overflow: hidden;
-          transition: box-shadow 0.22s, border-color 0.22s, transform 0.22s;
-        }
-        .guide-step-card:hover {
-          box-shadow: 0 10px 36px rgba(26,46,74,0.12), 0 0 0 1px rgba(0,212,255,0.3);
-          border-color: rgba(0,212,255,0.35);
-          transform: translateY(-5px);
-        }
-        @media (min-width: 1024px) {
-          .lg-connector { display: block !important; }
-        }
-      `}</style>
-
-      <div style={{ maxWidth: 1020, margin: "0 auto" }}>
+    <section className="bg-[#f8fafc] py-[80px] px-4">
+      <div className="max-w-[1020px] mx-auto">
         {/* Header */}
-        <div style={{ textAlign: "center", marginBottom: 56 }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 14 }}>
-            <div style={{ width: 28, height: 1.5, background: "#00D4FF", borderRadius: 2 }} />
-            <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.14em", textTransform: "uppercase", color: "#00D4FF" }}>
+        <div className="text-center mb-14">
+          <div className="flex items-center justify-center gap-2.5 mb-3.5">
+            <div className="w-7 h-[1.5px] bg-dash-cyan rounded-[2px]" />
+            <span className="text-[10px] font-extrabold tracking-[0.14em] uppercase text-dash-cyan">
               How it works
             </span>
-            <div style={{ width: 28, height: 1.5, background: "#00D4FF", borderRadius: 2 }} />
+            <div className="w-7 h-[1.5px] bg-dash-cyan rounded-[2px]" />
           </div>
-          <h2 style={{ fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 800, color: "#1a2e4a", letterSpacing: "-0.02em", margin: 0 }}>
+          <h2 className="text-[clamp(24px,4vw,36px)] font-extrabold text-dash-navy tracking-[-0.02em] m-0">
             {title}
           </h2>
         </div>
 
         {/* Steps */}
-        <div style={{ position: "relative", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 18 }}>
+        <div className="relative grid grid-cols-[repeat(auto-fit,minmax(210px,1fr))] gap-[18px]">
           {/* Desktop connector */}
           <div
             aria-hidden
-            className="lg-connector"
-            style={{
-              display: "none", position: "absolute",
-              top: 50, left: "12.5%", right: "12.5%", height: 1,
-              background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.3) 20%, rgba(0,102,255,0.3) 50%, rgba(0,212,255,0.3) 80%, transparent)",
-              pointerEvents: "none", zIndex: 0,
-            }}
+            className="lg-connector hidden absolute top-[50px] left-[12.5%] right-[12.5%] h-px pointer-events-none z-0"
+            style={{ background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.3) 20%, rgba(0,102,255,0.3) 50%, rgba(0,212,255,0.3) 80%, transparent)" }}
           />
 
           {steps.map(({ num, title: stepTitle, desc }, i) => {
@@ -79,46 +49,39 @@ export default function GuideStepsGrid({ steps, title }: { steps: Step[]; title:
             const accent = STEP_ACCENTS[i]
             const glow = STEP_GLOWS[i]
             return (
-              <div key={num} className="guide-step-card" style={{ zIndex: 1 }}>
+              <div key={num} className="guide-step-card z-[1]">
                 {/* Step number */}
-                <div style={{
-                  position: "absolute", top: 14, right: 16,
-                  fontSize: 11, fontWeight: 800, color: "rgba(26,46,74,0.12)",
-                  letterSpacing: "0.04em",
-                }}>
+                <div className="absolute top-3.5 right-4 text-[11px] font-extrabold text-dash-navy/[0.12] tracking-[0.04em]">
                   {num}
                 </div>
 
                 {/* Icon container */}
-                <div style={{
-                  width: 56, height: 56, borderRadius: 16, marginBottom: 18,
-                  background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  boxShadow: `0 4px 20px ${glow}, 0 0 0 1px rgba(0,212,255,0.12)`,
-                  position: "relative",
-                }}>
+                <div
+                  className="w-14 h-14 rounded-2xl mb-[18px] flex items-center justify-center relative"
+                  style={{
+                    background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
+                    boxShadow: `0 4px 20px ${glow}, 0 0 0 1px rgba(0,212,255,0.12)`,
+                  }}
+                >
                   <Icon style={{ width: 22, height: 22, color: accent }} />
-                  <div style={{
-                    position: "absolute", top: -3, right: -3,
-                    width: 10, height: 10, borderRadius: "50%",
-                    background: accent, boxShadow: `0 0 8px ${accent}`,
-                    border: "2px solid #f8fafc",
-                  }} />
+                  <div
+                    className="absolute -top-[3px] -right-[3px] w-2.5 h-2.5 rounded-full border-2 border-[#f8fafc]"
+                    style={{ background: accent, boxShadow: `0 0 8px ${accent}` }}
+                  />
                 </div>
 
-                <h3 style={{ fontSize: 13, fontWeight: 700, color: "#1a2e4a", marginBottom: 8, letterSpacing: "-0.01em" }}>
+                <h3 className="text-[13px] font-bold text-dash-navy mb-2 tracking-[-0.01em]">
                   {stepTitle}
                 </h3>
-                <p style={{ fontSize: 12, color: "#6B7A8C", lineHeight: 1.65, margin: 0 }}>
+                <p className="text-[12px] text-dash-muted leading-[1.65] m-0">
                   {desc}
                 </p>
 
                 {/* Bottom accent */}
-                <div style={{
-                  position: "absolute", bottom: 0, left: "25%", right: "25%",
-                  height: 2, borderRadius: "2px 2px 0 0",
-                  background: `linear-gradient(90deg, transparent, ${accent}50, transparent)`,
-                }} />
+                <div
+                  className="absolute bottom-0 left-[25%] right-[25%] h-0.5 rounded-t-[2px]"
+                  style={{ background: `linear-gradient(90deg, transparent, ${accent}50, transparent)` }}
+                />
               </div>
             )
           })}

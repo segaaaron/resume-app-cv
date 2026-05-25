@@ -13,102 +13,71 @@ export default function CoverLetterMockup({ locale = "es" }: Props) {
   const hint        = isEs ? "Genera variantes hasta encontrar la perfecta · Editable con formato rico" : "Generate variants until perfect · Editable with rich text"
 
   return (
-    <div style={{
-      background: "white", borderRadius: 20, border: "1.5px solid #E8EEF8",
-      boxShadow: "0 8px 40px rgba(26,46,74,0.10)", padding: "18px",
-      width: "100%", maxWidth: 340, margin: "0 auto",
-    }}>
+    <div className="bg-white rounded-[20px] border-[1.5px] border-dash-border-s shadow-[0_8px_40px_rgba(26,46,74,0.10)] p-[18px] w-full max-w-[340px] mx-auto">
       {/* Chrome bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57" }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e" }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840" }} />
-        <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 8, fontFamily: "monospace" }}>{titleLabel}</span>
+      <div className="flex items-center gap-[5px] mb-[14px]">
+        <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
+        <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
+        <div className="w-2 h-2 rounded-full bg-[#28c840]" />
+        <span className="text-[10px] text-slate-400 ml-2 font-mono">{titleLabel}</span>
       </div>
 
       {/* Meta row */}
-      <div style={{
-        display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10,
-      }}>
+      <div className="grid grid-cols-2 gap-[6px] mb-[10px]">
         {[
           { lbl: toLabel, val: "Brightwell Inc." },
           { lbl: roleLabel, val: isEs ? "Analista de Marketing" : "Marketing Analyst" },
         ].map(({ lbl, val }) => (
-          <div key={lbl} style={{
-            borderRadius: 8, border: "1px solid #E2E8F0", background: "#F8FAFC",
-            padding: "5px 8px",
-          }}>
-            <p style={{ fontSize: 8, color: "#94A3B8", marginBottom: 1 }}>{lbl}</p>
-            <p style={{ fontSize: 10, color: "#1a2e4a", fontWeight: 600 }}>{val}</p>
+          <div key={lbl} className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-[5px]">
+            <p className="text-[8px] text-slate-400 mb-[1px]">{lbl}</p>
+            <p className="text-[10px] text-dash-navy font-semibold">{val}</p>
           </div>
         ))}
       </div>
 
       {/* Letter preview */}
-      <div style={{
-        borderRadius: 12, border: "1.5px solid rgba(26,46,74,0.08)",
-        background: "#FAFBFC", padding: "12px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-            <div style={{
-              width: 24, height: 24, borderRadius: 7,
-              background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
-              display: "flex", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ color: "white", fontSize: 8, fontWeight: 800 }}>RC</span>
+      <div className="rounded-xl border-[1.5px] border-[rgba(26,46,74,0.08)] bg-[#FAFBFC] p-3">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-[7px]">
+            <div className="w-6 h-6 rounded-[7px] bg-[linear-gradient(135deg,#1a2e4a_0%,#0f1e33_100%)] flex items-center justify-center">
+              <span className="text-white text-[8px] font-extrabold">RC</span>
             </div>
-            <span style={{ fontSize: 10, fontWeight: 700, color: "#1a2e4a" }}>Sarah Johnson</span>
+            <span className="text-[10px] font-bold text-dash-navy">Sarah Johnson</span>
           </div>
-          <span style={{ fontSize: 9, color: "#94A3B8" }}>9 May 2026</span>
+          <span className="text-[9px] text-slate-400">9 May 2026</span>
         </div>
 
-        <div style={{ height: 1, background: "#F1F5F9", marginBottom: 8 }} />
+        <div className="h-px bg-slate-100 mb-2" />
 
-        <p style={{ fontSize: 10, color: "#475569", fontWeight: 600, marginBottom: 8 }}>{greeting}</p>
+        <p className="text-[10px] text-slate-600 font-semibold mb-2">{greeting}</p>
 
         {/* Simulated letter lines */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+        <div className="flex flex-col gap-1 mb-2">
           {[88, 100, 72, 92, 64].map((w, i) => (
-            <div key={i} style={{ height: 5, background: "#E9EEF6", borderRadius: 3, width: `${w}%` }} />
+            <div key={i} className="h-[5px] bg-[#E9EEF6] rounded-[3px]" style={{ width: `${w}%` }} />
           ))}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginBottom: 8 }}>
+        <div className="flex flex-col gap-1 mb-2">
           {[96, 82, 68, 90].map((w, i) => (
-            <div key={i} style={{ height: 5, background: "#E9EEF6", borderRadius: 3, width: `${w}%` }} />
+            <div key={i} className="h-[5px] bg-[#E9EEF6] rounded-[3px]" style={{ width: `${w}%` }} />
           ))}
         </div>
 
-        <p style={{ fontSize: 9, color: "#94A3B8", fontStyle: "italic" }}>{closing}</p>
+        <p className="text-[9px] text-slate-400 italic">{closing}</p>
       </div>
 
       {/* Hint */}
-      <div style={{
-        marginTop: 8, borderRadius: 8, background: "rgba(0,212,255,0.05)",
-        border: "1px solid rgba(0,212,255,0.15)", padding: "5px 9px",
-        display: "flex", alignItems: "center", gap: 5,
-      }}>
-        <span style={{ fontSize: 9, color: "#00D4FF" }}>✦</span>
-        <p style={{ fontSize: 9, color: "#64748B" }}>{hint}</p>
+      <div className="mt-2 rounded-lg bg-[rgba(0,212,255,0.05)] border border-[rgba(0,212,255,0.15)] px-[9px] py-[5px] flex items-center gap-[5px]">
+        <span className="text-[9px] text-dash-cyan">✦</span>
+        <p className="text-[9px] text-slate-500">{hint}</p>
       </div>
 
       {/* Actions */}
-      <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
-        <button style={{
-          flex: 1, fontSize: 10, fontWeight: 700,
-          color: "#1a2e4a", background: "transparent",
-          border: "1.5px solid rgba(26,46,74,0.15)", borderRadius: 9,
-          padding: "7px", cursor: "pointer",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 3,
-        }}>
-          <span style={{ color: "#00D4FF" }}>✦</span> {regenerate}
+      <div className="flex gap-2 mt-[10px]">
+        <button className="flex-1 text-[10px] font-bold text-dash-navy bg-transparent border-[1.5px] border-[rgba(26,46,74,0.15)] rounded-[9px] py-[7px] cursor-pointer flex items-center justify-center gap-[3px]">
+          <span className="text-dash-cyan">✦</span> {regenerate}
         </button>
-        <button style={{
-          flex: 1, fontSize: 10, fontWeight: 700, color: "white",
-          background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
-          border: "none", borderRadius: 9, padding: "7px", cursor: "pointer",
-          boxShadow: "0 2px 10px rgba(26,46,74,0.2)",
-        }}>
+        <button className="flex-1 text-[10px] font-bold text-white bg-[linear-gradient(135deg,#1a2e4a_0%,#0f1e33_100%)] border-none rounded-[9px] py-[7px] cursor-pointer shadow-[0_2px_10px_rgba(26,46,74,0.2)]">
           {download}
         </button>
       </div>

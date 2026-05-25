@@ -240,33 +240,6 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
 
   return (
     <>
-      <style>{`
-        @keyframes aiIconPulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.2); }
-          50% { box-shadow: 0 0 0 6px rgba(139, 92, 246, 0); }
-        }
-        .ai-assistant-icon-anim { animation: aiIconPulse 3s ease-in-out infinite; }
-        .ai-chip { font-size: 11px; font-weight: 600; padding: 5px 10px; border-radius: 20px;
-          border: 1.5px solid rgba(139,92,246,0.3); background: rgba(139,92,246,0.06);
-          color: #6D28D9; cursor: pointer; transition: all 0.2s; }
-        .ai-chip:hover { background: rgba(139,92,246,0.15); border-color: #8B5CF6; color: #5B21B6; }
-        .ai-main-textarea { width: 100%; min-height: 140px; padding: 12px 14px 28px;
-          border: 1.5px solid rgba(139,92,246,0.25); border-radius: 12px;
-          background: rgba(139,92,246,0.03); font-size: 13px; color: #1e293b;
-          line-height: 1.6; resize: vertical; transition: border-color 0.2s; font-family: inherit; }
-        .ai-main-textarea:focus { outline: none; border-color: #8B5CF6;
-          box-shadow: 0 0 0 3px rgba(139,92,246,0.1); }
-        .ai-generate-btn { width: 100%; padding: 12px;
-          background: linear-gradient(135deg, #8B5CF6 0%, #06B6D4 100%);
-          color: #FFF; border: none; border-radius: 12px;
-          font-size: 14px; font-weight: 700; letter-spacing: -0.01em;
-          display: flex; align-items: center; justify-content: center; gap: 8px;
-          cursor: pointer; transition: all 0.25s;
-          box-shadow: 0 4px 16px rgba(139,92,246,0.25); }
-        .ai-generate-btn:hover:not(:disabled) { transform: translateY(-2px);
-          box-shadow: 0 8px 24px rgba(139,92,246,0.35); }
-        .ai-generate-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-      `}</style>
       <div
         className={inTab ? undefined : "ai-assistant-card"}
         style={inTab ? { padding: '0 0 18px' } : {

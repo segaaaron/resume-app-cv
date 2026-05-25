@@ -383,7 +383,11 @@
       "error_session_blocked": "Account temporarily blocked due to too many failed attempts.",
       "forgot_password": "Forgot your password?",
       "session_check_error": "Could not verify your session. Please try signing in.",
-      "session_cleared": "Invalid session detected. Please sign in again."
+      "session_cleared": "Invalid session detected. Please sign in again.",
+      "subtitle": "Enter your credentials to continue",
+      "secure_connection": "Secure connection · SSL encrypted",
+      "show_password": "Show password",
+      "hide_password": "Hide password"
     },
     "register": {
       "title": "Create your account",
@@ -434,7 +438,9 @@
       "session_check_error": "Could not verify your session. Please try signing in.",
       "password_uppercase": "Must contain at least one uppercase letter",
       "password_lowercase": "Must contain at least one lowercase letter",
-      "password_number": "Must contain at least one number"
+      "password_number": "Must contain at least one number",
+      "show_password": "Show password",
+      "hide_password": "Hide password"
     },
     "forgot_password": {
       "title": "Forgot your password?",
@@ -478,7 +484,8 @@
         "google_cta": "Continue with Google"
       },
       "not_registered": "This email is not registered in READY CV.",
-      "not_registered_cta": "Create an account"
+      "not_registered_cta": "Create an account",
+      "continue_with_google": "Continue with Google"
     },
     "session_expired": "Your session expired. Please sign in again.",
     "verify_email": {
@@ -493,6 +500,17 @@
       "error_title": "Verification error",
       "error_message": "Something went wrong. Please try again or contact support.",
       "back_cta": "Back to dashboard"
+    },
+    "layout": {
+      "tagline": "Your career, elevated",
+      "headline_1": "Build your CV",
+      "headline_2": "professionally",
+      "headline_accent": "in minutes.",
+      "headline_sub": "Join thousands of professionals who already landed their next job with ReadyCV.",
+      "feature_1": "Over 128 professional templates",
+      "feature_2": "Export to PDF in one click",
+      "feature_3": "ATS-optimized",
+      "feature_4": "Available in English and Spanish"
     }
   },
   "ai_features": {

@@ -383,7 +383,11 @@
       "error_session_blocked": "Cuenta bloqueada temporalmente por demasiados intentos.",
       "forgot_password": "¿Olvidaste tu contraseña?",
       "session_check_error": "No se pudo verificar tu sesión. Por favor intenta iniciar sesión.",
-      "session_cleared": "Sesión inválida detectada. Por favor inicia sesión de nuevo."
+      "session_cleared": "Sesión inválida detectada. Por favor inicia sesión de nuevo.",
+      "subtitle": "Ingresa tus credenciales para continuar",
+      "secure_connection": "Conexión segura · SSL cifrado",
+      "show_password": "Mostrar contraseña",
+      "hide_password": "Ocultar contraseña"
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -434,7 +438,9 @@
       "session_check_error": "No se pudo verificar tu sesión. Por favor intenta iniciar sesión.",
       "password_uppercase": "Debe contener al menos una mayúscula",
       "password_lowercase": "Debe contener al menos una minúscula",
-      "password_number": "Debe contener al menos un número"
+      "password_number": "Debe contener al menos un número",
+      "show_password": "Mostrar contraseña",
+      "hide_password": "Ocultar contraseña"
     },
     "forgot_password": {
       "title": "¿Olvidaste tu contraseña?",
@@ -478,7 +484,8 @@
         "google_cta": "Continuar con Google"
       },
       "not_registered": "Este email no está registrado en READY CV.",
-      "not_registered_cta": "Crear una cuenta"
+      "not_registered_cta": "Crear una cuenta",
+      "continue_with_google": "Continuar con Google"
     },
     "session_expired": "Tu sesión expiró. Inicia sesión de nuevo.",
     "verify_email": {
@@ -493,6 +500,17 @@
       "error_title": "Error de verificación",
       "error_message": "Algo salió mal. Intenta de nuevo o contacta soporte.",
       "back_cta": "Volver al dashboard"
+    },
+    "layout": {
+      "tagline": "Tu carrera, elevada",
+      "headline_1": "Crea tu CV",
+      "headline_2": "profesional",
+      "headline_accent": "en minutos.",
+      "headline_sub": "Únete a miles de profesionales que ya consiguieron su próximo trabajo con ReadyCV.",
+      "feature_1": "Más de 128 plantillas profesionales",
+      "feature_2": "Exporta en PDF en un clic",
+      "feature_3": "Optimizado para ATS",
+      "feature_4": "Disponible en español e inglés"
     }
   },
   "ai_features": {

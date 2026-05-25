@@ -54,9 +54,9 @@ export default function TemplateSwitchModal({ pendingTemplateId, onConfirm, onCa
         </div>
 
         {/* Preview */}
-        <div className="bg-gradient-to-br from-[#F5F7FB] to-[#EEF2F8] p-5 flex justify-center overflow-hidden" style={{ height: 340 }}>
-          <div className="pointer-events-none overflow-hidden rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.1)]" style={{ width: 302, height: 320 }}>
-            <div style={{ transform: "scale(0.38)", transformOrigin: "top left", width: 794, height: 1123 }}>
+        <div className="bg-gradient-to-br from-[#F5F7FB] to-[#EEF2F8] p-5 flex justify-center overflow-hidden h-[340px]">
+          <div className="pointer-events-none overflow-hidden rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.1)] w-[302px] h-[320px]">
+            <div className="w-[794px] h-[1123px] origin-top-left scale-[0.38]">
               <ResumePreview overrideTemplateId={pendingTemplateId} />
             </div>
           </div>

@@ -174,7 +174,7 @@ export default function DesignPanel() {
   const photoPos = config.photoPosition ?? 15
 
   return (
-    <div style={{ padding: "8px 20px 28px", display: "flex", flexDirection: "column", gap: 24 }}>
+    <div className="flex flex-col gap-6 px-5 pt-2 pb-7">
 
       {/* ── Foto de Perfil ──────────────────────────────────────── */}
       <section>
@@ -184,24 +184,15 @@ export default function DesignPanel() {
         </div>
 
         {/* Avatar */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
-          <div style={{ position: "relative", margin: "0 auto" }}>
+        <div className="flex flex-col items-center gap-3.5">
+          <div className="relative mx-auto">
             {/* Circle photo */}
             <div
               onClick={() => !uploadingPhoto && photoInputRef.current?.click()}
-              className="dp-avatar"
+              className="dp-avatar w-[116px] h-[116px] rounded-full overflow-hidden cursor-pointer flex items-center justify-center relative"
               style={{
-                width: 116,
-                height: 116,
-                borderRadius: "50%",
-                overflow: "hidden",
-                cursor: "pointer",
                 background: "linear-gradient(135deg, #e8f0fe 0%, #dbeafe 100%)",
                 boxShadow: "0 0 0 3px #00D4FF, 0 0 0 5px #fff, 0 8px 24px rgba(0,212,255,0.25)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                position: "relative",
               }}
             >
               {config.photoUrl ? (
@@ -209,7 +200,8 @@ export default function DesignPanel() {
                 <img
                   src={config.photoUrl}
                   alt=""
-                  style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${photoPos}%` }}
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `center ${photoPos}%` }}
                 />
               ) : (
                 <IconUser color="#7AAAD4" />
@@ -217,12 +209,7 @@ export default function DesignPanel() {
               {/* Hover overlay */}
               <div className="dp-avatar-overlay">
                 {uploadingPhoto ? (
-                  <div style={{
-                    width: 22, height: 22, borderRadius: "50%",
-                    border: "2.5px solid rgba(255,255,255,0.3)",
-                    borderTopColor: "#00D4FF",
-                    animation: "dp-ring-spin 0.8s linear infinite",
-                  }} />
+                  <div className="w-[22px] h-[22px] rounded-full border-[2.5px] border-white/30 border-t-[#00D4FF] animate-spin" />
                 ) : (
                   <IconCamera size={24} color="#fff" />
                 )}
@@ -231,7 +218,7 @@ export default function DesignPanel() {
           </div>
 
           {/* Action buttons */}
-          <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", justifyContent: "center" }}>
+          <div className="flex gap-2 items-center flex-wrap justify-center">
             <button
               className="dp-btn-primary"
               onClick={() => photoInputRef.current?.click()}
@@ -250,16 +237,12 @@ export default function DesignPanel() {
 
           {/* Photo position slider */}
           {config.photoUrl && (
-            <div style={{ width: "100%", marginTop: 4 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-                <span style={{ fontSize: 11, color: "#7AAAD4", fontWeight: 500 }}>
+            <div className="w-full mt-1">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[11px] font-medium text-[#7AAAD4]">
                   {t("design.photo_top")} ↕ {t("design.photo_bottom")}
                 </span>
-                <span style={{
-                  fontSize: 11, fontWeight: 800, color: "#00D4FF",
-                  background: "rgba(0,212,255,0.1)", padding: "2px 8px",
-                  borderRadius: 100, border: "1px solid rgba(0,212,255,0.25)",
-                }}>
+                <span className="text-[11px] font-extrabold text-dash-cyan bg-[rgba(0,212,255,0.1)] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.25)]">
                   {photoPos}%
                 </span>
               </div>
@@ -278,7 +261,7 @@ export default function DesignPanel() {
         <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handlePhotoChange} />
       </section>
 
-      <div style={{ height: 1, background: "linear-gradient(to right, rgba(0,212,255,0.15), transparent)" }} />
+      <div className="h-px bg-gradient-to-r from-[rgba(0,212,255,0.15)] to-transparent" />
 
       {/* ── Color Principal ─────────────────────────────────────── */}
       <section>
@@ -287,13 +270,13 @@ export default function DesignPanel() {
           {t("design.color_section")}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="flex flex-col gap-3.5">
           {COLOR_PALETTES.map((palette) => (
             <div key={palette.labelKey}>
-              <p style={{ fontSize: 10, fontWeight: 700, color: "#5A7FA8", marginBottom: 8, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+              <p className="text-[10px] font-bold text-[#5A7FA8] mb-2 tracking-[0.06em] uppercase">
                 {t(palette.labelKey)}
               </p>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
+              <div className="grid grid-cols-3 gap-2">
                 {palette.colors.map(({ hex, nameKey }) => {
                   const active = config.colorScheme.toLowerCase() === hex.toLowerCase()
                   return (
@@ -303,26 +286,21 @@ export default function DesignPanel() {
                       onClick={() => setColor(hex)}
                       className={`dp-color-card${active ? " active" : ""}`}
                     >
-                      {/* Color swatch */}
-                      <div style={{
-                        width: 36, height: 36, borderRadius: 10,
-                        background: hex,
-                        margin: "0 auto 6px",
-                        boxShadow: active
-                          ? `0 4px 14px ${hex}66, inset 0 1px 0 rgba(255,255,255,0.2)`
-                          : `0 2px 8px ${hex}44`,
-                        transition: "box-shadow 0.2s",
-                      }} />
-                      <div style={{ fontSize: 9.5, fontWeight: 700, color: active ? "#00D4FF" : "#6B8BAE", letterSpacing: "0.04em" }}>
+                      {/* Color swatch — background and shadow depend on runtime hex value, keep inline */}
+                      <div
+                        className="w-9 h-9 rounded-[10px] mx-auto mb-1.5 transition-shadow duration-200"
+                        style={{
+                          background: hex,
+                          boxShadow: active
+                            ? `0 4px 14px ${hex}66, inset 0 1px 0 rgba(255,255,255,0.2)`
+                            : `0 2px 8px ${hex}44`,
+                        }}
+                      />
+                      <div className={`text-[9.5px] font-bold tracking-[0.04em] ${active ? "text-dash-cyan" : "text-[#6B8BAE]"}`}>
                         {t(nameKey)}
                       </div>
                       {active && (
-                        <div style={{
-                          position: "absolute", top: 6, right: 6,
-                          width: 7, height: 7, borderRadius: "50%",
-                          background: "#00D4FF",
-                          boxShadow: "0 0 6px #00D4FF",
-                        }} />
+                        <div className="absolute top-1.5 right-1.5 w-[7px] h-[7px] rounded-full bg-dash-cyan shadow-[0_0_6px_#00D4FF]" />
                       )}
                     </button>
                   )
@@ -332,26 +310,18 @@ export default function DesignPanel() {
           ))}
 
           {/* Custom color */}
-          <div style={{
-            padding: "14px 16px",
-            borderRadius: 14,
-            background: "rgba(255,255,255,0.03)",
-            border: "1.5px solid rgba(0,212,255,0.15)",
-            backdropFilter: "blur(8px)",
-          }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: "#5A7FA8", marginBottom: 10, letterSpacing: "0.06em", textTransform: "uppercase" }}>
+          <div className="px-4 py-3.5 rounded-[14px] bg-white/[0.03] border-[1.5px] border-[rgba(0,212,255,0.15)] backdrop-blur-sm">
+            <p className="text-[10px] font-bold text-[#5A7FA8] mb-2.5 tracking-[0.06em] uppercase">
               {t("design.custom_color")}
             </p>
-            <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <div className="flex gap-2.5 items-center">
+              {/* Swatch — background and shadow depend on runtime colorScheme, keep inline */}
               <div
                 onClick={() => colorInputRef.current?.click()}
+                className="w-11 h-11 rounded-xl cursor-pointer shrink-0 border-2 border-white/15 transition-shadow duration-200"
                 style={{
-                  width: 44, height: 44, borderRadius: 12, cursor: "pointer",
                   background: config.colorScheme,
                   boxShadow: `0 4px 14px ${config.colorScheme}55, inset 0 1px 0 rgba(255,255,255,0.2)`,
-                  border: "2px solid rgba(255,255,255,0.15)",
-                  flexShrink: 0,
-                  transition: "box-shadow 0.2s",
                 }}
               />
               <input
@@ -379,22 +349,16 @@ export default function DesignPanel() {
                   setHexInput("")
                   setHexInvalid(false)
                 }}
-                style={{
-                  flex: 1, fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace",
-                  fontSize: 13, padding: "10px 14px",
-                  border: hexInvalid ? "1.5px solid rgba(239,68,68,0.6)" : "1.5px solid rgba(0,212,255,0.2)",
-                  borderRadius: 10, color: "#1a2e4a",
-                  background: "#fff", outline: "none",
-                  letterSpacing: "0.05em",
-                  transition: "border-color 0.2s",
-                }}
+                className={`flex-1 font-mono text-[13px] px-3.5 py-2.5 rounded-[10px] text-dash-navy bg-white outline-none tracking-[0.05em] transition-[border-color] duration-200 ${
+                  hexInvalid ? "border-[1.5px] border-red-500/60" : "border-[1.5px] border-[rgba(0,212,255,0.2)]"
+                }`}
               />
             </div>
           </div>
         </div>
       </section>
 
-      <div style={{ height: 1, background: "linear-gradient(to right, rgba(0,212,255,0.15), transparent)" }} />
+      <div className="h-px bg-gradient-to-r from-[rgba(0,212,255,0.15)] to-transparent" />
 
       {/* ── Tipografía ──────────────────────────────────────────── */}
       <section>
@@ -402,22 +366,13 @@ export default function DesignPanel() {
           <IconType size={13} color="#00D4FF" />
           {t("design.typography_section")}
         </div>
-        <div style={{
-          borderRadius: 12, overflow: "hidden",
-          border: "1.5px solid rgba(0,212,255,0.15)",
-          background: "#fff",
-        }}>
+        <div className="rounded-xl overflow-hidden border-[1.5px] border-[rgba(0,212,255,0.15)] bg-white">
+          {/* fontFamily is runtime user state — keep inline */}
           <select
             value={config.fontFamily}
             onChange={(e) => { if (e.target.value) setFont(e.target.value) }}
-            style={{
-              padding: "12px 16px",
-              fontSize: 13.5, color: "#0B1B3D",
-              background: "transparent", width: "100%",
-              outline: "none", border: "none",
-              fontFamily: config.fontFamily,
-              cursor: "pointer",
-            }}
+            className="w-full px-4 py-3 text-[13.5px] text-[#0B1B3D] bg-transparent outline-none border-none cursor-pointer"
+            style={{ fontFamily: config.fontFamily }}
           >
             {FONT_OPTIONS.map((font) => (
               <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
@@ -426,7 +381,7 @@ export default function DesignPanel() {
         </div>
       </section>
 
-      <div style={{ height: 1, background: "linear-gradient(to right, rgba(0,212,255,0.15), transparent)" }} />
+      <div className="h-px bg-gradient-to-r from-[rgba(0,212,255,0.15)] to-transparent" />
 
       {/* ── Espaciado + Tamaño ──────────────────────────────────── */}
       <section>
@@ -435,18 +390,14 @@ export default function DesignPanel() {
           {t("design.spacing_section")}
         </div>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <div className="flex flex-col gap-5">
           {/* Spacing */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 11, color: "#7AAAD4", fontWeight: 500 }}>
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[11px] font-medium text-[#7AAAD4]">
                 {t("spacing_compact")} ↔ {t("spacing_spacious")}
               </span>
-              <span style={{
-                fontSize: 11, fontWeight: 800, color: "#00D4FF",
-                background: "rgba(0,212,255,0.1)", padding: "2px 8px",
-                borderRadius: 100, border: "1px solid rgba(0,212,255,0.25)",
-              }}>
+              <span className="text-[11px] font-extrabold text-dash-cyan bg-[rgba(0,212,255,0.1)] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.25)]">
                 {config.spacing.toFixed(1)}x
               </span>
             </div>
@@ -462,13 +413,9 @@ export default function DesignPanel() {
 
           {/* Font size */}
           <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-              <span style={{ fontSize: 11, color: "#7AAAD4", fontWeight: 500 }}>10px ↔ 18px</span>
-              <span style={{
-                fontSize: 11, fontWeight: 800, color: "#00D4FF",
-                background: "rgba(0,212,255,0.1)", padding: "2px 8px",
-                borderRadius: 100, border: "1px solid rgba(0,212,255,0.25)",
-              }}>
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[11px] font-medium text-[#7AAAD4]">10px ↔ 18px</span>
+              <span className="text-[11px] font-extrabold text-dash-cyan bg-[rgba(0,212,255,0.1)] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.25)]">
                 {config.fontSize}px
               </span>
             </div>

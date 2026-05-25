@@ -19,40 +19,28 @@ export default function ATSScoreMockup({ locale = "es" }: Props) {
   const tip          = isEs ? "Añade las keywords faltantes para mejorar tu score" : "Add missing keywords to improve your score"
 
   return (
-    <div style={{ width: "100%", maxWidth: 360, margin: "0 auto", display: "flex", flexDirection: "column", gap: 8 }}>
+    <div className="w-full max-w-[360px] mx-auto flex flex-col gap-2">
       {/* Input card */}
-      <div style={{
-        background: "white", borderRadius: 18, border: "1.5px solid #E8EEF8",
-        boxShadow: "0 4px 20px rgba(26,46,74,0.07)", padding: "14px",
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 10 }}>
-          <span style={{ fontSize: 9, fontWeight: 800, color: "#1a2e4a", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+      <div className="bg-white rounded-[18px] border-[1.5px] border-dash-border-s shadow-[0_4px_20px_rgba(26,46,74,0.07)] p-[14px]">
+        <div className="flex items-center gap-[5px] mb-[10px]">
+          <span className="text-[9px] font-extrabold text-dash-navy uppercase tracking-[0.08em]">
             {offerLabel}
           </span>
-          <div style={{ flex: 1, height: 1, background: "#F1F5F9" }} />
-          <span style={{ fontSize: 8, color: "#94A3B8" }}>{pasteHint}</span>
+          <div className="flex-1 h-px bg-slate-100" />
+          <span className="text-[8px] text-slate-400">{pasteHint}</span>
         </div>
-        <div style={{
-          borderRadius: 10, background: "#F8FAFC", border: "1px solid #E2E8F0",
-          padding: "9px 11px", marginBottom: 10,
-        }}>
-          <p style={{ fontSize: 11, color: "#475569", lineHeight: 1.6 }}>{jobSnippet}</p>
+        <div className="rounded-[10px] bg-slate-50 border border-slate-200 px-[11px] py-[9px] mb-[10px]">
+          <p className="text-[11px] text-slate-600 leading-[1.6]">{jobSnippet}</p>
         </div>
-        <button style={{
-          width: "100%", fontSize: 11, fontWeight: 800,
-          color: "white", background: "linear-gradient(135deg, #1a2e4a 0%, #0a1e35 100%)",
-          border: "none", borderRadius: 10, padding: "9px", cursor: "pointer",
-          boxShadow: "0 4px 16px rgba(26,46,74,0.2)",
-          display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-        }}>
-          <span style={{ color: "#00D4FF" }}>✦</span> {analyzeBtn}
+        <button className="w-full text-[11px] font-extrabold text-white bg-[linear-gradient(135deg,#1a2e4a_0%,#0a1e35_100%)] border-none rounded-[10px] py-[9px] cursor-pointer shadow-[0_4px_16px_rgba(26,46,74,0.2)] flex items-center justify-center gap-[5px]">
+          <span className="text-dash-cyan">✦</span> {analyzeBtn}
         </button>
       </div>
 
       {/* Arrow connector */}
-      <div style={{ display: "flex", justifyContent: "center" }}>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-          <div style={{ width: 1, height: 10, background: "linear-gradient(180deg, rgba(0,212,255,0.4), rgba(0,212,255,0.1))" }} />
+      <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-[2px]">
+          <div className="w-px h-[10px] bg-[linear-gradient(180deg,rgba(0,212,255,0.4),rgba(0,212,255,0.1))]" />
           <svg width="12" height="8" viewBox="0 0 12 8" fill="none">
             <path d="M1 1l5 5 5-5" stroke="rgba(0,212,255,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -60,76 +48,62 @@ export default function ATSScoreMockup({ locale = "es" }: Props) {
       </div>
 
       {/* Results card */}
-      <div style={{
-        background: "white", borderRadius: 18, border: "1.5px solid rgba(0,212,255,0.2)",
-        boxShadow: "0 6px 28px rgba(0,212,255,0.08)", padding: "16px",
-      }}>
+      <div className="bg-white rounded-[18px] border-[1.5px] border-[rgba(0,212,255,0.2)] shadow-[0_6px_28px_rgba(0,212,255,0.08)] p-[16px]">
         {/* Chrome */}
-        <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14 }}>
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57" }} />
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e" }} />
-          <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840" }} />
-          <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 8, fontFamily: "monospace" }}>ReadyCVV · ATS Score</span>
+        <div className="flex items-center gap-[5px] mb-[14px]">
+          <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
+          <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
+          <div className="w-2 h-2 rounded-full bg-[#28c840]" />
+          <span className="text-[10px] text-slate-400 ml-2 font-mono">ReadyCVV · ATS Score</span>
         </div>
 
         {/* Score circle */}
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 14 }}>
-          <div style={{ position: "relative", width: 76, height: 76 }}>
-            <svg viewBox="0 0 36 36" style={{ width: 76, height: 76, transform: "rotate(-90deg)" }}>
+        <div className="flex flex-col items-center mb-[14px]">
+          <div className="relative w-[76px] h-[76px]">
+            <svg viewBox="0 0 36 36" className="w-[76px] h-[76px] -rotate-90">
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="#F1F5F9" strokeWidth="2.5" />
               <circle cx="18" cy="18" r="15.9" fill="none" stroke="#22c55e" strokeWidth="2.5"
                 strokeDasharray="87 13" strokeLinecap="round" />
             </svg>
-            <div style={{
-              position: "absolute", inset: 0, display: "flex",
-              flexDirection: "column", alignItems: "center", justifyContent: "center",
-            }}>
-              <span style={{ fontSize: 18, fontWeight: 900, color: "#1a2e4a", lineHeight: 1 }}>87%</span>
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-[18px] font-black text-dash-navy leading-none">87%</span>
             </div>
           </div>
-          <span style={{ fontSize: 11, fontWeight: 700, color: "#22c55e", marginTop: 4 }}>{highCompat}</span>
+          <span className="text-[11px] font-bold text-green-500 mt-1">{highCompat}</span>
         </div>
 
         {/* Keywords */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div className="flex flex-col gap-[10px]">
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-[0.08em] mb-[5px]">
               {presentLabel}
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            <div className="flex flex-wrap gap-1">
               {present.map(k => (
-                <span key={k} style={{
-                  fontSize: 9, fontWeight: 700, color: "#16a34a",
-                  background: "#f0fdf4", border: "1px solid #bbf7d0",
-                  borderRadius: 999, padding: "2px 8px",
-                }}>✓ {k}</span>
+                <span key={k} className="text-[9px] font-bold text-green-700 bg-green-50 border border-green-200 rounded-full px-2 py-[2px]">
+                  ✓ {k}
+                </span>
               ))}
             </div>
           </div>
           <div>
-            <p style={{ fontSize: 9, fontWeight: 800, color: "#94A3B8", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+            <p className="text-[9px] font-extrabold text-slate-400 uppercase tracking-[0.08em] mb-[5px]">
               {missingLabel}
             </p>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            <div className="flex flex-wrap gap-1">
               {missing.map(k => (
-                <span key={k} style={{
-                  fontSize: 9, fontWeight: 700, color: "#dc2626",
-                  background: "#fef2f2", border: "1px solid #fecaca",
-                  borderRadius: 999, padding: "2px 8px",
-                }}>✗ {k}</span>
+                <span key={k} className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-[2px]">
+                  ✗ {k}
+                </span>
               ))}
             </div>
           </div>
         </div>
 
         {/* Tip */}
-        <div style={{
-          marginTop: 10, borderRadius: 8,
-          background: "rgba(0,212,255,0.05)", border: "1px solid rgba(0,212,255,0.15)",
-          padding: "6px 10px", display: "flex", alignItems: "center", gap: 5,
-        }}>
-          <span style={{ fontSize: 9, color: "#00D4FF" }}>💡</span>
-          <p style={{ fontSize: 9, color: "#64748B" }}>{tip}</p>
+        <div className="mt-[10px] rounded-lg bg-[rgba(0,212,255,0.05)] border border-[rgba(0,212,255,0.15)] px-[10px] py-[6px] flex items-center gap-[5px]">
+          <span className="text-[9px] text-dash-cyan">💡</span>
+          <p className="text-[9px] text-slate-500">{tip}</p>
         </div>
       </div>
     </div>

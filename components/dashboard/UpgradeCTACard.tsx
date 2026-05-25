@@ -42,36 +42,26 @@ export default function UpgradeCTACard() {
   ]
 
   return (
-    <div
-      className="relative mb-6 overflow-hidden rounded-2xl px-5 py-6 sm:px-7 sm:py-7"
-      style={{ backgroundColor: "var(--dash-navy)" }}
-    >
+    <div className="relative mb-6 overflow-hidden rounded-2xl px-5 py-6 sm:px-7 sm:py-7 bg-dash-navy">
       {/* Ambient glow */}
       <div
         aria-hidden
-        className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full blur-3xl"
-        style={{ backgroundColor: "var(--dash-cyan-glow)" }}
+        className="pointer-events-none absolute -top-16 -right-16 h-48 w-48 rounded-full blur-3xl bg-[var(--dash-cyan-glow)]"
       />
 
       <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5 mb-3">
-            <span
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
-              style={{ backgroundColor: "var(--dash-cyan)" }}
-            >
-              <Crown className="h-5 w-5" style={{ color: "var(--dash-navy)" }} />
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl shrink-0 bg-dash-cyan">
+              <Crown className="h-5 w-5 text-dash-navy" />
             </span>
-            <div
-              className="h-px flex-1 max-w-[3rem] rounded-full"
-              style={{ backgroundColor: "var(--dash-cyan)" }}
-            />
+            <div className="h-px flex-1 max-w-[3rem] rounded-full bg-dash-cyan" />
           </div>
 
           <h2 className="font-playfair text-xl sm:text-2xl font-bold text-white leading-tight">
             {t("headline")}
           </h2>
-          <p className="mt-1.5 text-sm sm:text-[15px] max-w-xl" style={{ color: "rgba(255,255,255,0.75)" }}>
+          <p className="mt-1.5 text-sm sm:text-[15px] max-w-xl text-white/75">
             {t("subtext")}
           </p>
 
@@ -79,13 +69,9 @@ export default function UpgradeCTACard() {
             {pills.map((label) => (
               <li
                 key={label}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-white/15"
-                style={{
-                  backgroundColor: "rgba(255,255,255,0.08)",
-                  color: "rgba(255,255,255,0.9)",
-                }}
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ring-1 ring-white/15 bg-white/[0.08] text-white/90"
               >
-                <Check className="h-3 w-3" style={{ color: "var(--dash-cyan)" }} aria-hidden />
+                <Check className="h-3 w-3 text-dash-cyan" aria-hidden />
                 {label}
               </li>
             ))}
@@ -93,13 +79,12 @@ export default function UpgradeCTACard() {
         </div>
 
         <div className="flex flex-col items-start gap-3 lg:items-end lg:text-right shrink-0">
-          <p className="text-xs font-medium uppercase tracking-wide" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="text-xs font-medium uppercase tracking-wide text-white/60">
             {t("price_hint")}
           </p>
           <Link
             href={`/${locale}/pricing`}
-            className="group inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-lg transition-all hover:opacity-90 hover:scale-[1.02] active:scale-100"
-            style={{ backgroundColor: "var(--dash-cyan)", color: "var(--dash-navy)" }}
+            className="group inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold shadow-lg transition-all hover:opacity-90 hover:scale-[1.02] active:scale-100 bg-dash-cyan text-dash-navy"
           >
             {t("cta_button")}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />

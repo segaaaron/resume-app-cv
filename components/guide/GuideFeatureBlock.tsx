@@ -11,58 +11,41 @@ interface Props {
 
 export default function GuideFeatureBlock({ badge, title, description, mockup, reverse = false, alt = false }: Props) {
   return (
-    <section style={{ background: alt ? "#f8fafc" : "white", padding: "64px 16px" }}>
-      <div
-        className="animate-on-scroll"
-        style={{
-          maxWidth: 960, margin: "0 auto",
-          display: "flex", flexDirection: "column",
-          gap: 48, alignItems: "center",
-        }}
-      >
-        <div style={{
-          display: "flex", flexDirection: reverse ? "row-reverse" : "row",
-          flexWrap: "wrap", alignItems: "center", gap: 56, width: "100%",
-        }}>
+    <section className={cn("py-16 px-4", alt ? "bg-[#f8fafc]" : "bg-white")}>
+      <div className="animate-on-scroll max-w-[960px] mx-auto flex flex-col gap-12 items-center">
+        <div className={cn(
+          "flex flex-wrap items-center gap-14 w-full",
+          reverse ? "flex-row-reverse" : "flex-row"
+        )}>
           {/* Mockup side */}
-          <div style={{ flex: "1 1 340px", display: "flex", justifyContent: "center" }}>
+          <div className="flex-[1_1_340px] flex justify-center">
             {mockup}
           </div>
 
           {/* Text side */}
-          <div style={{ flex: "1 1 300px", display: "flex", flexDirection: "column", gap: 16 }}>
+          <div className="flex-[1_1_300px] flex flex-col gap-4">
             {/* Badge */}
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <div style={{ width: 18, height: 1.5, background: "#00D4FF", borderRadius: 2 }} />
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: 5,
-                fontSize: 10, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase",
-                color: "#00D4FF", padding: "3px 12px", borderRadius: 999,
-                background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.22)",
-              }}>
+            <div className="flex items-center gap-1.5">
+              <div className="w-[18px] h-px bg-dash-cyan rounded-sm" />
+              <span className="inline-flex items-center gap-1 text-[10px] font-extrabold tracking-[0.12em] uppercase text-dash-cyan px-3 py-[3px] rounded-full"
+                style={{ background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.22)" }}
+              >
                 ✦ {badge}
               </span>
             </div>
 
-            <h2 style={{
-              fontSize: "clamp(22px, 3.5vw, 30px)", fontWeight: 800, color: "#1a2e4a",
-              letterSpacing: "-0.025em", lineHeight: 1.2, margin: 0,
-            }}>
+            <h2 className="text-[clamp(22px,3.5vw,30px)] font-extrabold text-dash-navy tracking-[-0.025em] leading-[1.2] m-0">
               {title}
             </h2>
 
-            <p style={{
-              fontSize: 15, color: "#6B7A8C", lineHeight: 1.7, margin: 0, maxWidth: 440,
-            }}>
+            <p className="text-[15px] text-dash-muted leading-[1.7] m-0 max-w-[440px]">
               {description}
             </p>
 
             {/* Decorative separator */}
-            <div style={{
-              height: 1, width: 48,
-              background: "linear-gradient(90deg, #00D4FF, transparent)",
-              borderRadius: 2, marginTop: 4,
-            }} />
+            <div className="mt-1 h-px w-12 rounded-sm"
+              style={{ background: "linear-gradient(90deg, #00D4FF, transparent)" }}
+            />
           </div>
         </div>
       </div>

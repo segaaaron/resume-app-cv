@@ -93,7 +93,7 @@ export default function PricingButtons({ plan, isPro }: Props) {
           onChange={(e) => setConsented(e.target.checked)}
           className="mt-0.5 shrink-0 accent-current w-3.5 h-3.5"
         />
-        <span style={{ fontSize: 11, lineHeight: 1.5, opacity: 0.75 }}>
+        <span className="text-[11px] leading-[1.5] opacity-75">
           {t("checkout_consent")}
         </span>
       </label>

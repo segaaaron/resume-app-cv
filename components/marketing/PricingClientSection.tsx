@@ -66,42 +66,6 @@ export default function PricingClientSection({
 
   return (
     <>
-      <style>{`
-        @keyframes shimmer {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(200%); }
-        }
-        @keyframes borderSpin {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        @keyframes floatOrb {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-12px); }
-        }
-        @keyframes pulse-dot {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.4; }
-        }
-        .annual-border-wrap {
-          background: linear-gradient(135deg, #00D4FF 0%, #0066ff 35%, #00D4FF 60%, #00ffcc 100%);
-          background-size: 300% 300%;
-          animation: borderSpin 4s ease infinite;
-          padding: 2px;
-          border-radius: 24px;
-        }
-        .shimmer-btn::after {
-          content: '';
-          position: absolute;
-          top: 0; left: 0; bottom: 0;
-          width: 40%;
-          background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-          animation: shimmer 2.4s ease infinite;
-          border-radius: inherit;
-        }
-      `}</style>
-
       <div className="px-4 pt-8 pb-20 max-w-5xl mx-auto relative" ref={sectionRef}>
 
         {/* Header */}

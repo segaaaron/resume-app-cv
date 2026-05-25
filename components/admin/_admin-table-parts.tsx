@@ -1,6 +1,5 @@
 "use client"
 
-import { useState } from "react"
 import { format } from "date-fns"
 import { RefreshCw } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -31,90 +30,49 @@ export function TableRow({
   isLast: boolean
 }) {
   const t = useTranslations("dashboard_admin")
-  const [hovered, setHovered] = useState(false)
 
   const isPro = user.plan === "PRO"
   const isActive = user.subscriptionStatus === "ACTIVE"
   const isAdmin = user.role === "SUPER_ADMIN"
 
+  const borderClass = isLast ? "" : "border-b border-dash-border-s"
+  const tdBase = `px-4 py-[14px] text-[13px] align-middle transition-colors duration-[140ms] ${borderClass} group-hover:bg-dash-surface2`
+
   return (
-    <tr
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{ transition: "background 0.14s ease" }}
-    >
+    <tr className="group">
       {/* Usuario */}
-      <td style={{
-        padding: "14px 16px", fontSize: 13, color: "#1a2e4a",
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          <span style={{ fontWeight: 600, color: "#1a2e4a", fontSize: 13 }}>
+      <td className={`${tdBase} text-dash-navy`}>
+        <div className="flex flex-col gap-[2px]">
+          <span className="font-semibold text-dash-navy text-[13px]">
             {user.name ?? "—"}
           </span>
-          <span style={{ fontSize: 11, color: "#A0AABE", fontFamily: "var(--dash-mono)" }}>
+          <span className="text-[11px] text-dash-subtle font-mono">
             {user.email}
           </span>
         </div>
       </td>
 
       {/* Plan */}
-      <td style={{
-        padding: "14px 16px", fontSize: 13,
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
+      <td className={tdBase}>
         {isPro ? (
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 4,
-            padding: "2px 8px", borderRadius: 5,
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-            background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)",
-            color: "#00D4FF", whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 7 }}>◆</span> PRO
+          <span className="inline-flex items-center gap-1 px-2 py-[2px] rounded-[5px] text-[11px] font-semibold tracking-[0.04em] bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.2)] text-dash-cyan whitespace-nowrap">
+            <span className="text-[7px]">◆</span> PRO
           </span>
         ) : (
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 4,
-            padding: "2px 8px", borderRadius: 5,
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-            background: "rgba(255,255,255,0.04)", border: "1px solid #E8EDF6",
-            color: "#A0AABE", whiteSpace: "nowrap",
-          }}>
+          <span className="inline-flex items-center gap-1 px-2 py-[2px] rounded-[5px] text-[11px] font-semibold tracking-[0.04em] bg-[rgba(255,255,255,0.04)] border border-dash-border-s text-dash-subtle whitespace-nowrap">
             FREE
           </span>
         )}
       </td>
 
       {/* Estado */}
-      <td style={{
-        padding: "14px 16px", fontSize: 13,
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
+      <td className={tdBase}>
         {isActive ? (
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 4,
-            padding: "2px 8px", borderRadius: 5,
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-            background: "rgba(16,185,129,0.12)", border: "1px solid rgba(16,185,129,0.2)",
-            color: "#10B981", whiteSpace: "nowrap",
-          }}>
+          <span className="inline-flex items-center gap-1 px-2 py-[2px] rounded-[5px] text-[11px] font-semibold tracking-[0.04em] bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.2)] text-emerald-500 whitespace-nowrap">
             {t("status_active")}
           </span>
         ) : (
-          <span style={{
-            display: "inline-flex", alignItems: "center",
-            padding: "2px 8px", borderRadius: 5,
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-            background: "#F5F7FB", border: "1px solid #E8EDF6",
-            color: "#A0AABE", whiteSpace: "nowrap",
-          }}>
+          <span className="inline-flex items-center px-2 py-[2px] rounded-[5px] text-[11px] font-semibold tracking-[0.04em] bg-dash-surface border border-dash-border-s text-dash-subtle whitespace-nowrap">
             {user.subscriptionStatus === "CANCELED" ? t("status_canceled")
               : user.subscriptionStatus === "EXPIRED" ? t("status_expired")
               : "—"}
@@ -123,25 +81,15 @@ export function TableRow({
       </td>
 
       {/* Intervalo */}
-      <td style={{
-        padding: "14px 16px", fontSize: 13, color: "#6B7A8C",
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
+      <td className={`${tdBase} text-dash-muted`}>
         {user.planInterval === "monthly" ? t("interval_monthly")
           : user.planInterval === "annual" ? t("interval_annual")
           : "—"}
       </td>
 
       {/* Renovación */}
-      <td style={{
-        padding: "14px 16px", fontSize: 13, color: "#6B7A8C",
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
-        <span style={{ fontFamily: "var(--dash-mono)", fontSize: 11.5, color: "#6B7A8C" }}>
+      <td className={tdBase}>
+        <span className="font-mono text-[11.5px] text-dash-muted">
           {user.subscriptionEndsAt
             ? format(new Date(user.subscriptionEndsAt), "dd MMM yyyy")
             : "—"}
@@ -149,46 +97,25 @@ export function TableRow({
       </td>
 
       {/* Última actividad */}
-      <td style={{
-        padding: "14px 16px",
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
-        <span style={{ fontFamily: "var(--dash-mono)", fontSize: 11.5, color: "#6B7A8C" }}>
+      <td className={tdBase}>
+        <span className="font-mono text-[11.5px] text-dash-muted">
           {format(new Date(user.lastActiveAt), "dd MMM yyyy HH:mm")}
         </span>
       </td>
 
       {/* Rol */}
-      <td style={{
-        padding: "14px 16px",
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
+      <td className={tdBase}>
         {isAdmin ? (
-          <span style={{
-            display: "inline-flex", alignItems: "center", gap: 4,
-            padding: "2px 8px", borderRadius: 5,
-            fontSize: 11, fontWeight: 600, letterSpacing: "0.04em",
-            background: "rgba(107,138,196,0.12)", border: "1px solid rgba(107,138,196,0.2)",
-            color: "#6B8AC4", whiteSpace: "nowrap",
-          }}>
-            <span style={{ fontSize: 8 }}>○</span> {t("role_admin")}
+          <span className="inline-flex items-center gap-1 px-2 py-[2px] rounded-[5px] text-[11px] font-semibold tracking-[0.04em] bg-[rgba(107,138,196,0.12)] border border-[rgba(107,138,196,0.2)] text-[#6B8AC4] whitespace-nowrap">
+            <span className="text-[8px]">○</span> {t("role_admin")}
           </span>
         ) : (
-          <span style={{ fontSize: 12, color: "#A0AABE" }}>{t("role_user")}</span>
+          <span className="text-[12px] text-dash-subtle">{t("role_user")}</span>
         )}
       </td>
 
       {/* Acciones */}
-      <td style={{
-        padding: "14px 16px", textAlign: "right",
-        borderBottom: isLast ? "none" : "1px solid #E8EDF6",
-        background: hovered ? "#EEF2F9" : "transparent",
-        verticalAlign: "middle",
-      }}>
+      <td className={`${tdBase} text-right`}>
         {!isAdmin && (
           <ActionBtn loading={loading === user.id} onClick={onAction} />
         )}
@@ -199,22 +126,11 @@ export function TableRow({
 
 export function ActionBtn({ loading, onClick }: { loading: boolean; onClick: () => void }) {
   const t = useTranslations("dashboard_admin")
-  const [hovered, setHovered] = useState(false)
   return (
     <button
       disabled={loading}
       onClick={onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        padding: "4px 10px", border: `1px solid ${hovered ? "#00D4FF" : "#D9E1ED"}`,
-        borderRadius: 5, background: hovered ? "#EEF2F9" : "transparent",
-        color: hovered ? "#1a2e4a" : "#6B7A8C",
-        fontSize: 11, fontFamily: "inherit", cursor: loading ? "not-allowed" : "pointer",
-        display: "inline-flex", alignItems: "center", gap: 5,
-        whiteSpace: "nowrap", transition: "all 0.14s ease",
-        opacity: loading ? 0.6 : 1,
-      }}
+      className="px-[10px] py-1 border border-dash-border rounded-[5px] bg-transparent text-dash-muted text-[11px] font-[inherit] inline-flex items-center gap-[5px] whitespace-nowrap transition-all duration-[140ms] hover:border-dash-cyan hover:bg-dash-surface2 hover:text-dash-navy disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
     >
       <RefreshCw style={{ width: 10, height: 10 }} className={loading ? "animate-spin" : ""} />
       {t("reset_session")}

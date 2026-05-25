@@ -29,72 +29,48 @@ export default function CVReviewMockup({ locale = "es" }: Props) {
   const warnItems = items.filter(i => i.type === "warn")
 
   return (
-    <div style={{
-      background: "white", borderRadius: 20, border: "1.5px solid #E8EEF8",
-      boxShadow: "0 8px 40px rgba(26,46,74,0.10)", padding: "18px",
-      width: "100%", maxWidth: 360, margin: "0 auto",
-    }}>
+    <div className="bg-white rounded-[20px] border-[1.5px] border-dash-border-s shadow-[0_8px_40px_rgba(26,46,74,0.10)] p-[18px] w-full max-w-[360px] mx-auto">
       {/* Chrome bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57" }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e" }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840" }} />
-        <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 8, fontFamily: "monospace" }}>{titleLabel}</span>
+      <div className="flex items-center gap-[5px] mb-[14px]">
+        <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
+        <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
+        <div className="w-2 h-2 rounded-full bg-[#28c840]" />
+        <span className="text-[10px] text-slate-400 ml-2 font-mono">{titleLabel}</span>
       </div>
 
       {/* OK items */}
-      <div style={{ marginBottom: 6 }}>
-        <p style={{ fontSize: 8, fontWeight: 800, color: "#16a34a", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+      <div className="mb-[6px]">
+        <p className="text-[8px] font-extrabold text-green-700 uppercase tracking-[0.08em] mb-[5px]">
           {okLabel}
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <div className="flex flex-col gap-[5px]">
           {okItems.map((item, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 8,
-              borderRadius: 9, background: "#f0fdf4", border: "1px solid #bbf7d0",
-              padding: "8px 10px",
-            }}>
-              <div style={{
-                width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
-                background: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{ fontSize: 8, color: "white", fontWeight: 800 }}>✓</span>
+            <div key={i} className="flex items-center gap-2 rounded-[9px] bg-green-50 border border-green-200 px-[10px] py-2">
+              <div className="w-4 h-4 rounded-full shrink-0 bg-green-700 flex items-center justify-center">
+                <span className="text-[8px] text-white font-extrabold">✓</span>
               </div>
-              <p style={{ fontSize: 11, color: "#15803d", lineHeight: 1.4 }}>{item.text}</p>
+              <p className="text-[11px] text-green-800 leading-[1.4]">{item.text}</p>
             </div>
           ))}
         </div>
       </div>
 
       {/* Divider */}
-      <div style={{ height: 1, background: "#F1F5F9", margin: "10px 0" }} />
+      <div className="h-px bg-slate-100 my-[10px]" />
 
       {/* Warn items */}
-      <div style={{ marginBottom: 8 }}>
-        <p style={{ fontSize: 8, fontWeight: 800, color: "#d97706", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: 5 }}>
+      <div className="mb-2">
+        <p className="text-[8px] font-extrabold text-amber-600 uppercase tracking-[0.08em] mb-[5px]">
           {warnLabel}
         </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+        <div className="flex flex-col gap-[5px]">
           {warnItems.map((item, i) => (
-            <div key={i} style={{
-              display: "flex", alignItems: "center", gap: 8,
-              borderRadius: 9, background: "#fffbeb", border: "1px solid #fde68a",
-              padding: "8px 10px",
-            }}>
-              <div style={{
-                width: 16, height: 16, borderRadius: "50%", flexShrink: 0,
-                background: "#f59e0b", display: "flex", alignItems: "center", justifyContent: "center",
-              }}>
-                <span style={{ fontSize: 9, color: "white" }}>!</span>
+            <div key={i} className="flex items-center gap-2 rounded-[9px] bg-amber-50 border border-amber-200 px-[10px] py-2">
+              <div className="w-4 h-4 rounded-full shrink-0 bg-amber-400 flex items-center justify-center">
+                <span className="text-[9px] text-white">!</span>
               </div>
-              <p style={{ fontSize: 10, color: "#92400e", lineHeight: 1.4, flex: 1 }}>{item.text}</p>
-              <button style={{
-                fontSize: 9, fontWeight: 800, color: "white",
-                background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
-                border: "none", borderRadius: 6, padding: "3px 8px",
-                cursor: "pointer", flexShrink: 0,
-                boxShadow: "0 1px 6px rgba(26,46,74,0.2)",
-              }}>
+              <p className="text-[10px] text-amber-900 leading-[1.4] flex-1">{item.text}</p>
+              <button className="text-[9px] font-extrabold text-white bg-[linear-gradient(135deg,#1a2e4a_0%,#0f1e33_100%)] border-none rounded-[6px] px-2 py-[3px] cursor-pointer shrink-0 shadow-[0_1px_6px_rgba(26,46,74,0.2)]">
                 {applyLabel}
               </button>
             </div>
@@ -103,13 +79,9 @@ export default function CVReviewMockup({ locale = "es" }: Props) {
       </div>
 
       {/* Hint */}
-      <div style={{
-        borderRadius: 8, background: "rgba(0,212,255,0.05)",
-        border: "1px solid rgba(0,212,255,0.15)", padding: "6px 10px",
-        display: "flex", alignItems: "center", gap: 5,
-      }}>
-        <span style={{ fontSize: 9, color: "#00D4FF" }}>✦</span>
-        <p style={{ fontSize: 9, color: "#64748B" }}>{hint}</p>
+      <div className="rounded-lg bg-[rgba(0,212,255,0.05)] border border-[rgba(0,212,255,0.15)] px-[10px] py-[6px] flex items-center gap-[5px]">
+        <span className="text-[9px] text-dash-cyan">✦</span>
+        <p className="text-[9px] text-slate-500">{hint}</p>
       </div>
     </div>
   )

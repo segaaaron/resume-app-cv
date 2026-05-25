@@ -54,71 +54,46 @@ export default function FillProfileMockup({ locale = "es" }: Props) {
       ]
 
   return (
-    <div style={{
-      background: "white", borderRadius: 20,
-      border: "1.5px solid #E8EEF8",
-      boxShadow: "0 8px 40px rgba(26,46,74,0.10)",
-      padding: "18px 18px 16px", width: "100%", maxWidth: 340, margin: "0 auto",
-    }}>
+    <div className="bg-white rounded-[20px] border-[1.5px] border-dash-border-s shadow-[0_8px_40px_rgba(26,46,74,0.10)] px-[18px] pt-[18px] pb-4 w-full max-w-[340px] mx-auto">
       {/* Chrome bar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 14 }}>
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#ff5f57" }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#febc2e" }} />
-        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#28c840" }} />
-        <span style={{ fontSize: 10, color: "#94A3B8", marginLeft: 8, fontFamily: "monospace" }}>
+      <div className="flex items-center gap-[5px] mb-[14px]">
+        <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
+        <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
+        <div className="w-2 h-2 rounded-full bg-[#28c840]" />
+        <span className="text-[10px] text-slate-400 ml-2 font-mono">
           ReadyCVV · {isEs ? "Completar con IA" : "AI Assistant"}
         </span>
       </div>
 
       {/* Input box */}
-      <div style={{
-        borderRadius: 10, border: "1.5px solid #E2E8F0",
-        background: "#F8FAFC", padding: "10px 12px", marginBottom: 10,
-      }}>
-        <p style={{ fontSize: 10, color: "#64748B", lineHeight: 1.5, marginBottom: 4 }}>{inputHint}</p>
-        <p style={{ fontSize: 11, color: "#1a2e4a", fontStyle: "italic", lineHeight: 1.5 }}>{prompt}</p>
+      <div className="rounded-[10px] border-[1.5px] border-slate-200 bg-slate-50 px-3 py-[10px] mb-[10px]">
+        <p className="text-[10px] text-slate-500 leading-[1.5] mb-1">{inputHint}</p>
+        <p className="text-[11px] text-dash-navy italic leading-[1.5]">{prompt}</p>
       </div>
 
       {/* AI badge */}
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 10 }}>
-        <span style={{
-          fontSize: 9, fontWeight: 800, letterSpacing: "0.08em",
-          color: "#00D4FF", background: "rgba(0,212,255,0.08)",
-          border: "1px solid rgba(0,212,255,0.25)", borderRadius: 999,
-          padding: "3px 10px",
-        }}>
+      <div className="flex justify-center mb-[10px]">
+        <span className="text-[9px] font-extrabold tracking-[0.08em] text-dash-cyan bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.25)] rounded-full px-[10px] py-[3px]">
           {aiGenerated}
         </span>
       </div>
 
       {/* Result cards */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div className="flex flex-col gap-2">
         {results.map((r) => (
-          <div key={r.label} style={{
-            borderRadius: 10, border: "1.5px solid rgba(26,46,74,0.08)",
-            background: "rgba(26,46,74,0.02)", padding: "10px 12px",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 5 }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <span style={{ fontSize: 10 }}>{r.icon}</span>
-                <span style={{ fontSize: 10, fontWeight: 700, color: "#1a2e4a" }}>{r.label}</span>
+          <div key={r.label} className="rounded-[10px] border-[1.5px] border-[rgba(26,46,74,0.08)] bg-[rgba(26,46,74,0.02)] px-3 py-[10px]">
+            <div className="flex items-center justify-between mb-[5px]">
+              <div className="flex items-center gap-1">
+                <span className="text-[10px]">{r.icon}</span>
+                <span className="text-[10px] font-bold text-dash-navy">{r.label}</span>
               </div>
-              <span style={{
-                fontSize: 8, fontWeight: 700, color: "#00D4FF",
-                background: "rgba(0,212,255,0.08)", border: "1px solid rgba(0,212,255,0.2)",
-                borderRadius: 999, padding: "1px 6px",
-              }}>
+              <span className="text-[8px] font-bold text-dash-cyan bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.2)] rounded-full px-[6px] py-[1px]">
                 {r.badge}
               </span>
             </div>
-            <p style={{ fontSize: 11, color: "#475569", lineHeight: 1.55, marginBottom: 8 }}>{r.suggested}</p>
-            <div style={{ display: "flex", justifyContent: "flex-end" }}>
-              <button style={{
-                fontSize: 10, fontWeight: 700, color: "white",
-                background: "linear-gradient(135deg, #1a2e4a 0%, #0f1e33 100%)",
-                border: "none", borderRadius: 7, padding: "4px 12px", cursor: "pointer",
-                boxShadow: "0 2px 8px rgba(26,46,74,0.2)",
-              }}>
+            <p className="text-[11px] text-slate-600 leading-[1.55] mb-2">{r.suggested}</p>
+            <div className="flex justify-end">
+              <button className="text-[10px] font-bold text-white bg-[linear-gradient(135deg,#1a2e4a_0%,#0f1e33_100%)] border-none rounded-[7px] px-3 py-1 cursor-pointer shadow-[0_2px_8px_rgba(26,46,74,0.2)]">
                 {applyLabel}
               </button>
             </div>

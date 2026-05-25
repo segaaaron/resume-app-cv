@@ -16,6 +16,7 @@ export default async function Hero() {
 
   return (
     <section className="relative overflow-hidden bg-white">
+      {/* radial-gradient with specific position kept as inline — not expressible in Tailwind */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{ background: "radial-gradient(ellipse 80% 60% at 70% -10%, #EFF6FF 0%, transparent 60%)" }}

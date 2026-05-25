@@ -21,19 +21,11 @@ export interface LetterCard {
 // ── DeleteBtn ─────────────────────────────────────────────────────────────────
 
 export function DeleteBtn({ onDelete }: { onDelete: () => void }) {
-  const [hov, setHov] = useState(false)
   return (
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); onDelete() }}
-      className="w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all duration-150 flex-shrink-0 ml-auto border"
-      style={{
-        borderColor: hov ? "rgba(239,68,68,0.45)" : "rgba(239,68,68,0.2)",
-        background: hov ? "rgba(239,68,68,0.14)" : "rgba(239,68,68,0.07)",
-        color: hov ? "#DC2626" : "#EF4444",
-      }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
+      className="w-7 h-7 rounded-md flex items-center justify-center cursor-pointer transition-all duration-150 flex-shrink-0 ml-auto border border-red-500/20 bg-red-500/[0.07] text-red-400 hover:border-red-500/45 hover:bg-red-500/[0.14] hover:text-red-600"
       title="Eliminar"
     >
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round">
@@ -85,20 +77,16 @@ export function CaBtn({ children, primary, onClick }: {
   primary?: boolean
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void
 }) {
-  const [hov, setHov] = useState(false)
   return (
     <button
       type="button"
-      className="inline-flex items-center gap-1 px-[10px] py-1 rounded-[5px] text-[11px] cursor-pointer transition-all duration-150 border"
-      style={{
-        fontFamily: "inherit",
-        background: primary ? hov ? "rgba(0,212,255,0.15)" : "rgba(0,212,255,0.1)" : hov ? "#EEF2F9" : "transparent",
-        borderColor: primary ? "rgba(0,212,255,0.25)" : hov ? "#00D4FF" : "#D9E1ED",
-        color: primary ? "#00D4FF" : hov ? "#1a2e4a" : "#6B7A8C",
-      }}
+      className={[
+        "inline-flex items-center gap-1 px-[10px] py-1 rounded-[5px] text-[11px] cursor-pointer transition-all duration-150 border",
+        primary
+          ? "border-dash-cyan/25 text-dash-cyan bg-dash-cyan/10 hover:bg-dash-cyan/15"
+          : "border-dash-border bg-transparent text-dash-muted hover:bg-dash-surface2 hover:border-dash-cyan hover:text-dash-navy",
+      ].join(" ")}
       onClick={onClick}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
     >
       {children}
     </button>
@@ -109,32 +97,23 @@ export function CaBtn({ children, primary, onClick }: {
 
 export function LetterActivityItem({ type, name, time }: { type: "edit" | "create" | "down"; name: string; time: string }) {
   const t = useTranslations("dashboard.cover_letters")
-  const [hov, setHov] = useState(false)
   const dotColor = type === "edit" ? "#00D4FF" : type === "create" ? "#10B981" : "#6B8AC4"
   const dotShadow = type === "edit" ? "0 0 6px rgba(0,212,255,0.5)" : type === "create" ? "0 0 6px rgba(16,185,129,0.5)" : "0 0 6px rgba(107,138,196,0.4)"
   const actionLabel = type === "edit" ? t("activity_edited") : type === "create" ? t("activity_created") : t("activity_downloaded")
   return (
-    <div
-      className="flex items-center gap-3 px-[14px] py-[10px] rounded-md border transition-[background,border-color] duration-150 cursor-default"
-      style={{
-        borderColor: hov ? "#E8EDF6" : "transparent",
-        background: hov ? "#EEF2F9" : "transparent",
-      }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-    >
+    <div className="flex items-center gap-3 px-[14px] py-[10px] rounded-md border border-transparent hover:border-dash-border-s hover:bg-dash-surface2 transition-[background,border-color] duration-150 cursor-default">
       {/* dot color/shadow are fully dynamic — keep inline */}
       <span
         className="inline-block w-[6px] h-[6px] rounded-full flex-shrink-0 mt-px"
         style={{ background: dotColor, boxShadow: dotShadow }}
       />
       <div className="flex-1">
-        <div className="text-[12.5px] text-[#374151]">
-          {actionLabel}{" "}<strong className="text-[#1a2e4a] font-medium">{name}</strong>
+        <div className="text-[12.5px] text-gray-700">
+          {actionLabel}{" "}<strong className="text-dash-navy font-medium">{name}</strong>
         </div>
       </div>
       <span
-        className="text-[11px] text-[#A0AABE] flex-shrink-0"
+        className="text-[11px] text-dash-subtle flex-shrink-0"
         style={{ fontFamily: "var(--dash-mono)" }}
       >{time}</span>
     </div>
@@ -161,10 +140,8 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
 
   return (
     <div
-      className="cl-card-wrap cl-card-anim relative overflow-hidden rounded-[14px] cursor-pointer flex flex-col transition-[border-color,transform,box-shadow] duration-[250ms]"
+      className="cl-card-wrap cl-card-anim group relative overflow-hidden rounded-[14px] cursor-pointer flex flex-col bg-white"
       style={{
-        background: "white",
-        textDecoration: "none",
         borderWidth: 1,
         borderStyle: "solid",
         borderColor: hovered ? "rgba(0,212,255,0.55)" : "#E2E8F4",
@@ -191,12 +168,10 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
       {/* thumbnail zone */}
       <div
         className="relative flex items-end justify-center px-8 pt-[22px] min-h-[148px] overflow-hidden flex-shrink-0"
-        style={{
-          background: "linear-gradient(160deg, #EFF3FB 0%, #E4EAF6 55%, #DDE4F0 100%)",
-        }}
+        style={{ background: "linear-gradient(160deg, #EFF3FB 0%, #E4EAF6 55%, #DDE4F0 100%)" }}
         onClick={onEdit}
       >
-        {/* subtle dot grid */}
+        {/* subtle dot grid — opacity is dynamic, keep inline */}
         <div
           className="absolute inset-0 pointer-events-none transition-opacity duration-300"
           style={{
@@ -227,28 +202,22 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
           {letter.templateId ? <CoverLetterThumbnail id={letter.templateId} color={letter.colorScheme} /> : <LetterThumbSVG />}
         </div>
 
-        {/* hover overlay */}
+        {/* hover overlay — static gradient, keep inline */}
         <div
           className="cl-overlay absolute inset-0 flex items-center justify-center z-[5] backdrop-blur-[3px]"
-          style={{
-            background: "linear-gradient(160deg, rgba(15,30,60,0.55) 0%, rgba(0,50,80,0.45) 100%)",
-          }}
+          style={{ background: "linear-gradient(160deg, rgba(15,30,60,0.55) 0%, rgba(0,50,80,0.45) 100%)" }}
           onClick={(e) => { e.stopPropagation(); onEdit() }}
         >
           <div className="flex flex-col items-center gap-[7px]">
             <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-[#00D4FF]"
-              style={{
-                background: "linear-gradient(135deg, rgba(0,212,255,0.3) 0%, rgba(0,168,204,0.15) 100%)",
-                border: "1.5px solid rgba(0,212,255,0.6)",
-                boxShadow: "0 0 20px rgba(0,212,255,0.3)",
-              }}
+              className="w-10 h-10 rounded-full flex items-center justify-center text-dash-cyan border border-dash-cyan/60 shadow-[0_0_20px_rgba(0,212,255,0.3)]"
+              style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.3) 0%, rgba(0,168,204,0.15) 100%)" }}
             >
               <svg width="15" height="15" viewBox="0 0 14 14" fill="none">
                 <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </div>
-            <span className="cl-ov-label text-[10px] font-bold tracking-[0.1em] uppercase text-[#00D4FF]">{t("edit")}</span>
+            <span className="cl-ov-label text-[10px] font-bold tracking-[0.1em] uppercase text-dash-cyan">{t("edit")}</span>
           </div>
         </div>
       </div>
@@ -256,20 +225,15 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
       {/* info + actions */}
       <div className="px-4 pt-[14px] pb-[15px] flex-1 flex flex-col gap-0">
         {/* title */}
-        <div
-          className="text-[13.5px] font-bold text-[#111D2E] tracking-[-0.02em] leading-[1.3] whitespace-nowrap overflow-hidden text-ellipsis mb-[5px]"
-        >
+        <div className="text-[13.5px] font-bold text-[#111D2E] tracking-[-0.02em] leading-[1.3] whitespace-nowrap overflow-hidden text-ellipsis mb-[5px]">
           {letter.title}
         </div>
 
         {/* meta row */}
         <div className="flex items-center gap-[6px] mb-3">
           <span
-            className="inline-flex items-center gap-[3px] text-[9.5px] font-bold tracking-wider uppercase text-[#00A8CC] rounded border px-[6px] py-[2px]"
-            style={{
-              background: "rgba(0,212,255,0.08)",
-              borderColor: "rgba(0,212,255,0.2)",
-            }}
+            className="inline-flex items-center gap-[3px] text-[9.5px] font-bold tracking-wider uppercase text-[#00A8CC] rounded border border-dash-cyan/20 px-[6px] py-[2px]"
+            style={{ background: "rgba(0,212,255,0.08)" }}
           >
             <svg width="7" height="7" viewBox="0 0 10 10" fill="none">
               <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.4"/>
@@ -288,24 +252,8 @@ export const LetterCardItem = React.memo(function LetterCardItem({ letter, index
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); onRename() }}
-            className="inline-flex items-center gap-[5px] px-[11px] py-[5px] rounded-md text-[11.5px] font-semibold cursor-pointer transition-all duration-150 border tracking-[-0.01em] text-[#00A8CC]"
-            style={{
-              fontFamily: "inherit",
-              background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)",
-              borderColor: "rgba(0,212,255,0.28)",
-            }}
-            onMouseEnter={(e) => {
-              const el = e.currentTarget
-              el.style.background = "linear-gradient(135deg, rgba(0,212,255,0.18) 0%, rgba(0,168,204,0.1) 100%)"
-              el.style.borderColor = "rgba(0,212,255,0.5)"
-              el.style.color = "#00D4FF"
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget
-              el.style.background = "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)"
-              el.style.borderColor = "rgba(0,212,255,0.28)"
-              el.style.color = "#00A8CC"
-            }}
+            className="inline-flex items-center gap-[5px] px-[11px] py-[5px] rounded-md text-[11.5px] font-semibold cursor-pointer transition-all duration-150 border border-dash-cyan/[0.28] tracking-[-0.01em] text-[#00A8CC] hover:border-dash-cyan/50 hover:text-dash-cyan"
+            style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.1) 0%, rgba(0,168,204,0.06) 100%)" }}
           >
             <svg width="10" height="10" viewBox="0 0 14 14" fill="none">
               <path d="M9 2l3 3L5 12H2V9L9 2z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

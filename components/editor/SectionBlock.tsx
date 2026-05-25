@@ -51,10 +51,7 @@ const SECTION_ICONS: Record<string, React.ReactNode> = {
 const NAVY = "#0B1B3D"
 const CYAN = "#00E5FF"
 const CYAN_DIM = "rgba(0,229,255,0.12)"
-const BORDER = "#E2E8F0"
-const MUTED = "#475569"
 const SUBTLE = "#94A3B8"
-const SUCCESS = "#10B981"
 const SURFACE2 = "#F1F5F9"
 
 const COLLAPSED_BG = "linear-gradient(135deg, rgba(236,254,255,0.7) 0%, rgba(239,246,255,0.5) 100%)"
@@ -168,14 +165,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     flexShrink: 0,
   }
 
-  // Body bg is state-driven, keep inline
-  const bodyStyle: CSSProperties = {
-    display: "block",
-    padding: "20px 24px 24px",
-    borderTop: `1px solid ${SURFACE2}`,
-    background: "#ffffff",
-    borderRadius: "0 0 12px 12px",
-  }
+  // Body: all static values — expressed via className below
 
   return (
     <div
@@ -200,10 +190,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
           </div>
           <div className="flex items-center gap-[6px] text-[11px] text-[#475569] font-medium mt-[3px]">
             {section.visible && (
-              <span
-                className="w-[6px] h-[6px] rounded-full shrink-0 inline-block"
-                style={{ background: SUCCESS, boxShadow: "0 0 6px rgba(16,185,129,0.5)" }}
-              />
+              <span className="w-[6px] h-[6px] rounded-full shrink-0 inline-block bg-[#10B981] shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
             )}
             <span className="overflow-hidden text-ellipsis whitespace-nowrap">
               {descriptionText}
@@ -227,7 +214,7 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
 
       {/* Body */}
       {open && (
-        <div style={bodyStyle} className="editor-section-body">
+        <div className="editor-section-body block px-6 pt-5 pb-6 border-t border-[#F1F5F9] bg-white rounded-b-xl">
           <SectionContent section={section} />
         </div>
       )}

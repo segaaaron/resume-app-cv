@@ -21,7 +21,6 @@ interface NewCVCardProps {
 }
 
 export function NewCVCard({ creating, index, onClick }: NewCVCardProps) {
-  const [isHovered, setIsHovered] = useState(false)
   const t = useTranslations("dashboard.resumes")
 
   return (
@@ -29,44 +28,22 @@ export function NewCVCard({ creating, index, onClick }: NewCVCardProps) {
       type="button"
       onClick={onClick}
       disabled={creating}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      className="dash-card-in"
-      style={{
-        background: isHovered ? "rgba(0,212,255,0.04)" : "transparent",
-        border: `2px dashed ${isHovered ? "#00D4FF" : "#A0AABE"}`,
-        borderRadius: "10px",
-        display: "flex", flexDirection: "column", alignItems: "center",
-        justifyContent: "center", minHeight: "286px", gap: "12px",
-        cursor: creating ? "not-allowed" : "pointer",
-        transition: "border-color 0.2s ease, background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease",
-        transform: isHovered ? "translateY(-3px)" : "translateY(0)",
-        boxShadow: isHovered ? "0 10px 36px rgba(0,212,255,0.08)" : "none",
-        opacity: creating ? 0.5 : 1,
-        animationDelay: getAnimationDelay(index),
-        width: "100%",
-      }}
+      className="dash-card-in group flex flex-col items-center justify-center w-full min-h-[286px] gap-3 rounded-[10px] border-2 border-dashed border-dash-subtle bg-transparent transition-all duration-200 ease-out hover:border-dash-cyan hover:bg-[rgba(0,212,255,0.04)] hover:-translate-y-[3px] hover:shadow-[0_10px_36px_rgba(0,212,255,0.08)] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+      style={{ animationDelay: getAnimationDelay(index) }}
     >
-      <div style={{
-        width: "46px", height: "46px", borderRadius: "50%",
-        border: `1.5px solid ${isHovered ? "#00D4FF" : "#A0AABE"}`,
-        display: "flex", alignItems: "center", justifyContent: "center",
-        color: isHovered ? "#00D4FF" : "#6B7A8C",
-        background: isHovered ? "rgba(0,212,255,0.08)" : "transparent",
-        transition: "all 0.2s ease",
-      }}>
+      <div className="w-[46px] h-[46px] rounded-full border border-[1.5px] border-dash-subtle flex items-center justify-center text-dash-muted bg-transparent transition-all duration-200 group-hover:border-dash-cyan group-hover:text-dash-cyan group-hover:bg-[rgba(0,212,255,0.08)]">
         {creating ? (
-          <Loader2 style={{ width: "20px", height: "20px", animation: "spin 1s linear infinite" }} />
+          <Loader2 className="w-5 h-5 animate-spin" />
         ) : (
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
             <path d="M10 4.5v11M4.5 10h11" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         )}
       </div>
-      <span style={{ fontSize: "13px", fontWeight: 500, color: isHovered ? "#00D4FF" : "#6B7A8C", transition: "color 0.2s ease" }}>
+      <span className="text-[13px] font-medium text-dash-muted transition-colors duration-200 group-hover:text-dash-cyan">
         {t("new_cv_create")}
       </span>
-      <span style={{ fontSize: "11px", color: isHovered ? "#6B7A8C" : "#A0AABE", transition: "color 0.2s ease", textAlign: "center" }}>
+      <span className="text-[11px] text-dash-subtle transition-colors duration-200 text-center group-hover:text-dash-muted">
         {t("new_cv_subtitle")}
       </span>
     </button>
@@ -84,27 +61,16 @@ interface DDItemProps {
 }
 
 export function DDItem({ onClick, icon, label, danger = false, disabled = false }: DDItemProps) {
-  const [hovered, setHovered] = useState(false)
-
-  const baseColor = danger ? "#EF4444" : "#1a2e4a"
-  const hoverColor = danger ? "#DC2626" : "#00D4FF"
-  const hoverBg = danger ? "rgba(239,68,68,0.1)" : "rgba(0,212,255,0.08)"
-
   return (
     <div
       onClick={disabled ? undefined : onClick}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        display: "flex", alignItems: "center", gap: "9px",
-        padding: "9px 11px", borderRadius: "7px",
-        fontSize: "13px", fontWeight: 500,
-        color: hovered ? hoverColor : baseColor,
-        cursor: disabled ? "default" : "pointer",
-        transition: "all 0.12s ease",
-        background: hovered ? hoverBg : "transparent",
-        opacity: disabled ? 0.5 : 1,
-      }}
+      className={`flex items-center gap-[9px] px-[11px] py-[9px] rounded-[7px] text-[13px] font-medium transition-all duration-[120ms] ${
+        disabled
+          ? "opacity-50 cursor-default"
+          : danger
+            ? "text-[#EF4444] cursor-pointer hover:text-[#DC2626] hover:bg-[rgba(239,68,68,0.1)]"
+            : "text-dash-navy cursor-pointer hover:text-dash-cyan hover:bg-[rgba(0,212,255,0.08)]"
+      }`}
     >
       {icon}
       {label}

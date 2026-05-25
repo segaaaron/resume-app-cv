@@ -19,11 +19,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
-import {
-  cardHeadStyle, cardIcoStyle, cardTitleStyle, cardSubStyle,
-  fieldLabelStyle, fieldHintStyle,
-  FieldInput, BtnGold, BtnGhost, DataCard,
-} from "./_settings-sub"
+import { FieldInput, BtnGold, BtnGhost, DataCard } from "./_settings-sub"
 
 interface UserData {
   id: string
@@ -35,6 +31,44 @@ interface UserData {
   subscriptionEndsAt: Date | null
   planInterval: string | null
   createdAt: Date
+}
+
+// ── Shared card header sub-components ────────────────────────────────────────
+
+function CardHead({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="px-5 pt-4 pb-3 border-b border-dash-border-s flex items-center gap-[10px]">
+      {children}
+    </div>
+  )
+}
+
+function CardIco({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="w-[30px] h-[30px] rounded-lg bg-[rgba(0,212,255,0.08)] border border-[rgba(0,212,255,0.2)] flex items-center justify-center text-dash-cyan shrink-0">
+      {children}
+    </div>
+  )
+}
+
+function CardTitle({ children }: { children: React.ReactNode }) {
+  return <div className="[font-family:var(--dash-serif)] text-sm font-semibold text-dash-navy tracking-[-0.02em]">{children}</div>
+}
+
+function CardSub({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11.5px] text-dash-muted mt-px">{children}</div>
+}
+
+function FieldLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] font-bold tracking-[0.06em] uppercase text-dash-muted mb-[5px]">
+      {children}
+    </div>
+  )
+}
+
+function FieldHint({ children }: { children: React.ReactNode }) {
+  return <div className="text-[11px] text-dash-subtle mt-1">{children}</div>
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -165,37 +199,30 @@ export default function SettingsForm({ user }: { user: UserData }) {
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
       {/* ── Card 1: Perfil (full width) ── */}
-      <div className="col-span-1 sm:col-span-2 bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
-        <div style={cardHeadStyle}>
-          <div style={cardIcoStyle}>
+      <div className="col-span-1 sm:col-span-2 bg-white border border-dash-border rounded-[10px] overflow-hidden">
+        <CardHead>
+          <CardIco>
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <circle cx="7.5" cy="5.5" r="2.5" stroke="currentColor" strokeWidth="1.2"/>
               <path d="M2 13.5c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-          </div>
+          </CardIco>
           <div>
-            <div style={cardTitleStyle}>{t("profile_section")}</div>
-            <div style={cardSubStyle}>{t("profile_subtitle")}</div>
+            <CardTitle>{t("profile_section")}</CardTitle>
+            <CardSub>{t("profile_subtitle")}</CardSub>
           </div>
-        </div>
+        </CardHead>
         <div className="px-5 py-[18px]">
           {/* Profile row */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-[14px] mb-[18px] pb-[18px] border-b border-[#E8EDF6]">
-            <div
-              className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 border-2"
-              style={{
-                fontFamily: "var(--dash-serif)",
-                background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-                borderColor: "rgba(0,212,255,0.3)",
-              }}
-            >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-[14px] mb-[18px] pb-[18px] border-b border-dash-border-s">
+            <div className="w-[52px] h-[52px] rounded-full flex items-center justify-center text-lg font-bold text-white flex-shrink-0 border-2 [font-family:var(--dash-serif)] bg-gradient-to-br from-[#00D4FF] to-[#00A8CC] border-[rgba(0,212,255,0.3)]">
               {initials}
             </div>
             <div>
-              <div className="text-sm font-semibold text-[#1a2e4a]">
+              <div className="text-sm font-semibold text-dash-navy">
                 {user.name ?? t("no_name")}
               </div>
-              <div className="text-xs text-[#6B7A8C]" style={{ fontFamily: "var(--dash-mono)" }}>
+              <div className="text-xs text-dash-muted [font-family:var(--dash-mono)]">
                 {user.email}
               </div>
             </div>
@@ -205,7 +232,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
           <form onSubmit={handleSave}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-[14px]">
               <div>
-                <div style={fieldLabelStyle}>{t("name_label")}</div>
+                <FieldLabel>{t("name_label")}</FieldLabel>
                 <FieldInput
                   value={name}
                   onChange={setName}
@@ -213,9 +240,9 @@ export default function SettingsForm({ user }: { user: UserData }) {
                 />
               </div>
               <div>
-                <div style={fieldLabelStyle}>{t("email_label")}</div>
+                <FieldLabel>{t("email_label")}</FieldLabel>
                 <FieldInput value={user.email} disabled />
-                <div style={fieldHintStyle}>{t("email_note")}</div>
+                <FieldHint>{t("email_note")}</FieldHint>
               </div>
             </div>
             <div className="mt-4">
@@ -228,87 +255,55 @@ export default function SettingsForm({ user }: { user: UserData }) {
       </div>
 
       {/* ── Card 2: Plan y cuenta ── */}
-      <div className="bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
-        <div style={cardHeadStyle}>
-          <div style={cardIcoStyle}>
+      <div className="bg-white border border-dash-border rounded-[10px] overflow-hidden">
+        <CardHead>
+          <CardIco>
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <path d="M7.5 1l1.8 4.5H14l-3.7 2.7 1.4 4.3L7.5 10l-4.2 2.5 1.4-4.3L1 5.5h4.7L7.5 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
             </svg>
-          </div>
+          </CardIco>
           <div>
-            <div style={cardTitleStyle}>{t("plan_section_label")}</div>
-            <div style={cardSubStyle}>{t("plan_subtitle")}</div>
+            <CardTitle>{t("plan_section_label")}</CardTitle>
+            <CardSub>{t("plan_subtitle")}</CardSub>
           </div>
-        </div>
+        </CardHead>
         <div className="px-5 py-[18px]">
           {/* Plan row */}
-          <div
-            className="flex items-center gap-[14px] px-4 py-[14px] rounded-md mb-4 relative overflow-hidden border"
-            style={{
-              background: "linear-gradient(135deg, rgba(0,212,255,0.05), rgba(0,212,255,0.02))",
-              borderColor: "rgba(0,212,255,0.15)",
-            }}
-          >
+          <div className="flex items-center gap-[14px] px-4 py-[14px] rounded-md mb-4 relative overflow-hidden border bg-gradient-to-br from-[rgba(0,212,255,0.05)] to-[rgba(0,212,255,0.02)] border-[rgba(0,212,255,0.15)]">
             {/* top shimmer line */}
-            <div
-              className="absolute top-0 left-0 right-0 h-px opacity-40"
-              style={{ background: "linear-gradient(90deg, transparent, #00D4FF, transparent)" }}
-            />
-            <div
-              className="w-9 h-9 rounded-[9px] flex items-center justify-center text-[#00D4FF] flex-shrink-0 border"
-              style={{
-                background: "rgba(0,212,255,0.1)",
-                borderColor: "rgba(0,212,255,0.2)",
-              }}
-            >
+            <div className="absolute top-0 left-0 right-0 h-px opacity-40 bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent" />
+            <div className="w-9 h-9 rounded-[9px] flex items-center justify-center text-dash-cyan flex-shrink-0 border bg-[rgba(0,212,255,0.1)] border-[rgba(0,212,255,0.2)]">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <path d="M8 1.5l1.8 4.2H14l-3.6 2.6 1.4 4.2L8 10.2l-3.8 2.3 1.4-4.2L2 5.7h4.2L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
               </svg>
             </div>
             <div className="flex-1">
-              <div
-                className="text-sm font-bold text-[#1a2e4a] tracking-[-0.02em]"
-                style={{ fontFamily: "var(--dash-serif)" }}
-              >
+              <div className="text-sm font-bold text-dash-navy tracking-[-0.02em] [font-family:var(--dash-serif)]">
                 {isPro ? t("plan_pro") : t("plan_free_label")}
               </div>
-              <div className="text-[11.5px] text-[#6B7A8C] mt-[2px] flex gap-[10px] flex-wrap">
+              <div className="text-[11.5px] text-dash-muted mt-[2px] flex gap-[10px] flex-wrap">
                 {isPro && (
                   <>
-                    <span
-                      className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#00D4FF] tracking-[0.04em]"
-                      style={{ background: "rgba(0,212,255,0.08)", borderColor: "rgba(0,212,255,0.15)" }}
-                    >
+                    <span className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-dash-cyan tracking-[0.04em] bg-[rgba(0,212,255,0.08)] border-[rgba(0,212,255,0.15)]">
                       {user.planInterval === "annual" ? t("interval_annual") : t("interval_monthly")}
                     </span>
-                    <span
-                      className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#00D4FF] tracking-[0.04em]"
-                      style={{ background: "rgba(0,212,255,0.08)", borderColor: "rgba(0,212,255,0.15)" }}
-                    >
+                    <span className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-dash-cyan tracking-[0.04em] bg-[rgba(0,212,255,0.08)] border-[rgba(0,212,255,0.15)]">
                       {user.planInterval === "annual" ? t("price_annual") : t("price_monthly")}
                     </span>
                     {isActive && (
-                      <span
-                        className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#7AAE8A] tracking-[0.04em]"
-                        style={{ background: "rgba(90,140,106,0.12)", borderColor: "rgba(90,140,106,0.2)" }}
-                      >
+                      <span className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#7AAE8A] tracking-[0.04em] bg-[rgba(90,140,106,0.12)] border-[rgba(90,140,106,0.2)]">
                         {t("status_active_badge")}
                       </span>
                     )}
                     {subscriptionStatus === "CANCELED" && (
-                      <span
-                        className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#D97706] tracking-[0.04em]"
-                        style={{ background: "rgba(245,158,11,0.1)", borderColor: "rgba(245,158,11,0.2)" }}
-                      >
+                      <span className="inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold text-[#D97706] tracking-[0.04em] bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.2)]">
                         {t("status_canceled_badge")}
                       </span>
                     )}
                   </>
                 )}
                 {!isPro && (
-                  <span
-                    className="inline-flex items-center rounded border border-[#E8EDF6] px-[7px] py-[1px] text-[10px] font-semibold text-[#A0AABE] tracking-[0.04em] bg-[#F5F7FB]"
-                  >
+                  <span className="inline-flex items-center rounded border border-dash-border-s px-[7px] py-[1px] text-[10px] font-semibold text-dash-subtle tracking-[0.04em] bg-dash-surface">
                     {t("status_no_subscription")}
                   </span>
                 )}
@@ -324,7 +319,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
               t("pro_benefit_3"),
               t("pro_benefit_4"),
             ].map(benefit => (
-              <div key={benefit} className="flex items-center gap-[9px] text-[12.5px] text-[#1a2e4a]">
+              <div key={benefit} className="flex items-center gap-[9px] text-[12.5px] text-dash-navy">
                 {/* background URL is a static data URI — keep inline */}
                 <span
                   className="w-[14px] h-[14px] rounded-full flex-shrink-0 border"
@@ -344,7 +339,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
                 {portalLoading ? t("opening_portal") : t("manage_billing")}
               </BtnGhost>
               {endsAt && (
-                <div className="text-[11px] text-[#A0AABE] mt-[10px] text-center">
+                <div className="text-[11px] text-dash-subtle mt-[10px] text-center">
                   {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
                   {isActive && (
                     <>
@@ -399,9 +394,9 @@ export default function SettingsForm({ user }: { user: UserData }) {
       />
 
       {/* ── Card 4: Programa de referidos (full width) ── */}
-      <div className="col-span-1 sm:col-span-2 bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
-        <div style={cardHeadStyle}>
-          <div style={cardIcoStyle}>
+      <div className="col-span-1 sm:col-span-2 bg-white border border-dash-border rounded-[10px] overflow-hidden">
+        <CardHead>
+          <CardIco>
             {/* share/link icon */}
             <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
               <circle cx="12" cy="3" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
@@ -409,12 +404,12 @@ export default function SettingsForm({ user }: { user: UserData }) {
               <circle cx="3" cy="7.5" r="1.5" stroke="currentColor" strokeWidth="1.2"/>
               <path d="M10.5 3.75L4.5 7M10.5 11.25L4.5 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
             </svg>
-          </div>
+          </CardIco>
           <div>
-            <div style={cardTitleStyle}>{tRef("title")}</div>
-            <div style={cardSubStyle}>{tRef("description")}</div>
+            <CardTitle>{tRef("title")}</CardTitle>
+            <CardSub>{tRef("description")}</CardSub>
           </div>
-        </div>
+        </CardHead>
         <div className="px-5 py-[18px]">
           <ReferralCard embeddedMode />
         </div>

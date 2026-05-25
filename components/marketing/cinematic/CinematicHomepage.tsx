@@ -184,21 +184,19 @@ export default function CinematicHomepage({ children, locale }: Props) {
           alt=""
           aria-hidden="true"
           loading="eager"
+          className="absolute left-0 w-full object-cover object-center"
           style={{
-            position: "absolute",
             top: "-10%",
-            left: 0,
-            width: "100%",
             height: "120%",
-            objectFit: "cover",
-            objectPosition: "center",
             willChange: "transform, opacity",
+            // bgOpacity and transition are JS-driven (scene fade)
             opacity: bgOpacity,
             transition: "opacity 380ms ease",
           }}
         />
 
         {/* Single color overlay — brand tint over the image */}
+        {/* backgroundColor and opacity are JS-driven (scene state) */}
         <div
           className="absolute inset-0 transition-[background-color,opacity] ease-in-out"
           style={{
@@ -211,11 +209,8 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
       {/* Navbar */}
       <nav
-        className="fixed top-0 left-0 right-0 z-50 px-6 h-16 flex items-center justify-between gap-6"
-        style={{
-          background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)",
-          backdropFilter: "blur(6px)",
-        }}
+        className="fixed top-0 left-0 right-0 z-50 px-6 h-16 flex items-center justify-between gap-6 backdrop-blur-[6px]"
+        style={{ background: "linear-gradient(to bottom, rgba(0,0,0,0.4) 0%, transparent 100%)" }}
       >
         <Link
           href={`/${locale}`}
@@ -251,15 +246,15 @@ export default function CinematicHomepage({ children, locale }: Props) {
           <LocaleSwitcher variant="marketing" inactiveColor={navFgMuted} />
           {session?.user ? (
             <Link href={`/${locale}/dashboard/resumes`}
-              className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300"
-              style={{ background: "rgba(255,255,255,0.15)", color: navFg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.25)" }}
+              className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+              style={{ background: "rgba(255,255,255,0.15)", color: navFg, border: "1px solid rgba(255,255,255,0.25)" }}
             >
               {nav("dashboard")}
             </Link>
           ) : (
             <Link href={`/${locale}/register`}
-              className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300"
-              style={{ background: "rgba(255,255,255,0.15)", color: navFg, backdropFilter: "blur(8px)", border: "1px solid rgba(255,255,255,0.25)" }}
+              className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 backdrop-blur-sm"
+              style={{ background: "rgba(255,255,255,0.15)", color: navFg, border: "1px solid rgba(255,255,255,0.25)" }}
             >
               {t("nav_cta")} →
             </Link>
@@ -275,10 +270,9 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="fixed top-16 left-0 right-0 z-40 px-6 py-5 flex flex-col gap-4 text-sm md:hidden"
+        <div className="fixed top-16 left-0 right-0 z-40 px-6 py-5 flex flex-col gap-4 text-sm md:hidden backdrop-blur-2xl"
           style={{
             background: isLight ? "rgba(15,15,26,0.95)" : "rgba(255,255,255,0.95)",
-            backdropFilter: "blur(16px)",
             borderBottom: pillBorder,
           }}
         >

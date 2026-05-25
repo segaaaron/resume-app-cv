@@ -91,20 +91,21 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
 
     for (let i = 1; i <= totalPages; i++) {
       if (i === 1 || i === totalPages || (i >= left && i <= right)) {
+        const isActive = i === page
         btns.push(
           <button
             key={i}
             onClick={() => setPage(i)}
             style={{
               minWidth: 32, height: 32, padding: "0 10px",
-              border: i === page ? "none" : "1px solid #D9E1ED",
-              background: i === page ? "linear-gradient(135deg,#00D4FF 0%,#00A8CC 100%)" : "white",
-              color: i === page ? "white" : "#6B7A8C",
+              border: isActive ? "none" : "1px solid #D9E1ED",
+              background: isActive ? "linear-gradient(135deg,#00D4FF 0%,#00A8CC 100%)" : "white",
+              color: isActive ? "white" : "#6B7A8C",
               borderRadius: 6,
-              fontFamily: "var(--dash-mono)", fontSize: 12, fontWeight: i === page ? 700 : 500,
+              fontFamily: "var(--dash-mono)", fontSize: 12, fontWeight: isActive ? 700 : 500,
               cursor: "pointer",
               display: "inline-flex", alignItems: "center", justifyContent: "center",
-              boxShadow: i === page ? "0 2px 8px rgba(0,212,255,0.28)" : "none",
+              boxShadow: isActive ? "0 2px 8px rgba(0,212,255,0.28)" : "none",
               transition: "all 0.15s ease",
             }}
           >
@@ -113,7 +114,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
         )
       } else if (i === left - 1 || i === right + 1) {
         btns.push(
-          <span key={`e${i}`} style={{ color: "#A0AABE", fontSize: 14, padding: "0 4px", userSelect: "none" }}>…</span>
+          <span key={`e${i}`} className="text-dash-subtle text-[14px] px-1 select-none">…</span>
         )
       }
     }
@@ -123,40 +124,16 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
   return (
     <>
       {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 18 }}>
-        <span style={{
-          fontFamily: "var(--serif,'Playfair Display',Georgia,serif)",
-          fontSize: 16, fontWeight: 600, color: "#1a2e4a",
-          letterSpacing: "-0.025em", flex: 1,
-        }}>
+      <div className="flex items-center gap-[10px] mb-[18px]">
+        <span className="font-serif text-[16px] font-semibold text-dash-navy tracking-[-0.025em] flex-1">
           {t("table_registered_users")}
         </span>
-        <span style={{
-          fontFamily: "var(--dash-mono)", fontSize: 11, color: "#6B7A8C",
-          background: "#EEF2F9", border: "1px solid #E8EDF6",
-          borderRadius: 8, padding: "2px 8px",
-        }}>
+        <span className="font-mono text-[11px] text-dash-muted bg-dash-surface2 border border-dash-border-s rounded-lg px-2 py-[2px]">
           {users.length} total
         </span>
         <button
           onClick={exportUsersCSV}
-          style={{
-            padding: "6px 14px", border: "1px solid #D9E1ED",
-            borderRadius: 5, background: "transparent", color: "#6B7A8C",
-            fontSize: 11, fontFamily: "inherit", cursor: "pointer",
-            display: "inline-flex", alignItems: "center", gap: 5,
-            transition: "all 0.14s ease", whiteSpace: "nowrap",
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "#EEF2F9"
-            ;(e.currentTarget as HTMLButtonElement).style.color = "#1a2e4a"
-            ;(e.currentTarget as HTMLButtonElement).style.borderColor = "#00D4FF"
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLButtonElement).style.background = "transparent"
-            ;(e.currentTarget as HTMLButtonElement).style.color = "#6B7A8C"
-            ;(e.currentTarget as HTMLButtonElement).style.borderColor = "#D9E1ED"
-          }}
+          className="px-[14px] py-[6px] border border-dash-border rounded-[5px] bg-transparent text-dash-muted text-[11px] font-[inherit] cursor-pointer inline-flex items-center gap-[5px] transition-all duration-[140ms] whitespace-nowrap hover:bg-dash-surface2 hover:text-dash-navy hover:border-dash-cyan"
         >
           <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
             <path d="M5.5 1v6M3.5 5l2 2 2-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
@@ -167,19 +144,12 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
       </div>
 
       {/* Table */}
-      <div style={{
-        background: "white", border: "1px solid #D9E1ED",
-        borderRadius: 10, overflowX: "auto", overflowY: "hidden",
-      }}>
-        <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
+      <div className="bg-white border border-dash-border rounded-[10px] overflow-x-auto overflow-y-hidden">
+        <table className="w-full border-collapse min-w-[900px]">
           <thead>
-            <tr style={{ borderBottom: "1px solid #E8EDF6", background: "#F5F7FB" }}>
+            <tr className="border-b border-dash-border-s bg-dash-surface">
               {[t("col_user"), t("col_plan"), t("col_status"), t("col_interval"), t("col_renewal"), t("col_last_active"), t("col_role"), t("col_actions")].map((h, i) => (
-                <th key={h} style={{
-                  padding: "11px 16px", textAlign: i === 7 ? "right" : "left",
-                  fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em",
-                  textTransform: "uppercase", color: "#6B7A8C", whiteSpace: "nowrap",
-                }}>
+                <th key={h} className="px-4 py-[11px] text-[9.5px] font-bold tracking-[0.1em] uppercase text-dash-muted whitespace-nowrap" style={{ textAlign: i === 7 ? "right" : "left" }}>
                   {h}
                 </th>
               ))}
@@ -197,7 +167,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
             ))}
             {users.length === 0 && (
               <tr>
-                <td colSpan={8} style={{ padding: "48px 16px", textAlign: "center", color: "#6B7A8C", fontSize: 13 }}>
+                <td colSpan={8} className="px-4 py-12 text-center text-dash-muted text-[13px]">
                   {t("table_no_users")}
                 </td>
               </tr>
@@ -208,17 +178,17 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
 
       {/* Pagination */}
       {users.length > 0 && (
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 18, padding: "0 4px" }}>
-          <div style={{ fontSize: 12, color: "#6B7A8C", fontFamily: "var(--dash-mono)" }}>
+        <div className="flex items-center justify-between mt-[18px] px-1">
+          <div className="text-[12px] text-dash-muted font-mono">
             {t("table_showing")}{" "}
-            <b style={{ color: "#1a2e4a", fontWeight: 600 }}>{pageFrom}</b>
+            <b className="text-dash-navy font-semibold">{pageFrom}</b>
             –
-            <b style={{ color: "#1a2e4a", fontWeight: 600 }}>{pageTo}</b>
+            <b className="text-dash-navy font-semibold">{pageTo}</b>
             {" "}{t("table_of")}{" "}
-            <b style={{ color: "#1a2e4a", fontWeight: 600 }}>{users.length}</b>
+            <b className="text-dash-navy font-semibold">{users.length}</b>
             {" "}{t("table_users")}
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
+          <div className="flex items-center gap-1">
             <button
               disabled={page === 1}
               onClick={() => setPage(p => Math.max(1, p - 1))}

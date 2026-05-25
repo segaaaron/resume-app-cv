@@ -163,17 +163,13 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   return (
     <header
-      className="h-[58px] flex items-center justify-between shrink-0 z-[100] relative px-3 sm:px-5"
-      style={{
-        background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)",
-        borderBottom: "1px solid rgba(0,212,255,0.2)",
-        boxShadow: "0 1px 0 rgba(0,212,255,0.12), 0 4px 16px rgba(0,0,0,0.06)",
-      }}
+      className="h-[58px] flex items-center justify-between shrink-0 z-[100] relative px-3 sm:px-5 border-b border-[rgba(0,212,255,0.2)] shadow-[0_1px_0_rgba(0,212,255,0.12),0_4px_16px_rgba(0,0,0,0.06)]"
+      style={{ background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)" }}
     >
       {/* Subtle cyan glow line at bottom */}
       <div
-        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-        style={{ background: "linear-gradient(90deg, transparent 0%, #00D4FF 30%, #00E5FF 50%, #00D4FF 70%, transparent 100%)", opacity: 0.35 }}
+        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none opacity-[0.35]"
+        style={{ background: "linear-gradient(90deg, transparent 0%, #00D4FF 30%, #00E5FF 50%, #00D4FF 70%, transparent 100%)" }}
       />
       {/* Ambient top-right glow */}
       <div
@@ -186,37 +182,17 @@ export default function EditorTopBar({ hasAccess }: Props) {
         <button
           onClick={handleBack}
           aria-label="Back"
-          className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 cursor-pointer transition-all duration-200"
-          style={{
-            background: "rgba(255,255,255,0.7)",
-            border: "1px solid rgba(0,212,255,0.2)",
-            color: "#1a2e4a",
-          }}
-          onMouseEnter={(e) => {
-            const el = e.currentTarget
-            el.style.background = "rgba(0,212,255,0.12)"
-            el.style.borderColor = "rgba(0,212,255,0.4)"
-            el.style.color = "#00A8CC"
-          }}
-          onMouseLeave={(e) => {
-            const el = e.currentTarget
-            el.style.background = "rgba(255,255,255,0.7)"
-            el.style.borderColor = "rgba(0,212,255,0.2)"
-            el.style.color = "#1a2e4a"
-          }}
+          className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 cursor-pointer transition-all duration-200 bg-white/70 border border-[rgba(0,212,255,0.2)] text-dash-navy hover:bg-[rgba(0,212,255,0.12)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#00A8CC]"
         >
           <ArrowLeft size={16} />
         </button>
 
         {/* CV icon badge */}
         <div
-          className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg shrink-0"
-          style={{
-            background: "linear-gradient(135deg, rgba(0,212,255,0.2) 0%, rgba(0,168,204,0.1) 100%)",
-            border: "1px solid rgba(0,212,255,0.25)",
-          }}
+          className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg shrink-0 border border-[rgba(0,212,255,0.25)]"
+          style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.2) 0%, rgba(0,168,204,0.1) 100%)" }}
         >
-          <FileText size={13} style={{ color: "#00D4FF" }} />
+          <FileText size={13} className="text-dash-cyan" />
         </div>
 
         {/* Title */}
@@ -235,16 +211,12 @@ export default function EditorTopBar({ hasAccess }: Props) {
             onClick={() => setEditing(true)}
             className="group flex items-center gap-1.5 truncate max-w-[110px] sm:max-w-[240px] cursor-pointer bg-transparent border-none"
           >
-            <span
-              className="truncate text-[14px] font-semibold tracking-[-0.01em]"
-              style={{ color: "#1a2e4a" }}
-            >
+            <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-dash-navy">
               {title}
             </span>
             <Pencil
               size={12}
-              className="shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100"
-              style={{ color: "#00D4FF" }}
+              className="shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 text-dash-cyan"
             />
           </button>
         )}
@@ -290,8 +262,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
         ) : (
           <button
             onClick={handleLockedClick}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] cursor-pointer border transition-all duration-200"
-            style={{ background: "rgba(255,255,255,0.5)", borderColor: "rgba(0,212,255,0.15)", color: "#94A3B8" }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] cursor-pointer border border-[rgba(0,212,255,0.15)] bg-white/50 text-[#94A3B8] transition-all duration-200"
           >
             <Lock size={11} />
             <span className="hidden sm:inline">{t("save")}</span>
@@ -305,26 +276,11 @@ export default function EditorTopBar({ hasAccess }: Props) {
               onClick={handleToggleShare}
               disabled={togglingShare || !resumeId}
               aria-label={isPublic ? t("share.public") : t("share.button")}
-              className="inline-flex items-center gap-2 px-3 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition-all duration-200 disabled:opacity-50"
-              style={{
-                background: isPublic ? "rgba(0,212,255,0.12)" : "rgba(255,255,255,0.7)",
-                border: isPublic ? "1px solid rgba(0,212,255,0.35)" : "1px solid rgba(0,212,255,0.2)",
-                color: isPublic ? "#00A8CC" : "#1a2e4a",
-              }}
-              onMouseEnter={(e) => {
-                if (isPublic) return
-                const el = e.currentTarget
-                el.style.background = "rgba(0,212,255,0.1)"
-                el.style.borderColor = "rgba(0,212,255,0.4)"
-                el.style.color = "#00A8CC"
-              }}
-              onMouseLeave={(e) => {
-                if (isPublic) return
-                const el = e.currentTarget
-                el.style.background = "rgba(255,255,255,0.7)"
-                el.style.borderColor = "rgba(0,212,255,0.2)"
-                el.style.color = "#1a2e4a"
-              }}
+              className={`inline-flex items-center gap-2 px-3 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition-all duration-200 disabled:opacity-50 ${
+                isPublic
+                  ? "bg-[rgba(0,212,255,0.12)] border border-[rgba(0,212,255,0.35)] text-[#00A8CC]"
+                  : "bg-white/70 border border-[rgba(0,212,255,0.2)] text-dash-navy hover:bg-[rgba(0,212,255,0.1)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#00A8CC]"
+              }`}
             >
               {togglingShare ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
               <span className="hidden sm:inline">{isPublic ? t("share.public") : t("share.button")}</span>
@@ -334,20 +290,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
               <button
                 onClick={handleCopyLink}
                 title={t("share.copy_link")}
-                className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200"
-                style={{ background: "rgba(255,255,255,0.7)", border: "1px solid rgba(0,212,255,0.2)", color: "#1a2e4a" }}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget
-                  el.style.background = "rgba(0,212,255,0.1)"
-                  el.style.borderColor = "rgba(0,212,255,0.4)"
-                  el.style.color = "#00A8CC"
-                }}
-                onMouseLeave={(e) => {
-                  const el = e.currentTarget
-                  el.style.background = "rgba(255,255,255,0.7)"
-                  el.style.borderColor = "rgba(0,212,255,0.2)"
-                  el.style.color = "#1a2e4a"
-                }}
+                className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 bg-white/70 border border-[rgba(0,212,255,0.2)] text-dash-navy hover:bg-[rgba(0,212,255,0.1)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#00A8CC]"
               >
                 <Copy size={13} />
               </button>
@@ -355,8 +298,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
             {isPublic && viewStats !== null && (
               <span
-                className="hidden sm:flex items-center gap-1 px-2 text-[11px]"
-                style={{ color: "#94A3B8" }}
+                className="hidden sm:flex items-center gap-1 px-2 text-[11px] text-[#94A3B8]"
                 title={t("share.views_tooltip", { total: viewStats.total })}
               >
                 <Eye size={11} /> {viewStats.last7d}
@@ -370,25 +312,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
           <button
             disabled={!resumeId || downloadingPdf}
             onClick={handleDownloadPdf}
-            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-            style={{
-              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-              border: "1px solid rgba(0,212,255,0.3)",
-              color: "#0a1a35",
-              boxShadow: "0 4px_16px rgba(0,212,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)",
-            }}
-            onMouseEnter={(e) => {
-              if (!downloadingPdf) {
-                const el = e.currentTarget
-                el.style.transform = "translateY(-1px)"
-                el.style.boxShadow = "0 6px 20px rgba(0,212,255,0.45), inset 0 1px 0 rgba(255,255,255,0.2)"
-              }
-            }}
-            onMouseLeave={(e) => {
-              const el = e.currentTarget
-              el.style.transform = "translateY(0)"
-              el.style.boxShadow = "0 4px 16px rgba(0,212,255,0.3), inset 0 1px 0 rgba(255,255,255,0.2)"
-            }}
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[rgba(0,212,255,0.3)] text-[#0a1a35] shadow-[0_4px_16px_rgba(0,212,255,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(0,212,255,0.45),inset_0_1px_0_rgba(255,255,255,0.2)]"
+            style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" }}
           >
             {downloadingPdf
               ? <Loader2 size={13} className="animate-spin" />
@@ -400,12 +325,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
         ) : (
           <button
             onClick={handleLockedClick}
-            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer opacity-40"
-            style={{
-              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-              border: "1px solid rgba(0,212,255,0.3)",
-              color: "#0a1a35",
-            }}
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer opacity-40 border border-[rgba(0,212,255,0.3)] text-[#0a1a35]"
+            style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" }}
           >
             <Lock size={13} />
             <span className="hidden sm:inline">{t("print.print_pdf")}</span>
