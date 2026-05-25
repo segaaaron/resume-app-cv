@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -35,7 +36,9 @@ function RingProgress({ pct, color, size = 30 }: { pct: number; color: string; s
 }
 
 export default function HelixTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
@@ -90,9 +93,10 @@ export default function HelixTemplate() {
               </defs>
               {/* Hex background */}
               <polygon points="47,1 93,27 93,81 47,107 1,81 1,27" fill={DARK2} stroke={color} strokeWidth="2" />
-              <text x="47" y="64" textAnchor="middle" fill={color} fontSize="26" fontWeight="800">
-                {initials || "N"}
-              </text>
+              {config.photoUrl
+                ? <image href={config.photoUrl} x="1" y="1" width="92" height="106" preserveAspectRatio="xMidYMid slice" clipPath="url(#hex-photo-clip)" />
+                : <text x="47" y="64" textAnchor="middle" fill={color} fontSize="26" fontWeight="800">{initials || "N"}</text>
+              }
             </svg>
             {/* Outer dashed hex ring */}
             <svg

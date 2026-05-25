@@ -1,36 +1,41 @@
 "use client"
 
 import { useState, useCallback, useEffect, useRef } from "react"
-import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Separator } from "@/components/ui/separator"
-import { Slider } from "@/components/ui/slider"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
-import { ArrowLeft, Save, Loader2, Check, Sparkles, Lock, ChevronDown, ChevronUp, Camera, X, Download, FileText, FileDown } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronUp, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import UpgradeModal from "@/components/editor/UpgradeModal"
-import SidebarTemplate from "./templates/SidebarTemplate"
-import ElegantTemplate from "./templates/ElegantTemplate"
-import SplitTemplate from "./templates/SplitTemplate"
-import ExecutiveBoldTemplate from "./templates/ExecutiveBoldTemplate"
-import MaterialCardTemplate from "./templates/MaterialCardTemplate"
-import GradientHorizonTemplate from "./templates/GradientHorizonTemplate"
-import MinimalLineTemplate from "./templates/MinimalLineTemplate"
-import TwoToneTemplate from "./templates/TwoToneTemplate"
-import TimelineTemplate from "./templates/TimelineTemplate"
-import MonogramTemplate from "./templates/MonogramTemplate"
-import ArchitectTemplate from "./templates/ArchitectTemplate"
-import DiagonalTemplate from "./templates/DiagonalTemplate"
-import NewspaperTemplate from "./templates/NewspaperTemplate"
-import RichTextEditor from "./RichTextEditor"
+import UnsavedChangesModal from "@/components/editor/UnsavedChangesModal"
+import dynamic from "next/dynamic"
+const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
 import { CoverLetterThumbnail } from "./thumbnails"
-import type { CandidateData, CoverLetterContent } from "./templates/types"
+import type { CandidateData, CoverLetterContent, TemplateProps } from "./templates/types"
+
+const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = {
+  elegant:   dynamic(() => import("./templates/ElegantTemplate"),       { ssr: false }),
+  classic:   dynamic(() => import("./templates/ElegantTemplate"),       { ssr: false }),
+  sidebar:   dynamic(() => import("./templates/SidebarTemplate"),       { ssr: false }),
+  split:     dynamic(() => import("./templates/SplitTemplate"),         { ssr: false }),
+  executive: dynamic(() => import("./templates/ExecutiveBoldTemplate"), { ssr: false }),
+  material:  dynamic(() => import("./templates/MaterialCardTemplate"),  { ssr: false }),
+  gradient:  dynamic(() => import("./templates/GradientHorizonTemplate"), { ssr: false }),
+  minimal:   dynamic(() => import("./templates/MinimalLineTemplate"),   { ssr: false }),
+  twotone:   dynamic(() => import("./templates/TwoToneTemplate"),       { ssr: false }),
+  timeline:  dynamic(() => import("./templates/TimelineTemplate"),      { ssr: false }),
+  monogram:  dynamic(() => import("./templates/MonogramTemplate"),      { ssr: false }),
+  architect: dynamic(() => import("./templates/ArchitectTemplate"),     { ssr: false }),
+  diagonal:  dynamic(() => import("./templates/DiagonalTemplate"),      { ssr: false }),
+  newspaper: dynamic(() => import("./templates/NewspaperTemplate"),     { ssr: false }),
+}
 
 type TemplateId = "classic" | "sidebar" | "elegant" | "split" | "executive" | "material" | "gradient" | "minimal" | "twotone" | "timeline" | "monogram" | "architect" | "diagonal" | "newspaper"
 
@@ -76,10 +81,16 @@ export default function CoverLetterEditor({
   isNew = false,
 }: Props) {
   const t = useTranslations("cover_letter_editor")
+  const locale = useLocale()
+  const router = useRouter()
+  const [showExitModal, setShowExitModal] = useState(false)
   const [title, setTitle] = useState(initialTitle)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [editingTitle, setEditingTitle] = useState(false)
-  const [content, setContent] = useState<CoverLetterContent>(initialContent)
+  const [content, setContent] = useState<CoverLetterContent>(() => ({
+    ...initialContent,
+    closing: initialContent.closing || (language === "es" ? "Atentamente" : "Sincerely"),
+  }))
   const [candidate, setCandidate] = useState<CandidateData>(initialCandidate)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -87,7 +98,10 @@ export default function CoverLetterEditor({
   const [activeTemplate, setActiveTemplate] = useState<TemplateId>(
     (initialTemplateId as TemplateId) === "classic" ? "elegant" : (initialTemplateId as TemplateId) ?? "elegant"
   )
-  const [candidateOpen, setCandidateOpen] = useState(false)
+  const [openSection, setOpenSection] = useState<"candidate" | "content" | "body" | null>(null)
+  const toggleSection = (id: "candidate" | "content" | "body") => setOpenSection(prev => prev === id ? null : id)
+  const [sidebarTab, setSidebarTab] = useState<"content" | "templates" | "ai">("content")
+  const [mobileView, setMobileView] = useState<"form" | "preview">("form")
   const [downloadingWord, setDownloadingWord] = useState(false)
   const [photoPosition, setPhotoPosition] = useState<number>(
     typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
@@ -116,6 +130,8 @@ export default function CoverLetterEditor({
   const [selectedResumeId, setSelectedResumeId] = useState("")
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
   const [aiUserPrompt, setAiUserPrompt] = useState("")
+  const [aiGenerated, setAiGenerated] = useState(false)
+  const bodyHasContent = (content.body?.replace(/<[^>]+>/g, "").trim() ?? "").length > 0
 
 
   useEffect(() => {
@@ -130,6 +146,29 @@ export default function CoverLetterEditor({
   const dirtyRef = useRef(dirty)
   useEffect(() => { dirtyRef.current = dirty }, [dirty])
 
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (!dirtyRef.current) return
+      e.preventDefault()
+    }
+    window.addEventListener("beforeunload", handler)
+    return () => window.removeEventListener("beforeunload", handler)
+  }, [])
+
+  function handleBack() {
+    if (dirty) { setShowExitModal(true); return }
+    router.push("/dashboard/cover-letters")
+  }
+
+  async function handleModalSave() {
+    await save()
+    router.push("/dashboard/cover-letters")
+  }
+
+  function handleModalDiscard() {
+    router.push("/dashboard/cover-letters")
+  }
+
   async function handleGenerateAI() {
     setGenerating(true)
     try {
@@ -142,7 +181,7 @@ export default function CoverLetterEditor({
           recipientTitle: content.recipientTitle,
           company: content.company,
           tone: aiTone,
-          language,
+          language: locale,
           userPrompt: aiUserPrompt.trim() || undefined,
         }),
       })
@@ -152,6 +191,7 @@ export default function CoverLetterEditor({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       updateContent("body", data.body)
+      setAiGenerated(true)
       toast.success(t("ai_success"))
     } catch {
       toast.error(t("ai_error"))
@@ -221,7 +261,23 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   }, [id, title, content, candidate, activeTemplate, photoPosition])
 
   const templateRef = useRef<HTMLDivElement>(null)
+  const previewContainerRef = useRef<HTMLDivElement>(null)
+  const [previewScale, setPreviewScale] = useState(1)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
+
+  useEffect(() => {
+    const A4_PX = 794
+    const el = previewContainerRef.current
+    if (!el) return
+    const update = () => {
+      const available = el.clientWidth - 32 // 16px padding each side
+      setPreviewScale(Math.min(1, available / A4_PX))
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
 
   const downloadPDF = useCallback(async () => {
     setDownloadingPdf(true)
@@ -284,47 +340,98 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     newspaper: t("template_newspaper"),
   }
 
-  return (
-    <div className="min-h-screen flex flex-col bg-background">
-      {/* Top bar */}
-      <header className="h-12 bg-white border-b border-border flex items-center justify-between px-4 gap-4 shrink-0 sticky top-0 z-10">
-        <div className="flex items-center gap-3 min-w-0">
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" asChild>
-            <Link href="/dashboard/cover-letters">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
+  // Palette constants used in conditional inline styles (tab bar, template grid)
+  const NAVY_DEEP = "#0B1B3D", NAVY_MID = "#1a2e4a", CYAN = "#00D4FF"
+  const BORDER_LIGHT = "#C8DCF0", MUTED_LABEL = "#7A9BB5"
 
+  const candidateFieldIcons: Partial<Record<keyof CandidateData, React.ReactNode>> = {
+    name: <User className="h-3 w-3 text-[#5B8FBD]" />,
+    jobTitle: <Briefcase className="h-3 w-3 text-[#5B8FBD]" />,
+    email: <Mail className="h-3 w-3 text-[#5B8FBD]" />,
+    phone: <Phone className="h-3 w-3 text-[#5B8FBD]" />,
+    address: <MapPin className="h-3 w-3 text-[#5B8FBD]" />,
+    linkedin: <Link2 className="h-3 w-3 text-[#5B8FBD]" />,
+    website: <Globe className="h-3 w-3 text-[#5B8FBD]" />,
+  }
+
+  return (
+    <div className="min-h-screen flex flex-col bg-[#F4F8FD]">
+      {/* Top bar — matches resume EditorTopBar */}
+      <header
+        className="h-[58px] flex items-center justify-between shrink-0 sticky top-0 z-10 relative px-3 sm:px-5"
+        style={{
+          background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)",
+          borderBottom: "1px solid rgba(0,212,255,0.2)",
+          boxShadow: "0 1px 0 rgba(0,212,255,0.12), 0 4px 16px rgba(0,0,0,0.06)",
+        }}
+      >
+        {/* Cyan glow line */}
+        <div className="absolute bottom-0 left-0 right-0 h-px pointer-events-none opacity-[0.35]"
+          style={{ background: "linear-gradient(90deg, transparent 0%, #00D4FF 30%, #00E5FF 50%, #00D4FF 70%, transparent 100%)" }} />
+        {/* Ambient right glow */}
+        <div className="absolute top-0 right-0 w-64 h-full pointer-events-none"
+          style={{ background: "radial-gradient(ellipse at 100% 50%, rgba(0,212,255,0.12) 0%, rgba(0,168,204,0.05) 50%, transparent 70%)" }} />
+
+        {/* Left: back + icon + title */}
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-3 relative z-10">
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Back"
+            className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 transition-all duration-200 text-dash-navy border border-dash-cyan/20 bg-white/70 hover:bg-dash-cyan/[0.12] hover:border-dash-cyan/40 hover:text-[#00A8CC]"
+            onMouseEnter={(e) => { const el = e.currentTarget; el.style.background = "rgba(0,212,255,0.12)"; el.style.borderColor = "rgba(0,212,255,0.4)"; el.style.color = "#00A8CC" }}
+            onMouseLeave={(e) => { const el = e.currentTarget; el.style.background = "rgba(255,255,255,0.7)"; el.style.borderColor = "rgba(0,212,255,0.2)"; el.style.color = "#1a2e4a" }}
+          >
+            <ArrowLeft size={16} />
+          </button>
+
+          {/* Icon badge */}
+          <div className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg shrink-0 border border-dash-cyan/25"
+            style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.2) 0%, rgba(0,168,204,0.1) 100%)" }}>
+            <FileText size={13} className="text-dash-cyan" />
+          </div>
+
+          {/* Title */}
           {editingTitle ? (
-            <Input
-              autoFocus
-              value={title}
+            <input autoFocus value={title}
               onChange={(e) => { setTitle(e.target.value); setDirty(true) }}
               onBlur={() => setEditingTitle(false)}
               onKeyDown={(e) => e.key === "Enter" && setEditingTitle(false)}
-              className="h-7 text-sm font-medium max-w-[200px]"
-            />
+              className="max-w-[120px] sm:max-w-[240px] border-0 border-b border-b-[#00D4FF] rounded-none bg-transparent text-[14px] font-semibold text-dash-navy outline-none py-1 px-0 h-auto shadow-none focus-visible:ring-0"
+              style={{ caretColor: "#00D4FF" }} />
           ) : (
-            <button
-              onClick={() => setEditingTitle(true)}
-              className="text-sm font-medium truncate hover:text-primary transition-colors max-w-[200px]"
-            >
-              {title}
+            <button onClick={() => setEditingTitle(true)}
+              className="group flex items-center gap-1.5 truncate max-w-[110px] sm:max-w-[240px] cursor-pointer bg-transparent border-none">
+              <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-dash-navy">{title}</span>
+              <Pencil size={12} className="shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 text-dash-cyan" />
             </button>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground hidden sm:block">
-            {saving ? (
-              <span className="flex items-center gap-1"><Loader2 className="h-3 w-3 animate-spin" /> {t("saving")}</span>
-            ) : saved ? (
-              <span className="flex items-center gap-1"><Check className="h-3 w-3 text-green-500" /> {t("saved")}</span>
-            ) : dirty ? t("unsaved") : null}
-          </span>
-          <Button variant="outline" size="sm" onClick={save} disabled={saving} className="gap-1.5">
-            <Save className="h-3.5 w-3.5" /> {t("save")}
-          </Button>
+        {/* Right: save status + save + download */}
+        <div className="flex items-center gap-2 shrink-0 relative z-10">
+          {/* Save button — always visible, shows state */}
+          <button onClick={save} disabled={saving}
+            className="hidden sm:inline-flex items-center gap-1.5 h-8 px-3 rounded-full transition-all duration-200 disabled:cursor-default"
+            style={{
+              fontSize: 11.5, fontWeight: 600,
+              background: saving ? "rgba(148,163,184,0.1)" : dirty ? "rgba(245,158,11,0.1)" : saved ? "rgba(16,185,129,0.1)" : "rgba(255,255,255,0.7)",
+              border: saving ? "1px solid rgba(148,163,184,0.2)" : dirty ? "1px solid rgba(245,158,11,0.25)" : saved ? "1px solid rgba(16,185,129,0.25)" : "1px solid rgba(0,212,255,0.2)",
+              color: saving ? "#94A3B8" : dirty ? "#F59E0B" : saved ? "#10B981" : "#1a2e4a",
+              boxShadow: (!saving && !dirty && !saved) ? "none" : "none",
+            }}>
+            {saving ? <Loader2 size={11} className="animate-spin" /> : dirty ? <AlertCircle size={11} /> : saved ? <Check size={11} /> : <Save size={11} />}
+            <span>{saving ? t("saving") : dirty ? t("unsaved") : saved ? t("saved") : t("save")}</span>
+          </button>
+
+          {/* Save button (mobile icon only) */}
+          <button onClick={save} disabled={saving}
+            className="sm:hidden inline-flex items-center justify-center w-8 h-8 rounded-lg transition-all duration-200 disabled:opacity-50 text-white border border-dash-cyan/30"
+            style={{ background: "linear-gradient(135deg, #1a2e4a 0%, #0B1B3D 100%)" }}>
+            {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
+          </button>
+
+          {/* Download menu (PDF + Word) */}
           <DownloadMenu
             filename={`${(title.replace(/[^a-z0-9]/gi, "_") || "carta")}`}
             triggerLabel={t("download")}
@@ -337,380 +444,495 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
               almostDone: t("download_almost_done"),
             }}
             options={[
-              {
-                format: "pdf",
-                label: "PDF",
-                sublabel: t("export_with_design"),
-                isLoading: downloadingPdf,
-                onDownload: downloadPDF,
-              },
-              {
-                format: "docx",
-                label: t("word_label"),
-                sublabel: t("export_plain"),
-                isLoading: downloadingWord,
-                onDownload: downloadWord,
-              },
+              { format: "pdf", label: "PDF", sublabel: t("export_with_design"), isLoading: downloadingPdf, onDownload: downloadPDF },
+              { format: "docx", label: t("word_label"), sublabel: t("export_plain"), isLoading: downloadingWord, onDownload: downloadWord },
             ]}
           />
-
         </div>
       </header>
 
       {/* Two panel layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Left: form */}
-        <div className="w-80 shrink-0 border-r border-border overflow-y-auto p-5 space-y-4">
+        {/* Left: sidebar with tab bar */}
+        <div
+          className={`${mobileView === "preview" ? "hidden" : "flex"} md:flex flex-col w-full md:w-[400px] shrink-0 overflow-hidden pb-14 md:pb-0 print:hidden bg-[#F4F8FD] border-r border-[#E2E8F0]`}
+          style={{ boxShadow: "2px 0 12px rgba(0,0,0,0.02)" }}
+        >
 
-          {/* Template selector */}
-          <div className="space-y-2">
-            <p className="text-xs font-semibold">{t("template_label")}</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {TEMPLATES.map((tpl) => {
-                const locked = tpl.pro && !isPro
-                return (
-                  <button
-                    key={tpl.id}
-                    type="button"
-                    onClick={() => locked ? setUpgradeOpen(true) : selectTemplate(tpl.id)}
-                    className={`relative flex flex-col items-center gap-1 rounded-lg border-2 p-1 transition-all ${
-                      activeTemplate === tpl.id
-                        ? "border-primary ring-2 ring-primary/20"
-                        : "border-border hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="w-full aspect-[0.73] rounded overflow-hidden bg-gray-50 relative">
-                      <CoverLetterThumbnail id={tpl.id} color={colorScheme} />
-                      {locked && (
-                        <div className="absolute inset-0 bg-white/70 flex items-center justify-center">
-                          <Lock className="h-3.5 w-3.5 text-primary" />
-                        </div>
-                      )}
-                    </div>
-                    <span className="text-[9px] text-center leading-tight text-muted-foreground font-medium truncate w-full">
-                      {templateLabels[tpl.id]}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+          {/* ── Tab bar ── */}
+          <div className="shrink-0 flex p-2 gap-1 border-b border-[#E2E8F0] bg-[#F4F8FD]">
+            {([
+              { key: "content",   icon: <FileText className="w-3 h-3" />,   label: t("tab_content"),   activeStyle: { background: `linear-gradient(135deg, ${NAVY_DEEP} 0%, ${NAVY_MID} 100%)`, color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(11,27,61,0.2)" }, inactiveStyle: { background: "rgba(11,27,61,0.05)", color: MUTED_LABEL, border: `1px solid ${BORDER_LIGHT}` } },
+              { key: "templates", icon: <LayoutGrid className="w-3 h-3" />,  label: t("tab_templates"), activeStyle: { background: "linear-gradient(135deg, #3B4F7A 0%, #2A3D6B 100%)", color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(42,61,107,0.25)" }, inactiveStyle: { background: "rgba(11,27,61,0.05)", color: MUTED_LABEL, border: `1px solid ${BORDER_LIGHT}` } },
+              { key: "ai",        icon: <Sparkles className="w-3 h-3" />,    label: t("tab_ai"),        activeStyle: { background: `linear-gradient(135deg, ${CYAN} 0%, #00A8CC 100%)`, color: NAVY_DEEP, border: "none", boxShadow: "0 4px 14px rgba(0,212,255,0.35)" }, inactiveStyle: { background: "rgba(0,212,255,0.08)", color: "#00A8CC", border: "1px solid rgba(0,212,255,0.25)" } },
+            ] as const).map(({ key, icon, label, activeStyle, inactiveStyle }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setSidebarTab(key)}
+                className="flex-1 flex items-center justify-center gap-1 transition-all"
+                style={{ height: 33, borderRadius: 7, fontSize: 10.5, fontWeight: 700, ...(sidebarTab === key ? activeStyle : inactiveStyle) }}
+              >
+                {icon}
+                <span className="truncate">{label}</span>
+              </button>
+            ))}
           </div>
 
-          <Separator />
+          {/* ── Tab content (scrollable) ── */}
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 bg-[#F4F8FD]" style={{ scrollbarWidth: "thin", scrollbarColor: "#E2E8F0 transparent" }}>
 
-          {/* Candidate data section */}
-          <div className="space-y-2">
-            <button
-              type="button"
-              className="flex items-center justify-between w-full"
-              onClick={() => setCandidateOpen((v) => !v)}
-            >
-              <span className="text-xs font-semibold">{t("candidate_section")}</span>
-              {candidateOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-            </button>
-
-            {candidateOpen && (
-              <div className="space-y-2.5 pt-1">
-                {/* Photo upload */}
-                <div className="space-y-2">
-                  <Label className="text-[11px] text-muted-foreground">{t("candidate_photo")}</Label>
-                  <div className="flex items-center gap-4">
-                    <div
-                      className="w-20 h-20 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-muted/30 shrink-0 overflow-hidden cursor-pointer hover:border-primary/50 transition-colors"
-                      onClick={() => photoInputRef.current?.click()}
+          {/* ── Planillas tab ── */}
+          {sidebarTab === "templates" && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-dash-muted pb-[2px]">
+                {TEMPLATES.length} {t("tab_templates").toLowerCase()}
+              </p>
+              <div className="grid grid-cols-2 gap-[10px]">
+                {TEMPLATES.map(({ id, labelKey, pro }) => {
+                  const isSelected = activeTemplate === id
+                  const locked = !!pro && !isPro
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => locked ? setUpgradeOpen(true) : selectTemplate(id)}
+                      className="flex flex-col items-center gap-2 transition-all"
+                      style={{
+                        padding: "10px 8px 8px",
+                        borderRadius: 12,
+                        background: isSelected ? "rgba(0,212,255,0.07)" : "#ffffff",
+                        border: isSelected ? `2px solid ${CYAN}` : `1.5px solid ${BORDER_LIGHT}`,
+                        boxShadow: isSelected
+                          ? "0 0 0 3px rgba(0,212,255,0.12), 0 4px 16px rgba(0,212,255,0.12)"
+                          : "0 1px 4px rgba(0,0,0,0.06)",
+                      }}
                     >
-                      {candidate.photo ? (
-                        <img
-                          src={candidate.photo}
-                          alt=""
-                          className="w-full h-full object-cover"
-                          style={{ objectPosition: `center ${photoPosition}%` }}
-                        />
-                      ) : candidate.name ? (
-                        <span className="text-lg font-bold text-muted-foreground select-none">
-                          {candidate.name.trim().split(/\s+/).slice(0, 2).map((w: string) => w[0].toUpperCase()).join("")}
-                        </span>
-                      ) : (
-                        <Camera className="h-6 w-6 text-muted-foreground" />
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2 flex-1">
-                      <button
-                        type="button"
-                        onClick={() => photoInputRef.current?.click()}
-                        className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors"
-                      >
-                        <Camera className="h-3.5 w-3.5" />
-                        {candidate.photo ? t("candidate_photo_change") : t("candidate_photo_add")}
-                      </button>
-                      {candidate.photo && (
-                        <button
-                          type="button"
-                          onClick={() => { updateCandidate("photo", ""); if (photoInputRef.current) photoInputRef.current.value = "" }}
-                          className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors"
-                        >
-                          <X className="h-3.5 w-3.5" /> {t("candidate_photo_remove")}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Position slider — only when photo is loaded */}
-                  {candidate.photo && (
-                    <div className="space-y-1.5 pt-1">
-                      <div className="flex items-center justify-between">
-                        <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                          {t("candidate_photo_position")}
-                        </Label>
-                        <span className="text-[10px] font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-                          {photoPosition}%
-                        </span>
+                      {/* Thumbnail */}
+                      <div className="relative overflow-hidden rounded-md shrink-0" style={{ width: 72, height: 96, opacity: locked ? 0.55 : 1 }}>
+                        <CoverLetterThumbnail id={id} color={locked ? "#9ca3af" : colorScheme} />
+                        {locked && (
+                          <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-white/50">
+                            <Lock className="w-[14px] h-[14px] text-[#7C3AED]" />
+                            <span className="text-[8px] font-extrabold tracking-[0.06em] text-[#7C3AED] bg-[rgba(124,58,237,0.12)] px-[5px] py-[2px] rounded">PRO</span>
+                          </div>
+                        )}
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 w-4 h-4 rounded-full bg-dash-cyan flex items-center justify-center">
+                            <Check className="w-[9px] h-[9px] text-[#0B1B3D]" strokeWidth={3} />
+                          </div>
+                        )}
                       </div>
-                      <Slider
-                        min={0}
-                        max={100}
-                        step={5}
-                        value={photoPosition}
-                        onValueChange={(v) => {
-                          const val = Array.isArray(v) ? v[0] : v
-                          setPhotoPosition(val)
-                          setDirty(true)
-                          setSaved(false)
-                        }}
-                      />
-                      <div className="flex justify-between text-[10px] text-muted-foreground/60">
-                        <span>{t("candidate_photo_top")}</span>
-                        <span>{t("candidate_photo_bottom")}</span>
+                      {/* Name */}
+                      <span className={`text-[10px] font-semibold text-center leading-[1.2] w-full overflow-hidden text-ellipsis whitespace-nowrap ${isSelected ? "text-[#00A8CC]" : "text-[#4A6785]"}`}>
+                        {t(labelKey as Parameters<typeof t>[0])}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {sidebarTab === "content" && (() => {
+            const candidateSubtitle = candidate.name || t("candidate_section")
+            const contentSubtitle = content.company || content.recipientName || t("content_section")
+            const bodyPlain = content.body?.replace(/<[^>]+>/g, "").trim() ?? ""
+            const hasBody = bodyPlain.length > 0
+            const bodySubtitle = hasBody ? (bodyPlain.slice(0, 34) + (bodyPlain.length > 34 ? "…" : "")) : t("body_label")
+
+            const dot = <span className="w-[7px] h-[7px] rounded-full bg-green-500 inline-block shrink-0" />
+
+            return (
+              <div className="flex flex-col gap-[10px]">
+
+                {/* ── Tus datos card ── */}
+                <div className="rounded-[14px] overflow-hidden border border-[#cffafe] shadow-[0_1px_4px_rgba(0,0,0,0.04)]" style={{ background: "linear-gradient(135deg, rgba(236,254,255,0.7) 0%, rgba(239,246,255,0.5) 100%)" }}>
+                  <button type="button" onClick={() => toggleSection("candidate")} className="flex items-center gap-3 px-[14px] py-[13px] w-full cursor-pointer bg-transparent">
+                    <div className="w-11 h-11 rounded-[10px] bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center shrink-0"><User className="w-[18px] h-[18px] text-[#0B1B3D]" /></div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="font-bold text-[13.5px] text-[#0B1B3D] leading-[1.2]">{t("candidate_section")}</div>
+                      <div className="flex items-center gap-[5px] mt-1">
+                        {dot}
+                        <span className="text-[11px] text-[#6B8FAB] overflow-hidden text-ellipsis whitespace-nowrap">{candidateSubtitle}</span>
+                      </div>
+                    </div>
+                    {openSection === "candidate"
+                      ? <ChevronDown className="w-[17px] h-[17px] text-[#9BB5CC] shrink-0" />
+                      : <ChevronRight className="w-[17px] h-[17px] text-[#9BB5CC] shrink-0" />
+                    }
+                  </button>
+
+                  {openSection === "candidate" && (
+                    <div className="px-[14px] pt-1 pb-4 border-t border-[#E2E8F0] bg-white flex flex-col gap-3">
+                      {/* Photo — resume editor style */}
+                      <div className="flex flex-col items-center gap-3 pt-[14px]">
+                        {/* Section label */}
+                        <div className="dp-section-label w-full">
+                          <Camera className="w-[13px] h-[13px] text-dash-cyan" />
+                          {t("candidate_photo")}
+                        </div>
+                        {/* Avatar ring */}
+                        <div
+                          className="dp-avatar w-[108px] h-[108px] rounded-full overflow-hidden cursor-pointer relative flex items-center justify-center"
+                          onClick={() => photoInputRef.current?.click()}
+                          style={{
+                            background: "linear-gradient(135deg, #e8f0fe 0%, #dbeafe 100%)",
+                            boxShadow: "0 0 0 3px #00D4FF, 0 0 0 5px #fff, 0 8px 24px rgba(0,212,255,0.2)",
+                          }}
+                        >
+                          {candidate.photo
+                            ? <img src={candidate.photo} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${photoPosition}%` }} />
+                            : candidate.name
+                              ? <span className="text-[28px] font-bold text-[#0B1B3D] select-none">{candidate.name.trim().split(/\s+/).slice(0, 2).map((w: string) => w[0].toUpperCase()).join("")}</span>
+                              : <Camera className="w-7 h-7 text-[#7AAAD4]" />
+                          }
+                          <div className="dp-avatar-overlay">
+                            <Camera className="w-6 h-6 text-white" />
+                          </div>
+                        </div>
+                        {/* Action buttons */}
+                        <div className="flex gap-2 flex-wrap justify-center">
+                          <button type="button" className="dp-btn-primary" onClick={() => photoInputRef.current?.click()}>
+                            <Camera className="w-[14px] h-[14px]" />
+                            {candidate.photo ? t("candidate_photo_change") : t("candidate_photo_add")}
+                          </button>
+                          {candidate.photo && (
+                            <button type="button" className="dp-btn-danger" onClick={() => { updateCandidate("photo", ""); if (photoInputRef.current) photoInputRef.current.value = "" }}>
+                              <X className="w-[14px] h-[14px]" /> {t("candidate_photo_remove")}
+                            </button>
+                          )}
+                        </div>
+                        {/* Position slider */}
+                        {candidate.photo && (
+                          <div className="w-full mt-1">
+                            <div className="flex justify-between items-center mb-2">
+                              <span className="text-[11px] text-[#7AAAD4] font-medium">
+                                {t("candidate_photo_top")} ↕ {t("candidate_photo_bottom")}
+                              </span>
+                              <span className="text-[11px] font-extrabold text-dash-cyan bg-dash-cyan/10 px-2 py-[2px] rounded-full border border-dash-cyan/25">
+                                {photoPosition}%
+                              </span>
+                            </div>
+                            <input
+                              type="range"
+                              className="dp-slider"
+                              style={{ ["--val" as string]: `${photoPosition}%` }}
+                              min={0} max={100} step={5}
+                              value={photoPosition}
+                              onChange={(e) => { setPhotoPosition(Number(e.target.value)); setDirty(true); setSaved(false) }}
+                            />
+                          </div>
+                        )}
+                        <input ref={photoInputRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoUpload} />
+                      </div>
+                      {/* Fields */}
+                      {([
+                        ["name", "candidate_name", "text"],
+                        ["jobTitle", "candidate_job_title", "text"],
+                        ["email", "candidate_email", "email"],
+                        ["phone", "candidate_phone", "tel"],
+                        ["address", "candidate_address", "text"],
+                        ["linkedin", "candidate_linkedin", "url"],
+                        ["website", "candidate_website", "url"],
+                      ] as [keyof CandidateData, string, string][]).map(([field, lk, inputType]) => (
+                        <div key={field}>
+                          <div className="text-[11px] font-semibold text-[#7A9BB5] tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">{candidateFieldIcons[field]}{t(lk as Parameters<typeof t>[0])}</div>
+                          <input type={inputType} value={candidate[field]} onChange={(e) => updateCandidate(field, e.target.value)} className="h-9 pl-3 pr-3 bg-white border border-[#C8DCF0] rounded-md text-[13px] text-dash-navy w-full outline-none" />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Contenido card ── */}
+                <div className="rounded-[14px] overflow-hidden border border-[#cffafe] shadow-[0_1px_4px_rgba(0,0,0,0.04)]" style={{ background: "linear-gradient(135deg, rgba(236,254,255,0.7) 0%, rgba(239,246,255,0.5) 100%)" }}>
+                  <button type="button" onClick={() => toggleSection("content")} className="flex items-center gap-3 px-[14px] py-[13px] w-full cursor-pointer bg-transparent">
+                    <div className="w-11 h-11 rounded-[10px] bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center shrink-0"><FileText className="w-[18px] h-[18px] text-[#0B1B3D]" /></div>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="font-bold text-[13.5px] text-[#0B1B3D] leading-[1.2]">{t("content_section")}</div>
+                      <div className="flex items-center gap-[5px] mt-1">
+                        {dot}
+                        <span className="text-[11px] text-[#6B8FAB] overflow-hidden text-ellipsis whitespace-nowrap">{contentSubtitle}</span>
+                      </div>
+                    </div>
+                    {openSection === "content"
+                      ? <ChevronDown className="w-[17px] h-[17px] text-[#9BB5CC] shrink-0" />
+                      : <ChevronRight className="w-[17px] h-[17px] text-[#9BB5CC] shrink-0" />
+                    }
+                  </button>
+
+                  {openSection === "content" && (
+                    <div className="px-[14px] pt-3 pb-4 border-t border-[#E2E8F0] bg-white flex flex-col gap-3">
+                      <div>
+                        <div className="text-[11px] font-semibold text-[#7A9BB5] tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]"><User className="h-3 w-3 text-[#5B8FBD]" />{t("recipient_label")}</div>
+                        <input placeholder={t("recipient_placeholder")} value={content.recipientName} onChange={(e) => updateContent("recipientName", e.target.value)} className="h-9 pl-3 pr-3 bg-white border border-[#C8DCF0] rounded-md text-[13px] text-dash-navy w-full outline-none" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-[#7A9BB5] tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]"><Briefcase className="h-3 w-3 text-[#5B8FBD]" />{t("recipient_title_label")}</div>
+                        <input placeholder={t("recipient_title_placeholder")} value={content.recipientTitle} onChange={(e) => updateContent("recipientTitle", e.target.value)} className="h-9 pl-3 pr-3 bg-white border border-[#C8DCF0] rounded-md text-[13px] text-dash-navy w-full outline-none" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-[#7A9BB5] tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]"><Building2 className="h-3 w-3 text-[#5B8FBD]" />{t("company_label")}</div>
+                        <input placeholder={t("company_placeholder")} value={content.company} onChange={(e) => updateContent("company", e.target.value)} className="h-9 pl-3 pr-3 bg-white border border-[#C8DCF0] rounded-md text-[13px] text-dash-navy w-full outline-none" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-[#7A9BB5] tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]"><Type className="h-3 w-3 text-[#5B8FBD]" />{t("subject_label")}</div>
+                        <input placeholder={t("subject_placeholder")} value={content.subject ?? ""} onChange={(e) => updateContent("subject", e.target.value)} className="h-9 pl-3 pr-3 bg-white border border-[#C8DCF0] rounded-md text-[13px] text-dash-navy w-full outline-none" />
+                      </div>
+                      <div>
+                        <div className="text-[11px] font-semibold text-[#7A9BB5] tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]"><Type className="h-3 w-3 text-[#5B8FBD]" />{t("closing_label")}</div>
+                        <input placeholder={t("closing_placeholder")} value={content.closing} onChange={(e) => updateContent("closing", e.target.value)} className="h-9 pl-3 pr-3 bg-white border border-[#C8DCF0] rounded-md text-[13px] text-dash-navy w-full outline-none" />
                       </div>
                     </div>
                   )}
-
-                  <input
-                    ref={photoInputRef}
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handlePhotoUpload}
-                  />
                 </div>
 
-                {(
-                  [
-                    ["name", "candidate_name", "text"],
-                    ["jobTitle", "candidate_job_title", "text"],
-                    ["email", "candidate_email", "email"],
-                    ["phone", "candidate_phone", "tel"],
-                    ["address", "candidate_address", "text"],
-                    ["linkedin", "candidate_linkedin", "url"],
-                    ["website", "candidate_website", "url"],
-                  ] as [keyof CandidateData, keyof typeof t extends string ? string : string, string][]
-                ).map(([field, labelKey, inputType]) => (
-                  <div key={field} className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">{t(labelKey as Parameters<typeof t>[0])}</Label>
-                    <Input
-                      type={inputType}
-                      value={candidate[field]}
-                      onChange={(e) => updateCandidate(field, e.target.value)}
-                      className="h-7 text-xs"
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+                {/* ── Cuerpo card (conditional) ── */}
+                {hasBody && (
+                  <div className="rounded-[14px] overflow-hidden border border-[#cffafe] shadow-[0_1px_4px_rgba(0,0,0,0.04)]" style={{ background: "linear-gradient(135deg, rgba(236,254,255,0.7) 0%, rgba(239,246,255,0.5) 100%)" }}>
+                    <button type="button" onClick={() => toggleSection("body")} className="flex items-center gap-3 px-[14px] py-[13px] w-full cursor-pointer bg-transparent">
+                      <div className="w-11 h-11 rounded-[10px] bg-[#F1F5F9] border border-[#E2E8F0] flex items-center justify-center shrink-0"><FileText className="w-[18px] h-[18px] text-[#0B1B3D]" /></div>
+                      <div className="flex-1 min-w-0 text-left">
+                        <div className="font-bold text-[13.5px] text-[#0B1B3D] leading-[1.2]">{t("body_label")}</div>
+                        <div className="flex items-center gap-[5px] mt-1">
+                          {dot}
+                          <span className="text-[11px] text-[#6B8FAB] overflow-hidden text-ellipsis whitespace-nowrap">{bodySubtitle}</span>
+                        </div>
+                      </div>
+                      {openSection === "body"
+                        ? <ChevronDown className="w-[17px] h-[17px] text-[#9BB5CC] shrink-0" />
+                        : <ChevronRight className="w-[17px] h-[17px] text-[#9BB5CC] shrink-0" />
+                      }
+                    </button>
 
-          <Separator />
-
-          <h2 className="font-semibold text-sm">{t("content_section")}</h2>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t("recipient_label")}</Label>
-            <Input
-              placeholder={t("recipient_placeholder")}
-              value={content.recipientName}
-              onChange={(e) => updateContent("recipientName", e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t("recipient_title_label")}</Label>
-            <Input
-              placeholder={t("recipient_title_placeholder")}
-              value={content.recipientTitle}
-              onChange={(e) => updateContent("recipientTitle", e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t("company_label")}</Label>
-            <Input
-              placeholder={t("company_placeholder")}
-              value={content.company}
-              onChange={(e) => updateContent("company", e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t("subject_label")}</Label>
-            <Input
-              placeholder={t("subject_placeholder")}
-              value={content.subject ?? ""}
-              onChange={(e) => updateContent("subject", e.target.value)}
-            />
-          </div>
-
-          <Separator />
-
-          {/* Body + AI unified */}
-          <div className="space-y-3">
-            <Label className="text-xs">{t("body_label")}</Label>
-
-            {!isPro ? (
-              <div className="rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-4 py-4 flex flex-col items-center gap-2 text-center">
-                <Lock className="h-4 w-4 text-primary" />
-                <p className="text-xs font-semibold text-foreground">{t("pro_upgrade_title")}</p>
-                <p className="text-[11px] text-muted-foreground leading-relaxed">{t("pro_upgrade_desc")}</p>
-                <Button size="sm" className="gap-1.5 mt-1" onClick={() => setUpgradeOpen(true)}>
-                  <Sparkles className="h-3.5 w-3.5" /> {t("pro_upgrade_cta")}
-                </Button>
-              </div>
-            ) : !content.body || content.body.replace(/<[^>]+>/g, "").trim().length === 0 ? (
-              /* ── State A: no body → prompt + generate ── */
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-3.5 space-y-3">
-                {/* AI panel header */}
-                <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                    <Sparkles className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <p className="text-xs font-semibold text-foreground">{t("ai_generate")}</p>
-                </div>
-
-                {resumes.length > 0 && (
-                  <div className="space-y-1">
-                    <Label className="text-[11px] text-muted-foreground">{t("ai_resume_label")}</Label>
-                    <select
-                      value={selectedResumeId}
-                      onChange={(e) => setSelectedResumeId(e.target.value)}
-                      className="w-full text-xs rounded-md border border-input bg-background px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    >
-                      <option value="">{t("ai_resume_none")}</option>
-                      {resumes.map((r) => (
-                        <option key={r.id} value={r.id}>{r.title}</option>
-                      ))}
-                    </select>
+                    {openSection === "body" && (
+                      <div className="px-[14px] pt-3 pb-[14px] border-t border-[#E2E8F0] bg-white flex flex-col gap-[10px]">
+                        <div className="bg-white border border-[#C8DCF0] rounded-[10px] p-1">
+                          <RichTextEditor value={content.body} onChange={(html) => updateContent("body", html)} placeholder={t("body_placeholder")} />
+                        </div>
+                        <button type="button" onClick={() => { updateContent("body", ""); setAiUserPrompt(""); setAiGenerated(false); setSidebarTab("ai") }} disabled={generating}
+                          className={`text-[11px] text-dash-muted flex items-center gap-[5px] ${generating ? "opacity-40" : ""}`}>
+                          <X className="w-[11px] h-[11px]" />{t("ai_regenerate")}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">{t("ai_tone_label")}</Label>
-                  <div className="flex gap-1.5">
-                    {toneOptions.map(([v, l]) => (
+              </div>
+            )
+          })()}
+
+          {/* ── AI Tab ── */}
+          {sidebarTab === "ai" && (
+            <div className="space-y-3">
+              {!isPro ? (
+                <div className="flex flex-col items-center gap-3 text-center rounded-2xl p-6 border border-dash-cyan/20" style={{ background: "linear-gradient(135deg, #0B1B3D 0%, #1a2e4a 100%)" }}>
+                  <div className="w-12 h-12 rounded-xl bg-dash-cyan/[0.12] border border-dash-cyan/25 flex items-center justify-center">
+                    <Lock className="h-5 w-5 text-dash-cyan" />
+                  </div>
+                  <div>
+                    <p className="text-[14px] font-bold text-white mb-[6px]">{t("pro_upgrade_title")}</p>
+                    <p className="text-[11px] text-white/65 leading-[1.6]">{t("pro_upgrade_desc")}</p>
+                  </div>
+                  <button onClick={() => setUpgradeOpen(true)} className="inline-flex items-center gap-1.5 text-[12px] font-bold text-[#0B1B3D] px-[18px] py-[10px] rounded-[10px]"
+                    style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", boxShadow: "0 4px 14px rgba(0,212,255,0.35)" }}>
+                    <Sparkles className="h-3.5 w-3.5" /> {t("pro_upgrade_cta")}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4 rounded-2xl p-4 border border-dash-cyan/20" style={{ background: "linear-gradient(135deg, #0B1B3D 0%, #1a2e4a 100%)" }}>
+                  {/* Header */}
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-[9px] bg-dash-cyan/15 border border-dash-cyan/30 flex items-center justify-center">
+                      <Sparkles className="h-4 w-4 text-dash-cyan" />
+                    </div>
+                    <div>
+                      <p className="text-[13px] font-bold text-white leading-none">{t("ai_generate")}</p>
+                      <p className="text-[10px] text-white/45 mt-[2px]">{t("ai_subtitle")}</p>
+                    </div>
+                  </div>
+
+                  {/* Body already has content — show banner and disable form */}
+                  {bodyHasContent && (
+                    <div className="bg-[rgba(16,185,129,0.12)] border border-[rgba(16,185,129,0.35)] rounded-[10px] px-[14px] pt-[14px] pb-3">
+                      <div className="flex items-center gap-2 mb-[6px]">
+                        <Check className="w-4 h-4 text-[#10B981] shrink-0" />
+                        <span className="text-[12px] font-bold text-white">{t("body_complete_title")}</span>
+                      </div>
+                      <p className="text-[11px] text-white/60 leading-[1.5] mb-[10px]">{t("body_complete_desc")}</p>
                       <button
-                        key={v}
                         type="button"
-                        onClick={() => setAiTone(v)}
-                        className={`flex-1 text-[10px] py-1.5 rounded-md border font-medium transition-all ${
-                          aiTone === v
-                            ? "bg-primary text-primary-foreground border-primary shadow-sm"
-                            : "bg-background text-muted-foreground border-input hover:border-primary/50 hover:text-foreground"
-                        }`}
-                      >
-                        {l}
+                        onClick={() => { updateContent("body", ""); setAiUserPrompt(""); setAiGenerated(false) }}
+                        className="w-full inline-flex items-center justify-center gap-1.5 transition-all text-[11px] font-semibold text-white/70 bg-white/[0.08] border border-white/15 rounded-lg px-3 py-2">
+                        <X className="w-3 h-3" />
+                        {t("body_complete_clear")}
                       </button>
-                    ))}
+                    </div>
+                  )}
+
+                  {/* Form — disabled when body has content */}
+                  <div className={`transition-opacity duration-200 ${bodyHasContent ? "opacity-40 pointer-events-none" : ""}`}>
+                    {/* Resume picker */}
+                    {resumes.length > 0 && (
+                      <div className="mb-3">
+                        <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">{t("ai_resume_label")}</div>
+                        <select value={selectedResumeId} onChange={(e) => setSelectedResumeId(e.target.value)}
+                          className="w-full h-9 bg-white/[0.06] border border-white/[0.12] rounded-lg text-white text-[12px] px-[10px] outline-none">
+                          <option value="" className="text-[#0B1B3D]">{t("ai_resume_none")}</option>
+                          {resumes.map((r) => <option key={r.id} value={r.id} className="text-[#0B1B3D]">{r.title}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Tone */}
+                    <div className="mb-3">
+                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">{t("ai_tone_label")}</div>
+                      <div className="flex gap-1.5">
+                        {toneOptions.map(([v, l]) => {
+                          const sel = aiTone === v
+                          return (
+                            <button key={v} type="button" onClick={() => setAiTone(v)} className="flex-1 transition-all text-[10px] font-semibold py-2 px-1 rounded-[7px]"
+                              style={{
+                                background: sel ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" : "rgba(255,255,255,0.06)",
+                                color: sel ? "#0B1B3D" : "rgba(255,255,255,0.55)",
+                                border: sel ? "1px solid rgba(0,212,255,0.4)" : "1px solid rgba(255,255,255,0.1)",
+                                boxShadow: sel ? "0 4px 12px rgba(0,212,255,0.25)" : "none" }}>
+                              {l}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Prompt */}
+                    <div className="mb-3">
+                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">{t("ai_prompt_label")}</div>
+                      <div className="relative">
+                        <textarea value={aiUserPrompt} onChange={(e) => setAiUserPrompt(e.target.value)}
+                          placeholder={t("ai_prompt_placeholder")} rows={4} maxLength={500}
+                          className="w-full bg-white/[0.05] border border-white/[0.12] rounded-lg pt-[10px] px-3 pb-6 text-[12px] text-white outline-none resize-none"
+                          onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.3)" }}
+                          onBlur={(e) => { e.currentTarget.style.boxShadow = "none" }} />
+                        <span className={`absolute tabular-nums bottom-[6px] right-[10px] text-[10px] ${aiUserPrompt.length >= 450 ? "text-[#fbbf24]" : "text-white/40"}`}>
+                          {aiUserPrompt.length}/500
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Success state after generation */}
+                    {aiGenerated && (
+                      <div className="bg-[rgba(16,185,129,0.1)] border border-[rgba(16,185,129,0.3)] rounded-[10px] px-[14px] py-3 flex flex-col gap-[10px] mb-3">
+                        <div className="flex items-start gap-[10px]">
+                          <div className="w-7 h-7 rounded-lg bg-[rgba(16,185,129,0.2)] border border-[rgba(16,185,129,0.35)] flex items-center justify-center shrink-0">
+                            <Check className="w-[14px] h-[14px] text-[#10B981]" />
+                          </div>
+                          <div>
+                            <p className="text-[12px] font-bold text-white leading-[1.2]">{t("ai_generated_title")}</p>
+                            <p className="text-[11px] text-white/60 mt-1 leading-[1.5]">{t("ai_generated_desc")}</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => { updateContent("body", ""); setAiUserPrompt(""); setAiGenerated(false) }}
+                          className="w-full inline-flex items-center justify-center gap-1.5 transition-all text-[11px] font-semibold text-white/70 bg-white/[0.08] border border-white/15 rounded-lg px-3 py-2">
+                          <X className="w-3 h-3" />
+                          {t("ai_regenerate_clear")}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Generate */}
+                    {!aiGenerated && (
+                      <button onClick={handleGenerateAI} disabled={generating || aiUserPrompt.trim().length < 10}
+                        className="w-full inline-flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-[13px] font-bold text-[#0B1B3D] py-[11px] px-[14px] rounded-[10px]"
+                        style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", boxShadow: "0 6px 18px rgba(0,212,255,0.3)" }}>
+                        {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+                        {generating ? t("ai_generating") : t("ai_generate")}
+                      </button>
+                    )}
                   </div>
                 </div>
+              )}
+            </div>
+          )}
 
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">{t("ai_prompt_label")}</Label>
-                  <div className="relative">
-                    <textarea
-                      value={aiUserPrompt}
-                      onChange={(e) => setAiUserPrompt(e.target.value)}
-                      placeholder={t("ai_prompt_placeholder")}
-                      rows={4}
-                      maxLength={500}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none pb-6"
-                    />
-                    <span className={`absolute bottom-2 right-2.5 text-[10px] tabular-nums ${aiUserPrompt.length >= 450 ? "text-amber-500" : "text-muted-foreground/50"}`}>
-                      {aiUserPrompt.length}/500
-                    </span>
-                  </div>
-                </div>
-
-                <Button
-                  size="sm"
-                  className="w-full gap-1.5"
-                  onClick={handleGenerateAI}
-                  disabled={generating}
-                >
-                  {generating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                  {generating ? t("ai_generating") : t("ai_generate")}
-                </Button>
-              </div>
-            ) : (
-              /* ── State B: body exists → rich editor + start over ── */
-              <div className="space-y-2">
-                <RichTextEditor
-                  value={content.body}
-                  onChange={(html) => updateContent("body", html)}
-                  placeholder={t("body_placeholder")}
-                />
-                <button
-                  type="button"
-                  onClick={() => { updateContent("body", ""); setAiUserPrompt("") }}
-                  disabled={generating}
-                  className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
-                >
-                  <X className="h-3 w-3" />
-                  {t("ai_regenerate")}
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs">{t("closing_label")}</Label>
-            <Input
-              placeholder={t("closing_placeholder")}
-              value={content.closing}
-              onChange={(e) => updateContent("closing", e.target.value)}
-            />
-          </div>
+</div>{/* end scrollable tab content */}
         </div>
 
-        {/* Right: preview */}
-        <div className="flex-1 overflow-auto bg-[#e8e8e8] flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0">
+        {/* Right: pure preview */}
+        <div className={`${mobileView === "form" ? "hidden" : "flex"} md:flex flex-1 flex-col overflow-hidden pb-14 md:pb-0`}>
+          {/* Preview */}
           <div
-            ref={templateRef}
-            className="bg-white shadow-2xl print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"
-            style={{ width: "210mm", minHeight: "297mm" }}
+            ref={previewContainerRef}
+            className="flex-1 overflow-auto flex justify-center items-start py-8 px-4 print:py-0 print:bg-white print:px-0"
+            style={{ background: "linear-gradient(135deg, #E0F2F7 0%, #D4EBF5 100%)" }}
           >
-            {(() => {
-              const candidateWithPosition = { ...candidate, photoPosition }
-              return <>
-                {(activeTemplate === "elegant" || activeTemplate === "classic") && <ElegantTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "sidebar" && <SidebarTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "split" && <SplitTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "executive" && <ExecutiveBoldTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "material" && <MaterialCardTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "gradient" && <GradientHorizonTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "twotone" && <TwoToneTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "timeline" && <TimelineTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "minimal" && <MinimalLineTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "monogram" && <MonogramTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "architect" && <ArchitectTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "diagonal" && <DiagonalTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-                {activeTemplate === "newspaper" && <NewspaperTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />}
-              </>
-            })()}
+            {/* Outer wrapper sized to scaled dimensions so container doesn't overflow */}
+            <div
+              className="relative shrink-0"
+              style={{
+                width: previewScale < 1 ? `${794 * previewScale}px` : "210mm",
+                minHeight: previewScale < 1 ? `${1123 * previewScale}px` : "297mm",
+              }}
+            >
+            <div
+              ref={templateRef}
+              className="bg-white shadow-[0_8px_40px_rgba(0,0,0,0.22)] print:shadow-none overflow-hidden print:min-h-[297mm] shrink-0"
+              style={{
+                width: "210mm",
+                minHeight: "297mm",
+                transformOrigin: "top left",
+                transform: previewScale < 1 ? `scale(${previewScale})` : undefined,
+              }}
+            >
+              {(() => {
+                const candidateWithPosition = { ...candidate, photoPosition }
+                const ActiveTemplate = TEMPLATE_COMPONENTS[activeTemplate] ?? TEMPLATE_COMPONENTS.elegant
+                return <ActiveTemplate content={content} candidate={candidateWithPosition} colorScheme={colorScheme} />
+              })()}
+              {/* Page break indicator at 297mm */}
+              <div className="print:hidden absolute left-0 right-0 h-0 pointer-events-none z-10" style={{ top: "297mm" }}>
+                <div className="relative w-full">
+                  <div className="absolute left-0 right-0 top-0 border-t-[1.5px] border-dashed border-[rgba(220,38,38,0.45)]" />
+                  <span className="absolute right-[6px] top-[3px] text-[9px] font-semibold text-[rgba(220,38,38,0.6)] tracking-[0.05em] whitespace-nowrap" style={{ fontFamily: "var(--font-mono, monospace)" }}>
+                    — pág. 1
+                  </span>
+                </div>
+              </div>
+            </div>
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Mobile bottom toggle bar */}
+      <div className="md:hidden print:hidden fixed bottom-0 left-0 right-0 flex h-14 z-50 bg-[#0B1B3D] border-t border-dash-cyan/15"
+        style={{ boxShadow: "0 -4px 24px rgba(11,27,61,0.35)" }}>
+        {([
+          { view: "form" as const, icon: <FileText className="w-[18px] h-[18px]" />, label: "Editar" },
+          { view: "preview" as const, icon: <Eye className="w-[18px] h-[18px]" />, label: "Vista previa" },
+        ]).map(({ view, icon, label }) => {
+          const active = mobileView === view
+          return (
+            <button
+              key={view}
+              type="button"
+              onClick={() => setMobileView(view)}
+              className={`flex-1 h-full flex items-center justify-center gap-2 touch-manipulation transition-colors ${active ? "text-dash-cyan border-b-2 border-dash-cyan" : "text-white/45 border-b-2 border-transparent"}`}
+              style={{ WebkitTapHighlightColor: "rgba(0,212,255,0.1)" }}
+            >
+              {icon}
+              <span className="text-[13px] font-bold tracking-[0.06em] uppercase">{label}</span>
+            </button>
+          )
+        })}
+      </div>
+
       <style>{`
         @media print {
-          header, .w-80 { display: none !important; }
+          header { display: none !important; }
           @page { size: A4; margin: 0; }
           body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -719,6 +941,12 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       `}</style>
 
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
+      <UnsavedChangesModal
+        open={showExitModal}
+        onSave={handleModalSave}
+        onDiscard={handleModalDiscard}
+        onClose={() => setShowExitModal(false)}
+      />
     </div>
   )
 }

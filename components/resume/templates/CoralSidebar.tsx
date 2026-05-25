@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 function SH({ children, ink }: { children: React.ReactNode; ink: string }) {
@@ -12,7 +13,9 @@ function SH({ children, ink }: { children: React.ReactNode; ink: string }) {
 }
 
 export default function CoralSidebarTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
   const accent = config.colorScheme
@@ -102,7 +105,7 @@ export default function CoralSidebarTemplate() {
       {/* Right sidebar */}
       <aside style={{ background: coral, color: cream, padding: "48px 28px", display: "flex", flexDirection: "column", gap: 28, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
         <div style={{ width: 180, height: 180, borderRadius: "50%", flexShrink: 0, backgroundColor: "rgba(255,255,255,0.15)", display: "flex", alignItems: "center", justifyContent: "center", color: cream, fontWeight: 800, fontSize: 52 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
 
         {/* Contact */}

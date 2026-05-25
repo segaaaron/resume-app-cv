@@ -1,6 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
+import DOMPurify from "isomorphic-dompurify"
 import type { TemplateProps } from "./types"
 
 export default function NewspaperTemplate({ content, colorScheme, candidate }: TemplateProps) {
@@ -9,7 +10,7 @@ export default function NewspaperTemplate({ content, colorScheme, candidate }: T
   const contactParts = [candidate.email, candidate.phone, candidate.linkedin].filter(Boolean)
 
   // Extract first paragraph for drop cap effect
-  const bodyHtml = content.body || ""
+  const bodyHtml = DOMPurify.sanitize(content.body ?? "")
 
   return (
     <div className="px-[18mm] pt-[10mm] pb-[14mm] print:min-h-[297mm]"

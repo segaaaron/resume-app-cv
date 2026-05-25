@@ -30,14 +30,11 @@ export default function ActFeatureScene({ scene, badge, headline, body, mockup, 
         {/* Text */}
         <div className="flex-1 text-center lg:text-left">
           <span
-            className="inline-block text-xs font-bold tracking-widest uppercase mb-4 animate-blur-in"
+            className="inline-block text-xs font-bold tracking-widest uppercase mb-4 animate-blur-in rounded-full px-3.5 py-1 backdrop-blur-sm"
             style={{
               background: "rgba(255,255,255,0.15)",
               color: "rgba(255,255,255,0.8)",
-              backdropFilter: "blur(8px)",
               border: "1px solid rgba(255,255,255,0.2)",
-              borderRadius: "999px",
-              padding: "4px 14px",
             }}
           >
             ✦ {badge}

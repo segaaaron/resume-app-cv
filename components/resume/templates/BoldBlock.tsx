@@ -1,10 +1,13 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 export default function BoldBlockTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, projects } = sd
   const accent = config.colorScheme
@@ -65,7 +68,7 @@ export default function BoldBlockTemplate() {
             const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
             return (
               <div style={{ width: 180, height: 180, borderRadius: 12, backgroundColor: accent, display: "flex", alignItems: "center", justifyContent: "center", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-                <span style={{ fontWeight: 900, fontSize: 72, color: "#fff", lineHeight: 1 }}>{initials || "N"}</span>
+                {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ fontWeight: 900, fontSize: 72, color: "#fff", lineHeight: 1 }}>{initials || "N"}</span>}
               </div>
             )
           })()}

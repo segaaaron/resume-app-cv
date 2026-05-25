@@ -14,12 +14,9 @@ export default function ActReveal({ brand, tagline, statAi, statTemplates, statA
     >
       <div className="max-w-4xl mx-auto">
         <p
-          className="font-serif text-7xl sm:text-8xl lg:text-9xl font-black text-white leading-none mb-4"
+          className="font-serif text-7xl sm:text-8xl lg:text-9xl font-black text-white leading-none mb-4 tracking-[-0.02em]"
           data-animate="title"
-          style={{
-            letterSpacing: "-0.02em",
-            textShadow: "0 0 120px rgba(139,92,246,0.5)",
-          }}
+          style={{ textShadow: "0 0 120px rgba(139,92,246,0.5)" }}
         >
           {brand}
         </p>
@@ -36,10 +33,9 @@ export default function ActReveal({ brand, tagline, statAi, statTemplates, statA
           {[statAi, statTemplates, statAts].map((s) => (
             <span
               key={s}
-              className="px-4 py-2 rounded-full text-sm font-semibold text-white/90"
+              className="px-4 py-2 rounded-full text-sm font-semibold text-white/90 backdrop-blur-sm"
               style={{
                 background: "rgba(255,255,255,0.1)",
-                backdropFilter: "blur(8px)",
                 border: "1px solid rgba(255,255,255,0.2)",
               }}
             >

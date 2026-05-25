@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -26,7 +27,9 @@ function MainBlock({ title, navy, gold, children }: { title: string; navy: strin
 }
 
 export default function NavyExecutiveTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -55,7 +58,7 @@ export default function NavyExecutiveTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 140, height: 140, borderRadius: "50%", background: "#1a3956", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: gold, fontWeight: 900, fontSize: 44 }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: gold, fontWeight: 900, fontSize: 44 }}>{initials || "N"}</span>}
             </div>
           )
         })()}

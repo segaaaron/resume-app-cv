@@ -171,7 +171,7 @@ async function sendReferralRewardEmail({
 
   try {
     await resend.emails.send({
-      from: "READY CV <no-reply@readycvv.com>",
+      from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
       to: referrer.email,
       subject: isCycleComplete
         ? "🏆 ¡1 mes gratis! Completaste tu ciclo de referidos"

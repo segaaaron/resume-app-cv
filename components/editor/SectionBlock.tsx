@@ -1,105 +1,224 @@
 "use client"
 
-import { useTranslations } from "next-intl"
-import { useState } from "react"
-import { useSortable } from "@dnd-kit/sortable"
-import { CSS } from "@dnd-kit/utilities"
-import { GripVertical, ChevronDown, ChevronRight, MoreHorizontal, Eye, EyeOff, Scissors } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useTranslations, useLocale } from "next-intl"
+import { SECTION_LABELS } from "@/types/resume"
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+  createContext,
+  memo,
+  useContext,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react"
+import {
+  ChevronRight,
+  Eye,
+  EyeOff,
+  Scissors,
+  User,
+  FileText,
+  Briefcase,
+  BookOpen,
+  CheckCircle2,
+  Star,
+  Users,
+  UserPlus,
+  Smile,
+  BarChart2,
+  Globe,
+  Layout,
+} from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
-import type { ResumeSection } from "@/types/resume"
-import { cn } from "@/lib/utils"
+import type { ResumeSection, ResumeSections } from "@/types/resume"
 import SectionContent from "./SectionContent"
 
-export default function SectionBlock({ section }: { section: ResumeSection }) {
+const SECTION_ICONS: Record<string, React.ReactNode> = {
+  personalDetails: <User className="w-5 h-5" strokeWidth={1.8} />,
+  summary: <FileText className="w-5 h-5" strokeWidth={1.8} />,
+  workExperience: <Briefcase className="w-5 h-5" strokeWidth={1.8} />,
+  education: <BookOpen className="w-5 h-5" strokeWidth={1.8} />,
+  certifications: <CheckCircle2 className="w-5 h-5" strokeWidth={1.8} />,
+  projects: <Star className="w-5 h-5" strokeWidth={1.8} />,
+  volunteer: <Users className="w-5 h-5" strokeWidth={1.8} />,
+  references: <UserPlus className="w-5 h-5" strokeWidth={1.8} />,
+  hobbies: <Smile className="w-5 h-5" strokeWidth={1.8} />,
+  skills: <BarChart2 className="w-5 h-5" strokeWidth={1.8} />,
+  languages: <Globe className="w-5 h-5" strokeWidth={1.8} />,
+}
+
+// Tokens
+const NAVY = "#0B1B3D"
+const CYAN = "#00E5FF"
+const CYAN_DIM = "rgba(0,229,255,0.12)"
+const SUBTLE = "#94A3B8"
+const SURFACE2 = "#F1F5F9"
+
+const COLLAPSED_BG = "linear-gradient(135deg, rgba(236,254,255,0.7) 0%, rgba(239,246,255,0.5) 100%)"
+const COLLAPSED_BORDER = "#cffafe"
+const EXPANDED_GRADIENT =
+  "linear-gradient(135deg, #E8F4FD 0%, #EDF6FB 50%, #E6F0FA 100%)"
+
+// ---- Single-active-accordion context ----
+interface SectionAccordionContextValue {
+  expandedId: string | null
+  setExpandedId: (id: string | null) => void
+}
+
+const SectionAccordionContext = createContext<SectionAccordionContextValue>({
+  expandedId: null,
+  setExpandedId: () => {},
+})
+
+export function SectionDropdownProvider({ children }: { children: ReactNode }) {
+  const pd = useResumeStore.getState().sectionData.personalDetails as Record<string, string> | undefined
+  const hasData = pd && (pd.firstName || pd.lastName || pd.email || pd.jobTitle)
+  const [expandedId, setExpandedId] = useState<string | null>(hasData ? null : "personalDetails")
+  const accordionValue = useMemo(() => ({ expandedId, setExpandedId }), [expandedId])
+  return (
+    <SectionAccordionContext.Provider value={accordionValue}>
+      {children}
+    </SectionAccordionContext.Provider>
+  )
+}
+
+function getItemCount(section: ResumeSection, data: ResumeSections | undefined): number | null {
+  if (!data) return null
+  const type = section.type as keyof ResumeSections
+  const value = (data as unknown as Record<string, unknown>)[type]
+  if (Array.isArray(value)) return value.length
+  return null
+}
+
+const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSection }) {
   const t = useTranslations("editor")
-  const [open, setOpen] = useState(section.type === "personalDetails")
-  const { toggleSection, togglePageBreak, moveSectionToColumn } = useResumeStore()
+  const locale = useLocale()
+  const localizedLabel = SECTION_LABELS[locale as "es" | "en"]?.[section.type] ?? section.label
+  const [hovered, setHovered] = useState(false)
+  const itemCount = useResumeStore((s) => {
+    const val = (s.sectionData as unknown as Record<string, unknown>)[section.type]
+    return Array.isArray(val) ? val.length : null
+  })
+  const { expandedId, setExpandedId } = useContext(SectionAccordionContext)
+  const open = expandedId === section.id
+  const setOpen = (val: boolean) => setExpandedId(val ? section.id : null)
 
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: section.id })
+  const sortableStyle: CSSProperties = {}
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
+  const SectionIcon =
+    SECTION_ICONS[section.type] ?? <Layout className="w-5 h-5" strokeWidth={1.8} />
+  const descriptionText =
+    itemCount !== null && itemCount > 0
+      ? t(itemCount === 1 ? "section_item_one" : "section_item_other", { count: itemCount })
+      : localizedLabel
+
+  // Container — all values are conditional on state, keep inline
+  const containerStyle: CSSProperties = {
+    border: open || hovered ? "1px solid transparent" : `1px solid ${COLLAPSED_BORDER}`,
+    borderRadius: 12,
+    marginBottom: 12,
+    background: open || hovered ? EXPANDED_GRADIENT : COLLAPSED_BG,
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    position: "relative",
+    boxShadow: open
+      ? "0 0 0 2px #93C5E8, 0 12px 32px rgba(59,130,180,0.12)"
+      : hovered
+      ? "0 8px 24px rgba(0,0,0,0.05)"
+      : section.pageBreakBefore
+      ? `inset 0 2px 0 0 ${CYAN}`
+      : "none",
+    transform: hovered && !open ? "translateY(-1.5px)" : "translateY(0)",
+    ...sortableStyle,
   }
+
+  // Icon box — transform/bg are state-driven, keep inline
+  const iconBoxStyle: CSSProperties = {
+    width: 42,
+    height: 42,
+    borderRadius: 12,
+    background: hovered ? "rgba(0,100,180,0.18)" : SURFACE2,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: NAVY,
+    transition: "all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+    border: "1px solid transparent",
+    transform: hovered ? "scale(1.15) rotate(-3deg)" : "scale(1) rotate(0)",
+    boxShadow: hovered ? "0 4px 12px rgba(0,229,255,0.1)" : "none",
+    flexShrink: 0,
+  }
+
+  // Expand button — bg/color/rotation are state-driven, keep inline
+  const expandBtnStyle: CSSProperties = {
+    width: 32,
+    height: 32,
+    border: "none",
+    background: open ? CYAN_DIM : hovered ? SURFACE2 : "transparent",
+    color: open ? NAVY : SUBTLE,
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "50%",
+    transform: open ? "rotate(90deg)" : "rotate(0)",
+    cursor: "pointer",
+    flexShrink: 0,
+  }
+
+  // Body: all static values — expressed via className below
 
   return (
     <div
-      ref={setNodeRef}
-      style={style}
-      className={cn(
-        "border border-border rounded-xl bg-white overflow-hidden",
-        !section.visible && "opacity-60",
-        section.pageBreakBefore && "border-t-2 border-t-primary"
-      )}
+      style={containerStyle}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      suppressHydrationWarning
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 py-2.5" suppressHydrationWarning>
-        <button
-          {...attributes}
-          {...listeners}
-          className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+      <div
+        className="flex items-center gap-3 px-4 py-[14px] cursor-pointer select-none"
+        onClick={(e) => {
+          if ((e.target as Element).closest("[data-no-toggle]")) return
+          setOpen(!open)
+        }}
+      >
+        <div style={iconBoxStyle}>{SectionIcon}</div>
+
+        <div className="flex-1 ml-1 min-w-0">
+          <div className="text-[14px] font-bold text-[#0B1B3D] tracking-[-0.015em] leading-[1.2]">
+            {localizedLabel}
+          </div>
+          <div className="flex items-center gap-[6px] text-[11px] text-[#475569] font-medium mt-[3px]">
+            {section.visible && (
+              <span className="w-[6px] h-[6px] rounded-full shrink-0 inline-block bg-[#10B981] shadow-[0_0_6px_rgba(16,185,129,0.5)]" />
+            )}
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap">
+              {descriptionText}
+            </span>
+          </div>
+        </div>
 
         <button
-          className="flex-1 flex items-center gap-2 text-left"
-          onClick={() => setOpen(!open)}
+          type="button"
+          style={expandBtnStyle}
+          onClick={(e) => {
+            e.stopPropagation()
+            setOpen(!open)
+          }}
+          aria-label={open ? t("section_collapse") : t("section_expand")}
+          aria-expanded={open}
         >
-          {open ? (
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-          ) : (
-            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
-          <span className="text-sm font-medium">{section.label}</span>
+          <ChevronRight style={{ width: 20, height: 20 }} strokeWidth={2} />
         </button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger className="inline-flex h-6 w-6 items-center justify-center rounded-md hover:bg-muted transition-colors">
-            <MoreHorizontal className="h-3.5 w-3.5" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => toggleSection(section.id)}>
-              {section.visible ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-              {section.visible ? t("section.hide") : t("section.show")}
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => togglePageBreak(section.id)}>
-              <Scissors className="h-3.5 w-3.5" />
-              {section.pageBreakBefore ? t("section.remove_page_break") : t("section.add_page_break")}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => moveSectionToColumn(section.id, "main")}>
-              {t("section.move_to_main")}
-            </DropdownMenuItem>
-            <DropdownMenuItem className="gap-2 cursor-pointer" onClick={() => moveSectionToColumn(section.id, "side")}>
-              {t("section.move_to_side")}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
       </div>
 
-      {/* Content */}
+      {/* Body */}
       {open && (
-        <div className="border-t border-border px-4 py-4">
+        <div className="editor-section-body block px-6 pt-5 pb-6 border-t border-[#F1F5F9] bg-white rounded-b-xl">
           <SectionContent section={section} />
         </div>
       )}
     </div>
   )
-}
+})
+export default SectionBlock

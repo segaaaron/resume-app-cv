@@ -53,8 +53,8 @@ export async function generateMetadata({
 const jsonLdHowTo = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: "Cómo crear un CV profesional con ReadyCV e Inteligencia Artificial",
-  description: "Guía paso a paso para crear un CV profesional usando las 7 herramientas de IA de ReadyCV",
+  name: "Cómo crear un CV profesional con ReadyCVV e Inteligencia Artificial",
+  description: "Guía paso a paso para crear un CV profesional usando las 7 herramientas de IA de ReadyCVV",
   step: [
     {
       "@type": "HowToStep",

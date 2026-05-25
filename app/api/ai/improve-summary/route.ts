@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireAuth, handleError, requireProUser } from "@/lib/controllers/shared"
+import { requireUser, handleError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
 
 const schema = z.object({
@@ -11,11 +11,8 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
-  const authResult = await requireAuth(req)
+  const authResult = await requireUser(req, { pro: true, csrf: true })
   if (authResult instanceof NextResponse) return authResult
-
-  const proCheck = await requireProUser(authResult.userId)
-  if (proCheck) return proCheck
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })

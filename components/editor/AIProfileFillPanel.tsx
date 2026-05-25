@@ -10,8 +10,8 @@ import type {
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
 import {
-  Sparkles, Loader2, ChevronDown, ChevronUp, Check,
-  ArrowRight, Briefcase, GraduationCap, FolderOpen, Heart, Globe, Info,
+  Sparkles, Loader2, ChevronDown, Check,
+  ArrowRight, Briefcase, GraduationCap, FolderOpen, Heart, Globe, Info, CheckCircle2,
 } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -43,6 +43,13 @@ function isCVEmpty(sectionData: ResumeSections): boolean {
   const education = (sectionData.education as unknown[]) ?? []
   const skills = (sectionData.skills as unknown[]) ?? []
   return !summary.trim() && workExp.length === 0 && education.length === 0 && skills.length === 0
+}
+
+function isCVComplete(sectionData: ResumeSections): boolean {
+  const summary = (sectionData.summary as string) ?? ""
+  const workExp = (sectionData.workExperience as unknown[]) ?? []
+  const skills = (sectionData.skills as unknown[]) ?? []
+  return summary.trim().length > 0 && workExp.length > 0 && skills.length > 0
 }
 
 // ── Reusable diff block ────────────────────────────────────────────────────────
@@ -123,11 +130,11 @@ function SectionUpdateBlock({
   )
 }
 
-export default function AIProfileFillPanel() {
+export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean }) {
   const t = useTranslations("editor.ai_profile_fill")
   const { sectionData, updateSectionData, save } = useResumeStore()
   const { prompt, setPrompt, loading, result, generate } = useAIProfileFill()
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(inTab)
 
   // Applied state per section (UI-only)
   const [appliedSummary, setAppliedSummary] = useState(false)
@@ -164,6 +171,7 @@ export default function AIProfileFillPanel() {
 
   // Show all sections when CV is empty or user didn't mention a specific section
   const cvIsEmpty = isCVEmpty(sectionData as ResumeSections)
+  const cvComplete = isCVComplete(sectionData as ResumeSections)
   const showAll = cvIsEmpty || !sectionIntent
   function show(section: SectionIntent) { return showAll || sectionIntent === section }
 
@@ -231,46 +239,123 @@ export default function AIProfileFillPanel() {
   )
 
   return (
-    <div className="border border-border rounded-xl overflow-hidden">
-      <button type="button" onClick={() => setExpanded(v => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-muted/30 transition-colors">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-violet-600" />
-          <span className="text-sm font-semibold">{t("title")}</span>
-          <span className="text-[10px] bg-violet-100 text-violet-700 px-1.5 py-0.5 rounded font-medium">Pro</span>
-        </div>
-        {expanded ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
-      </button>
-
-      {expanded && (
-        <div className="px-4 pb-4 space-y-3 bg-white border-t border-border">
-          <p className="text-[11px] text-muted-foreground pt-3 leading-relaxed">
-            {t("description")}
-          </p>
-
-          <div className="flex items-start gap-2 rounded-lg bg-blue-50 border border-blue-100 px-3 py-2">
-            <Info className="h-3.5 w-3.5 text-blue-500 mt-0.5 shrink-0" />
-            <p className="text-[11px] text-blue-700 leading-relaxed">
-              {t("review_hint")} <span className="font-semibold">{t("review_hint_tab")}</span> {t("review_hint_suffix")}
-            </p>
+    <>
+      <div
+        className={inTab ? undefined : "ai-assistant-card"}
+        style={inTab ? { padding: '0 0 18px' } : {
+          margin: '16px 24px 20px', borderRadius: 16, overflow: 'hidden',
+          border: '1.5px solid transparent',
+          background: 'linear-gradient(white, white) padding-box, linear-gradient(135deg, #8B5CF6, #06B6D4) border-box',
+          boxShadow: '0 4px 20px rgba(139,92,246,0.08)',
+        }}
+      >
+        {/* Header */}
+        {inTab ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '4px 0 16px', borderBottom: '1px solid rgba(139,92,246,0.12)', marginBottom: 16 }}>
+            <div className="ai-assistant-icon-anim" style={{ width: 36, height: 36, borderRadius: 10, flexShrink: 0, background: 'linear-gradient(135deg, #8B5CF6, #06B6D4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF' }}>
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>{t("title")}</span>
+                <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', background: 'linear-gradient(135deg, #8B5CF6, #06B6D4)', color: '#FFF', padding: '2px 7px', borderRadius: 20 }}>PRO</span>
+              </div>
+              <p style={{ fontSize: 11, color: '#64748B', marginTop: 2, lineHeight: 1.4 }}>{t("description")}</p>
+            </div>
           </div>
+        ) : (
+          <div onClick={() => setExpanded(v => !v)} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', cursor: 'pointer', userSelect: 'none', background: 'linear-gradient(135deg, rgba(139,92,246,0.06) 0%, rgba(6,182,212,0.06) 100%)' }}>
+            <div className="ai-assistant-icon-anim" style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg, #8B5CF6, #06B6D4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#FFF', flexShrink: 0 }}>
+              <Sparkles className="h-4 w-4" />
+            </div>
+            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 14, fontWeight: 700, color: '#1e1b4b', letterSpacing: '-0.01em' }}>{t("title")}</span>
+              <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.06em', background: 'linear-gradient(135deg, #8B5CF6, #06B6D4)', color: '#FFF', padding: '2px 7px', borderRadius: 20 }}>PRO</span>
+            </div>
+            <ChevronDown className="h-4 w-4" style={{ color: '#8B5CF6', transition: 'transform 0.3s ease', transform: expanded ? 'rotate(180deg)' : 'rotate(0deg)' }} />
+          </div>
+        )}
 
-          <Textarea
-            value={prompt}
-            onChange={e => setPrompt(e.target.value)}
-            placeholder={t("placeholder")}
-            className="text-xs min-h-[90px] resize-none"
-            maxLength={500}
-          />
-          <p className="text-[10px] text-muted-foreground">{prompt.length}/500</p>
+        {/* Content — always shown in tab, gated by expanded in sidebar */}
+        {(inTab || expanded) && (
+          <div style={{ padding: inTab ? '0' : '0 16px 18px' }}>
+            {!inTab && <p style={{ fontSize: 12, color: '#475569', lineHeight: 1.6, marginBottom: 14 }}>{t("description")}</p>}
 
-          <Button size="sm" className="w-full gap-2 bg-violet-600 hover:bg-violet-700 text-white" onClick={handleGenerate} disabled={loading || prompt.trim().length < 10}>
-            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-            {loading ? t("btn_generating") : t("btn_generate")}
-          </Button>
+            {/* CV complete banner */}
+            {cvComplete && (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(16,185,129,0.08) 0%, rgba(6,182,212,0.08) 100%)',
+                border: '1.5px solid rgba(16,185,129,0.3)',
+                borderRadius: 12, padding: '14px 16px', marginBottom: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                  <CheckCircle2 style={{ width: 20, height: 20, color: '#10B981', flexShrink: 0 }} />
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#065F46' }}>{t("cv_complete_title")}</span>
+                </div>
+                <p style={{ fontSize: 11, color: '#047857', lineHeight: 1.6, marginBottom: 10 }}>{t("cv_complete_desc")}</p>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {[t("cv_complete_summary"), t("cv_complete_skills"), t("cv_complete_experience")].map((label) => (
+                    <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: '#059669' }}>
+                      <Check style={{ width: 12, height: 12, flexShrink: 0 }} />
+                      <span style={{ fontWeight: 600 }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+                <p style={{ fontSize: 10, color: '#6B7280', marginTop: 10, lineHeight: 1.5 }}>{t("cv_complete_hint")}</p>
+              </div>
+            )}
+
+            <div style={{ position: 'relative', marginBottom: 10, opacity: cvComplete ? 0.5 : 1, pointerEvents: cvComplete ? 'none' : undefined }}>
+              <Textarea
+                value={prompt}
+                onChange={e => setPrompt(e.target.value)}
+                placeholder={t("placeholder")}
+                className="ai-main-textarea"
+                maxLength={500}
+                disabled={cvComplete}
+              />
+              <span
+                style={{
+                  position: 'absolute', bottom: 8, right: 10,
+                  fontSize: 10, fontWeight: 600, color: '#94A3B8',
+                  fontFamily: 'monospace', pointerEvents: 'none',
+                }}
+              >
+                {prompt.length}/500
+              </span>
+            </div>
+
+            {!cvComplete && (
+              <div
+                style={{
+                  display: 'flex', gap: 8, alignItems: 'flex-start',
+                  background: 'rgba(6,182,212,0.07)',
+                  border: '1px solid rgba(6,182,212,0.25)',
+                  borderRadius: 10, padding: '10px 12px', marginBottom: 14,
+                  fontSize: 11, color: '#0E7490', lineHeight: 1.5,
+                }}
+              >
+                <Info
+                  style={{ width: 14, height: 14, color: '#06B6D4', flexShrink: 0, marginTop: 1 }}
+                />
+                <span>
+                  {t("review_hint")} <span style={{ fontWeight: 600 }}>{t("review_hint_tab")}</span> {t("review_hint_suffix")}
+                </span>
+              </div>
+            )}
+
+            <button
+              type="button"
+              className="ai-generate-btn"
+              onClick={handleGenerate}
+              disabled={loading || prompt.trim().length < 10 || cvComplete}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+              {loading ? t("btn_generating") : t("btn_generate")}
+            </button>
 
           {hasAnyResult && (
-            <div className="space-y-4 pt-2 border-t border-border">
+            <div className="space-y-4" style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(139,92,246,0.15)' }}>
               <p className="text-[10px] text-muted-foreground pt-1">
                 {t("review_hint")}
               </p>
@@ -521,10 +606,11 @@ export default function AIProfileFillPanel() {
                   </div>
                 </div>
               )}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+          </div>
+        )}
+      </div>
+        )}
+      </div>
+    </>
   )
 }

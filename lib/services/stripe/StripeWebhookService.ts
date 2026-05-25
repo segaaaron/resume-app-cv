@@ -45,6 +45,16 @@ export class StripeWebhookService {
         case "invoice.payment_failed": await this.handlePaymentFailed(event); break
         case "radar.early_fraud_warning.created": await this.handleFraudWarning(event); break
         case "customer.updated": await this.handleCustomerUpdated(event); break
+        case "payment_intent.payment_failed": {
+          const pi = event.data.object as Stripe.PaymentIntent
+          this.logger.warn("StripeWebhookService: payment_intent.payment_failed", { paymentIntentId: pi.id, customerId: pi.customer })
+          break
+        }
+        case "customer.subscription.trial_will_end": {
+          const sub = event.data.object as Stripe.Subscription
+          this.logger.info("StripeWebhookService: trial_will_end", { subscriptionId: sub.id, customerId: sub.customer, trialEnd: sub.trial_end })
+          break
+        }
       }
     } catch (e) {
       if (e instanceof AppError) throw e
@@ -63,7 +73,11 @@ export class StripeWebhookService {
       ? session.subscription
       : (session.subscription as Stripe.Subscription | null)?.id ?? null
 
-    const planInterval = (session.metadata?.planInterval === "annual" ? "annual" : "monthly") as "monthly" | "annual"
+    const rawInterval = session.metadata?.planInterval
+    if (rawInterval !== "annual" && rawInterval !== "monthly") {
+      this.logger.warn("StripeWebhookService: unexpected planInterval metadata, defaulting to monthly", { rawInterval, sessionId: session.id })
+    }
+    const planInterval = (rawInterval === "annual" ? "annual" : "monthly") as "monthly" | "annual"
 
     let subscriptionEndsAt: Date | undefined
     if (subscriptionId) {
@@ -102,7 +116,10 @@ export class StripeWebhookService {
           const sub = (invoice as unknown as Record<string, unknown>).subscription
           return typeof sub === "string" ? sub : (sub as { id?: string } | null)?.id ?? null
         })()
-    if (!subscriptionId) return
+    if (!subscriptionId) {
+      this.logger.warn("handleInvoicePaid: no subscriptionId found — one-time or non-subscription invoice, skipping", { eventId: event.id, customerId })
+      return
+    }
 
     const subscription = await this.stripeClient.retrieveSubscription(subscriptionId)
     const firstItem = subscription.items.data[0]
@@ -128,7 +145,7 @@ export class StripeWebhookService {
     if (emailEnabled() && resend && result.user.email) {
       const planInterval = (result.user.planInterval ?? "monthly") as "monthly" | "annual"
       await resend.emails.send({
-        from: "READY CV <no-reply@readycvv.com>",
+        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: result.user.email,
         subject: "¡Tu suscripción Pro está activa! 🎉",
         html: subscriptionConfirmationHtml({ userName: result.user.name ?? "Usuario", userId: result.user.id, planInterval, renewalDate }),
@@ -308,7 +325,7 @@ export class StripeWebhookService {
       })
       if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
         await resend.emails.send({
-          from: "READY CV <no-reply@readycvv.com>",
+          from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
           to: process.env.ADMIN_EMAIL,
           subject: `[ACTION REQUIRED] Dispute won — user locked out: ${userEmail ?? userId}`,
           text: `Stripe dispute ${dispute.id} was WON.\n\nUser: ${userName ?? "unknown"} (${userEmail ?? "no email"})\nUser ID: ${userId}\nAmount: $${(dispute.amount / 100).toFixed(2)}\n\nThe user lost Pro access when the dispute was created. Their account is currently LOCKED OUT.\n\nTo re-activate:\n1. Go to Stripe Dashboard → create a new subscription for this customer\n2. Then run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n   This syncs the new subscription to the database and restores Pro access.\n\nAlternatively, issue a manual account credit in Stripe if no new subscription is needed.`,
@@ -338,7 +355,7 @@ export class StripeWebhookService {
     if (emailEnabled() && resend && result.user.email) {
       const firstName = result.user.name?.split(" ")[0] ?? "Usuario"
       await resend.emails.send({
-        from: "READY CV <no-reply@readycvv.com>",
+        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: result.user.email,
         subject: "Acción requerida: problema con tu pago en READY CV",
         html: paymentFailedHtml({ firstName, userId: result.user.id, invoiceUrl }),
@@ -378,7 +395,7 @@ export class StripeWebhookService {
     })
     if (warning.actionable && emailEnabled() && resend && process.env.ADMIN_EMAIL) {
       await resend.emails.send({
-        from: "READY CV <no-reply@readycvv.com>",
+        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: process.env.ADMIN_EMAIL,
         subject: `[ACTION REQUIRED] Stripe Radar fraud warning — userId: ${result.userId}`,
         text: `Stripe Radar issued an actionable early fraud warning.\n\nUser ID: ${result.userId}\nWarning ID: ${warning.id}\nFraud type: ${warning.fraud_type}\nCharge ID: ${chargeId}\n\nThe user has been auto-downgraded to UNSUBSCRIBED. Review in Stripe Radar and decide whether to dispute or refund.`,

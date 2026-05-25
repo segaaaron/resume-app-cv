@@ -1,9 +1,15 @@
 "use client"
 
+import { memo } from "react"
+import dynamic from "next/dynamic"
 import { cn } from "@/lib/utils"
 import { Lock } from "lucide-react"
-import { ResumeThumbnail } from "./thumbnails"
 import { TEMPLATES, TemplateId } from "@/types/resume"
+
+const ResumeThumbnail = dynamic(
+  () => import("./thumbnails").then((m) => ({ default: m.ResumeThumbnail })),
+  { ssr: false, loading: () => <div className="w-full h-full bg-muted/40 animate-pulse" /> }
+)
 
 interface TemplateCardProps {
   template: (typeof TEMPLATES)[number]
@@ -11,14 +17,16 @@ interface TemplateCardProps {
   isSelected: boolean
   colorScheme: string
   onSelect: (templateId: TemplateId, locked: boolean) => void
+  compact?: boolean
 }
 
-export function TemplateCard({
+export const TemplateCard = memo(function TemplateCard({
   template,
   locked,
   isSelected,
   colorScheme,
   onSelect,
+  compact = false,
 }: TemplateCardProps) {
   return (
     <button
@@ -28,7 +36,8 @@ export function TemplateCard({
       <div
         suppressHydrationWarning
         className={cn(
-          "w-12 h-16 rounded-lg border-2 overflow-hidden transition-all relative",
+          "rounded-lg border-2 overflow-hidden transition-all relative",
+          compact ? "w-9 h-12" : "w-12 h-16",
           locked
             ? "border-border opacity-50 cursor-not-allowed"
             : isSelected
@@ -57,4 +66,4 @@ export function TemplateCard({
       </span>
     </button>
   )
-}
+})

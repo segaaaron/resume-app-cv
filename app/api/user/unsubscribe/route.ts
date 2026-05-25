@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   <div class="card">
     <h1>Solicitud recibida</h1>
     <p>Hemos recibido tu solicitud para cancelar la suscripción a correos transaccionales de <strong>READY CV</strong>.</p>
-    <p>Si deseas eliminar tu cuenta o exportar tus datos, puedes hacerlo desde <a href="https://www.readycvv.com/dashboard/settings">Configuración</a>.</p>
+    <p>Si deseas eliminar tu cuenta o exportar tus datos, puedes hacerlo desde <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/dashboard/settings`}">Configuración</a>.</p>
   </div>
 </body>
 </html>`,

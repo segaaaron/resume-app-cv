@@ -8,7 +8,7 @@ import { sessionChallengeBlockedHtml, sessionChallengeBlockedText } from "@/lib/
 import { sessionForcedHtml, sessionForcedText } from "@/lib/emails/sessionForced"
 import type { IEmailService } from "@/lib/interfaces/IEmailService"
 
-const FROM = "READY CV <no-reply@readycvv.com>"
+const FROM = process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>"
 const logger = createLogger("ResendEmailService")
 
 function maskEmail(email: string): string {

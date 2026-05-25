@@ -34,7 +34,10 @@ export type ResumeSnapshot = z.infer<typeof snapshotSchema>
 export const resumePatchSchema = z.object({
   title:       z.string().min(1).max(200).optional(),
   sections:    z.array(z.any()).optional(),
-  sectionData: z.any().optional(),
+  sectionData: z.record(z.string(), z.unknown()).optional().refine(
+    (val) => !val || JSON.stringify(val).length <= 500_000,
+    { message: "sectionData too large" }
+  ),
   config: z.object({
     templateId:    z.string().optional(),
     colorScheme:   z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
@@ -129,10 +132,18 @@ export class ResumeService {
   // ── CREATE ────────────────────────────────────────────────────────────────
 
   async create(userId: string, templateId?: string) {
-    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true } })
+    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, name: true } })
     const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
 
     const defaultData = ResumeSectionsSchema.parse({})
+
+    // Pre-populate name from account profile so first CV always reflects the account owner.
+    if (user?.name?.trim()) {
+      const parts = user.name.trim().split(/\s+/)
+      const pd = defaultData.personalDetails as Record<string, unknown>
+      pd.firstName = parts[0] ?? ""
+      pd.lastName  = parts.slice(1).join(" ")
+    }
 
     // Transaction ensures count-check and create are atomic — prevents two concurrent
     // requests from both passing the limit check and creating two resumes.
@@ -158,6 +169,11 @@ export class ResumeService {
     })
 
     this.logger.info("[ResumeService] create", { userId, resumeId: resume.id })
+
+    db.auditLog.create({
+      data: { userId, action: "CREATE_RESUME", metadata: { resumeId: resume.id } },
+    }).catch(() => {})
+
     return resume
   }
 
@@ -284,15 +300,11 @@ export class ResumeService {
     })
     if (!resume) throw new AppError("not_found", 404)
 
-    const now = new Date()
+    const now = Date.now()
     const [total, last7d, last30d] = await Promise.all([
       db.cVView.count({ where: { resumeId } }),
-      db.cVView.count({
-        where: { resumeId, viewedAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) } },
-      }),
-      db.cVView.count({
-        where: { resumeId, viewedAt: { gte: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) } },
-      }),
+      db.cVView.count({ where: { resumeId, viewedAt: { gte: new Date(now - 7 * 24 * 60 * 60 * 1000) } } }),
+      db.cVView.count({ where: { resumeId, viewedAt: { gte: new Date(now - 30 * 24 * 60 * 60 * 1000) } } }),
     ])
 
     return { total, last7d, last30d, isPublic: resume.isPublic, publicSlug: resume.publicSlug }
@@ -321,16 +333,17 @@ export class ResumeService {
     snapshot: ResumeSnapshot,
     label?: string,
   ) {
-    // Pro check
-    const user = await db.user.findUnique({
-      where: { id: userId },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
-    })
+    // Pro check — run both queries in parallel (no data dependency between them)
+    const [user, resume] = await Promise.all([
+      db.user.findUnique({
+        where: { id: userId },
+        select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+      }),
+      db.resume.findFirst({ where: { id: resumeId, userId } }),
+    ])
     if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
       throw new AppError("pro_required", 403)
     }
-
-    const resume = await db.resume.findFirst({ where: { id: resumeId, userId } })
     if (!resume) throw new AppError("not_found", 404)
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

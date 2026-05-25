@@ -2,11 +2,14 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CasualTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const color = config.colorScheme
@@ -31,7 +34,7 @@ export default function CasualTemplate() {
 
         <div className="relative flex items-center gap-6 z-10">
           <div className="w-20 h-20 rounded-2xl bg-white/20 flex items-center justify-center shrink-0 border-4 border-white/30">
-              <span className="text-2xl font-black text-white">{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span className="text-2xl font-black text-white">{initials || "N"}</span>}
             </div>
           <div>
             {fullName && <h1 className="text-3xl font-black text-white tracking-tight">{fullName}</h1>}

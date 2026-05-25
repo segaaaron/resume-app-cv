@@ -1,6 +1,7 @@
 import createMiddleware from "next-intl/middleware"
 import { routing } from "./i18n/routing"
 import { type NextRequest, NextResponse } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 const intlMiddleware = createMiddleware(routing)
 
@@ -14,7 +15,7 @@ const skipPaths = [
 ]
 
 const authRoutes = ["/login", "/register"]
-const protectedRoutes = ["/dashboard", "/editor", "/cover-letter", "/resume"]
+const protectedRoutes = ["/dashboard", "/editor", "/cover-letter", "/resume", "/accept-terms"]
 
 // Auth cookie names NextAuth v5 uses (dev + prod variants)
 const AUTH_COOKIE_NAMES = [
@@ -52,7 +53,7 @@ function clearAuthCookiesAndRedirect(request: NextRequest, locale: string): Next
   return res
 }
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Redirect non-www to www in production
@@ -98,6 +99,19 @@ export function middleware(request: NextRequest) {
       sameSite: "lax",
     })
     return res
+  }
+
+  // Terms acceptance guard: Google OAuth users without termsAcceptedAt must accept first.
+  // Only enforced when termsAcceptedAt is explicitly null in the JWT (not undefined = old token).
+  if (
+    protectedRoutes.some((r) => pathnameWithoutLocale.startsWith(r)) &&
+    isAuth &&
+    !pathnameWithoutLocale.startsWith("/accept-terms")
+  ) {
+    const token = await getToken({ req: request, secret: process.env.AUTH_SECRET })
+    if (token && token.termsAcceptedAt === null) {
+      return NextResponse.redirect(new URL(`/${locale}/accept-terms`, request.url))
+    }
   }
 
   // Reset redirect counter when user reaches a protected page successfully (has cookie)

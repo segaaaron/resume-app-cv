@@ -14,7 +14,7 @@ interface Options {
 }
 
 export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role }: Options) {
-  const { config, setTemplateWithAdapt } = useResumeStore()
+  const { config, setTemplateWithAdapt, save } = useResumeStore()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null)
 
@@ -38,6 +38,9 @@ export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEnds
     if (!pendingTemplate) return
     setTemplateWithAdapt(pendingTemplate)
     setPendingTemplate(null)
+    setTimeout(() => {
+      save().catch(() => {})
+    }, 0)
   }
 
   function cancelSwitch() {

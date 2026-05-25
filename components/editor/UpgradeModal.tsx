@@ -3,8 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useLocale, useTranslations } from "next-intl"
-import { Check, Crown } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Check, Crown, Loader2 } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -62,50 +61,69 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md p-0 overflow-hidden rounded-2xl">
-        <div className="bg-gradient-to-br from-primary to-[#1D4ED8] px-8 py-8 text-white">
-          <div className="h-10 w-10 rounded-xl bg-white/20 flex items-center justify-center mb-4">
-            <Crown className="h-5 w-5 text-white" />
+      <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-md border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.10)] gap-0">
+        {/* Head — premium gradient */}
+        <div className="relative px-8 pt-8 pb-6 bg-gradient-to-br from-[#1a2e4a] via-[#1e3a5f] to-[#0f2040] text-white overflow-hidden">
+          {/* Glow orb */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#00D4FF] opacity-10 blur-3xl pointer-events-none" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-40" />
+
+          <div className="flex items-center justify-center w-12 h-12 rounded-2xl mb-4 relative bg-[rgba(0,212,255,0.18)] border-[1.5px] border-[rgba(0,212,255,0.35)]">
+            <Crown className="h-6 w-6 text-[#00D4FF]" />
           </div>
-          <h2 className="text-2xl font-bold mb-1">{t("title")}</h2>
-          <p className="text-blue-100 text-sm">{t("subtitle")}</p>
+          <h2
+            className="text-[24px] font-bold mb-1 tracking-[-0.03em]"
+            style={{ fontFamily: "var(--dash-serif,'Playfair Display',Georgia,serif)" }}
+          >
+            {t("title")}
+          </h2>
+          <p className="text-[13px] text-[rgba(255,255,255,0.65)]">{t("subtitle")}</p>
         </div>
 
-        <div className="px-8 py-6">
+        {/* Features + pricing */}
+        <div className="px-8 py-6 bg-white">
           <ul className="space-y-2 mb-6">
             {features.map((f) => (
-              <li key={f} className="flex items-center gap-2 text-sm text-foreground">
-                <Check className="h-4 w-4 shrink-0 text-primary" /> {f}
+              <li key={f} className="flex items-center gap-2.5 text-[13px] text-[#1a2e4a]">
+                <span className="flex items-center justify-center w-5 h-5 rounded-full bg-gradient-to-br from-[#00D4FF] to-[#00A8CC] shrink-0">
+                  <Check className="h-3 w-3 text-white" strokeWidth={2.5} />
+                </span>
+                {f}
               </li>
             ))}
           </ul>
 
-          <div className="flex items-baseline gap-1 mb-1">
-            <span className="text-3xl font-bold text-foreground mb-1">$15</span>
-            <span className="text-muted-foreground text-sm">{t("monthly_per")}</span>
+          <div className="rounded-xl border border-[#E2E8F0] bg-gradient-to-br from-[#F5F7FB] to-white px-4 py-3 mb-5">
+            <div className="flex items-baseline gap-1">
+              <span className="text-[32px] font-bold text-[#1a2e4a] tracking-[-0.03em]">$15</span>
+              <span className="text-[#6B7A8C] text-[13px]">{t("monthly_per")}</span>
+            </div>
+            <p className="text-[11.5px] text-[#94A3B8] mt-0.5">{t("annual_detail")}</p>
           </div>
-          <p className="text-xs text-muted-foreground mb-4">{t("annual_detail")}</p>
 
-          <Button
-            className="w-full shadow-brand-md"
-            size="lg"
+          <button
+            type="button"
             onClick={() => handleCheckout("monthly")}
             disabled={!!loading}
+            className="w-full flex items-center justify-center gap-2 py-[13px] text-[14px] font-semibold text-white rounded-xl border-none cursor-pointer bg-gradient-to-br from-[#00D4FF] to-[#00A8CC] shadow-[0_4px_16px_rgba(0,212,255,0.3)] transition-all duration-150 hover:shadow-[0_6px_20px_rgba(0,212,255,0.4)] hover:-translate-y-px disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading === "monthly" ? t("redirecting") : t("start_now")}
-          </Button>
+            {loading === "monthly" ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t("redirecting")}</>
+            ) : t("start_now")}
+          </button>
 
-          <Button
-            variant="outline"
-            className="w-full mt-2"
-            size="lg"
+          <button
+            type="button"
             onClick={() => handleCheckout("annual")}
             disabled={!!loading}
+            className="w-full flex items-center justify-center gap-2 mt-2 py-[13px] text-[13px] font-medium text-[#1a2e4a] rounded-xl border border-[#E2E8F0] bg-white cursor-pointer transition-all duration-150 hover:border-[#00D4FF] hover:text-[#00A8CC] disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            {loading === "annual" ? t("redirecting") : t("best_price")}
-          </Button>
+            {loading === "annual" ? (
+              <><Loader2 className="w-4 h-4 animate-spin" /> {t("redirecting")}</>
+            ) : t("best_price")}
+          </button>
 
-          <p className="text-center text-xs text-muted-foreground mt-4">
+          <p className="text-center text-[11.5px] text-[#94A3B8] mt-4">
             {t("footer_note")}
           </p>
         </div>

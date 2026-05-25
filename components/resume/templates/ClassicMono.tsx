@@ -1,13 +1,16 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
 const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 export default function ClassicMonoTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, volunteer } = sd
   const accent = config.colorScheme
@@ -35,7 +38,7 @@ export default function ClassicMonoTemplate() {
       <aside style={{ padding: "44px 28px", borderRight: `1px solid ${rule}` }}>
         {/* Photo */}
         <div style={{ width: 150, height: 150, borderRadius: "50%", flexShrink: 0, backgroundColor: accent + "22", border: `2px solid ${accent}`, display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 42 }}>
-          {initials || "N"}
+          {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
         </div>
 
         {/* Name & title */}

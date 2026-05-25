@@ -5,26 +5,7 @@ import { useTranslations } from "next-intl"
 export default function HeroMockupCard() {
   const t = useTranslations("hero")
   return (
-    <>
-      <style>{`
-        @keyframes float {
-          0%, 100% { transform: translateY(0px); }
-          50% { transform: translateY(-10px); }
-        }
-        @keyframes float-badge {
-          0%, 100% { transform: translateY(0px) rotate(-2deg); }
-          50% { transform: translateY(-6px) rotate(-2deg); }
-        }
-        @keyframes dash-fill {
-          from { stroke-dasharray: 0 100; }
-          to { stroke-dasharray: 94 6; }
-        }
-        .hero-card { animation: float 4s ease-in-out infinite; }
-        .hero-badge { animation: float-badge 3.5s ease-in-out infinite 0.5s; }
-        .ats-arc { animation: dash-fill 1.5s ease-out 0.3s both; }
-      `}</style>
-
-      <div className="relative hidden md:block">
+    <div className="relative hidden md:block">
         {/* Main CV card */}
         <div className="hero-card bg-white rounded-3xl shadow-2xl border border-neutral-100 overflow-hidden">
           {/* Header bar */}
@@ -78,7 +59,7 @@ export default function HeroMockupCard() {
             </div>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">ATS Score</p>
+            <p className="text-[10px] font-bold text-neutral-500 uppercase tracking-wide">{t("ats_score_label")}</p>
             <p className="text-sm font-bold text-green-600">{t("mockup_ats_compat")}</p>
             <div className="flex gap-1 mt-1">
               {["React", "TS", "Git"].map(k => (
@@ -88,6 +69,5 @@ export default function HeroMockupCard() {
           </div>
         </div>
       </div>
-    </>
   )
 }

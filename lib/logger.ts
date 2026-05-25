@@ -15,7 +15,12 @@ export function createLogger(service: string): ILogger {
       ...context,
     }
     if (err instanceof Error) entry.stack = err.stack
-    const line = JSON.stringify(entry)
+    let line: string
+    try {
+      line = JSON.stringify(entry)
+    } catch {
+      line = JSON.stringify({ timestamp: entry.timestamp, level, service, message, error: "non-serializable context" })
+    }
     if (level === "info")  console.log(line)
     if (level === "warn")  console.warn(line)
     if (level === "error") console.error(line)

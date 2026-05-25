@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { FileText } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
 
 export default function Footer() {
@@ -19,44 +18,75 @@ export default function Footer() {
   ]
 
   return (
-    <footer className="bg-neutral-50 border-t border-neutral-200">
-      <div className="max-w-6xl mx-auto px-4 py-12">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-12">
-          <div className="col-span-2 md:col-span-1">
-            <Link href={`/${locale}`} className="flex items-center gap-2 font-bold text-foreground mb-3">
-              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                <FileText className="h-4 w-4 text-white" />
-              </div>
-              ReadyCV
+    <footer className="bg-[#0d1b2e]">
+      <div className="max-w-6xl mx-auto px-6 pt-12 pb-0">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pb-7">
+
+          {/* Brand */}
+          <div>
+            <Link href={`/${locale}`} className="flex items-center gap-2 mb-3 no-underline">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.svg"
+                alt="ReadyCVV"
+                width={26}
+                height={26}
+                className="rounded-lg shrink-0"
+                style={{ boxShadow: "0 2px 10px rgba(0,212,255,0.3)" }}
+              />
+              <span className="text-white text-[15px] font-extrabold tracking-[-0.01em]">
+                ReadyCVV
+              </span>
             </Link>
-            <p className="text-sm text-muted-foreground leading-relaxed">{t("tagline")}</p>
           </div>
 
+          {/* Product */}
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-4">{t("product")}</h4>
-            <ul className="space-y-3">
+            <h4 className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-[.1em] mb-3.5">
+              {t("product")}
+            </h4>
+            <ul className="space-y-2.5 list-none p-0 m-0">
               {productLinks.map(({ label, href }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{label}</Link>
+                  <Link
+                    href={href}
+                    className="text-[#94A3B8] text-[13px] no-underline hover:!text-white transition-colors duration-200"
+                  >
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
 
+          {/* Legal */}
           <div>
-            <h4 className="text-sm font-semibold text-foreground mb-4">{t("legal")}</h4>
-            <ul className="space-y-3">
+            <h4 className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-[.1em] mb-3.5">
+              {t("legal")}
+            </h4>
+            <ul className="space-y-2.5 list-none p-0 m-0">
               {legalLinks.map(({ label, href }) => (
                 <li key={href}>
-                  <Link href={href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">{label}</Link>
+                  <Link
+                    href={href}
+                    className="text-[#94A3B8] text-[13px] no-underline hover:!text-white transition-colors duration-200"
+                  >
+                    {label}
+                  </Link>
                 </li>
               ))}
             </ul>
           </div>
         </div>
 
-        <div className="border-t border-neutral-200 pt-6">
-          <p className="text-xs text-muted-foreground">{t("copyright", { year: new Date().getFullYear() })}</p>
+        {/* Bottom bar */}
+        <div
+          className="flex items-center justify-between py-3.5"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.06)" }}
+        >
+          <p className="text-[#94A3B8] text-xs">
+            {t("copyright", { year: new Date().getFullYear() })}
+          </p>
         </div>
       </div>
     </footer>

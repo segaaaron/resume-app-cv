@@ -1,3 +1,4 @@
+import { useMemo } from "react"
 import { create } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import { devtools } from "zustand/middleware"
@@ -109,7 +110,7 @@ const defaultSectionData: ResumeSections = ResumeSectionsSchema.parse({})
 /** Hook for templates: returns sectionData sorted chronologically */
 export function useTemplateSectionData() {
   const raw = useResumeStore((s) => s.sectionData)
-  return applySectionOrder(raw)
+  return useMemo(() => applySectionOrder(raw), [raw])
 }
 
 export const useResumeStore = create<ResumeState & ResumeActions>()(
@@ -210,12 +211,16 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
           : "es"
         fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
           .then(async (r) => {
-            if (!r.ok && r.status !== 503) {
-              const body = await r.json().catch(() => ({})) as { error?: string }
-              if (body.error) toast.error(body.error)
+            if (!r.ok) {
+              if (r.status === 503) {
+                console.warn("[thumbnail] PDF microservice unavailable (503)")
+              } else {
+                const body = await r.json().catch(() => ({})) as { error?: string }
+                if (body.error) toast.error(body.error)
+              }
             }
           })
-          .catch(() => {})
+          .catch((err) => { console.warn("[thumbnail] network error:", err) })
       },
 
       save: async (opts) => {
@@ -252,6 +257,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         }
       },
     })),
-    { name: "resume-store" }
+    // M4: disable devtools serialization overhead in production
+    { name: "resume-store", enabled: process.env.NODE_ENV === "development" }
   )
 )

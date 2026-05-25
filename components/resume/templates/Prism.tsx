@@ -7,6 +7,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
   Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane, Coffee,
@@ -27,7 +28,9 @@ const HOBBY_ICONS = [Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane
    MAIN COMPONENT
 ══════════════════════════════════════════════════════════════════════════════ */
 export default function PrismTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
@@ -64,7 +67,7 @@ export default function PrismTemplate() {
             overflow: "hidden",
             display: "flex", alignItems: "center", justifyContent: "center",
           }}>
-            <span style={{ color: accent, fontWeight: 900, fontSize: 28 }}>{initials || "N"}</span>
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: accent, fontWeight: 900, fontSize: 28 }}>{initials || "N"}</span>}
           </div>
         </div>
 

@@ -6,11 +6,14 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function GlassTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, hobbies } = sectionData
   const color = config.colorScheme
@@ -33,7 +36,7 @@ export default function GlassTemplate() {
       >
         <div className="flex items-center gap-6">
           <div className="w-20 h-20 rounded-2xl flex items-center justify-center border-2 border-white/50 shrink-0 text-2xl font-black" style={{ background: `${color}25`, color }}>
-              {initials || "N"}
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
             </div>
           <div className="flex-1">
             {fullName && <h1 className="text-2xl font-black text-gray-900 tracking-tight">{fullName}</h1>}

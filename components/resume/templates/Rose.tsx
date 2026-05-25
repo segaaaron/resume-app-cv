@@ -2,11 +2,14 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function RoseTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -56,7 +59,7 @@ export default function RoseTemplate() {
 
   const PhotoPlaceholder = () => (
     <div style={{ width: 90, height: 90, borderRadius: "50%", backgroundColor: accent + "33", margin: "0 auto 14px", display: "flex", alignItems: "center", justifyContent: "center", color: accent, fontWeight: 800, fontSize: 28 }}>
-      {initials || "N"}
+      {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
     </div>
   )
 

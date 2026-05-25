@@ -2,11 +2,14 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CobaltTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -52,7 +55,7 @@ export default function CobaltTemplate() {
               const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
               return (
                 <div style={{ width: 95, height: 95, borderRadius: "50%", border: `3px solid ${accent}`, backgroundColor: "#0a1a2e", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                  <span style={{ color: accent, fontWeight: 900, fontSize: 28 }}>{initials || "N"}</span>
+                  {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: accent, fontWeight: 900, fontSize: 28 }}>{initials || "N"}</span>}
                 </div>
               )
             })()}

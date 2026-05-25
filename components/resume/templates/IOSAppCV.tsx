@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -15,7 +16,9 @@ function SL({ children }: { children: React.ReactNode }) {
 const rowColors = ["#34c759", "#bf5af2", "#0a84ff", "#ff9f0a", "#ff3b30", "#5ac8fa"]
 
 export default function IOSAppCVTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
   const accent = config.colorScheme
@@ -67,7 +70,7 @@ export default function IOSAppCVTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 68, height: 68, borderRadius: "50%", background: blue, flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: "#fff", fontWeight: 800, fontSize: 22 }}>{initials || "N"}</span>}
             </div>
           )
         })()}

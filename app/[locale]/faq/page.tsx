@@ -17,7 +17,7 @@ export async function generateMetadata({
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: "faq" })
   return {
-    title: `${t("page_title")} — ReadyCV`,
+    title: `${t("page_title")} — ReadyCVV`,
     description: t("page_subtitle"),
     alternates: {
       canonical: `https://readycvv.com/${locale}/faq`,

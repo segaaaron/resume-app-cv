@@ -90,3 +90,9 @@ docs/
 # ── Project-specific ignores ──────────────────────────────────────────────────
 CLAUDE.md
 .env.example
+
+# ── AI tooling artifacts ──────────────────────────────────────────────────────
+ruvector.db
+.swarm/
+.claude-flow/
+memory/security_audit.md

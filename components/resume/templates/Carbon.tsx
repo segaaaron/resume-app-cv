@@ -6,11 +6,14 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, GitFork, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
 export default function CarbonTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, hobbies } = sectionData
   const color = config.colorScheme
@@ -29,7 +32,7 @@ export default function CarbonTemplate() {
         {/* Avatar */}
         <div className="flex justify-center">
           <div className="w-20 h-20 rounded-full flex items-center justify-center font-extrabold text-xl border-2" style={{ borderColor: color, color, backgroundColor: color + "20" }}>
-            {initials || "N"}
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
           </div>
         </div>
 

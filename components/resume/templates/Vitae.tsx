@@ -10,6 +10,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
   Music, Camera, Palette, Gamepad2, BookOpen, Dumbbell, Plane, Coffee,
@@ -26,7 +27,9 @@ const LANG_W: Record<string, string> = {
 }
 
 export default function VitaeTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
@@ -71,7 +74,7 @@ export default function VitaeTemplate() {
               display: "flex", alignItems: "center", justifyContent: "center",
               color: accent, fontWeight: 800, fontSize: "28px",
             }}>
-              {initials || "N"}
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
             </div>
           </div>
         </div>

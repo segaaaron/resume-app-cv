@@ -2,13 +2,16 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 const SKILL_W: Record<string, number> = { beginner: 22, intermediate: 50, advanced: 75, expert: 100 }
 const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 export default function TokyoTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
   const accent = config.colorScheme
@@ -82,7 +85,7 @@ export default function TokyoTemplate() {
                   backgroundColor: `${accent}20`,
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
-                  <span style={{ color: accent, fontWeight: 900, fontSize: 22 }}>{initials || "N"}</span>
+                  {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ color: accent, fontWeight: 900, fontSize: 22 }}>{initials || "N"}</span>}
                 </div>
               )
             })()}

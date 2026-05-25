@@ -2,10 +2,13 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
 export default function MinimalTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -62,7 +65,7 @@ export default function MinimalTemplate() {
           const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
           return (
             <div style={{ width: 80, height: 80, borderRadius: "50%", flexShrink: 0, backgroundColor: "#e8e8e8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-              <span style={{ fontWeight: 900, fontSize: 24, color: navy }}>{initials || "N"}</span>
+              {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span style={{ fontWeight: 900, fontSize: 24, color: navy }}>{initials || "N"}</span>}
             </div>
           )
         })()}

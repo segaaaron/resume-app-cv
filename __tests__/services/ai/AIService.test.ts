@@ -11,6 +11,7 @@ vi.mock("@/lib/ai-client", () => ({
   AI_TEMPERATURE_CREATIVE: 0.7,
   AI_TEMPERATURE_BALANCED: 0.5,
   checkRateLimit: vi.fn().mockResolvedValue(true),
+  checkAndIncrementRateLimit: vi.fn().mockResolvedValue(true),
   recordRateLimitUsage: vi.fn(),
   logAIUsage: vi.fn(),
   buildResumeContext: vi.fn().mockReturnValue("Nombre: Juan Garcia\nPuesto objetivo: Developer"),
@@ -70,27 +71,36 @@ describe("AIService", () => {
   beforeEach(async () => {
     logger = makeMockLogger()
     vi.clearAllMocks()
-    // Reset checkRateLimit to allowed by default
-    const { checkRateLimit } = vi.mocked(await import("@/lib/ai-client"))
-    checkRateLimit.mockResolvedValue(true)
+    const { checkAndIncrementRateLimit } = vi.mocked(await import("@/lib/ai-client"))
+    checkAndIncrementRateLimit.mockResolvedValue(true)
   })
 
   // ── improveBullet ──────────────────────────────────────────────────────────
 
   describe("improveBullet", () => {
-    it("returns versions on happy path", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify({ versions: ["v1", "v2", "v3"] }))
+    it("returns bullets on happy path", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({ bullets: ["• bullet1", "• bullet2", "• bullet3"] }))
       const service = new AIService(aiClient, logger)
 
       const result = await service.improveBullet("user-1", { text: "Managed a team and delivered projects on time" })
 
-      expect(result.versions).toEqual(["v1", "v2", "v3"])
+      expect(result.bullets).toEqual(["• bullet1", "• bullet2", "• bullet3"])
       expect(aiClient.chat).toHaveBeenCalledOnce()
     })
 
+    it("slices to 10 bullets maximum", async () => {
+      const elevenBullets = Array.from({ length: 11 }, (_, i) => `• Bullet ${i + 1}`)
+      const aiClient = makeMockAIClient(JSON.stringify({ bullets: elevenBullets }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: "Rich description with many responsibilities" })
+
+      expect(result.bullets).toHaveLength(10)
+    })
+
     it("throws AppError 429 when rate limited", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValueOnce(false)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
@@ -100,8 +110,8 @@ describe("AIService", () => {
       ).rejects.toMatchObject({ code: "rate_limit_exceeded", status: 429 })
     })
 
-    it("throws AppError 422 when AI returns off-topic empty versions", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify({ versions: [] }))
+    it("throws AppError 422 when AI returns off-topic empty bullets", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({ bullets: [] }))
       const service = new AIService(aiClient, logger)
 
       await expect(
@@ -137,8 +147,8 @@ describe("AIService", () => {
     })
 
     it("throws AppError 429 when rate limited", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValueOnce(false)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
@@ -203,8 +213,8 @@ describe("AIService", () => {
     })
 
     it("throws AppError 429 when rate limited", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValueOnce(false)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
@@ -245,8 +255,8 @@ describe("AIService", () => {
     })
 
     it("throws AppError 429 when rate limited", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValueOnce(false)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
@@ -280,16 +290,16 @@ describe("AIService", () => {
 
   describe("AIService.generateSummary", () => {
     it("rate limit exceeded → throws AppError", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockRejectedValue(new AppError("rate_limit", 429))
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockRejectedValue(new AppError("rate_limit", 429))
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
       await expect(service.generateSummary("u1", {})).rejects.toMatchObject({ status: 429 })
     })
 
     it("happy path → returns versions array", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
       const aiClient = makeMockAIClient(JSON.stringify({ versions: ["v1", "v2"] }))
       const service = new AIService(aiClient, logger)
       const result = await service.generateSummary("u1", {})
@@ -301,8 +311,8 @@ describe("AIService", () => {
 
   describe("AIService.reviewCV", () => {
     it("off-topic response → throws AppError off_topic", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
       const aiClient = makeMockAIClient(JSON.stringify({ summary: "", strengths: [], improvements: [], answer: "off_topic" }))
       const service = new AIService(aiClient, logger)
       await expect(service.reviewCV("u1", { sectionData: {}, question: "test" })).rejects.toMatchObject({ code: "off_topic" })
@@ -313,8 +323,8 @@ describe("AIService", () => {
 
   describe("AIService.suggestSkills", () => {
     it("happy path → returns skills array", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
       const aiClient = makeMockAIClient(JSON.stringify({ skills: [{ name: "TypeScript", level: "Advanced" }] }))
       const service = new AIService(aiClient, logger)
       const result = await service.suggestSkills("u1", { jobTitle: "Engineer" })
@@ -326,8 +336,8 @@ describe("AIService", () => {
 
   describe("AIService JSON parse failure", () => {
     it("malformed OpenAI response → throws AppError parse_error 500", async () => {
-      const { checkRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
       const aiClient = makeMockAIClient("not json {{")
       const service = new AIService(aiClient, logger)
       await expect(service.improveBullet("u1", { text: "Did things" })).rejects.toMatchObject({ code: "parse_error", status: 500 })

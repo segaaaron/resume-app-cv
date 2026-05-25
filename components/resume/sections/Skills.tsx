@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { SkillItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, X, Sparkles, Loader2 } from "lucide-react"
 import { nanoid } from "nanoid"
@@ -14,7 +14,10 @@ import { apiFetch } from "@/lib/apiFetch"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData, config } = useResumeStore()
+  const locale = useLocale()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  )
   const skills = sectionData.skills
   const [suggesting, setSuggesting] = useState(false)
 
@@ -51,7 +54,7 @@ export default function SkillsSection() {
       const res = await apiFetch("/api/ai/suggest-skills", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobTitle, existingSkills, language: config.language }),
+        body: JSON.stringify({ jobTitle, existingSkills, language: locale }),
       })
 
       if (res.status === 429) {
@@ -93,14 +96,22 @@ export default function SkillsSection() {
     <div className="space-y-2">
       {skills.map((skill) => (
         <div key={skill.id} className="flex items-center gap-2">
-          <Input
+          <input
             value={skill.name}
             onChange={(e) => update(skill.id, "name", e.target.value)}
             placeholder={t("skills.placeholder")}
-            className="h-8 text-xs flex-1"
+            className="flex-1 outline-none text-[12.5px] font-medium transition-all duration-200"
+            style={{
+              height: 40, paddingLeft: 14, paddingRight: 14, borderRadius: 20,
+              background: "linear-gradient(135deg,rgba(240,248,255,0.85) 0%,rgba(232,244,251,0.65) 100%)",
+              border: "1.5px solid rgba(0,212,255,0.2)",
+              boxShadow: "inset 0 1px 3px rgba(0,0,0,0.03)", color: "#1a2e4a",
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.6)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0,212,255,0.1)" }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)"; e.currentTarget.style.boxShadow = "inset 0 1px 3px rgba(0,0,0,0.03)" }}
           />
           <Select value={skill.level} onValueChange={(v) => update(skill.id, "level", v ?? "intermediate")}>
-            <SelectTrigger className="h-8 w-32 text-xs">
+            <SelectTrigger className="h-10 w-32 text-xs" style={{ borderRadius: 20 }}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -116,21 +127,9 @@ export default function SkillsSection() {
       ))}
 
       <div className="flex gap-2">
-        <Button variant="outline" size="sm" className="flex-1 gap-1.5" onClick={add}>
+        <button onClick={add} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors duration-200 hover:border-[#00D4FF] hover:text-[#1a2e4a] hover:bg-[rgba(0,212,255,0.04)]" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
           <Plus className="h-3.5 w-3.5" /> {t("add_skill")}
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex-1 gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
-          onClick={suggestSkills}
-          disabled={suggesting}
-        >
-          {suggesting
-            ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("suggest_skills_loading")}</>
-            : <><Sparkles className="h-3.5 w-3.5" /> {t("suggest_skills")}</>
-          }
-        </Button>
+        </button>
       </div>
     </div>
   )

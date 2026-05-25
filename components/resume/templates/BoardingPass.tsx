@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 
 function Ticket({ children }: { children: React.ReactNode }) {
   return (
@@ -28,7 +29,9 @@ function Field({ k, v, dim }: { k: string; v: string; dim: string }) {
 }
 
 export default function BoardingPassTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, workExperience, education, skills, languages, certifications } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id

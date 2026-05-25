@@ -1,10 +1,13 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 export default function SketchbookIllustratorTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sd = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
 
@@ -140,7 +143,7 @@ export default function SketchbookIllustratorTemplate() {
                   boxShadow: "4px 6px 0 rgba(0,0,0,0.1)",
                   WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
                 }}>
-                  {initials || "N"}
+                  {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : (initials || "N")}
                 </div>
               )
             })()}

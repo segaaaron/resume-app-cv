@@ -2,10 +2,13 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function CircularTemplate() {
-  const { config, sections } = useResumeStore()
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections }))
+  )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sectionData
   const color = config.colorScheme
@@ -28,7 +31,7 @@ export default function CircularTemplate() {
             className="w-24 h-24 rounded-full border-4 border-white/30 flex items-center justify-center shrink-0"
             style={{ backgroundColor: "rgba(255,255,255,0.15)" }}
           >
-            <span className="text-3xl font-extrabold">{initials || "N"}</span>
+            {config.photoUrl ? <img src={config.photoUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: `center ${config.photoPosition ?? 15}%`, borderRadius: "inherit" }} /> : <span className="text-3xl font-extrabold">{initials || "N"}</span>}
           </div>
           <div>
             {fullName && <h1 className="text-3xl font-extrabold mb-0.5 tracking-tight">{fullName}</h1>}

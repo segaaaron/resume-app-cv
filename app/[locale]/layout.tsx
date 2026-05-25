@@ -9,11 +9,11 @@ const BASE_URL = "https://readycvv.com"
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
-    template: "%s | ReadyCV",
+    default: "ReadyCVV — AI Resume Builder | Beat ATS, 111+ Templates",
+    template: "%s | ReadyCVV",
   },
   description:
-    "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. Try ReadyCV Pro from $15/month.",
+    "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. Try ReadyCVV Pro from $15/month.",
   keywords: [
     // High-intent EN (KD 50-65)
     "ai resume builder",
@@ -33,9 +33,9 @@ export const metadata: Metadata = {
     "plantillas cv ats compatible",
     "carta de presentacion con inteligencia artificial",
   ],
-  authors: [{ name: "ReadyCV", url: BASE_URL }],
-  creator: "ReadyCV",
-  publisher: "ReadyCV",
+  authors: [{ name: "ReadyCVV", url: BASE_URL }],
+  creator: "ReadyCVV",
+  publisher: "ReadyCVV",
   robots: {
     index: true,
     follow: true,
@@ -60,8 +60,8 @@ export const metadata: Metadata = {
     locale: "es_ES",
     alternateLocale: ["en_US"],
     url: BASE_URL,
-    siteName: "ReadyCV",
-    title: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
+    siteName: "ReadyCVV",
+    title: "ReadyCVV — AI Resume Builder | Beat ATS, 111+ Templates",
     description:
       "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. From $15/month.",
     images: [
@@ -69,13 +69,13 @@ export const metadata: Metadata = {
         url: `${BASE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: "ReadyCV — AI Resume Builder with 111+ Professional Templates",
+        alt: "ReadyCVV — AI Resume Builder with 111+ Professional Templates",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReadyCV — AI Resume Builder | Beat ATS, 111+ Templates",
+    title: "ReadyCVV — AI Resume Builder | Beat ATS, 111+ Templates",
     description:
       "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker.",
     images: [`${BASE_URL}/og-image.png`],

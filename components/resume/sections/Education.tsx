@@ -3,20 +3,23 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type { EducationItem } from "@/types/resume"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
-import { Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react"
+import { Label } from "@/components/ui/label"
+import { Plus, Trash2, ChevronDown, ChevronRight, GraduationCap, Award, BookOpen, MapPin } from "lucide-react"
 import { nanoid } from "nanoid"
+import { PField, DateField, PTextarea } from "./shared"
 
 export default function EducationSection() {
   const t = useTranslations("editor.sections_form")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  )
   const items = sectionData.education
   const [openId, setOpenId] = useState<string | null>(null)
-  useEffect(() => { if (items[0]?.id) setOpenId(items[0].id) }, [])
+  useEffect(() => { if (items[0]?.id) setOpenId(items[0].id) }, [items[0]?.id])
 
   function add() {
     const newItem: EducationItem = {
@@ -39,10 +42,9 @@ export default function EducationSection() {
   return (
     <div className="space-y-2">
       {items.map((item) => (
-        <div key={item.id} className="border border-border rounded-lg overflow-hidden">
+        <div key={item.id} className="border border-border rounded-lg bg-white">
           <div
-            role="button"
-            tabIndex={0}
+            role="button" tabIndex={0}
             className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
             onClick={() => setOpenId(openId === item.id ? null : item.id)}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") setOpenId(openId === item.id ? null : item.id) }}
@@ -60,35 +62,26 @@ export default function EducationSection() {
 
           {openId === item.id && (
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
-              {([
-                { labelKey: "education.institution", field: "institution" as const },
-                { labelKey: "education.degree", field: "degree" as const },
-                { labelKey: "education.field_of_study", field: "fieldOfStudy" as const },
-                { labelKey: "education.city", field: "city" as const },
-                { labelKey: "education.start_date", field: "startDate" as const },
-              ] as const).map(({ labelKey, field }) => (
-                <div key={field}>
-                  <Label className="text-xs mb-1 block text-muted-foreground">{t(labelKey)}</Label>
-                  <Input value={item[field] as string} onChange={(e) => update(item.id, field, e.target.value)} className="h-8 text-xs" />
-                </div>
-              ))}
+              <PField label={t("education.institution")} value={item.institution} onChange={(v) => update(item.id, "institution", v)} icon={GraduationCap} span2 />
+              <PField label={t("education.degree")}       value={item.degree}      onChange={(v) => update(item.id, "degree", v)}      icon={Award} />
+              <PField label={t("education.field_of_study")} value={item.fieldOfStudy} onChange={(v) => update(item.id, "fieldOfStudy", v)} icon={BookOpen} />
+              <PField label={t("education.city")}         value={item.city}        onChange={(v) => update(item.id, "city", v)}        icon={MapPin} />
+              <DateField label={t("education.start_date")} value={item.startDate}  onChange={(v) => update(item.id, "startDate", v)} />
               {!item.currentlyStudying && (
-                <div>
-                  <Label className="text-xs mb-1 block text-muted-foreground">{t("education.end_date")}</Label>
-                  <Input value={item.endDate} onChange={(e) => update(item.id, "endDate", e.target.value)} className="h-8 text-xs" />
-                </div>
+                <DateField label={t("education.end_date")} value={item.endDate}    onChange={(v) => update(item.id, "endDate", v)} />
               )}
               <div className="col-span-2 flex items-center gap-2">
                 <Switch id={`studying-${item.id}`} checked={item.currentlyStudying} onCheckedChange={(v) => update(item.id, "currentlyStudying", v)} />
                 <Label htmlFor={`studying-${item.id}`} className="text-xs">{t("currently_studying")}</Label>
               </div>
+              <PTextarea label={t("description")} value={item.description ?? ""} onChange={(v) => update(item.id, "description", v)} />
             </div>
           )}
         </div>
       ))}
-      <Button variant="outline" size="sm" className="w-full gap-1.5" onClick={add}>
+      <button onClick={add} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors duration-200 hover:border-[#00D4FF] hover:text-[#1a2e4a] hover:bg-[rgba(0,212,255,0.04)]" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
         <Plus className="h-3.5 w-3.5" /> {t("add_education")}
-      </Button>
+      </button>
     </div>
   )
 }

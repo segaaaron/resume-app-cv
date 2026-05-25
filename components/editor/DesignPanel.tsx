@@ -3,74 +3,140 @@
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { FONT_OPTIONS } from "@/types/resume"
-import { Label } from "@/components/ui/label"
-import { Slider } from "@/components/ui/slider"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
 import { useRef, useState } from "react"
-import { Camera, Trash2, Upload } from "lucide-react"
+import { useShallow } from "zustand/react/shallow"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
 
-const COLOR_PALETTES: { labelKey: string; colors: { hex: string; nameKey: string }[] }[] = [
+const COLOR_PALETTES: { labelKey: string; svgPath: string; colors: { hex: string; nameKey: string }[] }[] = [
   {
     labelKey: "design.palette_professional",
+    svgPath: "M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM4 5h16a4 4 0 014 4v10a4 4 0 01-4 4H4a4 4 0 01-4-4V9a4 4 0 014-4z",
     colors: [
-      { hex: "#2a72d7", nameKey: "design.color_blue" },
-      { hex: "#1e3a5f", nameKey: "design.color_navy" },
-      { hex: "#0891b2", nameKey: "design.color_cyan" },
-      { hex: "#0f766e", nameKey: "design.color_teal" },
-      { hex: "#1d4ed8", nameKey: "design.color_indigo" },
-      { hex: "#475569", nameKey: "design.color_slate" },
+      { hex: "#0B5394", nameKey: "design.color_navy" },
+      { hex: "#1E3A5F", nameKey: "design.color_slate" },
+      { hex: "#2D3E50", nameKey: "design.color_charcoal" },
     ],
   },
   {
     labelKey: "design.palette_vibrant",
+    svgPath: "M13 10V3L4 14h7v7l9-11h-7z",
     colors: [
-      { hex: "#9333ea", nameKey: "design.color_purple" },
-      { hex: "#ec4899", nameKey: "design.color_pink" },
-      { hex: "#dc2626", nameKey: "design.color_red" },
-      { hex: "#ea580c", nameKey: "design.color_orange" },
-      { hex: "#ca8a04", nameKey: "design.color_amber" },
-      { hex: "#16a34a", nameKey: "design.color_green" },
+      { hex: "#FF6B6B", nameKey: "design.color_red" },
+      { hex: "#4ECDC4", nameKey: "design.color_teal" },
+      { hex: "#FFD93D", nameKey: "design.color_gold" },
     ],
   },
   {
     labelKey: "design.palette_dark",
+    svgPath: "M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z",
     colors: [
-      { hex: "#111827", nameKey: "design.color_black" },
-      { hex: "#1d1d20", nameKey: "design.color_charcoal" },
-      { hex: "#1e293b", nameKey: "design.color_slate_dark" },
-      { hex: "#312e81", nameKey: "design.color_indigo_dark" },
-      { hex: "#4a1942", nameKey: "design.color_plum" },
-      { hex: "#292524", nameKey: "design.color_stone" },
+      { hex: "#0D0D0D", nameKey: "design.color_black" },
+      { hex: "#1a1a2e", nameKey: "design.color_indigo_dark" },
+      { hex: "#2C3E50", nameKey: "design.color_charcoal" },
     ],
   },
   {
     labelKey: "design.palette_soft",
+    svgPath: "M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z",
     colors: [
-      { hex: "#6366f1", nameKey: "design.color_violet" },
-      { hex: "#8b5cf6", nameKey: "design.color_lilac" },
-      { hex: "#06b6d4", nameKey: "design.color_sky" },
-      { hex: "#10b981", nameKey: "design.color_emerald" },
-      { hex: "#f59e0b", nameKey: "design.color_gold" },
-      { hex: "#64748b", nameKey: "design.color_gray" },
+      { hex: "#D4A5A5", nameKey: "design.color_pink" },
+      { hex: "#A8D8EA", nameKey: "design.color_sky" },
+      { hex: "#C4B5FD", nameKey: "design.color_lilac" },
     ],
   },
 ]
 
+/* ── tiny SVG icons ─────────────────────────────────────────── */
+function IconCamera({ size = 18, color = "#fff" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+      <circle cx="12" cy="13" r="4" />
+    </svg>
+  )
+}
+function IconTrash({ size = 14, color = "#F87171" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14H6L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4h6v2" />
+    </svg>
+  )
+}
+function IconUser({ color = "#4A6FA5" }: { color?: string }) {
+  return (
+    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  )
+}
+function IconPalette({ size = 13, color = "#00D4FF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="13.5" cy="6.5" r=".5" fill={color} />
+      <circle cx="17.5" cy="10.5" r=".5" fill={color} />
+      <circle cx="8.5" cy="7.5" r=".5" fill={color} />
+      <circle cx="6.5" cy="12.5" r=".5" fill={color} />
+      <path d="M12 2C6.5 2 2 6.5 2 12a10 10 0 0010 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
+    </svg>
+  )
+}
+function IconType({ size = 13, color = "#00D4FF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="4 7 4 4 20 4 20 7" />
+      <line x1="9" y1="20" x2="15" y2="20" />
+      <line x1="12" y1="4" x2="12" y2="20" />
+    </svg>
+  )
+}
+function IconSpacing({ size = 13, color = "#00D4FF" }: { size?: number; color?: string }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="21" y1="10" x2="3" y2="10" />
+      <line x1="21" y1="6" x2="3" y2="6" />
+      <line x1="21" y1="14" x2="3" y2="14" />
+      <line x1="21" y1="18" x2="3" y2="18" />
+    </svg>
+  )
+}
+
+/* slider track gradient helper */
+function sliderStyle(value: number, min: number, max: number): React.CSSProperties {
+  const pct = ((value - min) / (max - min)) * 100
+  return {
+    "--val": `${pct}%`,
+  } as React.CSSProperties
+}
+
 export default function DesignPanel() {
   const t = useTranslations("editor")
-  const { config, resumeId, setColor, setFont, setFontSize, setSpacing, setPhoto, setPhotoPosition } = useResumeStore()
+  const { config, resumeId, setColor, setFont, setFontSize, setSpacing, setPhoto, setPhotoPosition } = useResumeStore(
+    useShallow((s) => ({
+      config: s.config,
+      resumeId: s.resumeId,
+      setColor: s.setColor,
+      setFont: s.setFont,
+      setFontSize: s.setFontSize,
+      setSpacing: s.setSpacing,
+      setPhoto: s.setPhoto,
+      setPhotoPosition: s.setPhotoPosition,
+    }))
+  )
   const colorInputRef = useRef<HTMLInputElement>(null)
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const [hexInput, setHexInput] = useState("")
+  const [hexInvalid, setHexInvalid] = useState(false)
 
   async function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     if (!file || !resumeId) return
-
     setUploadingPhoto(true)
     try {
       let uploadTarget: Blob = file
@@ -78,9 +144,7 @@ export default function DesignPanel() {
         const compressed = await compressImage(file)
         const r = await fetch(compressed)
         uploadTarget = await r.blob()
-      } catch {
-        // fallback to original if compression fails
-      }
+      } catch { /* fallback to original */ }
       const form = new FormData()
       form.append("photo", uploadTarget, "photo.jpg")
       const res = await apiFetch(`/api/resumes/${resumeId}/photo`, { method: "POST", body: form })
@@ -107,198 +171,262 @@ export default function DesignPanel() {
     }
   }
 
-  return (
-    <div className="divide-y divide-border">
+  const photoPos = config.photoPosition ?? 15
 
-      {/* ── Foto de perfil ─────────────────────────────────── */}
-      <section className="px-5 py-5 space-y-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+  return (
+    <div className="flex flex-col gap-6 px-5 pt-2 pb-7">
+
+      {/* ── Foto de Perfil ──────────────────────────────────────── */}
+      <section>
+        <div className="dp-section-label">
+          <IconCamera size={13} color="#00D4FF" />
           {t("design.photo_section")}
-        </h3>
-        <div className="flex items-center gap-4">
-          <div
-            className="shrink-0 rounded-full overflow-hidden border-2 border-border flex items-center justify-center bg-muted cursor-pointer hover:border-primary/50 transition-colors"
-            style={{ width: 80, height: 80 }}
-            onClick={() => photoInputRef.current?.click()}
-          >
-            {config.photoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={config.photoUrl} alt="" className="w-full h-full object-cover" style={{ objectPosition: `center ${config.photoPosition ?? 15}%` }} />
-            ) : (
-              <Camera className="h-8 w-8 text-muted-foreground/60" />
-            )}
+        </div>
+
+        {/* Avatar */}
+        <div className="flex flex-col items-center gap-3.5">
+          <div className="relative mx-auto">
+            {/* Circle photo */}
+            <div
+              onClick={() => !uploadingPhoto && photoInputRef.current?.click()}
+              className="dp-avatar w-[116px] h-[116px] rounded-full overflow-hidden cursor-pointer flex items-center justify-center relative"
+              style={{
+                background: "linear-gradient(135deg, #e8f0fe 0%, #dbeafe 100%)",
+                boxShadow: "0 0 0 3px #00D4FF, 0 0 0 5px #fff, 0 8px 24px rgba(0,212,255,0.25)",
+              }}
+            >
+              {config.photoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={config.photoUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  style={{ objectPosition: `center ${photoPos}%` }}
+                />
+              ) : (
+                <IconUser color="#7AAAD4" />
+              )}
+              {/* Hover overlay */}
+              <div className="dp-avatar-overlay">
+                {uploadingPhoto ? (
+                  <div className="w-[22px] h-[22px] rounded-full border-[2.5px] border-white/30 border-t-[#00D4FF] animate-spin" />
+                ) : (
+                  <IconCamera size={24} color="#fff" />
+                )}
+              </div>
+            </div>
           </div>
-          <div className="flex flex-col gap-2 flex-1">
+
+          {/* Action buttons */}
+          <div className="flex gap-2 items-center flex-wrap justify-center">
             <button
+              className="dp-btn-primary"
               onClick={() => photoInputRef.current?.click()}
               disabled={uploadingPhoto}
-              className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2.5 rounded-xl border border-border hover:border-primary/50 hover:bg-primary/5 transition-colors disabled:opacity-50"
             >
-              <Upload className="h-3.5 w-3.5" />
+              <IconCamera size={14} color="#fff" />
               {uploadingPhoto ? t("design.uploading") : config.photoUrl ? t("design.change_photo") : t("design.upload_photo")}
             </button>
             {config.photoUrl && (
-              <button
-                onClick={handlePhotoRemove}
-                className="flex items-center justify-center gap-2 text-xs font-medium px-3 py-2.5 rounded-xl border border-destructive/30 text-destructive hover:bg-destructive/5 transition-colors"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
+              <button className="dp-btn-danger" onClick={handlePhotoRemove}>
+                <IconTrash size={14} color="#F87171" />
                 {t("design.remove_photo")}
               </button>
             )}
           </div>
+
+          {/* Photo position slider */}
+          {config.photoUrl && (
+            <div className="w-full mt-1">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-[11px] font-medium text-[#7AAAD4]">
+                  {t("design.photo_top")} ↕ {t("design.photo_bottom")}
+                </span>
+                <span className="text-[11px] font-extrabold text-dash-cyan bg-[rgba(0,212,255,0.1)] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.25)]">
+                  {photoPos}%
+                </span>
+              </div>
+              <input
+                type="range"
+                className="dp-slider"
+                style={sliderStyle(photoPos, 0, 100)}
+                min={0} max={100} step={5}
+                value={photoPos}
+                onChange={(e) => setPhotoPosition(Number(e.target.value))}
+              />
+            </div>
+          )}
         </div>
-        {config.photoUrl && (
-          <div className="space-y-2 pt-1">
-            <div className="flex items-center justify-between">
-              <Label className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                {t("design.photo_position")}
-              </Label>
-              <span className="text-[10px] font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-                {config.photoPosition ?? 15}%
-              </span>
-            </div>
-            <Slider
-              min={0}
-              max={100}
-              step={5}
-              value={config.photoPosition ?? 15}
-              onValueChange={(v) => setPhotoPosition(Array.isArray(v) ? v[0] : v)}
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-              <span>{t("design.photo_top")}</span>
-              <span>{t("design.photo_bottom")}</span>
-            </div>
-          </div>
-        )}
-        <p className="text-[10px] text-muted-foreground/70">{t("design.photo_hint")}</p>
-        <input
-          ref={photoInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          className="sr-only"
-          onChange={handlePhotoChange}
-        />
+
+        <input ref={photoInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="sr-only" onChange={handlePhotoChange} />
       </section>
 
-      {/* ── Color principal ────────────────────────────────── */}
-      <section className="px-5 py-5 space-y-4">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-          {t("design.color_section")}
-        </h3>
+      <div className="h-px bg-gradient-to-r from-[rgba(0,212,255,0.15)] to-transparent" />
 
-        <div className="space-y-4">
+      {/* ── Color Principal ─────────────────────────────────────── */}
+      <section>
+        <div className="dp-section-label">
+          <IconPalette size={13} color="#00D4FF" />
+          {t("design.color_section")}
+        </div>
+
+        <div className="flex flex-col gap-3.5">
           {COLOR_PALETTES.map((palette) => (
             <div key={palette.labelKey}>
-              <p className="text-[10px] font-semibold text-muted-foreground/70 uppercase tracking-widest mb-2">
+              <p className="text-[10px] font-bold text-[#5A7FA8] mb-2 tracking-[0.06em] uppercase">
                 {t(palette.labelKey)}
               </p>
-              <div className="grid grid-cols-6 gap-2">
-                {palette.colors.map(({ hex, nameKey }) => (
-                  <button
-                    key={hex}
-                    title={t(nameKey)}
-                    onClick={() => setColor(hex)}
-                    className={cn(
-                      "h-8 w-full rounded-lg border-2 transition-all hover:scale-105 hover:shadow-md",
-                      config.colorScheme === hex
-                        ? "border-foreground ring-2 ring-foreground/30 ring-offset-1 scale-105"
-                        : "border-transparent hover:border-foreground/20"
-                    )}
-                    style={{ backgroundColor: hex }}
-                  />
-                ))}
+              <div className="grid grid-cols-3 gap-2">
+                {palette.colors.map(({ hex, nameKey }) => {
+                  const active = config.colorScheme.toLowerCase() === hex.toLowerCase()
+                  return (
+                    <button
+                      key={hex}
+                      title={t(nameKey)}
+                      onClick={() => setColor(hex)}
+                      className={`dp-color-card${active ? " active" : ""}`}
+                    >
+                      {/* Color swatch — background and shadow depend on runtime hex value, keep inline */}
+                      <div
+                        className="w-9 h-9 rounded-[10px] mx-auto mb-1.5 transition-shadow duration-200"
+                        style={{
+                          background: hex,
+                          boxShadow: active
+                            ? `0 4px 14px ${hex}66, inset 0 1px 0 rgba(255,255,255,0.2)`
+                            : `0 2px 8px ${hex}44`,
+                        }}
+                      />
+                      <div className={`text-[9.5px] font-bold tracking-[0.04em] ${active ? "text-dash-cyan" : "text-[#6B8BAE]"}`}>
+                        {t(nameKey)}
+                      </div>
+                      {active && (
+                        <div className="absolute top-1.5 right-1.5 w-[7px] h-[7px] rounded-full bg-dash-cyan shadow-[0_0_6px_#00D4FF]" />
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           ))}
-        </div>
 
-        {/* Custom color picker */}
-        <div
-          className="flex items-center gap-3 p-3 rounded-xl border border-border hover:border-primary/40 hover:bg-muted/30 cursor-pointer transition-colors"
-          onClick={() => colorInputRef.current?.click()}
-        >
-          <div
-            className="h-9 w-9 rounded-lg border border-border shrink-0 shadow-sm"
-            style={{ backgroundColor: config.colorScheme }}
-          />
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold">{t("design.custom_color")}</p>
-            <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{config.colorScheme.toUpperCase()}</p>
+          {/* Custom color */}
+          <div className="px-4 py-3.5 rounded-[14px] bg-white/[0.03] border-[1.5px] border-[rgba(0,212,255,0.15)] backdrop-blur-sm">
+            <p className="text-[10px] font-bold text-[#5A7FA8] mb-2.5 tracking-[0.06em] uppercase">
+              {t("design.custom_color")}
+            </p>
+            <div className="flex gap-2.5 items-center">
+              {/* Swatch — background and shadow depend on runtime colorScheme, keep inline */}
+              <div
+                onClick={() => colorInputRef.current?.click()}
+                className="w-11 h-11 rounded-xl cursor-pointer shrink-0 border-2 border-white/15 transition-shadow duration-200"
+                style={{
+                  background: config.colorScheme,
+                  boxShadow: `0 4px 14px ${config.colorScheme}55, inset 0 1px 0 rgba(255,255,255,0.2)`,
+                }}
+              />
+              <input
+                ref={colorInputRef}
+                type="color"
+                value={config.colorScheme}
+                onChange={(e) => setColor(e.target.value)}
+                className="sr-only"
+              />
+              <input
+                type="text"
+                value={hexInput || config.colorScheme.toUpperCase()}
+                onFocus={() => setHexInput(config.colorScheme.toUpperCase())}
+                onChange={(e) => {
+                  const v = e.target.value.trim()
+                  setHexInput(v)
+                  if (/^#[0-9A-Fa-f]{6}$/.test(v)) {
+                    setColor(v)
+                    setHexInvalid(false)
+                  } else {
+                    setHexInvalid(v.length >= 4)
+                  }
+                }}
+                onBlur={() => {
+                  setHexInput("")
+                  setHexInvalid(false)
+                }}
+                className={`flex-1 font-mono text-[13px] px-3.5 py-2.5 rounded-[10px] text-dash-navy bg-white outline-none tracking-[0.05em] transition-[border-color] duration-200 ${
+                  hexInvalid ? "border-[1.5px] border-red-500/60" : "border-[1.5px] border-[rgba(0,212,255,0.2)]"
+                }`}
+              />
+            </div>
           </div>
-          <input
-            ref={colorInputRef}
-            type="color"
-            value={config.colorScheme}
-            onChange={(e) => setColor(e.target.value)}
-            className="sr-only"
-          />
-          <span className="text-[10px] font-medium text-primary">{t("design.edit_color")}</span>
         </div>
       </section>
 
-      {/* ── Tipografía ─────────────────────────────────────── */}
-      <section className="px-5 py-5 space-y-3">
-        <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+      <div className="h-px bg-gradient-to-r from-[rgba(0,212,255,0.15)] to-transparent" />
+
+      {/* ── Tipografía ──────────────────────────────────────────── */}
+      <section>
+        <div className="dp-section-label">
+          <IconType size={13} color="#00D4FF" />
           {t("design.typography_section")}
-        </h3>
-        <Select value={config.fontFamily} onValueChange={(v) => { if (v) setFont(v) }}>
-          <SelectTrigger className="h-10 rounded-xl">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
+        </div>
+        <div className="rounded-xl overflow-hidden border-[1.5px] border-[rgba(0,212,255,0.15)] bg-white">
+          {/* fontFamily is runtime user state — keep inline */}
+          <select
+            value={config.fontFamily}
+            onChange={(e) => { if (e.target.value) setFont(e.target.value) }}
+            className="w-full px-4 py-3 text-[13.5px] text-[#0B1B3D] bg-transparent outline-none border-none cursor-pointer"
+            style={{ fontFamily: config.fontFamily }}
+          >
             {FONT_OPTIONS.map((font) => (
-              <SelectItem key={font} value={font} style={{ fontFamily: font }}>
-                {font}
-              </SelectItem>
+              <option key={font} value={font} style={{ fontFamily: font }}>{font}</option>
             ))}
-          </SelectContent>
-        </Select>
+          </select>
+        </div>
       </section>
 
-      {/* ── Tamaño y espaciado ─────────────────────────────── */}
-      <section className="px-5 py-5 space-y-6">
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("design.font_size_section")}
-            </h3>
-            <span className="text-xs font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-              {config.fontSize}px
-            </span>
-          </div>
-          <Slider
-            min={10}
-            max={18}
-            step={1}
-            value={config.fontSize}
-            onValueChange={(v) => setFontSize(Array.isArray(v) ? v[0] : v)}
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-            <span>10px</span>
-            <span>18px</span>
-          </div>
+      <div className="h-px bg-gradient-to-r from-[rgba(0,212,255,0.15)] to-transparent" />
+
+      {/* ── Espaciado + Tamaño ──────────────────────────────────── */}
+      <section>
+        <div className="dp-section-label">
+          <IconSpacing size={13} color="#00D4FF" />
+          {t("design.spacing_section")}
         </div>
 
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {t("design.spacing_section")}
-            </h3>
-            <span className="text-xs font-semibold tabular-nums bg-muted px-2 py-0.5 rounded-md">
-              {config.spacing.toFixed(1)}×
-            </span>
+        <div className="flex flex-col gap-5">
+          {/* Spacing */}
+          <div>
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[11px] font-medium text-[#7AAAD4]">
+                {t("spacing_compact")} ↔ {t("spacing_spacious")}
+              </span>
+              <span className="text-[11px] font-extrabold text-dash-cyan bg-[rgba(0,212,255,0.1)] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.25)]">
+                {config.spacing.toFixed(1)}x
+              </span>
+            </div>
+            <input
+              type="range"
+              className="dp-slider"
+              style={sliderStyle(config.spacing, 0.8, 1.4)}
+              min={0.8} max={1.4} step={0.1}
+              value={config.spacing}
+              onChange={(e) => setSpacing(Number(e.target.value))}
+            />
           </div>
-          <Slider
-            min={0.8}
-            max={1.5}
-            step={0.1}
-            value={config.spacing}
-            onValueChange={(v) => setSpacing(Array.isArray(v) ? v[0] : v)}
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground/60 px-0.5">
-            <span>{t("spacing_compact")}</span>
-            <span>{t("spacing_spacious")}</span>
+
+          {/* Font size */}
+          <div>
+            <div className="flex justify-between items-center mb-2.5">
+              <span className="text-[11px] font-medium text-[#7AAAD4]">10px ↔ 18px</span>
+              <span className="text-[11px] font-extrabold text-dash-cyan bg-[rgba(0,212,255,0.1)] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.25)]">
+                {config.fontSize}px
+              </span>
+            </div>
+            <input
+              type="range"
+              className="dp-slider"
+              style={sliderStyle(config.fontSize, 10, 18)}
+              min={10} max={18} step={1}
+              value={config.fontSize}
+              onChange={(e) => setFontSize(Number(e.target.value))}
+            />
           </div>
         </div>
       </section>

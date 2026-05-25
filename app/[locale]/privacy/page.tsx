@@ -160,6 +160,16 @@ export default async function PrivacyPage({
                   </li>
                 ))}
               </ul>
+              <div className="space-y-2 pt-1">
+                <div className="rounded-lg bg-muted/40 border p-3 text-xs text-muted-foreground leading-relaxed">
+                  <strong className="text-foreground block mb-1">Brasil · LGPD</strong>
+                  {t("s7_lgpd_note")}
+                </div>
+                <div className="rounded-lg bg-muted/40 border p-3 text-xs text-muted-foreground leading-relaxed">
+                  <strong className="text-foreground block mb-1">México · LFPDPPP</strong>
+                  {t("s7_mexico_note")}
+                </div>
+              </div>
               <p className="text-muted-foreground text-sm">
                 {t("s7_contact_pre")}{" "}
                 <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a>.
@@ -196,6 +206,15 @@ export default async function PrivacyPage({
               <h2 className="text-base font-semibold">{t("s10_title")}</h2>
             </div>
             <p className="text-muted-foreground leading-relaxed">{t.rich("s10_body", { b })}</p>
+          </section>
+
+          {/* Section 11 */}
+          <section className="rounded-xl border bg-card p-6 space-y-3">
+            <div className="flex items-center gap-3">
+              <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">11</span>
+              <h2 className="text-base font-semibold">{t("s11_title")}</h2>
+            </div>
+            <p className="text-muted-foreground leading-relaxed">{t("s11_body")}</p>
           </section>
 
           {/* Contact card */}

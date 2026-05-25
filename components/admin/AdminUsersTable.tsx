@@ -1,13 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import { format } from "date-fns"
+import { useState, useEffect, useCallback } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations } from "next-intl"
-import { RefreshCw, Shield, User, Crown, AlertCircle } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { AlertCircle } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,55 +15,51 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { TableRow, type UserRow } from "./_admin-table-parts"
 
-interface UserRow {
-  id:                 string
-  name:               string | null
-  email:              string | null
-  plan:               string
-  subscriptionStatus: string
-  subscriptionEndsAt: Date | null
-  planInterval:       string | null
-  role:               string
-  stripeCustomerId:   string | null
-  createdAt:          Date
-  lastActiveAt:       Date
-}
-
-function PlanBadge({ plan, status }: { plan: string; status: string }) {
-  if (plan === "PRO") {
-    const color = status === "ACTIVE" ? "bg-emerald-100 text-emerald-800 border-emerald-200"
-                : status === "CANCELED" ? "bg-amber-100 text-amber-800 border-amber-200"
-                : "bg-red-100 text-red-800 border-red-200"
-    return <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border ${color}`}><Crown className="h-3 w-3" /> PRO</span>
-  }
-  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium border bg-gray-100 text-gray-600 border-gray-200"><User className="h-3 w-3" /> Sin plan</span>
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const map: Record<string, string> = {
-    ACTIVE:   "bg-emerald-100 text-emerald-700 border-emerald-200",
-    CANCELED: "bg-amber-100 text-amber-700 border-amber-200",
-    EXPIRED:  "bg-red-100 text-red-700 border-red-200",
-    NONE:     "bg-gray-100 text-gray-500 border-gray-200",
-  }
-  const labels: Record<string, string> = {
-    ACTIVE: "Activo", CANCELED: "Cancelado", EXPIRED: "Expirado", NONE: "—",
-  }
-  return (
-    <span className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium border ${map[status] ?? map.NONE}`}>
-      {labels[status] ?? status}
-    </span>
-  )
-}
+const PAGE_SIZE = 10
 
 export default function AdminUsersTable({ users: initial }: { users: UserRow[] }) {
   const t = useTranslations("dashboard_admin")
-  const [users, setUsers] = useState(initial)
+  const [users] = useState(initial)
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
+  const [page, setPage] = useState(1)
 
+  const totalPages = Math.ceil(users.length / PAGE_SIZE)
+  const pageFrom = (page - 1) * PAGE_SIZE + 1
+  const pageTo = Math.min(page * PAGE_SIZE, users.length)
+  const pageUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   const confirmUser = users.find(u => u.id === confirmId)
+
+  const exportUsersCSV = useCallback(() => {
+    const headers = ["id", "name", "email", "plan", "subscriptionStatus", "planInterval", "subscriptionEndsAt", "role", "createdAt", "lastActiveAt"]
+    const rows = users.map(u => [
+      u.id,
+      u.name ?? "",
+      u.email ?? "",
+      u.plan,
+      u.subscriptionStatus,
+      u.planInterval ?? "",
+      u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString() : "",
+      u.role,
+      new Date(u.createdAt).toISOString(),
+      new Date(u.lastActiveAt).toISOString(),
+    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
+    const csv = [headers.join(","), ...rows].join("\n")
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `readycv-users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }, [users])
+
+  useEffect(() => {
+    document.addEventListener("admin-export-users", exportUsersCSV)
+    return () => document.removeEventListener("admin-export-users", exportUsersCSV)
+  }, [exportUsersCSV])
 
   async function invalidateSession(userId: string) {
     setLoading(userId)
@@ -90,100 +83,168 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
     }
   }
 
+  function renderPageButtons() {
+    const btns: React.ReactNode[] = []
+    const delta = 2
+    const left = page - delta
+    const right = page + delta
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= left && i <= right)) {
+        const isActive = i === page
+        btns.push(
+          <button
+            key={i}
+            onClick={() => setPage(i)}
+            style={{
+              minWidth: 32, height: 32, padding: "0 10px",
+              border: isActive ? "none" : "1px solid #D9E1ED",
+              background: isActive ? "linear-gradient(135deg,#00D4FF 0%,#00A8CC 100%)" : "white",
+              color: isActive ? "white" : "#6B7A8C",
+              borderRadius: 6,
+              fontFamily: "var(--dash-mono)", fontSize: 12, fontWeight: isActive ? 700 : 500,
+              cursor: "pointer",
+              display: "inline-flex", alignItems: "center", justifyContent: "center",
+              boxShadow: isActive ? "0 2px 8px rgba(0,212,255,0.28)" : "none",
+              transition: "all 0.15s ease",
+            }}
+          >
+            {i}
+          </button>
+        )
+      } else if (i === left - 1 || i === right + 1) {
+        btns.push(
+          <span key={`e${i}`} className="text-dash-subtle text-[14px] px-1 select-none">…</span>
+        )
+      }
+    }
+    return btns
+  }
+
   return (
     <>
-      <div className="rounded-xl border border-border overflow-hidden bg-white shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 border-b border-border">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Usuario</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Plan</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Estado</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Intervalo</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Renovación</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Última actividad</th>
-                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Rol</th>
-                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {users.map(user => (
-                <tr key={user.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <div className="font-medium truncate max-w-[180px]">{user.name ?? "—"}</div>
-                    <div className="text-xs text-muted-foreground truncate max-w-[180px]">{user.email}</div>
-                  </td>
-                  <td className="px-4 py-3">
-                    <PlanBadge plan={user.plan} status={user.subscriptionStatus} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={user.subscriptionStatus} />
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {user.planInterval === "monthly" ? "Mensual"
-                     : user.planInterval === "annual" ? "Anual"
-                     : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {user.subscriptionEndsAt
-                      ? format(new Date(user.subscriptionEndsAt), "dd MMM yyyy")
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground">
-                    {format(new Date(user.lastActiveAt), "dd MMM yyyy HH:mm")}
-                  </td>
-                  <td className="px-4 py-3">
-                    {user.role === "SUPER_ADMIN"
-                      ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700 border border-purple-200"><Shield className="h-3 w-3" /> Admin</span>
-                      : <span className="text-muted-foreground text-xs">Usuario</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    {user.role !== "SUPER_ADMIN" && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1"
-                        disabled={loading === user.id}
-                        onClick={() => setConfirmId(user.id)}
-                      >
-                        <RefreshCw className={`h-3 w-3 ${loading === user.id ? "animate-spin" : ""}`} />
-                        Reset sesión
-                      </Button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-              {users.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
-                    No hay usuarios registrados.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+      {/* Toolbar */}
+      <div className="flex items-center gap-[10px] mb-[18px]">
+        <span className="font-serif text-[16px] font-semibold text-dash-navy tracking-[-0.025em] flex-1">
+          {t("table_registered_users")}
+        </span>
+        <span className="font-mono text-[11px] text-dash-muted bg-dash-surface2 border border-dash-border-s rounded-lg px-2 py-[2px]">
+          {users.length} total
+        </span>
+        <button
+          onClick={exportUsersCSV}
+          className="px-[14px] py-[6px] border border-dash-border rounded-[5px] bg-transparent text-dash-muted text-[11px] font-[inherit] cursor-pointer inline-flex items-center gap-[5px] transition-all duration-[140ms] whitespace-nowrap hover:bg-dash-surface2 hover:text-dash-navy hover:border-dash-cyan"
+        >
+          <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+            <path d="M5.5 1v6M3.5 5l2 2 2-2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M1 8.5V9.5a1 1 0 001 1h7a1 1 0 001-1V8.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round"/>
+          </svg>
+          {t("table_export_csv")}
+        </button>
       </div>
 
+      {/* Table */}
+      <div className="bg-white border border-dash-border rounded-[10px] overflow-x-auto overflow-y-hidden">
+        <table className="w-full border-collapse min-w-[900px]">
+          <thead>
+            <tr className="border-b border-dash-border-s bg-dash-surface">
+              {[t("col_user"), t("col_plan"), t("col_status"), t("col_interval"), t("col_renewal"), t("col_last_active"), t("col_role"), t("col_actions")].map((h, i) => (
+                <th key={h} className="px-4 py-[11px] text-[9.5px] font-bold tracking-[0.1em] uppercase text-dash-muted whitespace-nowrap" style={{ textAlign: i === 7 ? "right" : "left" }}>
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {pageUsers.map((user, idx) => (
+              <TableRow
+                key={user.id}
+                user={user}
+                loading={loading}
+                onAction={() => setConfirmId(user.id)}
+                isLast={idx === pageUsers.length - 1}
+              />
+            ))}
+            {users.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-12 text-center text-dash-muted text-[13px]">
+                  {t("table_no_users")}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {users.length > 0 && (
+        <div className="flex items-center justify-between mt-[18px] px-1">
+          <div className="text-[12px] text-dash-muted font-mono">
+            {t("table_showing")}{" "}
+            <b className="text-dash-navy font-semibold">{pageFrom}</b>
+            –
+            <b className="text-dash-navy font-semibold">{pageTo}</b>
+            {" "}{t("table_of")}{" "}
+            <b className="text-dash-navy font-semibold">{users.length}</b>
+            {" "}{t("table_users")}
+          </div>
+          <div className="flex items-center gap-1">
+            <button
+              disabled={page === 1}
+              onClick={() => setPage(p => Math.max(1, p - 1))}
+              style={{
+                minWidth: 32, height: 32, padding: "0 10px",
+                border: "1px solid #D9E1ED", background: "white",
+                color: "#6B7A8C", borderRadius: 6,
+                fontFamily: "var(--dash-mono)", fontSize: 12, fontWeight: 500,
+                cursor: page === 1 ? "not-allowed" : "pointer",
+                opacity: page === 1 ? 0.4 : 1,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.15s ease",
+              }}
+            >
+              ‹
+            </button>
+            {renderPageButtons()}
+            <button
+              disabled={page === totalPages}
+              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              style={{
+                minWidth: 32, height: 32, padding: "0 10px",
+                border: "1px solid #D9E1ED", background: "white",
+                color: "#6B7A8C", borderRadius: 6,
+                fontFamily: "var(--dash-mono)", fontSize: 12, fontWeight: 500,
+                cursor: page === totalPages ? "not-allowed" : "pointer",
+                opacity: page === totalPages ? 0.4 : 1,
+                display: "inline-flex", alignItems: "center", justifyContent: "center",
+                transition: "all 0.15s ease",
+              }}
+            >
+              ›
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm dialog */}
       <AlertDialog open={!!confirmId} onOpenChange={open => { if (!open) setConfirmId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertCircle className="h-5 w-5 text-amber-500" />
-              Invalidar sesión
+              {t("invalidate_title")}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              El usuario <span className="font-medium text-foreground">{confirmUser?.email}</span> será deslogueado automáticamente en los próximos 5 minutos. No perderá ningún dato.
+              {t("invalidate_desc", { email: confirmUser?.email ?? "" })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel>{t("invalidate_cancel")}</AlertDialogCancel>
             <AlertDialogAction
               className="bg-amber-500 hover:bg-amber-600 text-white"
               onClick={() => confirmId && invalidateSession(confirmId)}
             >
-              Invalidar sesión
+              {t("invalidate_confirm")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

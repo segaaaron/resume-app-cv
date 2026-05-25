@@ -2,10 +2,13 @@
 
 import { useRouter } from "next/navigation"
 import { useResumeStore } from "@/stores/resumeStore"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Download, Loader2, Lock, Share2, Copy, Eye, CheckCircle2, AlertCircle } from "lucide-react"
+import {
+  ArrowLeft, Download, Loader2, Lock, Save, Share2, Copy, Eye,
+  CheckCircle2, AlertCircle, Pencil, FileText,
+} from "lucide-react"
 import { useState, useEffect } from "react"
+import { useShallow } from "zustand/react/shallow"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -17,7 +20,18 @@ interface Props {
 
 export default function EditorTopBar({ hasAccess }: Props) {
   const router = useRouter()
-  const { title, setTitle, save, triggerThumbnail, isSaving, lastSaved, isDirty, resumeId } = useResumeStore()
+  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, triggerThumbnail } = useResumeStore(
+    useShallow((s) => ({
+      title: s.title,
+      setTitle: s.setTitle,
+      save: s.save,
+      isSaving: s.isSaving,
+      lastSaved: s.lastSaved,
+      isDirty: s.isDirty,
+      resumeId: s.resumeId,
+      triggerThumbnail: s.triggerThumbnail,
+    }))
+  )
   const [editing, setEditing] = useState(false)
   const [isPublic, setIsPublic] = useState(false)
   const [publicSlug, setPublicSlug] = useState<string | null>(null)
@@ -28,10 +42,9 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const locale = useLocale()
   const t = useTranslations("editor")
 
-
   useEffect(() => {
     if (!resumeId) return
-    fetch(`/api/resumes/${resumeId}`)
+    apiFetch(`/api/resumes/${resumeId}`)
       .then((r) => r.json())
       .then((data) => {
         if (data?.isPublic !== undefined) {
@@ -44,7 +57,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   useEffect(() => {
     if (!resumeId || !isPublic) return
-    fetch(`/api/resumes/views?resumeId=${resumeId}`)
+    apiFetch(`/api/resumes/views?resumeId=${resumeId}`)
       .then((r) => r.json())
       .then((data) => setViewStats({ total: data.total ?? 0, last7d: data.last7d ?? 0 }))
       .catch(() => {})
@@ -60,10 +73,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
   }, [isDirty])
 
   function handleBack() {
-    if (isDirty) {
-      setShowExitModal(true)
-      return
-    }
+    if (isDirty) { setShowExitModal(true); return }
     router.push(`/${locale}/dashboard/resumes`)
   }
 
@@ -71,10 +81,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
     setShowExitModal(false)
     if (hasAccess) {
       await save().catch(() => {})
-      if (useResumeStore.getState().isDirty) {
-        toast.error(t("save_error") ?? "Error al guardar")
-        return
-      }
+      if (useResumeStore.getState().isDirty) { toast.error(t("save_error")); return }
     }
     router.push(`/${locale}/dashboard/resumes`)
   }
@@ -83,7 +90,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
     setShowExitModal(false)
     router.push(`/${locale}/dashboard/resumes`)
   }
-
 
   async function handleToggleShare() {
     if (!resumeId) return
@@ -126,14 +132,18 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   async function handleDownloadPdf() {
     if (!resumeId) return
-    if (isDirty && hasAccess) {
-      // Skip thumbnail during save — will trigger after PDF completes to avoid concurrent Puppeteer calls
-      await save({ skipThumbnail: true }).catch(() => {})
-    }
+    if (isDirty && hasAccess) await save({ skipThumbnail: true }).catch(() => {})
     setDownloadingPdf(true)
     try {
       const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
-      if (!res.ok) { toast.error(t("print.error_pdf")); return }
+      if (!res.ok) {
+        const key = res.status === 403 ? "print.error_pdf_403"
+          : res.status === 429 ? "print.error_pdf_429"
+          : res.status === 404 ? "print.error_pdf_404"
+          : res.status >= 500 ? "print.error_pdf_500"
+          : "print.error_pdf"
+        toast.error(t(key)); return
+      }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -143,7 +153,6 @@ export default function EditorTopBar({ hasAccess }: Props) {
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
-      // Thumbnail refresh fires AFTER PDF download — sequential, not concurrent
       triggerThumbnail()
     } catch {
       toast.error(t("print.error_pdf"))
@@ -153,12 +162,40 @@ export default function EditorTopBar({ hasAccess }: Props) {
   }
 
   return (
-    <header className="h-14 bg-white border-b border-neutral-200 flex items-center justify-between px-4 gap-4 shrink-0 relative">
-      <div className="flex items-center gap-3 min-w-0">
-        <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={handleBack}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
+    <header
+      className="h-[58px] flex items-center justify-between shrink-0 z-[100] relative px-3 sm:px-5 border-b border-[rgba(0,212,255,0.2)] shadow-[0_1px_0_rgba(0,212,255,0.12),0_4px_16px_rgba(0,0,0,0.06)]"
+      style={{ background: "linear-gradient(135deg, #f0f8ff 0%, #e8f4fb 40%, #f5faff 70%, #edf6fb 100%)" }}
+    >
+      {/* Subtle cyan glow line at bottom */}
+      <div
+        className="absolute bottom-0 left-0 right-0 h-px pointer-events-none opacity-[0.35]"
+        style={{ background: "linear-gradient(90deg, transparent 0%, #00D4FF 30%, #00E5FF 50%, #00D4FF 70%, transparent 100%)" }}
+      />
+      {/* Ambient top-right glow */}
+      <div
+        className="absolute top-0 right-0 w-64 h-full pointer-events-none"
+        style={{ background: "radial-gradient(ellipse at 100% 50%, rgba(0,212,255,0.12) 0%, rgba(0,168,204,0.05) 50%, transparent 70%)" }}
+      />
 
+      {/* ── Left: back + title ── */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 mr-3 relative z-10">
+        <button
+          onClick={handleBack}
+          aria-label="Back"
+          className="w-8 h-8 flex items-center justify-center rounded-lg shrink-0 cursor-pointer transition-all duration-200 bg-white/70 border border-[rgba(0,212,255,0.2)] text-dash-navy hover:bg-[rgba(0,212,255,0.12)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#00A8CC]"
+        >
+          <ArrowLeft size={16} />
+        </button>
+
+        {/* CV icon badge */}
+        <div
+          className="hidden sm:flex items-center justify-center w-7 h-7 rounded-lg shrink-0 border border-[rgba(0,212,255,0.25)]"
+          style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.2) 0%, rgba(0,168,204,0.1) 100%)" }}
+        >
+          <FileText size={13} className="text-dash-cyan" />
+        </div>
+
+        {/* Title */}
         {editing ? (
           <Input
             autoFocus
@@ -166,94 +203,134 @@ export default function EditorTopBar({ hasAccess }: Props) {
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => setEditing(false)}
             onKeyDown={(e) => e.key === "Enter" && setEditing(false)}
-            className="h-7 text-sm font-medium max-w-[200px]"
+            className="max-w-[120px] sm:max-w-[240px] border-0 border-b border-b-[#00D4FF] rounded-none bg-transparent text-[14px] font-semibold text-[#1a2e4a] outline-none py-1 px-0 h-auto shadow-none focus-visible:ring-0"
+            style={{ caretColor: "#00D4FF" }}
           />
         ) : (
           <button
             onClick={() => setEditing(true)}
-            className="text-sm font-medium truncate hover:text-primary transition-colors max-w-[200px]"
+            className="group flex items-center gap-1.5 truncate max-w-[110px] sm:max-w-[240px] cursor-pointer bg-transparent border-none"
           >
-            {title}
+            <span className="truncate text-[14px] font-semibold tracking-[-0.01em] text-dash-navy">
+              {title}
+            </span>
+            <Pencil
+              size={12}
+              className="shrink-0 transition-all duration-200 opacity-0 group-hover:opacity-100 text-dash-cyan"
+            />
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        {/* Share button */}
+      {/* ── Right: actions ── */}
+      <div className="flex items-center gap-2 shrink-0 relative z-10">
+
+        {/* Save status pill */}
+        {hasAccess ? (
+          <button
+            onClick={() => { if (!isSaving) save().catch(() => {}) }}
+            disabled={isSaving}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-medium cursor-pointer border transition-all duration-200 disabled:cursor-default"
+            style={{
+              background: isSaving
+                ? "rgba(148,163,184,0.1)"
+                : isDirty
+                ? "rgba(245,158,11,0.1)"
+                : lastSaved
+                ? "rgba(16,185,129,0.1)"
+                : "rgba(255,255,255,0.7)",
+              borderColor: isSaving
+                ? "rgba(148,163,184,0.2)"
+                : isDirty
+                ? "rgba(245,158,11,0.25)"
+                : lastSaved
+                ? "rgba(16,185,129,0.25)"
+                : "rgba(0,212,255,0.2)",
+              color: isSaving ? "#94A3B8" : isDirty ? "#F59E0B" : lastSaved ? "#10B981" : "#1a2e4a",
+            }}
+          >
+            {isSaving ? (
+              <><Loader2 size={11} className="animate-spin" /><span className="hidden sm:inline">{t("saving")}</span></>
+            ) : isDirty ? (
+              <><AlertCircle size={11} /><span className="hidden sm:inline">{t("unsaved")}</span></>
+            ) : lastSaved ? (
+              <><CheckCircle2 size={11} /><span className="hidden sm:inline">{t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}</span></>
+            ) : (
+              <><Save size={11} /><span className="hidden sm:inline">{t("save")}</span></>
+            )}
+          </button>
+        ) : (
+          <button
+            onClick={handleLockedClick}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] cursor-pointer border border-[rgba(0,212,255,0.15)] bg-white/50 text-[#94A3B8] transition-all duration-200"
+          >
+            <Lock size={11} />
+            <span className="hidden sm:inline">{t("save")}</span>
+          </button>
+        )}
+
+        {/* Share */}
         {hasAccess && (
           <div className="flex items-center gap-1">
-            <Button
-              variant={isPublic ? "default" : "outline"}
-              size="sm"
-              className={`gap-1.5 ${isPublic ? "bg-green-600 hover:bg-green-700 text-white border-green-600" : ""}`}
+            <button
               onClick={handleToggleShare}
               disabled={togglingShare || !resumeId}
               aria-label={isPublic ? t("share.public") : t("share.button")}
+              className={`inline-flex items-center gap-2 px-3 py-[7px] rounded-lg text-[12.5px] font-semibold cursor-pointer transition-all duration-200 disabled:opacity-50 ${
+                isPublic
+                  ? "bg-[rgba(0,212,255,0.12)] border border-[rgba(0,212,255,0.35)] text-[#00A8CC]"
+                  : "bg-white/70 border border-[rgba(0,212,255,0.2)] text-dash-navy hover:bg-[rgba(0,212,255,0.1)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#00A8CC]"
+              }`}
             >
-              {togglingShare ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Share2 className="h-3.5 w-3.5" />}
-              <span className="hidden sm:inline text-xs">{isPublic ? t("share.public") : t("share.button")}</span>
-            </Button>
+              {togglingShare ? <Loader2 size={13} className="animate-spin" /> : <Share2 size={13} />}
+              <span className="hidden sm:inline">{isPublic ? t("share.public") : t("share.button")}</span>
+            </button>
+
             {isPublic && publicSlug && (
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={handleCopyLink} title={t("share.copy_link")}>
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
+              <button
+                onClick={handleCopyLink}
+                title={t("share.copy_link")}
+                className="w-8 h-8 flex items-center justify-center rounded-lg cursor-pointer transition-all duration-200 bg-white/70 border border-[rgba(0,212,255,0.2)] text-dash-navy hover:bg-[rgba(0,212,255,0.1)] hover:border-[rgba(0,212,255,0.4)] hover:text-[#00A8CC]"
+              >
+                <Copy size={13} />
+              </button>
             )}
+
             {isPublic && viewStats !== null && (
-              <span className="flex items-center gap-1 text-xs text-muted-foreground px-1" title={t("share.views_tooltip", { total: viewStats.total })}>
-                <Eye className="h-3 w-3" />
-                {viewStats.last7d}
+              <span
+                className="hidden sm:flex items-center gap-1 px-2 text-[11px] text-[#94A3B8]"
+                title={t("share.views_tooltip", { total: viewStats.total })}
+              >
+                <Eye size={11} /> {viewStats.last7d}
               </span>
             )}
           </div>
         )}
 
-        {/* Save status indicator */}
+        {/* Download PDF */}
         {hasAccess ? (
           <button
-            onClick={() => { if (isDirty && !isSaving) save().catch(() => {}) }}
-            disabled={isSaving || !isDirty}
-            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md transition-colors disabled:cursor-default cursor-pointer hover:bg-neutral-100"
-            title={isDirty ? t("unsaved") : lastSaved ? t("saved") : ""}
+            disabled={!resumeId || downloadingPdf}
+            onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed border border-[rgba(0,212,255,0.3)] text-[#0a1a35] shadow-[0_4px_16px_rgba(0,212,255,0.3),inset_0_1px_0_rgba(255,255,255,0.2)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(0,212,255,0.45),inset_0_1px_0_rgba(255,255,255,0.2)]"
+            style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" }}
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
-                <span className="hidden sm:inline text-muted-foreground">{t("saving")}</span>
-              </>
-            ) : isDirty ? (
-              <>
-                <AlertCircle className="h-3 w-3 text-amber-500" />
-                <span className="hidden sm:inline text-amber-600 hover:text-amber-700">{t("unsaved")}</span>
-              </>
-            ) : lastSaved ? (
-              <>
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
-                <span className="hidden sm:inline text-muted-foreground">
-                  {t("saved_at", { time: lastSaved.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) })}
-                </span>
-              </>
-            ) : null}
+            {downloadingPdf
+              ? <Loader2 size={13} className="animate-spin" />
+              : <Download size={13} />}
+            <span className="hidden sm:inline">
+              {downloadingPdf ? t("download_generating_pdf") : t("print.print_pdf")}
+            </span>
           </button>
         ) : (
           <button
             onClick={handleLockedClick}
-            className="flex items-center gap-1.5 text-xs px-2 py-1 rounded-md opacity-50 cursor-pointer"
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer opacity-40 border border-[rgba(0,212,255,0.3)] text-[#0a1a35]"
+            style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" }}
           >
-            <Lock className="h-3 w-3" />
-            <span className="hidden sm:inline">{t("save")}</span>
+            <Lock size={13} />
+            <span className="hidden sm:inline">{t("print.print_pdf")}</span>
           </button>
-        )}
-
-        {hasAccess ? (
-          <Button size="sm" className="gap-1.5" disabled={!resumeId || downloadingPdf} onClick={handleDownloadPdf}>
-            {downloadingPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-            {downloadingPdf ? t("download_generating_pdf") : t("print.print_pdf")}
-          </Button>
-        ) : (
-          <Button size="sm" onClick={handleLockedClick} className="gap-1.5 opacity-50">
-            <Lock className="h-3.5 w-3.5" />
-            {t("print.print_pdf")}
-          </Button>
         )}
       </div>
 

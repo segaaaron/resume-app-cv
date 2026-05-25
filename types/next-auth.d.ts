@@ -11,6 +11,7 @@ declare module "next-auth" {
       emailVerified?: string | null
       sessionVersion?: number
       activeSessionToken?: string | null
+      termsAcceptedAt?: string | null
     } & DefaultSession["user"]
   }
 }
@@ -25,5 +26,6 @@ declare module "next-auth/jwt" {
     emailVerified?: string | null
     sessionVersion?: number
     activeSessionToken?: string | null
+    termsAcceptedAt?: string | null
   }
 }

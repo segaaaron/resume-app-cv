@@ -38,43 +38,43 @@ const PROFESSIONS: ProfessionData[] = [
     slug: "software-engineer",
     relatedBlogSlug: "cv-para-desarrolladores-de-software",
     en: {
-      title: "Software Engineer Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Software Engineer Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Software Engineer Resume Templates",
       description: "Download a free ATS-optimized software engineer resume template. Built for developers, engineers and tech professionals. Highlight your stack, projects and impact. Export to PDF in minutes.",
-      intro: "Landing a software engineering role means beating two gatekeepers: the ATS algorithm and the hiring manager's 6-second scan. Your resume needs to pass both. ReadyCV's templates are built specifically for technical roles — clean structure, keyword-optimized sections, and modern layouts that highlight your stack and your impact.",
+      intro: "Landing a software engineering role means beating two gatekeepers: the ATS algorithm and the hiring manager's 6-second scan. Your resume needs to pass both. ReadyCVV's templates are built specifically for technical roles — clean structure, keyword-optimized sections, and modern layouts that highlight your stack and your impact.",
       tips: [
         "Lead with a skills section: list languages, frameworks and tools before your experience",
         "Quantify impact: 'Reduced API latency by 40%' beats 'Improved performance'",
         "Use the ATS Pro template if applying to large tech companies with automated screening",
         "Include a GitHub link or portfolio URL in the contact section",
-        "Tailor keywords to the job description using ReadyCV's AI ATS Score feature",
+        "Tailor keywords to the job description using ReadyCVV's AI ATS Score feature",
       ],
       recommended: ["ATS Pro", "Carbon", "Blueprint", "Executive", "Nordic"],
       faq: [
         { q: "What is the best resume format for software engineers?", a: "A reverse-chronological format with a prominent skills section works best for most engineering roles. If your experience is strong, lead with it. If you're a new grad, lead with skills and projects." },
         { q: "Should a software engineer resume include all programming languages?", a: "No. Include languages and tools relevant to the roles you're targeting. A curated list signals focus; a 40-item dump signals noise." },
         { q: "How long should a software engineer resume be?", a: "One page for fewer than 7 years of experience. Two pages are acceptable for senior engineers with significant impact to document." },
-        { q: "Does ReadyCV's ATS Score work for software engineering jobs?", a: "Yes. Paste a job description into the ATS Score panel and ReadyCV's AI analyzes your CV keyword coverage, skills match and structure — then gives you specific improvements." },
+        { q: "Does ReadyCVV's ATS Score work for software engineering jobs?", a: "Yes. Paste a job description into the ATS Score panel and ReadyCVV's AI analyzes your CV keyword coverage, skills match and structure — then gives you specific improvements." },
       ],
     },
     es: {
-      title: "Plantilla de CV para Desarrollador de Software 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Desarrollador de Software 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Desarrolladores de Software",
       description: "Descarga una plantilla de CV para desarrollador optimizada para ATS. Ideal para ingenieros, programadores y perfiles tech. Resalta tu stack, proyectos e impacto. Exporta a PDF en minutos.",
-      intro: "Conseguir un rol de desarrollo de software significa superar dos filtros: el algoritmo ATS y el escaneo de 6 segundos del reclutador. Tu CV necesita pasar ambos. Las plantillas de ReadyCV están diseñadas para roles técnicos — estructura limpia, secciones optimizadas para palabras clave y layouts modernos que destacan tu stack y tu impacto.",
+      intro: "Conseguir un rol de desarrollo de software significa superar dos filtros: el algoritmo ATS y el escaneo de 6 segundos del reclutador. Tu CV necesita pasar ambos. Las plantillas de ReadyCVV están diseñadas para roles técnicos — estructura limpia, secciones optimizadas para palabras clave y layouts modernos que destacan tu stack y tu impacto.",
       tips: [
         "Empieza con una sección de habilidades: lista lenguajes, frameworks y herramientas antes de la experiencia",
         "Cuantifica el impacto: 'Reduje la latencia de la API en un 40%' es mejor que 'Mejoré el rendimiento'",
         "Usa la plantilla ATS Pro si aplicas a grandes empresas con selección automatizada",
         "Incluye tu perfil de GitHub o portafolio en la sección de contacto",
-        "Adapta las palabras clave a la oferta usando el ATS Score IA de ReadyCV",
+        "Adapta las palabras clave a la oferta usando el ATS Score IA de ReadyCVV",
       ],
       recommended: ["ATS Pro", "Carbon", "Blueprint", "Executive", "Nordic"],
       faq: [
         { q: "¿Cuál es el mejor formato de CV para desarrolladores de software?", a: "Un formato cronológico inverso con una sección de habilidades prominente funciona mejor para la mayoría de roles de ingeniería. Si tu experiencia es sólida, empieza con ella. Si eres recién graduado, empieza con habilidades y proyectos." },
         { q: "¿Debe un CV de desarrollador incluir todos los lenguajes de programación?", a: "No. Incluye los lenguajes y herramientas relevantes para los roles a los que aplicas. Una lista curada señala enfoque; una lista de 40 elementos señala ruido." },
         { q: "¿Cuánto debe extenderse el CV de un desarrollador?", a: "Una página para menos de 7 años de experiencia. Dos páginas son aceptables para ingenieros senior con impacto significativo que documentar." },
-        { q: "¿El ATS Score de ReadyCV funciona para ofertas de desarrollo de software?", a: "Sí. Pega una oferta de trabajo en el panel ATS Score y la IA de ReadyCV analiza la cobertura de palabras clave, el match de habilidades y la estructura — y te da mejoras específicas." },
+        { q: "¿El ATS Score de ReadyCVV funciona para ofertas de desarrollo de software?", a: "Sí. Pega una oferta de trabajo en el panel ATS Score y la IA de ReadyCVV analiza la cobertura de palabras clave, el match de habilidades y la estructura — y te da mejoras específicas." },
       ],
     },
   },
@@ -82,16 +82,16 @@ const PROFESSIONS: ProfessionData[] = [
     slug: "marketing",
     relatedBlogSlug: "cv-para-marketing",
     en: {
-      title: "Marketing Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Marketing Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Marketing Resume Templates",
       description: "Free ATS-optimized marketing resume templates for digital marketers, content strategists, SEO specialists and marketing managers. Show your metrics and get more interviews.",
-      intro: "Marketing resumes live and die by metrics. Recruiters in this field want to see numbers: growth percentages, ROAS, follower counts, conversion rates. ReadyCV's templates give you the structure to lead with impact, and our AI bullet improver helps you transform vague duties into measurable achievements.",
+      intro: "Marketing resumes live and die by metrics. Recruiters in this field want to see numbers: growth percentages, ROAS, follower counts, conversion rates. ReadyCVV's templates give you the structure to lead with impact, and our AI bullet improver helps you transform vague duties into measurable achievements.",
       tips: [
         "Every bullet point should answer: 'by how much?' — add percentages, follower counts, revenue figures",
         "Use the 'Summary' section to position yourself clearly: content marketer vs performance marketer vs brand strategist",
         "List your tools: Google Analytics, HubSpot, Meta Ads, Semrush, etc.",
         "Include campaign results as standalone achievements, not buried in job descriptions",
-        "Use ReadyCV's AI Cover Letter generator to write personalized letters for each application",
+        "Use ReadyCVV's AI Cover Letter generator to write personalized letters for each application",
       ],
       recommended: ["Spark", "Modern", "Fold", "Glass", "Sidebar"],
       faq: [
@@ -101,16 +101,16 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Marketing 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Marketing 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Marketing",
       description: "Plantillas de CV para marketing digital, content marketing, SEO, SEM y gerentes de marketing. Optimizadas para ATS. Muestra tus métricas y consigue más entrevistas.",
-      intro: "Los CVs de marketing se ganan o se pierden por las métricas. Los reclutadores en este campo quieren ver números: porcentajes de crecimiento, ROAS, seguidores, tasas de conversión. Las plantillas de ReadyCV te dan la estructura para liderar con impacto, y el mejorador de bullets IA te ayuda a transformar responsabilidades vagas en logros medibles.",
+      intro: "Los CVs de marketing se ganan o se pierden por las métricas. Los reclutadores en este campo quieren ver números: porcentajes de crecimiento, ROAS, seguidores, tasas de conversión. Las plantillas de ReadyCVV te dan la estructura para liderar con impacto, y el mejorador de bullets IA te ayuda a transformar responsabilidades vagas en logros medibles.",
       tips: [
         "Cada bullet debe responder: '¿en cuánto?' — agrega porcentajes, número de seguidores, cifras de ingresos",
         "Usa la sección 'Resumen' para posicionarte claramente: marketing de contenidos vs performance vs branding",
         "Lista tus herramientas: Google Analytics, HubSpot, Meta Ads, Semrush, etc.",
         "Incluye resultados de campañas como logros independientes, no enterrados en descripciones",
-        "Usa el generador de cartas de presentación IA de ReadyCV para escribir cartas personalizadas",
+        "Usa el generador de cartas de presentación IA de ReadyCVV para escribir cartas personalizadas",
       ],
       recommended: ["Spark", "Modern", "Fold", "Glass", "Sidebar"],
       faq: [
@@ -123,10 +123,10 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "data-scientist",
     en: {
-      title: "Data Scientist Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Data Scientist Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Data Scientist Resume Templates",
       description: "ATS-optimized data scientist resume templates. Showcase your Python, SQL, ML skills and research impact. Used by analysts, ML engineers and data professionals. Download in PDF.",
-      intro: "Data science hiring is highly technical. Recruiters scan for specific tools, methodologies, and — critically — business impact. Your resume must speak to both the technical reviewer and the business stakeholder. ReadyCV's templates help you structure this dual narrative clearly.",
+      intro: "Data science hiring is highly technical. Recruiters scan for specific tools, methodologies, and — critically — business impact. Your resume must speak to both the technical reviewer and the business stakeholder. ReadyCVV's templates help you structure this dual narrative clearly.",
       tips: [
         "Create a dedicated 'Technical Skills' section: languages (Python, R, SQL), frameworks (TensorFlow, PyTorch, scikit-learn), cloud (AWS, GCP, Azure)",
         "Frame every project with: problem → methodology → business result",
@@ -137,15 +137,15 @@ const PROFESSIONS: ProfessionData[] = [
       recommended: ["Carbon", "Blueprint", "ATS Pro", "Executive", "Spark"],
       faq: [
         { q: "Should a data scientist resume include all projects?", a: "No. Include 2-4 projects that are most relevant to the role. Quality over quantity — each project entry should clearly state the problem, your approach and the measurable outcome." },
-        { q: "How do I show ML experience on a resume without a formal job?", a: "Include personal projects, Kaggle competitions (with rank), open source contributions, or research papers. ReadyCV's 'Projects' section is built for this." },
+        { q: "How do I show ML experience on a resume without a formal job?", a: "Include personal projects, Kaggle competitions (with rank), open source contributions, or research papers. ReadyCVV's 'Projects' section is built for this." },
         { q: "What's the best template style for data scientists?", a: "Technical roles benefit from clean, structured layouts that prioritize readability. Carbon (dark mode) works well for creative data roles; ATS Pro is best for corporate analytics positions." },
       ],
     },
     es: {
-      title: "Plantilla de CV para Científico de Datos 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Científico de Datos 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Científicos de Datos",
       description: "Plantillas de CV para data scientists, analistas de datos e ingenieros ML. Muestra tus habilidades en Python, SQL y machine learning. Exporta a PDF en minutos.",
-      intro: "La contratación en ciencia de datos es altamente técnica. Los reclutadores buscan herramientas específicas, metodologías y — de forma crítica — impacto en el negocio. Tu CV debe hablarle tanto al revisor técnico como al stakeholder de negocio. Las plantillas de ReadyCV te ayudan a estructurar esta narrativa dual con claridad.",
+      intro: "La contratación en ciencia de datos es altamente técnica. Los reclutadores buscan herramientas específicas, metodologías y — de forma crítica — impacto en el negocio. Tu CV debe hablarle tanto al revisor técnico como al stakeholder de negocio. Las plantillas de ReadyCVV te ayudan a estructurar esta narrativa dual con claridad.",
       tips: [
         "Crea una sección de 'Habilidades técnicas' dedicada: lenguajes (Python, R, SQL), frameworks (TensorFlow, PyTorch, scikit-learn), cloud (AWS, GCP, Azure)",
         "Enmarca cada proyecto con: problema → metodología → resultado de negocio",
@@ -156,7 +156,7 @@ const PROFESSIONS: ProfessionData[] = [
       recommended: ["Carbon", "Blueprint", "ATS Pro", "Executive", "Spark"],
       faq: [
         { q: "¿Debe un CV de científico de datos incluir todos los proyectos?", a: "No. Incluye 2-4 proyectos más relevantes para el rol. Calidad sobre cantidad — cada entrada de proyecto debe indicar claramente el problema, tu enfoque y el resultado medible." },
-        { q: "¿Cómo muestro experiencia en ML sin un empleo formal?", a: "Incluye proyectos personales, competencias de Kaggle (con ranking), contribuciones open source o artículos de investigación. La sección 'Proyectos' de ReadyCV está diseñada para esto." },
+        { q: "¿Cómo muestro experiencia en ML sin un empleo formal?", a: "Incluye proyectos personales, competencias de Kaggle (con ranking), contribuciones open source o artículos de investigación. La sección 'Proyectos' de ReadyCVV está diseñada para esto." },
         { q: "¿Cuál es la mejor plantilla para científicos de datos?", a: "Los roles técnicos se benefician de layouts limpios y estructurados. Carbon funciona bien para roles de datos creativos; ATS Pro es mejor para posiciones de analítica corporativa." },
       ],
     },
@@ -164,7 +164,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "nurse",
     en: {
-      title: "Nurse Resume Template 2026 | Healthcare | ATS-Optimized | ReadyCV",
+      title: "Nurse Resume Template 2026 | Healthcare | ATS-Optimized | ReadyCVV",
       h1: "Nurse Resume Templates",
       description: "Free ATS-optimized nurse and healthcare resume templates. Designed for RNs, LPNs, nurse practitioners and healthcare professionals. Highlight certifications, specializations and patient care experience.",
       intro: "Healthcare hiring is credential-driven. Nurse recruiters scan resumes in seconds for licensure (RN, LPN, NP), certifications (BLS, ACLS, PALS), and clinical specialization. Your resume structure must make these credentials instantly visible — not buried in paragraphs of job descriptions.",
@@ -183,7 +183,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Enfermero/a 2026 | Salud | ATS | ReadyCV",
+      title: "Plantilla de CV para Enfermero/a 2026 | Salud | ATS | ReadyCVV",
       h1: "Plantillas de CV para Enfermería",
       description: "Plantillas de CV para enfermeros, enfermeras y profesionales de la salud. Optimizadas para ATS. Destaca tus certificaciones, especializaciones y experiencia clínica. Descarga en PDF.",
       intro: "La contratación en salud se basa en credenciales. Los reclutadores de enfermería escanean CVs en segundos buscando licencias, certificaciones y especialización clínica. La estructura de tu CV debe hacer que estas credenciales sean inmediatamente visibles — no enterradas en párrafos de descripciones de trabajo.",
@@ -205,10 +205,10 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "project-manager",
     en: {
-      title: "Project Manager Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Project Manager Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Project Manager Resume Templates",
       description: "ATS-optimized project manager resume templates for PMs, Scrum Masters and program managers. Showcase certifications (PMP, CAPM), project scope, budget management and team leadership.",
-      intro: "Project management resumes need to demonstrate one thing above all else: delivery. Recruiters want to see projects you've shipped, budgets you've managed, teams you've led, and methodologies you've mastered. ReadyCV's templates give you the structure to present this evidence convincingly.",
+      intro: "Project management resumes need to demonstrate one thing above all else: delivery. Recruiters want to see projects you've shipped, budgets you've managed, teams you've led, and methodologies you've mastered. ReadyCVV's templates give you the structure to present this evidence convincingly.",
       tips: [
         "List PM certifications prominently: PMP, CAPM, PMI-ACP, CSM, PRINCE2",
         "Quantify project scope: budget ($), team size (#), timeline, and delivery status",
@@ -224,10 +224,10 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Gerente de Proyectos 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Gerente de Proyectos 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Gerentes de Proyectos",
       description: "Plantillas de CV para Project Managers, Scrum Masters y gerentes de programa. Muestra certificaciones PMP, alcance de proyectos, gestión de presupuesto y liderazgo de equipos.",
-      intro: "Los CVs de gestión de proyectos necesitan demostrar una cosa por encima de todo: entrega. Los reclutadores quieren ver proyectos que hayas completado, presupuestos que hayas gestionado, equipos que hayas liderado y metodologías que domines. Las plantillas de ReadyCV te dan la estructura para presentar esta evidencia de manera convincente.",
+      intro: "Los CVs de gestión de proyectos necesitan demostrar una cosa por encima de todo: entrega. Los reclutadores quieren ver proyectos que hayas completado, presupuestos que hayas gestionado, equipos que hayas liderado y metodologías que domines. Las plantillas de ReadyCVV te dan la estructura para presentar esta evidencia de manera convincente.",
       tips: [
         "Lista las certificaciones PM prominentemente: PMP, CAPM, PMI-ACP, CSM, PRINCE2",
         "Cuantifica el alcance del proyecto: presupuesto ($), tamaño del equipo (#), cronograma y estado de entrega",
@@ -246,7 +246,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "accountant",
     en: {
-      title: "Accountant Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Accountant Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Accountant Resume Templates",
       description: "ATS-optimized resume templates for accountants, CPAs, financial analysts and bookkeepers. Showcase your certifications, software skills and financial impact. Download to PDF in minutes.",
       intro: "Accounting resumes are evaluated on precision, credentials, and software proficiency. Hiring managers scan for CPA licensure, ERP systems, and audit or tax specialization. Your resume must communicate technical accuracy and measurable financial impact — two traits that define every strong accounting hire.",
@@ -255,7 +255,7 @@ const PROFESSIONS: ProfessionData[] = [
         "Name the software you use: QuickBooks, SAP, Oracle, NetSuite, Excel (including pivot tables and VLOOKUP)",
         "Quantify financial scope: 'Managed $4M in accounts payable' or 'Reduced month-end close by 3 days'",
         "Separate public accounting (audit/tax) from corporate (FP&A, cost accounting) experience clearly",
-        "Use ReadyCV's ATS Score to match keywords to each job description before applying",
+        "Use ReadyCVV's ATS Score to match keywords to each job description before applying",
       ],
       recommended: ["Professional", "Classic", "Executive", "Blueprint", "ATS Pro"],
       faq: [
@@ -265,7 +265,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Contador 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Contador 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Contadores",
       description: "Plantillas de CV para contadores, CPAs, analistas financieros y tenedores de libros. Optimizadas para ATS. Destaca tus certificaciones, software y logros financieros.",
       intro: "Los CVs de contabilidad se evalúan por precisión, credenciales y dominio de software. Los reclutadores buscan licencias CPA, sistemas ERP y especialización en auditoría o impuestos. Tu CV debe comunicar precisión técnica e impacto financiero medible — dos rasgos que definen a toda contratación de contabilidad exitosa.",
@@ -274,7 +274,7 @@ const PROFESSIONS: ProfessionData[] = [
         "Nombra el software que usas: QuickBooks, SAP, Oracle, NetSuite, Excel avanzado (tablas dinámicas, BUSCARV)",
         "Cuantifica el alcance financiero: 'Gestión de $4M en cuentas por pagar' o 'Reduje el cierre mensual en 3 días'",
         "Separa claramente la contabilidad pública (auditoría/impuestos) de la corporativa (FP&A, costos)",
-        "Usa el ATS Score de ReadyCV para hacer match de palabras clave antes de aplicar",
+        "Usa el ATS Score de ReadyCVV para hacer match de palabras clave antes de aplicar",
       ],
       recommended: ["Professional", "Classic", "Executive", "Blueprint", "ATS Pro"],
       faq: [
@@ -287,10 +287,10 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "teacher",
     en: {
-      title: "Teacher Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Teacher Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Teacher Resume Templates",
       description: "ATS-optimized resume templates for teachers, educators and school administrators. Highlight certifications, grade levels, curriculum development and student outcomes. Download to PDF.",
-      intro: "Teaching resumes must convey two things: credentials and classroom impact. Administrators scan for state licensure, subject area endorsements, grade level experience, and evidence of student achievement. ReadyCV's templates help you present this information clearly and pass the automated screening systems many school districts now use.",
+      intro: "Teaching resumes must convey two things: credentials and classroom impact. Administrators scan for state licensure, subject area endorsements, grade level experience, and evidence of student achievement. ReadyCVV's templates help you present this information clearly and pass the automated screening systems many school districts now use.",
       tips: [
         "List your teaching license, state, and endorsements prominently near the top",
         "Specify grade levels and subject areas you've taught — don't make readers search for this",
@@ -306,10 +306,10 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Maestro/Docente 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Maestro/Docente 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Docentes",
       description: "Plantillas de CV para maestros, docentes y directivos escolares. Optimizadas para ATS. Destaca certificaciones, niveles educativos, desarrollo curricular y logros estudiantiles.",
-      intro: "Los CVs de docentes deben transmitir dos cosas: credenciales e impacto en el aula. Los directivos buscan licencias estatales, habilitaciones por asignatura, experiencia por nivel y evidencias de logro estudiantil. Las plantillas de ReadyCV te ayudan a presentar esta información con claridad y a superar los sistemas de selección automatizada que muchos distritos escolares ya utilizan.",
+      intro: "Los CVs de docentes deben transmitir dos cosas: credenciales e impacto en el aula. Los directivos buscan licencias estatales, habilitaciones por asignatura, experiencia por nivel y evidencias de logro estudiantil. Las plantillas de ReadyCVV te ayudan a presentar esta información con claridad y a superar los sistemas de selección automatizada que muchos distritos escolares ya utilizan.",
       tips: [
         "Lista tu licencia de enseñanza, estado y habilitaciones prominentemente cerca del inicio",
         "Especifica los niveles y materias que has enseñado — no hagas que los lectores lo busquen",
@@ -328,7 +328,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "lawyer",
     en: {
-      title: "Lawyer Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Lawyer Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Lawyer Resume Templates",
       description: "ATS-optimized resume templates for lawyers, attorneys and legal professionals. Showcase bar admissions, practice areas, case outcomes and publications. Download to PDF in minutes.",
       intro: "Legal resumes operate in a highly credential-driven market. Partners and HR at law firms scan for bar admissions, law school prestige, practice area depth, and specific transaction or litigation experience. Your resume must be impeccably formatted — typos or inconsistencies signal the same carelessness that would concern a client.",
@@ -347,7 +347,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Abogado 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Abogado 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Abogados",
       description: "Plantillas de CV para abogados y profesionales del derecho. Optimizadas para ATS. Destaca admisiones al colegio, áreas de práctica, resultados de casos y publicaciones.",
       intro: "Los CVs jurídicos operan en un mercado altamente orientado a credenciales. Los socios y RR.HH. en despachos de abogados buscan admisiones al colegio, prestigio de la facultad de derecho, profundidad en el área de práctica y experiencia específica en transacciones o litigios. Tu CV debe estar impecablemente formateado — los errores tipográficos o inconsistencias señalan el mismo descuido que preocuparía a un cliente.",
@@ -369,10 +369,10 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "sales",
     en: {
-      title: "Sales Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Sales Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Sales Resume Templates",
       description: "ATS-optimized resume templates for sales representatives, account executives and sales managers. Showcase quotas, revenue generated, pipeline managed and sales methodology.",
-      intro: "Sales resumes are judged on one thing: numbers. Hiring managers in sales want evidence that you can close. Quota attainment, revenue generated, deal sizes, and ramp time — these are the metrics that decide whether your resume goes to the top of the pile or the bottom. ReadyCV's templates give you the structure to lead with proof.",
+      intro: "Sales resumes are judged on one thing: numbers. Hiring managers in sales want evidence that you can close. Quota attainment, revenue generated, deal sizes, and ramp time — these are the metrics that decide whether your resume goes to the top of the pile or the bottom. ReadyCVV's templates give you the structure to lead with proof.",
       tips: [
         "Include quota attainment in every role: '118% of quota in FY2025' is instantly credible",
         "State your deal size and sales cycle length — enterprise and SMB sales require very different skills",
@@ -388,10 +388,10 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Ventas 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Ventas 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Ventas",
       description: "Plantillas de CV para ejecutivos de ventas, representantes comerciales y gerentes de ventas. Muestra tus cuotas, ingresos generados, pipeline gestionado y metodología de ventas.",
-      intro: "Los CVs de ventas se juzgan por una cosa: los números. Los gerentes de contratación en ventas quieren evidencia de que puedes cerrar. Cumplimiento de cuota, ingresos generados, tamaños de deals y tiempo de ramp — estas son las métricas que deciden si tu CV va al tope o al fondo. Las plantillas de ReadyCV te dan la estructura para liderar con pruebas.",
+      intro: "Los CVs de ventas se juzgan por una cosa: los números. Los gerentes de contratación en ventas quieren evidencia de que puedes cerrar. Cumplimiento de cuota, ingresos generados, tamaños de deals y tiempo de ramp — estas son las métricas que deciden si tu CV va al tope o al fondo. Las plantillas de ReadyCVV te dan la estructura para liderar con pruebas.",
       tips: [
         "Incluye el cumplimiento de cuota en cada rol: '118% de la cuota en FY2025' es inmediatamente creíble",
         "Indica el tamaño de tus deals y la duración del ciclo de ventas — las ventas enterprise y SMB requieren habilidades muy diferentes",
@@ -410,7 +410,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "hr",
     en: {
-      title: "HR Resume Template 2026 | Human Resources | ATS-Optimized | ReadyCV",
+      title: "HR Resume Template 2026 | Human Resources | ATS-Optimized | ReadyCVV",
       h1: "HR & Human Resources Resume Templates",
       description: "ATS-optimized resume templates for HR professionals, recruiters, HR business partners and talent managers. Highlight certifications, HRIS platforms and workforce metrics.",
       intro: "HR professionals face the irony of writing a resume that will be screened by systems they know well. The advantage: you understand exactly what recruiters and ATS systems look for. Use that knowledge. Lead with certifications, HRIS proficiency, and the specific metrics that demonstrate your impact on hiring quality, retention, and workforce performance.",
@@ -429,7 +429,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para RRHH 2026 | Recursos Humanos | ATS | ReadyCV",
+      title: "Plantilla de CV para RRHH 2026 | Recursos Humanos | ATS | ReadyCVV",
       h1: "Plantillas de CV para Recursos Humanos",
       description: "Plantillas de CV para profesionales de RRHH, reclutadores, HR business partners y gestores de talento. Optimizadas para ATS. Destaca certificaciones, plataformas HRIS y métricas de fuerza laboral.",
       intro: "Los profesionales de RRHH enfrentan la ironía de escribir un CV que será evaluado por sistemas que conocen bien. La ventaja: sabes exactamente qué buscan los reclutadores y los sistemas ATS. Usa ese conocimiento. Empieza con certificaciones, dominio de HRIS y las métricas específicas que demuestran tu impacto en la calidad de contratación, la retención y el rendimiento de la fuerza laboral.",
@@ -451,16 +451,16 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "designer",
     en: {
-      title: "Graphic Designer Resume Template 2026 | ATS-Optimized | ReadyCV",
+      title: "Graphic Designer Resume Template 2026 | ATS-Optimized | ReadyCVV",
       h1: "Graphic Designer Resume Templates",
       description: "ATS-optimized resume templates for graphic designers, UX/UI designers and creative professionals. Show your tools, portfolio and design impact. Download to PDF in minutes.",
-      intro: "Designers face a unique challenge: your resume is also a design artifact. It signals your aesthetic judgment before anyone reads a word. But beauty without ATS-compatibility is invisible. ReadyCV's templates balance visual appeal with the structured formatting that automated screening systems require.",
+      intro: "Designers face a unique challenge: your resume is also a design artifact. It signals your aesthetic judgment before anyone reads a word. But beauty without ATS-compatibility is invisible. ReadyCVV's templates balance visual appeal with the structured formatting that automated screening systems require.",
       tips: [
         "Always include a portfolio link in your contact section — it's your strongest proof",
         "List design tools explicitly: Figma, Adobe Creative Suite (Illustrator, Photoshop, InDesign), Sketch, Framer",
         "For UX roles: include research methods (user interviews, usability testing, A/B testing)",
         "Quantify design impact: 'Redesigned checkout flow, increasing conversion by 22%'",
-        "Choose a visually distinctive ReadyCV template — your resume layout is part of your portfolio",
+        "Choose a visually distinctive ReadyCVV template — your resume layout is part of your portfolio",
       ],
       recommended: ["Neon", "Glass", "Bauhaus", "Fold", "Carbon"],
       faq: [
@@ -470,16 +470,16 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Diseñador Gráfico 2026 | ATS | ReadyCV",
+      title: "Plantilla de CV para Diseñador Gráfico 2026 | ATS | ReadyCVV",
       h1: "Plantillas de CV para Diseñadores",
       description: "Plantillas de CV para diseñadores gráficos, UX/UI y creativos. Optimizadas para ATS. Muestra tus herramientas, portafolio e impacto del diseño. Descarga en PDF.",
-      intro: "Los diseñadores enfrentan un desafío único: tu CV también es un artefacto de diseño. Señala tu juicio estético antes de que alguien lea una sola palabra. Pero la belleza sin compatibilidad con ATS es invisible. Las plantillas de ReadyCV equilibran el atractivo visual con el formato estructurado que requieren los sistemas de selección automatizada.",
+      intro: "Los diseñadores enfrentan un desafío único: tu CV también es un artefacto de diseño. Señala tu juicio estético antes de que alguien lea una sola palabra. Pero la belleza sin compatibilidad con ATS es invisible. Las plantillas de ReadyCVV equilibran el atractivo visual con el formato estructurado que requieren los sistemas de selección automatizada.",
       tips: [
         "Incluye siempre un link de portafolio en tu sección de contacto — es tu prueba más poderosa",
         "Lista las herramientas de diseño explícitamente: Figma, Adobe Creative Suite, Sketch, Framer",
         "Para roles UX: incluye métodos de investigación (entrevistas de usuario, pruebas de usabilidad, A/B testing)",
         "Cuantifica el impacto del diseño: 'Rediseñé el flujo de checkout, aumentando la conversión en un 22%'",
-        "Elige una plantilla visualmente distintiva de ReadyCV — el layout de tu CV es parte de tu portafolio",
+        "Elige una plantilla visualmente distintiva de ReadyCVV — el layout de tu CV es parte de tu portafolio",
       ],
       recommended: ["Neon", "Glass", "Bauhaus", "Fold", "Carbon"],
       faq: [
@@ -632,8 +632,8 @@ export default async function ProfessionTemplatePage({
             </h2>
             <p className="text-muted-foreground mb-6">
               {isEs
-                ? `Estas plantillas de ReadyCV son las más utilizadas por profesionales de ${content.h1.replace("Plantillas de CV para ", "").toLowerCase()}.`
-                : `These ReadyCV templates are most popular among ${content.h1.replace(" Resume Templates", "").toLowerCase()} professionals.`}
+                ? `Estas plantillas de ReadyCVV son las más utilizadas por profesionales de ${content.h1.replace("Plantillas de CV para ", "").toLowerCase()}.`
+                : `These ReadyCVV templates are most popular among ${content.h1.replace(" Resume Templates", "").toLowerCase()} professionals.`}
             </p>
             <div className="flex flex-wrap gap-2 mb-8">
               {content.recommended.map((name) => (
@@ -689,8 +689,8 @@ export default async function ProfessionTemplatePage({
             </h2>
             <p className="text-muted-foreground mb-8">
               {isEs
-                ? "ReadyCV Pro incluye IA para mejorar bullets, ATS Score, carta de presentación y más. Desde $15/mes."
-                : "ReadyCV Pro includes AI bullet improver, ATS Score, cover letter generator and more. From $15/month."}
+                ? "ReadyCVV Pro incluye IA para mejorar bullets, ATS Score, carta de presentación y más. Desde $15/mes."
+                : "ReadyCVV Pro includes AI bullet improver, ATS Score, cover letter generator and more. From $15/month."}
             </p>
             <Link href={`/${locale}/register`}>
               <Button size="lg" className="gap-2 text-base">

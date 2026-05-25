@@ -7,8 +7,7 @@ import {
   AI_TEMPERATURE,
   AI_TEMPERATURE_CREATIVE,
   AI_TEMPERATURE_BALANCED,
-  checkRateLimit,
-  recordRateLimitUsage,
+  checkAndIncrementRateLimit,
   logAIUsage,
   buildResumeContext,
 } from "@/lib/ai-client"
@@ -20,6 +19,10 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 
 export interface VersionsResult {
   versions: string[]
+}
+
+export interface BulletResult {
+  bullets: string[]
 }
 
 export interface ATSScoreResult {
@@ -231,8 +234,8 @@ export class AIService {
 
   // ── 1. improve-bullet ────────────────────────────────────────────────────────
 
-  async improveBullet(userId: string, input: ImproveBulletInput): Promise<VersionsResult> {
-    const allowed = await checkRateLimit(userId, "improve-bullet")
+  async improveBullet(userId: string, input: ImproveBulletInput): Promise<BulletResult> {
+    const allowed = await checkAndIncrementRateLimit(userId, "improve-bullet")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { text, jobTitle, employer, industry, language: rawLanguage } = input
@@ -248,34 +251,31 @@ export class AIService {
       industry ? `Industria: ${industry}` : "",
     ].filter(Boolean).join(" | ")
 
-    const prompt = `TAREA: Revisa y mejora TODOS los bullets de esta descripción de experiencia laboral. Devuelve 3 versiones completas mejoradas.
+    const prompt = `TAREA: Analiza esta descripción de experiencia laboral y genera una lista optimizada de bullets profesionales.
+La cantidad de bullets debe adaptarse a la riqueza del contenido:
+- Contenido pobre (vago, sin métricas, sin contexto): genera 3-4 bullets
+- Contenido medio (algo de contexto, algunos logros): genera 4-6 bullets
+- Contenido rico (métricas, logros claros, múltiples responsabilidades): genera 6-10 bullets
 
 ${context ? `Contexto: ${context}` : ""}
 Descripción actual:
 ${text}
 
-INSTRUCCIONES PARA CADA VERSIÓN:
-1. Mejora CADA bullet existente: verbo de acción fuerte al inicio, orientado a logros, ATS-friendly.
-2. Agrega 2-3 bullets nuevos y relevantes si enriquecen el perfil para el puesto.
-3. Elimina bullets débiles, repetitivos o irrelevantes para un CV profesional.
+INSTRUCCIONES:
+1. Mejora cada bullet: verbo de acción fuerte al inicio, orientado a logros, ATS-friendly.
+2. Agrega bullets nuevos y relevantes si enriquecen el perfil para el puesto.
+3. Elimina bullets débiles, repetitivos o irrelevantes.
 4. Métricas: usa PLACEHOLDERS como [X%], [N usuarios], [$Z] cuando no hay cifras reales. NUNCA inventes números.
 5. Sin pronombres personales. Empieza cada bullet directo con el verbo.
 6. Verbos fuertes: Desarrollé, Implementé, Optimicé, Lideré, Diseñé, Reduje, Automaticé, Colaboré, Entregué.
 7. Mantén el mismo idioma que el texto original.
 
-LAS 3 VERSIONES DEBEN DIFERENCIARSE ASÍ:
-- Versión 1: enfoque técnico — resalta stack, arquitectura y soluciones técnicas.
-- Versión 2: enfoque en logros — cuantifica impacto, métricas y resultados de negocio.
-- Versión 3: enfoque en liderazgo y colaboración — resalta trabajo en equipo, mentoring y entrega ágil.
-
-Cada versión es una cadena con todos los bullets separados por \\n, cada uno empezando con "• ".
-
 Responde ÚNICAMENTE con JSON válido (sin markdown):
-{"versions": ["bullets_version1", "bullets_version2", "bullets_version3"]}`
+{"bullets": ["• bullet1", "• bullet2", "• bullet3"]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 1800,
+      max_tokens: 600,
       temperature: AI_TEMPERATURE_CREATIVE,
       response_format: { type: "json_object" },
       messages: [
@@ -283,11 +283,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           role: "system",
           content:
             "Eres un Consultor de Carrera de Élite y experto en optimización de ATS (Applicant Tracking Systems). " +
-            "Tu especialidad es revisar descripciones de experiencia laboral bullet por bullet: mejorar los existentes, agregar nuevos relevantes y eliminar los débiles. " +
-            "Devuelves siempre 3 versiones completas de la descripción mejorada con todos sus bullets. " +
+            "Tu especialidad es revisar descripciones de experiencia laboral y generar una lista optimizada de bullets profesionales adaptada a la riqueza del contenido. " +
+            "Generas entre 3-10 bullets según la cantidad y calidad del contenido proporcionado. " +
             "SOLO respondes solicitudes relacionadas con CVs, experiencia laboral y perfiles de empleo. " +
             "Cuando el original no tiene métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N], [$Z]) — NUNCA inventas cifras reales. " +
-            "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"versions\": []} sin texto adicional. " +
+            "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"bullets\": []} sin texto adicional. " +
             langInstruction,
         },
         { role: "user", content: prompt },
@@ -295,20 +295,21 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     })
 
     const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ versions?: unknown }>(raw)
+    const parsed = parseAIJson<{ bullets?: unknown }>(raw)
 
-    if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (!Array.isArray(parsed.bullets)) throw new AppError("invalid_response_format", 500)
+    if (parsed.bullets.length === 0) {
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "improve-bullet")
-    recordRateLimitUsage(userId, "improve-bullet")
-    return { versions: (parsed.versions as string[]).slice(0, 3) }
+    return { bullets: (parsed.bullets as string[]).slice(0, 10) }
   }
 
   // ── 2. generate-summary ──────────────────────────────────────────────────────
 
   async generateSummary(userId: string, input: GenerateSummaryInput): Promise<VersionsResult> {
-    const allowed = await checkRateLimit(userId, "generate-summary")
+    const allowed = await checkAndIncrementRateLimit(userId, "generate-summary")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { sectionData, language: rawLanguage } = input
@@ -366,17 +367,18 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "generate-summary")
-    recordRateLimitUsage(userId, "generate-summary")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
   // ── 3. improve-summary ───────────────────────────────────────────────────────
 
   async improveSummary(userId: string, input: ImproveSummaryInput): Promise<VersionsResult> {
-    const allowed = await checkRateLimit(userId, "improve-summary")
+    const allowed = await checkAndIncrementRateLimit(userId, "improve-summary")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { summary, userDescription, sectionData, language: rawLanguage } = input
@@ -461,17 +463,18 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "improve-summary")
-    recordRateLimitUsage(userId, "improve-summary")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
   // ── 4. ats-score ─────────────────────────────────────────────────────────────
 
   async atsScore(userId: string, input: ATSScoreInput): Promise<ATSScoreResult> {
-    const allowed = await checkRateLimit(userId, "ats-score")
+    const allowed = await checkAndIncrementRateLimit(userId, "ats-score")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { jobDescription, sectionData, language: rawLanguage } = input
@@ -540,14 +543,13 @@ Reglas:
     }
 
     logAIUsage(userId, "ats-score")
-    recordRateLimitUsage(userId, "ats-score")
     return parsed
   }
 
   // ── 5. generate-cover-letter ─────────────────────────────────────────────────
 
   async generateCoverLetter(userId: string, input: GenerateCoverLetterInput): Promise<CoverLetterResult> {
-    const allowed = await checkRateLimit(userId, "generate-cover-letter")
+    const allowed = await checkAndIncrementRateLimit(userId, "generate-cover-letter")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt } = input
@@ -661,7 +663,9 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     const parsed = parseAIJson<{ body: string }>(raw)
 
     if (typeof parsed.body !== "string") throw new AppError("invalid_response_format", 500)
-    if (parsed.body.trim() === "") throw new AppError("off_topic", 422)
+    if (parsed.body.trim() === "") {
+      throw new AppError("off_topic", 422)
+    }
 
     const html = parsed.body
       .split(/\n\n+/)
@@ -669,14 +673,13 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       .join("")
 
     logAIUsage(userId, "generate-cover-letter")
-    recordRateLimitUsage(userId, "generate-cover-letter")
     return { body: html }
   }
 
   // ── 6. improve-cover-letter ──────────────────────────────────────────────────
 
   async improveCoverLetter(userId: string, input: ImproveCoverLetterInput): Promise<VersionsResult> {
-    const allowed = await checkRateLimit(userId, "improve-cover-letter")
+    const allowed = await checkAndIncrementRateLimit(userId, "improve-cover-letter")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { body, company, jobTitle, recipientTitle, language: rawLanguage } = input
@@ -741,17 +744,18 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const parsed = parseAIJson<{ versions?: unknown }>(raw)
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) throw new AppError("off_topic", 422)
+    if (parsed.versions.length === 0) {
+      throw new AppError("off_topic", 422)
+    }
 
     logAIUsage(userId, "improve-cover-letter")
-    recordRateLimitUsage(userId, "improve-cover-letter")
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 
   // ── 7. review-cv ─────────────────────────────────────────────────────────────
 
   async reviewCV(userId: string, input: ReviewCVInput): Promise<ReviewResult> {
-    const allowed = await checkRateLimit(userId, "review-cv")
+    const allowed = await checkAndIncrementRateLimit(userId, "review-cv")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { sectionData, question, language: rawLanguage } = input
@@ -833,7 +837,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const raw = response.choices[0]?.message?.content ?? ""
     const parsed = parseAIJson<ReviewResult & { answer: string }>(raw)
 
-    if (parsed.answer === "off_topic") throw new AppError("off_topic", 422)
+    if (parsed.answer === "off_topic") {
+      throw new AppError("off_topic", 422)
+    }
 
     const sanitizePreview = (text: string) =>
       text.replace(/[*_`#>]/g, "").replace(/\n{3,}/g, "\n\n").trim()
@@ -849,7 +855,6 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (!validated.success) {
       this.logger.warn("[AIService.reviewCV] Zod validation failed, returning without suggestions", { error: validated.error.flatten() })
       logAIUsage(userId, "review-cv")
-      recordRateLimitUsage(userId, "review-cv")
       return {
         summary: parsed.summary ?? "",
         strengths: (parsed.strengths ?? []).slice(0, 5).map((s: unknown) =>
@@ -863,7 +868,6 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     }
 
     logAIUsage(userId, "review-cv")
-    recordRateLimitUsage(userId, "review-cv")
     return {
       summary: validated.data.summary,
       strengths: validated.data.strengths.map(sanitizeItem),
@@ -875,7 +879,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   // ── 8. fill-profile ──────────────────────────────────────────────────────────
 
   async fillProfile(userId: string, input: FillProfileInput): Promise<FillProfileResult> {
-    const allowed = await checkRateLimit(userId, "fill-profile")
+    const allowed = await checkAndIncrementRateLimit(userId, "fill-profile")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { prompt, sectionData, language: rawLanguage } = input
@@ -981,7 +985,9 @@ Reglas:
       parsed.workExperienceUpdates?.length || parsed.workExperienceNew?.length ||
       parsed.educationUpdates?.length || parsed.projectUpdates?.length || parsed.volunteerUpdates?.length
 
-    if (!hasContent) throw new AppError("off_topic", 422)
+    if (!hasContent) {
+      throw new AppError("off_topic", 422)
+    }
 
     const validated = FillProfileResponseSchema.safeParse(parsed)
     const data = validated.success ? validated.data : parsed
@@ -992,7 +998,6 @@ Reglas:
     const validVolIds = new Set(((sd.volunteer ?? []) as { id: string }[]).map((v) => v.id))
 
     logAIUsage(userId, "fill-profile")
-    recordRateLimitUsage(userId, "fill-profile")
     return {
       summary: data.summary ?? null,
       jobTitle: data.jobTitle ?? null,
@@ -1012,7 +1017,7 @@ Reglas:
   // ── 9. suggest-skills ────────────────────────────────────────────────────────
 
   async suggestSkills(userId: string, input: SuggestSkillsInput): Promise<SuggestSkillsResult> {
-    const allowed = await checkRateLimit(userId, "suggest-skills")
+    const allowed = await checkAndIncrementRateLimit(userId, "suggest-skills")
     if (!allowed) throw new AppError("rate_limit_exceeded", 429)
 
     const { jobTitle, industry, existingSkills = [], language: rawLanguage } = input
@@ -1076,7 +1081,6 @@ Rules:
       }))
 
     logAIUsage(userId, "suggest-skills")
-    recordRateLimitUsage(userId, "suggest-skills")
     return { skills }
   }
 }

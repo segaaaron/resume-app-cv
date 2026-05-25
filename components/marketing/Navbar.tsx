@@ -4,7 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
 import { Button } from "@/components/ui/button"
-import { FileText, Menu, X } from "lucide-react"
+import { Menu, X } from "lucide-react"
 import { useState } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
@@ -37,10 +37,9 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#C9A96E]/25 shadow-brand-xs">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
-          <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <FileText className="h-4 w-4 text-white" />
-          </div>
-          ReadyCV
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.svg" alt="ReadyCVV" width={28} height={28} className="rounded-lg shrink-0" />
+          ReadyCVV
         </Link>
 
         {/* Desktop nav */}
@@ -67,7 +66,7 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <LocaleSwitcher />
+          <LocaleSwitcher variant="marketing" />
           {session ? (
             <Button asChild>
               <Link href={`/${locale}/dashboard/resumes`}>{t("dashboard")}</Link>
@@ -110,7 +109,7 @@ export default function Navbar() {
             )
           )}
           <div className="py-2">
-            <LocaleSwitcher />
+            <LocaleSwitcher variant="marketing" />
           </div>
           <hr />
           {session ? (

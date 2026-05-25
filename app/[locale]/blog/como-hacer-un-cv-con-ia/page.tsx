@@ -36,7 +36,7 @@ export async function generateMetadata({
       images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCV"],
+      authors: ["ReadyCVV"],
     },
     twitter: {
       card: "summary_large_image",
@@ -98,10 +98,10 @@ export default async function AIResumeArticlePage({
     description: content.intro,
     datePublished: DATE_PUBLISHED,
     dateModified: DATE_MODIFIED,
-    author: { "@type": "Organization", name: "ReadyCV", url: "https://readycvv.com" },
+    author: { "@type": "Organization", name: "ReadyCVV", url: "https://readycvv.com" },
     publisher: {
       "@type": "Organization",
-      name: "ReadyCV",
+      name: "ReadyCVV",
       logo: { "@type": "ImageObject", url: "https://readycvv.com/og-image.png" },
     },
     image: "https://readycvv.com/og-image.png",

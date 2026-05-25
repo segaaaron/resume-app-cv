@@ -39,6 +39,13 @@ export interface PurgeStripeEventsResult {
   deleted: number
 }
 
+/** Split an array into chunks of at most `size` elements. */
+function chunk<T>(arr: T[], size: number): T[][] {
+  return Array.from({ length: Math.ceil(arr.length / size) }, (_, i) =>
+    arr.slice(i * size, i * size + size),
+  )
+}
+
 export class CronService {
   constructor(
     private readonly emailClient: ICronEmailClient | null,
@@ -56,6 +63,7 @@ export class CronService {
     const windowEnd = new Date(now.getTime() + 60 * 60 * 60 * 1000) // +60h
     const sentSince = new Date(now.getTime() - 20 * 60 * 60 * 1000) // last 20h
 
+    // H5: cap to 200 rows — at most ~200 PRO users renew in any given 24-hour window
     const users = await db.user.findMany({
       where: {
         plan: "PRO",
@@ -77,6 +85,7 @@ export class CronService {
         planInterval: true,
         subscriptionEndsAt: true,
       },
+      take: 200,
     })
 
     if (users.length === 0) {
@@ -84,39 +93,45 @@ export class CronService {
       return { sent: 0, failed: 0, total: 0, message: "No renewals in 2 days" }
     }
 
-    const results = await Promise.allSettled(
-      users.map(async (user) => {
-        // Claim the reminder slot BEFORE sending email to prevent duplicate sends
-        // if this cron fires concurrently (Dokploy retry, overlapping run).
-        // If another instance already claimed it (count = 0), skip silently.
-        const claimed = await db.user.updateMany({
-          where: { id: user.id, OR: [{ renewalReminderSentAt: null }, { renewalReminderSentAt: { lt: sentSince } }] },
-          data: { renewalReminderSentAt: new Date() },
-        })
-        if (claimed.count === 0) return
+    // H5: process in batches of 50 to avoid overwhelming the email provider
+    const BATCH_SIZE = 50
+    let sent = 0
+    let failed = 0
 
-        await this.emailClient!.emails.send({
-          from: "READY CV <no-reply@readycvv.com>",
-          to: user.email,
-          subject: "Tu plan se renueva en 2 días ⏰",
-          html: renewalReminderHtml({
-            userName: user.name ?? "Usuario",
-            userId: user.id,
-            planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
-            renewalDate: user.subscriptionEndsAt!,
-          }),
-          text: renewalReminderText({
-            userName: user.name ?? "Usuario",
-            userId: user.id,
-            planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
-            renewalDate: user.subscriptionEndsAt!,
-          }),
-        })
-      }),
-    )
+    const sendOne = async (user: (typeof users)[number]) => {
+      // Claim the reminder slot BEFORE sending email to prevent duplicate sends
+      // if this cron fires concurrently (Dokploy retry, overlapping run).
+      // If another instance already claimed it (count = 0), skip silently.
+      const claimed = await db.user.updateMany({
+        where: { id: user.id, OR: [{ renewalReminderSentAt: null }, { renewalReminderSentAt: { lt: sentSince } }] },
+        data: { renewalReminderSentAt: new Date() },
+      })
+      if (claimed.count === 0) return
 
-    const sent = results.filter((r) => r.status === "fulfilled").length
-    const failed = results.filter((r) => r.status === "rejected").length
+      await this.emailClient!.emails.send({
+        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
+        to: user.email,
+        subject: "Tu plan se renueva en 2 días ⏰",
+        html: renewalReminderHtml({
+          userName: user.name ?? "Usuario",
+          userId: user.id,
+          planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
+          renewalDate: user.subscriptionEndsAt!,
+        }),
+        text: renewalReminderText({
+          userName: user.name ?? "Usuario",
+          userId: user.id,
+          planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
+          renewalDate: user.subscriptionEndsAt!,
+        }),
+      })
+    }
+
+    for (const batch of chunk(users, BATCH_SIZE)) {
+      const results = await Promise.allSettled(batch.map(sendOne))
+      sent += results.filter((r) => r.status === "fulfilled").length
+      failed += results.filter((r) => r.status === "rejected").length
+    }
 
     this.logger.info(`[CronService] sendRenewalReminders: sent=${sent} failed=${failed}`)
     return { sent, failed, total: users.length }
@@ -128,6 +143,7 @@ export class CronService {
     endOfDay.setHours(23, 59, 59, 999)
 
     const startOfWindow = new Date(Date.now() - 24 * 60 * 60 * 1000)
+    // H4: cap to 500 rows to prevent unbounded table scans
     const applications = await db.application.findMany({
       where: {
         followUpAt: { gte: startOfWindow, lte: endOfDay },
@@ -139,6 +155,7 @@ export class CronService {
           select: { id: true, name: true, email: true },
         },
       },
+      take: 500,
     })
 
     let sent = 0
@@ -157,7 +174,7 @@ export class CronService {
 
         if (this.isEmailEnabled && this.emailClient) {
           await this.emailClient.emails.send({
-            from: "READY CV <no-reply@readycvv.com>",
+            from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
             to: app.user.email,
             subject: `Recordatorio: seguimiento a ${app.jobTitle} en ${app.company}`,
             html: applicationReminderHtml({

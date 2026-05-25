@@ -56,12 +56,7 @@ export default function ActTemplates({ headline, sub, footer, locale, labels }: 
             <Link
               key={key}
               href={`/${locale}/templates`}
-              className="group relative rounded-xl overflow-hidden shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_60px_rgba(139,92,246,0.4)]"
-              style={{
-                width: "180px",
-                height: "254px",
-                flexShrink: 0,
-              }}
+              className="group relative rounded-xl overflow-hidden shadow-2xl transition-all duration-300 hover:scale-105 hover:shadow-[0_0_60px_rgba(139,92,246,0.4)] w-[180px] h-[254px] shrink-0"
             >
               <Image
                 src={TEMPLATE_IMAGES[key]}
