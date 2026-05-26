@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations, useLocale } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
+import { useAICooldown } from "./useAICooldown"
 
 export interface ReviewItem {
   text: string
@@ -29,7 +30,7 @@ export function useCVReview() {
   const [question, setQuestion] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<CVReviewResult | null>(null)
-  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_cv_review")
   const lastReviewKeyRef = useRef<string | null>(null)
 
   const review = useCallback(async () => {

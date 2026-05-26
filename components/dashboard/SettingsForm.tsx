@@ -338,9 +338,13 @@ export default function SettingsForm({ user }: { user: UserData }) {
               <BtnGhost onClick={handleBillingPortal} disabled={portalLoading} fullWidth>
                 {portalLoading ? t("opening_portal") : t("manage_billing")}
               </BtnGhost>
-              {endsAt && (
-                <div className="text-[11px] text-dash-subtle mt-[10px] text-center">
+              <div className="text-[11px] text-dash-subtle mt-[10px] text-center">
                   {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
+                  {endsAt && isActive && (
+                    <span className="ml-1">
+                      {" · "}{t("renews_on")} <strong>{format(endsAt, locale === "es" ? "d 'de' MMMM yyyy" : "MMMM d, yyyy", { locale: dateLocale })}</strong>
+                    </span>
+                  )}
                   {isActive && (
                     <>
                       {" · "}
@@ -357,7 +361,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
                             <AlertDialogTitle>{t("cancel_dialog_title")}</AlertDialogTitle>
                             <AlertDialogDescription>
                               {t("cancel_dialog_desc")}
-                              {endsAt && <> <strong>{format(endsAt, "d 'de' MMMM yyyy", { locale: dateLocale })}</strong>.</>}
+                              {endsAt && <> <strong>{format(endsAt, locale === "es" ? "d 'de' MMMM yyyy" : "MMMM d, yyyy", { locale: dateLocale })}</strong>.</>}
                               {" "}{t("cancel_dialog_after")}
                             </AlertDialogDescription>
                           </AlertDialogHeader>
@@ -375,7 +379,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
                     </>
                   )}
                 </div>
-              )}
             </>
           ) : (
             <BtnGold onClick={() => { window.location.href = `/${locale}/pricing` }} fullWidth>

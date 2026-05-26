@@ -80,7 +80,7 @@ export default async function CoverLetterPage({ params, searchParams }: { params
         company: content.company ?? "",
         subject: content.subject ?? "",
         body: content.body ?? "",
-        closing: content.closing ?? "",
+        closing: content.closing || (locale === "es" ? "Atentamente" : "Sincerely"),
       }}
       initialCandidate={initialCandidate}
     />

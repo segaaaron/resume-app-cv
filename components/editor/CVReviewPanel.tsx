@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import {
   MessageSquare, Loader2, CheckCircle2, TrendingUp,
-  Lightbulb, Check, Wand2, Sparkles, RotateCcw, AlertCircle, Clock,
+  Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -108,7 +108,7 @@ export default function CVReviewPanel() {
   const t = useTranslations("editor.cv_review")
   const tAts = useTranslations("editor.ats")
   const { sectionData, updateSectionData, save } = useResumeStore()
-  const { question, setQuestion, loading, result, review, reset, cooldownUntil } = useCVReview()
+  const { question, setQuestion, loading, result, review, cooldownUntil } = useCVReview()
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
   const [now, setNow] = useState(Date.now())
@@ -294,15 +294,6 @@ export default function CVReviewPanel() {
                 : <><Sparkles className="h-4 w-4" />{t("analyze")}</>
             }
           </button>
-          {result && (
-            <button
-              type="button"
-              onClick={() => { reset(); setAppliedItems(new Set()) }}
-              className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-600 transition-colors shrink-0 px-3 py-2.5 rounded-2xl hover:bg-slate-100"
-            >
-              <RotateCcw className="h-3.5 w-3.5" /> {t("clear")}
-            </button>
-          )}
         </div>
 
         {/* Empty state */}

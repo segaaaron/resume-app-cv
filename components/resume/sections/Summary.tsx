@@ -9,6 +9,7 @@ import { Sparkles, Loader2, Lock, Wand2, Check } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import SummaryVersionModal, { type SummaryVersion } from "./SummaryVersionModal"
+import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 
 export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
@@ -29,7 +30,7 @@ export default function SummarySection() {
   const [improving, setImproving] = useState(false)
   const [versions, setVersions] = useState<SummaryVersion[]>([])
   const [improved, setImproved] = useState(false)
-  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_summary")
   const [nowTs, setNowTs] = useState(Date.now())
   const lastKeyRef = useRef<string | null>(null)
 

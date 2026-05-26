@@ -6,6 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations, useLocale } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
+import { useAICooldown } from "./useAICooldown"
 
 export interface ATSResult {
   score: number
@@ -47,7 +48,7 @@ export function useATSScore() {
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
   const [offTopic, setOffTopic] = useState(false)
-  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ats")
   const lastKeyRef = useRef<string | null>(null)
 
   const analyze = useCallback(async () => {

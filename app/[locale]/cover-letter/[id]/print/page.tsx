@@ -69,7 +69,7 @@ export default async function CoverLetterPrintPage({
         company: content.company ?? "",
         subject: content.subject ?? "",
         body: content.body ?? "",
-        closing: content.closing ?? "",
+        closing: content.closing || (locale === "es" ? "Atentamente" : "Sincerely"),
       }}
       candidate={candidate}
       locale={locale}

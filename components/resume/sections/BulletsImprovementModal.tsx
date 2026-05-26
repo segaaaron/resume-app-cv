@@ -178,7 +178,7 @@ export default function BulletsImprovementModal({
           <button
             type="button"
             onClick={() => { setApplied(new Set()); onClose() }}
-            className="flex-1 flex justify-center items-center px-3 py-3 text-[13px] font-medium rounded-xl border border-[#E2E8F0] bg-white text-[#6B7A8C] cursor-pointer transition-all duration-150 hover:border-[#CBD5E1] hover:text-[#1a2e4a] min-h-[44px]"
+            className="shrink-0 flex justify-center items-center px-5 py-3 text-[13px] font-medium rounded-xl border border-[#E2E8F0] bg-white text-[#6B7A8C] cursor-pointer transition-all duration-150 hover:border-[#CBD5E1] hover:text-[#1a2e4a] min-h-[44px] whitespace-nowrap"
           >
             {t("cancel")}
           </button>
@@ -186,7 +186,7 @@ export default function BulletsImprovementModal({
             type="button"
             onClick={handleApplyAll}
             disabled={allApplied}
-            className="flex-1 flex justify-center items-center gap-1.5 px-3 py-3 text-[13px] font-semibold text-white rounded-xl border-none cursor-pointer transition-all duration-150 min-h-[44px] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 flex justify-center items-center gap-1.5 px-3 py-3 text-[13px] font-semibold text-white rounded-xl border-none cursor-pointer transition-all duration-150 min-h-[44px] whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
             style={{
               background: allApplied
                 ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"

@@ -975,6 +975,7 @@
       "cancel_dialog_after": "Después tu acceso Pro será desactivado.",
       "confirm_cancel": "Sí, cancelar",
       "member_since": "Miembro desde",
+      "renews_on": "Renueva el",
       "danger_zone": "Zona de peligro",
       "danger_desc": "Una vez eliminada tu cuenta, todos tus datos serán borrados permanentemente y no podrán recuperarse.",
       "delete_account": "Eliminar cuenta",
@@ -1341,7 +1342,8 @@
       "cv_incomplete_skills": "Habilidades",
       "cv_incomplete_experience": "Experiencia laboral",
       "no_changes": "El CV y la búsqueda no han cambiado desde el último análisis",
-      "cooldown_wait": "Espera {seconds} antes de volver a analizar"
+      "cooldown_wait": "Espera {seconds} antes de volver a analizar",
+      "wait": "Espera {seconds}"
     },
     "cv_review": {
       "title": "Revisión IA del CV",

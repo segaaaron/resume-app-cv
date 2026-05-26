@@ -975,6 +975,7 @@
       "cancel_dialog_after": "After that, your Pro access will be deactivated.",
       "confirm_cancel": "Yes, cancel",
       "member_since": "Member since",
+      "renews_on": "Renews on",
       "danger_zone": "Danger zone",
       "danger_desc": "Once your account is deleted, all your data will be permanently erased and cannot be recovered.",
       "delete_account": "Delete account",
@@ -1341,7 +1342,8 @@
       "cv_incomplete_skills": "Skills",
       "cv_incomplete_experience": "Work experience",
       "no_changes": "CV and search haven't changed since the last analysis",
-      "cooldown_wait": "Wait {seconds} before analyzing again"
+      "cooldown_wait": "Wait {seconds} before analyzing again",
+      "wait": "Wait {seconds}"
     },
     "cv_review": {
       "title": "AI CV Review",

@@ -86,12 +86,12 @@ export default function PlaceholderWarningModal({ open, count, onReview, onProce
         </div>
 
         {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-2.5 px-6 pb-6 pt-1"
+        <div className="flex flex-col gap-2.5 px-6 pb-6 pt-1"
           style={{ background: "linear-gradient(180deg, #f0f6fc 0%, #eaf4fb 100%)" }}>
           <button
             type="button"
             onClick={onReview}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[13px] font-bold text-white whitespace-nowrap cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:brightness-95"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[13px] font-bold text-white cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:brightness-110 active:translate-y-0 active:brightness-95"
             style={{
               background: "linear-gradient(135deg, #00C4EE 0%, #0099CC 60%, #007BB5 100%)",
               boxShadow: "0 4px 18px rgba(0,196,238,0.38), inset 0 1px 0 rgba(255,255,255,0.18)",
@@ -104,7 +104,7 @@ export default function PlaceholderWarningModal({ open, count, onReview, onProce
           <button
             type="button"
             onClick={onProceedAnyway}
-            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[12.5px] font-medium text-[#64748B] cursor-pointer transition-all duration-200 hover:text-[#475569] hover:bg-[rgba(100,116,139,0.1)]"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-[12.5px] font-medium text-[#64748B] cursor-pointer transition-all duration-200 hover:text-[#475569] hover:bg-[rgba(100,116,139,0.1)]"
             style={{
               background: "rgba(100,116,139,0.06)",
               border: "1px solid rgba(100,116,139,0.18)",

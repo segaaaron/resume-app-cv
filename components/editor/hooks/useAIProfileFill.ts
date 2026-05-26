@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations, useLocale } from "next-intl"
+import { useAICooldown } from "./useAICooldown"
 
 interface SuggestedLanguage { name: string; level: string }
 
@@ -37,7 +38,7 @@ export function useAIProfileFill() {
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<FillProfileResult | null>(null)
-  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ai_fill")
   const lastKeyRef = useRef<string | null>(null)
 
   const generate = useCallback(async (): Promise<FillProfileResult | undefined> => {

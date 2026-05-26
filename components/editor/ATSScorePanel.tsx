@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, RotateCcw } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -122,11 +122,27 @@ export default function ATSScorePanel() {
     offTopic,
     hasResult,
     analyze,
-    reset,
+    cooldownUntil,
   } = useATSScore()
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return
+    const id = setInterval(() => {
+      setNow(Date.now())
+      if (Date.now() >= cooldownUntil) clearInterval(id)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [cooldownUntil])
+
+  const inCooldown = now < cooldownUntil
+  const cooldownRemaining = inCooldown ? Math.ceil((cooldownUntil - now) / 1000) : 0
+  const cooldownLabel = cooldownRemaining >= 60
+    ? `${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, "0")}`
+    : `${cooldownRemaining}s`
 
   const inputIsQuestion = isQuestion(input)
 
@@ -335,10 +351,10 @@ export default function ATSScorePanel() {
         )}
 
         {/* Analyze button */}
-        <button type="button" onClick={handleSubmit} disabled={loading || input.trim().length < 15 || !cvReady}
+        <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < 15 || !cvReady}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
-          {loading ? t("analyzing") : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
+          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inCooldown ? <Clock className="h-3.5 w-3.5" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
+          {loading ? t("analyzing") : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
         </button>
 
         {offTopic && (
@@ -508,13 +524,6 @@ export default function ATSScorePanel() {
 
         <TailorCVPanel />
 
-        {hasResult && (
-          <button type="button"
-            onClick={() => { reset(); setAddedKeywords(new Set()); setAppliedItems(new Set()) }}
-            className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-slate-600 transition-colors mx-auto">
-            <RotateCcw className="h-3 w-3" /> {t("clear")}
-          </button>
-        )}
       </div>
 
       {/* Diff modal — rendered outside panel to avoid z-index issues */}

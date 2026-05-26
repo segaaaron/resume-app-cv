@@ -10,6 +10,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { nanoid } from "nanoid"
 import type { SkillItem, WorkExperienceItem } from "@/types/resume"
 import SuggestionDiffModal from "./SuggestionDiffModal"
+import { useAICooldown } from "./hooks/useAICooldown"
 
 interface TailorResult {
   summaryVersion: string
@@ -32,7 +33,7 @@ export default function TailorCVPanel() {
   const [appliedBullets, setAppliedBullets] = useState<Set<string>>(new Set())
   const [addedSkills, setAddedSkills] = useState<Set<string>>(new Set())
   const [pendingBullet, setPendingBullet] = useState<{ targetId: string; improved: string; currentDescription: string } | null>(null)
-  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_tailor")
   const [now, setNow] = useState(Date.now())
   const lastTailorKeyRef = useRef<string | null>(null)
 
