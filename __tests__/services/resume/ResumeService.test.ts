@@ -29,7 +29,7 @@ vi.mock("@/lib/db", () => {
       count: vi.fn(),
     },
     auditLog: {
-      create: vi.fn(),
+      create: vi.fn().mockResolvedValue({}),
     },
   }
   // $transaction executes the callback with the same mock db as the tx context

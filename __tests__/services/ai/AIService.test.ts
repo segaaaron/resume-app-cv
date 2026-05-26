@@ -10,6 +10,8 @@ vi.mock("@/lib/ai-client", () => ({
   AI_TEMPERATURE: 0.4,
   AI_TEMPERATURE_CREATIVE: 0.7,
   AI_TEMPERATURE_BALANCED: 0.5,
+  AI_TEMPERATURE_PRECISE: 0.1,
+  AI_TEMPERATURE_STRUCTURED: 0.3,
   checkRateLimit: vi.fn().mockResolvedValue(true),
   checkAndIncrementRateLimit: vi.fn().mockResolvedValue(true),
   recordRateLimitUsage: vi.fn(),
