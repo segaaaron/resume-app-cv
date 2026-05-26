@@ -102,7 +102,6 @@ export default function CoverLetterEditor({
   const toggleSection = (id: "candidate" | "content" | "body") => setOpenSection(prev => prev === id ? null : id)
   const [sidebarTab, setSidebarTab] = useState<"content" | "templates" | "ai">("content")
   const [mobileView, setMobileView] = useState<"form" | "preview">("form")
-  const [downloadingWord, setDownloadingWord] = useState(false)
   const [photoPosition, setPhotoPosition] = useState<number>(
     typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
   )
@@ -299,24 +298,6 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     }
   }, [id, title, language, dirty, save])
 
-  const downloadWord = useCallback(async () => {
-    setDownloadingWord(true)
-    try {
-      const res = await apiFetch(`/api/export/cover-letter-docx?id=${id}`)
-      if (!res.ok) { toast.error(t("word_error")); return }
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = `${title.replace(/[^a-z0-9]/gi, "_") || "carta"}.docx`
-      a.click()
-    } catch {
-      toast.error(t("word_download_error"))
-    } finally {
-      setDownloadingWord(false)
-    }
-  }, [id, title])
-
   const toneOptions = [
     ["formal", t("ai_tone_formal")],
     ["balanced", t("ai_tone_balanced")],
@@ -431,12 +412,11 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           </button>
 
-          {/* Download menu (PDF + Word) */}
+          {/* Download menu (PDF only) */}
           <DownloadMenu
             filename={`${(title.replace(/[^a-z0-9]/gi, "_") || "carta")}`}
             triggerLabel={t("download")}
             generatingPdfLabel={t("download_generating_pdf")}
-            generatingWordLabel={t("download_generating_word")}
             successLabel={(f) => t("download_success", { filename: f })}
             phaseLabels={{
               preparing: t("download_preparing"),
@@ -445,7 +425,6 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
             }}
             options={[
               { format: "pdf", label: "PDF", sublabel: t("export_with_design"), isLoading: downloadingPdf, onDownload: downloadPDF },
-              { format: "docx", label: t("word_label"), sublabel: t("export_plain"), isLoading: downloadingWord, onDownload: downloadWord },
             ]}
           />
         </div>

@@ -172,7 +172,7 @@ export class ResumeService {
 
     db.auditLog.create({
       data: { userId, action: "CREATE_RESUME", metadata: { resumeId: resume.id } },
-    }).catch(() => {})
+    }).catch((err) => { this.logger.error("[ResumeService] auditLog CREATE_RESUME failed", { userId, resumeId: resume.id }, err) })
 
     return resume
   }

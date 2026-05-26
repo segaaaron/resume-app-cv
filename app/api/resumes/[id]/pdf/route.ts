@@ -66,7 +66,7 @@ export async function GET(req: Request, { params }: Params) {
 
     db.auditLog.create({
       data: { userId: session.user.id, action: "EXPORT_PDF", metadata: { resumeId: id } },
-    }).catch(() => {})
+    }).catch((err) => { logger.error("auditLog EXPORT_PDF failed", { userId: session.user.id, resumeId: id }, err) })
 
     const filename = encodeURIComponent(resume.title || "resume")
     return new Response(new Uint8Array(pdf), {

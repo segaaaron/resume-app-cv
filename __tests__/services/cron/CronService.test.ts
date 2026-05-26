@@ -29,11 +29,6 @@ vi.mock("@/lib/emails/renewalReminder", () => ({
   renewalReminderText: vi.fn().mockReturnValue("renewal text"),
 }))
 
-vi.mock("@/lib/emails/applicationReminder", () => ({
-  applicationReminderHtml: vi.fn().mockReturnValue("<html>application</html>"),
-  applicationReminderText: vi.fn().mockReturnValue("application text"),
-}))
-
 // ---------- helpers ----------
 
 const mockEmailClient: ICronEmailClient = {
@@ -158,115 +153,6 @@ describe("CronService.sendRenewalReminders", () => {
     expect(result.sent).toBe(2)
     expect(result.failed).toBe(1)
     expect(result.total).toBe(3)
-  })
-})
-
-// ============================================================
-// sendApplicationReminders
-// ============================================================
-
-describe("CronService.sendApplicationReminders", () => {
-  it("returns sent=0 failed=0 when no applications found", async () => {
-    const { db } = await import("@/lib/db")
-    vi.mocked(db.application.findMany).mockResolvedValue([])
-
-    const result = await makeService().sendApplicationReminders()
-
-    expect(result).toEqual({ sent: 0, failed: 0 })
-    expect(mockEmailClient.emails.send).not.toHaveBeenCalled()
-  })
-
-  it("skips application with no user email", async () => {
-    const { db } = await import("@/lib/db")
-    const app = {
-      id: "app-1",
-      jobTitle: "Engineer",
-      company: "Acme",
-      status: "APPLIED",
-      followUpAt: new Date(),
-      user: { id: "u1", name: "No Email", email: null },
-    }
-    vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-
-    const result = await makeService().sendApplicationReminders()
-
-    expect(result.sent).toBe(0)
-    expect(result.failed).toBe(0)
-    expect(mockEmailClient.emails.send).not.toHaveBeenCalled()
-  })
-
-  it("sends email and marks application when email configured", async () => {
-    const { db } = await import("@/lib/db")
-    const app = {
-      id: "app-2",
-      jobTitle: "Designer",
-      company: "Corp",
-      status: "INTERVIEW",
-      followUpAt: new Date(),
-      user: { id: "u2", name: "Laura", email: "laura@example.com" },
-    }
-    vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-    vi.mocked(db.application.updateMany).mockResolvedValue({ count: 1 })
-
-    const result = await makeService().sendApplicationReminders()
-
-    expect(result.sent).toBe(1)
-    expect(result.failed).toBe(0)
-    expect(mockEmailClient.emails.send).toHaveBeenCalledOnce()
-    expect(mockEmailClient.emails.send).toHaveBeenCalledWith(
-      expect.objectContaining({
-        from: "READY CV <no-reply@readycvv.com>",
-        to: "laura@example.com",
-        subject: "Recordatorio: seguimiento a Designer en Corp",
-      }),
-    )
-    expect(db.application.updateMany).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({ id: "app-2" }),
-        data: { reminderSentAt: expect.any(Date) },
-      }),
-    )
-  })
-
-  it("marks application even when email disabled", async () => {
-    const { db } = await import("@/lib/db")
-    const app = {
-      id: "app-3",
-      jobTitle: "PM",
-      company: "Startup",
-      status: "APPLIED",
-      followUpAt: new Date(),
-      user: { id: "u3", name: "Carlos", email: "carlos@example.com" },
-    }
-    vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-    vi.mocked(db.application.updateMany).mockResolvedValue({ count: 1 })
-
-    const result = await makeService(null, false).sendApplicationReminders()
-
-    expect(result.sent).toBe(1)
-    expect(result.failed).toBe(0)
-    expect(mockEmailClient.emails.send).not.toHaveBeenCalled()
-    expect(db.application.updateMany).toHaveBeenCalledOnce()
-  })
-
-  it("counts failed when DB update throws", async () => {
-    const { db } = await import("@/lib/db")
-    const app = {
-      id: "app-4",
-      jobTitle: "Dev",
-      company: "Corp",
-      status: "APPLIED",
-      followUpAt: new Date(),
-      user: { id: "u4", name: "Ali", email: "ali@example.com" },
-    }
-    vi.mocked(db.application.findMany).mockResolvedValue([app] as never)
-    vi.mocked(db.application.updateMany).mockRejectedValueOnce(new Error("DB error"))
-
-    const result = await makeService().sendApplicationReminders()
-
-    expect(result.sent).toBe(0)
-    expect(result.failed).toBe(1)
-    expect(mockLogger.error).toHaveBeenCalledOnce()
   })
 })
 

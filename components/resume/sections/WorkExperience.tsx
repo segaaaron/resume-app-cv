@@ -11,13 +11,14 @@ import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
   Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2,
-  Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText, Wand2, X, ChevronLeft,
+  Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText, Wand2, ChevronLeft,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useEditorPro } from "@/components/editor/EditorContext"
+import BulletsImprovementModal, { type BulletPair } from "./BulletsImprovementModal"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
@@ -31,18 +32,39 @@ export default function WorkExperienceSection() {
   const [openId, setOpenId] = useState<string | null>(null)
   useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [jobs[0]?.id])
   const [improvingId, setImprovingId] = useState<string | null>(null)
-  const [aiVersions, setAiVersions] = useState<{ jobId: string; bullets: string[] } | null>(null)
+  const [bulletModal, setBulletModal] = useState<{ jobId: string; pairs: BulletPair[]; working: string[] } | null>(null)
   const [improvedId, setImprovedId] = useState<string | null>(null)
+  const [alreadyOptimizedIds, setAlreadyOptimizedIds] = useState<Set<string>>(new Set())
+  const cooldownMap = useRef<Map<string, number>>(new Map())
+  const lastKeyMap = useRef<Map<string, string>>(new Map())
 
   async function handleImprove(job: WorkExperienceItem) {
-    if (!job.description.trim()) { toast.error(ai("off_topic_bullet")); return }
+    if (improvingId) return
+    const isEmpty = !job.description.trim()
+    // QA-001: when empty, build context from jobTitle+employer (must be ≥5 chars)
+    const contextText = isEmpty
+      ? [job.jobTitle, job.employer].filter(Boolean).join(" at ")
+      : job.description
+    if (isEmpty && contextText.trim().length < 5) {
+      toast.error(ai("bullet_need_job_title"))
+      return
+    }
+    const jobCooldown = cooldownMap.current.get(job.id) ?? 0
+    if (Date.now() < jobCooldown) {
+      const secs = Math.ceil((jobCooldown - Date.now()) / 1000)
+      const label = secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : `${secs}s`
+      toast.info(ai("cooldown_wait", { seconds: label }))
+      return
+    }
+    const key = job.description.trim()
+    if (!isEmpty && key === lastKeyMap.current.get(job.id)) { toast.info(ai("no_changes")); return }
     setImprovingId(job.id)
-    setAiVersions(null)
+    setBulletModal(null)
     try {
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: locale }),
+        body: JSON.stringify({ text: contextText, jobTitle: job.jobTitle, language: locale }),
       })
       if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
       if (res.status === 403) { toast.error(ai("pro_only")); return }
@@ -52,8 +74,23 @@ export default function WorkExperienceSection() {
       const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
       if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
       const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
-      if (normalize(bullets.join("\n")) === normalize(job.description)) { toast.info(ai("already_optimized")); return }
-      setAiVersions({ jobId: job.id, bullets })
+      if (!isEmpty && normalize(bullets.join("\n")) === normalize(job.description)) {
+        // QA-004: set cooldown even on already-optimized path
+        lastKeyMap.current.set(job.id, key)
+        cooldownMap.current.set(job.id, Date.now() + 60_000)
+        setAlreadyOptimizedIds((prev) => new Set(prev).add(job.id))
+        return
+      }
+      // QA-002: build stable working array padded to bullets.length
+      const origLines = job.description.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
+      const working: string[] = bullets.map((_, i) => origLines[i] ?? "")
+      const pairs: BulletPair[] = bullets.map((improved, i) => ({
+        original: origLines[i] ?? "",
+        improved,
+      }))
+      setBulletModal({ jobId: job.id, pairs, working })
+      lastKeyMap.current.set(job.id, key)
+      cooldownMap.current.set(job.id, Date.now() + 60_000)
     } catch {
       toast.error(ai("error_bullet"))
     } finally {
@@ -61,9 +98,20 @@ export default function WorkExperienceSection() {
     }
   }
 
-  function applyBullets(jobId: string, bullets: string[]) {
-    updateSectionData("workExperience", jobs.map((j) => (j.id === jobId ? { ...j, description: bullets.join("\n") } : j)))
-    setAiVersions(null)
+  function applyOneBullet(jobId: string, index: number) {
+    if (!bulletModal || bulletModal.jobId !== jobId) return
+    // QA-002: use stable working array — never re-derive from job.description
+    const newWorking = [...bulletModal.working]
+    newWorking[index] = bulletModal.pairs[index].improved
+    updateSectionData("workExperience", jobs.map((j) => j.id === jobId ? { ...j, description: newWorking.filter(Boolean).join("\n") } : j))
+    setBulletModal({ ...bulletModal, working: newWorking })
+  }
+
+  function applyAllBullets(jobId: string) {
+    if (!bulletModal || bulletModal.jobId !== jobId) return
+    const improved = bulletModal.pairs.map((p) => p.improved).join("\n")
+    updateSectionData("workExperience", jobs.map((j) => j.id === jobId ? { ...j, description: improved } : j))
+    setBulletModal(null)
     setImprovedId(jobId)
     toast.success(ai("apply_bullets"))
   }
@@ -92,14 +140,14 @@ export default function WorkExperienceSection() {
             className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
             onClick={() => {
               setOpenId(openId === job.id ? null : job.id)
-              setImprovedId(null)
-              setAiVersions(null)
+              if (improvedId === job.id) setImprovedId(null)
+              if (bulletModal?.jobId === job.id) setBulletModal(null)
             }}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 setOpenId(openId === job.id ? null : job.id)
-                setImprovedId(null)
-                setAiVersions(null)
+                if (improvedId === job.id) setImprovedId(null)
+                if (bulletModal?.jobId === job.id) setBulletModal(null)
               }
             }}
           >
@@ -138,28 +186,46 @@ export default function WorkExperienceSection() {
                     <FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD" }} />
                     {t("description")}
                   </div>
-                  <button
-                    type="button"
-                    onClick={isPro ? () => handleImprove(job) : openUpgrade}
-                    disabled={improvingId === job.id || improvedId === job.id}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border-none"
-                    style={{
-                      background: improvedId === job.id
-                        ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
-                        : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
-                      color: "#fff",
-                      boxShadow: improvedId === job.id ? "0 2px 6px rgba(16,185,129,0.3)" : "0 2px 6px rgba(124,58,237,0.25)",
-                    }}
-                  >
-                    {!isPro
-                      ? <><Lock className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
-                      : improvingId === job.id
-                        ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{ai("generating")}</>
-                        : improvedId === job.id
-                          ? <><Check className="h-2.5 w-2.5" />{ai("bullet_improved")}</>
-                          : <><Wand2 className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
-                    }
-                  </button>
+                  {alreadyOptimizedIds.has(job.id) ? (
+                    <span
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold"
+                      style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}
+                    >
+                      <Check className="h-2.5 w-2.5" />
+                      {ai("already_optimized")}
+                    </span>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={isPro ? () => handleImprove(job) : openUpgrade}
+                      disabled={improvingId === job.id || improvedId === job.id}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border-none"
+                      style={{
+                        background: improvedId === job.id
+                          ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
+                          : job.description.trim() === ""
+                            ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)"
+                            : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+                        color: job.description.trim() === "" ? "#0a1a35" : "#fff",
+                        boxShadow: improvedId === job.id
+                          ? "0 2px 6px rgba(16,185,129,0.3)"
+                          : job.description.trim() === ""
+                            ? "0 2px 6px rgba(0,212,255,0.3)"
+                            : "0 2px 6px rgba(124,58,237,0.25)",
+                      }}
+                    >
+                      {!isPro
+                        ? <><Lock className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
+                        : improvingId === job.id
+                          ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{ai("generating")}</>
+                          : improvedId === job.id
+                            ? <><Check className="h-2.5 w-2.5" />{ai("bullet_improved")}</>
+                            : job.description.trim() === ""
+                              ? <><Sparkles className="h-2.5 w-2.5" />{ai("suggest_bullet")}</>
+                              : <><Wand2 className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
+                      }
+                    </button>
+                  )}
                 </div>
 
                 {/* Textarea premium */}
@@ -169,6 +235,7 @@ export default function WorkExperienceSection() {
                     onChange={(e) => {
                       updateJob(job.id, "description", e.target.value)
                       if (improvedId === job.id) setImprovedId(null)
+                      if (alreadyOptimizedIds.has(job.id)) setAlreadyOptimizedIds((prev) => { const s = new Set(prev); s.delete(job.id); return s })
                     }}
                     placeholder={t("description_placeholder")}
                     rows={5}
@@ -191,71 +258,6 @@ export default function WorkExperienceSection() {
                   />
                 </div>
 
-                {/* AI bullets panel — dark premium */}
-                {aiVersions?.jobId === job.id && (
-                  <div className="relative overflow-hidden rounded-2xl"
-                    style={{
-                      background: "linear-gradient(135deg, #0f1e3a 0%, #1a2e4a 100%)",
-                      border: "1px solid rgba(0,212,255,0.2)",
-                      boxShadow: "0 8px 32px rgba(0,0,0,0.2), 0 0 0 1px rgba(0,212,255,0.08)",
-                    }}
-                  >
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-px"
-                      style={{ background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.5 }} />
-
-                    {/* Header */}
-                    <div className="flex items-center justify-between px-4 pt-3.5 pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center justify-center w-6 h-6 rounded-lg"
-                          style={{ background: "rgba(0,212,255,0.15)", border: "1px solid rgba(0,212,255,0.3)" }}>
-                          <Sparkles className="w-3 h-3" style={{ color: "#00D4FF" }} />
-                        </div>
-                        <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: "#00D4FF" }}>
-                          {ai("bullets_improved")} ({aiVersions.bullets.length})
-                        </span>
-                      </div>
-                      <button type="button" onClick={() => setAiVersions(null)}
-                        className="flex items-center justify-center w-5 h-5 rounded-full cursor-pointer"
-                        style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)", color: "rgba(255,255,255,0.4)" }}>
-                        <X className="w-2.5 h-2.5" />
-                      </button>
-                    </div>
-
-                    {/* Bullets */}
-                    <div className="px-4 pb-4 space-y-2">
-                      <div className="rounded-xl p-3 space-y-1.5"
-                        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
-                        {aiVersions.bullets.map((bullet, i) => (
-                          <div key={i} className="flex items-start gap-2">
-                            <span className="flex items-center justify-center w-4 h-4 rounded-full shrink-0 mt-0.5 text-[8px] font-black"
-                              style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", color: "#0a1a35" }}>
-                              {i + 1}
-                            </span>
-                            <p className="text-[11.5px] leading-relaxed" style={{ color: "rgba(255,255,255,0.82)" }}>{bullet}</p>
-                          </div>
-                        ))}
-                      </div>
-
-                      {/* Disclaimer */}
-                      <div className="flex items-start gap-1.5 px-2.5 py-2 rounded-lg"
-                        style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.18)" }}>
-                        <span className="text-amber-400 text-[10px] shrink-0">⚠</span>
-                        <p className="text-[10px] leading-relaxed" style={{ color: "rgba(245,158,11,0.85)" }}>
-                          {ai("metrics_disclaimer")}
-                        </p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 pt-0.5">
-                        <button type="button" onClick={(e) => { e.stopPropagation(); applyBullets(job.id, aiVersions.bullets) }}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10.5px] font-bold cursor-pointer transition-all duration-150 border-none"
-                          style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", color: "#0a1a35", boxShadow: "0 2px 8px rgba(0,212,255,0.25)" }}>
-                          <Check className="w-2.5 h-2.5" />{ai("apply_bullets")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -265,6 +267,22 @@ export default function WorkExperienceSection() {
       <button onClick={addJob} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
         <Plus className="h-3.5 w-3.5" /> {t("add_experience")}
       </button>
+
+      {/* Bullets improvement modal — one shared modal for all jobs */}
+      {bulletModal && (() => {
+        const job = jobs.find((j) => j.id === bulletModal.jobId)
+        return (
+          <BulletsImprovementModal
+            open={true}
+            onClose={() => setBulletModal(null)}
+            jobTitle={job?.jobTitle ?? ""}
+            pairs={bulletModal.pairs}
+            onApplyBullet={(index) => applyOneBullet(bulletModal.jobId, index)}
+            onApplyAll={() => applyAllBullets(bulletModal.jobId)}
+            onAllApplied={() => { setImprovedId(bulletModal.jobId); setBulletModal(null); toast.success(ai("apply_bullets")) }}
+          />
+        )
+      })()}
     </div>
   )
 }

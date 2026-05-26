@@ -308,6 +308,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       const tokenVersion = (token.sessionVersion as number | undefined) ?? 0
       if (tokenVersion !== 0 && tokenVersion !== dbUser.sessionVersion) {
         logger.info("jwt: sessionVersion refreshed", { userId, from: tokenVersion, to: dbUser.sessionVersion })
+        purgeUserCache(userId)
       }
       token.sessionVersion = dbUser.sessionVersion
 

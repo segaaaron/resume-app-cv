@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
@@ -37,10 +37,21 @@ export function useAIProfileFill() {
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<FillProfileResult | null>(null)
+  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const lastKeyRef = useRef<string | null>(null)
 
   const generate = useCallback(async (): Promise<FillProfileResult | undefined> => {
+    if (loading) return undefined
     if (prompt.trim().length < 10) {
       toast.error(t("toast_min_chars"))
+      return undefined
+    }
+    const key = prompt.trim()
+    if (key === lastKeyRef.current) { toast.info(t("toast_no_changes")); return undefined }
+    if (Date.now() < cooldownUntil) {
+      const secs = Math.ceil((cooldownUntil - Date.now()) / 1000)
+      const label = secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : `${secs}s`
+      toast.info(t("toast_cooldown", { seconds: label }))
       return undefined
     }
     setLoading(true)
@@ -58,6 +69,8 @@ export function useAIProfileFill() {
       const data = await res.json() as FillProfileResult
       if (!res.ok) throw new Error((data as unknown as { error: string }).error)
       setResult(data)
+      lastKeyRef.current = key
+      setCooldownUntil(Date.now() + 120_000)
       return data
     } catch {
       toast.error(t("toast_generate_error"))
@@ -65,12 +78,14 @@ export function useAIProfileFill() {
     } finally {
       setLoading(false)
     }
-  }, [prompt, sectionData, locale, t])
+  }, [prompt, sectionData, locale, t, loading, cooldownUntil])
 
   const reset = useCallback(() => {
     setResult(null)
     setPrompt("")
+    lastKeyRef.current = null
+    setCooldownUntil(0)
   }, [])
 
-  return { prompt, setPrompt, loading, result, generate, reset }
+  return { prompt, setPrompt, loading, result, generate, reset, cooldownUntil }
 }

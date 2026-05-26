@@ -635,6 +635,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const resumeText = buildResumeContext(sectionData ?? {}, language)
     if (!resumeText.trim()) throw new AppError("not_enough_resume_data", 400)
+    const resumeTextValidation = validateAIInput(resumeText, 5000)
+    if (!resumeTextValidation.valid) throw new AppError("invalid_input", 400)
 
     const prompt = language === "en"
       ? `Analyze the compatibility between this resume and the job description.
@@ -969,6 +971,8 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
 
     const resumeContext = buildResumeContext(sectionData, language)
     if (!resumeContext.trim()) throw new AppError("not_enough_data", 400)
+    const resumeCtxValidation = validateAIInput(resumeContext, 5000)
+    if (!resumeCtxValidation.valid) throw new AppError("invalid_input", 400)
 
     if (question) {
       const validation = validateAIInput(String(question), 300)
@@ -998,27 +1002,30 @@ INSTRUCTIONS:
 3. Be concrete — mention real sections or data from the resume.
 4. Tone: professional consultant, direct and constructive.
 
-For each strength and improvement item, evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
+For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
 - field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (replace current content) or "append" (add to current content)
-- preview: the final suggested text, NO markdown, NO asterisks, NO HTML. Max 500 characters.
+- preview: the IMPROVED, ENRICHED text — more specific, more impactful than the original. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max 500 characters.
 - reason: max 12 words explaining the change
 - targetId: only if the improvement applies to a specific array item (use the item id from the resume)
+
+For STRENGTHS: do NOT include suggestion. Strengths confirm what is already working well — never suggest replacing or rewriting them.
 
 Do NOT include suggestion if:
 - The improvement requires data the AI doesn't have (dates, company names, real metrics)
 - The improvement is general advice ("get references", "gain more experience")
 - The field is not in the allowed list
 - You are not sure of the final value
+- The result would be shorter or more generic than what already exists
 
 Respond ONLY with valid JSON (no markdown):
 {
   "summary": "<general diagnosis in 2-3 sentences>",
   "strengths": [
-    { "text": "<strength>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } }
+    { "text": "<strength — no suggestion>" }
   ],
   "improvements": [
-    { "text": "<improvement>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } },
+    { "text": "<improvement>", "suggestion": { "field": "...", "type": "replace", "preview": "<enriched text, more specific than the original>", "reason": "<max 12 words>" } },
     { "text": "<improvement without automatable action>" }
   ],
   "answer": "<direct answer to candidate's question, or empty string if general review>"
@@ -1037,27 +1044,30 @@ INSTRUCCIONES:
 3. Sé concreto — menciona secciones o datos reales del CV.
 4. Tono: consultor profesional, directo y constructivo.
 
-Para cada item de strengths e improvements, evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
+Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (reemplazar el contenido actual) o "append" (agregar al contenido actual)
-- preview: el texto final sugerido, SIN markdown, SIN asteriscos, SIN HTML. Máximo 500 caracteres.
+- preview: el texto MEJORADO y ENRIQUECIDO — más específico, más impactante que el original. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo 500 caracteres.
 - reason: máximo 12 palabras explicando el cambio
 - targetId: solo si la mejora aplica a un item específico de un array (usa el id del item del CV)
+
+Para STRENGTHS: NO incluyas suggestion. Las fortalezas confirman lo que ya funciona bien — nunca sugieras reemplazar ni reescribir el contenido existente.
 
 NO incluyas suggestion si:
 - La mejora requiere datos que la IA no tiene (fechas, nombres de empresas, métricas reales)
 - La mejora es un consejo general ("busca referencias", "consigue más experiencia")
 - El campo no está en la lista de fields permitidos
 - No estás seguro del valor final
+- El resultado sería más corto o más genérico que lo que ya existe
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {
   "summary": "<diagnóstico general en 2-3 oraciones>",
   "strengths": [
-    { "text": "<fortaleza>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } }
+    { "text": "<fortaleza — sin suggestion>" }
   ],
   "improvements": [
-    { "text": "<mejora>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } },
+    { "text": "<mejora>", "suggestion": { "field": "...", "type": "replace", "preview": "<texto enriquecido, más específico que el original>", "reason": "<max 12 palabras>" } },
     { "text": "<mejora sin acción automatizable>" }
   ],
   "answer": "<respuesta directa a la pregunta del candidato, o cadena vacía si fue revisión general>"
@@ -1139,6 +1149,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const sd = sectionData ?? {}
     const resumeContext = buildResumeContext(sd, language)
+    const fillCtxValidation = validateAIInput(resumeContext, 5000)
+    if (!fillCtxValidation.valid) throw new AppError("invalid_input", 400)
 
     const existingSkills = ((sd.skills ?? []) as { name: string }[]).map((s) => s.name).join(", ")
 
@@ -1319,6 +1331,11 @@ Reglas:
 
     if (industry) { const v = validateAIInput(industry, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
 
+    for (const skill of existingSkills) {
+      const v = validateAIInput(skill, 100)
+      if (!v.valid) throw new AppError("invalid_input", 400)
+    }
+
     const existingList = existingSkills.length > 0
       ? `The candidate already has these skills: ${existingSkills.join(", ")}. Do not repeat them.`
       : ""
@@ -1389,6 +1406,9 @@ Rules:
     if (!jdValidation.valid) throw new AppError(jdValidation.error ?? "invalid_input", 400)
 
     const resumeContext = buildResumeContext(sectionData, language)
+    const ctxValidation = validateAIInput(resumeContext, 5000)
+    if (!ctxValidation.valid) throw new AppError("invalid_input", 400)
+
     const work = (sectionData.workExperience ?? []) as { id?: string; jobTitle?: string; employer?: string; description?: string }[]
     const workList = work.slice(0, 4).map((j) =>
       `ID:${j.id ?? "?"} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}: ${(j.description ?? "").slice(0, 300)}`
@@ -1410,7 +1430,7 @@ Return a JSON object with this structure:
 {
   "summaryVersion": "rewritten professional summary (3-4 sentences, 80-120 words) aligned to this job",
   "bulletSuggestions": [
-    { "targetId": "work experience ID from the list", "jobTitle": "job title", "employer": "employer", "improved": "rewritten bullet(s) using CAR method, highlighting what this job description values" }
+    { "targetId": "work experience ID from the list", "jobTitle": "job title", "employer": "employer", "improved": "• Bullet 1 rewritten with CAR method\n• Bullet 2 rewritten\n• Bullet 3 if needed" }
   ],
   "missingSkills": ["skill1", "skill2"],
   "keywordsToAdd": ["keyword1", "keyword2"]
@@ -1419,6 +1439,7 @@ Return a JSON object with this structure:
 Rules:
 - summaryVersion: mirror the job's language and keywords naturally; no exaggeration
 - bulletSuggestions: only for work experiences where improvement would meaningfully help; max 3
+- improved: MUST use • bullet format, one bullet per line separated by \n. Match the original number of bullets. Each bullet uses CAR method (Context/Action/Result). No markdown, no asterisks.
 - missingSkills: skills required by the job that the candidate doesn't have (max 5)
 - keywordsToAdd: ATS keywords from the job not present in the CV (max 8)
 - Be specific and actionable; no generic advice
@@ -1438,7 +1459,7 @@ Devuelve un objeto JSON con esta estructura:
 {
   "summaryVersion": "resumen profesional reescrito (3-4 oraciones, 80-120 palabras) alineado a esta oferta",
   "bulletSuggestions": [
-    { "targetId": "ID de la experiencia laboral", "jobTitle": "puesto", "employer": "empresa", "improved": "bullet(s) reescritos con método CAR, destacando lo que valora esta oferta" }
+    { "targetId": "ID de la experiencia laboral", "jobTitle": "puesto", "employer": "empresa", "improved": "• Bullet 1 reescrito con método CAR\n• Bullet 2 reescrito\n• Bullet 3 si aplica" }
   ],
   "missingSkills": ["habilidad1", "habilidad2"],
   "keywordsToAdd": ["keyword1", "keyword2"]
@@ -1447,6 +1468,7 @@ Devuelve un objeto JSON con esta estructura:
 Reglas:
 - summaryVersion: refleja el lenguaje y palabras clave de la oferta de forma natural; sin exageraciones
 - bulletSuggestions: solo para experiencias donde la mejora aporte valor real; máximo 3
+- improved: DEBE usar formato • bullet, un bullet por línea separado por \n. Iguala el número de bullets del original. Cada bullet usa método CAR (Contexto/Acción/Resultado). Sin markdown, sin asteriscos.
 - missingSkills: habilidades requeridas por la oferta que el candidato no tiene (máximo 5)
 - keywordsToAdd: keywords ATS de la oferta no presentes en el CV (máximo 8)
 - Sé específico y accionable; nada genérico
@@ -1454,7 +1476,7 @@ Reglas:
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 1200,
+      max_tokens: 900,
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [

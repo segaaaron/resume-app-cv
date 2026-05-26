@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import {
   MessageSquare, Loader2, CheckCircle2, TrendingUp,
-  Lightbulb, Check, Wand2, Sparkles, RotateCcw, AlertCircle,
+  Lightbulb, Check, Wand2, Sparkles, RotateCcw, AlertCircle, Clock,
 } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -108,14 +108,39 @@ export default function CVReviewPanel() {
   const t = useTranslations("editor.cv_review")
   const tAts = useTranslations("editor.ats")
   const { sectionData, updateSectionData, save } = useResumeStore()
-  const { question, setQuestion, loading, result, review, reset } = useCVReview()
+  const { question, setQuestion, loading, result, review, reset, cooldownUntil } = useCVReview()
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
+  const [now, setNow] = useState(Date.now())
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return
+    const id = setInterval(() => {
+      const t = Date.now()
+      setNow(t)
+      if (t >= cooldownUntil) clearInterval(id)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [cooldownUntil])
+
+  const inCooldown = now < cooldownUntil
+  const cooldownRemaining = inCooldown ? Math.ceil((cooldownUntil - now) / 1000) : 0
+  const cooldownLabel = cooldownRemaining >= 60
+    ? `${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, "0")}`
+    : `${cooldownRemaining}s`
 
   const summary = (sectionData.summary as string) ?? ""
   const workExp = (sectionData.workExperience as unknown[]) ?? []
   const skills = (sectionData.skills as unknown[]) ?? []
   const cvReady = summary.trim().length > 0 && workExp.length > 0 && skills.length > 0
+
+  const actionableKeys = result
+    ? [
+        ...result.improvements.map((item, i) => item.suggestion ? `improvement-${i}` : null),
+        ...result.strengths.map((item, i) => item.suggestion ? `strength-${i}` : null),
+      ].filter(Boolean) as string[]
+    : []
+  const allApplied = actionableKeys.length > 0 && actionableKeys.every((k) => appliedItems.has(k))
 
   async function handleReview() {
     setAppliedItems(new Set())
@@ -126,6 +151,22 @@ export default function CVReviewPanel() {
     if (!item.suggestion) return
     const currentValue = getCurrentValue(item.suggestion.field, item.suggestion.targetId, sectionData as unknown as ResumeSections)
     setModal({ suggestion: item.suggestion, currentValue, itemKey })
+  }
+
+  function getApplyLocation(field: SuggestionField, targetId?: string): string {
+    if (field === "summary") return t("field_summary")
+    if (field === "personalDetails.jobTitle") return t("field_job_title")
+    if (field === "skills") return t("field_skills")
+    if (field === "languages") return t("field_languages")
+    if (field === "certifications") return t("field_certifications")
+    if (field === "workExperience.description" || field === "workExperience.jobTitle") {
+      const items = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+      const item = targetId ? items.find((i) => i.id === targetId) : items[0]
+      const label = item?.jobTitle ?? item?.employer ?? ""
+      const fieldLabel = field === "workExperience.description" ? t("field_work_description") : t("field_work_job_title")
+      return label ? `${fieldLabel} · ${label}` : fieldLabel
+    }
+    return field
   }
 
   function handleConfirmApply() {
@@ -171,8 +212,9 @@ export default function CVReviewPanel() {
         return
       }
 
+      const location = getApplyLocation(field, targetId)
       setAppliedItems((prev) => new Set(prev).add(itemKey))
-      toast.success(tAts("toast_change_applied"))
+      toast.success(`${tAts("toast_change_applied")} → ${location}`, { duration: 4000 })
     } catch {
       toast.error(tAts("toast_change_error"))
     } finally {
@@ -242,11 +284,15 @@ export default function CVReviewPanel() {
           <button
             type="button"
             onClick={handleReview}
-            disabled={loading || !cvReady}
+            disabled={loading || !cvReady || inCooldown}
             className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-violet-500 to-cyan-500 text-white text-xs font-bold shadow-lg shadow-violet-200 hover:shadow-violet-300 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100"
           >
-            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            {loading ? t("analyzing") : t("analyze")}
+            {loading
+              ? <><Loader2 className="h-4 w-4 animate-spin" />{t("analyzing")}</>
+              : inCooldown
+                ? <><Clock className="h-4 w-4" />{t("review_wait", { seconds: cooldownLabel })}</>
+                : <><Sparkles className="h-4 w-4" />{t("analyze")}</>
+            }
           </button>
           {result && (
             <button
@@ -321,6 +367,19 @@ export default function CVReviewPanel() {
               <p className="text-[10px] font-black tracking-widest uppercase text-slate-500 mb-2">{t("summary_label")}</p>
               <p className="text-xs text-slate-600 leading-relaxed">{result.summary}</p>
             </div>
+
+            {/* All-applied success banner */}
+            {allApplied && (
+              <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-4 flex items-start gap-3">
+                <div className="flex items-center justify-center w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-sm shrink-0 mt-0.5">
+                  <CheckCircle2 className="h-4 w-4 text-white" />
+                </div>
+                <div>
+                  <p className="text-[12px] font-bold text-emerald-800 leading-tight">{t("all_applied_title")}</p>
+                  <p className="text-[11px] text-emerald-600 mt-0.5 leading-snug">{t("all_applied_desc")}</p>
+                </div>
+              </div>
+            )}
 
             {/* Strengths */}
             {result.strengths.length > 0 && (

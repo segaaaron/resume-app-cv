@@ -1,14 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Wand2, Loader2, ChevronDown, ChevronUp, Plus, Check, Copy } from "lucide-react"
+import { Wand2, Loader2, ChevronDown, ChevronUp, Plus, Check, Copy, Clock } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { nanoid } from "nanoid"
 import type { SkillItem, WorkExperienceItem } from "@/types/resume"
+import SuggestionDiffModal from "./SuggestionDiffModal"
 
 interface TailorResult {
   summaryVersion: string
@@ -30,10 +31,41 @@ export default function TailorCVPanel() {
   const [appliedSummary, setAppliedSummary] = useState(false)
   const [appliedBullets, setAppliedBullets] = useState<Set<string>>(new Set())
   const [addedSkills, setAddedSkills] = useState<Set<string>>(new Set())
+  const [pendingBullet, setPendingBullet] = useState<{ targetId: string; improved: string; currentDescription: string } | null>(null)
+  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const [now, setNow] = useState(Date.now())
+  const lastTailorKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return
+    const id = setInterval(() => {
+      const t = Date.now()
+      setNow(t)
+      if (t >= cooldownUntil) clearInterval(id)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [cooldownUntil])
+
+  const inCooldown = now < cooldownUntil
+  const cooldownRemaining = inCooldown ? Math.ceil((cooldownUntil - now) / 1000) : 0
+  const cooldownLabel = cooldownRemaining >= 60
+    ? `${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, "0")}`
+    : `${cooldownRemaining}s`
 
   async function handleTailor() {
+    if (loading) return
     const jd = jobDescription.trim()
     if (jd.length < 20) { toast.info(t("jd_too_short")); return }
+
+    const tailorKey = JSON.stringify({
+      jd,
+      s: sectionData.summary,
+      w: sectionData.workExperience,
+      sk: sectionData.skills,
+    })
+    if (tailorKey === lastTailorKeyRef.current) { toast.info(t("no_changes")); return }
+    if (inCooldown) { toast.info(t("cooldown", { seconds: cooldownLabel })); return }
+
     setLoading(true)
     setResult(null)
     setExpanded(false)
@@ -53,6 +85,8 @@ export default function TailorCVPanel() {
       const data = await res.json() as TailorResult
       setResult(data)
       setExpanded(true)
+      lastTailorKeyRef.current = tailorKey
+      setCooldownUntil(Date.now() + 120_000)
     } catch {
       toast.error(t("error"))
     } finally {
@@ -67,12 +101,20 @@ export default function TailorCVPanel() {
     toast.success(t("summary_applied"))
   }
 
-  function applyBullet(b: { targetId: string; improved: string }) {
+  function openBulletDiff(b: { targetId: string; improved: string }) {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
-    const updated = work.map((j) => j.id === b.targetId ? { ...j, description: b.improved } : j)
+    const item = work.find((j) => j.id === b.targetId)
+    setPendingBullet({ targetId: b.targetId, improved: b.improved, currentDescription: item?.description ?? "" })
+  }
+
+  function confirmApplyBullet() {
+    if (!pendingBullet) return
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    const updated = work.map((j) => j.id === pendingBullet.targetId ? { ...j, description: pendingBullet.improved } : j)
     updateSectionData("workExperience", updated)
-    setAppliedBullets((prev) => new Set(prev).add(b.targetId))
+    setAppliedBullets((prev) => new Set(prev).add(pendingBullet.targetId))
     toast.success(t("bullet_applied"))
+    setPendingBullet(null)
   }
 
   function addSkill(name: string) {
@@ -129,11 +171,16 @@ export default function TailorCVPanel() {
         />
         <button
           onClick={handleTailor}
-          disabled={loading || jobDescription.trim().length < 20}
+          disabled={loading || jobDescription.trim().length < 20 || inCooldown}
           className="mt-2 w-full flex items-center justify-center gap-2 py-2.5 rounded-lg text-[12.5px] font-bold text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:-translate-y-px"
           style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", boxShadow: "0 4px 14px rgba(0,212,255,0.35)" }}
         >
-          {loading ? <><Loader2 size={13} className="animate-spin" />{t("analyzing")}</> : <><Wand2 size={13} />{t("cta")}</>}
+          {loading
+            ? <><Loader2 size={13} className="animate-spin" />{t("analyzing")}</>
+            : inCooldown
+              ? <><Clock size={13} />{t("cooldown_btn", { seconds: cooldownLabel })}</>
+              : <><Wand2 size={13} />{t("cta")}</>
+          }
         </button>
       </div>
 
@@ -147,6 +194,26 @@ export default function TailorCVPanel() {
             {t("results_title")}
             {expanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
           </button>
+
+          {/* All-applied success banner */}
+          {result && (() => {
+            const summaryDone = !result.summaryVersion || appliedSummary
+            const bulletsDone = result.bulletSuggestions.every((b) => appliedBullets.has(b.targetId))
+            const skillsDone = result.missingSkills.every((s) => addedSkills.has(s))
+            const hasActionable = !!(result.summaryVersion || result.bulletSuggestions.length || result.missingSkills.length)
+            const allDone = hasActionable && summaryDone && bulletsDone && skillsDone
+            return allDone ? (
+              <div className="mx-0 mb-2 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-3 flex items-start gap-2.5">
+                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-sm shrink-0 mt-0.5">
+                  <Check size={13} className="text-white" />
+                </div>
+                <div>
+                  <p className="text-[11.5px] font-bold text-emerald-800 leading-tight">{t("all_applied_title")}</p>
+                  <p className="text-[10.5px] text-emerald-600 mt-0.5 leading-snug">{t("all_applied_desc")}</p>
+                </div>
+              </div>
+            ) : null
+          })()}
 
           {expanded && (
             <div className="space-y-4">
@@ -183,7 +250,7 @@ export default function TailorCVPanel() {
                         <div className="flex items-center justify-between mb-1.5">
                           <p className="text-[10px] text-[#7A9BB5] truncate flex-1 mr-2">{b.jobTitle} · {b.employer}</p>
                           <button
-                            onClick={() => applyBullet(b)}
+                            onClick={() => openBulletDiff(b)}
                             disabled={appliedBullets.has(b.targetId)}
                             className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-semibold shrink-0 transition-all duration-200 disabled:opacity-60"
                             style={{
@@ -252,6 +319,22 @@ export default function TailorCVPanel() {
             </div>
           )}
         </div>
+      )}
+
+      {pendingBullet && (
+        <SuggestionDiffModal
+          open={true}
+          onClose={() => setPendingBullet(null)}
+          onConfirm={confirmApplyBullet}
+          suggestion={{
+            field: "workExperience.description",
+            type: "replace",
+            preview: pendingBullet.improved,
+            reason: t("diff_replace_reason"),
+            targetId: pendingBullet.targetId,
+          }}
+          currentValue={pendingBullet.currentDescription}
+        />
       )}
     </div>
   )

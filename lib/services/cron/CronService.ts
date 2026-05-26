@@ -6,10 +6,6 @@ import {
   renewalReminderHtml,
   renewalReminderText,
 } from "@/lib/emails/renewalReminder"
-import {
-  applicationReminderHtml,
-  applicationReminderText,
-} from "@/lib/emails/applicationReminder"
 
 export interface ICronEmailClient {
   emails: {
@@ -28,11 +24,6 @@ export interface RenewalReminderResult {
   failed: number
   total: number
   message?: string
-}
-
-export interface ApplicationReminderResult {
-  sent: number
-  failed: number
 }
 
 export interface PurgeStripeEventsResult {
@@ -135,76 +126,6 @@ export class CronService {
 
     this.logger.info(`[CronService] sendRenewalReminders: sent=${sent} failed=${failed}`)
     return { sent, failed, total: users.length }
-  }
-
-  async sendApplicationReminders(): Promise<ApplicationReminderResult> {
-    const now = new Date()
-    const endOfDay = new Date(now)
-    endOfDay.setHours(23, 59, 59, 999)
-
-    const startOfWindow = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    // H4: cap to 500 rows to prevent unbounded table scans
-    const applications = await db.application.findMany({
-      where: {
-        followUpAt: { gte: startOfWindow, lte: endOfDay },
-        reminderSentAt: null,
-        user: { emailOptOut: false },
-      },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true },
-        },
-      },
-      take: 500,
-    })
-
-    let sent = 0
-    let failed = 0
-
-    for (const app of applications) {
-      if (!app.user.email) continue
-
-      try {
-        // Claim before email — prevents duplicate sends on concurrent cron runs.
-        const claimed = await db.application.updateMany({
-          where: { id: app.id, reminderSentAt: null },
-          data: { reminderSentAt: now },
-        })
-        if (claimed.count === 0) continue
-
-        if (this.isEmailEnabled && this.emailClient) {
-          await this.emailClient.emails.send({
-            from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
-            to: app.user.email,
-            subject: `Recordatorio: seguimiento a ${app.jobTitle} en ${app.company}`,
-            html: applicationReminderHtml({
-              userName: app.user.name ?? "Usuario",
-              userId: app.user.id,
-              jobTitle: app.jobTitle,
-              company: app.company,
-              status: app.status,
-              followUpAt: app.followUpAt!,
-            }),
-            text: applicationReminderText({
-              userName: app.user.name ?? "Usuario",
-              userId: app.user.id,
-              jobTitle: app.jobTitle,
-              company: app.company,
-              status: app.status,
-              followUpAt: app.followUpAt!,
-            }),
-          })
-        }
-
-        sent++
-      } catch (err) {
-        this.logger.error("[CronService] sendApplicationReminders: error for app", { appId: app.id }, err)
-        failed++
-      }
-    }
-
-    this.logger.info(`[CronService] sendApplicationReminders: sent=${sent} failed=${failed}`)
-    return { sent, failed }
   }
 
   async purgeStripeEvents(): Promise<PurgeStripeEventsResult> {

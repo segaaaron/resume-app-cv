@@ -40,7 +40,7 @@ export async function GET(req: Request, { params }: Params) {
     })
     db.auditLog.create({
       data: { userId: authResult.userId, action: "EXPORT_PDF", metadata: { coverLetterId: id } },
-    }).catch(() => {})
+    }).catch((err) => { logger.error("auditLog EXPORT_PDF cover-letter failed", { userId: authResult.userId, coverLetterId: id }, err) })
 
     const filename = encodeURIComponent(letter.title || "carta")
     return new Response(new Uint8Array(pdf), {

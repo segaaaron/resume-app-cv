@@ -3,6 +3,9 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { checkOrigin } from "@/lib/csrf"
 import { AppError } from "@/lib/services/auth/AppError"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("controller")
 
 export async function requireAuth(req: Request): Promise<{ userId: string } | NextResponse> {
   const session = await auth()
@@ -15,7 +18,7 @@ export function handleError(err: unknown): NextResponse {
   if (err instanceof AppError) {
     return NextResponse.json({ error: err.code, ...err.extra }, { status: err.status })
   }
-  console.error("[controller] unhandled error", err)
+  logger.error("unhandled error", {}, err)
   return NextResponse.json({ error: "server_error" }, { status: 500 })
 }
 

@@ -1,5 +1,8 @@
 import OpenAI from "openai"
 import { db } from "@/lib/db"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("ai-client")
 
 // Re-export so existing AI routes don't need to change their import path
 export { checkRateLimit, recordRateLimitUsage, checkAndIncrementRateLimit } from "@/lib/rate-limit"
@@ -20,7 +23,9 @@ export const AI_TEMPERATURE_STRUCTURED = 0.3 as const // profile fill — faithf
 
 // Fire-and-forget usage log — never throws
 export function logAIUsage(userId: string, endpoint: string): void {
-  db.aIUsageLog.create({ data: { userId, endpoint } }).catch(() => {})
+  db.aIUsageLog.create({ data: { userId, endpoint } }).catch((err) => {
+    logger.error("logAIUsage: failed to write usage log", { userId, endpoint }, err)
+  })
 }
 
 // Extract plain-text summary of CV data for use in AI prompts

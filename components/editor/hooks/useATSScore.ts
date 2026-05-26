@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
@@ -47,11 +47,26 @@ export function useATSScore() {
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
   const [offTopic, setOffTopic] = useState(false)
+  const [cooldownUntil, setCooldownUntil] = useState(0)
+  const lastKeyRef = useRef<string | null>(null)
 
   const analyze = useCallback(async () => {
+    if (loading) return
     const text = input.trim()
     if (text.length < 5) {
       toast.error(t("toast_empty_input"))
+      return
+    }
+    const key = `${text}:${JSON.stringify({
+      s: sectionData.summary,
+      w: sectionData.workExperience,
+      sk: sectionData.skills,
+    })}`
+    if (key === lastKeyRef.current) { toast.info(t("no_changes")); return }
+    if (Date.now() < cooldownUntil) {
+      const secs = Math.ceil((cooldownUntil - Date.now()) / 1000)
+      const label = secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : `${secs}s`
+      toast.info(t("cooldown_wait", { seconds: label }))
       return
     }
     setLoading(true)
@@ -87,18 +102,22 @@ export function useATSScore() {
         if (!res.ok) throw new Error(data.error)
         setAtsResult(data)
       }
+      lastKeyRef.current = key
+      setCooldownUntil(Date.now() + 120_000)
     } catch {
       toast.error(t("error"))
     } finally {
       setLoading(false)
     }
-  }, [input, sectionData, locale, t])
+  }, [input, sectionData, locale, t, loading, cooldownUntil])
 
   const reset = useCallback(() => {
     setAtsResult(null)
     setReviewResult(null)
     setOffTopic(false)
     setInput("")
+    lastKeyRef.current = null
+    setCooldownUntil(0)
   }, [])
 
   const hasResult = atsResult !== null || reviewResult !== null
@@ -111,5 +130,6 @@ export function useATSScore() {
     hasResult,
     analyze,
     reset,
+    cooldownUntil,
   }
 }
