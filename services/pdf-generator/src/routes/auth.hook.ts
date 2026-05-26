@@ -17,7 +17,7 @@ export function registerAuthHook(app: FastifyInstance, secret: string): void {
       { url: request.url, ip: request.ip, hasHeader: !!auth },
       `[auth] ${!auth ? "Authorization header missing" : "Bearer token does not match PDF_SERVICE_SECRET"}`,
     )
-    reply.code(401).send({ error: "unauthorized" })
+    return reply.code(401).send({ error: "unauthorized" })
   })
 }
 
