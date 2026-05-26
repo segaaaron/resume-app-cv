@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, RotateCcw } from "lucide-react"
+import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
@@ -504,6 +505,8 @@ export default function ATSScorePanel() {
             )}
           </div>
         )}
+
+        <TailorCVPanel />
 
         {hasResult && (
           <button type="button"

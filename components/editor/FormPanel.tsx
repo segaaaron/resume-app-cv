@@ -9,6 +9,7 @@ import ATSScorePanel from "./ATSScorePanel"
 import CVReviewPanel from "./CVReviewPanel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
+import CVCompletenessWidget from "./CVCompletenessWidget"
 import { LayoutTemplate, Settings2, Target, MessageSquare, Sparkles } from "lucide-react"
 
 // Tokens (kept for sidebar container)
@@ -119,6 +120,7 @@ export default function FormPanel() {
       <div style={scrollAreaStyle}>
         {activeTab === "content" && (
           <div className="px-5 pt-4 pb-6">
+            <CVCompletenessWidget />
             <SectionDropdownProvider>
               <div>
                 {visibleSections.map((section) => (

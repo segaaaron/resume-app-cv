@@ -13,6 +13,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import UnsavedChangesModal from "./UnsavedChangesModal"
+import { detectPlaceholders } from "@/lib/detectPlaceholders"
 
 interface Props {
   hasAccess: boolean
@@ -20,7 +21,7 @@ interface Props {
 
 export default function EditorTopBar({ hasAccess }: Props) {
   const router = useRouter()
-  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, triggerThumbnail } = useResumeStore(
+  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, triggerThumbnail, sectionData } = useResumeStore(
     useShallow((s) => ({
       title: s.title,
       setTitle: s.setTitle,
@@ -30,6 +31,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
       isDirty: s.isDirty,
       resumeId: s.resumeId,
       triggerThumbnail: s.triggerThumbnail,
+      sectionData: s.sectionData,
     }))
   )
   const [editing, setEditing] = useState(false)
@@ -132,6 +134,10 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   async function handleDownloadPdf() {
     if (!resumeId) return
+    const placeholderCount = detectPlaceholders(sectionData)
+    if (placeholderCount > 0) {
+      toast.warning(t("print.placeholder_warning", { count: placeholderCount }), { duration: 6000 })
+    }
     if (isDirty && hasAccess) await save({ skipThumbnail: true }).catch(() => {})
     setDownloadingPdf(true)
     try {

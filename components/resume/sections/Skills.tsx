@@ -11,6 +11,7 @@ import { Plus, X, Sparkles, Loader2 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { getSkillsCache, setSkillsCache } from "@/lib/skillsCache"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
@@ -51,37 +52,43 @@ export default function SkillsSection() {
     setSuggesting(true)
     try {
       const existingSkills = skills.map((s) => s.name).filter(Boolean)
-      const res = await apiFetch("/api/ai/suggest-skills", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobTitle, existingSkills, language: locale }),
-      })
 
-      if (res.status === 429) {
-        toast.error(t("suggest_skills_rate_limit"))
-        return
-      }
-      if (res.status === 403) {
-        toast.error(t("toast_pro_only"))
-        return
-      }
-      if (res.status === 422 || !res.ok) {
-        toast.error(t("suggest_skills_empty"))
-        return
-      }
+      // Session cache: same jobTitle + language → skip API call
+      const cached = getSkillsCache(jobTitle, locale)
+      const data = cached ?? await (async () => {
+        const res = await apiFetch("/api/ai/suggest-skills", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ jobTitle, existingSkills, language: locale }),
+        })
+        if (res.status === 429) { toast.error(t("suggest_skills_rate_limit")); return null }
+        if (res.status === 403) { toast.error(t("toast_pro_only")); return null }
+        if (res.status === 422 || !res.ok) { toast.error(t("suggest_skills_empty")); return null }
+        const json = await res.json() as { skills: { name: string; level: string }[] }
+        setSkillsCache(jobTitle, locale, json)
+        return json
+      })()
 
-      const data = await res.json() as { skills: { name: string; level: string }[] }
+      if (!data) return
 
       if (!data.skills?.length) {
         toast.info(t("suggest_skills_empty"))
         return
       }
 
-      const newSkills: SkillItem[] = data.skills.map((s) => ({
-        id: nanoid(),
-        name: s.name,
-        level: s.level as SkillItem["level"],
-      }))
+      const existingNames = new Set(skills.map((s) => s.name.trim().toLowerCase()))
+      const newSkills: SkillItem[] = data.skills
+        .filter((s) => !existingNames.has(s.name.trim().toLowerCase()))
+        .map((s) => ({
+          id: nanoid(),
+          name: s.name,
+          level: s.level as SkillItem["level"],
+        }))
+
+      if (!newSkills.length) {
+        toast.info(t("suggest_skills_empty"))
+        return
+      }
 
       updateSectionData("skills", [...skills, ...newSkills])
       toast.success(t("suggest_skills_added"))

@@ -15,6 +15,8 @@ export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4o-mini") as string
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_BALANCED = 0.5 as const  // profile fill — between deterministic and creative
+export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score, suggest-skills)
+export const AI_TEMPERATURE_STRUCTURED = 0.3 as const // profile fill — faithful to user input, minimal creative drift
 
 // Fire-and-forget usage log — never throws
 export function logAIUsage(userId: string, endpoint: string): void {
@@ -22,7 +24,8 @@ export function logAIUsage(userId: string, endpoint: string): void {
 }
 
 // Extract plain-text summary of CV data for use in AI prompts
-export function buildResumeContext(sectionData: Record<string, unknown>): string {
+export function buildResumeContext(sectionData: Record<string, unknown>, language = "es"): string {
+  const en = language === "en"
   const {
     personalDetails,
     workExperience,
@@ -47,46 +50,49 @@ export function buildResumeContext(sectionData: Record<string, unknown>): string
 
   if (personalDetails) {
     const name = [personalDetails.firstName, personalDetails.lastName].filter(Boolean).join(" ")
-    if (name) lines.push(`Nombre: ${name}`)
-    if (personalDetails.jobTitle) lines.push(`Puesto objetivo: ${personalDetails.jobTitle}`)
-    if (personalDetails.location) lines.push(`Ubicación: ${personalDetails.location}`)
+    if (name) lines.push(`${en ? "Name" : "Nombre"}: ${name}`)
+    if (personalDetails.jobTitle) lines.push(`${en ? "Target Role" : "Puesto objetivo"}: ${personalDetails.jobTitle}`)
+    if (personalDetails.location) lines.push(`${en ? "Location" : "Ubicación"}: ${personalDetails.location}`)
   }
 
-  if (summary) lines.push(`Resumen profesional: ${summary}`)
+  if (summary) lines.push(`${en ? "Professional Summary" : "Resumen profesional"}: ${summary}`)
 
   if (workExperience?.length) {
-    lines.push("Experiencia laboral:")
+    lines.push(en ? "Work Experience:" : "Experiencia laboral:")
     workExperience.slice(0, 5).forEach((j) => {
-      const period = [j.startDate, j.endDate ?? "Presente"].filter(Boolean).join(" - ")
-      lines.push(`  - ${j.jobTitle ?? ""} en ${j.employer ?? ""} (${period})`)
+      const present = en ? "Present" : "Presente"
+      const at = en ? "at" : "en"
+      const period = [j.startDate, j.endDate ?? present].filter(Boolean).join(" - ")
+      lines.push(`  - ${j.jobTitle ?? ""} ${at} ${j.employer ?? ""} (${period})`)
       if (j.description) lines.push(`    ${j.description.slice(0, 500)}`)
     })
   }
 
   if (education?.length) {
-    lines.push("Educación:")
+    lines.push(en ? "Education:" : "Educación:")
     education.slice(0, 3).forEach((e) => {
-      lines.push(`  - ${e.degree ?? ""} en ${e.institution ?? e.school ?? ""}`)
+      const at = en ? "at" : "en"
+      lines.push(`  - ${e.degree ?? ""} ${at} ${e.institution ?? e.school ?? ""}`)
     })
   }
 
   if (skills?.length) {
     const skillList = skills.slice(0, 12).map((s) => s.name).filter(Boolean).join(", ")
-    if (skillList) lines.push(`Habilidades: ${skillList}`)
+    if (skillList) lines.push(`${en ? "Skills" : "Habilidades"}: ${skillList}`)
   }
 
   if (languages?.length) {
     const langList = languages.map((l) => `${l.language ?? ""}${l.level ? ` (${l.level})` : ""}`).filter(Boolean).join(", ")
-    if (langList) lines.push(`Idiomas: ${langList}`)
+    if (langList) lines.push(`${en ? "Languages" : "Idiomas"}: ${langList}`)
   }
 
   if (certifications?.length) {
     const certList = certifications.slice(0, 3).map((c) => c.name).filter(Boolean).join(", ")
-    if (certList) lines.push(`Certificaciones: ${certList}`)
+    if (certList) lines.push(`${en ? "Certifications" : "Certificaciones"}: ${certList}`)
   }
 
   if (projects?.length) {
-    lines.push("Proyectos:")
+    lines.push(en ? "Projects:" : "Proyectos:")
     projects.slice(0, 3).forEach((p) => {
       lines.push(`  - ${p.name ?? ""}${p.description ? `: ${p.description.slice(0, 100)}` : ""}`)
     })

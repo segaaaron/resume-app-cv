@@ -7,6 +7,8 @@ import {
   AI_TEMPERATURE,
   AI_TEMPERATURE_CREATIVE,
   AI_TEMPERATURE_BALANCED,
+  AI_TEMPERATURE_PRECISE,
+  AI_TEMPERATURE_STRUCTURED,
   checkAndIncrementRateLimit,
   logAIUsage,
   buildResumeContext,
@@ -196,6 +198,19 @@ export interface SuggestSkillsInput {
   language?: string
 }
 
+export interface TailorCVInput {
+  sectionData: Record<string, unknown>
+  jobDescription: string
+  language?: string
+}
+
+export interface TailorCVResult {
+  summaryVersion: string
+  bulletSuggestions: Array<{ targetId: string; jobTitle: string; employer: string; improved: string }>
+  missingSkills: string[]
+  keywordsToAdd: string[]
+}
+
 // ─── Safe JSON parser ─────────────────────────────────────────────────────────
 
 function parseAIJson<T>(raw: string): T {
@@ -251,27 +266,57 @@ export class AIService {
       industry ? `Industria: ${industry}` : "",
     ].filter(Boolean).join(" | ")
 
-    const prompt = `TAREA: Analiza esta descripción de experiencia laboral y genera una lista optimizada de bullets profesionales.
-La cantidad de bullets debe adaptarse a la riqueza del contenido:
-- Contenido pobre (vago, sin métricas, sin contexto): genera 3-4 bullets
-- Contenido medio (algo de contexto, algunos logros): genera 4-6 bullets
-- Contenido rico (métricas, logros claros, múltiples responsabilidades): genera 6-10 bullets
+    const prompt = language === "en"
+      ? `TASK: Transform this work experience description into high-impact professional bullets for an executive resume.
 
-${context ? `Contexto: ${context}` : ""}
-Descripción actual:
+${context ? `Position context: ${context}` : ""}
+
+Original description:
 ${text}
 
-INSTRUCCIONES:
-1. Mejora cada bullet: verbo de acción fuerte al inicio, orientado a logros, ATS-friendly.
-2. Agrega bullets nuevos y relevantes si enriquecen el perfil para el puesto.
-3. Elimina bullets débiles, repetitivos o irrelevantes.
-4. Métricas: usa PLACEHOLDERS como [X%], [N usuarios], [$Z] cuando no hay cifras reales. NUNCA inventes números.
-5. Sin pronombres personales. Empieza cada bullet directo con el verbo.
-6. Verbos fuertes: Desarrollé, Implementé, Optimicé, Lideré, Diseñé, Reduje, Automaticé, Colaboré, Entregué.
-7. Mantén el mismo idioma que el texto original.
+TRANSFORMATION RULES:
+1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Measurable result.
+2. Verb first, always. PROHIBITED: "Responsible for", "In charge of", "Assisted with", personal pronouns (I, my).
+3. Impact order: highest business-impact bullet goes FIRST. Last bullet can be scope/reach.
+4. Metrics: if not in the original, use PLACEHOLDERS: [X%], [N users], [$Z], [N months]. NEVER invent real figures.
+5. Choose verbs based on role context:
+   - Tech/Product: Architected, Developed, Automated, Migrated, Optimized, Deployed, Refactored, Scaled
+   - Leadership/Management: Led, Mentored, Coordinated, Aligned, Consolidated, Transformed, Prioritized
+   - Operations/Process: Reduced, Standardized, Implemented, Centralized, Increased, Structured
+   - Sales/Business/Marketing: Grew, Closed, Negotiated, Expanded, Positioned, Captured, Generated
+6. Quantity based on content richness:
+   - Basic (1-2 generic responsibilities): 3-4 dense bullets
+   - Medium (several responsibilities, some achievements): 4-6 bullets
+   - Rich (concrete achievements, projects, metrics, leadership): 6-8 bullets
+7. ATS: naturally incorporate 1-2 industry/role keywords within bullets.
+
+Respond ONLY with valid JSON (no markdown):
+{"bullets": ["• bullet1", "• bullet2", ...]}`
+      : `TAREA: Transforma esta descripción de experiencia laboral en bullets profesionales de alto impacto, listos para un CV ejecutivo.
+
+${context ? `Contexto del puesto: ${context}` : ""}
+
+Descripción original:
+${text}
+
+REGLAS DE TRANSFORMACIÓN:
+1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado medible.
+2. Verbo primero, siempre. PROHIBIDO: "Responsable de", "Encargado de", "Apoyé en", pronombres (yo, mi, mis).
+3. Orden de impacto: el bullet con mayor impacto de negocio va PRIMERO. El último puede ser de alcance/scope.
+4. Métricas: si no existen en el original, usa PLACEHOLDERS: [X%], [N usuarios], [$Z], [N meses]. NUNCA inventes cifras reales.
+5. Elige verbos según el contexto del puesto:
+   - Tech/Producto: Arquitecté, Desarrollé, Automaticé, Migré, Optimicé, Desplegué, Refactoricé, Escalé
+   - Liderazgo/Gestión: Lideré, Mentoré, Coordiné, Alineé, Consolidé, Transformé, Prioricé
+   - Operaciones/Procesos: Reduje, Estandaricé, Implementé, Centralicé, Incrementé, Estructuré
+   - Ventas/Negocio/Marketing: Crecí, Cerré, Negocié, Expandí, Posicioné, Capturé, Generé
+6. Cantidad según riqueza del contenido:
+   - Básico (1-2 responsabilidades genéricas): 3-4 bullets densos
+   - Medio (varias responsabilidades, algún logro): 4-6 bullets
+   - Rico (logros concretos, proyectos, métricas, liderazgo): 6-8 bullets
+7. ATS: incorpora 1-2 keywords del sector/puesto de forma natural dentro de los bullets.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
-{"bullets": ["• bullet1", "• bullet2", "• bullet3"]}`
+{"bullets": ["• bullet1", "• bullet2", ...]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
@@ -282,12 +327,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         {
           role: "system",
           content:
-            "Eres un Consultor de Carrera de Élite y experto en optimización de ATS (Applicant Tracking Systems). " +
-            "Tu especialidad es revisar descripciones de experiencia laboral y generar una lista optimizada de bullets profesionales adaptada a la riqueza del contenido. " +
-            "Generas entre 3-10 bullets según la cantidad y calidad del contenido proporcionado. " +
-            "SOLO respondes solicitudes relacionadas con CVs, experiencia laboral y perfiles de empleo. " +
-            "Cuando el original no tiene métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N], [$Z]) — NUNCA inventas cifras reales. " +
-            "Si el contenido no corresponde a experiencia laboral, responde únicamente con: {\"bullets\": []} sin texto adicional. " +
+            "Eres un Consultor de Carrera de Élite con expertise en optimización de CVs ejecutivos para empresas Fortune 500 y startups de alto crecimiento. " +
+            "Tu especialidad: transformar descripciones genéricas en bullets de alto impacto que superan filtros ATS y capturan la atención de recruiters en los primeros 6 segundos de lectura. " +
+            "Usas el método CAR (Acción-Contexto-Resultado) y priorizas logros de negocio sobre responsabilidades. " +
+            "SOLO procesas contenido de experiencia laboral profesional real. Si el contenido no es de experiencia laboral, responde: {\"bullets\": []}. " +
+            "Cuando no hay métricas reales, usas SIEMPRE placeholders explícitos [X%], [N usuarios], [$Z] — NUNCA inventas cifras. " +
             langInstruction,
         },
         { role: "user", content: prompt },
@@ -316,44 +360,82 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const language = rawLanguage === "en" ? "en" : "es"
     const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
-    const resumeContext = buildResumeContext(sectionData ?? {})
+    const resumeContext = buildResumeContext(sectionData ?? {}, language)
     if (!resumeContext.trim()) throw new AppError("not_enough_data", 400)
 
     const validation = validateAIInput(resumeContext, 5000)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
-    const prompt = `TAREA: Genera 3 versiones de resumen profesional de alto impacto para un CV, basadas en los siguientes datos del candidato.
+    const prompt = language === "en"
+      ? `TASK: Analyze this professional profile and generate 3 high-impact resume summaries, each with a different positioning.
 
+=== CANDIDATE PROFILE ===
 ${resumeContext}
 
-REGLAS DE ORO (aplica todas):
-1. Fórmula de posicionamiento: "[Título profesional] con [X años/logro clave] especializado en [área]. Ha [verbo de logro] [resultado medible] mediante [diferenciador único]."
-2. Verbos de logro: Lideró, Desarrolló, Impulsó, Optimizó, Transformó. NUNCA uses "Responsable de" o "Con experiencia en".
-3. Métricas: si los datos no incluyen cifras, usa placeholders explícitos entre corchetes ([X años], [N equipos], [X%]). NUNCA inventes números reales.
-4. Sin pronombres personales: no uses "Yo", "Mi", "Soy". El resumen habla del candidato en tercera persona o de forma impersonal.
-5. ATS-Friendly: incluye palabras clave del sector del candidato de forma natural.
-6. Longitud: 2 a 4 oraciones máximo. Denso en valor, sin relleno.
-7. Idioma: mismo idioma que predomina en los datos.
+PHASE 1 — INTERNAL DIAGNOSIS (do not include in response, use to guide writing):
+• Seniority level: detect from experience and responsibilities (Junior <2yr / Mid 2-5yr / Senior 5-10yr / Lead/Director 10yr+)
+• Primary sector and industry
+• 2-3 unique differentiators: what this candidate has that others in their role don't
+• Most impactful achievement (with figure if exists, placeholder if not)
+• Key ATS keywords for the sector to include naturally
 
-Genera exactamente 3 versiones con estos tonos:
-- Versión 1: Formal y ejecutiva
-- Versión 2: Equilibrada y directa
-- Versión 3: Dinámica y orientada al impacto
+PHASE 2 — GENERATE 3 VERSIONS (include in JSON response):
 
-Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
+Version 1 — EXECUTIVE: Positions candidate as a senior expert. Emphasis on business impact, leadership and scale. Tone: authority, decisiveness, results. Exactly 3 sentences.
+
+Version 2 — SPECIALIST: Emphasis on technical or functional expertise specific to the sector. Include key tools, methodologies or technologies if applicable. Tone: precise, competent, no filler. 2-3 sentences.
+
+Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their next team. Combines past achievement + differential skill + future value. Tone: dynamic, forward-looking, impact-oriented. 3 sentences.
+
+ABSOLUTE RULES:
+• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player".
+• No personal pronouns (I, My, I am). Third person or impersonal form.
+• If no metrics in profile: use [X years], [N projects], [X%], [N teams] as placeholders. NEVER invent real figures.
+• Each version must feel written by the candidate — personal and authentic, not AI-generated.
+
+Respond ONLY with valid JSON (no markdown, no explanations):
+{"versions": ["version1", "version2", "version3"]}`
+      : `TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impacto, cada uno con posicionamiento diferente.
+
+=== PERFIL DEL CANDIDATO ===
+${resumeContext}
+
+FASE 1 — DIAGNÓSTICO INTERNO (no incluir en respuesta, solo usar para informar la escritura):
+• Nivel de seniority: detecta según años de experiencia y responsabilidades (Junior <2 años / Mid 2-5 / Senior 5-10 / Lead/Director 10+)
+• Sector e industria principal del candidato
+• 2-3 diferenciadores únicos: qué tiene este candidato que otros en su rol no tienen
+• Logro más impactante del perfil (con cifra si existe, con placeholder si no)
+• Keywords ATS clave del sector para incluir de forma natural
+
+FASE 2 — GENERA 3 VERSIONES (incluir en respuesta JSON):
+
+Versión 1 — EJECUTIVA: Posiciona al candidato como experto de alto nivel. Énfasis en impacto de negocio, liderazgo y escala. Tono: autoridad, decisión y resultados. Exactamente 3 oraciones.
+
+Versión 2 — ESPECIALISTA: Énfasis en expertise técnico o funcional específico del sector. Si aplica: incluye herramientas, metodologías o tecnologías clave. Tono: preciso, competente, sin relleno. 2-3 oraciones.
+
+Versión 3 — PROPUESTA DE VALOR: Enfoca en lo que el candidato aporta a su próximo equipo. Combina logro pasado + habilidad diferencial + valor futuro. Tono: dinámico, propositivo, orientado al impacto. 3 oraciones.
+
+REGLAS ABSOLUTAS:
+• Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA: "Responsable de", "Apasionado por", "Con experiencia en", "Busca", "Está interesado en".
+• Sin pronombres personales (Yo, Mi, Soy). Tercera persona o forma impersonal.
+• Si no hay métricas en el perfil: usa [X años], [N proyectos], [X%], [N equipos] como placeholders. NUNCA inventes cifras reales.
+• Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
+
+Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 500,
+      max_tokens: 600,
       temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "Eres un Consultor de Carrera de Élite y experto en optimización de ATS (Applicant Tracking Systems). " +
-            "Tu especialidad es crear resúmenes profesionales de alto impacto que posicionan al candidato como la opción ideal para su industria. " +
+            "Eres un Consultor de Carrera de Élite especializado en escritura de resúmenes profesionales que consiguen entrevistas en empresas top. " +
+            "Tu método: analizar el perfil completo del candidato, identificar su nivel real de seniority, extraer sus diferenciadores únicos y construir resúmenes que posicionan al candidato como la opción ideal para su sector. " +
+            "Cada resumen debe sonar personal y auténtico — escrito por el candidato, no generado por IA. " +
             "Usas la fórmula: [Título] con [logro clave] especializado en [área], que ha [verbo de logro] [resultado] mediante [diferenciador]. " +
             "SOLO respondes con perfiles profesionales reales. Cuando no hay métricas, usas placeholders explícitos entre corchetes ([X años], [X%]). NUNCA inventas cifras. " +
             "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. " +
@@ -399,42 +481,106 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
       if (!validation.valid) throw new AppError("invalid_input", 400)
     }
 
-    const resumeContext = sectionData ? buildResumeContext(sectionData) : ""
+    const resumeContext = sectionData ? buildResumeContext(sectionData, language) : ""
 
-    const prompt = hasSummary
-      ? `TAREA: Revisa y mejora el siguiente resumen profesional. Devuelve 3 versiones optimizadas.
+    const prompt = language === "en"
+      ? hasSummary
+        ? `TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
 
-${hasDescription ? `Instrucción adicional del candidato: "${userDescription!.trim()}"` : ""}
+${hasDescription ? `Candidate instruction: "${userDescription!.trim()}"` : ""}
+${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
+
+Current summary to improve:
+"${summary!.trim()}"
+
+DIAGNOSIS (use internally to guide writing):
+• Detect: clichés, weak phrases, passive voice, low-impact verbs
+• Identify: hidden achievements that can be amplified with metrics or placeholders
+• Extract: candidate's real differentiator in their sector
+
+GENERATE 3 IMPROVED VERSIONS:
+
+Version 1 — EXECUTIVE (exactly 3 sentences): Emphasis on business impact, leadership and quantifiable results. Direct tone, no filler. Positions as senior expert.
+
+Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional expertise specific to the sector. Includes key tools, methodologies or technologies from the CV or original summary.
+
+Version 3 — VALUE PROPOSITION (3 sentences): Combines most impactful past achievement + differential skill + value the candidate will bring to the next company. Dynamic and forward-looking tone.
+
+ABSOLUTE RULES:
+• Preserve real metrics from the original. If none: use [X years], [N projects], [X%], [$Z]. NEVER invent figures.
+• PROHIBITED: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player".
+• No personal pronouns (I, My, I am). Third person or impersonal.
+• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
+
+Respond ONLY with valid JSON (no markdown):
+{"versions": ["version1", "version2", "version3"]}`
+        : `TASK: Create a high-impact professional summary from scratch based on the candidate's description. Return 3 distinct versions.
+
+Candidate description: "${userDescription!.trim()}"
+${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
+
+GENERATE 3 VERSIONS:
+
+Version 1 — EXECUTIVE (3 sentences): Positioning as a senior expert in their area. Emphasis on impact and leadership.
+
+Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional stack or the most specific area of expertise the candidate mentions.
+
+Version 3 — VALUE PROPOSITION (3 sentences): Focuses on what the candidate brings to their next team. Combines skills + vision of future value.
+
+RULES:
+• If the candidate didn't specify metrics: use [X years], [N projects], [X%] as placeholders. NEVER invent figures.
+• No personal pronouns. No clichés. Impact verbs first.
+• Each version must sound authentic — personal, not generic.
+
+Respond ONLY with valid JSON (no markdown):
+{"versions": ["version1", "version2", "version3"]}`
+      : hasSummary
+        ? `TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
+
+${hasDescription ? `Instrucción del candidato: "${userDescription!.trim()}"` : ""}
 ${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
 
-Resumen actual:
-${summary!.trim()}
+Resumen actual a mejorar:
+"${summary!.trim()}"
 
-INSTRUCCIONES:
-1. Detecta y corrige errores de redacción, clichés y frases débiles.
-2. Usa verbos de impacto: Desarrollé, Lideré, Optimicé, Implementé, Especializo.
-3. Sin pronombres personales excesivos. Orientado a logros y valor aportado.
-4. Si hay métricas en el original, consérvelas. Si no las hay, usa placeholders [X años], [N proyectos]. NUNCA inventes cifras.
-5. Cada versión con un enfoque diferente:
-   - Versión 1: Concisa y ejecutiva (2-3 oraciones potentes)
-   - Versión 2: Técnica y detallada (habilidades + stack + logros)
-   - Versión 3: Orientada al impacto de negocio y resultados
+DIAGNÓSTICO (usa internamente para guiar las versiones):
+• Detecta: clichés, frases débiles, voz pasiva, verbos sin impacto
+• Identifica: logros ocultos que pueden amplificarse con métricas o placeholders
+• Extrae: diferenciador real del candidato en su sector
+
+GENERA 3 VERSIONES MEJORADAS:
+
+Versión 1 — EJECUTIVA (3 oraciones exactas): Énfasis en impacto de negocio, liderazgo y resultados cuantificables. Tono directo, sin relleno. Posiciona como experto senior.
+
+Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en expertise técnico/funcional específico del sector. Incluye herramientas, metodologías o tecnologías clave mencionadas en el CV o resumen original.
+
+Versión 3 — PROPUESTA DE VALOR (3 oraciones): Combina logro más impactante del pasado + habilidad diferencial + valor que aportará a la próxima empresa. Tono dinámico y propositivo.
+
+REGLAS ABSOLUTAS:
+• Conserva métricas reales del original. Si no hay: usa [X años], [N proyectos], [X%], [$Z]. NUNCA inventes cifras.
+• PROHIBIDO: "Responsable de", "Apasionado por", "Busco nuevos retos", "Con experiencia en", "Equipo de trabajo".
+• Sin pronombres personales (Yo, Mi, Soy). Tercera persona o impersonal.
+• Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"versions": ["version1", "version2", "version3"]}`
-      : `TAREA: Crea un resumen profesional desde cero basado en la descripción del candidato. Devuelve 3 versiones.
+        : `TAREA: Crea un resumen profesional de alto impacto desde cero, basado en la descripción del candidato. Devuelve 3 versiones distintas.
 
 Descripción del candidato: "${userDescription!.trim()}"
 ${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
 
-INSTRUCCIONES:
-1. 3-4 oraciones por versión. Denso en valor, sin relleno.
-2. Verbos de impacto: Especializo, Desarrollo, Lidero, Implemento.
-3. Usa placeholders [X años], [N proyectos] si el candidato no especificó métricas. NUNCA inventes cifras.
-4. Cada versión con un enfoque diferente:
-   - Versión 1: Concisa y ejecutiva
-   - Versión 2: Técnica y orientada al stack/herramientas
-   - Versión 3: Orientada al impacto de negocio
+GENERA 3 VERSIONES:
+
+Versión 1 — EJECUTIVA (3 oraciones): Posicionamiento como experto senior en su área. Énfasis en impacto y liderazgo.
+
+Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en stack técnico/funcional o área de expertise más específica que menciona el candidato.
+
+Versión 3 — PROPUESTA DE VALOR (3 oraciones): Enfoca en qué aporta el candidato a su próximo equipo. Combina habilidades + visión de valor futuro.
+
+REGLAS:
+• Si el candidato no especificó métricas: usa [X años], [N proyectos], [X%] como placeholders. NUNCA inventes cifras.
+• Sin pronombres personales. Sin clichés. Verbos de impacto al inicio.
+• Cada versión debe sonar auténtica — personal, no genérica.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"versions": ["version1", "version2", "version3"]}`
@@ -487,11 +633,40 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // Truncate to 6000 chars — covers 95%+ of real job descriptions without quality loss
     const jobDescriptionTruncated = jobDescription.slice(0, 6000)
 
-    const resumeText = buildResumeContext(sectionData ?? {})
+    const resumeText = buildResumeContext(sectionData ?? {}, language)
     if (!resumeText.trim()) throw new AppError("not_enough_resume_data", 400)
 
-    const prompt = `Eres un experto en sistemas ATS (Applicant Tracking Systems) y selección de personal.
-Analiza la compatibilidad entre el CV y la descripción del puesto de trabajo.
+    const prompt = language === "en"
+      ? `Analyze the compatibility between this resume and the job description.
+
+=== CANDIDATE RESUME ===
+${resumeText}
+
+=== JOB DESCRIPTION ===
+${jobDescriptionTruncated}
+
+Evaluate and return results in JSON with this exact format:
+{
+  "score": <number from 0 to 100>,
+  "label": "<Excellent|Good|Fair|Low>",
+  "summary": "<1-2 sentence summary of overall compatibility>",
+  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
+  "gaps": ["<gap 1>", "<gap 2>", "<gap 3>"],
+  "missingKeywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],
+  "suggestions": ["<concrete suggestion 1>", "<concrete suggestion 2>", "<concrete suggestion 3>"]
+}
+
+Evaluation rules:
+- score 80-100 = Excellent, 60-79 = Good, 40-59 = Fair, 0-39 = Low
+- strengths: specific resume strengths that match the job (not generic)
+- gaps: specific mismatches between what the job requires and what the resume shows
+- missingKeywords: job keywords NOT found in the resume — order from most to least critical (max 8)
+- suggestions: EXACTLY 3 concrete actions. Each in this format:
+  "[IMPERATIVE VERB] [what to do exactly] in [specific CV section]: [concrete example of how to do it]"
+  Example: "ADD the keyword 'agile project management' to your Experience section at [most recent employer]: rewrite the team leadership bullet to mention Scrum/Kanban if you used them"
+  Prioritize the 3 actions with the highest score impact.
+- Respond ONLY with the JSON, no markdown, no explanations`
+      : `Analiza la compatibilidad entre el CV y la descripción del puesto de trabajo.
 
 === CV DEL CANDIDATO ===
 ${resumeText}
@@ -510,16 +685,21 @@ Evalúa y devuelve los resultados en JSON con este formato exacto:
   "suggestions": ["<sugerencia concreta 1>", "<sugerencia concreta 2>", "<sugerencia concreta 3>"]
 }
 
-Reglas:
+Reglas de evaluación:
 - score 80-100 = Excelente, 60-79 = Bueno, 40-59 = Regular, 0-39 = Bajo
-- missingKeywords: palabras clave del puesto que NO aparecen en el CV (máximo 8)
-- suggestions: acciones concretas y específicas para mejorar la compatibilidad (menciona secciones del CV donde aplicar cada mejora)
+- strengths: fortalezas concretas del CV que coinciden con el puesto (no genéricas)
+- gaps: brechas específicas entre lo que pide el puesto y lo que muestra el CV
+- missingKeywords: palabras clave del puesto que NO aparecen en el CV — ordena de más a menos crítica (máximo 8)
+- suggestions: EXACTAMENTE 3 acciones concretas. Cada una con este formato:
+  "[VERBO EN IMPERATIVO] [qué hacer exactamente] en [sección específica del CV]: [ejemplo o detalle concreto de cómo hacerlo]"
+  Ejemplo: "AÑADE la keyword 'gestión de proyectos ágiles' en tu sección de Experiencia en [empresa más reciente]: reescribe el bullet de liderazgo de equipo para incluir Scrum/Kanban si lo usaste"
+  Prioriza las 3 acciones de mayor impacto en el score.
 - Responde ÚNICAMENTE con el JSON, sin markdown ni explicaciones`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 800,
-      temperature: AI_TEMPERATURE,
+      temperature: AI_TEMPERATURE_PRECISE,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -693,13 +873,39 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     if (jobTitle) { const v = validateAIInput(jobTitle, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (recipientTitle) { const v = validateAIInput(recipientTitle, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
 
-    const context = [
-      company ? `Empresa: ${company}` : "",
-      jobTitle ? `Puesto: ${jobTitle}` : "",
-      recipientTitle ? `Destinatario: ${recipientTitle}` : "",
-    ].filter(Boolean).join(" | ")
+    const context = language === "en"
+      ? [
+          company ? `Company: ${company}` : "",
+          jobTitle ? `Role: ${jobTitle}` : "",
+          recipientTitle ? `Recipient: ${recipientTitle}` : "",
+        ].filter(Boolean).join(" | ")
+      : [
+          company ? `Empresa: ${company}` : "",
+          jobTitle ? `Puesto: ${jobTitle}` : "",
+          recipientTitle ? `Destinatario: ${recipientTitle}` : "",
+        ].filter(Boolean).join(" | ")
 
-    const prompt = `TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones optimizadas.
+    const prompt = language === "en"
+      ? `TASK: Improve this cover letter body and generate 3 optimized versions.
+
+${context ? `Context: ${context}` : ""}
+Current letter:
+${body}
+
+GOLDEN RULES (apply all):
+1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA.
+2. Eliminate clichés ("I am a proactive person", "I am passionate about teamwork"). Replace with concrete achievements.
+3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
+4. If the original has metrics, preserve them. If not, use explicit placeholders [X%], [N projects], [$Z]. NEVER invent real figures.
+5. Each version must have a distinct tone:
+   - Version 1: Formal and executive
+   - Version 2: Balanced and direct
+   - Version 3: Dynamic and impact-oriented
+6. Maximum 4 paragraphs per version. Maximum 200 words per version. Dense in value, no filler.
+
+Respond ONLY with valid JSON (no markdown, no explanations):
+{"versions": ["version1", "version2", "version3"]}`
+      : `TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones optimizadas.
 
 ${context ? `Contexto: ${context}` : ""}
 Carta actual:
@@ -714,8 +920,7 @@ REGLAS DE ORO (aplica todas):
    - Versión 1: Formal y ejecutiva
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
-6. Idioma: mismo idioma que el texto original.
-7. Máximo 4 párrafos por versión. Cada versión máximo 200 palabras. Denso en valor, sin relleno.
+6. Máximo 4 párrafos por versión. Cada versión máximo 200 palabras. Denso en valor, sin relleno.
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
@@ -762,7 +967,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const language = rawLanguage === "en" ? "en" : "es"
     const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
 
-    const resumeContext = buildResumeContext(sectionData)
+    const resumeContext = buildResumeContext(sectionData, language)
     if (!resumeContext.trim()) throw new AppError("not_enough_data", 400)
 
     if (question) {
@@ -770,11 +975,55 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
       if (!validation.valid) throw new AppError("invalid_input", 400)
     }
 
-    const userQuestion = question?.trim()
-      ? `Pregunta específica del candidato: "${question.trim()}"`
-      : "El candidato quiere una revisión general de su CV."
+    const userQuestion = language === "en"
+      ? question?.trim()
+        ? `Candidate's specific question: "${question.trim()}"`
+        : "The candidate wants a general review of their resume."
+      : question?.trim()
+        ? `Pregunta específica del candidato: "${question.trim()}"`
+        : "El candidato quiere una revisión general de su CV."
 
-    const prompt = `TAREA: Analiza el siguiente CV y proporciona una revisión profesional detallada.
+    const prompt = language === "en"
+      ? `TASK: Analyze this resume and provide a detailed professional review.
+
+=== CANDIDATE RESUME ===
+${resumeContext}
+
+=== REQUEST ===
+${userQuestion}
+
+INSTRUCTIONS:
+1. Analyze the full resume: clarity, impact, structure, ATS keywords, coherence, completeness.
+2. Answer the question directly if it is specific.
+3. Be concrete — mention real sections or data from the resume.
+4. Tone: professional consultant, direct and constructive.
+
+For each strength and improvement item, evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
+- field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
+- type: "replace" (replace current content) or "append" (add to current content)
+- preview: the final suggested text, NO markdown, NO asterisks, NO HTML. Max 500 characters.
+- reason: max 12 words explaining the change
+- targetId: only if the improvement applies to a specific array item (use the item id from the resume)
+
+Do NOT include suggestion if:
+- The improvement requires data the AI doesn't have (dates, company names, real metrics)
+- The improvement is general advice ("get references", "gain more experience")
+- The field is not in the allowed list
+- You are not sure of the final value
+
+Respond ONLY with valid JSON (no markdown):
+{
+  "summary": "<general diagnosis in 2-3 sentences>",
+  "strengths": [
+    { "text": "<strength>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } }
+  ],
+  "improvements": [
+    { "text": "<improvement>", "suggestion": { "field": "...", "type": "replace", "preview": "...", "reason": "..." } },
+    { "text": "<improvement without automatable action>" }
+  ],
+  "answer": "<direct answer to candidate's question, or empty string if general review>"
+}`
+      : `TAREA: Analiza el siguiente CV y proporciona una revisión profesional detallada.
 
 === CV DEL CANDIDATO ===
 ${resumeContext}
@@ -787,7 +1036,6 @@ INSTRUCCIONES:
 2. Responde directamente a la pregunta si es específica.
 3. Sé concreto — menciona secciones o datos reales del CV.
 4. Tono: consultor profesional, directo y constructivo.
-5. Idioma: mismo idioma que el CV.
 
 Para cada item de strengths e improvements, evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
@@ -890,7 +1138,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
     const sd = sectionData ?? {}
-    const resumeContext = buildResumeContext(sd)
+    const resumeContext = buildResumeContext(sd, language)
 
     const existingSkills = ((sd.skills ?? []) as { name: string }[]).map((s) => s.name).join(", ")
 
@@ -907,14 +1155,57 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     )
     const existingLanguages = ((sd.languages ?? []) as { name: string }[]).map((l) => l.name).join(", ")
 
-    const workExpCtx = buildSectionContext("EXPERIENCIA LABORAL", (sd.workExperience ?? []) as Parameters<typeof buildSectionContext>[1])
-    const educationCtx = buildSectionContext("EDUCACIÓN", (sd.education ?? []) as Parameters<typeof buildSectionContext>[1])
-    const projectsCtx = buildSectionContext("PROYECTOS", (sd.projects ?? []) as Parameters<typeof buildSectionContext>[1])
-    const volunteerCtx = buildSectionContext("VOLUNTARIADO", (sd.volunteer ?? []) as Parameters<typeof buildSectionContext>[1])
+    const workExpCtx = buildSectionContext(language === "en" ? "WORK EXPERIENCE" : "EXPERIENCIA LABORAL", (sd.workExperience ?? []) as Parameters<typeof buildSectionContext>[1])
+    const educationCtx = buildSectionContext(language === "en" ? "EDUCATION" : "EDUCACIÓN", (sd.education ?? []) as Parameters<typeof buildSectionContext>[1])
+    const projectsCtx = buildSectionContext(language === "en" ? "PROJECTS" : "PROYECTOS", (sd.projects ?? []) as Parameters<typeof buildSectionContext>[1])
+    const volunteerCtx = buildSectionContext(language === "en" ? "VOLUNTEER" : "VOLUNTARIADO", (sd.volunteer ?? []) as Parameters<typeof buildSectionContext>[1])
 
     const sectionsWithIds = [workExpCtx, educationCtx, projectsCtx, volunteerCtx].filter(Boolean).join("\n")
 
-    const userPrompt = `El candidato quiere mejorar su CV con esta instrucción:
+    const userPrompt = language === "en"
+      ? `The candidate wants to improve their resume with this instruction:
+"${prompt.trim()}"
+
+=== CURRENT RESUME ===
+${resumeContext}
+${sectionsWithIds}
+
+${existingSkills ? `Current skills (DO NOT repeat): ${existingSkills}` : ""}
+${existingLanguages ? `Current languages (DO NOT repeat): ${existingLanguages}` : ""}
+${(sd as { hobbies?: string }).hobbies ? `Current interests: ${(sd as { hobbies?: string }).hobbies}` : ""}
+
+TASK: Analyze the instruction and determine which resume sections need improvement. Apply changes where appropriate:
+
+- If mentions a company or role that already exists in the resume → improve that entry's description using its exact id in workExperienceUpdates
+- If mentions a company or role NOT in the current resume → create it in workExperienceNew with jobTitle, employer, city, startDate, endDate, currentlyWorking and description (• bullet points, no markdown). Max 3 new entries.
+- If talks about their general profile → improve the summary and/or jobTitle
+- If mentions skills → add to suggestedSkills (ONLY real technical or soft skills: frameworks, languages, tools, methodologies; NEVER company names, employers, job titles, cities or locations)
+- If mentions languages → add to suggestedLanguages with appropriate level
+- If mentions education → improve that education entry's description
+- If mentions projects → improve that project's description
+- If mentions volunteer work → improve that entry's description
+- If mentions interests or hobbies → update the hobbies field
+- Can apply to multiple sections simultaneously
+
+Respond ONLY with valid JSON (no markdown). Only include fields that actually change, omit the rest:
+{
+  "summary": "<improved summary or null>",
+  "jobTitle": "<updated title or null>",
+  "hobbies": "<updated interests or null>",
+  "suggestedSkills": ["<new skill>"],
+  "suggestedLanguages": [{ "name": "<language>", "level": "elementary|limited|professional|full_professional|native" }],
+  "workExperienceUpdates": [{ "id": "<exact id>", "description": "<improved description with • bullets, no markdown>" }],
+  "workExperienceNew": [{ "jobTitle": "<role>", "employer": "<company>", "city": "<optional city>", "startDate": "<MM/YYYY optional>", "endDate": "<MM/YYYY optional>", "currentlyWorking": false, "description": "<• bullets>" }],
+  "educationUpdates": [{ "id": "<exact id>", "description": "<improved description>" }],
+  "projectUpdates": [{ "id": "<exact id>", "description": "<improved description with • bullets>" }],
+  "volunteerUpdates": [{ "id": "<exact id>", "description": "<improved description>" }]
+}
+
+Rules:
+- ALWAYS use the exact ids from the section listing above. Never invent an id.
+- Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
+- Do not invent data (dates, companies, metrics) the candidate didn't mention. Use [X] as placeholder if the candidate wants metrics.`
+      : `El candidato quiere mejorar su CV con esta instrucción:
 "${prompt.trim()}"
 
 === CV ACTUAL ===
@@ -955,13 +1246,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
 Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Nunca inventes un id.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
-- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó. Usa [X] como placeholder si el candidato quiere métricas.
-- Mismo idioma que la descripción del candidato.`
+- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó. Usa [X] como placeholder si el candidato quiere métricas.`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 700,
-      temperature: AI_TEMPERATURE_BALANCED,
+      temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -1033,7 +1323,7 @@ Reglas:
       ? `The candidate already has these skills: ${existingSkills.join(", ")}. Do not repeat them.`
       : ""
 
-    const prompt = `You are a professional career coach. Suggest relevant skills for a "${jobTitle}"${industry ? ` in the ${industry} industry` : ""}.
+    const prompt = `Suggest the most relevant and high-value skills for a "${jobTitle}"${industry ? ` in the ${industry} industry` : ""} to include in a professional CV/resume.
 ${existingList}
 
 Return a JSON object with this exact structure:
@@ -1046,20 +1336,23 @@ Return a JSON object with this exact structure:
 
 Rules:
 - Return exactly 8-10 skills
-- Mix technical and soft skills appropriate for the role
-- Assign realistic levels for a typical professional in this role
+- ORDER by relevance: most critical/in-demand skill for this specific role FIRST
+- Use SPECIFIC, precise skill names (not generic): prefer "React.js" over "React", "Python (Data Analysis)" over "Python", "Google Analytics 4" over "Analytics", "Scrum / Agile" over "Agile"
+- Distribution: 60% hard/technical skills specific to the role, 40% soft/cross-functional skills
+- Hard skills first in the list, soft skills at the end
+- Assign realistic levels for a mid-level professional in this role (avoid all "expert" — be honest)
 - Only return the JSON object, no other text
 - If the job title is not a real profession or is off-topic, return { "skills": [] }`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 400,
-      temperature: AI_TEMPERATURE,
+      temperature: AI_TEMPERATURE_PRECISE,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
-          content: "You are a career coach. Only suggest skills relevant to professional CV/resume contexts. If the input is off-topic or nonsensical, return { \"skills\": [] }. " + langInstruction,
+          content: "You are a senior career strategist and talent acquisition expert who knows exactly which skills recruiters search for in each role and industry. You suggest specific, high-value skills that differentiate candidates and pass ATS filters — never generic filler. Only suggest skills relevant to professional CV/resume contexts. If the input is off-topic or nonsensical, return { \"skills\": [] }. " + langInstruction,
         },
         { role: "user", content: prompt },
       ],
@@ -1082,5 +1375,110 @@ Rules:
 
     logAIUsage(userId, "suggest-skills")
     return { skills }
+  }
+
+  async tailorCV(userId: string, input: TailorCVInput): Promise<TailorCVResult> {
+    const allowed = await checkAndIncrementRateLimit(userId, "tailor-cv")
+    if (!allowed) throw new AppError("rate_limit_exceeded", 429)
+
+    const { sectionData, jobDescription, language: rawLanguage } = input
+    const language = rawLanguage === "en" ? "en" : "es"
+    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+
+    const jdValidation = validateAIInput(jobDescription, 6000)
+    if (!jdValidation.valid) throw new AppError(jdValidation.error ?? "invalid_input", 400)
+
+    const resumeContext = buildResumeContext(sectionData, language)
+    const work = (sectionData.workExperience ?? []) as { id?: string; jobTitle?: string; employer?: string; description?: string }[]
+    const workList = work.slice(0, 4).map((j) =>
+      `ID:${j.id ?? "?"} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}: ${(j.description ?? "").slice(0, 300)}`
+    ).join("\n")
+
+    const prompt = language === "en"
+      ? `You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
+
+JOB DESCRIPTION:
+${jobDescription.slice(0, 4000)}
+
+CANDIDATE CV:
+${resumeContext}
+
+WORK EXPERIENCE DETAILS:
+${workList}
+
+Return a JSON object with this structure:
+{
+  "summaryVersion": "rewritten professional summary (3-4 sentences, 80-120 words) aligned to this job",
+  "bulletSuggestions": [
+    { "targetId": "work experience ID from the list", "jobTitle": "job title", "employer": "employer", "improved": "rewritten bullet(s) using CAR method, highlighting what this job description values" }
+  ],
+  "missingSkills": ["skill1", "skill2"],
+  "keywordsToAdd": ["keyword1", "keyword2"]
+}
+
+Rules:
+- summaryVersion: mirror the job's language and keywords naturally; no exaggeration
+- bulletSuggestions: only for work experiences where improvement would meaningfully help; max 3
+- missingSkills: skills required by the job that the candidate doesn't have (max 5)
+- keywordsToAdd: ATS keywords from the job not present in the CV (max 8)
+- Be specific and actionable; no generic advice
+- Only return the JSON object`
+      : `Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
+
+OFERTA DE TRABAJO:
+${jobDescription.slice(0, 4000)}
+
+CV DEL CANDIDATO:
+${resumeContext}
+
+DETALLES DE EXPERIENCIA LABORAL:
+${workList}
+
+Devuelve un objeto JSON con esta estructura:
+{
+  "summaryVersion": "resumen profesional reescrito (3-4 oraciones, 80-120 palabras) alineado a esta oferta",
+  "bulletSuggestions": [
+    { "targetId": "ID de la experiencia laboral", "jobTitle": "puesto", "employer": "empresa", "improved": "bullet(s) reescritos con método CAR, destacando lo que valora esta oferta" }
+  ],
+  "missingSkills": ["habilidad1", "habilidad2"],
+  "keywordsToAdd": ["keyword1", "keyword2"]
+}
+
+Reglas:
+- summaryVersion: refleja el lenguaje y palabras clave de la oferta de forma natural; sin exageraciones
+- bulletSuggestions: solo para experiencias donde la mejora aporte valor real; máximo 3
+- missingSkills: habilidades requeridas por la oferta que el candidato no tiene (máximo 5)
+- keywordsToAdd: keywords ATS de la oferta no presentes en el CV (máximo 8)
+- Sé específico y accionable; nada genérico
+- Solo devuelve el objeto JSON`
+
+    const response = await this.aiClient.chat({
+      model: AI_MODEL,
+      max_tokens: 1200,
+      temperature: AI_TEMPERATURE_STRUCTURED,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summaryVersion": "", "bulletSuggestions": [], "missingSkills": [], "keywordsToAdd": [] }. ${langInstruction}`,
+        },
+        { role: "user", content: prompt },
+      ],
+    })
+
+    const content = response.choices[0]?.message?.content ?? "{}"
+    const raw = parseAIJson<TailorCVResult>(content)
+
+    if (!raw.summaryVersion && !raw.bulletSuggestions?.length && !raw.missingSkills?.length) {
+      throw new AppError("off_topic", 422)
+    }
+
+    logAIUsage(userId, "tailor-cv")
+    return {
+      summaryVersion: raw.summaryVersion ?? "",
+      bulletSuggestions: (raw.bulletSuggestions ?? []).slice(0, 3),
+      missingSkills: (raw.missingSkills ?? []).slice(0, 5),
+      keywordsToAdd: (raw.keywordsToAdd ?? []).slice(0, 8),
+    }
   }
 }
