@@ -116,9 +116,9 @@ export default function CVReviewPanel() {
   useEffect(() => {
     if (cooldownUntil <= Date.now()) return
     const id = setInterval(() => {
-      const t = Date.now()
-      setNow(t)
-      if (t >= cooldownUntil) clearInterval(id)
+      const ts = Date.now()
+      setNow(ts)
+      if (ts >= cooldownUntil) clearInterval(id)
     }, 1000)
     return () => clearInterval(id)
   }, [cooldownUntil])

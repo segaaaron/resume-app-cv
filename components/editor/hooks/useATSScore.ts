@@ -112,15 +112,6 @@ export function useATSScore() {
     }
   }, [input, sectionData, locale, t, loading, cooldownUntil])
 
-  const reset = useCallback(() => {
-    setAtsResult(null)
-    setReviewResult(null)
-    setOffTopic(false)
-    setInput("")
-    lastKeyRef.current = null
-    setCooldownUntil(0)
-  }, [])
-
   const hasResult = atsResult !== null || reviewResult !== null
 
   return {
@@ -130,7 +121,6 @@ export function useATSScore() {
     offTopic,
     hasResult,
     analyze,
-    reset,
     cooldownUntil,
   }
 }

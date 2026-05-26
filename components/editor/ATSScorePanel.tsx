@@ -120,7 +120,6 @@ export default function ATSScorePanel() {
     loading,
     atsResult, reviewResult,
     offTopic,
-    hasResult,
     analyze,
     cooldownUntil,
   } = useATSScore()
