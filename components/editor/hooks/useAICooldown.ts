@@ -14,7 +14,7 @@ function writeCooldown(key: string, v: number): void {
 }
 
 export function useAICooldown(storageKey: string) {
-  const [cooldownUntil, setCooldownUntilState] = useState<number>(0)
+  const [cooldownUntil, setCooldownUntilState] = useState<number>(() => readCooldown(storageKey))
 
   useEffect(() => {
     setCooldownUntilState(readCooldown(storageKey))

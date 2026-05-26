@@ -6,11 +6,10 @@ import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { WorkExperienceItem } from "@/types/resume"
-import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import {
-  Plus, Trash2, ChevronDown, ChevronRight, Sparkles, Loader2,
+  Plus, Trash2, ChevronDown, ChevronRight, Loader2,
   Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText, Wand2, ChevronLeft,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
@@ -19,10 +18,10 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useEditorPro } from "@/components/editor/EditorContext"
 import BulletsImprovementModal, { type BulletPair } from "./BulletsImprovementModal"
+import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
-  const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
   const locale = useLocale()
   const { sectionData, updateSectionData } = useResumeStore(
@@ -31,90 +30,6 @@ export default function WorkExperienceSection() {
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(null)
   useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [jobs[0]?.id])
-  const [improvingId, setImprovingId] = useState<string | null>(null)
-  const [bulletModal, setBulletModal] = useState<{ jobId: string; pairs: BulletPair[]; working: string[] } | null>(null)
-  const [improvedId, setImprovedId] = useState<string | null>(null)
-  const [alreadyOptimizedIds, setAlreadyOptimizedIds] = useState<Set<string>>(new Set())
-  const cooldownMap = useRef<Map<string, number>>(new Map())
-  const lastKeyMap = useRef<Map<string, string>>(new Map())
-
-  async function handleImprove(job: WorkExperienceItem) {
-    if (improvingId) return
-    const isEmpty = !job.description.trim()
-    // QA-001: when empty, build context from jobTitle+employer (must be ≥5 chars)
-    const contextText = isEmpty
-      ? [job.jobTitle, job.employer].filter(Boolean).join(" at ")
-      : job.description
-    if (isEmpty && contextText.trim().length < 5) {
-      toast.error(ai("bullet_need_job_title"))
-      return
-    }
-    const jobCooldown = cooldownMap.current.get(job.id) ?? 0
-    if (Date.now() < jobCooldown) {
-      const secs = Math.ceil((jobCooldown - Date.now()) / 1000)
-      const label = secs >= 60 ? `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` : `${secs}s`
-      toast.info(ai("cooldown_wait", { seconds: label }))
-      return
-    }
-    const key = job.description.trim()
-    if (!isEmpty && key === lastKeyMap.current.get(job.id)) { toast.info(ai("no_changes")); return }
-    setImprovingId(job.id)
-    setBulletModal(null)
-    try {
-      const res = await apiFetch("/api/ai/improve-bullet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: contextText, jobTitle: job.jobTitle, language: locale }),
-      })
-      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
-      if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_bullet")); return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
-      if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
-      const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
-      if (!isEmpty && normalize(bullets.join("\n")) === normalize(job.description)) {
-        // QA-004: set cooldown even on already-optimized path
-        lastKeyMap.current.set(job.id, key)
-        cooldownMap.current.set(job.id, Date.now() + 60_000)
-        setAlreadyOptimizedIds((prev) => new Set(prev).add(job.id))
-        return
-      }
-      // QA-002: build stable working array padded to bullets.length
-      const origLines = job.description.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
-      const working: string[] = bullets.map((_, i) => origLines[i] ?? "")
-      const pairs: BulletPair[] = bullets.map((improved, i) => ({
-        original: origLines[i] ?? "",
-        improved,
-      }))
-      setBulletModal({ jobId: job.id, pairs, working })
-      lastKeyMap.current.set(job.id, key)
-      cooldownMap.current.set(job.id, Date.now() + 60_000)
-    } catch {
-      toast.error(ai("error_bullet"))
-    } finally {
-      setImprovingId(null)
-    }
-  }
-
-  function applyOneBullet(jobId: string, index: number) {
-    if (!bulletModal || bulletModal.jobId !== jobId) return
-    if (index < 0 || index >= bulletModal.pairs.length) return
-    const newWorking = [...bulletModal.working]
-    newWorking[index] = bulletModal.pairs[index].improved
-    updateSectionData("workExperience", jobs.map((j) => j.id === jobId ? { ...j, description: newWorking.filter(Boolean).join("\n") } : j))
-    setBulletModal({ ...bulletModal, working: newWorking })
-  }
-
-  function applyAllBullets(jobId: string) {
-    if (!bulletModal || bulletModal.jobId !== jobId) return
-    const improved = bulletModal.pairs.map((p) => p.improved).join("\n")
-    updateSectionData("workExperience", jobs.map((j) => j.id === jobId ? { ...j, description: improved } : j))
-    setBulletModal(null)
-    setImprovedId(jobId)
-    toast.success(ai("bullets_all_applied"))
-  }
 
   function addJob() {
     const newJob: WorkExperienceItem = { id: nanoid(), employer: "", jobTitle: "", city: "", startDate: "", endDate: "", currentlyWorking: false, description: "" }
@@ -134,155 +49,243 @@ export default function WorkExperienceSection() {
   return (
     <div className="space-y-2">
       {jobs.map((job) => (
-        <div key={job.id} className="border border-border rounded-lg bg-white">
-          <div
-            role="button" tabIndex={0}
-            className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
-            onClick={() => {
-              setOpenId(openId === job.id ? null : job.id)
-              if (improvedId === job.id) setImprovedId(null)
-              if (bulletModal?.jobId === job.id) setBulletModal(null)
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                setOpenId(openId === job.id ? null : job.id)
-                if (improvedId === job.id) setImprovedId(null)
-                if (bulletModal?.jobId === job.id) setBulletModal(null)
-              }
-            }}
-          >
-            <span className="font-medium truncate text-left">
-              {job.jobTitle || job.employer || t("new_experience")}
-            </span>
-            <div className="flex items-center gap-1 shrink-0">
-              <button onClick={(e) => { e.stopPropagation(); removeJob(job.id) }} className="p-1 hover:text-destructive transition-colors">
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
-              {openId === job.id ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-            </div>
-          </div>
-
-          {openId === job.id && (
-            <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
-              <Field label={t("work.job_title")} value={job.jobTitle} onChange={(v) => updateJob(job.id, "jobTitle", v)} icon={Briefcase} />
-              <Field label={t("work.employer")} value={job.employer} onChange={(v) => updateJob(job.id, "employer", v)} icon={Building2} />
-              <Field label={t("work.city")} value={job.city} onChange={(v) => updateJob(job.id, "city", v)} icon={MapPin} />
-              <div />
-              <DateField label={t("work.start_date")} value={job.startDate} onChange={(v) => updateJob(job.id, "startDate", v)} />
-              {!job.currentlyWorking && (
-                <DateField label={t("work.end_date")} value={job.endDate} onChange={(v) => updateJob(job.id, "endDate", v)} />
-              )}
-
-              <div className="col-span-2 flex items-center gap-2">
-                <Switch id={`current-${job.id}`} checked={job.currentlyWorking} onCheckedChange={(v) => updateJob(job.id, "currentlyWorking", v)} />
-                <Label htmlFor={`current-${job.id}`} className="text-xs">{t("currently_working")}</Label>
-              </div>
-
-              {/* Description + AI */}
-              <div className="col-span-2 space-y-2">
-                {/* Description label + AI button */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD" }} />
-                    {t("description")}
-                  </div>
-                  {alreadyOptimizedIds.has(job.id) ? (
-                    <span
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold"
-                      style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}
-                    >
-                      <Check className="h-2.5 w-2.5" />
-                      {ai("already_optimized")}
-                    </span>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={isPro ? () => handleImprove(job) : openUpgrade}
-                      disabled={improvingId === job.id || improvedId === job.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border-none"
-                      style={{
-                        background: improvedId === job.id
-                          ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
-                          : job.description.trim() === ""
-                            ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)"
-                            : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
-                        color: job.description.trim() === "" ? "#0a1a35" : "#fff",
-                        boxShadow: improvedId === job.id
-                          ? "0 2px 6px rgba(16,185,129,0.3)"
-                          : job.description.trim() === ""
-                            ? "0 2px 6px rgba(0,212,255,0.3)"
-                            : "0 2px 6px rgba(124,58,237,0.25)",
-                      }}
-                    >
-                      {!isPro
-                        ? <><Lock className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
-                        : improvingId === job.id
-                          ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{ai("generating")}</>
-                          : improvedId === job.id
-                            ? <><Check className="h-2.5 w-2.5" />{ai("bullet_improved")}</>
-                            : job.description.trim() === ""
-                              ? <><Sparkles className="h-2.5 w-2.5" />{ai("suggest_bullet")}</>
-                              : <><Wand2 className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
-                      }
-                    </button>
-                  )}
-                </div>
-
-                {/* Textarea premium */}
-                <div className="relative">
-                  <textarea
-                    value={job.description}
-                    onChange={(e) => {
-                      updateJob(job.id, "description", e.target.value)
-                      if (improvedId === job.id) setImprovedId(null)
-                      if (alreadyOptimizedIds.has(job.id)) setAlreadyOptimizedIds((prev) => { const s = new Set(prev); s.delete(job.id); return s })
-                    }}
-                    placeholder={t("description_placeholder")}
-                    rows={5}
-                    className="w-full resize-none text-[12.5px] leading-relaxed text-[#1a2e4a] placeholder:text-slate-400 outline-none transition-all duration-200"
-                    style={{
-                      background: "linear-gradient(135deg, rgba(240,248,255,0.8) 0%, rgba(232,244,251,0.6) 100%)",
-                      border: "1.5px solid rgba(0,212,255,0.2)",
-                      borderRadius: 10,
-                      padding: "10px 12px",
-                      boxShadow: "inset 0 2px 4px rgba(0,0,0,0.03)",
-                    }}
-                    onFocus={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(0,212,255,0.5)"
-                      e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.03), 0 0 0 3px rgba(0,212,255,0.08)"
-                    }}
-                    onBlur={(e) => {
-                      e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)"
-                      e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.03)"
-                    }}
-                  />
-                </div>
-
-              </div>
-            </div>
-          )}
-        </div>
+        <WorkExperienceJobItem
+          key={job.id}
+          job={job}
+          isOpen={openId === job.id}
+          onToggle={() => setOpenId(openId === job.id ? null : job.id)}
+          onUpdate={(field, value) => updateJob(job.id, field, value)}
+          onRemove={() => removeJob(job.id)}
+          isPro={isPro}
+          openUpgrade={openUpgrade}
+          locale={locale}
+        />
       ))}
-
       <button onClick={addJob} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
         <Plus className="h-3.5 w-3.5" /> {t("add_experience")}
       </button>
+    </div>
+  )
+}
 
-      {/* Bullets improvement modal — one shared modal for all jobs */}
-      {bulletModal && (() => {
-        const job = jobs.find((j) => j.id === bulletModal.jobId)
-        return (
-          <BulletsImprovementModal
-            open={true}
-            onClose={() => setBulletModal(null)}
-            jobTitle={job?.jobTitle ?? ""}
-            pairs={bulletModal.pairs}
-            onApplyBullet={(index) => applyOneBullet(bulletModal.jobId, index)}
-            onApplyAll={() => applyAllBullets(bulletModal.jobId)}
-            onAllApplied={() => { setImprovedId(bulletModal.jobId); setBulletModal(null); toast.success(ai("bullets_all_applied")) }}
-          />
-        )
-      })()}
+function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPro, openUpgrade, locale }: {
+  job: WorkExperienceItem
+  isOpen: boolean
+  onToggle: () => void
+  onUpdate: (field: keyof WorkExperienceItem, value: unknown) => void
+  onRemove: () => void
+  isPro: boolean
+  openUpgrade: () => void
+  locale: string
+}) {
+  const t = useTranslations("editor.sections_form")
+  const ai = useTranslations("editor.ai")
+  const { cooldownUntil, setCooldownUntil } = useAICooldown(`cooldown_work_${job.id}`)
+  const [nowTs, setNowTs] = useState(Date.now())
+  const [improving, setImproving] = useState(false)
+  const [improved, setImproved] = useState(false)
+  const [alreadyOptimized, setAlreadyOptimized] = useState(false)
+  const [bulletModal, setBulletModal] = useState<{ pairs: BulletPair[]; working: string[] } | null>(null)
+  const lastKeyRef = useRef("")
+
+  useEffect(() => {
+    if (cooldownUntil <= Date.now()) return
+    const id = setInterval(() => {
+      const ts = Date.now()
+      setNowTs(ts)
+      if (ts >= cooldownUntil) clearInterval(id)
+    }, 1000)
+    return () => clearInterval(id)
+  }, [cooldownUntil])
+
+  const inCooldown = nowTs < cooldownUntil
+  const cooldownSecs = inCooldown ? Math.ceil((cooldownUntil - nowTs) / 1000) : 0
+  const cooldownLabel = cooldownSecs >= 60
+    ? `${Math.floor(cooldownSecs / 60)}:${String(cooldownSecs % 60).padStart(2, "0")}`
+    : `${cooldownSecs}s`
+
+  const isEmpty = !job.description.trim()
+  const aiButtonDisabled = isPro && (improving || improved || isEmpty || inCooldown)
+
+  async function handleImprove() {
+    if (improving || isEmpty) return
+    if (inCooldown) { toast.info(ai("cooldown_wait", { seconds: cooldownLabel })); return }
+    const key = job.description.trim()
+    if (key === lastKeyRef.current) { toast.info(ai("no_changes")); return }
+    setImproving(true)
+    setBulletModal(null)
+    try {
+      const res = await apiFetch("/api/ai/improve-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: locale }),
+      })
+      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
+      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_bullet")); return }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
+      if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
+      const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
+      if (normalize(bullets.join("\n")) === normalize(job.description)) {
+        lastKeyRef.current = key
+        setCooldownUntil(Date.now() + 120_000)
+        setAlreadyOptimized(true)
+        return
+      }
+      const origLines = job.description.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
+      const working: string[] = bullets.map((_, i) => origLines[i] ?? "")
+      const pairs: BulletPair[] = bullets.map((b, i) => ({ original: origLines[i] ?? "", improved: b }))
+      setBulletModal({ pairs, working })
+      lastKeyRef.current = key
+      setCooldownUntil(Date.now() + 120_000)
+    } catch {
+      toast.error(ai("error_bullet"))
+    } finally {
+      setImproving(false)
+    }
+  }
+
+  function applyOneBullet(index: number) {
+    if (!bulletModal) return
+    const newWorking = [...bulletModal.working]
+    newWorking[index] = bulletModal.pairs[index].improved
+    onUpdate("description", newWorking.filter(Boolean).join("\n"))
+    setBulletModal({ ...bulletModal, working: newWorking })
+  }
+
+  function applyAllBullets() {
+    if (!bulletModal) return
+    onUpdate("description", bulletModal.pairs.map((p) => p.improved).join("\n"))
+    setBulletModal(null)
+    setImproved(true)
+    toast.success(ai("bullets_all_applied"))
+  }
+
+  return (
+    <div className="border border-border rounded-lg bg-white">
+      <div
+        role="button" tabIndex={0}
+        className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
+        onClick={() => { onToggle(); if (improved) setImproved(false); if (bulletModal) setBulletModal(null) }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { onToggle(); if (improved) setImproved(false); if (bulletModal) setBulletModal(null) } }}
+      >
+        <span className="font-medium truncate text-left">
+          {job.jobTitle || job.employer || t("new_experience")}
+        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          <button onClick={(e) => { e.stopPropagation(); onRemove() }} className="p-1 hover:text-destructive transition-colors">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+          {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
+          <Field label={t("work.job_title")} value={job.jobTitle} onChange={(v) => onUpdate("jobTitle", v)} icon={Briefcase} />
+          <Field label={t("work.employer")} value={job.employer} onChange={(v) => onUpdate("employer", v)} icon={Building2} />
+          <Field label={t("work.city")} value={job.city} onChange={(v) => onUpdate("city", v)} icon={MapPin} />
+          <div />
+          <DateField label={t("work.start_date")} value={job.startDate} onChange={(v) => onUpdate("startDate", v)} />
+          {!job.currentlyWorking && (
+            <DateField label={t("work.end_date")} value={job.endDate} onChange={(v) => onUpdate("endDate", v)} />
+          )}
+
+          <div className="col-span-2 flex items-center gap-2">
+            <Switch id={`current-${job.id}`} checked={job.currentlyWorking} onCheckedChange={(v) => onUpdate("currentlyWorking", v)} />
+            <Label htmlFor={`current-${job.id}`} className="text-xs">{t("currently_working")}</Label>
+          </div>
+
+          <div className="col-span-2 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD" }} />
+                {t("description")}
+              </div>
+              {alreadyOptimized ? (
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}>
+                  <Check className="h-2.5 w-2.5" />
+                  {ai("already_optimized")}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={isPro ? handleImprove : openUpgrade}
+                  disabled={aiButtonDisabled}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border-none"
+                  style={{
+                    background: improved
+                      ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
+                      : inCooldown
+                        ? "linear-gradient(135deg, #64748B 0%, #475569 100%)"
+                        : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+                    color: "#fff",
+                    boxShadow: improved
+                      ? "0 2px 6px rgba(16,185,129,0.3)"
+                      : inCooldown
+                        ? "0 2px 6px rgba(100,116,139,0.3)"
+                        : "0 2px 6px rgba(124,58,237,0.25)",
+                  }}
+                >
+                  {!isPro
+                    ? <><Lock className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
+                    : improving
+                      ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{ai("generating")}</>
+                      : improved
+                        ? <><Check className="h-2.5 w-2.5" />{ai("bullet_improved")}</>
+                        : inCooldown
+                          ? <><Loader2 className="h-2.5 w-2.5" />{cooldownLabel}</>
+                          : <><Wand2 className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
+                  }
+                </button>
+              )}
+            </div>
+
+            <div className="relative">
+              <textarea
+                value={job.description}
+                onChange={(e) => {
+                  onUpdate("description", e.target.value)
+                  if (improved) setImproved(false)
+                  if (alreadyOptimized) setAlreadyOptimized(false)
+                }}
+                placeholder={t("description_placeholder")}
+                rows={5}
+                className="w-full resize-none text-[12.5px] leading-relaxed text-[#1a2e4a] placeholder:text-slate-400 outline-none transition-all duration-200"
+                style={{
+                  background: "linear-gradient(135deg, rgba(240,248,255,0.8) 0%, rgba(232,244,251,0.6) 100%)",
+                  border: "1.5px solid rgba(0,212,255,0.2)",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.03)",
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(0,212,255,0.5)"
+                  e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.03), 0 0 0 3px rgba(0,212,255,0.08)"
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)"
+                  e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.03)"
+                }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {bulletModal && (
+        <BulletsImprovementModal
+          open={true}
+          onClose={() => setBulletModal(null)}
+          jobTitle={job.jobTitle}
+          pairs={bulletModal.pairs}
+          onApplyBullet={applyOneBullet}
+          onApplyAll={applyAllBullets}
+          onAllApplied={() => { setImproved(true); setBulletModal(null); toast.success(ai("bullets_all_applied")) }}
+        />
+      )}
     </div>
   )
 }
@@ -376,106 +379,38 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
     <div
       ref={popoverRef}
       style={{
-        position: "fixed",
-        zIndex: 200,
-        top: popoverPos.top,
-        left: popoverPos.left,
-        width: popoverPos.width,
-        borderRadius: 16,
-        overflow: "hidden",
+        position: "fixed", zIndex: 200, top: popoverPos.top, left: popoverPos.left, width: popoverPos.width,
+        borderRadius: 16, overflow: "hidden",
         background: "linear-gradient(135deg, #0f1e3a 0%, #1a2e4a 100%)",
         border: "1px solid rgba(0,212,255,0.25)",
         boxShadow: "0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,255,0.1)",
       }}
     >
-      {/* Glow top line */}
-      <div style={{
-        position: "absolute", top: 0, left: "12.5%", width: "75%", height: 1,
-        background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.55,
-      }} />
-
-      {/* Year nav */}
+      <div style={{ position: "absolute", top: 0, left: "12.5%", width: "75%", height: 1, background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.55 }} />
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px" }}>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setViewYear((y) => y - 1) }}
-          style={{
-            width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-            borderRadius: 8, cursor: "pointer",
-            background: "rgba(0,212,255,0.12)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF",
-          }}
-        >
+        <button type="button" onClick={(e) => { e.stopPropagation(); setViewYear((y) => y - 1) }} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, cursor: "pointer", background: "rgba(0,212,255,0.12)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF" }}>
           <ChevronLeft size={14} strokeWidth={2.5} />
         </button>
         <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", color: "#fff" }}>{viewYear}</span>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); setViewYear((y) => y + 1) }}
-          style={{
-            width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center",
-            borderRadius: 8, cursor: "pointer",
-            background: "rgba(0,212,255,0.12)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF",
-          }}
-        >
+        <button type="button" onClick={(e) => { e.stopPropagation(); setViewYear((y) => y + 1) }} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, cursor: "pointer", background: "rgba(0,212,255,0.12)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF" }}>
           <ChevronRight size={14} strokeWidth={2.5} />
         </button>
       </div>
-
-      {/* Month grid — inline grid, no Tailwind classes */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "1fr 1fr 1fr",
-        gap: 6,
-        padding: "0 12px 12px",
-      }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, padding: "0 12px 12px" }}>
         {MONTHS_ES.map((m, i) => {
           const isSelected = parsed.month === i && parsed.year === viewYear
           return (
-            <button
-              key={m}
-              type="button"
-              onClick={(e) => { e.stopPropagation(); selectMonth(i) }}
-              style={{
-                padding: "8px 0",
-                borderRadius: 10,
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                border: "none",
-                transition: "all 0.15s ease",
-                background: isSelected
-                  ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)"
-                  : "rgba(255,255,255,0.06)",
-                color: isSelected ? "#0a1a35" : "rgba(255,255,255,0.78)",
-                boxShadow: isSelected ? "0 2px 10px rgba(0,212,255,0.4)" : "none",
-              }}
-            >
+            <button key={m} type="button" onClick={(e) => { e.stopPropagation(); selectMonth(i) }} style={{ padding: "8px 0", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer", border: "none", transition: "all 0.15s ease", background: isSelected ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" : "rgba(255,255,255,0.06)", color: isSelected ? "#0a1a35" : "rgba(255,255,255,0.78)", boxShadow: isSelected ? "0 2px 10px rgba(0,212,255,0.4)" : "none" }}>
               {m}
             </button>
           )
         })}
       </div>
-
-      {/* Footer */}
-      <div style={{
-        borderTop: "1px solid rgba(255,255,255,0.07)",
-        padding: "10px 16px",
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "center",
-      }}>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false) }}
-          style={{ fontSize: 10.5, fontWeight: 500, cursor: "pointer", border: "none", background: "transparent", color: "rgba(255,255,255,0.38)" }}
-        >
+      <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false) }} style={{ fontSize: 10.5, fontWeight: 500, cursor: "pointer", border: "none", background: "transparent", color: "rgba(255,255,255,0.38)" }}>
           {t("date.clear")}
         </button>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); selectMonth(new Date().getMonth()) }}
-          style={{ fontSize: 10.5, fontWeight: 700, cursor: "pointer", border: "none", background: "transparent", color: "#00D4FF" }}
-        >
+        <button type="button" onClick={(e) => { e.stopPropagation(); selectMonth(new Date().getMonth()) }} style={{ fontSize: 10.5, fontWeight: 700, cursor: "pointer", border: "none", background: "transparent", color: "#00D4FF" }}>
           {t("date.this_month")}
         </button>
       </div>
@@ -488,27 +423,10 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
         <CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />
         {label}
       </label>
-      <button
-        ref={triggerRef}
-        type="button"
-        onClick={() => { setViewYear(parsed.year || new Date().getFullYear()); setOpen((o) => !o) }}
-        className="w-full text-left flex items-center justify-between"
-        style={{
-          height: 36,
-          paddingLeft: 12,
-          paddingRight: 12,
-          background: "#ffffff",
-          border: "1px solid #C8DCF0",
-          borderRadius: 6,
-          color: displayValue ? "#1a2e4a" : "#94A3B8",
-          fontSize: 13.5,
-          fontWeight: 500,
-        }}
-      >
+      <button ref={triggerRef} type="button" onClick={() => { setViewYear(parsed.year || new Date().getFullYear()); setOpen((o) => !o) }} className="w-full text-left flex items-center justify-between" style={{ height: 36, paddingLeft: 12, paddingRight: 12, background: "#ffffff", border: "1px solid #C8DCF0", borderRadius: 6, color: displayValue ? "#1a2e4a" : "#94A3B8", fontSize: 13.5, fontWeight: 500 }}>
         <span>{displayValue || t("date.select")}</span>
         <CalendarDays size={11} style={{ color: "#5B8FBD", flexShrink: 0 }} />
       </button>
-
       {typeof document !== "undefined" && createPortal(popover, document.body)}
     </div>
   )
