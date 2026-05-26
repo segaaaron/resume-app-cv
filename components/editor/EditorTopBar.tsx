@@ -13,6 +13,7 @@ import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import UnsavedChangesModal from "./UnsavedChangesModal"
+import PlaceholderWarningModal from "./PlaceholderWarningModal"
 import { detectPlaceholders } from "@/lib/detectPlaceholders"
 
 interface Props {
@@ -41,6 +42,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const [viewStats, setViewStats] = useState<{ total: number; last7d: number } | null>(null)
   const [downloadingPdf, setDownloadingPdf] = useState(false)
   const [showExitModal, setShowExitModal] = useState(false)
+  const [placeholderCount, setPlaceholderCount] = useState(0)
+  const [showPlaceholderModal, setShowPlaceholderModal] = useState(false)
   const locale = useLocale()
   const t = useTranslations("editor")
 
@@ -76,6 +79,22 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   function handleBack() {
     if (isDirty) { setShowExitModal(true); return }
+    const count = detectPlaceholders(sectionData)
+    if (count > 0) {
+      setPlaceholderCount(count)
+      setShowPlaceholderModal(true)
+      return
+    }
+    router.push(`/${locale}/dashboard/resumes`)
+  }
+
+  function checkPlaceholdersThenNavigate() {
+    const count = detectPlaceholders(sectionData)
+    if (count > 0) {
+      setPlaceholderCount(count)
+      setShowPlaceholderModal(true)
+      return
+    }
     router.push(`/${locale}/dashboard/resumes`)
   }
 
@@ -85,12 +104,12 @@ export default function EditorTopBar({ hasAccess }: Props) {
       await save().catch(() => {})
       if (useResumeStore.getState().isDirty) { toast.error(t("save_error")); return }
     }
-    router.push(`/${locale}/dashboard/resumes`)
+    checkPlaceholdersThenNavigate()
   }
 
   function handleModalDiscard() {
     setShowExitModal(false)
-    router.push(`/${locale}/dashboard/resumes`)
+    checkPlaceholdersThenNavigate()
   }
 
   async function handleToggleShare() {
@@ -134,9 +153,9 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   async function handleDownloadPdf() {
     if (!resumeId) return
-    const placeholderCount = detectPlaceholders(sectionData)
-    if (placeholderCount > 0) {
-      toast.warning(t("print.placeholder_warning", { count: placeholderCount }), { duration: 6000 })
+    const count = detectPlaceholders(sectionData)
+    if (count > 0) {
+      toast.warning(t("print.placeholder_warning", { count }), { duration: 6000 })
     }
     if (isDirty && hasAccess) await save({ skipThumbnail: true }).catch(() => {})
     setDownloadingPdf(true)
@@ -165,6 +184,15 @@ export default function EditorTopBar({ hasAccess }: Props) {
     } finally {
       setDownloadingPdf(false)
     }
+  }
+
+  function handlePlaceholderReview() {
+    setShowPlaceholderModal(false)
+  }
+
+  function handlePlaceholderGoBack() {
+    setShowPlaceholderModal(false)
+    router.push(`/${locale}/dashboard/resumes`)
   }
 
   return (
@@ -345,6 +373,12 @@ export default function EditorTopBar({ hasAccess }: Props) {
         onSave={handleModalSave}
         onDiscard={handleModalDiscard}
         onClose={() => setShowExitModal(false)}
+      />
+      <PlaceholderWarningModal
+        open={showPlaceholderModal}
+        count={placeholderCount}
+        onReview={handlePlaceholderReview}
+        onProceedAnyway={handlePlaceholderGoBack}
       />
     </header>
   )

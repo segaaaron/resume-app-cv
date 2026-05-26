@@ -1051,7 +1051,6 @@
     "regular_designs_label": "Regular",
     "regular_designs_label2": "Designs",
     "pro_designs_label": "Pro",
-    "pro_designs_label2": "Designs",
     "saving": "Saving...",
     "section_item_one": "{count} item",
     "section_item_other": "{count} items",
@@ -1238,7 +1237,16 @@
       "watermark_text": "readycvv.com",
       "watermark_upgrade": "Activate your Pro plan at readycvv.com",
       "export_with_design": "With design and colors",
-      "placeholder_warning": "{count, plural, one {⚠ Your CV has 1 unfilled field (e.g. [X%]). Review it before downloading.} other {⚠ Your CV has {count} unfilled fields (e.g. [X%]). Review them before downloading.}}"
+      "placeholder_warning": "{count, plural, one {⚠ Your CV has 1 unfilled field (e.g. [X%]). Review it before downloading.} other {⚠ Your CV has {count} unfilled fields (e.g. [X%]). Review them before downloading.}}",
+      "placeholder_modal": {
+        "title": "Your CV has unfilled fields",
+        "subtitle": "{count, plural, one {1 placeholder was found in your content.} other {{count} placeholders were found in your content.}}",
+        "found_label": "{count, plural, one {1 field to complete:} other {{count} fields to complete:}}",
+        "body": "Sending a resume with values like [X%] or [N users] can leave a careless impression on a recruiter. These fields were auto-generated and need your real numbers to accurately reflect your experience.",
+        "tip": "Look for highlighted fields in your summary and work experience, then replace them with your actual metrics. A concrete number always communicates more than a placeholder.",
+        "cta_review": "Review now",
+        "cta_anyway": "Go to dashboard anyway"
+      }
     },
     "completeness": {
       "title": "CV Completeness",

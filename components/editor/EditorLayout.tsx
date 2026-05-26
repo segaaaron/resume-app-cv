@@ -7,10 +7,9 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
-import TemplateSwitcher from "./template-switcher"
 import { EditorProvider } from "./EditorContext"
 import { isActive, isSuperAdmin } from "@/lib/plans"
-import { FileText, Eye, LayoutTemplate } from "lucide-react"
+import { FileText, Eye } from "lucide-react"
 
 interface Props {
   resumeId: string
@@ -25,7 +24,7 @@ interface Props {
   isNew?: boolean
 }
 
-type MobileView = "form" | "preview" | "templates"
+type MobileView = "form" | "preview"
 
 export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
@@ -82,18 +81,6 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
             <PreviewPanel />
           </div>
 
-          {/* Mobile templates panel — full screen, only on mobile */}
-          {mobileView === "templates" && (
-            <div className="md:hidden flex flex-1 flex-col overflow-hidden pb-14 bg-[linear-gradient(180deg,#f0f8ff_0%,#e8f4fb_60%,#edf6fb_100%)]">
-              <TemplateSwitcher
-                plan={plan}
-                subscriptionStatus={subscriptionStatus}
-                subscriptionEndsAt={subscriptionEndsAt}
-                role={role}
-                fullscreen
-              />
-            </div>
-          )}
         </div>
 
         {/* Mobile bottom bar */}
@@ -105,10 +92,6 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
           <button type="button" onClick={() => setMobileView("preview")} style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }} className={TAB_CLS(mobileView === "preview")}>
             <Eye className="w-[16px] h-[16px] pointer-events-none" strokeWidth={2} />
             <span className="pointer-events-none">Preview</span>
-          </button>
-          <button type="button" onClick={() => setMobileView("templates")} style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }} className={TAB_CLS(mobileView === "templates")}>
-            <LayoutTemplate className="w-[16px] h-[16px] pointer-events-none" strokeWidth={2} />
-            <span className="pointer-events-none">Diseños</span>
           </button>
         </div>
       </div>

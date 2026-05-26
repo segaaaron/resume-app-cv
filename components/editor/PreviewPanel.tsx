@@ -2,10 +2,11 @@
 
 import ResumePreview from "@/components/resume/ResumePreview"
 import { ZoomIn, ZoomOut } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 export default function PreviewPanel() {
-  const [scale, setScale] = useState(0.5)
+  const [scale, setScale] = useState(0.8)
+  useEffect(() => { if (window.innerWidth < 768) setScale(0.5) }, [])
 
   return (
     <div className="canvas-and-strip flex-1 relative flex flex-col bg-gradient-to-br from-[#E0F2F7] to-[#D4EBF5] overflow-hidden">
@@ -38,8 +39,8 @@ export default function PreviewPanel() {
       </div>
 
       {/* Canvas */}
-      <div className="canvas-scroller flex-1 min-h-0 overflow-auto flex flex-col relative z-[1]">
-        <div className="flex items-start justify-center min-h-full min-w-full px-10 pt-6 pb-10">
+      <div className="canvas-scroller flex-1 min-h-0 overflow-y-auto overflow-x-auto flex flex-col relative z-[1]">
+        <div className="flex items-start justify-center min-h-full w-full px-4 pt-6 pb-10">
           <div className="shrink-0 relative rounded-[4px] bg-transparent" style={{ width: `calc(210mm * ${scale})`, height: `calc(297mm * ${scale})`, transition: "width 0.2s ease, height 0.2s ease", boxShadow: "0 30px 80px rgba(11,27,61,0.18), 0 10px 30px rgba(11,27,61,0.10)" }}>
             <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", transition: "transform 0.2s ease", width: "210mm", minHeight: "297mm" }}>
               <ResumePreview />

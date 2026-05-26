@@ -63,7 +63,7 @@ export default function SkillsSection() {
               ))}
             </SelectContent>
           </Select>
-          <button onClick={() => remove(skill.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+          <button onClick={() => remove(skill.id)} className="shrink-0 w-10 h-10 flex items-center justify-center rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors">
             <Trash2 className="h-4 w-4" />
           </button>
         </div>

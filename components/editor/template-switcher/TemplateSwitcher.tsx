@@ -8,30 +8,10 @@ import TemplateSwitchModal from "@/components/editor/TemplateSwitchModal"
 import UpgradeModal from "@/components/editor/UpgradeModal"
 import { TemplateCard } from "./TemplateCard"
 import { useTemplateSwitcher } from "./hooks/useTemplateSwitcher"
+import { PRO_IDS } from "./template-data"
 
-const proTemplates = TEMPLATES.filter((t) =>
-  ["aurora", "lumiere", "consul", "rose", "minimal", "wave", "banner", "vertex",
-    "prestige", "kyoto", "geneva", "windsor", "vienna", "berlin", "seoul",
-    "copenhagen", "genevanoir", "reykjavik", "apex", "nova", "cascade", "onyx",
-    "mosaic", "larsson", "thompson", "classicmono", "editorialserif", "boldblock",
-    "timelinevertical", "swissgrid", "charcoalclassic", "navyexecutive",
-    "coralsidebar", "neobrutalist", "sagebotanical", "terminalcv", "iosappcv",
-    "datadriven", "boardingpass", "magazinespread", "legalbrief", "engraved",
-    "chalkboard", "academiccv", "psychologist", "chefmenu", "sommelier", "hotelcv",
-    "bartendercv", "postcardcv", "frontpage", "vinylcv", "callsheet", "copywritermag",
-    "animatorcv", "codeeditor", "civileng", "mechanical", "devopsterminal",
-    "processflow", "pilotlog", "onboardingform", "athletecard", "translatorcv",
-    "herbariumcv", "risodesigner", "uxtokens", "sketchbookillustrator", "blueprintcv",
-    "contactsheet", "annualreport", "financeterminal", "campaignposter", "salespitch",
-    "ledgercv", "neon", "medicalchart", "vitalsigns", "vetcv", "fieldjournal",
-    "sharp", "bauhaus", "cobalt", "duality", "havana", "helix", "lisbon", "nautical",
-    "obsidian", "prism", "tokyo", "vitae",
-  ].includes(t.id)
-)
-
-const regularTemplates = TEMPLATES.filter(
-  (t) => !proTemplates.some((p) => p.id === t.id)
-)
+const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
+const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
 
 interface Props {
   plan: string
@@ -100,7 +80,7 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
             )}
             style={activeTab === "pro" ? { background: "linear-gradient(135deg,#7C3AED,#6D28D9)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" } : {}}
           >
-            Pro Designs
+            {t("pro_designs_label")}
           </button>
         </div>
 

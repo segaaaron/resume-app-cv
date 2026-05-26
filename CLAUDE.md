@@ -10,6 +10,7 @@
 - **DEPLOY:** Dokploy + Hostinger. No asumir entorno local ni Vercel.
 - **DISEÑO PREMIUM OBLIGATORIO:** Todo componente UI (cards, iconos, botones, badges, modals, inputs, etc.) debe tener nivel premium/elegante. Sin excepciones. Aplicar siempre: gradientes sutiles, sombras con profundidad y color, bordes refinados, micro-interacciones en hover, tipografía con peso y espaciado, acentos de color coherentes con la paleta (#1a2e4a navy, #00D4FF cyan). PROHIBIDO: fondos planos sin textura/gradiente, sombras genéricas sin color, bordes simples `#ccc`, botones sin estado hover elaborado, iconos sin contexto visual. Siempre invocar el skill `frontend-design` o `ui-ux-pro-max:ui-ux-pro-max` al crear/rediseñar componentes.
 - Do what has been asked; nothing more, nothing less
+- **VERIFICAR ANTES DE ELIMINAR:** Antes de borrar cualquier código, archivo, import, clave i18n, función, variable o componente — buscar TODOS los usos en el codebase (`grep`). Si algo lo referencia, NO eliminar sin adaptar o reemplazar primero. Confirmar con el usuario si el impacto no es claro.
 - NEVER create files unless absolutely necessary — prefer editing existing files
 - NEVER create documentation files unless explicitly requested
 - NEVER save working files or tests to root — use `/src`, `/tests`, `/docs`, `/config`, `/scripts`

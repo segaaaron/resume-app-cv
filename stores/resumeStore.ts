@@ -91,7 +91,7 @@ interface ResumeActions {
   togglePageBreak: (id: string) => void
   moveSectionToColumn: (id: string, column: "main" | "side") => void
   save: (opts?: { skipThumbnail?: boolean }) => Promise<void>
-  triggerThumbnail: () => void
+  triggerThumbnail: (force?: boolean) => void
 }
 
 const defaultConfig: ResumeConfig = {
@@ -200,11 +200,11 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         })
       },
 
-      triggerThumbnail: () => {
+      triggerThumbnail: (force = false) => {
         const { resumeId, lastThumbnailAt } = get()
         if (!resumeId) return
         const now = Date.now()
-        if (lastThumbnailAt && now - lastThumbnailAt < 60_000) return
+        if (!force && lastThumbnailAt && now - lastThumbnailAt < 60_000) return
         set((state) => { state.lastThumbnailAt = now })
         const locale = typeof window !== "undefined"
           ? (["es", "en"].includes(window.location.pathname.split("/")[1]) ? window.location.pathname.split("/")[1] : "es")
@@ -212,6 +212,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
           .then(async (r) => {
             if (!r.ok) {
+              set((state) => { state.lastThumbnailAt = lastThumbnailAt })
               if (r.status === 503) {
                 console.warn("[thumbnail] PDF microservice unavailable (503)")
               } else {
@@ -220,7 +221,7 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
               }
             }
           })
-          .catch((err) => { console.warn("[thumbnail] network error:", err) })
+          .catch((err) => { set((state) => { state.lastThumbnailAt = lastThumbnailAt }); console.warn("[thumbnail] network error:", err) })
       },
 
       save: async (opts) => {

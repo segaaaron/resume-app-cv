@@ -1051,7 +1051,6 @@
     "regular_designs_label": "Diseños",
     "regular_designs_label2": "Regulares",
     "pro_designs_label": "Pro",
-    "pro_designs_label2": "Diseños",
     "saving": "Guardando...",
     "section_item_one": "{count} elemento",
     "section_item_other": "{count} elementos",
@@ -1238,7 +1237,16 @@
       "watermark_text": "readycvv.com",
       "watermark_upgrade": "Activa tu plan Pro en readycvv.com",
       "export_with_design": "Con diseño y colores",
-      "placeholder_warning": "{count, plural, one {⚠ Tu CV tiene 1 campo sin completar (ej: [X%]). Revísalo antes de descargar.} other {⚠ Tu CV tiene {count} campos sin completar (ej: [X%]). Revísalos antes de descargar.}}"
+      "placeholder_warning": "{count, plural, one {⚠ Tu CV tiene 1 campo sin completar (ej: [X%]). Revísalo antes de descargar.} other {⚠ Tu CV tiene {count} campos sin completar (ej: [X%]). Revísalos antes de descargar.}}",
+      "placeholder_modal": {
+        "title": "Tu CV tiene campos sin completar",
+        "subtitle": "{count, plural, one {Se encontró 1 campo con texto provisional.} other {Se encontraron {count} campos con texto provisional.}}",
+        "found_label": "{count, plural, one {1 campo por completar:} other {{count} campos por completar:}}",
+        "body": "Enviar un currículum con valores como [X%] o [N usuarios] puede dar una impresión poco cuidada ante el reclutador. Estos campos fueron generados automáticamente y necesitan tus cifras reales para reflejar tu experiencia con precisión.",
+        "tip": "Busca los campos resaltados en tu resumen y experiencia laboral, y reemplázalos con tus métricas reales. Un número concreto siempre comunica más que un placeholder.",
+        "cta_review": "Revisar ahora",
+        "cta_anyway": "Ir al dashboard de todos modos"
+      }
     },
     "completeness": {
       "title": "Completitud del CV",
