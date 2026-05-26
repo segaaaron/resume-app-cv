@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
-import { TEMPLATES, TemplateId } from "@/types/resume"
+import { TemplateId } from "@/types/resume"
 import { isProTemplate } from "../template-data"
 import { isActive, isSuperAdmin } from "@/lib/plans"
 
@@ -11,25 +11,11 @@ interface Options {
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
   role?: string
+  onAfterSwitch?: () => void
 }
 
-function computeHasWarning(
-  currentId: TemplateId,
-  targetId: TemplateId,
-  photoUrl: string | undefined,
-  sections: { column?: string; visible?: boolean }[]
-): boolean {
-  const currentMeta = TEMPLATES.find((t) => t.id === currentId)
-  const targetMeta = TEMPLATES.find((t) => t.id === targetId)
-  const singleToDouble = currentMeta?.columns === "single" && targetMeta?.columns === "double"
-  const doubleToSingle = currentMeta?.columns === "double" && targetMeta?.columns === "single"
-  const losingPhoto = !!(photoUrl && currentMeta?.hasPhoto && !targetMeta?.hasPhoto)
-  const hasSideContent = sections.some((s) => s.column === "side" && s.visible)
-  return singleToDouble || losingPhoto || (doubleToSingle && hasSideContent)
-}
-
-export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role }: Options) {
-  const { config, sections, setTemplateWithAdapt, save, triggerThumbnail } = useResumeStore()
+export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role, onAfterSwitch }: Options) {
+  const { config, setTemplateWithAdapt, save, triggerThumbnail } = useResumeStore()
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null)
 
@@ -44,16 +30,8 @@ export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEnds
   function handleSelectTemplate(templateId: TemplateId, locked: boolean) {
     if (locked) { setUpgradeOpen(true); return }
     if (templateId === config.templateId) return
-
-    const needsWarning = computeHasWarning(config.templateId, templateId, config.photoUrl ?? undefined, sections)
-    if (needsWarning) {
-      setPendingTemplate(templateId)
-      return
-    }
-
-    // Silent switch: no structural changes to warn about
-    setTemplateWithAdapt(templateId)
-    setTimeout(() => { save().then(() => { triggerThumbnail(true) }).catch(() => {}) }, 0)
+    // Always open preview modal so user sees the template before committing
+    setPendingTemplate(templateId)
   }
 
   function confirmSwitch() {
@@ -61,6 +39,7 @@ export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEnds
     setTemplateWithAdapt(pendingTemplate)
     setPendingTemplate(null)
     setTimeout(() => { save().then(() => { triggerThumbnail(true) }).catch(() => {}) }, 0)
+    onAfterSwitch?.()
   }
 
   function cancelSwitch() {

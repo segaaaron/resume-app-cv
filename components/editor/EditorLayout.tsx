@@ -73,6 +73,7 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
               subscriptionStatus={subscriptionStatus}
               subscriptionEndsAt={subscriptionEndsAt}
               role={role}
+              onAfterTemplateSwitch={() => setMobileView("preview")}
             />
           </div>
 

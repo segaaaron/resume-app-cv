@@ -29,9 +29,10 @@ interface Props {
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
   role?: string
+  onAfterTemplateSwitch?: () => void
 }
 
-export default function FormPanel({ plan = "free", subscriptionStatus, subscriptionEndsAt, role }: Props) {
+export default function FormPanel({ plan = "", subscriptionStatus, subscriptionEndsAt, role, onAfterTemplateSwitch }: Props) {
   const t = useTranslations("editor")
   const { sections } = useResumeStore()
   const visibleSections = sections.filter((s) => s.visible)
@@ -138,6 +139,7 @@ export default function FormPanel({ plan = "free", subscriptionStatus, subscript
             subscriptionEndsAt={subscriptionEndsAt}
             role={role}
             fullscreen
+            onAfterSwitch={onAfterTemplateSwitch}
           />
         </div>
       )}

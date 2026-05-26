@@ -4,6 +4,8 @@
 
 - **REGLA DE QA:** Toda feature nueva o fix requiere visto bueno del agente `readycvv-qa-senior` antes de commit/deploy. Sin excepción.
 - **REGLA DE ORO:** NUNCA hacer `git commit`, `git push`, ni crear PR sin autorización explícita del usuario en ese turno. Un "sí" anterior no vale. Siempre preguntar.
+- **SOLO PLAN PRO:** Este proyecto NO tiene plan gratuito. Solo existe el plan PRO ($15/mo · $144/yr). NUNCA usar `"free"` como valor de plan, ni como default, ni en lógica de negocio. Plan sin acceso = string vacío o ausente.
+- **REGLA DE ORO 2:** NUNCA realizar cambios que no fueron pedidos explícitamente. No tocar archivos, componentes, estilos, lógica ni nada fuera del alcance exacto de la tarea solicitada. Alcance = solo lo que el usuario pidió, nada más.
 - **NO PEDIR PERMISOS** para leer archivos, ejecutar comandos read-only, o usar herramientas MCP — ejecutar directamente.
 - **REPORTE FINAL OBLIGATORIO:** Al terminar cualquier tarea, entregar reporte gerencial detallado: qué se hizo, archivos modificados, decisiones tomadas, impacto, pendientes. Sin excepción.
 - **RAMA ACTIVA ÚNICAMENTE:** trabajar solo en la rama actual. NUNCA verificar, comparar ni tocar `master` — lo controla el usuario.

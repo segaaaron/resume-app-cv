@@ -19,9 +19,10 @@ interface Props {
   subscriptionEndsAt?: string | null
   role?: string
   fullscreen?: boolean
+  onAfterSwitch?: () => void
 }
 
-export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role, fullscreen = false }: Props) {
+export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role, fullscreen = false, onAfterSwitch }: Props) {
   const t = useTranslations("editor")
   const {
     config,
@@ -32,7 +33,7 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
     handleSelectTemplate,
     confirmSwitch,
     cancelSwitch,
-  } = useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role })
+  } = useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role, onAfterSwitch })
 
   const [activeTab, setActiveTab] = useState<"regular" | "pro">("regular")
   const activeTemplates = activeTab === "regular" ? regularTemplates : proTemplates
