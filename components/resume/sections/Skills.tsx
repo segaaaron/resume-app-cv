@@ -1,29 +1,19 @@
 "use client"
 
-import { useState } from "react"
-import { useTranslations, useLocale } from "next-intl"
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { SkillItem } from "@/types/resume"
-import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, X, Sparkles, Loader2 } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
-import { toast } from "sonner"
-import { apiFetch } from "@/lib/apiFetch"
-import { getSkillsCache, setSkillsCache } from "@/lib/skillsCache"
-import SkillsSuggestionModal, { type SuggestedSkill } from "./SkillsSuggestionModal"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
-  const locale = useLocale()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
-  const ai = useTranslations("editor.ai")
   const skills = sectionData.skills
-  const [suggesting, setSuggesting] = useState(false)
-  const [pendingSuggestions, setPendingSuggestions] = useState<SuggestedSkill[]>([])
 
   const LEVELS = [
     { value: "beginner",     label: t("skills.beginner") },
@@ -43,81 +33,6 @@ export default function SkillsSection() {
 
   function remove(id: string) {
     updateSectionData("skills", skills.filter((s) => s.id !== id))
-  }
-
-  async function suggestSkills() {
-    const jobTitle = sectionData.personalDetails?.jobTitle?.trim()
-    if (!jobTitle) {
-      toast.info(t("suggest_skills_job_title_hint"))
-      return
-    }
-
-    setSuggesting(true)
-    try {
-      const existingSkills = skills.map((s) => s.name).filter(Boolean)
-
-      // Session cache: same jobTitle + language → skip API call
-      const cached = getSkillsCache(jobTitle, locale)
-      const data = cached ?? await (async () => {
-        const res = await apiFetch("/api/ai/suggest-skills", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobTitle, existingSkills, language: locale }),
-        })
-        if (res.status === 429) { toast.error(t("suggest_skills_rate_limit")); return null }
-        if (res.status === 403) { toast.error(t("toast_pro_only")); return null }
-        if (res.status === 422 || !res.ok) { toast.error(t("suggest_skills_empty")); return null }
-        const json = await res.json() as { skills: { name: string; level: string }[] }
-        setSkillsCache(jobTitle, locale, json)
-        return json
-      })()
-
-      if (!data) return
-
-      if (!data.skills?.length) {
-        toast.info(t("suggest_skills_empty"))
-        return
-      }
-
-      const existingNames = new Set(skills.map((s) => s.name.trim().toLowerCase()))
-      const newSkills: SkillItem[] = data.skills
-        .filter((s) => !existingNames.has(s.name.trim().toLowerCase()))
-        .map((s) => ({
-          id: nanoid(),
-          name: s.name,
-          level: s.level as SkillItem["level"],
-        }))
-
-      if (!newSkills.length) {
-        toast.info(t("suggest_skills_empty"))
-        return
-      }
-
-      // Show modal for individual review instead of auto-adding
-      setPendingSuggestions(newSkills.map((s) => ({ name: s.name, level: s.level })))
-    } catch {
-      toast.error(t("suggest_skills_error"))
-    } finally {
-      setSuggesting(false)
-    }
-  }
-
-  function addOneSkill(skill: SuggestedSkill) {
-    const existingNames = new Set(skills.map((s) => s.name.trim().toLowerCase()))
-    if (existingNames.has(skill.name.trim().toLowerCase())) return
-    updateSectionData("skills", [...skills, { id: nanoid(), name: skill.name, level: skill.level as SkillItem["level"] }])
-  }
-
-  function addAllSkills() {
-    const existingNames = new Set(skills.map((s) => s.name.trim().toLowerCase()))
-    const toAdd = pendingSuggestions
-      .filter((s) => !existingNames.has(s.name.trim().toLowerCase()))
-      .map((s) => ({ id: nanoid(), name: s.name, level: s.level as SkillItem["level"] }))
-    if (toAdd.length) {
-      updateSectionData("skills", [...skills, ...toAdd])
-      toast.success(t("suggest_skills_added"))
-    }
-    setPendingSuggestions([])
   }
 
   return (
@@ -148,42 +63,15 @@ export default function SkillsSection() {
               ))}
             </SelectContent>
           </Select>
-          <button onClick={() => remove(skill.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-            <X className="h-4 w-4" />
+          <button onClick={() => remove(skill.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       ))}
 
-      <div className="flex gap-2">
-        <button onClick={add} className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors duration-200 hover:border-[#00D4FF] hover:text-[#1a2e4a] hover:bg-[rgba(0,212,255,0.04)]" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
-          <Plus className="h-3.5 w-3.5" /> {t("add_skill")}
-        </button>
-        <button
-          onClick={suggestSkills}
-          disabled={suggesting}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-[11px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border-none"
-          style={{
-            background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
-            color: "#0a1a35",
-            boxShadow: "0 2px 8px rgba(0,212,255,0.25)",
-          }}
-          onMouseEnter={(e) => { if (!suggesting) e.currentTarget.style.boxShadow = "0 4px 14px rgba(0,212,255,0.4)" }}
-          onMouseLeave={(e) => { e.currentTarget.style.boxShadow = "0 2px 8px rgba(0,212,255,0.25)" }}
-        >
-          {suggesting
-            ? <><Loader2 className="h-3 w-3 animate-spin" />{ai("generating")}</>
-            : <><Sparkles className="h-3 w-3" />{ai("suggest_bullet")}</>
-          }
-        </button>
-      </div>
-
-      <SkillsSuggestionModal
-        open={pendingSuggestions.length > 0}
-        onClose={() => setPendingSuggestions([])}
-        suggestions={pendingSuggestions}
-        onAddSkill={addOneSkill}
-        onAddAll={addAllSkills}
-      />
+      <button onClick={add} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg transition-colors duration-200 hover:border-[#00D4FF] hover:text-[#1a2e4a] hover:bg-[rgba(0,212,255,0.04)]" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
+        <Plus className="h-3.5 w-3.5" /> {t("add_skill")}
+      </button>
     </div>
   )
 }

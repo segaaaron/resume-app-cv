@@ -7,9 +7,10 @@ import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume
 import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
+import TemplateSwitcher from "./template-switcher"
 import { EditorProvider } from "./EditorContext"
 import { isActive, isSuperAdmin } from "@/lib/plans"
-import { FileText, Eye } from "lucide-react"
+import { FileText, Eye, LayoutTemplate } from "lucide-react"
 
 interface Props {
   resumeId: string
@@ -24,6 +25,7 @@ interface Props {
   isNew?: boolean
 }
 
+type MobileView = "form" | "preview" | "templates"
 
 export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
@@ -50,67 +52,63 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     subscriptionStatus
   )
 
-  const [mobileView, setMobileView] = useState<"form" | "preview">("form")
+  const [mobileView, setMobileView] = useState<MobileView>("form")
+
+  const TAB_CLS = (active: boolean) =>
+    `flex-1 h-full flex flex-col items-center justify-center gap-0.5 text-[10px] font-bold tracking-[0.05em] uppercase bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer touch-manipulation transition-[color,border-bottom-color] duration-200 ${
+      active ? "text-[#00E5FF] border-b-[#00E5FF]" : "text-[rgba(255,255,255,0.45)] border-b-transparent"
+    }`
 
   return (
     <EditorProvider isPro={hasAccess}>
-      {/* Root shell: full dynamic viewport height, navy-tinted off-white bg */}
       <div className="flex flex-col overflow-hidden h-dvh bg-[#FAFCFF] text-[#0F172A]">
         <EditorTopBar hasAccess={hasAccess} />
 
-        {/* Main body — fills remaining height below 64px top bar */}
+        {/* Main body */}
         <div className="flex flex-1 overflow-hidden h-[calc(100dvh-64px)]">
-          {/* Form panel — full width on mobile, fixed 380px on md+ */}
-          <div
-            className={`${
-              mobileView === "preview" ? "hidden" : "flex"
-            } md:flex w-full md:w-[380px] shrink-0 flex-col overflow-hidden pb-14 md:pb-0`}
-          >
-            <FormPanel />
-          </div>
 
-          {/* Preview panel — hidden on mobile, flex-1 on md+ */}
-          <div
-            className={`${
-              mobileView === "form" ? "hidden" : "flex"
-            } md:flex flex-1 flex-col overflow-hidden pb-14 md:pb-0`}
-          >
-            <PreviewPanel
+          {/* Form panel */}
+          <div className={`${mobileView === "form" ? "flex" : "hidden"} md:flex w-full md:w-[380px] shrink-0 flex-col overflow-hidden pb-14 md:pb-0`}>
+            <FormPanel
               plan={plan}
               subscriptionStatus={subscriptionStatus}
               subscriptionEndsAt={subscriptionEndsAt}
               role={role}
             />
           </div>
+
+          {/* Preview panel */}
+          <div className={`${mobileView === "preview" ? "flex" : "hidden"} md:flex flex-1 flex-col overflow-hidden pb-14 md:pb-0`}>
+            <PreviewPanel />
+          </div>
+
+          {/* Mobile templates panel — full screen, only on mobile */}
+          {mobileView === "templates" && (
+            <div className="md:hidden flex flex-1 flex-col overflow-hidden pb-14 bg-[linear-gradient(180deg,#f0f8ff_0%,#e8f4fb_60%,#edf6fb_100%)]">
+              <TemplateSwitcher
+                plan={plan}
+                subscriptionStatus={subscriptionStatus}
+                subscriptionEndsAt={subscriptionEndsAt}
+                role={role}
+                fullscreen
+              />
+            </div>
+          )}
         </div>
 
-        {/* Mobile bottom toggle bar — hidden on md+ */}
+        {/* Mobile bottom bar */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 flex h-14 bg-[#0B1B3D] border-t border-[rgba(0,229,255,0.15)] shadow-[0_-4px_24px_rgba(11,27,61,0.35)] z-50">
-          <button
-            type="button"
-            onClick={() => setMobileView("form")}
-            style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }}
-            className={`flex-1 h-full flex items-center justify-center gap-2 text-[13px] font-bold tracking-[0.06em] uppercase bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer touch-manipulation px-4 transition-[color,border-bottom-color] duration-200 ${
-              mobileView === "form"
-                ? "text-[#00E5FF] border-b-[#00E5FF]"
-                : "text-[rgba(255,255,255,0.45)] border-b-transparent"
-            }`}
-          >
-            <FileText className="w-[18px] h-[18px] pointer-events-none" strokeWidth={2} />
+          <button type="button" onClick={() => setMobileView("form")} style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }} className={TAB_CLS(mobileView === "form")}>
+            <FileText className="w-[16px] h-[16px] pointer-events-none" strokeWidth={2} />
             <span className="pointer-events-none">Editar</span>
           </button>
-          <button
-            type="button"
-            onClick={() => setMobileView("preview")}
-            style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }}
-            className={`flex-1 h-full flex items-center justify-center gap-2 text-[13px] font-bold tracking-[0.06em] uppercase bg-transparent border-t-0 border-l-0 border-r-0 border-b-2 cursor-pointer touch-manipulation px-4 transition-[color,border-bottom-color] duration-200 ${
-              mobileView === "preview"
-                ? "text-[#00E5FF] border-b-[#00E5FF]"
-                : "text-[rgba(255,255,255,0.45)] border-b-transparent"
-            }`}
-          >
-            <Eye className="w-[18px] h-[18px] pointer-events-none" strokeWidth={2} />
-            <span className="pointer-events-none">Vista previa</span>
+          <button type="button" onClick={() => setMobileView("preview")} style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }} className={TAB_CLS(mobileView === "preview")}>
+            <Eye className="w-[16px] h-[16px] pointer-events-none" strokeWidth={2} />
+            <span className="pointer-events-none">Preview</span>
+          </button>
+          <button type="button" onClick={() => setMobileView("templates")} style={{ WebkitTapHighlightColor: "rgba(0,229,255,0.1)" }} className={TAB_CLS(mobileView === "templates")}>
+            <LayoutTemplate className="w-[16px] h-[16px] pointer-events-none" strokeWidth={2} />
+            <span className="pointer-events-none">Diseños</span>
           </button>
         </div>
       </div>

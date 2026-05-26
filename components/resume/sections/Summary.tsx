@@ -62,10 +62,10 @@ export default function SummarySection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, language: locale }),
       })
-      if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { toast.error(ai("pro_only")); return }
-      if (res.status === 400) { toast.error(ai("not_enough_data_summary")); return }
-      if (res.status === 422) { toast.error(ai("off_topic_summary")); return }
+      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
+      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 400) { await res.text().catch(() => {}); toast.error(ai("not_enough_data_summary")); return }
+      if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_summary")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
@@ -97,10 +97,10 @@ export default function SummarySection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ summary: currentSummary, sectionData, language: locale }),
       })
-      if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { toast.error(ai("pro_only")); return }
-      if (res.status === 400) { toast.error(ai("improve_summary_empty")); return }
-      if (res.status === 422) { toast.error(ai("off_topic_summary")); return }
+      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
+      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 400) { await res.text().catch(() => {}); toast.error(ai("improve_summary_empty")); return }
+      if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_summary")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]

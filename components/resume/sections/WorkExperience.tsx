@@ -66,9 +66,9 @@ export default function WorkExperienceSection() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: contextText, jobTitle: job.jobTitle, language: locale }),
       })
-      if (res.status === 429) { toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { toast.error(ai("pro_only")); return }
-      if (res.status === 422) { toast.error(ai("off_topic_bullet")); return }
+      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
+      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_bullet")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
@@ -100,7 +100,7 @@ export default function WorkExperienceSection() {
 
   function applyOneBullet(jobId: string, index: number) {
     if (!bulletModal || bulletModal.jobId !== jobId) return
-    // QA-002: use stable working array — never re-derive from job.description
+    if (index < 0 || index >= bulletModal.pairs.length) return
     const newWorking = [...bulletModal.working]
     newWorking[index] = bulletModal.pairs[index].improved
     updateSectionData("workExperience", jobs.map((j) => j.id === jobId ? { ...j, description: newWorking.filter(Boolean).join("\n") } : j))
@@ -113,7 +113,7 @@ export default function WorkExperienceSection() {
     updateSectionData("workExperience", jobs.map((j) => j.id === jobId ? { ...j, description: improved } : j))
     setBulletModal(null)
     setImprovedId(jobId)
-    toast.success(ai("apply_bullets"))
+    toast.success(ai("bullets_all_applied"))
   }
 
   function addJob() {
@@ -279,7 +279,7 @@ export default function WorkExperienceSection() {
             pairs={bulletModal.pairs}
             onApplyBullet={(index) => applyOneBullet(bulletModal.jobId, index)}
             onApplyAll={() => applyAllBullets(bulletModal.jobId)}
-            onAllApplied={() => { setImprovedId(bulletModal.jobId); setBulletModal(null); toast.success(ai("apply_bullets")) }}
+            onAllApplied={() => { setImprovedId(bulletModal.jobId); setBulletModal(null); toast.success(ai("bullets_all_applied")) }}
           />
         )
       })()}
@@ -377,7 +377,7 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
       ref={popoverRef}
       style={{
         position: "fixed",
-        zIndex: 9999,
+        zIndex: 200,
         top: popoverPos.top,
         left: popoverPos.left,
         width: popoverPos.width,

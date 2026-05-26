@@ -10,12 +10,13 @@ import CVReviewPanel from "./CVReviewPanel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
 import CVCompletenessWidget from "./CVCompletenessWidget"
-import { LayoutTemplate, Settings2, Target, MessageSquare, Sparkles } from "lucide-react"
+import TemplateSwitcher from "./template-switcher"
+import { LayoutTemplate, Settings2, Target, MessageSquare, Sparkles, Layers } from "lucide-react"
 
 // Tokens (kept for sidebar container)
 const BORDER = "#E2E8F0"
 
-type TabKey = "content" | "design" | "ats" | "review" | "ai"
+type TabKey = "content" | "design" | "ats" | "review" | "ai" | "planillas"
 
 interface TabDef {
   key: TabKey
@@ -23,7 +24,14 @@ interface TabDef {
   icon: ReactNode
 }
 
-export default function FormPanel() {
+interface Props {
+  plan?: string
+  subscriptionStatus?: string | null
+  subscriptionEndsAt?: string | null
+  role?: string
+}
+
+export default function FormPanel({ plan = "free", subscriptionStatus, subscriptionEndsAt, role }: Props) {
   const t = useTranslations("editor")
   const { sections } = useResumeStore()
   const visibleSections = sections.filter((s) => s.visible)
@@ -55,6 +63,11 @@ export default function FormPanel() {
       key: "ai",
       label: t("form.ai_tab") || "AI Fill",
       icon: <Sparkles className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+    },
+    {
+      key: "planillas",
+      label: "Planillas",
+      icon: <Layers className="h-[18px] w-[18px]" strokeWidth={1.8} />,
     },
   ]
 
@@ -116,8 +129,21 @@ export default function FormPanel() {
         })}
       </div>
 
+      {/* Planillas tab — full height, no scroll wrapper */}
+      {activeTab === "planillas" && (
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <TemplateSwitcher
+            plan={plan}
+            subscriptionStatus={subscriptionStatus}
+            subscriptionEndsAt={subscriptionEndsAt}
+            role={role}
+            fullscreen
+          />
+        </div>
+      )}
+
       {/* Scrollable content */}
-      <div style={scrollAreaStyle}>
+      <div style={{ ...scrollAreaStyle, display: activeTab === "planillas" ? "none" : undefined }}>
         {activeTab === "content" && (
           <div className="px-5 pt-4 pb-6">
             <CVCompletenessWidget />

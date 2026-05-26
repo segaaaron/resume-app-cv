@@ -4,9 +4,8 @@ import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { LanguageItem } from "@/types/resume"
-import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Plus, X } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
 
 export default function LanguagesSection() {
@@ -76,8 +75,8 @@ export default function LanguagesSection() {
               ))}
             </SelectContent>
           </Select>
-          <button onClick={() => remove(lang.id)} className="text-muted-foreground hover:text-destructive transition-colors">
-            <X className="h-4 w-4" />
+          <button onClick={() => remove(lang.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1">
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       ))}
