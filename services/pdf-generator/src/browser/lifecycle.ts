@@ -3,6 +3,9 @@ import puppeteer, { Browser } from "puppeteer-core"
 const PUPPETEER_ARGS = [
   "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage",
   "--disable-gpu", "--disable-extensions",
+  // Allow cross-origin image loads (user photos/logos on CDN). Safe: internal service, all URLs are signed.
+  "--disable-web-security",
+  "--allow-running-insecure-content",
   "--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows",
   "--disable-renderer-backgrounding", "--disable-features=TranslateUI",
   "--disable-ipc-flooding-protection",

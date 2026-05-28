@@ -21,13 +21,20 @@ export async function waitForFonts(page: Page): Promise<void> {
  * Continues after timeoutMs to avoid blocking the render indefinitely.
  */
 export async function waitForImages(page: Page, timeoutMs = 6_000): Promise<void> {
-  await Promise.race([
-    page.evaluate(evaluateImages),
-    new Promise<void>((resolve) => setTimeout(() => {
-      console.warn(`[page] Images not ready after ${timeoutMs}ms — photos/logos may appear broken. Check external URLs.`)
-      resolve()
-    }, timeoutMs)),
-  ])
+  const interval = 200
+  const deadline = Date.now() + timeoutMs
+  while (Date.now() < deadline) {
+    const allDone = await page.evaluate(() => {
+      const imgs = Array.from(document.images)
+      return imgs.length === 0 || imgs.every((img) => img.complete)
+    })
+    if (allDone) return
+    await new Promise<void>((resolve) => setTimeout(resolve, interval))
+  }
+  const brokenCount = await page.evaluate(() =>
+    Array.from(document.images).filter((img) => img.complete && img.naturalWidth === 0).length
+  )
+  console.warn(`[page] Images not ready after ${timeoutMs}ms — ${brokenCount} broken image(s). Photos/logos may appear broken. Check external URLs.`)
 }
 
 /**
@@ -36,12 +43,13 @@ export async function waitForImages(page: Page, timeoutMs = 6_000): Promise<void
  * Exported so it can be unit-tested independently of Puppeteer.
  */
 export function evaluateImages(): Promise<void[]> {
+  const incomplete = Array.from(document.images).filter((img) => !img.complete)
+  if (incomplete.length === 0) return Promise.resolve([])
   return Promise.all(
-    Array.from(document.images)
-      .filter((img) => !img.complete)
-      .map((img) => new Promise<void>((resolve) => {
-        img.onload = () => resolve()
-        img.onerror = () => resolve()
-      }))
+    incomplete.map((img) => new Promise<void>((resolve) => {
+      if (img.complete) { resolve(); return }
+      img.onload = () => resolve()
+      img.onerror = () => resolve()
+    }))
   )
 }
