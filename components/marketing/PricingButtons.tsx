@@ -10,9 +10,11 @@ import { useTranslations, useLocale } from "next-intl"
 interface Props {
   plan: "monthly" | "annual"
   isPro?: boolean
+  theme?: "light" | "dark"
+  buttonClassName?: string
 }
 
-export default function PricingButtons({ plan, isPro }: Props) {
+export default function PricingButtons({ plan, isPro, theme = "light", buttonClassName }: Props) {
   const [loading, setLoading] = useState(false)
   const [consented, setConsented] = useState(false)
   const locale = useLocale()
@@ -93,11 +95,11 @@ export default function PricingButtons({ plan, isPro }: Props) {
           onChange={(e) => setConsented(e.target.checked)}
           className="mt-0.5 shrink-0 accent-current w-3.5 h-3.5"
         />
-        <span className="text-[11px] leading-[1.5] opacity-75">
+        <span className={`text-[11px] leading-[1.5] ${theme === "dark" ? "text-white/60" : "opacity-75"}`}>
           {t("checkout_consent")}
         </span>
       </label>
-      <Button size="lg" className="w-full" onClick={handleClick} disabled={loading || !consented}>
+      <Button size="lg" className={`w-full ${buttonClassName ?? ""}`} onClick={handleClick} disabled={loading || !consented}>
         {loading ? t("btn_loading") : t("btn_start")}
       </Button>
     </div>

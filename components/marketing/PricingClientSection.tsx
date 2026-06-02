@@ -205,15 +205,11 @@ export default function PricingClientSection({
                 </ul>
 
                 {/* CTA */}
-                <div style={{
-                  background: "#1a2e4a",
-                  borderRadius: 14,
-                  overflow: "hidden",
-                }}>
-                  <div className="[&>button]:w-full [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-white [&>button]:font-semibold [&>button]:py-3 [&>button]:text-sm">
-                    <PricingButtons plan="monthly" isPro={userIsPro} />
-                  </div>
-                </div>
+                <PricingButtons
+                  plan="monthly"
+                  isPro={userIsPro}
+                  buttonClassName="!bg-[#1a2e4a] !text-white !font-semibold !rounded-[14px] !border-0 !py-3.5"
+                />
                 <p style={{ fontSize: 11, color: "#CBD5E1", textAlign: "center", marginTop: 10 }}>{cancelAnytime}</p>
               </div>
             </motion.div>
@@ -360,23 +356,12 @@ export default function PricingClientSection({
                   </div>
 
                   {/* CTA — shimmer button */}
-                  <div style={{ position: "relative" }}>
-                    <div style={{
-                      background: "linear-gradient(135deg, #00D4FF 0%, #0099CC 100%)",
-                      borderRadius: 14,
-                      overflow: "hidden",
-                      position: "relative",
-                      boxShadow: "0 0 24px rgba(0,212,255,0.35), 0 4px 12px rgba(0,0,0,0.3)",
-                    }}>
-                      <div
-                        className="shimmer-btn"
-                        style={{ position: "absolute", inset: 0, overflow: "hidden", borderRadius: 14, pointerEvents: "none" }}
-                      />
-                      <div className="[&>button]:w-full [&>button]:border-0 [&>button]:bg-transparent [&>button]:text-[#071525] [&>button]:font-bold [&>button]:py-3 [&>button]:text-sm">
-                        <PricingButtons plan="annual" isPro={userIsPro} />
-                      </div>
-                    </div>
-                  </div>
+                  <PricingButtons
+                    plan="annual"
+                    isPro={userIsPro}
+                    theme="dark"
+                    buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#071525] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_0_24px_rgba(0,212,255,0.35),_0_4px_12px_rgba(0,0,0,0.3)]"
+                  />
                   <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", marginTop: 10, position: "relative" }}>
                     {cancelAnytime}
                   </p>
