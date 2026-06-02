@@ -18,6 +18,10 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useEditorPro } from "@/components/editor/EditorContext"
 import BulletsImprovementModal, { type BulletPair } from "./BulletsImprovementModal"
+import { useAICall } from "@/hooks/useAICall"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
+import { useRouter } from "next/navigation"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 
 export default function WorkExperienceSection() {
@@ -80,6 +84,10 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
 }) {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
+  const router = useRouter()
+  const localeForErr = useLocale()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess } = useAICall()
   const { cooldownUntil, setCooldownUntil } = useAICooldown(`cooldown_work_${job.id}`)
   const [nowTs, setNowTs] = useState(Date.now())
   const [improving, setImproving] = useState(false)
@@ -114,17 +122,26 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     if (key === lastKeyRef.current) { toast.info(ai("no_changes")); return }
     setImproving(true)
     setBulletModal(null)
+    preCheck("improve-bullet")
     try {
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: locale }),
       })
-      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale: localeForErr,
+          fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
       if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_bullet")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      await onSuccess()
       const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
       if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
       const normalize = (s: string) => s.trim().replace(/\s+/g, " ")

@@ -43,6 +43,9 @@ export async function GET(req: Request, { params }: Params) {
   }
 
   if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
+    db.auditLog.create({
+      data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id } },
+    }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

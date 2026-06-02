@@ -7,6 +7,10 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations, useLocale } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
 import { useAICooldown } from "./useAICooldown"
+import { useAICall } from "@/hooks/useAICall"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
+import { useRouter } from "next/navigation"
 
 export interface ReviewItem {
   text: string
@@ -25,6 +29,9 @@ const COOLDOWN_MS = 120_000
 export function useCVReview() {
   const t = useTranslations("editor.cv_review")
   const locale = useLocale()
+  const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess } = useAICall()
   const { sectionData } = useResumeStore()
 
   const [question, setQuestion] = useState("")
@@ -58,18 +65,28 @@ export function useCVReview() {
 
     setLoading(true)
     setResult(null)
+    preCheck("review-cv")
     try {
       const res = await apiFetch("/api/ai/review-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, question: question.trim() || undefined, language: locale }),
       })
-      if (res.status === 403) { toast.error(t("pro_only")); return }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(t("pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
       if (res.status === 400) { toast.error(t("not_enough_data")); return }
       if (res.status === 422) { toast.error(t("off_topic")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setResult(data)
+      await onSuccess()
       lastReviewKeyRef.current = reviewKey
       setCooldownUntil(Date.now() + COOLDOWN_MS)
     } catch {

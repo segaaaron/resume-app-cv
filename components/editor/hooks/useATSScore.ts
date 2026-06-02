@@ -7,6 +7,10 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations, useLocale } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
 import { useAICooldown } from "./useAICooldown"
+import { useAICall } from "@/hooks/useAICall"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
+import { useRouter } from "next/navigation"
 
 export interface ATSResult {
   score: number
@@ -41,6 +45,9 @@ export function isQuestion(text: string): boolean {
 export function useATSScore() {
   const t = useTranslations("editor.ats")
   const locale = useLocale()
+  const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess } = useAICall()
   const { sectionData } = useResumeStore()
 
   const [input, setInput] = useState("")
@@ -77,31 +84,49 @@ export function useATSScore() {
 
     try {
       if (isQuestion(text)) {
+        preCheck("review-cv")
         const res = await apiFetch("/api/ai/review-cv", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sectionData, question: text, language: locale }),
         })
-        if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
-        if (res.status === 403) { toast.error(t("pro_only")); return }
+        if (res.status === 429 || res.status === 403) {
+          const handled = await handleApiError(res, {
+            openUpgradeModal,
+            redirect: (p) => router.push(p),
+            locale,
+            fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit_exceeded") : t("pro_only")),
+          })
+          if (handled || res.status === 429 || res.status === 403) return
+        }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
         if (res.status === 422) { setOffTopic(true); return }
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setReviewResult(data)
+        await onSuccess()
       } else {
+        preCheck("ats-score")
         const res = await apiFetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ jobDescription: text, sectionData, language: locale }),
         })
-        if (res.status === 429) { toast.error(t("rate_limit_exceeded")); return }
-        if (res.status === 403) { toast.error(t("pro_only")); return }
+        if (res.status === 429 || res.status === 403) {
+          const handled = await handleApiError(res, {
+            openUpgradeModal,
+            redirect: (p) => router.push(p),
+            locale,
+            fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit_exceeded") : t("pro_only")),
+          })
+          if (handled || res.status === 429 || res.status === 403) return
+        }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
         if (res.status === 422) { setOffTopic(true); return }
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setAtsResult(data)
+        await onSuccess()
       }
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)

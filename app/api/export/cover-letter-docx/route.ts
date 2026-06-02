@@ -83,7 +83,12 @@ export async function GET(req: Request) {
     user?.subscriptionEndsAt ?? null,
     user?.subscriptionStatus ?? null,
   )
-  if (!isPro) return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
+  if (!isPro) {
+    db.auditLog.create({
+      data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "docx", target: "cover-letter" } },
+    }).catch(() => { /* fire-and-forget */ })
+    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
+  }
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")

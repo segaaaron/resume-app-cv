@@ -10,12 +10,19 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import SummaryVersionModal, { type SummaryVersion } from "./SummaryVersionModal"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
+import { useAICall } from "@/hooks/useAICall"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
+import { useRouter } from "next/navigation"
 
 export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
   const { isPro, openUpgrade } = useEditorPro()
   const locale = useLocale()
+  const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess } = useAICall()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
@@ -57,18 +64,27 @@ export default function SummarySection() {
     if (key === lastKeyRef.current) { toast.info(ai("no_changes")); return }
     setGenerating(true)
     setVersions([])
+    preCheck("generate-summary")
     try {
       const res = await apiFetch("/api/ai/generate-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, language: locale }),
       })
-      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
       if (res.status === 400) { await res.text().catch(() => {}); toast.error(ai("not_enough_data_summary")); return }
       if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_summary")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      await onSuccess()
       const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
       setVersions((data.versions as string[]).map((text, i) => ({ type: types[i] ?? "executive", text })))
       lastKeyRef.current = key
@@ -92,18 +108,27 @@ export default function SummarySection() {
     if (key === lastKeyRef.current) { toast.info(ai("no_changes")); return }
     setImproving(true)
     setVersions([])
+    preCheck("improve-summary")
     try {
       const res = await apiFetch("/api/ai/improve-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ summary: currentSummary, sectionData, language: locale }),
       })
-      if (res.status === 429) { await res.text().catch(() => {}); toast.error(ai("rate_limit_exceeded")); return }
-      if (res.status === 403) { await res.text().catch(() => {}); toast.error(ai("pro_only")); return }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
       if (res.status === 400) { await res.text().catch(() => {}); toast.error(ai("improve_summary_empty")); return }
       if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_summary")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
+      await onSuccess()
       const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
       setVersions((data.versions as string[]).map((text, i) => ({ type: types[i] ?? "executive", text })))
       lastKeyRef.current = key

@@ -6,6 +6,10 @@ import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useTranslations, useLocale } from "next-intl"
 import { useAICooldown } from "./useAICooldown"
+import { useAICall } from "@/hooks/useAICall"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
+import { useRouter } from "next/navigation"
 
 interface SuggestedLanguage { name: string; level: string }
 
@@ -33,6 +37,9 @@ export interface FillProfileResult {
 export function useAIProfileFill() {
   const t = useTranslations("editor.ai_profile_fill")
   const locale = useLocale()
+  const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess } = useAICall()
   const { sectionData } = useResumeStore()
 
   const [prompt, setPrompt] = useState("")
@@ -57,19 +64,28 @@ export function useAIProfileFill() {
     }
     setLoading(true)
     setResult(null)
+    preCheck("fill-profile")
     try {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: locale }),
       })
-      if (res.status === 429) { toast.error(t("toast_rate_limit")); return undefined }
-      if (res.status === 403) { toast.error(t("toast_pro_only")); return undefined }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? t("toast_rate_limit") : t("toast_pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return undefined
+      }
       if (res.status === 400) { toast.error(t("toast_more_detail")); return undefined }
       if (res.status === 422) { toast.error(t("toast_off_topic")); return undefined }
       const data = await res.json() as FillProfileResult
       if (!res.ok) throw new Error((data as unknown as { error: string }).error)
       setResult(data)
+      await onSuccess()
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
       return data

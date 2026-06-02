@@ -3,6 +3,7 @@ import { NextIntlClientProvider } from "next-intl"
 import { getMessages } from "next-intl/server"
 import { routing } from "@/i18n/routing"
 import { notFound } from "next/navigation"
+import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext"
 
 const BASE_URL = "https://readycvv.com"
 
@@ -108,7 +109,9 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider messages={messages}>
-      {children}
+      <UpgradeModalProvider>
+        {children}
+      </UpgradeModalProvider>
     </NextIntlClientProvider>
   )
 }

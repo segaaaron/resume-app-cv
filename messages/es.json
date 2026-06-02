@@ -2981,5 +2981,68 @@
         "a3": "Desde el portal de Stripe puedes cancelar cuando quieras — sin preguntas. Tu acceso continúa hasta el final del periodo de facturación."
       }
     }
+  },
+  "upgradeModal": {
+    "closeAria": "Cerrar",
+    "maybeLater": "Quizá más tarde",
+    "pricing": {
+      "monthly": "$15/mes",
+      "yearly": "$144/año",
+      "discount": "20% OFF",
+      "yearlyHint": "Facturado anual — ahorras $36"
+    },
+    "download": {
+      "title": "Suscríbete para descargar tu CV",
+      "body": "Las descargas en PDF y Word forman parte del plan PRO. Desbloquea exportaciones ilimitadas y sin marca de agua.",
+      "cta": "Hazte PRO y descarga"
+    },
+    "aiQuota": {
+      "title": "Créditos de AI agotados",
+      "body": "Has usado todos tus créditos AI gratuitos. Suscríbete a PRO para usar AI sin límites en tu CV.",
+      "bodyWithEndpoint": "Has agotado tus créditos gratuitos para {endpoint}. Hazte PRO y usa AI sin límites.",
+      "cta": "Desbloquea AI ilimitado"
+    },
+    "secondResume": {
+      "title": "Plan gratuito: solo 1 CV",
+      "body": "El plan gratuito permite crear un único CV. Suscríbete a PRO y crea CVs ilimitados, uno por cada oportunidad.",
+      "cta": "Crea CVs ilimitados"
+    },
+    "secondCoverLetter": {
+      "title": "Plan gratuito: solo 1 carta",
+      "body": "El plan gratuito incluye una carta de presentación. Con PRO escribes cartas ilimitadas a medida.",
+      "cta": "Crea cartas ilimitadas"
+    },
+    "proFeature": {
+      "title": "Función PRO: {feature}",
+      "titleGeneric": "Función exclusiva PRO",
+      "body": "Esta herramienta está disponible únicamente para suscriptores PRO. Hazte PRO y desbloquea todo ReadyCV.",
+      "cta": "Hazte PRO"
+    },
+    "watermarkRemove": {
+      "title": "Quita la marca de agua",
+      "body": "Tu vista previa gratuita incluye marca de agua. PRO la elimina y desbloquea descargas limpias en PDF/Word.",
+      "cta": "Quitar marca con PRO"
+    }
+  },
+  "freemium": {
+    "dashboard": {
+      "banner": {
+        "title": "Plan gratuito — 1 CV y 1 carta incluidos",
+        "subtitle": "Suscríbete a PRO para documentos ilimitados, descargas y acceso completo a la AI.",
+        "cta": "Hazte PRO"
+      },
+      "resumeLimit": "{used}/{limit} CV usado",
+      "coverLetterLimit": "{used}/{limit} carta usada"
+    },
+    "editor": {
+      "lastUseToast": "Último uso gratuito disponible — Desbloquea AI ilimitado con PRO",
+      "atsBadge": "PRO",
+      "reviewBadge": "PRO",
+      "tooltipProOnly": "Disponible en el plan PRO",
+      "watermarkAria": "Vista previa ReadyCV — suscríbete para quitar la marca de agua"
+    },
+    "errors": {
+      "unexpected": "Error inesperado. Inténtalo de nuevo."
+    }
   }
 }

@@ -21,14 +21,14 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  // Single DB round-trip: auth + pro-plan check merged via requireUser
-  const authResult = await requireUser(req, { pro: true, csrf: true })
+  // UNSUBSCRIBED gets 1 cover letter (freemium). Quota enforced inside the service.
+  const authResult = await requireUser(req, { csrf: true, emailVerified: true })
   if (authResult instanceof NextResponse) return authResult
 
   try {
     const body = await req.json().catch(() => ({}))
     const title = typeof body?.title === "string" ? body.title.slice(0, 200) : undefined
-    const letter = await coverLetterService.create(authResult.userId, title)
+    const letter = await coverLetterService.create(authResult.userId, title, authResult.user.plan)
     return NextResponse.json(letter, { status: 201 })
   } catch (err) {
     return handleError(err)

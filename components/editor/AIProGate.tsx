@@ -2,19 +2,24 @@
 
 import { Sparkles, Lock } from "lucide-react"
 import { useEditorPro } from "./EditorContext"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "next-intl"
 
 interface AIProGateProps {
   children: React.ReactNode
+  /** Optional feature label propagated to the shared UpgradeModal (e.g. "ATS Checker"). */
+  feature?: string
 }
 
 /**
- * Wraps any AI feature. If the user is not Pro, renders a locked
- * upgrade banner instead of the children.
+ * Wraps any AI feature. If the user is not Pro, renders a locked upgrade banner
+ * instead of the children. CTA opens the shared freemium UpgradeModal with
+ * trigger 'pro-feature' (replacing the previous editor-internal modal).
  */
-export default function AIProGate({ children }: AIProGateProps) {
-  const { isPro, openUpgrade } = useEditorPro()
+export default function AIProGate({ children, feature }: AIProGateProps) {
+  const { isPro } = useEditorPro()
+  const { open } = useUpgradeModal()
   const t = useTranslations("editor.ai_gate")
 
   if (isPro) return <>{children}</>
@@ -28,7 +33,11 @@ export default function AIProGate({ children }: AIProGateProps) {
         <p className="text-sm font-semibold text-foreground">{t("title")}</p>
         <p className="text-xs text-muted-foreground leading-relaxed max-w-[220px]">{t("description")}</p>
       </div>
-      <Button size="sm" className="gap-1.5 mt-1" onClick={openUpgrade}>
+      <Button
+        size="sm"
+        className="gap-1.5 mt-1"
+        onClick={() => open("pro-feature", feature ? { feature } : undefined)}
+      >
         <Sparkles className="h-3.5 w-3.5" />
         {t("cta")}
       </Button>

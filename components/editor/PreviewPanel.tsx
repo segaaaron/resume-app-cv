@@ -3,8 +3,13 @@
 import ResumePreview from "@/components/resume/ResumePreview"
 import { ZoomIn, ZoomOut } from "lucide-react"
 import { useEffect, useState } from "react"
+import ResumePreviewWatermark from "./ResumePreviewWatermark"
+import { useEditorPro } from "./EditorContext"
+import { useResumeStore } from "@/stores/resumeStore"
 
 export default function PreviewPanel() {
+  const { isPro } = useEditorPro()
+  const templateSlug = useResumeStore((s) => s.config.templateId)
   const [scale, setScale] = useState(0.8)
   useEffect(() => { if (window.innerWidth < 768) setScale(0.5) }, [])
 
@@ -42,8 +47,10 @@ export default function PreviewPanel() {
       <div className="canvas-scroller flex-1 min-h-0 overflow-y-auto overflow-x-auto flex flex-col relative z-[1]">
         <div className="flex items-start justify-center min-h-full w-full px-4 pt-6 pb-10">
           <div className="shrink-0 relative rounded-[4px] bg-transparent" style={{ width: `calc(210mm * ${scale})`, height: `calc(297mm * ${scale})`, transition: "width 0.2s ease, height 0.2s ease", boxShadow: "0 30px 80px rgba(11,27,61,0.18), 0 10px 30px rgba(11,27,61,0.10)" }}>
-            <div style={{ transform: `scale(${scale})`, transformOrigin: "top left", transition: "transform 0.2s ease", width: "210mm", minHeight: "297mm" }}>
+            <div className="relative" style={{ transform: `scale(${scale})`, transformOrigin: "top left", transition: "transform 0.2s ease", width: "210mm", minHeight: "297mm" }}>
               <ResumePreview />
+              {/* Free-plan watermark — overlay only, never reaches PDF export */}
+              <ResumePreviewWatermark isPro={isPro} templateSlug={templateSlug} />
             </div>
           </div>
         </div>

@@ -13,10 +13,20 @@ const PDF_DAILY_LIMIT = 15
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(req: Request, { params }: Params) {
-  const authResult = await requireUser(req, { pro: true })
-  if (authResult instanceof NextResponse) return authResult
-
   const { id } = await params
+
+  // Two-stage auth: first check identity to log FREE_DOWNLOAD_BLOCKED for UNSUBSCRIBED,
+  // then enforce Pro plan.
+  const baseAuth = await requireUser(req, {})
+  if (baseAuth instanceof NextResponse) return baseAuth
+
+  const authResult = await requireUser(req, { pro: true })
+  if (authResult instanceof NextResponse) {
+    db.auditLog.create({
+      data: { userId: baseAuth.userId, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", coverLetterId: id } },
+    }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED cover-letter failed", { userId: baseAuth.userId, coverLetterId: id }, err) })
+    return authResult
+  }
 
   try {
     const url = new URL(req.url)

@@ -20,6 +20,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import UpgradeCTACard from "./UpgradeCTACard"
 import { isActive } from "@/lib/plans"
 import { type LetterCard, LetterCardItem, LetterActivityItem } from "./_letter-sub"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 export default function CoverLettersDashboard({ initialLetters }: { initialLetters: LetterCard[] }) {
   const t = useTranslations("dashboard.cover_letters")
@@ -40,14 +41,17 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState("")
   const [renaming, setRenaming] = useState(false)
-
-  function requirePro() {
-    router.push(`/${locale}/pricing`)
-    toast.info(t("require_pro_toast"))
-  }
+  const { open: openUpgradeModal } = useUpgradeModal()
 
   async function createLetter() {
-    if (!isPro) { requirePro(); return }
+    // Freemium funnel: 1 cover letter included free. Beyond that → UpgradeModal.
+    if (!isPro && letters.length >= 1) {
+      openUpgradeModal("second-cover-letter")
+      return
+    }
+    if (!isPro) {
+      // Free plan still allows the first letter (backend enforces). UI can pass through.
+    }
     setCreating(true)
     try {
       const res = await apiFetch("/api/cover-letters", {
@@ -114,9 +118,19 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
             >
               {t("title")}
             </h1>
-            <p className="text-[13.5px] text-[#6B7A8C] mt-[6px] mb-0">
-              {letters.length} {letters.length === 1 ? t("count_one") : t("count_other")} · {t("ai_generated")}
-              {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
+            <p className="text-[13.5px] text-[#6B7A8C] mt-[6px] mb-0 flex items-center gap-2 flex-wrap">
+              <span>
+                {letters.length} {letters.length === 1 ? t("count_one") : t("count_other")} · {t("ai_generated")}
+                {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
+              </span>
+              {!isPro && letters.length >= 1 && (
+                <span
+                  className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.35)] text-[#00A8CC]"
+                  style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))" }}
+                >
+                  {letters.length}/1
+                </span>
+              )}
             </p>
           </div>
         </div>
@@ -157,17 +171,17 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
           <button
             type="button"
             onClick={createLetter}
-            disabled={creating || !isPro}
+            disabled={creating}
             className="cl-new-card cl-card-anim flex flex-col items-center justify-center gap-3 rounded-[10px] border border-dashed border-[#A0AABE] bg-transparent min-h-[286px]"
             style={{
-              cursor: creating || !isPro ? "not-allowed" : "pointer",
-              opacity: creating || !isPro ? 0.5 : 1,
+              cursor: creating ? "not-allowed" : "pointer",
+              opacity: creating ? 0.5 : 1,
               transition: "border-color 0.22s ease, background 0.22s ease, transform 0.22s cubic-bezier(0.34,1.2,0.64,1), box-shadow 0.22s ease",
               animationDelay: `${(letters.length) * 0.08 + 0.05}s`,
               textDecoration: "none",
             }}
             onMouseEnter={(e) => {
-              if (creating || !isPro) return
+              if (creating) return
               const el = e.currentTarget as HTMLButtonElement
               el.style.borderColor = "#00D4FF"
               el.style.background = "rgba(0,212,255,0.04)"

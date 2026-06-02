@@ -41,6 +41,12 @@ interface RequireUserOptions {
   pro?: boolean
   /** When true, also validates CSRF origin header. Returns 403 if invalid. */
   csrf?: boolean
+  /**
+   * When true, requires the user's email to be verified. Returns 403 `email_not_verified`
+   * otherwise. Use on any endpoint that consumes server resources (AI credits, downloads,
+   * new resumes/cover letters) so throwaway / unverified accounts can't abuse the free tier.
+   */
+  emailVerified?: boolean
 }
 
 interface RequireUserSuccess {
@@ -51,6 +57,7 @@ interface RequireUserSuccess {
     subscriptionStatus: string | null
     subscriptionEndsAt: Date | null
     role: string
+    emailVerified: Date | null
   }
 }
 
@@ -75,10 +82,14 @@ export async function requireUser(
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+    select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true },
   })
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  if (opts.emailVerified && !user.emailVerified) {
+    return NextResponse.json({ error: "email_not_verified" }, { status: 403 })
+  }
 
   if (opts.pro && !isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, user.role)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })

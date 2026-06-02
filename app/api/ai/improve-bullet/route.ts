@@ -12,14 +12,14 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
-  const authResult = await requireUser(req, { pro: true, csrf: true })
+  const authResult = await requireUser(req, { csrf: true, emailVerified: true })
   if (authResult instanceof NextResponse) return authResult
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
 
   try {
-    const result = await aiService.improveBullet(authResult.userId, parsed.data)
+    const result = await aiService.improveBullet(authResult.userId, parsed.data, authResult.user.plan)
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

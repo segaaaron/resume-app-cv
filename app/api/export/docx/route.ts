@@ -28,6 +28,9 @@ export async function GET(req: Request) {
   })
 
   if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
+    db.auditLog.create({
+      data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "docx" } },
+    }).catch(() => { /* fire-and-forget */ })
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

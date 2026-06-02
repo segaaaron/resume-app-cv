@@ -5,17 +5,23 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 
 // ─── Mock DB ──────────────────────────────────────────────────────────────────
 
-vi.mock("@/lib/db", () => ({
-  db: {
-    coverLetter: {
-      findMany:  vi.fn(),
-      findFirst: vi.fn(),
-      create:    vi.fn(),
-      update:    vi.fn(),
-      delete:    vi.fn(),
+vi.mock("@/lib/db", () => {
+  const coverLetter = {
+    findMany:  vi.fn(),
+    findFirst: vi.fn(),
+    create:    vi.fn(),
+    count:     vi.fn().mockResolvedValue(0),
+    update:    vi.fn(),
+    delete:    vi.fn(),
+  }
+  return {
+    db: {
+      coverLetter,
+      auditLog: { create: vi.fn().mockResolvedValue({}) },
+      $transaction: vi.fn((cb: (tx: unknown) => unknown) => cb({ coverLetter })),
     },
-  },
-}))
+  }
+})
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -147,7 +153,7 @@ describe("CoverLetterService.create", () => {
     const row = makeLetterRow()
     vi.mocked(db.coverLetter.create).mockResolvedValue(row as never)
 
-    const result = await makeService().create(USER_ID)
+    const result = await makeService().create(USER_ID, undefined, "PRO")
 
     expect(result).toEqual(row)
     const call = vi.mocked(db.coverLetter.create).mock.calls[0][0] as { data: { userId: string; title: string } }

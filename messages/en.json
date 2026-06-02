@@ -2981,5 +2981,68 @@
         "a3": "From the Stripe portal you can cancel anytime — no questions asked. Your access stays until the end of the billing period."
       }
     }
+  },
+  "upgradeModal": {
+    "closeAria": "Close",
+    "maybeLater": "Maybe later",
+    "pricing": {
+      "monthly": "$15/mo",
+      "yearly": "$144/yr",
+      "discount": "20% OFF",
+      "yearlyHint": "Billed annually — save $36"
+    },
+    "download": {
+      "title": "Subscribe to download your CV",
+      "body": "PDF and Word downloads are part of the PRO plan. Unlock unlimited high-quality exports without watermark.",
+      "cta": "Get PRO and download"
+    },
+    "aiQuota": {
+      "title": "AI credits exhausted",
+      "body": "You've used all your free AI credits. Upgrade to PRO for unlimited AI generations across your CV.",
+      "bodyWithEndpoint": "You've used all your free credits for {endpoint}. Upgrade to PRO for unlimited AI.",
+      "cta": "Unlock unlimited AI"
+    },
+    "secondResume": {
+      "title": "Free plan: 1 CV only",
+      "body": "The free plan allows just one CV. Subscribe to PRO and create unlimited tailored CVs for every opportunity.",
+      "cta": "Create unlimited CVs"
+    },
+    "secondCoverLetter": {
+      "title": "Free plan: 1 cover letter only",
+      "body": "The free plan includes a single cover letter. With PRO you write unlimited letters, custom for each job.",
+      "cta": "Create unlimited letters"
+    },
+    "proFeature": {
+      "title": "PRO feature: {feature}",
+      "titleGeneric": "PRO-only feature",
+      "body": "This tool is available exclusively for PRO subscribers. Upgrade and unlock the full ReadyCV toolkit.",
+      "cta": "Upgrade to PRO"
+    },
+    "watermarkRemove": {
+      "title": "Remove watermark",
+      "body": "Your free preview ships with a watermark. PRO removes it and unlocks clean PDF/Word downloads.",
+      "cta": "Remove watermark with PRO"
+    }
+  },
+  "freemium": {
+    "dashboard": {
+      "banner": {
+        "title": "Free plan — 1 CV and 1 cover letter included",
+        "subtitle": "Subscribe to PRO for unlimited documents, downloads and full AI access.",
+        "cta": "Upgrade to PRO"
+      },
+      "resumeLimit": "{used}/{limit} CV used",
+      "coverLetterLimit": "{used}/{limit} cover letter used"
+    },
+    "editor": {
+      "lastUseToast": "Last free use available — Unlock unlimited AI with PRO",
+      "atsBadge": "PRO",
+      "reviewBadge": "PRO",
+      "tooltipProOnly": "Available on PRO plan",
+      "watermarkAria": "ReadyCV preview — upgrade to remove watermark"
+    },
+    "errors": {
+      "unexpected": "Unexpected error. Please try again."
+    }
   }
 }

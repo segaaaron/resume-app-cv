@@ -15,6 +15,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import UnsavedChangesModal from "./UnsavedChangesModal"
 import PlaceholderWarningModal from "./PlaceholderWarningModal"
 import { detectPlaceholders } from "@/lib/detectPlaceholders"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 interface Props {
   hasAccess: boolean
@@ -46,6 +47,7 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const [showPlaceholderModal, setShowPlaceholderModal] = useState(false)
   const locale = useLocale()
   const t = useTranslations("editor")
+  const { open: openUpgradeModal } = useUpgradeModal()
 
   useEffect(() => {
     if (!resumeId) return
@@ -149,6 +151,11 @@ export default function EditorTopBar({ hasAccess }: Props) {
     toast.error(t("pro_required"), {
       action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
     })
+  }
+
+  function handleDownloadLockedClick() {
+    // Freemium funnel: paywall on download intent → shared UpgradeModal.
+    openUpgradeModal("download")
   }
 
   async function handleDownloadPdf() {
@@ -358,8 +365,9 @@ export default function EditorTopBar({ hasAccess }: Props) {
           </button>
         ) : (
           <button
-            onClick={handleLockedClick}
-            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer opacity-40 border border-[rgba(0,212,255,0.3)] text-[#0a1a35]"
+            onClick={handleDownloadLockedClick}
+            aria-label={t("print.print_pdf")}
+            className="inline-flex items-center gap-2 px-4 py-[7px] rounded-lg text-[12.5px] font-bold cursor-pointer border border-[rgba(0,212,255,0.4)] text-[#0a1a35] shadow-[0_4px_16px_rgba(0,212,255,0.25),inset_0_1px_0_rgba(255,255,255,0.2)] hover:-translate-y-px hover:shadow-[0_6px_20px_rgba(0,212,255,0.4),inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-200"
             style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" }}
           >
             <Lock size={13} />

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
-import { ChevronDown, Download, FileDown, FileText, Loader2, CheckCircle2 } from "lucide-react"
+import { ChevronDown, Download, FileDown, FileText, Loader2, CheckCircle2, Lock } from "lucide-react"
 import { toast } from "sonner"
 
 export interface DownloadOption {
@@ -27,6 +27,12 @@ export interface DownloadMenuProps {
     almostDone: string
   }
   disabled?: boolean
+  /**
+   * Freemium paywall: when true the menu does NOT open; click triggers `onLocked`
+   * (typically the shared UpgradeModal with trigger='download').
+   */
+  locked?: boolean
+  onLocked?: () => void
 }
 
 const DEFAULT_PHASES = {
@@ -64,6 +70,8 @@ export default function DownloadMenu({
   successLabel = (f) => `${f} descargado`,
   phaseLabels = DEFAULT_PHASES,
   disabled = false,
+  locked = false,
+  onLocked,
 }: DownloadMenuProps) {
   const [open, setOpen] = useState(false)
   const [recentSuccess, setRecentSuccess] = useState<"pdf" | "docx" | null>(null)
@@ -110,16 +118,25 @@ export default function DownloadMenu({
         size={size}
         className="gap-1.5"
         disabled={disabled}
+        aria-label={locked ? triggerLabel : undefined}
         onClick={() => {
-          if (!anyLoading) setOpen((v) => !v)
+          if (anyLoading) return
+          if (locked) { onLocked?.(); return }
+          setOpen((v) => !v)
         }}
       >
-        {anyLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
+        {anyLoading ? (
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        ) : locked ? (
+          <Lock className="h-3.5 w-3.5" />
+        ) : (
+          <Download className="h-3.5 w-3.5" />
+        )}
         {triggerText}
-        {!anyLoading && <ChevronDown className="h-3 w-3 ml-0.5" />}
+        {!anyLoading && !locked && <ChevronDown className="h-3 w-3 ml-0.5" />}
       </Button>
 
-      {open && (
+      {open && !locked && (
         <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-border rounded-xl shadow-xl min-w-[220px] overflow-hidden">
           {options.map((opt) => {
             const otherLoading = anyLoading && !opt.isLoading

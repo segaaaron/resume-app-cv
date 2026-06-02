@@ -17,7 +17,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
 
   try {
-    const result = await aiService.atsScore(authResult.userId, parsed.data)
+    const result = await aiService.atsScore(authResult.userId, parsed.data, authResult.user.plan)
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

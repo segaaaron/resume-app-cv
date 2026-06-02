@@ -11,6 +11,10 @@ import { nanoid } from "nanoid"
 import type { SkillItem, WorkExperienceItem } from "@/types/resume"
 import SuggestionDiffModal from "./SuggestionDiffModal"
 import { useAICooldown } from "./hooks/useAICooldown"
+import { useAICall } from "@/hooks/useAICall"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
+import { useRouter } from "next/navigation"
 
 interface TailorResult {
   summaryVersion: string
@@ -22,6 +26,9 @@ interface TailorResult {
 export default function TailorCVPanel() {
   const t = useTranslations("editor.tailor")
   const locale = useLocale()
+  const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess } = useAICall()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
@@ -73,14 +80,22 @@ export default function TailorCVPanel() {
     setAppliedSummary(false)
     setAppliedBullets(new Set())
     setAddedSkills(new Set())
+    preCheck("tailor-cv")
     try {
       const res = await apiFetch("/api/ai/tailor-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ sectionData, jobDescription: jd, language: locale === "en" ? "en" : "es" }),
       })
-      if (res.status === 429) { toast.error(t("rate_limit")); return }
-      if (res.status === 403) { toast.error(t("pro_only")); return }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit") : t("pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
       if (res.status === 422) { toast.error(t("off_topic")); return }
       if (!res.ok) { toast.error(t("error")); return }
       const data = await res.json() as TailorResult
@@ -88,6 +103,7 @@ export default function TailorCVPanel() {
       setExpanded(true)
       lastTailorKeyRef.current = tailorKey
       setCooldownUntil(Date.now() + 120_000)
+      await onSuccess()
     } catch {
       toast.error(t("error"))
     } finally {

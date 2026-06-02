@@ -155,8 +155,8 @@ describe("ResumeService.create", () => {
   it("throws 403 when UNSUBSCRIBED user hits maxResumes limit", async () => {
     const { db } = await import("@/lib/db")
     vi.mocked(db.user.findUnique).mockResolvedValue({ plan: "UNSUBSCRIBED" } as never)
-    // UNSUBSCRIBED maxResumes = 0, so count=0 >= 0 triggers the limit
-    vi.mocked(db.resume.count).mockResolvedValue(0 as never)
+    // UNSUBSCRIBED maxResumes = 1, so count=1 >= 1 triggers the limit
+    vi.mocked(db.resume.count).mockResolvedValue(1 as never)
 
     await expect(makeService().create(USER_ID)).rejects.toMatchObject({
       status: 403,
@@ -274,7 +274,8 @@ describe("ResumeService.duplicate", () => {
     const original = { id: RESUME_ID, title: "CV" }
     vi.mocked(db.resume.findFirst).mockResolvedValue(original as never)
     vi.mocked(db.user.findUnique).mockResolvedValue({ plan: "UNSUBSCRIBED" } as never)
-    vi.mocked(db.resume.count).mockResolvedValue(0 as never)
+    // UNSUBSCRIBED maxResumes = 1, so count=1 >= 1 triggers the limit
+    vi.mocked(db.resume.count).mockResolvedValue(1 as never)
 
     await expect(makeService().duplicate(USER_ID, RESUME_ID)).rejects.toMatchObject({
       status: 403,

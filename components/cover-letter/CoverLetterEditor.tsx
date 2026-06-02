@@ -15,6 +15,9 @@ import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations, useLocale } from "next-intl"
 import UpgradeModal from "@/components/editor/UpgradeModal"
 import UnsavedChangesModal from "@/components/editor/UnsavedChangesModal"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { useAICall } from "@/hooks/useAICall"
+import { handleApiError } from "@/lib/upgrade-modal-handler"
 import dynamic from "next/dynamic"
 const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
 import { CoverLetterThumbnail } from "./thumbnails"
@@ -83,6 +86,8 @@ export default function CoverLetterEditor({
   const t = useTranslations("cover_letter_editor")
   const locale = useLocale()
   const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
+  const { preCheck, onSuccess: aiOnSuccess } = useAICall()
   const [showExitModal, setShowExitModal] = useState(false)
   const [title, setTitle] = useState(initialTitle)
   const [upgradeOpen, setUpgradeOpen] = useState(false)
@@ -170,6 +175,7 @@ export default function CoverLetterEditor({
 
   async function handleGenerateAI() {
     setGenerating(true)
+    preCheck("generate-cover-letter")
     try {
       const res = await apiFetch("/api/ai/generate-cover-letter", {
         method: "POST",
@@ -184,14 +190,22 @@ export default function CoverLetterEditor({
           userPrompt: aiUserPrompt.trim() || undefined,
         }),
       })
-      if (res.status === 429) { toast.error(t("ai_rate_limit")); return }
-      if (res.status === 403) { toast.error(t("ai_pro_only")); return }
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? t("ai_rate_limit") : t("ai_pro_only")),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
       if (res.status === 422) { toast.error(t("ai_off_topic")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       updateContent("body", data.body)
       setAiGenerated(true)
       toast.success(t("ai_success"))
+      await aiOnSuccess()
     } catch {
       toast.error(t("ai_error"))
     } finally {
@@ -412,7 +426,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
             {saving ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
           </button>
 
-          {/* Download menu (PDF only) */}
+          {/* Download menu (PDF only) — freemium paywall when not PRO */}
           <DownloadMenu
             filename={`${(title.replace(/[^a-z0-9]/gi, "_") || "carta")}`}
             triggerLabel={t("download")}
@@ -426,6 +440,8 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
             options={[
               { format: "pdf", label: "PDF", sublabel: t("export_with_design"), isLoading: downloadingPdf, onDownload: downloadPDF },
             ]}
+            locked={!isPro}
+            onLocked={() => openUpgradeModal("download")}
           />
         </div>
       </header>

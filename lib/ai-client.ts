@@ -5,7 +5,8 @@ import { createLogger } from "@/lib/logger"
 const logger = createLogger("ai-client")
 
 // Re-export so existing AI routes don't need to change their import path
-export { checkRateLimit, recordRateLimitUsage, checkAndIncrementRateLimit } from "@/lib/rate-limit"
+export { checkRateLimit, recordRateLimitUsage, checkAndIncrementRateLimit, checkAndIncrementAIQuota } from "@/lib/rate-limit"
+export type { AIQuotaCheck } from "@/lib/rate-limit"
 
 // Lazy singleton — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
 let _openai: OpenAI | null = null

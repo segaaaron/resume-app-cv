@@ -2,6 +2,7 @@
 import { db } from "@/lib/db"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { AppError } from "@/lib/services/auth/AppError"
+import { getLimits } from "@/lib/plans"
 import { z } from "zod"
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -75,20 +76,41 @@ export class CoverLetterService {
     return letter
   }
 
-  async create(userId: string, title?: string) {
-    const letter = await db.coverLetter.create({
-      data: {
-        userId,
-        title: title ?? "Mi Carta de Presentación",
-        content: {
-          recipientName: "",
-          recipientTitle: "",
-          company: "",
-          body: "",
-          closing: "",
+  async create(userId: string, title?: string, plan: string = "UNSUBSCRIBED") {
+    const limits = getLimits(plan)
+
+    // Atomic count-then-create. Mirrors ResumeService.create.
+    let limitHit = false
+    const letter = await db.$transaction(async (tx) => {
+      if (limits.maxCoverLetters !== -1) {
+        const count = await tx.coverLetter.count({ where: { userId } })
+        if (count >= limits.maxCoverLetters) {
+          limitHit = true
+          throw new AppError("plan_limit_cover_letter", 403, { limit: limits.maxCoverLetters })
+        }
+      }
+      return tx.coverLetter.create({
+        data: {
+          userId,
+          title: title ?? "Mi Carta de Presentación",
+          content: {
+            recipientName: "",
+            recipientTitle: "",
+            company: "",
+            body: "",
+            closing: "",
+          },
         },
-      },
+      })
+    }).catch((err) => {
+      if (limitHit) {
+        db.auditLog
+          .create({ data: { userId, action: "FREE_COVER_LETTER_LIMIT_HIT", metadata: { limit: limits.maxCoverLetters } } })
+          .catch(() => { /* fire-and-forget */ })
+      }
+      throw err
     })
+
     this.logger.info("cover-letter.create", { userId, letterId: letter.id })
     return letter
   }

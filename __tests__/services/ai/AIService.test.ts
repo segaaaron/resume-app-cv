@@ -14,6 +14,7 @@ vi.mock("@/lib/ai-client", () => ({
   AI_TEMPERATURE_STRUCTURED: 0.3,
   checkRateLimit: vi.fn().mockResolvedValue(true),
   checkAndIncrementRateLimit: vi.fn().mockResolvedValue(true),
+  checkAndIncrementAIQuota: vi.fn().mockResolvedValue({ allowed: true }),
   recordRateLimitUsage: vi.fn(),
   logAIUsage: vi.fn(),
   buildResumeContext: vi.fn().mockReturnValue("Nombre: Juan Garcia\nPuesto objetivo: Developer"),
@@ -24,6 +25,9 @@ vi.mock("@/lib/db", () => ({
   db: {
     resume: {
       findFirst: vi.fn().mockResolvedValue(null),
+    },
+    auditLog: {
+      create: vi.fn().mockResolvedValue({}),
     },
   },
 }))
@@ -73,8 +77,8 @@ describe("AIService", () => {
   beforeEach(async () => {
     logger = makeMockLogger()
     vi.clearAllMocks()
-    const { checkAndIncrementRateLimit } = vi.mocked(await import("@/lib/ai-client"))
-    checkAndIncrementRateLimit.mockResolvedValue(true)
+    const { checkAndIncrementAIQuota } = vi.mocked(await import("@/lib/ai-client"))
+    checkAndIncrementAIQuota.mockResolvedValue({ allowed: true })
   })
 
   // ── improveBullet ──────────────────────────────────────────────────────────
@@ -84,7 +88,7 @@ describe("AIService", () => {
       const aiClient = makeMockAIClient(JSON.stringify({ bullets: ["• bullet1", "• bullet2", "• bullet3"] }))
       const service = new AIService(aiClient, logger)
 
-      const result = await service.improveBullet("user-1", { text: "Managed a team and delivered projects on time" })
+      const result = await service.improveBullet("user-1", { text: "Managed a team and delivered projects on time" }, "PRO")
 
       expect(result.bullets).toEqual(["• bullet1", "• bullet2", "• bullet3"])
       expect(aiClient.chat).toHaveBeenCalledOnce()
@@ -95,21 +99,21 @@ describe("AIService", () => {
       const aiClient = makeMockAIClient(JSON.stringify({ bullets: elevenBullets }))
       const service = new AIService(aiClient, logger)
 
-      const result = await service.improveBullet("user-1", { text: "Rich description with many responsibilities" })
+      const result = await service.improveBullet("user-1", { text: "Rich description with many responsibilities" }, "PRO")
 
       expect(result.bullets).toHaveLength(10)
     })
 
-    it("throws AppError 429 when rate limited", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
+    it("throws AppError 429 free_quota_exhausted when AI quota exhausted", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValueOnce({ allowed: false, reason: "exhausted", used: 2, limit: 2 })
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.improveBullet("user-1", { text: "Managed a team" })
-      ).rejects.toMatchObject({ code: "rate_limit_exceeded", status: 429 })
+        service.improveBullet("user-1", { text: "Managed a team" }, "UNSUBSCRIBED")
+      ).rejects.toMatchObject({ code: "free_quota_exhausted", status: 429 })
     })
 
     it("throws AppError 422 when AI returns off-topic empty bullets", async () => {
@@ -117,7 +121,7 @@ describe("AIService", () => {
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.improveBullet("user-1", { text: "tell me a joke" })
+        service.improveBullet("user-1", { text: "tell me a joke" }, "PRO")
       ).rejects.toMatchObject({ code: "off_topic", status: 422 })
     })
   })
@@ -142,22 +146,22 @@ describe("AIService", () => {
       const result = await service.atsScore("user-1", {
         jobDescription: "We need a React developer with Docker experience for our team.",
         sectionData: {},
-      })
+      }, "PRO")
 
       expect(result.score).toBe(82)
       expect(result.label).toBe("Excelente")
     })
 
-    it("throws AppError 429 when rate limited", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
+    it("throws AppError 403 feature_pro_only when endpoint blocked for plan", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValueOnce({ allowed: false, reason: "blocked" })
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.atsScore("user-1", { jobDescription: "React developer needed for our team." })
-      ).rejects.toMatchObject({ code: "rate_limit_exceeded", status: 429 })
+        service.atsScore("user-1", { jobDescription: "React developer needed for our team." }, "UNSUBSCRIBED")
+      ).rejects.toMatchObject({ code: "feature_pro_only", status: 403 })
     })
 
     it("throws AppError 422 when AI returns off_topic label", async () => {
@@ -167,7 +171,7 @@ describe("AIService", () => {
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.atsScore("user-1", { jobDescription: "What is the capital of France?" })
+        service.atsScore("user-1", { jobDescription: "What is the capital of France?" }, "PRO")
       ).rejects.toMatchObject({ code: "off_topic", status: 422 })
     })
 
@@ -180,7 +184,7 @@ describe("AIService", () => {
       const suffix = "UNIQUE_OVERFLOW_MARKER_SHOULD_NOT_APPEAR"
       const longDescription = base + suffix
 
-      await service.atsScore("user-1", { jobDescription: longDescription, sectionData: {} })
+      await service.atsScore("user-1", { jobDescription: longDescription, sectionData: {} }, "PRO")
 
       const calledWith = (aiClient.chat as ReturnType<typeof vi.fn>).mock.calls[0][0]
       const userMessage = calledWith.messages.find((m: { role: string }) => m.role === "user")
@@ -199,7 +203,7 @@ describe("AIService", () => {
         company: "Acme Corp",
         jobTitle: "Software Engineer",
         language: "en",
-      })
+      }, "PRO")
 
       expect(result.body).toContain("<p>")
       expect(result.body).toContain("First paragraph")
@@ -210,20 +214,20 @@ describe("AIService", () => {
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.generateCoverLetter("user-1", { company: "Acme", jobTitle: "Engineer" })
+        service.generateCoverLetter("user-1", { company: "Acme", jobTitle: "Engineer" }, "PRO")
       ).rejects.toMatchObject({ code: "off_topic", status: 422 })
     })
 
-    it("throws AppError 429 when rate limited", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
+    it("throws AppError 429 free_quota_exhausted when AI quota exhausted", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValueOnce({ allowed: false, reason: "exhausted", used: 2, limit: 2 })
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.generateCoverLetter("user-1", { company: "Acme", jobTitle: "Engineer" })
-      ).rejects.toMatchObject({ code: "rate_limit_exceeded", status: 429 })
+        service.generateCoverLetter("user-1", { company: "Acme", jobTitle: "Engineer" }, "UNSUBSCRIBED")
+      ).rejects.toMatchObject({ code: "free_quota_exhausted", status: 429 })
     })
   })
 
@@ -241,7 +245,7 @@ describe("AIService", () => {
       const result = await service.fillProfile("user-1", {
         prompt: "I am a senior engineer with 5 years experience in React and TypeScript",
         sectionData: {},
-      })
+      }, "PRO")
 
       expect(result.summary).toBe("Experienced developer")
       expect(result.jobTitle).toBe("Senior Engineer")
@@ -252,20 +256,20 @@ describe("AIService", () => {
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.fillProfile("user-1", { prompt: "tell me a funny joke please" })
+        service.fillProfile("user-1", { prompt: "tell me a funny joke please" }, "PRO")
       ).rejects.toMatchObject({ code: "off_topic", status: 422 })
     })
 
-    it("throws AppError 429 when rate limited", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValueOnce(false)
+    it("throws AppError 429 free_quota_exhausted when AI quota exhausted", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValueOnce({ allowed: false, reason: "exhausted", used: 1, limit: 1 })
 
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.fillProfile("user-1", { prompt: "I am a software engineer with React skills" })
-      ).rejects.toMatchObject({ code: "rate_limit_exceeded", status: 429 })
+        service.fillProfile("user-1", { prompt: "I am a software engineer with React skills" }, "UNSUBSCRIBED")
+      ).rejects.toMatchObject({ code: "free_quota_exhausted", status: 429 })
     })
 
     it("filters out skills that match employer names from blocklist", async () => {
@@ -280,7 +284,7 @@ describe("AIService", () => {
         sectionData: {
           workExperience: [{ id: "we-1", employer: "Google", jobTitle: "SWE" }],
         },
-      })
+      }, "PRO")
 
       expect(result.suggestedSkills).not.toContain("Google")
       expect(result.suggestedSkills).toContain("TypeScript")
@@ -291,20 +295,20 @@ describe("AIService", () => {
   // ── generateSummary ────────────────────────────────────────────────────────
 
   describe("AIService.generateSummary", () => {
-    it("rate limit exceeded → throws AppError", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockRejectedValue(new AppError("rate_limit", 429))
+    it("quota exhausted → throws AppError free_quota_exhausted 429", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: false, reason: "exhausted", used: 2, limit: 2 })
       const aiClient = makeMockAIClient("{}")
       const service = new AIService(aiClient, logger)
-      await expect(service.generateSummary("u1", {})).rejects.toMatchObject({ status: 429 })
+      await expect(service.generateSummary("u1", {}, "UNSUBSCRIBED")).rejects.toMatchObject({ code: "free_quota_exhausted", status: 429 })
     })
 
     it("happy path → returns versions array", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
       const aiClient = makeMockAIClient(JSON.stringify({ versions: ["v1", "v2"] }))
       const service = new AIService(aiClient, logger)
-      const result = await service.generateSummary("u1", {})
+      const result = await service.generateSummary("u1", {}, "PRO")
       expect(result.versions).toHaveLength(2)
     })
   })
@@ -313,11 +317,11 @@ describe("AIService", () => {
 
   describe("AIService.reviewCV", () => {
     it("off-topic response → throws AppError off_topic", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
       const aiClient = makeMockAIClient(JSON.stringify({ summary: "", strengths: [], improvements: [], answer: "off_topic" }))
       const service = new AIService(aiClient, logger)
-      await expect(service.reviewCV("u1", { sectionData: {}, question: "test" })).rejects.toMatchObject({ code: "off_topic" })
+      await expect(service.reviewCV("u1", { sectionData: {}, question: "test" }, "PRO")).rejects.toMatchObject({ code: "off_topic" })
     })
   })
 
@@ -325,11 +329,11 @@ describe("AIService", () => {
 
   describe("AIService.suggestSkills", () => {
     it("happy path → returns skills array", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
       const aiClient = makeMockAIClient(JSON.stringify({ skills: [{ name: "TypeScript", level: "Advanced" }] }))
       const service = new AIService(aiClient, logger)
-      const result = await service.suggestSkills("u1", { jobTitle: "Engineer" })
+      const result = await service.suggestSkills("u1", { jobTitle: "Engineer" }, "PRO")
       expect(result.skills[0].name).toBe("TypeScript")
     })
   })
@@ -338,11 +342,11 @@ describe("AIService", () => {
 
   describe("AIService JSON parse failure", () => {
     it("malformed OpenAI response → throws AppError parse_error 500", async () => {
-      const { checkAndIncrementRateLimit } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementRateLimit).mockResolvedValue(true)
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
       const aiClient = makeMockAIClient("not json {{")
       const service = new AIService(aiClient, logger)
-      await expect(service.improveBullet("u1", { text: "Did things" })).rejects.toMatchObject({ code: "parse_error", status: 500 })
+      await expect(service.improveBullet("u1", { text: "Did things" }, "PRO")).rejects.toMatchObject({ code: "parse_error", status: 500 })
     })
   })
 })

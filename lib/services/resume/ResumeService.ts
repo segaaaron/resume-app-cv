@@ -147,14 +147,13 @@ export class ResumeService {
 
     // Transaction ensures count-check and create are atomic — prevents two concurrent
     // requests from both passing the limit check and creating two resumes.
+    let limitHit = false
     const resume = await db.$transaction(async (tx) => {
-      if (limits.maxResumes !== Infinity) {
+      if (limits.maxResumes !== -1) {
         const count = await tx.resume.count({ where: { userId } })
         if (count >= limits.maxResumes) {
-          throw new AppError(
-            `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.`,
-            403,
-          )
+          limitHit = true
+          throw new AppError("plan_limit_resume", 403, { limit: limits.maxResumes })
         }
       }
       return tx.resume.create({
@@ -166,6 +165,15 @@ export class ResumeService {
           ...(templateId ? { templateId } : {}),
         },
       })
+    }).catch((err) => {
+      if (limitHit) {
+        db.auditLog.create({
+          data: { userId, action: "FREE_RESUME_LIMIT_HIT", metadata: { limit: limits.maxResumes } },
+        }).catch((auditErr) => {
+          this.logger.error("[ResumeService] auditLog FREE_RESUME_LIMIT_HIT failed", { userId }, auditErr)
+        })
+      }
+      throw err
     })
 
     this.logger.info("[ResumeService] create", { userId, resumeId: resume.id })
@@ -234,13 +242,15 @@ export class ResumeService {
     const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
 
     const copy = await db.$transaction(async (tx) => {
-      if (limits.maxResumes !== Infinity) {
+      if (limits.maxResumes !== -1) {
         const count = await tx.resume.count({ where: { userId } })
         if (count >= limits.maxResumes) {
-          throw new AppError(
-            `Tu plan permite máximo ${limits.maxResumes} CV(s). Actualiza a Pro para crear más.`,
-            403,
-          )
+          db.auditLog.create({
+            data: { userId, action: "FREE_RESUME_LIMIT_HIT", metadata: { limit: limits.maxResumes, op: "duplicate" } },
+          }).catch((err) => {
+            this.logger.error("[ResumeService] auditLog FREE_RESUME_LIMIT_HIT (duplicate) failed", { userId }, err)
+          })
+          throw new AppError("plan_limit_resume", 403, { limit: limits.maxResumes })
         }
       }
       return tx.resume.create({

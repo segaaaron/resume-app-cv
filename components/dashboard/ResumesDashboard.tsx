@@ -22,6 +22,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { isActive } from "@/lib/plans"
 import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
 import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed } from "./_resume-sub"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 export default function ResumesDashboard({ initialResumes }: { initialResumes: ResumeCard[] }) {
   const t = useTranslations("dashboard.resumes")
@@ -48,6 +49,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [personalUseConsented, setPersonalUseConsented] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null)
   const [portalLoading, setPortalLoading] = useState(false)
+  const { open: openUpgradeModal } = useUpgradeModal()
 
   // Generate thumbnails for CVs that don't have one yet (staggered, fire-and-forget)
   useEffect(() => {
@@ -145,6 +147,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   function requirePro() {
+    // Legacy fallback retained for download path; create flow uses UpgradeModal.
     router.push(`/${locale}/pricing`)
     toast.info(t("require_pro_toast"))
   }
@@ -156,8 +159,12 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   function createResume() {
-    if (!isPro) { requirePro(); return }
-    if (resumes.length >= 1) {
+    // Freemium funnel: 1 CV included on free plan. Beyond that → UpgradeModal.
+    if (!isPro && resumes.length >= 1) {
+      openUpgradeModal("second-resume")
+      return
+    }
+    if (isPro && resumes.length >= 1) {
       requirePersonalUseConsent(doCreateResume)
       return
     }
@@ -229,6 +236,11 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   async function downloadPdf(resume: ResumeCard) {
+    // Freemium paywall: intercept on client before hitting the gated endpoint.
+    if (!isPro) {
+      openUpgradeModal("download")
+      return
+    }
     if (downloadingIds.has(resume.id)) return
     setDownloadingIds((prev) => new Set(prev).add(resume.id))
 
@@ -293,9 +305,19 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
           >
             {t("page_title")}
           </h1>
-          <p className="text-[13.5px] text-dash-muted mt-[6px]">
-            {resumes.length} {resumes.length === 1 ? t("active_document_one") : t("active_documents_other")}
-            {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
+          <p className="text-[13.5px] text-dash-muted mt-[6px] flex items-center gap-2 flex-wrap">
+            <span>
+              {resumes.length} {resumes.length === 1 ? t("active_document_one") : t("active_documents_other")}
+              {isPro ? ` · ${t("plan_pro_suffix")}` : ""}
+            </span>
+            {!isPro && resumes.length >= 1 && (
+              <span
+                className="inline-flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.06em] px-2 py-0.5 rounded-full border border-[rgba(0,212,255,0.35)] text-[#00A8CC]"
+                style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.12), rgba(0,168,204,0.04))" }}
+              >
+                {resumes.length}/1
+              </span>
+            )}
           </p>
         </div>
       </div>
