@@ -53,7 +53,7 @@ function clearAuthCookiesAndRedirect(request: NextRequest, locale: string): Next
   return res
 }
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Redirect non-www to www in production
@@ -156,10 +156,10 @@ export async function middleware(request: NextRequest) {
   return intlMiddleware(request)
 }
 
-// NOTE: /api/ routes are intentionally excluded from this middleware.
+// NOTE: /api/ routes are intentionally excluded from this proxy.
 // API routes handle their own auth (via `auth()`) and rate limiting
 // (via `checkRateLimit()` in `lib/ai-client.ts`). Including /api/ here
-// would add in-memory middleware rate limiting that resets on each deploy
+// would add in-memory proxy rate limiting that resets on each deploy
 // and runs on the Edge, where per-user DB lookups are not feasible.
 export const config = {
   matcher: [

@@ -13,6 +13,14 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "cookie_policy" })
   return {
     title: t("meta_title"),
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/cookie-policy`,
+      languages: {
+        es: "https://readycvv.com/es/cookie-policy",
+        en: "https://readycvv.com/en/cookie-policy",
+        "x-default": "https://readycvv.com/en/cookie-policy",
+      },
+    },
   }
 }
 

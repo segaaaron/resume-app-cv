@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation"
 import { signOut } from "next-auth/react"
 import { clearSessionToken } from "@/lib/actions/logout"
 import { toast } from "sonner"
-import { FileText, Mail, Briefcase, Settings, LogOut, Shield } from "lucide-react"
+import { FileText, Mail, Briefcase, Settings, LogOut, Shield, Gift } from "lucide-react"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +64,17 @@ export default function DashboardNav({
       proOnly: true,
       count: null as number | null,
       isNew: false,
+    },
+  ]
+
+  const recompensas = [
+    {
+      label: t("referrals"),
+      href: `/${locale}/dashboard/referrals`,
+      icon: Gift,
+      proOnly: false,
+      count: null as number | null,
+      isNew: true,
     },
   ]
 
@@ -135,6 +146,12 @@ export default function DashboardNav({
         <NavSeparator />
         <SectionLabel label={t("section_applications")} />
         {candidaturas.map((item) => (
+          <NavItem key={item.href} {...item} locked={item.proOnly && !isPro} active={isActive(item.href)} onClick={onDrawerClose} />
+        ))}
+
+        <NavSeparator />
+        <SectionLabel label={t("section_rewards")} />
+        {recompensas.map((item) => (
           <NavItem key={item.href} {...item} locked={item.proOnly && !isPro} active={isActive(item.href)} onClick={onDrawerClose} />
         ))}
 

@@ -13,6 +13,14 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "dmca" })
   return {
     title: t("meta_title"),
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/dmca`,
+      languages: {
+        es: "https://readycvv.com/es/dmca",
+        en: "https://readycvv.com/en/dmca",
+        "x-default": "https://readycvv.com/en/dmca",
+      },
+    },
   }
 }
 

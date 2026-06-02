@@ -7,50 +7,50 @@ datasource db {
 }
 
 model User {
-  id                  String               @id @default(cuid())
-  name                String?
-  email               String               @unique
-  emailVerified       DateTime?
-  image               String?
-  password            String?
-  plan                Plan                 @default(UNSUBSCRIBED)
-  trialEndsAt         DateTime?
-  role                Role                 @default(USER)
-  stripeCustomerId    String?              @unique
-  subscriptionId      String?              @unique
-  subscriptionEndsAt  DateTime?
-  subscriptionStatus  SubscriptionStatus   @default(NONE)
-  planInterval        String?
-  accounts            Account[]
-  sessions            Session[]
-  resumes             Resume[]
-  coverLetters        CoverLetter[]
-  applications        Application[]
-  marketingConsent    Boolean              @default(false)
-  ageVerified         Boolean              @default(false)
-  emailOptOut             Boolean              @default(false)
-  renewalReminderSentAt   DateTime?
-  deletedAt           DateTime?
-  auditLogs           AuditLog[]
-  referralCode        String?              @unique
-  referredBy          String?
-  referredUsers       User[]               @relation("Referrals")
-  referrer            User?                @relation("Referrals", fields: [referredBy], references: [id])
-  referralRewardTier  Int                  @default(0)
-  referralCycleOffset Int                  @default(0)
-  referrerConversions ReferralConversion[] @relation("ReferrerConversions")
-  referredConversions ReferralConversion[] @relation("ReferredConversions")
-  sessionVersion      Int                  @default(1)
-  forceLogoutAt       DateTime?            // set by admin to invalidate all active JWTs immediately
-  activeSessionToken           String?   @unique
+  id                           String               @id @default(cuid())
+  name                         String?
+  email                        String               @unique
+  emailVerified                DateTime?
+  image                        String?
+  password                     String?
+  plan                         Plan                 @default(UNSUBSCRIBED)
+  trialEndsAt                  DateTime?
+  role                         Role                 @default(USER)
+  stripeCustomerId             String?              @unique
+  subscriptionId               String?              @unique
+  subscriptionEndsAt           DateTime?
+  subscriptionStatus           SubscriptionStatus   @default(NONE)
+  planInterval                 String?
+  accounts                     Account[]
+  sessions                     Session[]
+  resumes                      Resume[]
+  coverLetters                 CoverLetter[]
+  applications                 Application[]
+  marketingConsent             Boolean              @default(false)
+  ageVerified                  Boolean              @default(false)
+  emailOptOut                  Boolean              @default(false)
+  renewalReminderSentAt        DateTime?
+  deletedAt                    DateTime?
+  auditLogs                    AuditLog[]
+  referralCode                 String?              @unique
+  referredBy                   String?
+  referredUsers                User[]               @relation("Referrals")
+  referrer                     User?                @relation("Referrals", fields: [referredBy], references: [id])
+  referralRewardTier           Int                  @default(0)
+  referralCycleOffset          Int                  @default(0)
+  referrerConversions          ReferralConversion[] @relation("ReferrerConversions")
+  referredConversions          ReferralConversion[] @relation("ReferredConversions")
+  sessionVersion               Int                  @default(1)
+  forceLogoutAt                DateTime? // set by admin to invalidate all active JWTs immediately
+  activeSessionToken           String?              @unique
   sessionChallengeCode         String?
   sessionChallengeExp          DateTime?
-  sessionChallengeAttempts     Int       @default(0)
+  sessionChallengeAttempts     Int                  @default(0)
   sessionChallengeBlockedUntil DateTime?
-  termsAcceptedAt     DateTime?
-  lastActiveAt        DateTime             @default(now())
-  createdAt           DateTime             @default(now())
-  updatedAt           DateTime             @updatedAt
+  termsAcceptedAt              DateTime?
+  lastActiveAt                 DateTime             @default(now())
+  createdAt                    DateTime             @default(now())
+  updatedAt                    DateTime             @updatedAt
 
   @@index([referredBy])
   @@index([deletedAt])
@@ -222,8 +222,8 @@ model ReferralConversion {
 model StripeEvent {
   id                String   @id // Stripe event ID (e.g. evt_xxx)
   processedAt       DateTime @default(now())
-  userId            String?  // set when the event is associated to a known user
-  checkoutSessionId String?  // set for checkout.session.completed events
+  userId            String? // set when the event is associated to a known user
+  checkoutSessionId String? // set for checkout.session.completed events
 
   @@index([processedAt])
   @@index([userId])
@@ -309,4 +309,25 @@ model PasswordReset {
   attempts  Int       @default(0)
   usedAt    DateTime?
   createdAt DateTime  @default(now())
+}
+
+model AtsCheck {
+  id            String   @id @default(cuid())
+  sessionId     String // anonymous session token
+  scoreOverall  Int
+  scoreKeywords Int
+  scoreFormat   Int
+  scoreSections Int
+  scoreLength   Int
+  scoreContact  Int      @default(0)
+  locale        String
+  country       String?
+  userAgent     String?  @db.Text
+  jdHash        String
+  resumeHash    String
+  ip            String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([sessionId])
 }

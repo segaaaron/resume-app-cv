@@ -1,5 +1,6 @@
 "use client"
 
+import Image from "next/image"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useSession } from "next-auth/react"
@@ -37,8 +38,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#C9A96E]/25 shadow-brand-xs">
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="ReadyCVV" width={28} height={28} className="rounded-lg shrink-0" />
+          <Image src="/logo.svg" alt="ReadyCVV" width={28} height={28} priority className="rounded-lg shrink-0" />
           ReadyCVV
         </Link>
 

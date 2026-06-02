@@ -11,7 +11,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: "metadata.terms" })
-  return { title: t("title") }
+  return {
+    title: t("title"),
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/terms`,
+      languages: {
+        es: "https://readycvv.com/es/terms",
+        en: "https://readycvv.com/en/terms",
+        "x-default": "https://readycvv.com/en/terms",
+      },
+    },
+  }
 }
 
 export default async function TermsPage({

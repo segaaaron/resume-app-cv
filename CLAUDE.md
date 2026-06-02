@@ -21,6 +21,50 @@
 - Keep files under 500 lines
 - Validate input at system boundaries
 
+## Equipo Élite Autorizado
+
+**SOLO los siguientes agentes y skills pueden ejecutar trabajo en este proyecto. Cualquier otro = PROHIBIDO sin autorización explícita del usuario en ese turno. No spawnear subagents redundantes ni "por si acaso".**
+
+### Agentes (10) — roles únicos
+
+| Agente | Rol |
+|--------|-----|
+| `readycvv-qa-senior` | QA Lead. Auditoría templates, Stripe, API, seguridad, pre-deploy. Obligatorio antes commit/PR/deploy. |
+| `readycv-product-owner` | Product Owner. Backlog, MoSCoW, user stories, retención, análisis churn/feedback. |
+| `frontend-doc-architect` | Document Engineer. Templates CV, PDF/Word export, print layouts, Tailwind avanzado, Next.js components. |
+| `backend-dev` | Backend Engineer. API routes, Prisma, Stripe webhooks, endpoints AI, validación Zod. |
+| `security-auditor` | Security Lead. Auth, JWT, CSRF, rate-limit, secrets, OWASP, PII. |
+| `tester` | Test Engineer. Unit, integration, edge cases, regression. |
+| `reviewer` | Code Reviewer. Calidad, smells, patrones, consistency. Pre-PR. |
+| `Explore` | Code Search. Localizar archivos, símbolos, referencias. |
+| `Plan` | Solution Architect. Diseño multi-paso, trade-offs, estrategia. Tareas >3 archivos. |
+| `production-validator` | Deploy Gate. Verificar prod-ready, env vars, build, migraciones. Antes Dokploy deploy. |
+
+### Skills (13) — herramientas autorizadas
+
+- `readycv-auth-validator` — validar auth/Pro Gate
+- `frontend-design` — componentes UI premium
+- `ui-ux-pro-max:ui-ux-pro-max` — sistemas diseño, paletas, layouts
+- `claude-api` — endpoints AI (fill-profile, summary)
+- `tdd` — features con tests primero
+- `diagnose` — bugs reproducibles
+- `systematic-debugging` — bugs complejos
+- `verification-before-completion` — verificar antes "done"
+- `brainstorming` — pre-implementación features
+- `writing-plans` — specs multi-step
+- `verify` — confirmar fix funciona
+- `run` — lanzar app real navegador
+- `security-review` — diff seguridad pre-commit
+
+### Reglas de uso
+
+1. NO invocar agentes/skills fuera de esta lista sin OK explícito del usuario en ese turno.
+2. Cada agente cumple SU rol — no duplicar trabajo entre agentes.
+3. NO spawnear subagents redundantes para tareas que el agente principal puede resolver.
+4. Excepción permitida: `update-config` solo si usuario pide cambiar `settings.json`.
+5. Para dudas Claude Code/SDK puede usarse `claude-code-guide` puntualmente.
+6. Si tarea requiere capacidad fuera del equipo, AVISAR al usuario y esperar autorización antes de invocar otro agente/skill.
+
 ## Build & Test
 
 - ALWAYS run tests after code changes

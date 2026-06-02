@@ -78,6 +78,7 @@ export async function generateMetadata({
       languages: {
         es: "https://readycvv.com/es/templates",
         en: "https://readycvv.com/en/templates",
+        "x-default": "https://readycvv.com/en/templates",
       },
     },
     openGraph: {
@@ -413,8 +414,19 @@ export default async function TemplatesPage({
           </div>
         </div>
         <div className="mt-2.5 px-0.5">
-          <h3 className={`font-semibold text-sm leading-tight ${locked ? "text-muted-foreground" : ""}`}>{template.name}</h3>
-          <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">{template.description}</p>
+          <Link
+            href={`/${locale}/templates/design/${template.id}`}
+            className="group/title block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded"
+          >
+            <h3
+              className={`font-semibold text-sm leading-tight transition-colors group-hover/title:text-primary ${locked ? "text-muted-foreground" : ""}`}
+            >
+              {template.name}
+            </h3>
+            <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">
+              {template.description}
+            </p>
+          </Link>
         </div>
       </div>
     )

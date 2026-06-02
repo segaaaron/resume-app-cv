@@ -14,6 +14,14 @@ export interface ReferralTierInfo {
   label: string
 }
 
+export interface ReferralRewardHistoryItem {
+  id: string
+  referredAt: string // ISO date
+  status: "verified" | "pending"
+  tierApplied: number | null
+  creditCents: number | null
+}
+
 export interface ReferralStatusResult {
   referralCode: string
   totalReferred: number
@@ -21,6 +29,12 @@ export interface ReferralStatusResult {
   cycleCount: number
   rewardTier: number
   nextTier: ReferralTierInfo | null
+  // ── extended (dashboard UI) ────────────────────────────────────────────────
+  totalConversions: number
+  cycleOffset: number
+  conversionsToNextTier: number | null
+  totalStripeCreditsCents: number
+  rewardsHistory: ReferralRewardHistoryItem[]
 }
 
 // ─── Service ──────────────────────────────────────────────────────────────────
@@ -63,11 +77,44 @@ export class ReferralService {
     ).length
 
     // Cycle count = paid referrals since last tier reset
-    const cycleCount = totalPaid - (user.referralCycleOffset ?? 0)
+    const cycleOffset = user.referralCycleOffset ?? 0
+    const cycleCount = totalPaid - cycleOffset
     const rewardTier = user.referralRewardTier ?? 0
 
     // Next tier to reach in this cycle
     const nextTier = REFERRAL_TIERS.find((t) => t.tier > rewardTier) ?? null
+    const conversionsToNextTier = nextTier ? Math.max(0, nextTier.threshold - cycleCount) : null
+
+    // ── Conversions history (ReferralConversion audit) ────────────────────────
+    const conversions = await db.referralConversion.findMany({
+      where: { referrerId: userId },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+      select: {
+        id: true,
+        createdAt: true,
+        referred: { select: { emailVerified: true, plan: true, subscriptionEndsAt: true, subscriptionStatus: true } },
+      },
+    })
+
+    const totalConversions = await db.referralConversion.count({ where: { referrerId: userId } })
+
+    // Tier credits accumulated within current cycle (matches the rewards applied so far)
+    const totalStripeCreditsCents = REFERRAL_TIERS
+      .filter((t) => t.tier <= rewardTier)
+      .reduce((sum, t) => sum + t.creditCents, 0)
+
+    const rewardsHistory: ReferralRewardHistoryItem[] = conversions.map((c) => {
+      const verified = c.referred.emailVerified !== null
+        && isActive(c.referred.plan, c.referred.subscriptionEndsAt, c.referred.subscriptionStatus)
+      return {
+        id: c.id,
+        referredAt: c.createdAt.toISOString(),
+        status: verified ? "verified" : "pending",
+        tierApplied: null, // tier is referrer-cycle-level — not per-conversion; UI hides if null
+        creditCents: null,
+      }
+    })
 
     return {
       referralCode: user.referralCode!,
@@ -78,6 +125,11 @@ export class ReferralService {
       nextTier: nextTier
         ? { tier: nextTier.tier, threshold: nextTier.threshold, label: nextTier.label }
         : null,
+      totalConversions,
+      cycleOffset,
+      conversionsToNextTier,
+      totalStripeCreditsCents,
+      rewardsHistory,
     }
   }
 }

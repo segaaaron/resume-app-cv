@@ -3,12 +3,14 @@ import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import SessionProvider from "@/components/providers/SessionProvider"
+import ClarityScript from "@/components/analytics/ClarityScript"
 import { auth } from "@/lib/auth"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
+  display: "swap",
 })
 
 const playfairDisplay = Playfair_Display({
@@ -16,6 +18,7 @@ const playfairDisplay = Playfair_Display({
   subsets: ["latin"],
   weight: ["400", "700", "900"],
   style: ["normal", "italic"],
+  display: "swap",
 })
 
 const BASE_URL = "https://readycvv.com"
@@ -52,6 +55,9 @@ export default async function RootLayout({
           {children}
           <Toaster position="top-center" />
         </SessionProvider>
+        {process.env.NEXT_PUBLIC_CLARITY_ID && (
+          <ClarityScript projectId={process.env.NEXT_PUBLIC_CLARITY_ID} />
+        )}
       </body>
     </html>
   )

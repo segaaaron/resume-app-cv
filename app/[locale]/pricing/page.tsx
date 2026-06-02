@@ -74,6 +74,7 @@ export async function generateMetadata({
       languages: {
         es: "https://readycvv.com/es/pricing",
         en: "https://readycvv.com/en/pricing",
+        "x-default": "https://readycvv.com/en/pricing",
       },
     },
     openGraph: {

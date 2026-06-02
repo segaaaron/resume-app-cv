@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
+import Image from "next/image"
 import Link from "next/link"
 import { Menu, X } from "lucide-react"
 import { useTranslations } from "next-intl"
@@ -217,8 +218,7 @@ export default function CinematicHomepage({ children, locale }: Props) {
           className="flex items-center gap-2 font-bold text-xl shrink-0 transition-colors duration-700"
           style={{ color: navFg }}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo.svg" alt="ReadyCVV" width={28} height={28} className="rounded-lg shrink-0" />
+          <Image src="/logo.svg" alt="ReadyCVV" width={28} height={28} priority className="rounded-lg shrink-0" />
           ReadyCVV
         </Link>
 

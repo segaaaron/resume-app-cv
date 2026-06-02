@@ -26,6 +26,7 @@ export async function generateMetadata({
       languages: {
         es: `https://readycvv.com/es/blog/${SLUG}`,
         en: `https://readycvv.com/en/blog/${SLUG}`,
+        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {

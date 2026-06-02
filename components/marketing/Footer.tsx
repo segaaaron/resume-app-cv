@@ -1,14 +1,21 @@
+import Image from "next/image"
 import Link from "next/link"
 import { useTranslations, useLocale } from "next-intl"
 
 export default function Footer() {
   const t = useTranslations("footer")
+  const tt = useTranslations("footerTools")
   const locale = useLocale()
 
   const productLinks = [
     { label: t("templates"), href: `/${locale}/templates` },
     { label: t("pricing"), href: `/${locale}/pricing` },
     { label: t("blog"), href: `/${locale}/blog` },
+  ]
+
+  const toolsLinks = [
+    { label: tt("atsChecker"), href: `/${locale}/tools/ats-checker` },
+    { label: tt("salaryCalculator"), href: `/${locale}/tools/salary-calculator` },
   ]
 
   const legalLinks = [
@@ -20,13 +27,12 @@ export default function Footer() {
   return (
     <footer className="bg-[#0d1b2e]">
       <div className="max-w-6xl mx-auto px-6 pt-12 pb-0">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 pb-7">
+        <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 pb-7">
 
           {/* Brand */}
           <div>
             <Link href={`/${locale}`} className="flex items-center gap-2 mb-3 no-underline">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src="/logo.svg"
                 alt="ReadyCVV"
                 width={26}
@@ -47,6 +53,25 @@ export default function Footer() {
             </h4>
             <ul className="space-y-2.5 list-none p-0 m-0">
               {productLinks.map(({ label, href }) => (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    className="text-[#94A3B8] text-[13px] no-underline hover:!text-white transition-colors duration-200"
+                  >
+                    {label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Free Tools */}
+          <div>
+            <h4 className="text-[#94A3B8] text-[10px] font-bold uppercase tracking-[.1em] mb-3.5">
+              {tt("title")}
+            </h4>
+            <ul className="space-y-2.5 list-none p-0 m-0">
+              {toolsLinks.map(({ label, href }) => (
                 <li key={href}>
                   <Link
                     href={href}

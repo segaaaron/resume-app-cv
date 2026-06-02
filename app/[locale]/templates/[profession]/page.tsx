@@ -7,6 +7,7 @@ import Footer from "@/components/marketing/Footer"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, CheckCircle } from "lucide-react"
 import { setRequestLocale } from "next-intl/server"
+import { templatesSEO } from "@/lib/templates-seo"
 
 const BASE_URL = "https://readycvv.com"
 
@@ -516,6 +517,7 @@ export async function generateMetadata({
       languages: {
         es: `${BASE_URL}/es/templates/${profession}`,
         en: `${BASE_URL}/en/templates/${profession}`,
+        "x-default": `${BASE_URL}/en/templates/${profession}`,
       },
     },
     openGraph: {
@@ -636,11 +638,29 @@ export default async function ProfessionTemplatePage({
                 : `These ReadyCVV templates are most popular among ${content.h1.replace(" Resume Templates", "").toLowerCase()} professionals.`}
             </p>
             <div className="flex flex-wrap gap-2 mb-8">
-              {content.recommended.map((name) => (
-                <span key={name} className="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-lg">
-                  {name}
-                </span>
-              ))}
+              {content.recommended.map((name) => {
+                // Map "ATS Pro" → "ats", "Blueprint" → "blueprint", etc. against templatesSEO names.
+                const lookup = name.toLowerCase().replace(/\s+pro$/, "").trim()
+                const match = templatesSEO.find(
+                  (t) => t.name.toLowerCase() === lookup || t.id === lookup,
+                )
+                if (match) {
+                  return (
+                    <Link
+                      key={name}
+                      href={`/${locale}/templates/design/${match.slug}`}
+                      className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary text-sm font-medium rounded-lg transition-colors"
+                    >
+                      {name} →
+                    </Link>
+                  )
+                }
+                return (
+                  <span key={name} className="px-3 py-1.5 bg-primary/10 text-primary text-sm font-medium rounded-lg">
+                    {name}
+                  </span>
+                )
+              })}
             </div>
             <Link href={`/${locale}/templates`}>
               <Button className="gap-2">

@@ -1,7 +1,6 @@
 // lib/services/cron/CronService.ts
 import { db } from "@/lib/db"
 import type { ILogger } from "@/lib/interfaces/ILogger"
-import type { Resend } from "resend"
 import {
   renewalReminderHtml,
   renewalReminderText,

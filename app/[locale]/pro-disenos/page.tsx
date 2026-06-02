@@ -19,6 +19,14 @@ export async function generateMetadata({
   return {
     title: t("title"),
     description: t("description"),
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/pro-disenos`,
+      languages: {
+        es: "https://readycvv.com/es/pro-disenos",
+        en: "https://readycvv.com/en/pro-disenos",
+        "x-default": "https://readycvv.com/en/pro-disenos",
+      },
+    },
   }
 }
 

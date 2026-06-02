@@ -22,6 +22,7 @@ export async function generateMetadata({
       languages: {
         es: "https://readycvv.com/es/blog",
         en: "https://readycvv.com/en/blog",
+        "x-default": "https://readycvv.com/en/blog",
       },
     },
     openGraph: {
@@ -51,7 +52,158 @@ export default async function BlogIndexPage({
   const t = await getTranslations("blog_index")
   const tBlog = await getTranslations("blog")
 
-  const articles = [
+  // Locale-specific posts (no cross-translation). Each renders only in its target locale.
+  type Article = { slug: string; title: string; desc: string; tag: string; date: string; readingTime: number }
+  const localeSpecific: Article[] = [
+    // Lote 1 — pilot posts
+    locale === "en" && {
+      slug: "how-to-write-resume-summary",
+      title: "How to Write a Resume Summary (50 Examples That Get Interviews)",
+      desc: "The 4-line formula recruiters expect, 50 role-specific examples and the 7 mistakes that skip your summary. Pass ATS in 15 minutes.",
+      tag: "Resume Writing",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    locale === "es" && {
+      slug: "cv-en-ingles",
+      title: "CV en Inglés: Guía Paso a Paso con Ejemplos (Resume 2026)",
+      desc: "El formato real que usan en USA, UK y multinacionales. Estructura, vocabulario por sector, errores típicos y plantillas listas.",
+      tag: "CV Internacional",
+      date: "2026-06-01",
+      readingTime: 10,
+    },
+    // Lote 2 — EN posts
+    locale === "en" && {
+      slug: "resume-skills-by-industry",
+      title: "Resume Skills: 200+ Skills by Industry (2026 Guide)",
+      desc: "200+ resume skills organized by industry, the framework to choose yours, ATS formatting rules and the 5 mistakes that tank your match score.",
+      tag: "Resume Skills",
+      date: "2026-06-01",
+      readingTime: 11,
+    },
+    locale === "en" && {
+      slug: "cv-vs-resume-differences",
+      title: "CV vs Resume: Complete Comparison 2026 (When to Use Each)",
+      desc: "CV and resume are not interchangeable. The 7 key differences, when to use each, and a country-by-country guide so you never send the wrong document.",
+      tag: "Resume Basics",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    // Lote 2 — ES posts
+    locale === "es" && {
+      slug: "habilidades-para-cv",
+      title: "Habilidades para CV: 200+ Skills por Industria (Guía 2026)",
+      desc: "200+ habilidades organizadas por industria, el proceso para elegir las tuyas, reglas de formato ATS y los 5 errores que arruinan tu match score.",
+      tag: "Habilidades CV",
+      date: "2026-06-01",
+      readingTime: 11,
+    },
+    locale === "es" && {
+      slug: "objetivo-profesional-ejemplos",
+      title: "50 Ejemplos de Objetivo Profesional para CV (Guía 2026)",
+      desc: "50 ejemplos por categoría (recién egresado, cambio de carrera, sin experiencia, con experiencia, por industria), la fórmula que funciona y los 6 errores que evitar.",
+      tag: "Objetivo Profesional",
+      date: "2026-06-01",
+      readingTime: 10,
+    },
+    // Lote 3 — EN posts
+    locale === "en" && {
+      slug: "chronological-vs-functional-resume",
+      title: "Chronological vs Functional Resume: Which Format to Use (2026)",
+      desc: "Chronological, functional or combination — which resume format wins in 2026, when to use each, ATS compatibility per format and real candidate examples.",
+      tag: "Resume Formats",
+      date: "2026-06-01",
+      readingTime: 10,
+    },
+    locale === "en" && {
+      slug: "resume-length-guide",
+      title: "Resume Length: 1 or 2 Pages? Complete Guide for 2026",
+      desc: "The real answer on resume length: when 1 page wins, when 2 is required, country-by-country expectations and 8 tactics to cut to a single page without losing impact.",
+      tag: "Resume Basics",
+      date: "2026-06-01",
+      readingTime: 8,
+    },
+    // Lote 3 — ES posts
+    locale === "es" && {
+      slug: "cv-recien-graduado",
+      title: "CV para Recién Graduados Universitarios (Guía 2026 + Ejemplos)",
+      desc: "La estructura ideal del CV recién graduado, cómo presentar prácticas y proyectos académicos como experiencia y 5 ejemplos completos por área profesional.",
+      tag: "CV Sin Experiencia",
+      date: "2026-06-01",
+      readingTime: 10,
+    },
+    locale === "es" && {
+      slug: "cv-cambio-carrera",
+      title: "CV para Cambio de Carrera: Guía Completa con Ejemplos (2026)",
+      desc: "El CV de cambio de carrera necesita estrategia distinta: formato correcto, habilidades transferibles, reformular experiencia y 4 ejemplos antes/después reales.",
+      tag: "Cambio de Carrera",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    // Lote 4 — EN posts (cross-translated)
+    locale === "en" && {
+      slug: "action-verbs-resume",
+      title: "300+ Action Verbs for Your Resume (By Industry, 2026)",
+      desc: "300+ resume action verbs organized by category — leadership, results, technical, sales — plus the 4-step framework to pick the right verb and 5 before/after rewrites.",
+      tag: "Resume Writing",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    locale === "en" && {
+      slug: "resume-mistakes-to-avoid",
+      title: "15 Resume Mistakes That Cost You The Interview (2026)",
+      desc: "The 15 highest-cost resume mistakes ranked by impact: why each one hurts, how to fix it, before/after examples and a 12-item self-audit checklist.",
+      tag: "Resume Basics",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    // Lote 4 — ES posts (cross-translated)
+    locale === "es" && {
+      slug: "verbos-de-accion-cv",
+      title: "300+ Verbos de Acción para tu Currículum (Por Industria, 2026)",
+      desc: "300+ verbos de acción organizados por categoría — liderazgo, resultados, técnicos, ventas — el framework para elegir el correcto y 5 ejemplos antes/después.",
+      tag: "Redacción CV",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    locale === "es" && {
+      slug: "errores-comunes-cv",
+      title: "15 Errores Comunes en el Currículum que Debes Evitar (2026)",
+      desc: "Los 15 errores más costosos en el CV ranking por impacto: por qué dañan, cómo arreglarlos, ejemplos antes/después y checklist de auto-auditoría de 12 ítems.",
+      tag: "Errores CV",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    // Lote 5 — EN posts (cross-translated)
+    locale === "en" && {
+      slug: "how-to-tailor-resume",
+      title: "How to Tailor Your Resume for Each Job (Step-by-Step Guide 2026)",
+      desc: "Tailored resumes get 40% more interviews. The 6-step process to adapt your resume per job in 15-30 minutes, with a worked example showing 3 versions from one base.",
+      tag: "Resume Strategy",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    // Lote 5 — ES posts (cross-translated + single-locale)
+    locale === "es" && {
+      slug: "adaptar-cv-oferta-trabajo",
+      title: "Cómo Adaptar tu CV a Cada Oferta de Trabajo (Guía Paso a Paso 2026)",
+      desc: "Los CVs adaptados obtienen 40% más entrevistas. El proceso de 6 pasos para adaptar tu CV por oferta en 15-30 minutos, con ejemplo trabajado de 3 versiones desde una base.",
+      tag: "Estrategia CV",
+      date: "2026-06-01",
+      readingTime: 9,
+    },
+    locale === "es" && {
+      slug: "cv-sin-experiencia",
+      title: "Cómo Hacer un CV Sin Experiencia (Guía Completa 2026 + 8 Ejemplos)",
+      desc: "La estructura ideal del CV sin experiencia, cómo convertir proyectos y voluntariado en activos legítimos y 8 ejemplos completos por área profesional.",
+      tag: "CV Sin Experiencia",
+      date: "2026-06-01",
+      readingTime: 11,
+    },
+  ].filter(Boolean) as Article[]
+
+  const articles: Article[] = [
+    ...localeSpecific,
     { slug: "que-es-ats-y-por-que-rechaza-tu-cv", title: t("que-es-ats-y-por-que-rechaza-tu-cv.title"), desc: t("que-es-ats-y-por-que-rechaza-tu-cv.desc"), tag: t("que-es-ats-y-por-que-rechaza-tu-cv.tag"), date: "2026-04-29", readingTime: 7 },
     { slug: "como-escribir-bullets-de-cv", title: t("como-escribir-bullets-de-cv.title"), desc: t("como-escribir-bullets-de-cv.desc"), tag: t("como-escribir-bullets-de-cv.tag"), date: "2026-04-29", readingTime: 6 },
     { slug: "constructores-de-cv-gratuitos-vs-pago", title: t("constructores-de-cv-gratuitos-vs-pago.title"), desc: t("constructores-de-cv-gratuitos-vs-pago.desc"), tag: t("constructores-de-cv-gratuitos-vs-pago.tag"), date: "2026-04-29", readingTime: 5 },

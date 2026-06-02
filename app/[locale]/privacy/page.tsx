@@ -11,7 +11,17 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params
   const t = await getTranslations({ locale, namespace: "metadata.privacy" })
-  return { title: t("title") }
+  return {
+    title: t("title"),
+    alternates: {
+      canonical: `https://readycvv.com/${locale}/privacy`,
+      languages: {
+        es: "https://readycvv.com/es/privacy",
+        en: "https://readycvv.com/en/privacy",
+        "x-default": "https://readycvv.com/en/privacy",
+      },
+    },
+  }
 }
 
 export default async function PrivacyPage({

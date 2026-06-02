@@ -129,10 +129,22 @@ export class StripeWebhookService {
     const result = await db.$transaction(async (tx) => {
       try { await tx.stripeEvent.create({ data: { id: event.id } }) }
       catch (e) { if (isDuplicate(e)) return { skip: true, user: null }; throw e }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, name: true, email: true, planInterval: true, subscriptionStatus: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, name: true, email: true, planInterval: true },
+      })
       if (!user) return { skip: false, user: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
-      await tx.user.update({ where: { id: user.id }, data: { plan: "PRO", trialEndsAt: null, subscriptionStatus: "ACTIVE", subscriptionEndsAt: renewalDate, sessionVersion: { increment: 1 } } })
+      await tx.user.update({
+        where: { id: user.id },
+        data: {
+          plan: "PRO",
+          trialEndsAt: null,
+          subscriptionStatus: "ACTIVE",
+          subscriptionEndsAt: renewalDate,
+          sessionVersion: { increment: 1 },
+        },
+      })
       return { skip: false, user }
     }, TX_OPTS)
 
@@ -342,26 +354,32 @@ export class StripeWebhookService {
     const result = await db.$transaction(async (tx) => {
       try { await tx.stripeEvent.create({ data: { id: event.id } }) }
       catch (e) { if (isDuplicate(e)) return { skip: true, user: null }; throw e }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, name: true, email: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, name: true, email: true },
+      })
       if (!user) return { skip: false, user: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
-      await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } } })
+      await tx.user.update({
+        where: { id: user.id },
+        data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } },
+      })
       return { skip: false, user }
     }, TX_OPTS)
 
     if (result.skip || !result.user) return
     purgeUserCache(result.user.id)
 
-    if (emailEnabled() && resend && result.user.email) {
-      const firstName = result.user.name?.split(" ")[0] ?? "Usuario"
-      await resend.emails.send({
-        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
-        to: result.user.email,
-        subject: "Acción requerida: problema con tu pago en READY CV",
-        html: paymentFailedHtml({ firstName, userId: result.user.id, invoiceUrl }),
-        text: paymentFailedText({ firstName, invoiceUrl }),
-      }).catch((e) => this.logger.error("invoice.payment_failed email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
-    }
+    if (!emailEnabled() || !resend || !result.user.email) return
+
+    const firstName = result.user.name?.split(" ")[0] ?? "Usuario"
+    await resend.emails.send({
+      from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
+      to: result.user.email,
+      subject: "Acción requerida: problema con tu pago en READY CV",
+      html: paymentFailedHtml({ firstName, userId: result.user.id, invoiceUrl }),
+      text: paymentFailedText({ firstName, invoiceUrl }),
+    }).catch((e) => this.logger.error("invoice.payment_failed email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
   }
 
   private async handleFraudWarning(event: Stripe.Event): Promise<void> {

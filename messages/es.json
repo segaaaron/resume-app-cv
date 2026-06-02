@@ -77,6 +77,74 @@
       "title": "Ejemplos de Carta de Presentación 2026: Plantillas que Funcionan | ReadyCVV",
       "description": "Ejemplos reales de cartas para tech, marketing y cambios de carrera. La estructura de 3 párrafos, aperturas ganadoras y errores a evitar."
     },
+    "blog_resume_summary": {
+      "title": "How to Write a Resume Summary: 50 Examples That Get Interviews | ReadyCVV",
+      "description": "The 4-line formula recruiters expect in 2026, 50 role-specific examples and the 7 mistakes that get your summary skipped. Pass ATS in 15 minutes."
+    },
+    "blog_cv_ingles": {
+      "title": "CV en Inglés: Guía Paso a Paso con Ejemplos (Resume 2026) | ReadyCVV",
+      "description": "El formato real que usan en USA, UK y multinacionales. Estructura, vocabulario por sector, errores típicos del hispanohablante y plantillas listas."
+    },
+    "blog_resume_skills": {
+      "title": "Resume Skills: 200+ Skills by Industry (2026 Guide) | ReadyCVV",
+      "description": "200+ resume skills organized by industry, the framework to choose yours, ATS formatting rules and the 5 mistakes that tank your match score."
+    },
+    "blog_habilidades_cv": {
+      "title": "Habilidades para CV: 200+ Skills por Industria (Guía 2026) | ReadyCVV",
+      "description": "200+ habilidades organizadas por industria, el proceso para elegir las tuyas, reglas de formato ATS y los 5 errores que arruinan tu match score."
+    },
+    "blog_cv_vs_resume": {
+      "title": "CV vs Resume: Complete Comparison 2026 (When to Use Each) | ReadyCVV",
+      "description": "CV and resume are not interchangeable. The 7 key differences, when to use each, and a country-by-country guide so you never send the wrong document."
+    },
+    "blog_objetivo_profesional": {
+      "title": "50 Ejemplos de Objetivo Profesional para CV (Guía 2026) | ReadyCVV",
+      "description": "50 ejemplos por categoría (recién egresado, cambio de carrera, sin experiencia, con experiencia, por industria), la fórmula que funciona y los 6 errores que evitar."
+    },
+    "blog_chronological_functional": {
+      "title": "Chronological vs Functional Resume: Which Format to Use (2026) | ReadyCVV",
+      "description": "Chronological, functional or combination — which resume format wins in 2026, when to use each, ATS compatibility per format and real candidate examples."
+    },
+    "blog_resume_length": {
+      "title": "Resume Length: 1 or 2 Pages? Complete Guide for 2026 | ReadyCVV",
+      "description": "The real answer on resume length: when 1 page wins, when 2 is required, country-by-country expectations and 8 tactics to cut to a single page without losing impact."
+    },
+    "blog_cv_recien_graduado": {
+      "title": "CV para Recién Graduados Universitarios (Guía 2026 + Ejemplos) | ReadyCVV",
+      "description": "La estructura ideal del CV recién graduado, cómo presentar prácticas y proyectos académicos como experiencia y 5 ejemplos completos por área profesional."
+    },
+    "blog_cv_cambio_carrera": {
+      "title": "CV para Cambio de Carrera: Guía Completa con Ejemplos (2026) | ReadyCVV",
+      "description": "El CV de cambio de carrera necesita estrategia distinta: formato correcto, habilidades transferibles, reformular experiencia y 4 ejemplos antes/después reales."
+    },
+    "blog_action_verbs": {
+      "title": "300+ Action Verbs for Your Resume (By Industry, 2026) | ReadyCVV",
+      "description": "300+ resume action verbs organized by category — leadership, results, technical, sales — plus the 4-step framework to pick the right verb and 5 before/after rewrites."
+    },
+    "blog_verbos_accion": {
+      "title": "300+ Verbos de Acción para tu Currículum (Por Industria, 2026) | ReadyCVV",
+      "description": "300+ verbos de acción organizados por categoría — liderazgo, resultados, técnicos, ventas — el framework para elegir el correcto y 5 ejemplos antes/después."
+    },
+    "blog_resume_mistakes": {
+      "title": "15 Resume Mistakes That Cost You The Interview (2026) | ReadyCVV",
+      "description": "The 15 highest-cost resume mistakes ranked by impact: why each one hurts, how to fix it, before/after examples and a 12-item self-audit checklist."
+    },
+    "blog_errores_cv": {
+      "title": "15 Errores Comunes en el Currículum que Debes Evitar (2026) | ReadyCVV",
+      "description": "Los 15 errores más costosos en el CV ranking por impacto: por qué dañan, cómo arreglarlos, ejemplos antes/después y checklist de auto-auditoría de 12 ítems."
+    },
+    "blog_tailor_resume": {
+      "title": "How to Tailor Your Resume for Each Job (Step-by-Step Guide 2026) | ReadyCVV",
+      "description": "Tailored resumes get 40% more interviews. The 6-step process to adapt your resume per job in 15-30 minutes, with a worked example showing 3 versions from one base."
+    },
+    "blog_adaptar_cv": {
+      "title": "Cómo Adaptar tu CV a Cada Oferta de Trabajo (Guía Paso a Paso 2026) | ReadyCVV",
+      "description": "Los CVs adaptados obtienen 40% más entrevistas. El proceso de 6 pasos para adaptar tu CV por oferta en 15-30 minutos, con ejemplo trabajado de 3 versiones desde una base."
+    },
+    "blog_cv_sin_experiencia": {
+      "title": "Cómo Hacer un CV Sin Experiencia (Guía Completa 2026 + 8 Ejemplos) | ReadyCVV",
+      "description": "La estructura ideal del CV sin experiencia, cómo convertir proyectos y voluntariado en activos legítimos y 8 ejemplos completos por área profesional."
+    },
     "login": {
       "title": "Iniciar Sesión",
       "description": "Accede a tu cuenta de READY CV para continuar creando y editando tu currículum vitae profesional."
@@ -777,6 +845,7 @@
       "cvs": "Mis CVs",
       "letters": "Cartas",
       "jobs": "Candidaturas",
+      "referrals": "Referidos",
       "settings": "Configuración",
       "upgrade": "Mejorar plan",
       "logout": "Cerrar sesión",
@@ -789,6 +858,7 @@
       "profile": "Perfil",
       "section_documents": "Documentos",
       "section_applications": "Candidaturas",
+      "section_rewards": "Recompensas",
       "section_system": "Sistema",
       "new_badge": "Nuevo"
     },
@@ -1033,6 +1103,95 @@
       "activate_pro": "Activar PRO",
       "my_data_title": "Mis datos",
       "my_data_subtitle": "Exportar y eliminar cuenta"
+    },
+    "referrals": {
+      "meta": {
+        "title": "Referidos · ReadyCVV",
+        "description": "Comparte tu enlace, sigue tus conversiones y gana créditos Stripe."
+      },
+      "eyebrow": "Programa de referidos",
+      "hero": {
+        "title": "Refiere amigos, gana recompensas",
+        "subtitle": "Comparte tu enlace con tu red. Cada amigo que active Pro te suma crédito para tu próxima factura.",
+        "badge_conversions": "{count, plural, =0 {0 conversiones} one {# conversión} other {# conversiones}}"
+      },
+      "link": {
+        "eyebrow": "Tu enlace de referido",
+        "title": "Tu enlace único de invitación",
+        "subtitle": "Cualquiera que se registre con este enlace queda asociado automáticamente a ti.",
+        "copy_button": "Copiar enlace",
+        "copied_label": "¡Copiado!",
+        "copied_toast": "Enlace copiado al portapapeles",
+        "share_label": "Compartir en",
+        "share_email": "Email",
+        "share_text": "Estoy usando ReadyCVV para crear un currículum profesional. Regístrate con mi enlace y pruébalo:",
+        "email_subject": "Prueba ReadyCVV conmigo"
+      },
+      "tiers": {
+        "title": "Niveles de recompensa",
+        "subtitle": "Los créditos se acumulan dentro de cada ciclo. El ciclo se reinicia al alcanzar el Nivel 3.",
+        "badge_achieved": "Logrado",
+        "tier1_title": "Nivel 1 · 30% descuento",
+        "tier1_desc": "Obtén 30% de descuento en tu próxima factura como crédito Stripe de $4.50.",
+        "tier2_title": "Nivel 2 · 50% descuento",
+        "tier2_desc": "Suma otro 20% — cubre la mitad de tu próxima factura.",
+        "tier3_title": "Nivel 3 · 1 mes gratis",
+        "tier3_desc": "Gana un crédito completo de $15 — un mes Pro por nuestra cuenta.",
+        "credit_label": "crédito",
+        "threshold_label": "{count} referidos Pro",
+        "cycle_progress_label": "Progreso del ciclo · {count} de {total}",
+        "to_next_tier": "{count, plural, one {# más para el siguiente nivel} other {# más para el siguiente nivel}}",
+        "max_tier_title": "Nivel máximo alcanzado",
+        "max_tier_desc": "Tu ciclo se reiniciará automáticamente cuando se aplique la recompensa de Nivel 3. Después podrás volver a ganar recompensas."
+      },
+      "stats": {
+        "total_label": "Conversiones totales",
+        "tier_label": "Nivel actual",
+        "credits_label": "Créditos ganados",
+        "cycle_label": "Progreso del ciclo"
+      },
+      "how_it_works": {
+        "eyebrow": "Cómo funciona",
+        "title": "Tres pasos. Créditos reales.",
+        "step1_title": "Comparte tu enlace",
+        "step1_desc": "Envíalo por WhatsApp, email o redes — donde esté tu comunidad.",
+        "step2_title": "Tu amigo se registra y verifica",
+        "step2_desc": "Se registra con tu enlace y confirma su correo electrónico.",
+        "step3_title": "Recibes crédito Stripe",
+        "step3_desc": "Cuando activa Pro, tu crédito se aplica automáticamente a tu próxima factura."
+      },
+      "history": {
+        "title": "Actividad reciente",
+        "subtitle": "Tus últimos 10 referidos.",
+        "empty_state_title": "Aún no tienes referidos",
+        "empty_state_desc": "Comparte tu enlace para empezar a ganar. Cada activación Pro cuenta para tu siguiente recompensa.",
+        "row_verified_title": "Activación Pro",
+        "row_pending_title": "Registro pendiente de verificación",
+        "status_verified": "Verificado",
+        "status_pending": "Pendiente",
+        "tier_applied": "Nivel {tier} · ${amount}"
+      },
+      "faq": {
+        "title": "Preguntas frecuentes",
+        "subtitle": "Todo lo que necesitas saber del programa.",
+        "q1_question": "¿Cuándo recibo el descuento?",
+        "q1_answer": "Los créditos Stripe se aplican automáticamente a tu próxima factura en cuanto un amigo referido activa Pro y cruza un nuevo nivel.",
+        "q2_question": "¿Mi amigo necesita pagar para que yo gane?",
+        "q2_answer": "Sí. Las recompensas se activan únicamente cuando un usuario referido activa una suscripción Pro — los registros sin verificar o sin pago no cuentan.",
+        "q3_question": "¿Puedo referirme a mí mismo con otra cuenta?",
+        "q3_answer": "No. Los autoreferidos están bloqueados. Cada referido debe ser una persona distinta con email verificado.",
+        "q4_question": "¿Qué pasa después del Nivel 3?",
+        "q4_answer": "Cuando se aplica el Nivel 3, tu contador de ciclo se reinicia a cero y puedes empezar a ganar recompensas otra vez — no hay límite de ciclos.",
+        "q5_question": "¿Hay un tope de cuánto puedo ganar?",
+        "q5_answer": "No hay tope global. Sigue refiriendo, sigue ciclando — tu saldo Stripe crece en cada ciclo."
+      },
+      "cta": {
+        "share_button": "Empieza a compartir tu enlace"
+      },
+      "errors": {
+        "load_failed": "No pudimos cargar tus estadísticas de referidos. Recarga la página.",
+        "copy_failed": "No se pudo copiar el enlace. Cópialo manualmente."
+      }
     }
   },
   "editor": {
@@ -2357,5 +2516,470 @@
     "s4_title": "Contacto",
     "s4_pre": "Todos los avisos y contranotificaciones DMCA deben enviarse a: ",
     "s4_post": ""
+  },
+  "templates_detail": {
+    "breadcrumb_home": "Inicio",
+    "breadcrumb_templates": "Plantillas",
+    "badge_ats": "Compatible ATS",
+    "badge_free_download": "Descarga gratis",
+    "badge_no_watermark": "Sin marca de agua",
+    "badge_edit_online": "Edición online",
+    "ats_score_label": "Puntaje ATS",
+    "layout_label": "Diseño",
+    "photo_label": "Foto",
+    "yes": "Sí",
+    "no": "No",
+    "category_label": "Categoría",
+    "use_template_cta": "Usar esta plantilla",
+    "browse_all_cta": "Ver todas las plantillas",
+    "features_title": "Por qué funciona esta plantilla",
+    "best_for_title": "Ideal para",
+    "description_title": "Sobre esta plantilla",
+    "related_title": "Plantillas similares",
+    "related_subtitle": "Otros diseños que podrían gustarte",
+    "faq_title": "Preguntas frecuentes",
+    "faq_q1": "¿Es gratuita esta plantilla?",
+    "faq_a1": "Puedes previsualizar cada plantilla gratis. Para descargar, personalizar y exportar a PDF o Word necesitas una suscripción ReadyCV Pro ($15/mes).",
+    "faq_q2": "¿Esta plantilla pasa los sistemas ATS?",
+    "faq_a2": "Sí. Cada plantilla de ReadyCV está construida con HTML semántico que los parsers ATS pueden leer. Las plantillas con ATS Score 90+ han sido probadas contra Workday, Greenhouse, Lever y Taleo.",
+    "faq_q3": "¿Puedo editar colores, fuentes y diseño?",
+    "faq_a3": "Sí. En el editor de ReadyCV puedes cambiar el esquema de color, cambiar fuentes, reordenar secciones, ocultar bloques y personalizar espaciado — todo en tiempo real.",
+    "faq_q4": "¿A qué formatos puedo exportar?",
+    "faq_a4": "PDF (listo para imprimir) y Word (.docx). Ambos formatos preservan el diseño y están optimizados para envío a ATS.",
+    "faq_q5": "¿Puedo cambiar de plantilla después sin perder mis datos?",
+    "faq_a5": "Sí. Tu contenido se guarda separado de la plantilla. Cambia de diseño cuando quieras — tu experiencia, habilidades y educación se mantienen intactas.",
+    "final_cta_title": "Crea tu CV con esta plantilla",
+    "final_cta_subtitle": "Edita online, exporta a PDF en minutos, consigue empleo más rápido.",
+    "final_cta_button": "Empezar con esta plantilla",
+    "category_modern": "Moderno",
+    "category_classic": "Clásico",
+    "category_creative": "Creativo",
+    "category_minimal": "Minimalista",
+    "category_professional": "Profesional",
+    "category_ats": "ATS",
+    "category_tech": "Tech",
+    "category_executive": "Ejecutivo",
+    "layout_single_column": "Una columna",
+    "layout_two_column": "Dos columnas",
+    "layout_sidebar_left": "Sidebar izquierdo",
+    "layout_sidebar_right": "Sidebar derecho",
+    "pro_required": "Requiere plan Pro"
+  },
+  "tools": {
+    "atsChecker": {
+      "meta": {
+        "title": "Verificador ATS Gratis — Puntaje instantáneo de tu CV",
+        "description": "Compara tu CV con cualquier oferta y obtén un puntaje ATS al instante. Gratis, sin registro, en 30 segundos. Detecta keywords faltantes y mejoras rápidas."
+      },
+      "hero": {
+        "badge": "100 % gratis · Sin registro · Al instante",
+        "title": "Verificador ATS <accent>Gratis</accent>",
+        "subtitle": "Obtén tu puntaje ATS en 30 segundos. Descubre las palabras clave que te faltan, los errores de formato que detectan los filtros y exactamente qué corregir — antes de postular.",
+        "feat1": "Sin crear cuenta",
+        "feat2": "Resultados en 30 segundos",
+        "feat3": "Bilingüe: ES + EN"
+      },
+      "form": {
+        "step1": "Paso 1 — Sube tu CV (PDF, máx. 5 MB)",
+        "step2": "Paso 2 — Pega la descripción del puesto",
+        "dropTitle": "Arrastra tu CV aquí o haz clic para subirlo",
+        "dropSubtitle": "Solo PDF · Máx. 5 MB · Procesado en tu región",
+        "jdPlaceholder": "Pega aquí la descripción completa del puesto. Cuanto más detalle, mejor el análisis.",
+        "jdHelp": "Mínimo 50 caracteres",
+        "cta": "Analizar mi CV",
+        "analyzing": "Analizando tu CV…"
+      },
+      "errors": {
+        "noFile": "Sube primero el PDF de tu CV.",
+        "jdTooShort": "Pega una descripción del puesto más larga (mínimo 50 caracteres).",
+        "invalidType": "Solo se aceptan archivos PDF.",
+        "fileTooLarge": "Tu PDF pesa más de 5 MB. Compáctalo e inténtalo de nuevo.",
+        "generic": "Algo salió mal. Inténtalo de nuevo."
+      },
+      "score": {
+        "band": {
+          "excellent": {
+            "label": "Excelente",
+            "title": "Tu CV está listo para pasar el ATS.",
+            "subtitle": "Coincidencia sólida de keywords y estructura limpia. Postula con confianza y reutiliza esta base para puestos similares."
+          },
+          "good": {
+            "label": "Bien — pequeños ajustes",
+            "title": "Casi lo tienes.",
+            "subtitle": "Unos retoques en keywords o estructura llevarán tu CV por encima de la mayoría de los filtros ATS."
+          },
+          "fair": {
+            "label": "Necesita trabajo",
+            "title": "Riesgo real de quedar filtrado.",
+            "subtitle": "Los filtros automáticos no encuentran señales clave. Corrige los puntos siguientes antes de enviarlo."
+          },
+          "poor": {
+            "label": "Problemas críticos",
+            "title": "Tu CV podría ser rechazado en silencio.",
+            "subtitle": "Faltan varias señales básicas para el ATS. Repara los puntos de abajo antes de postular a nada."
+          }
+        }
+      },
+      "breakdown": {
+        "keywords": "Palabras clave",
+        "format": "Formato",
+        "sections": "Secciones",
+        "length": "Longitud",
+        "contact": "Contacto",
+        "phone": "Teléfono",
+        "lengthCount": "{count} palabras"
+      },
+      "preview": {
+        "title": "Adelanto de tu reporte completo",
+        "subtitle": "Esto es una muestra de lo que encontramos. Desbloquea el reporte completo — todas las keywords faltantes, todas las mejoras rápidas y las sugerencias detalladas.",
+        "missingKw": "Top keywords faltantes",
+        "quickWins": "Mejoras rápidas",
+        "unlock": "Desbloquear reporte completo",
+        "proCta": "Probar ReadyCVV PRO"
+      },
+      "email": {
+        "title": "Envíame el reporte completo",
+        "subtitle": "Te mostramos el reporte completo aquí abajo y te enviamos una copia por email para que la tengas a mano.",
+        "emailLabel": "Tu email",
+        "consent": "Acepto recibir mi reporte ATS y consejos ocasionales de CV de ReadyCVV. Puedes darte de baja cuando quieras.",
+        "submit": "Enviarme el reporte",
+        "submitting": "Enviando…",
+        "privacy": "Nunca compartimos tu email. Cumplimos GDPR y CCPA.",
+        "errors": {
+          "invalidEmail": "Ingresa un email válido.",
+          "noConsent": "Marca la casilla para recibir tu reporte.",
+          "generic": "Algo salió mal. Inténtalo de nuevo."
+        }
+      },
+      "trust": "Utilizado por personas que buscan trabajo en 40+ países — más de 10 000 CVs analizados.",
+      "crossLinkSalary": "Calcula tu salario potencial →",
+      "how": {
+        "title": "Cómo funciona",
+        "subtitle": "Tres pasos. Recomendaciones reales. Sin paja.",
+        "s1Title": "Sube tu CV",
+        "s1Body": "Extraemos el texto de tu PDF — no guardamos el archivo original.",
+        "s2Title": "Pega la oferta",
+        "s2Body": "Nuestro motor identifica las keywords que buscan los filtros de los reclutadores.",
+        "s3Title": "Recibe puntaje y correcciones",
+        "s3Body": "Ves tu puntaje, las brechas y los ajustes exactos en segundos."
+      },
+      "faq": {
+        "title": "Verificador ATS — Preguntas frecuentes",
+        "q1": "¿De verdad es gratis?",
+        "a1": "Sí. Puedes hacer un análisis, ver tu puntaje general y un adelanto de los problemas sin pagar ni crear cuenta. El reporte completo se desbloquea con tu email para enviarte una copia.",
+        "q2": "¿Cómo funciona?",
+        "a2": "Procesamos tu PDF, extraemos el texto y lo comparamos contra las keywords, la estructura y las señales de contacto que buscan la mayoría de los ATS (Workday, Greenhouse, Lever, Taleo). El puntaje es determinístico y se explica por categoría.",
+        "q3": "¿Guardáis mi CV?",
+        "a3": "No. Procesamos el archivo en memoria y solo guardamos una referencia con hash y los puntajes para analítica interna. El PDF se descarta inmediatamente tras el análisis.",
+        "q4": "¿Un puntaje perfecto garantiza una entrevista?",
+        "a4": "No. Un puntaje alto significa que los filtros automáticos te van a mostrar más fácil a un humano. La decisión final la toma una persona en base a relevancia y narrativa.",
+        "q5": "¿Cuál es la diferencia vs ReadyCVV PRO?",
+        "a5": "Este verificador gratis diagnostica tu CV actual. ReadyCVV PRO lo corrige — bullets escritos con IA, keywords automáticas por puesto, 129 plantillas y optimización ATS integrada mientras escribes."
+      },
+      "proCta": {
+        "title": "¿Quieres ayuda para corregir todo esto?",
+        "subtitle": "ReadyCVV PRO escribe bullets optimizados para ATS, sugiere keywords por puesto y adapta tu CV en minutos. Pruébalo por $15/mes.",
+        "button": "Ver plan PRO"
+      }
+    },
+    "salaryCalculator": {
+      "meta": {
+        "title": "Calculadora de Salario 2026 — Sueldos Reales por País, Profesión y Nivel",
+        "description": "Calculadora gratuita de salarios con estimaciones 2026 para 30 profesiones en 6 países. Mira p25, mediana y p90 por nivel de experiencia — sin registro.",
+        "ogTitle": "Calculadora de Salario 2026 · 30 profesiones · 6 países"
+      },
+      "hero": {
+        "badge": "Gratis · Sin registro · 6 países · 30 profesiones",
+        "title": "Conoce tu <accent>valor real de mercado</accent>",
+        "subtitle": "Elige país, profesión y nivel. Te mostramos tu rango salarial, dónde estás vs el mercado y cómo dar el salto al siguiente nivel.",
+        "feat1": "30 profesiones",
+        "feat2": "6 países",
+        "feat3": "Actualizado 2026"
+      },
+      "form": {
+        "countryLabel": "País",
+        "countryPlaceholder": "Selecciona un país",
+        "professionLabel": "Profesión",
+        "professionPlaceholder": "Buscar profesión…",
+        "levelLabel": "Nivel de experiencia",
+        "cta": "Calcular mi salario",
+        "reset": "Reiniciar",
+        "categoryAll": "Todas",
+        "noResults": "Ninguna profesión coincide con tu búsqueda."
+      },
+      "results": {
+        "yourEstimate": "Tu salario estimado",
+        "median": "Mediana (p50)",
+        "range": "Rango",
+        "period": {
+          "year": "Por año",
+          "month": "Por mes",
+          "hour": "Por hora"
+        },
+        "percentiles": {
+          "p25": "25% inferior",
+          "p50": "Mediana",
+          "p75": "25% superior",
+          "p90": "10% superior"
+        },
+        "percentilesHelp": "¿Dónde te ubicas vs otros {profession} en {country}?",
+        "comparison": "Mediana entre países",
+        "boostTitle": "Cómo subir de tramo",
+        "boostTip1": "Suma 1 o 2 certificaciones demandadas y hazlas visibles en el CV.",
+        "boostTip2": "Cuantifica logros con números e impacto concreto.",
+        "boostTip3": "Adapta tu CV a cada descripción de puesto y a sus keywords.",
+        "ctaTitle": "Impulsa tu potencial salarial",
+        "ctaSubtitle": "Construye un CV que te lleve al tramo alto — rápido.",
+        "ctaPrimary": "Crea un CV ganador con ReadyCVV PRO",
+        "ctaSecondary": "Revisa tu CV contra ATS"
+      },
+      "how": {
+        "title": "Cómo funciona",
+        "subtitle": "Tres selecciones. Rango instantáneo. Recomendaciones reales.",
+        "s1Title": "Elige tu país",
+        "s1Body": "Cada país usa su moneda, periodicidad de pago y normas fiscales locales.",
+        "s2Title": "Elige tu profesión",
+        "s2Body": "Busca entre 30 profesiones en 7 categorías.",
+        "s3Title": "Elige tu nivel",
+        "s3Body": "De entry a lead — ve p25, mediana, p75 y p90 al instante."
+      },
+      "trust": "Basado en datos públicos del mercado y encuestas salariales de oficinas oficiales de estadística.",
+      "featuredCountries": {
+        "title": "Explora salarios por país",
+        "subtitle": "Elige un país para ver las 30 profesiones lado a lado."
+      },
+      "popular": {
+        "title": "Búsquedas populares",
+        "subtitle": "Las combinaciones profesión × país más consultadas."
+      },
+      "faq": {
+        "title": "Calculadora de Salario — Preguntas frecuentes",
+        "q1": "¿Qué tan precisos son estos salarios?",
+        "a1": "Son estimaciones 2026 calibradas contra fuentes públicas (BLS, ONS, INE, INEGI, INDEC, DANE). Son buenos benchmarks, pero las ofertas individuales varían por empresa, ciudad y skills.",
+        "q2": "¿Están incluidos los impuestos?",
+        "a2": "Mostramos cifras brutas anuales por defecto, salvo en países donde el neto es el estándar habitual (España, LATAM). Las vistas por mes y hora dividen según la norma local.",
+        "q3": "¿Por qué estos 6 países?",
+        "a3": "Cubrimos los mercados laborales más grandes en inglés y español donde aplican nuestros usuarios. Iremos sumando más países.",
+        "q4": "¿Se guardan mis datos?",
+        "a4": "No. Todo el cálculo se ejecuta en tu navegador con un dataset estático — no se envía nada a un servidor.",
+        "q5": "¿En qué se diferencia de ReadyCVV PRO?",
+        "a5": "Esta herramienta te dice tu valor de mercado. ReadyCVV PRO te ayuda a llegar al tramo alto con CV optimizados para ATS, bullets con IA y 129+ plantillas."
+      },
+      "bottomCta": {
+        "title": "¿Quieres maximizar tu salario?",
+        "subtitle": "Crea un CV que apunte al tramo alto — listo para ATS, amable con reclutadores, en minutos.",
+        "button": "Probar ReadyCVV PRO"
+      }
+    }
+  },
+  "salary": {
+    "shared": {
+      "level": {
+        "entry": "Entry",
+        "mid": "Mid",
+        "senior": "Senior",
+        "lead": "Lead"
+      },
+      "levelYears": {
+        "entry": "0–2 años",
+        "mid": "3–5 años",
+        "senior": "6–10 años",
+        "lead": "10+ años"
+      },
+      "percentile": {
+        "p25": "p25",
+        "p50": "Mediana",
+        "p75": "p75",
+        "p90": "p90"
+      },
+      "period": {
+        "year": "Año",
+        "month": "Mes",
+        "hour": "Hora"
+      },
+      "currency": "Moneda",
+      "viewDetails": "Ver detalles",
+      "viewAllCountries": "Ver todos los países",
+      "viewAllProfessions": "Ver todas las profesiones",
+      "back": "Volver",
+      "home": "Inicio",
+      "sources": "Fuentes",
+      "lastUpdated": "Actualizado: 2026",
+      "disclaimer": "Los datos salariales se basan en datos públicos del mercado y encuestas de oficinas oficiales de estadística. Las cifras son estimaciones y pueden variar según empresa, ubicación, experiencia individual y condiciones actuales del mercado.",
+      "professionsCount": "{count} profesiones cubiertas",
+      "breadcrumb": {
+        "tool": "Calculadora de Salario"
+      }
+    },
+    "country": {
+      "meta": {
+        "title": "Guía Salarial 2026 en {country} — Sueldos por Profesión y Nivel",
+        "description": "Explora los salarios 2026 en {country} en 30 profesiones y 4 niveles de experiencia. Gratis y sin registro."
+      },
+      "hero": {
+        "eyebrow": "Guía Salarial 2026",
+        "title": "Salarios en {country}",
+        "subtitle": "Mediana salarial, rangos y tendencias en 30 profesiones en {country} — actualizado a 2026."
+      },
+      "overview": {
+        "title": "Resumen rápido",
+        "averageNet": "Salario medio nacional",
+        "topPaying": "Sector mejor pagado",
+        "currency": "Moneda",
+        "professions": "Profesiones cubiertas"
+      },
+      "professionsTitle": "Explora por profesión",
+      "professionsSubtitle": "Las 30 profesiones ordenadas por mediana mid-level en {country}.",
+      "comparisonTitle": "Por categoría",
+      "comparisonSubtitle": "Mediana mid-level en tecnología, salud, negocios y oficios.",
+      "methodology": {
+        "title": "Cómo calculamos",
+        "body": "Los salarios son estimaciones 2026 construidas con datos de oficinas oficiales de estadística, encuestas salariales públicas y datos agregados del mercado laboral. Las cifras están ancladas a los promedios reportados del país y ajustadas por profesión y nivel."
+      },
+      "faq": {
+        "title": "Preguntas frecuentes",
+        "q1": "¿Están incluidos los impuestos?",
+        "a1": "Por defecto mostramos la convención usada en {country}. Puedes cambiar entre vista anual, mensual y por hora en cada página de profesión.",
+        "q2": "¿Cómo se actualiza la data?",
+        "a2": "Refrescamos el dataset al menos una vez al año con los últimos datos públicos.",
+        "q3": "¿Por qué mi salario real es distinto?",
+        "a3": "Las ofertas individuales dependen de ciudad, tamaño de empresa, industria y skills específicos. Los percentiles muestran un rango creíble — no un número único.",
+        "q4": "¿Puedo ver otros países?",
+        "a4": "Sí — cubrimos 6 países. Usa el selector para saltar entre ellos."
+      },
+      "cta": {
+        "title": "Personaliza tu CV para el mercado de {country}",
+        "subtitle": "ReadyCVV PRO adapta tono, estructura y keywords para los reclutadores de {country}.",
+        "button": "Probar ReadyCVV PRO"
+      }
+    },
+    "profession": {
+      "meta": {
+        "title": "Salario de {profession} en {country} 2026 — por Nivel y Percentil",
+        "description": "¿Cuánto gana un {profession} en {country} en 2026? Ve p25, mediana, p75 y p90 por nivel de experiencia."
+      },
+      "hero": {
+        "eyebrow": "Salario 2026",
+        "title": "Salario de {profession} en {country}",
+        "subtitle": "Rango, mediana y percentiles por nivel de experiencia — actualizado a 2026."
+      },
+      "summary": {
+        "median": "Salario mediana",
+        "range": "Rango (p25 a p90)",
+        "level": "Referencia mid-level"
+      },
+      "levels": {
+        "title": "Por nivel de experiencia",
+        "subtitle": "Desglose de percentiles para cada nivel."
+      },
+      "chart": {
+        "title": "Rango salarial por nivel",
+        "subtitle": "Comparación de p25, mediana y p90 entre niveles."
+      },
+      "cross": {
+        "title": "El mismo rol en otros países",
+        "subtitle": "Mediana mid-level de {profession} convertida a USD para comparar.",
+        "valueLocal": "Local",
+        "valueUsd": "USD"
+      },
+      "related": {
+        "title": "Profesiones relacionadas",
+        "subtitle": "Otros roles en la misma categoría."
+      },
+      "tips": {
+        "title": "Cómo ganar más como {profession}",
+        "subtitle": "Tres movimientos concretos respaldados por patrones de contratación.",
+        "tip1Title": "Suma certificaciones de alto impacto",
+        "tip1Body": "Una o dos certificaciones demandadas pueden subirte un tramo entero — sobre todo en cloud, finanzas y salud.",
+        "tip2Title": "Cuantifica el impacto en tu CV",
+        "tip2Body": "Los reclutadores anclan las ofertas a números. Cambia tareas vagas por resultados medibles.",
+        "tip3Title": "Apunta a empleadores que pagan mejor",
+        "tip3Body": "Los tramos altos se concentran en industrias y ciudades específicas. Enfoca ahí tu búsqueda."
+      },
+      "faq": {
+        "title": "Preguntas frecuentes",
+        "q1": "¿Es bruto o neto?",
+        "a1": "Las cifras usan la convención dominante en {country}. Usa el selector de periodo para vista mensual o por hora.",
+        "q2": "¿Qué experiencia representa cada nivel?",
+        "a2": "Entry: 0–2 años. Mid: 3–5. Senior: 6–10. Lead: 10+ — ajusta según la responsabilidad real.",
+        "q3": "¿Están garantizados estos números?",
+        "a3": "No. Son benchmarks creíbles del mercado. Las ofertas reales dependen de empresa, ciudad y skills específicos.",
+        "q4": "¿Cómo llego al tramo más alto?",
+        "a4": "Logros cuantificados, certificaciones objetivo y un CV listo para ATS son las palancas que suben las ofertas."
+      },
+      "cta": {
+        "title": "Crea un CV que consiga empleos de {profession} en {country}",
+        "subtitle": "ReadyCVV PRO escribe bullets optimizados para ATS y adapta tu CV a cada puesto en minutos.",
+        "button": "Ver plan PRO"
+      }
+    },
+    "country_names": {
+      "usa": "Estados Unidos",
+      "uk": "Reino Unido",
+      "spain": "España",
+      "mexico": "México",
+      "argentina": "Argentina",
+      "colombia": "Colombia"
+    },
+    "category_names": {
+      "tech": "Tecnología",
+      "business": "Negocios",
+      "healthcare": "Salud",
+      "education": "Educación",
+      "legal": "Legal",
+      "trades": "Oficios e Ingeniería",
+      "service": "Servicios"
+    }
+  },
+  "footerTools": {
+    "title": "Herramientas gratis",
+    "atsChecker": "Verificador ATS",
+    "salaryCalculator": "Calculadora de Salario"
+  },
+  "emails": {
+    "common": {
+      "rights": "Todos los derechos reservados",
+      "privacy": "Privacidad",
+      "terms": "Términos",
+      "unsubscribe": "Cancelar suscripción",
+      "viewInBrowser": "Ver en el navegador"
+    }
+  },
+  "billing": {
+    "recover": {
+      "meta_title": "Actualiza tu método de pago · ReadyCV",
+      "meta_description": "Actualiza tu método de pago para mantener activa tu suscripción ReadyCV PRO.",
+      "hero": {
+        "title": "Actualiza tu método de pago",
+        "subtitle": "Tu suscripción necesita un método de pago válido para mantener ReadyCV PRO activo. Solo toma un minuto."
+      },
+      "why": {
+        "title": "Por qué esto importa",
+        "body": "Tu suscripción requiere un método de pago válido para continuar. Actualizarlo ahora mantiene tu cuenta totalmente activa."
+      },
+      "benefits": {
+        "b1": "Todos tus CVs guardados siguen disponibles",
+        "b2": "Acceso continuo a la asistencia de IA y al análisis ATS",
+        "b3": "Plantillas premium y exportaciones de un clic siguen desbloqueadas"
+      },
+      "cta": {
+        "update": "Actualizar método de pago",
+        "sign_in": "Inicia sesión para actualizar el pago",
+        "helper": "Serás redirigido a nuestro portal seguro de Stripe.",
+        "error": "No pudimos abrir el portal de pago. Inténtalo de nuevo."
+      },
+      "help": {
+        "title": "¿Necesitas ayuda?",
+        "contact": "Contacta a soporte: support@readycvv.com"
+      },
+      "faq": {
+        "q1": "¿Por qué falló mi pago?",
+        "a1": "Las razones más comunes son una tarjeta caducada, fondos insuficientes o que tu banco rechazó el cargo por seguridad.",
+        "q2": "¿Cuándo se me cobrará de nuevo?",
+        "a2": "Una vez actualices tu método de pago, Stripe reintenta automáticamente la factura fallida en pocos minutos.",
+        "q3": "¿Cómo puedo cancelar en su lugar?",
+        "a3": "Desde el portal de Stripe puedes cancelar cuando quieras — sin preguntas. Tu acceso continúa hasta el final del periodo de facturación."
+      }
+    }
   }
 }
