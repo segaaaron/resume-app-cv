@@ -37,7 +37,10 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  serverExternalPackages: ["pdf-parse", "mammoth", "pdf-lib"],
+  serverExternalPackages: ["pdf-parse", "mammoth", "pdf-lib", "geoip-lite"],
+  outputFileTracingIncludes: {
+    "/**/*": ["./node_modules/geoip-lite/data/**/*.dat"],
+  },
   async headers() {
     return [
       {

@@ -26,6 +26,7 @@ interface Props {
   accentLabel: string
   subscriptionEndsAt: string | null
   planInterval: string | null
+  isEU: boolean
 }
 
 const featureIcons = ["◆","◆","◆","◆","◆","◆","◆","◆","◆","◆","◆"]
@@ -48,6 +49,7 @@ export default function PricingClientSection({
   accentLabel,
   subscriptionEndsAt,
   planInterval,
+  isEU,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
 
@@ -208,6 +210,7 @@ export default function PricingClientSection({
                 <PricingButtons
                   plan="monthly"
                   isPro={userIsPro}
+                  isEU={isEU}
                   buttonClassName="!bg-[#1a2e4a] !text-white !font-semibold !rounded-[14px] !border-0 !py-3.5"
                 />
                 <p style={{ fontSize: 11, color: "#CBD5E1", textAlign: "center", marginTop: 10 }}>{cancelAnytime}</p>
@@ -359,6 +362,7 @@ export default function PricingClientSection({
                   <PricingButtons
                     plan="annual"
                     isPro={userIsPro}
+                    isEU={isEU}
                     theme="dark"
                     buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#071525] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_0_24px_rgba(0,212,255,0.35),_0_4px_12px_rgba(0,0,0,0.3)]"
                   />

@@ -12,9 +12,10 @@ interface Props {
   isPro?: boolean
   theme?: "light" | "dark"
   buttonClassName?: string
+  isEU?: boolean
 }
 
-export default function PricingButtons({ plan, isPro, theme = "light", buttonClassName }: Props) {
+export default function PricingButtons({ plan, isPro, theme = "light", buttonClassName, isEU = false }: Props) {
   const [loading, setLoading] = useState(false)
   const [consented, setConsented] = useState(false)
   const locale = useLocale()
@@ -49,7 +50,12 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
       const res = await apiFetch("/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan }),
+        body: JSON.stringify({
+          plan,
+          locale,
+          consent:     isEU && consented ? true : undefined,
+          consentText: isEU && consented ? t("checkout_consent") : undefined,
+        }),
       })
 
       if (res.status === 401) {
@@ -88,18 +94,20 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
 
   return (
     <div className="flex flex-col gap-3">
-      <label className="flex items-start gap-2.5 cursor-pointer select-none">
-        <input
-          type="checkbox"
-          checked={consented}
-          onChange={(e) => setConsented(e.target.checked)}
-          className="mt-0.5 shrink-0 accent-current w-3.5 h-3.5"
-        />
-        <span className={`text-[11px] leading-[1.5] ${theme === "dark" ? "text-white/60" : "opacity-75"}`}>
-          {t("checkout_consent")}
-        </span>
-      </label>
-      <Button size="lg" className={`w-full ${buttonClassName ?? ""}`} onClick={handleClick} disabled={loading || !consented}>
+      {isEU && (
+        <label className="flex items-start gap-2.5 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={consented}
+            onChange={(e) => setConsented(e.target.checked)}
+            className="mt-0.5 shrink-0 accent-current w-3.5 h-3.5"
+          />
+          <span className={`text-[11px] leading-[1.5] ${theme === "dark" ? "text-white/60" : "opacity-75"}`}>
+            {t("checkout_consent")}
+          </span>
+        </label>
+      )}
+      <Button size="lg" className={`w-full ${buttonClassName ?? ""}`} onClick={handleClick} disabled={loading || (isEU && !consented)}>
         {loading ? t("btn_loading") : t("btn_start")}
       </Button>
     </div>

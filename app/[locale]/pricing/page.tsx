@@ -8,10 +8,12 @@ import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
+import { isEUUser } from "@/lib/geoip"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 
 export const dynamic = "force-dynamic"
+export const runtime = "nodejs"
 
 
 const jsonLdSoftwareApp = {
@@ -113,7 +115,7 @@ export default async function PricingPage({
   }
   const dateLocale = locale === "es" ? es : enUS
 
-  const session = await auth()
+  const [session, isEU] = await Promise.all([auth(), isEUUser()])
   let userIsPro = false
   let subscriptionEndsAt: Date | null = null
   let planInterval: string | null = null
@@ -180,6 +182,7 @@ export default async function PricingPage({
               : null
           }
           planInterval={planInterval}
+          isEU={isEU}
         />
       </main>
       <Footer />

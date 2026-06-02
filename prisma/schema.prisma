@@ -48,14 +48,33 @@ model User {
   sessionChallengeAttempts     Int                  @default(0)
   sessionChallengeBlockedUntil DateTime?
   termsAcceptedAt              DateTime?
+  euConsentAcceptedAt          DateTime?
   lastActiveAt                 DateTime             @default(now())
   createdAt                    DateTime             @default(now())
   updatedAt                    DateTime             @updatedAt
+
+  consentLogs                  ConsentLog[]
 
   @@index([referredBy])
   @@index([deletedAt])
   @@index([plan, subscriptionStatus, subscriptionEndsAt])
   @@index([subscriptionStatus])
+}
+
+model ConsentLog {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan            String
+  ipHash          String
+  userAgent       String?  @db.Text
+  locale          String
+  consentVersion  String
+  consentText     String   @db.Text
+  acceptedAt      DateTime @default(now())
+
+  @@index([userId])
+  @@index([acceptedAt])
 }
 
 model Account {
