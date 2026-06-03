@@ -91,7 +91,7 @@ export class StripeWebhookService {
       catch (e) { if (isDuplicate(e)) return { skip: true }; throw e }
       await tx.user.update({
         where: { id: userId },
-        data: { plan: "PRO", trialEndsAt: null, planInterval, subscriptionId: subscriptionId ?? undefined, subscriptionStatus: "ACTIVE", ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}), sessionVersion: { increment: 1 } },
+        data: { plan: "PRO", planInterval, subscriptionId: subscriptionId ?? undefined, subscriptionStatus: "ACTIVE", ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}), sessionVersion: { increment: 1 } },
       })
       return { skip: false }
     }, TX_OPTS)
@@ -139,7 +139,6 @@ export class StripeWebhookService {
         where: { id: user.id },
         data: {
           plan: "PRO",
-          trialEndsAt: null,
           subscriptionStatus: "ACTIVE",
           subscriptionEndsAt: renewalDate,
           sessionVersion: { increment: 1 },
@@ -212,7 +211,7 @@ export class StripeWebhookService {
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true } })
       if (!user) return { skip: false, userId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
-      await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", trialEndsAt: null, subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
+      await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
       await tx.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { reason: "subscription_deleted" } } })
       return { skip: false, userId: user.id }
     }, TX_OPTS)
@@ -232,7 +231,7 @@ export class StripeWebhookService {
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true } })
       if (!user) return { skip: false, userId: null }
       const periodEnd = sub.items.data[0]?.current_period_end
-      await tx.user.update({ where: { id: user.id }, data: { plan: "PRO", subscriptionId: sub.id, subscriptionStatus: "ACTIVE", trialEndsAt: null, ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
+      await tx.user.update({ where: { id: user.id }, data: { plan: "PRO", subscriptionId: sub.id, subscriptionStatus: "ACTIVE", ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
       await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_CREATED_EXTERNAL", metadata: { subscriptionId: sub.id, status: sub.status } } })
       return { skip: false, userId: user.id }
     }, TX_OPTS)

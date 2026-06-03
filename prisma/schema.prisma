@@ -14,7 +14,6 @@ model User {
   image                        String?
   password                     String?
   plan                         Plan                 @default(UNSUBSCRIBED)
-  trialEndsAt                  DateTime?
   role                         Role                 @default(USER)
   stripeCustomerId             String?              @unique
   subscriptionId               String?              @unique

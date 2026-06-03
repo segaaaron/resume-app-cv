@@ -11,6 +11,10 @@ vi.mock("@/lib/db", () => ({
       update:     vi.fn(),
       findMany:   vi.fn(),
     },
+    referralConversion: {
+      findMany: vi.fn().mockResolvedValue([]),
+      count:    vi.fn().mockResolvedValue(0),
+    },
   },
 }))
 

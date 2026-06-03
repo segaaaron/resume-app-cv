@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
   if (file.size > MAX_PDF_BYTES) {
     return NextResponse.json({ error: "file_too_large", maxBytes: MAX_PDF_BYTES }, { status: 413 })
   }
-  if (file.type && !file.type.includes("pdf")) {
+  if (file.type && !["application/pdf", "application/x-pdf"].includes(file.type)) {
     return NextResponse.json({ error: "invalid_file_type" }, { status: 415 })
   }
 
@@ -95,6 +95,9 @@ export async function POST(req: NextRequest) {
   let resumeText: string
   try {
     const buf = Buffer.from(await file.arrayBuffer())
+    if (buf.length < 4 || buf.subarray(0, 4).toString("ascii") !== "%PDF") {
+      return NextResponse.json({ error: "invalid_file_signature" }, { status: 415 })
+    }
     const extracted = await extractTextFromPDF(buf)
     if (!extracted.hasExtractableText) {
       return NextResponse.json(
