@@ -1,6 +1,6 @@
 "use client"
 
-import { memo } from "react"
+import { memo, useState } from "react"
 import dynamic from "next/dynamic"
 import { Lock, Check } from "lucide-react"
 import { TEMPLATES, TemplateId } from "@/types/resume"
@@ -25,64 +25,140 @@ export const TemplateCard = memo(function TemplateCard({
   colorScheme,
   onSelect,
 }: TemplateCardProps) {
+  const [hover, setHover] = useState(false)
+  const active = isSelected && !locked
+  const interactive = !locked
+
+  // Premium multi-layer shadow — soft ambient + subtle navy tint + cyan glow when active
+  const baseShadow =
+    "0 1px 2px rgba(15,23,42,0.04), 0 4px 12px rgba(26,46,74,0.08), 0 12px 24px -8px rgba(26,46,74,0.12)"
+  const hoverShadow =
+    "0 1px 2px rgba(15,23,42,0.05), 0 6px 18px rgba(26,46,74,0.12), 0 18px 36px -10px rgba(0,212,255,0.18)"
+  const activeShadow =
+    "0 0 0 3px rgba(0,212,255,0.22), 0 6px 20px rgba(0,212,255,0.18), 0 16px 32px -10px rgba(26,46,74,0.18)"
+
   return (
     <button
       type="button"
       onClick={() => onSelect(template.id, locked)}
-      className="flex flex-col items-center gap-1.5 w-full"
+      onPointerEnter={() => setHover(true)}
+      onPointerLeave={() => setHover(false)}
+      className="flex flex-col items-center gap-2 w-full group"
       style={{ cursor: locked ? "not-allowed" : "pointer" }}
     >
-      {/* Card */}
+      {/* Card frame */}
       <div
         style={{
           width: "100%",
           aspectRatio: "210/297",
-          borderRadius: 12,
+          borderRadius: 14,
           overflow: "hidden",
           position: "relative",
-          background: isSelected && !locked ? "rgba(0,212,255,0.12)" : "#b0c4de",
-          border: isSelected && !locked ? "2px solid #00D4FF" : "1.5px solid #E2ECF7",
-          boxShadow: isSelected && !locked
-            ? "0 0 0 3px rgba(0,212,255,0.2), 0 4px 16px rgba(0,212,255,0.15)"
-            : "0 1px 4px rgba(26,46,74,0.06)",
-          padding: 25,
-          transition: "all 0.18s ease",
-          opacity: locked ? 0.55 : 1,
+          // Subtle frame gradient — softer than the old flat #b0c4de
+          background: active
+            ? "linear-gradient(145deg, rgba(0,212,255,0.10), rgba(0,212,255,0.04))"
+            : "linear-gradient(145deg, #eef4fb, #dbe6f3)",
+          border: active
+            ? "1.5px solid #00D4FF"
+            : hover && interactive
+            ? "1.5px solid rgba(0,212,255,0.55)"
+            : "1px solid #d8e3f0",
+          boxShadow: active ? activeShadow : hover && interactive ? hoverShadow : baseShadow,
+          // Minimal inner padding — let the document breathe inside the frame
+          padding: 6,
+          transition:
+            "transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease, border-color 180ms ease, background 180ms ease",
+          transform: hover && interactive && !active ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
+          opacity: locked ? 0.62 : 1,
+          willChange: "transform, box-shadow",
         }}
       >
-        {isSelected && !locked && (
+        {/* Selected check badge */}
+        {active && (
           <div
             style={{
-              position: "absolute", top: 5, right: 5, zIndex: 10,
-              width: 18, height: 18, borderRadius: "50%",
-              background: "#00D4FF",
-              boxShadow: "0 1px 6px rgba(0,212,255,0.6)",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              position: "absolute",
+              top: 6,
+              right: 6,
+              zIndex: 10,
+              width: 20,
+              height: 20,
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+              boxShadow: "0 2px 8px rgba(0,212,255,0.55), inset 0 1px 0 rgba(255,255,255,0.4)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              border: "1.5px solid #fff",
             }}
           >
             <Check style={{ width: 11, height: 11, color: "#fff", strokeWidth: 3 }} />
           </div>
         )}
 
-        <div style={{ width: "100%", height: "100%", borderRadius: 10, overflow: "hidden" }}>
+        {/* Document surface — drop shadow to lift the SVG off the frame */}
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: 8,
+            overflow: "hidden",
+            background: "#fff",
+            boxShadow:
+              "0 1px 2px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.06), 0 0 0 0.5px rgba(15,23,42,0.04) inset",
+          }}
+        >
           <ResumeThumbnail id={template.id} color={locked ? "#9ca3af" : colorScheme} />
         </div>
 
+        {/* Locked overlay — premium frosted look */}
         {locked && (
-          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.5)" }}>
-            <Lock style={{ width: 14, height: 14, color: "#00D4FF" }} />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.55), rgba(219,230,243,0.6))",
+              backdropFilter: "blur(1px)",
+            }}
+          >
+            <div
+              style={{
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "linear-gradient(135deg, #1a2e4a 0%, #2d4a6f 100%)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 4px 12px rgba(26,46,74,0.35), inset 0 1px 0 rgba(255,255,255,0.15)",
+                border: "1.5px solid rgba(0,212,255,0.4)",
+              }}
+            >
+              <Lock style={{ width: 13, height: 13, color: "#00D4FF" }} />
+            </div>
           </div>
         )}
       </div>
 
-      {/* Label */}
+      {/* Label — refined typography */}
       <span
         style={{
-          fontSize: 10, fontWeight: 600,
-          color: isSelected && !locked ? "#00A8CC" : locked ? "#9ca3af" : "#4A6A8A",
-          transition: "color 0.15s ease",
-          maxWidth: "100%", textAlign: "center", lineHeight: 1.2,
-          overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+          fontSize: 10.5,
+          fontWeight: active ? 700 : 600,
+          letterSpacing: active ? "0.02em" : "0.015em",
+          color: active ? "#00A8CC" : locked ? "#9ca3af" : hover ? "#1a2e4a" : "#4A6A8A",
+          transition: "color 160ms ease, font-weight 160ms ease, letter-spacing 160ms ease",
+          maxWidth: "100%",
+          textAlign: "center",
+          lineHeight: 1.25,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+          textTransform: "none",
         }}
       >
         {template.name}

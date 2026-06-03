@@ -353,8 +353,8 @@ export default async function TemplatesPage({
     { key: "other", label: t("cat_other"), ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
   ]
 
-  const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
-  const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
+  const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
+  const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
 
   const TemplateCard = ({ template, locked = false }: { template: typeof TEMPLATES[number]; locked?: boolean }) => {
     const visual = TEMPLATE_VISUALS[template.id] ?? {

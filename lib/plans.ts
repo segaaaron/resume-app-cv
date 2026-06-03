@@ -8,7 +8,7 @@
  *   - No import
  */
 
-export type Plan = "UNSUBSCRIBED" | "PRO"
+export type Plan = "UNSUBSCRIBED" | "PRO" | "LIMITED"
 export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED" | "PAST_DUE"
 export type Role = "USER" | "SUPER_ADMIN"
 
@@ -53,6 +53,24 @@ export function isSuperAdmin(role?: string | null): boolean {
 }
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
+  LIMITED: {
+    maxResumes: -1,
+    maxCoverLetters: -1,
+    canExportPdf: true,
+    canImport: true,
+    aiLimitsByEndpoint: {
+      "fill-profile": -1,
+      "improve-bullet": -1,
+      "improve-summary": -1,
+      "generate-summary": -1,
+      "suggest-skills": -1,
+      "tailor-cv": -1,
+      "generate-cover-letter": -1,
+      "improve-cover-letter": -1,
+      "ats-score": -1,
+      "review-cv": -1,
+    },
+  },
   UNSUBSCRIBED: {
     maxResumes: 1,
     maxCoverLetters: 1,
@@ -92,7 +110,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
 }
 
 export function isPro(plan: string): boolean {
-  return plan === "PRO"
+  return plan === "PRO" || plan === "LIMITED"
 }
 
 export function isActive(
@@ -100,8 +118,16 @@ export function isActive(
   subscriptionEndsAt?: Date | null,
   subscriptionStatus?: string | null,
   role?: string | null,
+  isManaged?: boolean,
+  managedBlocked?: boolean,
+  managedExpiresAt?: Date | null,
 ): boolean {
   if (isSuperAdmin(role)) return true
+  if (plan === "LIMITED") {
+    if (managedBlocked) return false
+    if (!managedExpiresAt || new Date() > managedExpiresAt) return false
+    return true
+  }
   if (plan === "PRO") {
     if (subscriptionStatus === "EXPIRED") return false
     if (subscriptionEndsAt && new Date() > subscriptionEndsAt) return false
@@ -112,7 +138,14 @@ export function isActive(
   return false
 }
 
+export function canDownloadPDF(user: { isManaged: boolean; managedDownloadLimit: number | null; managedDownloadsUsed: number }): boolean {
+  if (!user.isManaged) return true
+  if (user.managedDownloadLimit === null) return true
+  return user.managedDownloadsUsed < user.managedDownloadLimit
+}
+
 export function getLimits(plan: string): PlanLimits {
   if (plan === "PRO") return PLAN_LIMITS.PRO
+  if (plan === "LIMITED") return PLAN_LIMITS.LIMITED
   return PLAN_LIMITS.UNSUBSCRIBED
 }

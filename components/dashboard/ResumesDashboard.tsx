@@ -38,6 +38,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     session?.user?.subscriptionStatus,
     session?.user?.role,
   )
+  const isManaged = !!session?.user?.isManaged
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [renameId, setRenameId] = useState<string | null>(null)
@@ -241,7 +242,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
   async function downloadPdf(resume: ResumeCard) {
     // Freemium paywall: intercept on client before hitting the gated endpoint.
-    if (!isPro) {
+    // Managed users get a neutral "expired access" message — no upgrade modal.
+    if (!isPro && !isManaged) {
       openUpgradeModal("download")
       return
     }
@@ -250,7 +252,12 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
     const download = async () => {
       const res = await apiFetch(`/api/resumes/${resume.id}/pdf?locale=${locale}`)
-      if (!res.ok) throw new Error(t("pdf_error"))
+      if (!res.ok) {
+        if (res.status === 403 && isManaged) {
+          throw new Error(t("pdf_error_managed_expired"))
+        }
+        throw new Error(t("pdf_error"))
+      }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")

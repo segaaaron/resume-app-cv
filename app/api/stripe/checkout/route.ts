@@ -23,6 +23,9 @@ export async function POST(req: Request) {
   const authResult = await requireAuth(req)
   if (authResult instanceof NextResponse) return authResult
 
+  const userPlan = await db.user.findUnique({ where: { id: authResult.userId }, select: { plan: true } })
+  if (userPlan?.plan === "LIMITED") return NextResponse.json({ error: "Not available", code: "LIMITED_NO_CHECKOUT" }, { status: 403 })
+
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
 

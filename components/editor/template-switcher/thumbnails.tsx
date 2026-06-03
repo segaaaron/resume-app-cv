@@ -1,16 +1,16 @@
 import React from "react"
 import {
   ClassicThumb, ModernThumb, SidebarResumeThumb, ElegantResumeThumb,
-  ProfessionalThumb, ExecutiveResumeThumb, MinimalResumeThumb, ChronoThumb,
+  ProfessionalThumb, ExecutiveResumeThumb, MinimalResumeThumb,
   CarbonThumb, VerticalThumb, HorizontalThumb, GlassThumb, NeonThumb,
-  BauhausThumb, OutlineThumb, StripeThumb, NordicThumb,
+  BauhausThumb, OutlineThumb, StripeThumb,
 } from "./thumbnails-free"
 import {
   AuroraThumb, LumiereThumb, ConsulThumb, RoseThumb,
   WaveThumb, BannerThumb, VertexThumb, PrestigeThumb,
 } from "./thumbnails-pro-a"
 import {
-  OsloThumb, KyotoThumb, GenevaThumb, WindsorThumb, MilanThumb,
+  KyotoThumb, GenevaThumb, WindsorThumb, MilanThumb,
   ZurichThumb, PortoThumb, BarcelonaThumb, ViennaThumb, BerlinThumb,
   StockholmThumb, DublinThumb, HelsinkiThumb, LagosThumb, SeoulThumb,
   CopenhagenThumb, GenevanoirThumb, ReykjavikThumb,
@@ -33,9 +33,9 @@ import {
   DualityThumb, HavanaThumb, HelixThumb, LisbonThumb, NauticalThumb,
   ObsidianThumb, PrismThumb, TokyoThumb, VitaeThumb, MedicalChartThumb,
   VitalSignsThumb, VetCVThumb, NotebookCVThumb, FieldJournalThumb,
-  ATSThumb, BlueprintThumb, CasualThumb, CircularThumb, CoralThumb,
+  ATSThumb, CasualThumb, CircularThumb, CoralThumb,
   FoldThumb, LuxuriousThumb, MetroThumb, RivieraThumb, SharpThumb,
-  SimpleThumb, SparkThumb, VogueThumb,
+  SparkThumb, VogueThumb,
 } from "./thumbnails-pro-c"
 
 export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
@@ -47,7 +47,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "professional": return <ProfessionalThumb color={color} />
     case "executive":    return <ExecutiveResumeThumb color={color} />
     case "minimal":      return <MinimalResumeThumb color={color} />
-    case "chrono":       return <ChronoThumb color={color} />
     case "carbon":       return <CarbonThumb color={color} />
     case "vertical":     return <VerticalThumb color={color} />
     case "horizontal":   return <HorizontalThumb color={color} />
@@ -56,7 +55,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "bauhaus":      return <BauhausThumb color={color} />
     case "outline":      return <OutlineThumb color={color} />
     case "stripe":       return <StripeThumb color={color} />
-    case "nordic":       return <NordicThumb color={color} />
     // Pro
     case "aurora":       return <AuroraThumb color={color} />
     case "lumiere":      return <LumiereThumb color={color} />
@@ -66,7 +64,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "banner":       return <BannerThumb color={color} />
     case "vertex":       return <VertexThumb color={color} />
     case "prestige":     return <PrestigeThumb color={color} />
-    case "oslo":         return <OsloThumb color={color} />
     case "kyoto":        return <KyotoThumb color={color} />
     case "geneva":       return <GenevaThumb color={color} />
     case "windsor":      return <WindsorThumb color={color} />
@@ -157,7 +154,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "tokyo":          return <TokyoThumb color={color} />
     case "vitae":          return <VitaeThumb color={color} />
     case "ats":          return <ATSThumb color={color} />
-    case "blueprint":    return <BlueprintThumb color={color} />
     case "casual":       return <CasualThumb color={color} />
     case "circular":     return <CircularThumb color={color} />
     case "coral":        return <CoralThumb color={color} />
@@ -166,7 +162,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "metro":        return <MetroThumb color={color} />
     case "riviera":      return <RivieraThumb color={color} />
     case "sharp":        return <SharpThumb color={color} />
-    case "simple":       return <SimpleThumb color={color} />
     case "spark":        return <SparkThumb color={color} />
     case "vogue":        return <VogueThumb color={color} />
     default:             return <ClassicThumb color={color} />

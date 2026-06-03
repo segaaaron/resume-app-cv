@@ -8,6 +8,7 @@ import {
   CheckCircle2, AlertCircle, Pencil, FileText,
 } from "lucide-react"
 import { useState, useEffect } from "react"
+import { useSession } from "next-auth/react"
 import { useShallow } from "zustand/react/shallow"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
@@ -48,6 +49,8 @@ export default function EditorTopBar({ hasAccess }: Props) {
   const locale = useLocale()
   const t = useTranslations("editor")
   const { open: openUpgradeModal } = useUpgradeModal()
+  const { data: session } = useSession()
+  const isManaged = !!session?.user?.isManaged
 
   useEffect(() => {
     if (!resumeId) return
@@ -169,6 +172,10 @@ export default function EditorTopBar({ hasAccess }: Props) {
     try {
       const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
       if (!res.ok) {
+        if (res.status === 403 && isManaged) {
+          toast.error(t("print.error_pdf_managed_expired"))
+          return
+        }
         const key = res.status === 403 ? "print.error_pdf_403"
           : res.status === 429 ? "print.error_pdf_429"
           : res.status === 404 ? "print.error_pdf_404"

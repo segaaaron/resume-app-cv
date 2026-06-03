@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { useSession } from "next-auth/react"
 import { useTranslations, useLocale } from "next-intl"
 import { AlertTriangle, X, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
@@ -9,10 +10,12 @@ import { apiFetch } from "@/lib/apiFetch"
 export default function PastDueBanner() {
   const t = useTranslations("dashboard.past_due_banner")
   const locale = useLocale()
+  const { data: session } = useSession()
   const [dismissed, setDismissed] = useState(false)
   const [loading, setLoading] = useState(false)
 
   if (dismissed) return null
+  if (session?.user?.plan === "LIMITED") return null
 
   async function openPortal() {
     setLoading(true)

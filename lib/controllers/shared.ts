@@ -28,9 +28,9 @@ export async function requireProUser(userId: string): Promise<NextResponse | nul
   const { isActive } = await import("@/lib/plans")
   const user = await db.user.findUnique({
     where: { id: userId },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
   })
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
+  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role, user?.isManaged, user?.managedBlocked, user?.managedExpiresAt)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
   return null
@@ -58,6 +58,11 @@ interface RequireUserSuccess {
     subscriptionEndsAt: Date | null
     role: string
     emailVerified: Date | null
+    isManaged: boolean
+    managedBlocked: boolean
+    managedExpiresAt: Date | null
+    managedDownloadLimit: number | null
+    managedDownloadsUsed: number
   }
 }
 
@@ -82,7 +87,7 @@ export async function requireUser(
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true },
+    select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, managedDownloadLimit: true, managedDownloadsUsed: true },
   })
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -91,7 +96,7 @@ export async function requireUser(
     return NextResponse.json({ error: "email_not_verified" }, { status: 403 })
   }
 
-  if (opts.pro && !isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, user.role)) {
+  if (opts.pro && !isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, user.role, user.isManaged, user.managedBlocked, user.managedExpiresAt)) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 

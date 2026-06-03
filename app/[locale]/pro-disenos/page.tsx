@@ -51,7 +51,7 @@ export default async function ProDisenosPage({
   setRequestLocale(locale)
   const t = await getTranslations("pro_designs_page")
 
-  const proTemplates = TEMPLATES.filter((tmpl) => PRO_IDS.includes(tmpl.id))
+  const proTemplates = TEMPLATES.filter((tmpl) => PRO_IDS.includes(tmpl.id)).sort((a, b) => a.name.localeCompare(b.name))
   const descriptions: Record<string, { tagline: string; features: string[] }> = {
     aurora:  { tagline: t("aurora_tagline"),  features: [t("aurora_f1"),  t("aurora_f2"),  t("aurora_f3"),  t("aurora_f4")]  },
     helix:   { tagline: t("helix_tagline"),   features: [t("helix_f1"),   t("helix_f2"),   t("helix_f3"),   t("helix_f4")]   },

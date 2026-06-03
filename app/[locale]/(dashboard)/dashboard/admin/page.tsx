@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
+import { Users as UsersIcon, ArrowRight } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import AdminUsersTable from "@/components/admin/AdminUsersTable"
@@ -176,6 +178,29 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
             $
           </span>
         </div>
+      </div>
+
+      {/* Managed users entry point */}
+      <div className="dash-card-in mb-7" style={{ animationDelay: "90ms" }}>
+        <Link
+          href={`/${locale}/dashboard/admin/managed`}
+          className="group flex items-center justify-between gap-4 px-5 py-4 rounded-[12px] border border-[rgba(0,212,255,0.18)] bg-gradient-to-br from-[#eef4fb] via-white to-[#dbe6f3] shadow-[0_4px_16px_rgba(15,25,45,0.04)] hover:shadow-[0_8px_28px_rgba(0,212,255,0.18)] hover:-translate-y-px transition-all duration-200 no-underline"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00D4FF] to-[#00A8CC] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(0,212,255,0.3)]">
+              <UsersIcon className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[14px] font-bold text-[#1a2e4a] tracking-[-0.01em]">
+                {t("managed_entry_title")}
+              </div>
+              <div className="text-[11.5px] text-[#6B7A8C] mt-px">
+                {t("managed_entry_subtitle")}
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[#00D4FF] transition-transform duration-200 group-hover:translate-x-0.5" />
+        </Link>
       </div>
 
       {/* Table — horizontal scroll on mobile */}

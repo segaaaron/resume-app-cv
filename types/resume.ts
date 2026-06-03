@@ -165,15 +165,12 @@ export type TemplateId =
   | "vertical"
   | "horizontal"
   | "casual"
-  | "chrono"
   | "luxurious"
-  | "simple"
   | "metro"
   | "ats"
   | "sharp"
   | "glass"
   | "neon"
-  | "nordic"
   | "executive"
   | "sidebar"
   | "fold"
@@ -181,7 +178,6 @@ export type TemplateId =
   | "outline"
   | "spark"
   | "carbon"
-  | "blueprint"
   | "riviera"
   | "stripe"
   | "vogue"
@@ -195,7 +191,6 @@ export type TemplateId =
   | "banner"
   | "vertex"
   | "prestige"
-  | "oslo"
   | "kyoto"
   | "geneva"
   | "windsor"
@@ -326,15 +321,12 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "vertical", name: "Vertical", description: "Skills junto a la experiencia, dos columnas", columns: "double", hasPhoto: true },
   { id: "horizontal", name: "Horizontal", description: "Maximiza el espacio, encuadre profesional", columns: "double", hasPhoto: false },
   { id: "casual", name: "Casual", description: "Vibrante y llamativo", columns: "single", hasPhoto: false },
-  { id: "chrono", name: "Chrono", description: "Enfoque cronológico discreto", columns: "single", hasPhoto: false },
   { id: "luxurious", name: "Lujoso", description: "Tradicional con estética premium", columns: "single", hasPhoto: true },
-  { id: "simple", name: "Simple", description: "Limpio y enfocado en logros", columns: "single", hasPhoto: false },
   { id: "metro", name: "Metro", description: "Conservador pero audaz", columns: "double", hasPhoto: false },
   { id: "ats", name: "ATS Pro", description: "Optimizado para sistemas de selección automática", columns: "single", hasPhoto: false },
   { id: "sharp", name: "Sharp", description: "Líneas angulares, máximo impacto visual", columns: "double", hasPhoto: true },
   { id: "glass", name: "Glass", description: "Efecto glassmorphism moderno", columns: "double", hasPhoto: true },
   { id: "neon", name: "Neon", description: "Neobrutalism vibrante para perfiles creativos", columns: "single", hasPhoto: false },
-  { id: "nordic", name: "Nordic", description: "Minimalismo escandinavo, mucho espacio en blanco", columns: "single", hasPhoto: false },
   { id: "executive", name: "Executive", description: "Premium para perfiles senior y directivos", columns: "double", hasPhoto: false },
   { id: "sidebar", name: "Sidebar", description: "Sidebar de color sólido con foto circular", columns: "double", hasPhoto: true },
   { id: "fold", name: "Fold", description: "Diseño modular en bloques, muy visual", columns: "double", hasPhoto: false },
@@ -342,7 +334,6 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "outline", name: "Outline", description: "Ultra-minimalista, solo bordes sin rellenos", columns: "double", hasPhoto: false },
   { id: "spark", name: "Spark", description: "Header degradado dinámico, badges de skills", columns: "double", hasPhoto: false },
   { id: "carbon", name: "Carbon", description: "Dark mode, ideal para perfiles tech y diseño", columns: "double", hasPhoto: true },
-  { id: "blueprint", name: "Blueprint", description: "Sidebar navy con foto circular y headings en color", columns: "double", hasPhoto: true },
   { id: "riviera", name: "Riviera", description: "Sidebar oscuro, header con nombre partido en color y blanco", columns: "double", hasPhoto: true },
   { id: "stripe", name: "Stripe", description: "Banda de color completa con foto, dos columnas abajo", columns: "double", hasPhoto: true },
   { id: "vogue", name: "Vogue", description: "Nombre gigante estilo editorial, foto cuadrada en header", columns: "double", hasPhoto: true },
@@ -366,7 +357,6 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "banner",   name: "Banner ⚡",   description: "Headers en forma de banner/ribbon SVG navy con foto circular superior", columns: "double", hasPhoto: true },
   { id: "vertex",   name: "Vertex ⚡",   description: "Triángulos decorativos en esquinas, gauges circulares SVG para idiomas", columns: "double", hasPhoto: true },
   { id: "prestige", name: "Prestige ⚡", description: "Fondo crema con bloque navy para resumen, acento cobre/bronce elegante", columns: "double", hasPhoto: true },
-  { id: "oslo", name: "Oslo ✦", description: "Minimalismo tipográfico puro con iconos geométricos SVG por sección", columns: "single", hasPhoto: false },
   { id: "kyoto", name: "Kyoto ✦", description: "Sidebar off-white con marco cuadrado para foto e iconos brushstroke", columns: "double", hasPhoto: true },
   { id: "geneva", name: "Geneva ✦", description: "Nombre centrado en mayúsculas, divisores SVG punteados con icono", columns: "single", hasPhoto: false },
   { id: "windsor", name: "Windsor ✦", description: "Banda navy ejecutiva con nombre blanco y título dorado, foto con marco dorado", columns: "single", hasPhoto: true },

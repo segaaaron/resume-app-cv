@@ -10,8 +10,8 @@ import { TemplateCard } from "./TemplateCard"
 import { useTemplateSwitcher } from "./hooks/useTemplateSwitcher"
 import { PRO_IDS } from "./template-data"
 
-const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id))
-const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id))
+const proTemplates = TEMPLATES.filter((t) => PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
+const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
 
 interface Props {
   plan: string

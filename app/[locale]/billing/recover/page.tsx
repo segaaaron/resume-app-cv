@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { getTranslations, setRequestLocale } from "next-intl/server"
 import { CreditCard, AlertCircle, HelpCircle, Mail } from "lucide-react"
 import { auth } from "@/lib/auth"
@@ -31,6 +32,10 @@ export default async function BillingRecoverPage({
   const t = await getTranslations({ locale, namespace: "billing.recover" })
 
   const session = await auth()
+  // Managed users have no Stripe relationship — billing recovery is meaningless for them.
+  if (session?.user?.isManaged) {
+    redirect(`/${locale}/dashboard/resumes`)
+  }
   const isAuthenticated = !!session?.user
   const returnTo = encodeURIComponent(`/${locale}/billing/recover`)
   const loginHref = `/${locale}/login?callbackUrl=${returnTo}`

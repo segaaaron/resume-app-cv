@@ -28,15 +28,27 @@ export async function GET(req: Request, { params }: Params) {
     return NextResponse.json({ error: "subscription_required" }, { status: 403 })
   }
 
+  const url = new URL(req.url)
+  const rawLocale = url.searchParams.get("locale") ?? ""
+  const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
+
+  const allowed = await checkAndIncrementRateLimit(authResult.userId, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
+  if (!allowed) return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
+
+  let managedClaimed = false
+  if (authResult.user.isManaged && authResult.user.managedDownloadLimit !== null) {
+    const claimed = await db.user.updateMany({
+      where: { id: authResult.userId, isManaged: true, managedDownloadsUsed: { lt: authResult.user.managedDownloadLimit } },
+      data: { managedDownloadsUsed: { increment: 1 } },
+    })
+    if (claimed.count === 0) {
+      return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
+    }
+    managedClaimed = true
+  }
+
   try {
-    const url = new URL(req.url)
-    const rawLocale = url.searchParams.get("locale") ?? ""
-    const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
-
     const letter = await coverLetterService.getPdfMeta(authResult.userId, id)
-
-    const allowed = await checkAndIncrementRateLimit(authResult.userId, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
-    if (!allowed) return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
 
     const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
     const printToken = createPrintToken(authResult.userId, id)
@@ -62,6 +74,10 @@ export async function GET(req: Request, { params }: Params) {
     })
   } catch (err) {
     logger.error("render failed", { letterId: id, userId: authResult.userId }, err instanceof Error ? err : undefined)
+    if (managedClaimed) {
+      db.user.update({ where: { id: authResult.userId }, data: { managedDownloadsUsed: { decrement: 1 } } })
+        .catch(() => undefined)
+    }
     return handleError(err)
   }
 }

@@ -6,6 +6,7 @@ import { sessionChallengeHtml, sessionChallengeText } from "@/lib/emails/session
 import { sessionChallengeFailedHtml, sessionChallengeFailedText } from "@/lib/emails/sessionChallengeFailedAttempt"
 import { sessionChallengeBlockedHtml, sessionChallengeBlockedText } from "@/lib/emails/sessionChallengeBlocked"
 import { sessionForcedHtml, sessionForcedText } from "@/lib/emails/sessionForced"
+import { managedWelcomeHtml, managedWelcomeText } from "@/lib/emails/managedWelcome"
 import type { IEmailService } from "@/lib/interfaces/IEmailService"
 
 const FROM = process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>"
@@ -75,5 +76,16 @@ export class ResendEmailService implements IEmailService {
       html: sessionForcedHtml({ userName: name }),
       text: sessionForcedText({ userName: name }),
     }).catch((e) => logger.error("sendSessionForced failed", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
+  }
+
+  async sendManagedWelcome(to: string, password: string, expiresAt: Date, downloadLimit: number | null): Promise<void> {
+    if (!emailEnabled()) return
+    const loginUrl = (process.env.NEXTAUTH_URL ?? "https://www.readycvv.com") + "/login"
+    await resend!.emails.send({
+      from: FROM, to,
+      subject: "Tu acceso a ReadyCV está listo",
+      html: managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUrl }),
+      text: managedWelcomeText({ password, expiresAt, downloadLimit, loginUrl }),
+    }).catch((e) => logger.error("sendManagedWelcome failed", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 }

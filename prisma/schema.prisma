@@ -52,6 +52,14 @@ model User {
   createdAt                    DateTime             @default(now())
   updatedAt                    DateTime             @updatedAt
 
+  isManaged                    Boolean              @default(false)
+  managedExpiresAt             DateTime?
+  managedDownloadLimit         Int?
+  managedDownloadsUsed         Int                  @default(0)
+  managedCreatedBy             String?
+  managedNote                  String?
+  managedBlocked               Boolean              @default(false)
+
   consentLogs                  ConsentLog[]
 
   @@index([referredBy])
@@ -284,6 +292,13 @@ enum AuditAction {
   FREE_RESUME_LIMIT_HIT
   FREE_COVER_LETTER_LIMIT_HIT
   FREE_AI_ENDPOINT_BLOCKED
+  MANAGED_USER_CREATED
+  MANAGED_USER_BLOCKED
+  MANAGED_USER_UNBLOCKED
+  MANAGED_USER_DELETED
+  MANAGED_USER_EDITED
+  MANAGED_USER_DOWNLOADS_RESET
+  MANAGED_USER_PASSWORD_RESET
 }
 
 enum Role {
@@ -294,6 +309,7 @@ enum Role {
 enum Plan {
   UNSUBSCRIBED
   PRO
+  LIMITED
 }
 
 enum SubscriptionStatus {

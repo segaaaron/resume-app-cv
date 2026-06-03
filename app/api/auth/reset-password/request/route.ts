@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { passwordResetService, handleError } from "@/lib/controllers/auth-deps"
+import { db } from "@/lib/db"
 
 const schema = z.object({ email: z.string().email() })
 
@@ -12,6 +13,12 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}))
   const parsed = schema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: "invalid_email" }, { status: 400 })
+
+  const user = await db.user.findUnique({ where: { email: parsed.data.email }, select: { plan: true } })
+  if (user?.plan === "LIMITED") {
+    await new Promise(r => setTimeout(r, 200))
+    return NextResponse.json({ ok: true })
+  }
 
   try {
     const result = await passwordResetService.requestReset(ip, parsed.data.email)

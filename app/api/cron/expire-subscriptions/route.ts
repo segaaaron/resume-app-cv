@@ -15,39 +15,57 @@ export async function GET(req: Request) {
 
   const now = new Date()
 
-  // Parallelize both queries — independent, no shared state
-  const [canceled, activeStale] = await Promise.all([
+  // Parallelize all queries — independent, no shared state
+  const [canceled, activeStale, expiredLimited] = await Promise.all([
     // Users who canceled and whose period has now ended
     db.user.findMany({
-      where: { plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: { lt: now } },
+      where: { plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: { lt: now }, isManaged: false },
       select: { id: true },
     }),
     // Webhook drift guard: PRO/ACTIVE users whose subscriptionEndsAt is in the past
     // PAST_DUE excluded — Stripe smart-retry can run up to ~3 weeks; do not downgrade mid-retry
     db.user.findMany({
-      where: { plan: "PRO", subscriptionStatus: "ACTIVE", subscriptionEndsAt: { lt: now } },
+      where: { plan: "PRO", subscriptionStatus: "ACTIVE", subscriptionEndsAt: { lt: now }, isManaged: false },
+      select: { id: true },
+    }),
+    // LIMITED users whose admin-set expiry has passed and not yet processed — invalidate JWT
+    db.user.findMany({
+      where: { plan: "LIMITED", managedExpiresAt: { lt: now }, managedBlocked: false },
       select: { id: true },
     }),
   ])
 
   const ids = [...new Set([...canceled, ...activeStale].map((u) => u.id))]
+  const limitedIds = expiredLimited.map((u) => u.id)
 
-  if (ids.length === 0) {
-    return NextResponse.json({ downgraded: 0 })
-  }
-
-  await db.user.updateMany({
-    where: { id: { in: ids } },
-    data: {
-      plan: "UNSUBSCRIBED",
-      subscriptionId: null,
-      subscriptionEndsAt: null,
-      subscriptionStatus: "EXPIRED",
-      sessionVersion: { increment: 1 },
-    },
-  })
+  await Promise.all([
+    ids.length > 0
+      ? db.user.updateMany({
+          where: { id: { in: ids } },
+          data: {
+            plan: "UNSUBSCRIBED",
+            subscriptionId: null,
+            subscriptionEndsAt: null,
+            subscriptionStatus: "EXPIRED",
+            sessionVersion: { increment: 1 },
+          },
+        })
+      : Promise.resolve(),
+    limitedIds.length > 0
+      ? db.user.updateMany({
+          where: { id: { in: limitedIds } },
+          data: { sessionVersion: { increment: 1 }, managedBlocked: true },
+        })
+      : Promise.resolve(),
+  ])
 
   for (const id of ids) purgeUserCache(id)
+  for (const id of limitedIds) purgeUserCache(id)
 
-  return NextResponse.json({ downgraded: ids.length, canceledCount: canceled.length, stalePROCount: activeStale.length })
+  return NextResponse.json({
+    downgraded: ids.length,
+    canceledCount: canceled.length,
+    stalePROCount: activeStale.length,
+    expiredLimited: limitedIds.length,
+  })
 }

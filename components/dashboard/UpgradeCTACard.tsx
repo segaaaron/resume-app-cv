@@ -33,6 +33,7 @@ export default function UpgradeCTACard() {
   )
 
   if (pro) return null
+  if (session?.user?.plan === "LIMITED") return null
 
   const pills = [
     t("pill_unlimited_cvs"),

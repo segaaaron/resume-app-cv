@@ -1,5 +1,6 @@
 // Pro template thumbnails — batch C (ClassicMono → end)
 import React from "react"
+import { PageShadow } from "./thumbnails-free"
 
 export function ClassicMonoThumb({ color }: { color: string }) {
   return (
@@ -756,6 +757,9 @@ export function TerminalCVThumb({ color }: { color: string }) {
       <rect x="34" y="28" width="10" height="1.5" rx="0.75" fill="#6cb6ff" opacity="0.8" />
       <rect x="46" y="28" width="2" height="1.5" fill="#e6e6f0" opacity="0.4" />
       <rect x="50" y="28" width="12" height="1.5" rx="0.75" fill="#ffa657" opacity="0.8" />
+      {/* Terminal prompt line "$ _" with blinking cursor accent */}
+      <text x="26" y="98" fill="#7cdba4" opacity="0.9" style={{ fontSize: "5px", fontFamily: "ui-monospace, 'Courier New', monospace", fontWeight: 700 }}>{">_"}</text>
+      <rect x="34" y="93.6" width="6" height="5" fill={color} opacity="0.7" />
       {/* Status bar */}
       <rect x="0" y="104" width="80" height="6" fill="#15161f" />
       <rect x="4" y="106" width="16" height="2" rx="1" fill="#7cdba4" opacity="0.7" />
@@ -1389,7 +1393,81 @@ export function EngravedThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#f6efde" /><rect x="4" y="4" width="72" height="102" fill="none" stroke={color} strokeWidth="1.5" /><rect x="7" y="7" width="66" height="96" fill="none" stroke={color} strokeWidth="0.6" /><circle cx="40" cy="20" r="7" fill="none" stroke={color} strokeWidth="1" /><circle cx="40" cy="20" r="5" fill="none" stroke={color} strokeWidth="0.5" /><rect x="22" y="30" width="36" height="1.2" rx="0.6" fill={color} opacity="0.5" /><rect x="12" y="35" width="56" height="5" rx="1.5" fill="#0a0a0a" opacity="0.65" /><line x1="24" y1="43" x2="56" y2="43" stroke={color} strokeWidth="0.8" /><rect x="18" y="46" width="44" height="1.5" rx="0.75" fill="#0a0a0a" opacity="0.4" /><rect x="12" y="56" width="26" height="2" rx="1" fill={color} opacity="0.6" />{[0,1,2,3].map((i) => (<rect key={i} x="12" y={61 + i * 6} width="56" height="1.2" rx="0.6" fill="#0a0a0a" opacity={0.2 - i * 0.03} />))}<rect x="12" y="87" width="20" height="2" rx="1" fill={color} opacity="0.6" /><rect x="20" y="100" width="40" height="1" rx="0.5" fill={color} opacity="0.4" /></svg>)
 }
 export function ChalkboardThumb({ color }: { color: string }) {
-  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill={color} /><rect x="3" y="3" width="74" height="104" fill="none" stroke="#6e4a2a" strokeWidth="5" rx="2" /><rect x="8" y="14" width="52" height="7" rx="2" fill="white" opacity="0.85" /><rect x="8" y="23" width="36" height="2.5" rx="1" fill="#f4a3b6" opacity="0.8" /><rect x="8" y="33" width="20" height="2" rx="1" fill="#f5d76e" opacity="0.7" />{[0,1,2,3,4].map((i) => (<rect key={i} x="8" y={38 + i * 7} width={36 - i * 2} height="1.5" rx="0.75" fill="white" opacity={0.5 - i * 0.06} />))}<rect x="46" y="33" width="26" height="30" fill="white" opacity="0.9" /><rect x="54" y="97" width="16" height="7" rx="2" fill="#d2b48c" opacity="0.9" /></svg>)
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="chalkBoard" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#1e3a2e" />
+          <stop offset="100%" stopColor="#13231a" />
+        </linearGradient>
+        <radialGradient id="chalkDust" cx="50%" cy="50%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.05" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </radialGradient>
+        <filter id="chalkRough" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence baseFrequency="0.9" numOctaves="1" result="t" />
+          <feDisplacementMap in="SourceGraphic" in2="t" scale="0.6" />
+        </filter>
+      </defs>
+      <rect width="80" height="110" fill="#3a2818" />
+      {/* Wood frame */}
+      <rect x="0" y="0" width="80" height="110" fill="#6e4a2a" />
+      <rect x="3" y="3" width="74" height="104" fill="url(#chalkBoard)" />
+      {/* Chalk dust haze */}
+      <ellipse cx="40" cy="55" rx="40" ry="30" fill="url(#chalkDust)" />
+      {/* Single <g> with filter — 1× render cost instead of 14× */}
+      <g filter="url(#chalkRough)">
+        {/* Handwritten name in white chalk */}
+        <rect x="8" y="13" width="48" height="4" rx="1.5" fill="#ffffff" opacity="0.92" />
+        <rect x="8" y="20" width="28" height="2" rx="1" fill={color} opacity="0.85" />
+        {/* Underline scribble */}
+        <path d="M8 25 Q20 24 32 25 T56 25" stroke="#ffffff" strokeWidth="0.6" fill="none" opacity="0.6" />
+        {/* Section: pink chalk */}
+        <rect x="8" y="32" width="18" height="2" rx="1" fill="#f4a3b6" opacity="0.85" />
+        {[0, 1, 2, 3].map((i) => (
+          <rect
+            key={`exp-${i}`}
+            x="8"
+            y={37 + i * 4.5}
+            width={40 - i * 5}
+            height="1.1"
+            rx="0.55"
+            fill="#ffffff"
+            opacity={0.55 - i * 0.08}
+          />
+        ))}
+        {/* Section: yellow chalk */}
+        <rect x="8" y="60" width="20" height="2" rx="1" fill="#f5d76e" opacity="0.85" />
+        {[0, 1, 2].map((i) => (
+          <rect
+            key={`edu-${i}`}
+            x="8"
+            y={65 + i * 4.5}
+            width={36 - i * 4}
+            height="1.1"
+            rx="0.55"
+            fill="#ffffff"
+            opacity={0.5 - i * 0.08}
+          />
+        ))}
+        {/* Sketched diagram top-right */}
+        <circle cx="62" cy="40" r="7" fill="none" stroke={color} strokeWidth="0.7" opacity="0.7" />
+        <circle cx="62" cy="40" r="3" fill={color} opacity="0.45" />
+        <line x1="55" y1="50" x2="69" y2="50" stroke="#ffffff" strokeWidth="0.5" opacity="0.5" />
+        <line x1="58" y1="53" x2="66" y2="53" stroke="#ffffff" strokeWidth="0.5" opacity="0.4" />
+        {/* Skill chips chalk-outlined */}
+        <rect x="8" y="84" width="14" height="3.5" rx="1.5" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.55" />
+        <rect x="24" y="84" width="12" height="3.5" rx="1.5" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.55" />
+        <rect x="38" y="84" width="16" height="3.5" rx="1.5" fill="none" stroke="#ffffff" strokeWidth="0.5" opacity="0.55" />
+      </g>
+      {/* Chalk tray + eraser */}
+      <rect x="6" y="98" width="68" height="3" fill="#6e4a2a" />
+      <rect x="54" y="95" width="14" height="5" rx="1" fill="#d2b48c" />
+      <rect x="56" y="96" width="10" height="2" rx="0.5" fill="#f4f1ea" opacity="0.85" />
+      {/* Small chalk stick */}
+      <rect x="38" y="98.5" width="8" height="1.5" rx="0.75" fill="#ffffff" opacity="0.8" />
+    </svg>
+  )
 }
 export function AcademicCVThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="white" /><rect x="8" y="8" width="44" height="5" rx="1" fill="#111" opacity="0.8" /><rect x="8" y="15" width="56" height="1.5" rx="0.75" fill="#666" opacity="0.5" /><rect x="8" y="21" width="64" height="1.5" fill="#111" opacity="0.8" /><rect x="8" y="28" width="32" height="1.5" rx="0.75" fill="#111" opacity="0.7" /><rect x="8" y="31" width="64" height="0.5" fill="#111" opacity="0.3" />{[0,1,2,3].map((i) => (<g key={i}><rect x="8" y={35 + i * 7} width="14" height="1" rx="0.5" fill={color} opacity="0.7" /><rect x="26" y={35 + i * 7} width="40" height="1" rx="0.5" fill="#111" opacity="0.3" /></g>))}<rect x="8" y="65" width="28" height="1.5" rx="0.75" fill="#111" opacity="0.7" /><rect x="8" y="100" width="64" height="0.5" fill="#111" opacity="0.4" /></svg>)
@@ -1461,25 +1539,63 @@ export function LedgerCVThumb({ color }: { color: string }) {
 export function CobaltThumb({ color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#fff" />
-      <rect x="0" y="0" width="26" height="110" fill="#0d2137" />
-      <circle cx="13" cy="18" r="8" fill={color} opacity="0.8" />
-      <rect x="3" y="30" width="20" height="1.5" rx="0.5" fill="#fff" opacity="0.7" />
-      <rect x="3" y="33" width="15" height="1" rx="0.5" fill="#fff" opacity="0.5" />
-      <rect x="3" y="42" width="18" height="1" rx="0.5" fill="#fff" opacity="0.4" />
-      <rect x="3" y="45" width="14" height="1" rx="0.5" fill="#fff" opacity="0.4" />
-      <rect x="3" y="48" width="16" height="1" rx="0.5" fill="#fff" opacity="0.4" />
-      <rect x="30" y="8" width="44" height="3" rx="0.5" fill="#222" />
-      <rect x="30" y="13" width="30" height="1.5" rx="0.5" fill="#555" />
-      <rect x="30" y="20" width="44" height="1" rx="0.3" fill="#999" />
-      <rect x="30" y="23" width="38" height="1" rx="0.3" fill="#999" />
-      <rect x="30" y="26" width="40" height="1" rx="0.3" fill="#999" />
-      <rect x="30" y="32" width="20" height="1.5" rx="0.5" fill={color} />
-      <rect x="30" y="36" width="44" height="1" rx="0.3" fill="#999" />
-      <rect x="30" y="39" width="40" height="1" rx="0.3" fill="#999" />
-      <rect x="30" y="47" width="20" height="1.5" rx="0.5" fill={color} />
-      <rect x="30" y="51" width="44" height="1" rx="0.3" fill="#999" />
-      <rect x="30" y="54" width="36" height="1" rx="0.3" fill="#999" />
+      <defs>
+        <linearGradient id="cobaltSide" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1e3a5f" />
+          <stop offset="100%" stopColor="#0d2137" />
+        </linearGradient>
+        <linearGradient id="cobaltAvatar" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity="1" />
+          <stop offset="100%" stopColor={color} stopOpacity="0.6" />
+        </linearGradient>
+      </defs>
+      <rect width="80" height="110" fill="#eef2f7" />
+      <PageShadow />
+      <rect x="2" y="2" width="76" height="106" fill="#ffffff" />
+      {/* Deep cobalt sidebar with gradient */}
+      <rect x="2" y="2" width="26" height="106" fill="url(#cobaltSide)" />
+      {/* Cyan accent edge */}
+      <rect x="26" y="2" width="0.8" height="106" fill={color} opacity="0.7" />
+      {/* Avatar with cyan ring */}
+      <circle cx="15" cy="18" r="8" fill="url(#cobaltAvatar)" />
+      <circle cx="15" cy="18" r="8" fill="none" stroke={color} strokeWidth="0.8" opacity="0.9" />
+      <circle cx="15" cy="16" r="2.6" fill="#ffffff" opacity="0.65" />
+      <path d="M9 24 Q15 20 21 24 L21 25.5 L9 25.5 Z" fill="#ffffff" opacity="0.65" />
+      {/* Sidebar contact rows */}
+      <circle cx="5" cy="34" r="1" fill={color} />
+      <rect x="7.5" y="33.5" width="16" height="1" rx="0.5" fill="#ffffff" opacity="0.75" />
+      <circle cx="5" cy="38" r="1" fill={color} />
+      <rect x="7.5" y="37.5" width="14" height="1" rx="0.5" fill="#ffffff" opacity="0.6" />
+      <circle cx="5" cy="42" r="1" fill={color} />
+      <rect x="7.5" y="41.5" width="15" height="1" rx="0.5" fill="#ffffff" opacity="0.6" />
+      {/* Sidebar section: Skills */}
+      <rect x="5" y="50" width="14" height="1.6" rx="0.8" fill={color} />
+      <rect x="5" y="54" width="18" height="0.8" rx="0.4" fill="#ffffff" opacity="0.18" />
+      <rect x="5" y="54" width="14" height="0.8" rx="0.4" fill={color} />
+      <rect x="5" y="57" width="18" height="0.8" rx="0.4" fill="#ffffff" opacity="0.18" />
+      <rect x="5" y="57" width="11" height="0.8" rx="0.4" fill={color} />
+      <rect x="5" y="60" width="18" height="0.8" rx="0.4" fill="#ffffff" opacity="0.18" />
+      <rect x="5" y="60" width="16" height="0.8" rx="0.4" fill={color} />
+      {/* Sidebar section: Languages */}
+      <rect x="5" y="68" width="14" height="1.6" rx="0.8" fill={color} />
+      <rect x="5" y="72" width="18" height="0.9" rx="0.45" fill="#ffffff" opacity="0.4" />
+      <rect x="5" y="75.5" width="14" height="0.9" rx="0.45" fill="#ffffff" opacity="0.4" />
+      {/* Main column */}
+      <rect x="32" y="10" width="40" height="3.5" rx="1" fill="#0f172a" />
+      <rect x="32" y="16" width="26" height="1.8" rx="0.9" fill={color} />
+      <rect x="32" y="22" width="42" height="0.6" fill={color} opacity="0.4" />
+      <rect x="32" y="26" width="42" height="1.2" rx="0.6" fill="#cbd5e1" />
+      <rect x="32" y="29.5" width="36" height="1.2" rx="0.6" fill="#cbd5e1" />
+      <rect x="32" y="33" width="40" height="1.2" rx="0.6" fill="#cbd5e1" />
+      {/* Experience */}
+      <rect x="32" y="40" width="20" height="2" rx="1" fill={color} />
+      <rect x="32" y="46" width="42" height="1.1" rx="0.55" fill="#e2e8f0" />
+      <rect x="32" y="49.5" width="36" height="1.1" rx="0.55" fill="#e2e8f0" />
+      <rect x="32" y="53" width="40" height="1.1" rx="0.55" fill="#e2e8f0" />
+      <rect x="32" y="60" width="22" height="2" rx="1" fill={color} />
+      <rect x="32" y="66" width="42" height="1.1" rx="0.55" fill="#e2e8f0" />
+      <rect x="32" y="69.5" width="32" height="1.1" rx="0.55" fill="#e2e8f0" />
+      <rect x="32" y="73" width="38" height="1.1" rx="0.55" fill="#e2e8f0" />
     </svg>
   )
 }

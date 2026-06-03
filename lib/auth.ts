@@ -46,6 +46,9 @@ interface UserPlanCacheEntry {
   sessionVersion:      number
   activeSessionToken:  string | null
   termsAcceptedAt:     Date | null
+  isManaged:           boolean
+  managedExpiresAt:    Date | null
+  managedBlocked:      boolean
   expiresAt:           number
 }
 
@@ -114,6 +117,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             role:               true,
             emailVerified:      true,
             sessionVersion:     true,
+            isManaged:          true,
+            managedExpiresAt:   true,
+            managedBlocked:     true,
           },
         })
 
@@ -181,6 +187,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           role:               user.role,
           emailVerified:      user.emailVerified,
           sessionVersion:     user.sessionVersion,
+          isManaged:          user.isManaged,
+          managedExpiresAt:   user.managedExpiresAt,
+          managedBlocked:     user.managedBlocked,
         }
       },
     }),
@@ -210,6 +219,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const prefetched = user as {
           plan?: string; subscriptionStatus?: string; subscriptionEndsAt?: Date | null
           role?: string; emailVerified?: Date | null; sessionVersion?: number
+          isManaged?: boolean; managedExpiresAt?: Date | null; managedBlocked?: boolean
         }
         if (prefetched.plan !== undefined && user.id) {
           const now = Date.now()
@@ -219,6 +229,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           token.role               = prefetched.role ?? "USER"
           token.emailVerified      = prefetched.emailVerified?.toISOString() ?? null
           token.sessionVersion     = prefetched.sessionVersion ?? 1
+          token.isManaged          = prefetched.isManaged ?? false
+          token.managedExpiresAt   = prefetched.managedExpiresAt?.toISOString() ?? null
+          token.managedBlocked     = prefetched.managedBlocked ?? false
           userPlanCache.set(user.id, {
             plan:               prefetched.plan as string,
             subscriptionStatus: prefetched.subscriptionStatus ?? "",
@@ -228,6 +241,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             sessionVersion:     prefetched.sessionVersion ?? 1,
             activeSessionToken: (token.activeSessionToken as string | null) ?? null,
             termsAcceptedAt:    null,
+            isManaged:          prefetched.isManaged ?? false,
+            managedExpiresAt:   prefetched.managedExpiresAt ?? null,
+            managedBlocked:     prefetched.managedBlocked ?? false,
             expiresAt:          now + CACHE_TTL_MS,
           })
           const uid = user.id as string
@@ -294,6 +310,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             token.subscriptionEndsAt = cached.subscriptionEndsAt?.toISOString() ?? null
             token.role               = cached.role
             token.emailVerified      = cached.emailVerified?.toISOString() ?? null
+            token.isManaged          = cached.isManaged
+            token.managedExpiresAt   = cached.managedExpiresAt?.toISOString() ?? null
+            token.managedBlocked     = cached.managedBlocked ?? false
             return token
           }
         }
@@ -313,6 +332,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           lastActiveAt:       true,
           activeSessionToken:  true,
           termsAcceptedAt:    true,
+          isManaged:          true,
+          managedExpiresAt:   true,
+          managedBlocked:     true,
         },
       })
 
@@ -366,6 +388,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         sessionVersion:     dbUser.sessionVersion,
         activeSessionToken: dbUser.activeSessionToken,
         termsAcceptedAt:    (dbUser as { termsAcceptedAt?: Date | null }).termsAcceptedAt ?? null,
+        isManaged:          dbUser.isManaged,
+        managedExpiresAt:   dbUser.managedExpiresAt,
+        managedBlocked:     dbUser.managedBlocked,
         expiresAt:          now + CACHE_TTL_MS,
       })
 
@@ -376,6 +401,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       token.emailVerified      = dbUser.emailVerified?.toISOString() ?? null
       token.activeSessionToken = dbUser.activeSessionToken
       token.termsAcceptedAt    = (dbUser as { termsAcceptedAt?: Date | null }).termsAcceptedAt?.toISOString() ?? null
+      token.isManaged          = dbUser.isManaged
+      token.managedExpiresAt   = dbUser.managedExpiresAt?.toISOString() ?? null
+      token.managedBlocked     = dbUser.managedBlocked
 
       // fire-and-forget lastActiveAt update (runs at most every 5 min per user)
       db.user.update({
@@ -395,6 +423,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.emailVerified      = (token.emailVerified ?? null) as unknown as (Date & string) | null
         session.user.sessionVersion     = token.sessionVersion as number | undefined
         session.user.termsAcceptedAt    = token.termsAcceptedAt as string | null | undefined
+        session.user.isManaged          = (token.isManaged as boolean | undefined) ?? false
+        session.user.managedExpiresAt   = token.managedExpiresAt as string | null | undefined
+        session.user.managedBlocked     = (token.managedBlocked as boolean | undefined) ?? false
       }
       return session
     },
