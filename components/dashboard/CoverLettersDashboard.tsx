@@ -44,6 +44,10 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
   const { open: openUpgradeModal } = useUpgradeModal()
 
   async function createLetter() {
+    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    if (creating) return
+    setCreating(true)
+    setTimeout(() => setCreating(false), 1500)
     // Freemium funnel: 1 cover letter included free. Beyond that → UpgradeModal.
     if (!isPro && letters.length >= 1) {
       openUpgradeModal("second-cover-letter")
@@ -52,7 +56,6 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     if (!isPro) {
       // Free plan still allows the first letter (backend enforces). UI can pass through.
     }
-    setCreating(true)
     try {
       const res = await apiFetch("/api/cover-letters", {
         method: "POST",

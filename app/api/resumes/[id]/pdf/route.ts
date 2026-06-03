@@ -46,7 +46,7 @@ export async function GET(req: Request, { params }: Params) {
     db.auditLog.create({
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })
-    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
+    return NextResponse.json({ error: "subscription_required" }, { status: 403 })
   }
 
   const allowed = await checkAndIncrementRateLimit(session.user.id, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)

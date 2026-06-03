@@ -5,6 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "bcryptjs"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
+import { checkAndIncrementRateLimit, checkRateLimit, recordRateLimitFailure } from "@/lib/rate-limit"
 
 const logger = createLogger("auth")
 
@@ -20,6 +21,14 @@ class ActiveSessionError extends CredentialsSignin {
 class SessionChallengeBlockedError extends CredentialsSignin {
   code = "session_challenge_blocked" as const
 }
+class RateLimitedError extends CredentialsSignin {
+  code = "rate_limited" as const
+}
+
+// Login brute-force rate-limit settings
+const LOGIN_RATE_LIMIT_EMAIL_MAX  = 5           // max failed attempts per email
+const LOGIN_RATE_LIMIT_IP_MAX     = 10          // max failed attempts per IP (across all accounts)
+const LOGIN_RATE_LIMIT_WINDOW_MS  = 15 * 60 * 1000  // 15 minutes
 
 // Pre-computed dummy hash — ensures bcrypt runs even when user doesn't exist,
 // equalizing response time and preventing user enumeration via timing.
@@ -64,8 +73,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         if (!credentials?.email || !credentials?.password) return null
+
+        const email = credentials.email as string
+
+        // Extract client IP from trusted proxy headers (Dokploy/Hostinger environment).
+        // Falls back to a sentinel so rate-limit still applies per-email even when IP is unavailable.
+        const rawIp =
+          request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+          request.headers.get("x-real-ip") ??
+          "unknown"
+        const ipKey = `ip:${rawIp}`
+
+        // Pre-check: if the key is already blocked, bail out before touching the DB or running bcrypt.
+        const [emailAllowed, ipAllowed] = await Promise.all([
+          checkRateLimit(email, "login-password", LOGIN_RATE_LIMIT_EMAIL_MAX),
+          checkRateLimit(ipKey,  "login-password", LOGIN_RATE_LIMIT_IP_MAX),
+        ])
+        if (!emailAllowed || !ipAllowed) {
+          logger.warn("authorize: rate limited (pre-check)", { email, ip: rawIp, emailAllowed, ipAllowed })
+          throw new RateLimitedError()
+        }
 
         const user = await db.user.findUnique({
           where: { email: credentials.email as string },
@@ -90,12 +119,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         if (!user || !user.password) {
           await bcrypt.compare(credentials.password as string, DUMMY_HASH)
+          // Count user-not-found against IP only (email is unknown/invalid — no per-email counter).
+          await recordRateLimitFailure(ipKey, "login-password")
           throw new UserNotFoundError()
         }
         if (user.deletedAt !== null) return null
 
         const valid = await bcrypt.compare(credentials.password as string, user.password)
-        if (!valid) throw new InvalidPasswordError()
+        if (!valid) {
+          // Atomically increment both counters and re-check limits.
+          const [emailStillAllowed, ipStillAllowed] = await Promise.all([
+            checkAndIncrementRateLimit(email, "login-password", LOGIN_RATE_LIMIT_EMAIL_MAX, LOGIN_RATE_LIMIT_WINDOW_MS),
+            checkAndIncrementRateLimit(ipKey,  "login-password", LOGIN_RATE_LIMIT_IP_MAX,   LOGIN_RATE_LIMIT_WINDOW_MS),
+          ])
+          logger.warn("authorize: invalid password", {
+            email,
+            ip: rawIp,
+            emailBlocked: !emailStillAllowed,
+            ipBlocked:    !ipStillAllowed,
+          })
+          if (!emailStillAllowed || !ipStillAllowed) throw new RateLimitedError()
+          throw new InvalidPasswordError()
+        }
 
         // Block if account is challenge-blocked
         if (user.sessionChallengeBlockedUntil && user.sessionChallengeBlockedUntil > new Date()) {

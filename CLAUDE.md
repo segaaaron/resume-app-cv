@@ -3,6 +3,7 @@
 ## Rules
 
 - **REGLA DE QA:** Toda feature nueva o fix requiere visto bueno del agente `readycvv-qa-senior` antes de commit/deploy. Sin excepción.
+- **REGLA DE QA — VERIFICAR ANTES DE REPORTAR:** QA NUNCA reporta un issue sin haber leído el código exacto primero. Pasos obligatorios: (1) leer el archivo, (2) confirmar que el problema existe en el código actual, (3) entonces reportar. Reportar sin leer = issue inválido.
 - **REGLA DE ORO:** NUNCA hacer `git commit`, `git push`, ni crear PR sin autorización explícita del usuario en ese turno. Un "sí" anterior no vale. Siempre preguntar.
 - **SOLO PLAN PRO:** Este proyecto NO tiene plan gratuito. Solo existe el plan PRO ($15/mo · $144/yr). NUNCA usar `"free"` como valor de plan, ni como default, ni en lógica de negocio. Plan sin acceso = string vacío o ausente.
 - **REGLA DE ORO 2:** NUNCA realizar cambios que no fueron pedidos explícitamente. No tocar archivos, componentes, estilos, lógica ni nada fuera del alcance exacto de la tarea solicitada. Alcance = solo lo que el usuario pidió, nada más.

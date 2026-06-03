@@ -95,6 +95,19 @@ export function useQuotaStatus(): UseQuotaStatusResult {
     return () => window.removeEventListener("focus", onFocus)
   }, [fetcher])
 
+  // refetch when billing is synced from another tab
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") return
+    const channel = new BroadcastChannel("billing")
+    channel.onmessage = (e) => {
+      if (e.data?.type === "BILLING_SYNCED") {
+        lastFetch.current = 0
+        fetcher()
+      }
+    }
+    return () => channel.close()
+  }, [fetcher])
+
   const refresh = useCallback(async () => {
     lastFetch.current = 0
     await fetcher()

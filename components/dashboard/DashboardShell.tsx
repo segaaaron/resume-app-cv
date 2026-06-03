@@ -34,8 +34,11 @@ function TopbarNewCVButton({ locale, isPro }: { locale: string; isPro: boolean }
   const [creating, setCreating] = useState(false)
 
   async function createResume() {
-    if (!isPro) { router.push(`/${locale}/pricing`); return }
+    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    if (creating) return
     setCreating(true)
+    setTimeout(() => setCreating(false), 1500)
+    if (!isPro) { router.push(`/${locale}/pricing`); return }
     try {
       const res = await apiFetch("/api/resumes", { method: "POST" })
       if (!res.ok) { toast.error(t("error_create_cv")); setCreating(false); return }
@@ -70,8 +73,11 @@ function TopbarNewLetterButton({ locale, isPro }: { locale: string; isPro: boole
   const [creating, setCreating] = useState(false)
 
   async function createLetter() {
-    if (!isPro) { router.push(`/${locale}/pricing`); return }
+    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    if (creating) return
     setCreating(true)
+    setTimeout(() => setCreating(false), 1500)
+    if (!isPro) { router.push(`/${locale}/pricing`); return }
     try {
       const res = await apiFetch("/api/cover-letters", {
         method: "POST",

@@ -431,6 +431,7 @@
       "error": "Email o contraseña incorrectos",
       "error_user_not_found": "No existe una cuenta con ese email",
       "error_invalid_password": "Contraseña incorrecta",
+      "error_rate_limited": "Demasiados intentos fallidos. Intenta de nuevo en 15 minutos.",
       "email_invalid": "Email inválido",
       "password_required": "Contraseña requerida",
       "plan_pro_banner": "Un paso más para activar tu Plan Pro",

@@ -159,6 +159,10 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   function createResume() {
+    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    if (creating) return
+    setCreating(true)
+    setTimeout(() => setCreating(false), 1500)
     // Freemium funnel: 1 CV included on free plan. Beyond that → UpgradeModal.
     if (!isPro && resumes.length >= 1) {
       openUpgradeModal("second-resume")

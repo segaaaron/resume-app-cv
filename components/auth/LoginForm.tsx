@@ -68,6 +68,8 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
       })
     } else if (result?.code === "invalid_password") {
       toast.error(t("error_invalid_password"))
+    } else if (result?.code === "rate_limited") {
+      toast.error(t("error_rate_limited"))
     } else if (result?.code === "active_session") {
       setPendingEmail(data.email)
       setPendingPassword(data.password)

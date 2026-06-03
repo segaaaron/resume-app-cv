@@ -31,7 +31,7 @@ export async function GET(req: Request) {
     db.auditLog.create({
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "docx" } },
     }).catch(() => { /* fire-and-forget */ })
-    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
+    return NextResponse.json({ error: "subscription_required" }, { status: 403 })
   }
 
   const { searchParams } = new URL(req.url)

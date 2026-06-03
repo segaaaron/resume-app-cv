@@ -25,7 +25,7 @@ export async function GET(req: Request, { params }: Params) {
     db.auditLog.create({
       data: { userId: baseAuth.userId, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", coverLetterId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED cover-letter failed", { userId: baseAuth.userId, coverLetterId: id }, err) })
-    return authResult
+    return NextResponse.json({ error: "subscription_required" }, { status: 403 })
   }
 
   try {
