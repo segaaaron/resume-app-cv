@@ -38,9 +38,51 @@ const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = 
   architect: dynamic(() => import("./templates/ArchitectTemplate"),     { ssr: false }),
   diagonal:  dynamic(() => import("./templates/DiagonalTemplate"),      { ssr: false }),
   newspaper: dynamic(() => import("./templates/NewspaperTemplate"),     { ssr: false }),
+  // ── 30 premium templates (cover-letter v2) ───────────────────────────────
+  echo:      dynamic(() => import("./templates/EchoTemplate"),          { ssr: false }),
+  lumen:     dynamic(() => import("./templates/LumenTemplate"),         { ssr: false }),
+  stark:     dynamic(() => import("./templates/StarkTemplate"),         { ssr: false }),
+  atlas:     dynamic(() => import("./templates/AtlasTemplate"),         { ssr: false }),
+  consul:    dynamic(() => import("./templates/ConsulTemplate"),        { ssr: false }),
+  sterling:  dynamic(() => import("./templates/SterlingTemplate"),      { ssr: false }),
+  fortis:    dynamic(() => import("./templates/FortisTemplate"),        { ssr: false }),
+  prism:     dynamic(() => import("./templates/PrismTemplate"),         { ssr: false }),
+  ember:     dynamic(() => import("./templates/EmberTemplate"),         { ssr: false }),
+  vantage:   dynamic(() => import("./templates/VantageTemplate"),       { ssr: false }),
+  mosaic:    dynamic(() => import("./templates/MosaicTemplate"),        { ssr: false }),
+  circuit:   dynamic(() => import("./templates/CircuitTemplate"),       { ssr: false }),
+  vertex:    dynamic(() => import("./templates/VertexTemplate"),        { ssr: false }),
+  pulse:     dynamic(() => import("./templates/PulseTemplate"),         { ssr: false }),
+  folio:     dynamic(() => import("./templates/FolioTemplate"),         { ssr: false }),
+  gazette:   dynamic(() => import("./templates/GazetteTemplate"),       { ssr: false }),
+  verso:     dynamic(() => import("./templates/VersoTemplate"),         { ssr: false }),
+  aurum:     dynamic(() => import("./templates/AurumTemplate"),         { ssr: false }),
+  onyx:      dynamic(() => import("./templates/OnyxTemplate"),          { ssr: false }),
+  velvet:    dynamic(() => import("./templates/VelvetTemplate"),        { ssr: false }),
+  signal:    dynamic(() => import("./templates/SignalTemplate"),        { ssr: false }),
+  meridian:  dynamic(() => import("./templates/MeridianTemplate"),      { ssr: false }),
+  nova:      dynamic(() => import("./templates/NovaTemplate"),          { ssr: false }),
+  obsidian:  dynamic(() => import("./templates/ObsidianTemplate"),      { ssr: false }),
+  codex:     dynamic(() => import("./templates/CodexTemplate"),         { ssr: false }),
+  axiom:     dynamic(() => import("./templates/AxiomTemplate"),         { ssr: false }),
+  terra:     dynamic(() => import("./templates/TerraTemplate"),         { ssr: false }),
+  flare:     dynamic(() => import("./templates/FlareTemplate"),         { ssr: false }),
+  herald:    dynamic(() => import("./templates/HeraldTemplate"),        { ssr: false }),
+  bloom:     dynamic(() => import("./templates/BloomTemplate"),         { ssr: false }),
 }
 
-type TemplateId = "classic" | "sidebar" | "elegant" | "split" | "executive" | "material" | "gradient" | "minimal" | "twotone" | "timeline" | "monogram" | "architect" | "diagonal" | "newspaper"
+type TemplateId =
+  | "classic" | "sidebar" | "elegant" | "split" | "executive" | "material"
+  | "gradient" | "minimal" | "twotone" | "timeline" | "monogram"
+  | "architect" | "diagonal" | "newspaper"
+  | "echo" | "lumen" | "stark"
+  | "atlas" | "consul" | "sterling" | "fortis"
+  | "prism" | "ember" | "vantage" | "mosaic"
+  | "circuit" | "vertex" | "pulse"
+  | "folio" | "gazette" | "verso"
+  | "aurum" | "onyx" | "velvet"
+  | "signal" | "meridian" | "nova" | "obsidian" | "codex" | "axiom" | "terra"
+  | "flare" | "herald" | "bloom"
 
 interface Props {
   id: string
@@ -69,6 +111,37 @@ const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
   { id: "architect", labelKey: "template_architect", pro: true },
   { id: "diagonal", labelKey: "template_diagonal", pro: true },
   { id: "newspaper", labelKey: "template_newspaper", pro: true },
+  // ── 30 premium templates ──
+  { id: "echo",     labelKey: "template_echo",     pro: true },
+  { id: "lumen",    labelKey: "template_lumen",    pro: true },
+  { id: "stark",    labelKey: "template_stark",    pro: true },
+  { id: "atlas",    labelKey: "template_atlas",    pro: true },
+  { id: "consul",   labelKey: "template_consul",   pro: true },
+  { id: "sterling", labelKey: "template_sterling", pro: true },
+  { id: "fortis",   labelKey: "template_fortis",   pro: true },
+  { id: "prism",    labelKey: "template_prism",    pro: true },
+  { id: "ember",    labelKey: "template_ember",    pro: true },
+  { id: "vantage",  labelKey: "template_vantage",  pro: true },
+  { id: "mosaic",   labelKey: "template_mosaic",   pro: true },
+  { id: "circuit",  labelKey: "template_circuit",  pro: true },
+  { id: "vertex",   labelKey: "template_vertex",   pro: true },
+  { id: "pulse",    labelKey: "template_pulse",    pro: true },
+  { id: "folio",    labelKey: "template_folio",    pro: true },
+  { id: "gazette",  labelKey: "template_gazette",  pro: true },
+  { id: "verso",    labelKey: "template_verso",    pro: true },
+  { id: "aurum",    labelKey: "template_aurum",    pro: true },
+  { id: "onyx",     labelKey: "template_onyx",     pro: true },
+  { id: "velvet",   labelKey: "template_velvet",   pro: true },
+  { id: "signal",   labelKey: "template_signal",   pro: true },
+  { id: "meridian", labelKey: "template_meridian", pro: true },
+  { id: "nova",     labelKey: "template_nova",     pro: true },
+  { id: "obsidian", labelKey: "template_obsidian", pro: true },
+  { id: "codex",    labelKey: "template_codex",    pro: true },
+  { id: "axiom",    labelKey: "template_axiom",    pro: true },
+  { id: "terra",    labelKey: "template_terra",    pro: true },
+  { id: "flare",    labelKey: "template_flare",    pro: true },
+  { id: "herald",   labelKey: "template_herald",   pro: true },
+  { id: "bloom",    labelKey: "template_bloom",    pro: true },
 ]
 
 
@@ -333,6 +406,37 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     architect: t("template_architect"),
     diagonal: t("template_diagonal"),
     newspaper: t("template_newspaper"),
+    // ── 30 premium templates ──
+    echo: t("template_echo"),
+    lumen: t("template_lumen"),
+    stark: t("template_stark"),
+    atlas: t("template_atlas"),
+    consul: t("template_consul"),
+    sterling: t("template_sterling"),
+    fortis: t("template_fortis"),
+    prism: t("template_prism"),
+    ember: t("template_ember"),
+    vantage: t("template_vantage"),
+    mosaic: t("template_mosaic"),
+    circuit: t("template_circuit"),
+    vertex: t("template_vertex"),
+    pulse: t("template_pulse"),
+    folio: t("template_folio"),
+    gazette: t("template_gazette"),
+    verso: t("template_verso"),
+    aurum: t("template_aurum"),
+    onyx: t("template_onyx"),
+    velvet: t("template_velvet"),
+    signal: t("template_signal"),
+    meridian: t("template_meridian"),
+    nova: t("template_nova"),
+    obsidian: t("template_obsidian"),
+    codex: t("template_codex"),
+    axiom: t("template_axiom"),
+    terra: t("template_terra"),
+    flare: t("template_flare"),
+    herald: t("template_herald"),
+    bloom: t("template_bloom"),
   }
 
   // Palette constants used in conditional inline styles (tab bar, template grid)

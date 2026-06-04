@@ -7,7 +7,7 @@ import {
 } from "./thumbnails-free"
 import {
   AuroraThumb, LumiereThumb, ConsulThumb, RoseThumb,
-  WaveThumb, BannerThumb, VertexThumb, PrestigeThumb,
+  BannerThumb, VertexThumb,
 } from "./thumbnails-pro-a"
 import {
   KyotoThumb, GenevaThumb, WindsorThumb, MilanThumb,
@@ -19,20 +19,20 @@ import {
   ClassicMonoThumb, EditorialSerifThumb, BoldBlockThumb, TimelineVerticalThumb,
   SwissGridThumb, ApexThumb, NovaThumb, CascadeThumb, OnyxThumb, MosaicThumb,
   ThompsonThumb, LarssonThumb, CharcoalClassicThumb, NavyExecutiveThumb,
-  CoralSidebarThumb, NeoBrutalistThumb, SageBotanicalThumb, TerminalCVThumb,
-  IOSAppCVThumb, DataDrivenThumb, BoardingPassThumb, MagazineSpreadThumb,
-  CodeEditorThumb, CivilEngThumb, MechanicalThumb, DevOpsTerminalThumb,
+  CoralSidebarThumb, SageBotanicalThumb,
+  IOSAppCVThumb, DataDrivenThumb, MagazineSpreadThumb,
+  CivilEngThumb,
   ProcessFlowThumb, FrontPageThumb, VinylCVThumb, CallSheetThumb,
   CopywriterMagThumb, AnimatorCVThumb, ChefMenuThumb, SommelierThumb,
-  HotelCVThumb, BartenderCVThumb, PostcardCVThumb, LegalBriefThumb,
+  HotelCVThumb, BartenderCVThumb, LegalBriefThumb,
   EngravedThumb, ChalkboardThumb, AcademicCVThumb, PsychologistThumb,
   PilotLogThumb, OnboardingFormThumb, AthleteCardThumb, TranslatorCVThumb,
-  HerbariumCVThumb, RisoDesignerThumb, UXTokensThumb, SketchbookIllustratorThumb,
-  BlueprintCVThumb, ContactSheetThumb, AnnualReportThumb, FinanceTerminalThumb,
+  HerbariumCVThumb, RisoDesignerThumb, UXTokensThumb,
+  BlueprintCVThumb, AnnualReportThumb, FinanceTerminalThumb,
   CampaignPosterThumb, SalesPitchThumb, LedgerCVThumb, CobaltThumb,
   DualityThumb, HavanaThumb, HelixThumb, LisbonThumb, NauticalThumb,
-  ObsidianThumb, PrismThumb, TokyoThumb, VitaeThumb, MedicalChartThumb,
-  VitalSignsThumb, VetCVThumb, NotebookCVThumb, FieldJournalThumb,
+  PrismThumb, TokyoThumb, VitaeThumb, MedicalChartThumb,
+  VitalSignsThumb, VetCVThumb,
   ATSThumb, CasualThumb, CircularThumb, CoralThumb,
   FoldThumb, LuxuriousThumb, MetroThumb, RivieraThumb, SharpThumb,
   SparkThumb, VogueThumb,
@@ -60,10 +60,8 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "lumiere":      return <LumiereThumb color={color} />
     case "consul":       return <ConsulThumb color={color} />
     case "rose":         return <RoseThumb color={color} />
-    case "wave":         return <WaveThumb color={color} />
     case "banner":       return <BannerThumb color={color} />
     case "vertex":       return <VertexThumb color={color} />
-    case "prestige":     return <PrestigeThumb color={color} />
     case "kyoto":        return <KyotoThumb color={color} />
     case "geneva":       return <GenevaThumb color={color} />
     case "windsor":      return <WindsorThumb color={color} />
@@ -96,12 +94,9 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "charcoalclassic":  return <CharcoalClassicThumb color={color} />
     case "navyexecutive":    return <NavyExecutiveThumb color={color} />
     case "coralsidebar":     return <CoralSidebarThumb color={color} />
-    case "neobrutalist":     return <NeoBrutalistThumb color={color} />
     case "sagebotanical":    return <SageBotanicalThumb color={color} />
-    case "terminalcv":       return <TerminalCVThumb color={color} />
     case "iosappcv":         return <IOSAppCVThumb color={color} />
     case "datadriven":       return <DataDrivenThumb color={color} />
-    case "boardingpass":     return <BoardingPassThumb color={color} />
     case "magazinespread":   return <MagazineSpreadThumb color={color} />
     case "legalbrief":       return <LegalBriefThumb color={color} />
     case "engraved":         return <EngravedThumb color={color} />
@@ -112,12 +107,9 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "sommelier":        return <SommelierThumb color={color} />
     case "hotelcv":          return <HotelCVThumb color={color} />
     case "bartendercv":      return <BartenderCVThumb color={color} />
-    case "postcardcv":       return <PostcardCVThumb color={color} />
     case "medicalchart":     return <MedicalChartThumb color={color} />
     case "vitalsigns":       return <VitalSignsThumb color={color} />
     case "vetcv":            return <VetCVThumb color={color} />
-    case "notebookcv":       return <NotebookCVThumb color={color} />
-    case "fieldjournal":     return <FieldJournalThumb color={color} />
     case "pilotlog":         return <PilotLogThumb color={color} />
     case "onboardingform":   return <OnboardingFormThumb color={color} />
     case "athletecard":      return <AthleteCardThumb color={color} />
@@ -128,16 +120,11 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "callsheet":        return <CallSheetThumb color={color} />
     case "copywritermag":    return <CopywriterMagThumb color={color} />
     case "animatorcv":       return <AnimatorCVThumb color={color} />
-    case "codeeditor":       return <CodeEditorThumb color={color} />
     case "civileng":         return <CivilEngThumb color={color} />
-    case "mechanical":       return <MechanicalThumb color={color} />
-    case "devopsterminal":   return <DevOpsTerminalThumb color={color} />
     case "processflow":           return <ProcessFlowThumb color={color} />
     case "risodesigner":          return <RisoDesignerThumb color={color} />
     case "uxtokens":              return <UXTokensThumb color={color} />
-    case "sketchbookillustrator": return <SketchbookIllustratorThumb color={color} />
     case "blueprintcv":           return <BlueprintCVThumb color={color} />
-    case "contactsheet":          return <ContactSheetThumb color={color} />
     case "annualreport":          return <AnnualReportThumb color={color} />
     case "financeterminal":       return <FinanceTerminalThumb color={color} />
     case "campaignposter":        return <CampaignPosterThumb color={color} />
@@ -149,7 +136,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "helix":          return <HelixThumb color={color} />
     case "lisbon":         return <LisbonThumb color={color} />
     case "nautical":       return <NauticalThumb color={color} />
-    case "obsidian":       return <ObsidianThumb color={color} />
     case "prism":          return <PrismThumb color={color} />
     case "tokyo":          return <TokyoThumb color={color} />
     case "vitae":          return <VitaeThumb color={color} />

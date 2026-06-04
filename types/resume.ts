@@ -187,10 +187,8 @@ export type TemplateId =
   | "consul"
   | "rose"
   | "minimal"
-  | "wave"
   | "banner"
   | "vertex"
-  | "prestige"
   | "kyoto"
   | "geneva"
   | "windsor"
@@ -223,12 +221,9 @@ export type TemplateId =
   | "charcoalclassic"
   | "navyexecutive"
   | "coralsidebar"
-  | "neobrutalist"
   | "sagebotanical"
-  | "terminalcv"
   | "iosappcv"
   | "datadriven"
-  | "boardingpass"
   | "magazinespread"
   | "legalbrief"
   | "engraved"
@@ -239,12 +234,9 @@ export type TemplateId =
   | "sommelier"
   | "hotelcv"
   | "bartendercv"
-  | "postcardcv"
   | "medicalchart"
   | "vitalsigns"
   | "vetcv"
-  | "notebookcv"
-  | "fieldjournal"
   | "pilotlog"
   | "onboardingform"
   | "athletecard"
@@ -255,16 +247,11 @@ export type TemplateId =
   | "callsheet"
   | "copywritermag"
   | "animatorcv"
-  | "codeeditor"
   | "civileng"
-  | "mechanical"
-  | "devopsterminal"
   | "processflow"
   | "risodesigner"
   | "uxtokens"
-  | "sketchbookillustrator"
   | "blueprintcv"
-  | "contactsheet"
   | "annualreport"
   | "financeterminal"
   | "campaignposter"
@@ -276,7 +263,6 @@ export type TemplateId =
   | "helix"
   | "lisbon"
   | "nautical"
-  | "obsidian"
   | "prism"
   | "tokyo"
   | "vitae"
@@ -344,7 +330,6 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "helix",    name: "Helix ⭐",    description: "Sidebar oscuro hexagonal SVG, progreso circular SVG, ideal para perfiles técnicos", columns: "double", hasPhoto: true },
   { id: "lisbon",   name: "Lisbon ⭐",   description: "Sidebar con degradado accent, foto hexagonal, iconos geométricos por sección", columns: "double", hasPhoto: true },
   { id: "nautical", name: "Nautical ⭐", description: "Sidebar navy marino, estética náutica clásica, foto circular con marco", columns: "double", hasPhoto: true },
-  { id: "obsidian", name: "Obsidian ⭐", description: "Una columna oscura con photo header panorámica, estética dark premium", columns: "single", hasPhoto: true },
   { id: "prism",    name: "Prism ⭐",    description: "Sidebar navy profundo, foto circular, iconos de hobbies, estilo David Martin", columns: "double", hasPhoto: true },
   { id: "tokyo",    name: "Tokyo ⭐",    description: "Sidebar casi negro, círculos accent, labels uppercase con puntos decorativos", columns: "double", hasPhoto: true },
   { id: "vitae",    name: "Vitae ⭐",    description: "Sidebar navy clásico, foto circular, section headers con tab ovalado accent", columns: "double", hasPhoto: true },
@@ -353,10 +338,8 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "consul",  name: "Consul",    description: "Sidebar azul con nombre apilado, foto circular y secciones con línea inferior", columns: "double", hasPhoto: true },
   { id: "rose",     name: "Rose ⚡",     description: "Sidebar rosa cálido con foto circular, secciones elegantes y acento dusty rose", columns: "double", hasPhoto: true },
   { id: "minimal",  name: "Minimal ⚡",  description: "Ultra-limpio con nombre gigante, puntos de rating y máximo espacio blanco", columns: "double", hasPhoto: true },
-  { id: "wave",     name: "Wave ⚡",     description: "Header degradado teal con ola SVG curva, badges de contacto y estrellas", columns: "double", hasPhoto: true },
   { id: "banner",   name: "Banner ⚡",   description: "Headers en forma de banner/ribbon SVG navy con foto circular superior", columns: "double", hasPhoto: true },
   { id: "vertex",   name: "Vertex ⚡",   description: "Triángulos decorativos en esquinas, gauges circulares SVG para idiomas", columns: "double", hasPhoto: true },
-  { id: "prestige", name: "Prestige ⚡", description: "Fondo crema con bloque navy para resumen, acento cobre/bronce elegante", columns: "double", hasPhoto: true },
   { id: "kyoto", name: "Kyoto ✦", description: "Sidebar off-white con marco cuadrado para foto e iconos brushstroke", columns: "double", hasPhoto: true },
   { id: "geneva", name: "Geneva ✦", description: "Nombre centrado en mayúsculas, divisores SVG punteados con icono", columns: "single", hasPhoto: false },
   { id: "windsor", name: "Windsor ✦", description: "Banda navy ejecutiva con nombre blanco y título dorado, foto con marco dorado", columns: "single", hasPhoto: true },
@@ -389,12 +372,9 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "charcoalclassic",  name: "Charcoal Classic ⭐", description: "Header pill oscuro redondeado, sidebar con skill bars, software badges", columns: "double", hasPhoto: true },
   { id: "navyexecutive",    name: "Navy Executive ⭐",   description: "Sidebar navy + marfil, acentos dorados, Playfair Display serif", columns: "double", hasPhoto: true },
   { id: "coralsidebar",     name: "Coral Sidebar ⭐",    description: "Sidebar coral derecho, nombre grande 56px, chips de stack redondeados", columns: "double", hasPhoto: true },
-  { id: "neobrutalist",     name: "Neo Brutalist ⭐",    description: "Cards con bordes gruesos y sombra dura, fondo crema, colores primarios", columns: "double", hasPhoto: false },
   { id: "sagebotanical",    name: "Sage Botanical ⭐",   description: "Header sage con curva, 2 columnas, tipografía DM Serif italic", columns: "double", hasPhoto: true },
-  { id: "terminalcv",       name: "Terminal CV ⭐",      description: "Xcode dark UI, syntax highlighting colores, sidebar de archivos", columns: "single", hasPhoto: false },
   { id: "iosappcv",         name: "iOS App CV ⭐",       description: "Interfaz iOS nativa, status bar, cards redondeadas, tab bar inferior", columns: "single", hasPhoto: true },
   { id: "datadriven",       name: "Data Driven ⭐",      description: "Número gigante de años, métricas en strip, sparkline SVG footer", columns: "double", hasPhoto: false },
-  { id: "boardingpass",     name: "Boarding Pass ⭐",    description: "Metáfora ticket de avión, 3 tickets apilados, código de barras", columns: "single", hasPhoto: false },
   { id: "magazinespread",   name: "Magazine Spread ⭐",  description: "Editorial Playfair Display, drop cap, tres columnas, footer tags", columns: "single", hasPhoto: false },
   { id: "legalbrief",      name: "Legal Brief ⭐",      description: "Memorial curricular estilo brief legal, márgenes rojos, firma cursiva", columns: "single", hasPhoto: false },
   { id: "engraved",        name: "Engraved ⭐",          description: "Marco doble dorado, monograma SVG, tipografía Cormorant grabada", columns: "single", hasPhoto: false },
@@ -405,12 +385,9 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "sommelier",      name: "Sommelier ⭐",          description: "Etiqueta de vino girada, banda lateral, tipografía elegante con notas de cata", columns: "double", hasPhoto: false },
   { id: "hotelcv",        name: "Hotel CV ⭐",           description: "Estética concierge de hotel de lujo, tarjeta de bienvenida y datos estructurados", columns: "single", hasPhoto: true },
   { id: "bartendercv",    name: "Bartender CV ⭐",       description: "Pizarrón dark con chalk, receta de cóctel como metáfora del perfil profesional", columns: "double", hasPhoto: false },
-  { id: "postcardcv",     name: "Postcard CV ⭐",        description: "Diseño postal vintage con sellos, matasellos y tipografía manuscrita", columns: "single", hasPhoto: true },
   { id: "medicalchart",   name: "Medical Chart ⭐",      description: "Historial clínico con cabecera verde médico, cuadrícula de datos y cruz decorativa", columns: "double", hasPhoto: false },
   { id: "vitalsigns",     name: "Vital Signs ⭐",        description: "Monitor de signos vitales, ECG SVG animado, métricas de contacto como indicadores", columns: "double", hasPhoto: false },
   { id: "vetcv",          name: "Vet CV ⭐",             description: "Encabezado marrón cálido con ilustración de mascota SVG, estilo veterinario acogedor", columns: "double", hasPhoto: true },
-  { id: "notebookcv",     name: "Notebook CV ⭐",        description: "Estilo cuaderno Jupyter con celdas de código, outputs y markdown. Ideal para data scientists", columns: "single", hasPhoto: false },
-  { id: "fieldjournal",   name: "Field Journal ⭐",      description: "Cuaderno de campo con líneas de fondo, tipografía Garamond, mapa SVG y pie de página de coordenadas", columns: "double", hasPhoto: false },
   { id: "pilotlog",       name: "Pilot Log ⭐",           description: "Cuaderno de vuelo ICAO, tabla de carrera, stats de contacto en formato logbook", columns: "single", hasPhoto: false },
   { id: "onboardingform", name: "Onboarding Form ⭐",     description: "Formulario de alta de empleado, campos con subrayado, checks de habilidades, firma cursiva", columns: "single", hasPhoto: false },
   { id: "athletecard",    name: "Athlete Card ⭐",         description: "Tarjeta coleccionable deportiva, barras de atributos 0-99, stats de temporada, borde naranja", columns: "double", hasPhoto: true },
@@ -421,16 +398,11 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "callsheet",      name: "Call Sheet ⭐",            description: "Hoja de llamado de producción cinematográfica, tabla de elenco, bloques de producción en amarillo y negro", columns: "single", hasPhoto: false },
   { id: "copywritermag",  name: "Copywriter Mag ⭐",        description: "Doble página de revista literaria, gran titular tipográfico, cuerpo en dos columnas estilo ensayo", columns: "double", hasPhoto: false },
   { id: "animatorcv",     name: "Animator CV ⭐",           description: "Tira de fotogramas animados, círculo saltarín SVG, chips de software en azul, estética 2D animation studio", columns: "double", hasPhoto: false },
-  { id: "codeeditor",     name: "Code Editor ⭐",           description: "Tema dark Catppuccin Mocha, layout de editor de código con syntax highlighting y barra de estado", columns: "single", hasPhoto: false },
   { id: "civileng",       name: "Civil Eng ⭐",              description: "Fondo crema, encabezado bold, línea de tiempo SVG tipo plano estructural, paleta naranja/verde", columns: "double", hasPhoto: false },
-  { id: "mechanical",     name: "Mechanical ⭐",             description: "Diagrama exploded view SVG con callouts numerados, estética de plano técnico industrial", columns: "double", hasPhoto: false },
-  { id: "devopsterminal", name: "DevOps Terminal ⭐",        description: "Terminal log dark con niveles INFO/WARN/OK/ERR, paleta verde neón, estructura tipo tail -f", columns: "single", hasPhoto: false },
   { id: "processflow",          name: "Process Flow ⭐",          description: "Mapa de proceso DMAIC con flechas SVG tipo ingeniería industrial, paleta azul/naranja", columns: "double", hasPhoto: false },
   { id: "risodesigner",         name: "Riso Designer ⭐",          description: "Estética risografía indie, bloques de color, tipografía bold contrastante", columns: "double", hasPhoto: false },
   { id: "uxtokens",             name: "UX Tokens ⭐",              description: "Sistema de diseño card dark, etiquetas tipo design token, paleta verde/azul", columns: "double", hasPhoto: true },
-  { id: "sketchbookillustrator",name: "Sketchbook ⭐",             description: "Papel de cuaderno con líneas, margen rojo, tipografía manuscrita Caveat", columns: "double", hasPhoto: true },
   { id: "blueprintcv",          name: "Blueprint CV ⭐",           description: "Plano técnico azul con grid de coordenadas, habitaciones etiquetadas por sección", columns: "double", hasPhoto: false },
-  { id: "contactsheet",         name: "Contact Sheet ⭐",          description: "Hoja de contacto fotográfico, tira de negativos SVG, paleta oscura tipo cuarto oscuro", columns: "double", hasPhoto: true },
   { id: "annualreport",         name: "Annual Report ⭐",          description: "Informe anual corporativo, Playfair serif, tabla de resultados, sparkline SVG de carrera", columns: "double", hasPhoto: false },
   { id: "financeterminal",      name: "Finance Terminal ⭐",       description: "Estética terminal Bloomberg, fondo oscuro, texto verde/ámbar, tabla de track record", columns: "double", hasPhoto: false },
   { id: "campaignposter",       name: "Campaign Poster ⭐",        description: "Cartel de campaña política, gran titular HIRE [NAME]!, badge giratorio, fondos bold", columns: "single", hasPhoto: true },

@@ -667,38 +667,6 @@ export function CoralSidebarThumb({ color }: { color: string }) {
   )
 }
 
-export function NeoBrutalistThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#fef6e4" />
-      {/* Hero card with shadow */}
-      <rect x="6" y="6" width="68" height="22" fill={color} stroke="#0d0d0d" strokeWidth="2.5" />
-      <rect x="9" y="9" width="68" height="22" fill="none" stroke="#0d0d0d" strokeWidth="1" opacity="0.3" />
-      <rect x="8" y="14" width="36" height="5" rx="0" fill="#0d0d0d" opacity="0.8" />
-      <rect x="8" y="21" width="22" height="2" rx="0" fill="#0d0d0d" opacity="0.5" />
-      {/* HIRE ME badge */}
-      <rect x="50" y="10" width="16" height="10" fill="#0d0d0d" />
-      <rect x="51" y="12" width="14" height="6" rx="0" fill={color} opacity="0.3" />
-      {/* Two-col layout */}
-      {/* Pink card */}
-      <rect x="6" y="33" width="32" height="18" fill="#f582ae" stroke="#0d0d0d" strokeWidth="2" />
-      <rect x="9" y="36" width="8" height="1.5" rx="0" fill="#0d0d0d" />
-      <rect x="9" y="40" width="24" height="1" rx="0" fill="#0d0d0d" opacity="0.5" />
-      <rect x="9" y="43" width="20" height="1" rx="0" fill="#0d0d0d" opacity="0.5" />
-      {/* Blue card */}
-      <rect x="42" y="33" width="32" height="18" fill="#8bd3dd" stroke="#0d0d0d" strokeWidth="2" />
-      <rect x="45" y="36" width="8" height="1.5" rx="0" fill="#0d0d0d" />
-      <rect x="45" y="40" width="24" height="1" rx="0" fill="#0d0d0d" opacity="0.5" />
-      {/* Green skills */}
-      <rect x="6" y="56" width="42" height="20" fill="#a8e6a3" stroke="#0d0d0d" strokeWidth="2" />
-      <rect x="9" y="59" width="10" height="1.5" rx="0" fill="#0d0d0d" />
-      {["0","8","16","24"].map((x, i) => (
-        <rect key={i} x={9 + parseInt(x)} y="64" width="6" height="5" fill="#0d0d0d" />
-      ))}
-    </svg>
-  )
-}
-
 export function SageBotanicalThumb({ color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -722,48 +690,6 @@ export function SageBotanicalThumb({ color }: { color: string }) {
       {[0,6,12,18].map((dy) => (
         <rect key={dy} x="42" y={57 + dy} width="14" height="4" rx="2" fill="transparent" stroke="#2a3a29" strokeWidth="0.8" />
       ))}
-    </svg>
-  )
-}
-
-export function TerminalCVThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#1e1f2e" />
-      {/* Title bar */}
-      <rect x="0" y="0" width="80" height="10" fill="#15161f" />
-      <circle cx="8" cy="5" r="2.5" fill="#ff5f57" />
-      <circle cx="15" cy="5" r="2.5" fill="#febc2e" />
-      <circle cx="22" cy="5" r="2.5" fill="#28c840" />
-      <rect x="28" y="3.5" width="24" height="3" rx="1.5" fill="#7f8094" opacity="0.5" />
-      {/* Tab bar */}
-      <rect x="0" y="10" width="80" height="7" fill="#252638" />
-      <rect x="0" y="10" width="24" height="7" fill="#1e1f2e" />
-      <rect x="2" y="12" width="20" height="3" rx="1" fill="#e6e6f0" opacity="0.7" />
-      {/* File nav */}
-      <rect x="0" y="17" width="22" height="93" fill="#252638" />
-      <rect x="3" y="21" width="16" height="1.5" rx="0.75" fill="#6cb6ff" opacity="0.7" />
-      <rect x="3" y="25" width="14" height="1" rx="0.5" fill="#7f8094" opacity="0.6" />
-      <rect x="3" y="28" width="12" height="1" rx="0.5" fill="#7f8094" opacity="0.5" />
-      <rect x="3" y="31" width="16" height="1" rx="0.5" fill="#7f8094" opacity="0.5" />
-      {/* Code lines */}
-      <rect x="26" y="20" width="8" height="1.5" rx="0.75" fill="#ff7b9c" opacity="0.9" />
-      <rect x="36" y="20" width="14" height="1.5" rx="0.75" fill="#c39bff" opacity="0.9" />
-      <rect x="26" y="24" width="6" height="1.5" rx="0.75" fill="#ff7b9c" opacity="0.9" />
-      <rect x="34" y="24" width="8" height="1.5" rx="0.75" fill="#6cb6ff" opacity="0.8" />
-      <rect x="44" y="24" width="2" height="1.5" rx="0.75" fill="#e6e6f0" opacity="0.4" />
-      <rect x="48" y="24" width="16" height="1.5" rx="0.75" fill="#ffa657" opacity="0.8" />
-      <rect x="26" y="28" width="6" height="1.5" rx="0.75" fill="#ff7b9c" opacity="0.9" />
-      <rect x="34" y="28" width="10" height="1.5" rx="0.75" fill="#6cb6ff" opacity="0.8" />
-      <rect x="46" y="28" width="2" height="1.5" fill="#e6e6f0" opacity="0.4" />
-      <rect x="50" y="28" width="12" height="1.5" rx="0.75" fill="#ffa657" opacity="0.8" />
-      {/* Terminal prompt line "$ _" with blinking cursor accent */}
-      <text x="26" y="98" fill="#7cdba4" opacity="0.9" style={{ fontSize: "5px", fontFamily: "ui-monospace, 'Courier New', monospace", fontWeight: 700 }}>{">_"}</text>
-      <rect x="34" y="93.6" width="6" height="5" fill={color} opacity="0.7" />
-      {/* Status bar */}
-      <rect x="0" y="104" width="80" height="6" fill="#15161f" />
-      <rect x="4" y="106" width="16" height="2" rx="1" fill="#7cdba4" opacity="0.7" />
-      <rect x="50" y="106" width="24" height="2" rx="1" fill="#7f8094" opacity="0.5" />
     </svg>
   )
 }
@@ -836,44 +762,6 @@ export function DataDrivenThumb({ color }: { color: string }) {
   )
 }
 
-export function BoardingPassThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#e8e3d6" />
-      {/* Ticket 1 */}
-      <rect x="4" y="4" width="72" height="32" fill="#fbf6ec" />
-      <rect x="56" y="4" width="20" height="32" fill="#f4eedf" />
-      <rect x="56" y="4" width="2" height="32" fill="none" stroke="#1a1a1a" strokeWidth="1" strokeDasharray="2,2" />
-      <rect x="8" y="8" width="24" height="2" rx="1" fill={color} opacity="0.7" />
-      {/* FROM / plane / TO */}
-      <rect x="8" y="13" width="14" height="8" rx="1" fill="#1a1a1a" opacity="0.15" />
-      <rect x="8" y="14" width="12" height="4" rx="1" fill="#1a1a1a" opacity="0.7" />
-      <text x="28" y="21" style={{ fontSize: "10px", fill: color, fontWeight: 700 }}>✈</text>
-      <rect x="38" y="14" width="12" height="4" rx="1" fill="#1a1a1a" opacity="0.7" />
-      {/* Barcode */}
-      {[0,2,4,6,8,10,12].map((x) => (
-        <rect key={x} x={60 + x} y="12" width="1.5" height="14" fill="#1a1a1a" opacity={x % 4 === 0 ? 0.8 : 0.3} />
-      ))}
-      {/* Fields */}
-      <rect x="8" y="26" width="18" height="1.5" rx="0.75" fill="#1a1a1a" opacity="0.3" />
-      <rect x="29" y="26" width="22" height="1.5" rx="0.75" fill="#1a1a1a" opacity="0.3" />
-      {/* Ticket 2 */}
-      <rect x="4" y="40" width="72" height="22" fill="#fbf6ec" />
-      <rect x="56" y="40" width="20" height="22" fill="#f4eedf" />
-      <rect x="56" y="40" width="2" height="22" fill="none" stroke="#1a1a1a" strokeWidth="1" strokeDasharray="2,2" />
-      <rect x="8" y="44" width="22" height="1.5" rx="0.75" fill={color} opacity="0.6" />
-      {[0,1,2,3].map((i) => (
-        <rect key={i} x="8" y={48 + i * 4} width="42" height="1.5" rx="0.75" fill="#1a1a1a" opacity="0.15" />
-      ))}
-      {/* Ticket 3 */}
-      <rect x="4" y="66" width="72" height="14" fill="#fbf6ec" />
-      <rect x="56" y="66" width="20" height="14" fill="#f4eedf" />
-      <rect x="8" y="70" width="42" height="1" rx="0.5" fill="#1a1a1a" opacity="0.2" />
-      <rect x="8" y="74" width="30" height="1" rx="0.5" fill="#1a1a1a" opacity="0.2" />
-    </svg>
-  )
-}
-
 export function MagazineSpreadThumb({ color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -916,46 +804,6 @@ export function MagazineSpreadThumb({ color }: { color: string }) {
   )
 }
 
-export function CodeEditorThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#1e1e2e" />
-      {/* Title bar */}
-      <rect x="0" y="0" width="80" height="8" fill="#181825" />
-      <circle cx="6" cy="4" r="2" fill="#f38ba8" />
-      <circle cx="12" cy="4" r="2" fill="#f9e2af" />
-      <circle cx="18" cy="4" r="2" fill="#a6e3a1" />
-      <rect x="24" y="3" width="30" height="2" rx="1" fill="#313244" />
-      {/* Line numbers */}
-      <rect x="0" y="10" width="10" height="90" fill="#181825" />
-      {[0,1,2,3,4,5,6,7,8,9,10,11].map((i) => (
-        <rect key={i} x="2" y={13 + i * 7} width="6" height="1.5" rx="0.5" fill="#7c7f93" opacity="0.4" />
-      ))}
-      {/* Code lines */}
-      <rect x="13" y="13" width="14" height="1.5" rx="0.5" fill="#cba6f7" />
-      <rect x="29" y="13" width="25" height="1.5" rx="0.5" fill={color} />
-      <rect x="13" y="21" width="10" height="1.5" rx="0.5" fill="#cba6f7" />
-      <rect x="25" y="21" width="8" height="1.5" rx="0.5" fill="#f9e2af" />
-      <rect x="35" y="21" width="20" height="1.5" rx="0.5" fill="#a6e3a1" />
-      <rect x="13" y="29" width="18" height="1.5" rx="0.5" fill="#cba6f7" />
-      <rect x="33" y="29" width="28" height="1.5" rx="0.5" fill={color} />
-      <rect x="16" y="37" width="12" height="1.5" rx="0.5" fill="#a6e3a1" />
-      <rect x="16" y="44" width="22" height="1.5" rx="0.5" fill="#a6e3a1" />
-      <rect x="16" y="51" width="16" height="1.5" rx="0.5" fill="#7c7f93" opacity="0.6" />
-      <rect x="13" y="58" width="20" height="1.5" rx="0.5" fill="#cba6f7" />
-      <rect x="35" y="58" width="24" height="1.5" rx="0.5" fill={color} />
-      <rect x="16" y="65" width="14" height="1.5" rx="0.5" fill="#a6e3a1" />
-      <rect x="16" y="72" width="26" height="1.5" rx="0.5" fill="#a6e3a1" />
-      <rect x="13" y="79" width="8" height="1.5" rx="0.5" fill="#cba6f7" />
-      <rect x="13" y="86" width="22" height="1.5" rx="0.5" fill="#7c7f93" opacity="0.5" />
-      {/* Status bar */}
-      <rect x="0" y="104" width="80" height="6" fill={color} />
-      <rect x="3" y="106" width="20" height="1.5" rx="0.5" fill="#1e1e2e" opacity="0.6" />
-      <rect x="55" y="106" width="22" height="1.5" rx="0.5" fill="#1e1e2e" opacity="0.6" />
-    </svg>
-  )
-}
-
 export function CivilEngThumb({ color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -988,88 +836,6 @@ export function CivilEngThumb({ color }: { color: string }) {
       ))}
       <rect x="0" y="104" width="80" height="0.8" fill="#1a1f17" />
       <rect x="4" y="106" width="72" height="1.5" rx="0.5" fill="#1a1f17" opacity="0.25" />
-    </svg>
-  )
-}
-
-export function MechanicalThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#fafaf6" />
-      <rect x="4" y="4" width="72" height="1.5" rx="0.5" fill={color} opacity="0.6" />
-      <rect x="4" y="8" width="52" height="5" rx="0.5" fill="#101010" opacity="0.85" />
-      <rect x="4" y="15" width="34" height="1.5" rx="0.5" fill="#666" opacity="0.5" />
-      {/* Exploded diagram */}
-      <rect x="4" y="21" width="36" height="72" fill="white" stroke="#101010" strokeWidth="0.6" />
-      <circle cx="22" cy="34" r="8" fill="none" stroke="#101010" strokeWidth="1" />
-      <text x="22" y="36" fontSize="5" fill="#101010" textAnchor="middle" fontWeight="bold">EXP</text>
-      <line x1="22" y1="42" x2="22" y2="48" stroke="#101010" strokeWidth="0.6" strokeDasharray="2 1.5" />
-      <rect x="14" y="48" width="16" height="10" fill="none" stroke="#101010" strokeWidth="1" />
-      <text x="22" y="55" fontSize="5" fill="#101010" textAnchor="middle" fontWeight="bold">EDU</text>
-      <line x1="22" y1="58" x2="22" y2="64" stroke="#101010" strokeWidth="0.6" strokeDasharray="2 1.5" />
-      <polygon points="22,64 30,70 22,76 14,70" fill="none" stroke="#101010" strokeWidth="1" />
-      <text x="22" y="72" fontSize="5" fill="#101010" textAnchor="middle" fontWeight="bold">SKL</text>
-      {/* Callouts */}
-      <line x1="30" y1="34" x2="38" y2="30" stroke={color} strokeWidth="0.7" />
-      <circle cx="30" cy="34" r="1.2" fill={color} />
-      <line x1="30" y1="53" x2="38" y2="49" stroke={color} strokeWidth="0.7" />
-      <circle cx="30" cy="53" r="1.2" fill={color} />
-      {/* Right section content */}
-      <rect x="45" y="21" width="18" height="1.5" rx="0.5" fill="#101010" opacity="0.7" />
-      {[0,1,2].map((i) => (
-        <g key={i}>
-          <rect x="45" y={26 + i * 10} width="8" height="1.2" rx="0.5" fill={color} opacity="0.7" />
-          <rect x="45" y={29 + i * 10} width="30" height="1.5" rx="0.5" fill="#101010" opacity="0.5" />
-          <rect x="45" y={32 + i * 10} width="22" height="1.2" rx="0.5" fill="#666" opacity="0.35" />
-        </g>
-      ))}
-      <rect x="45" y="57" width="14" height="1.5" rx="0.5" fill="#101010" opacity="0.7" />
-      {[0,1,2,3].map((i) => (
-        <rect key={i} x="45" y={62 + i * 4} width="28" height="1.2" rx="0.5" fill="#101010" opacity={0.35 - i * 0.05} />
-      ))}
-      <rect x="0" y="99" width="80" height="0.8" fill="#101010" />
-      <rect x="4" y="101" width="72" height="1.5" rx="0.5" fill="#666" opacity="0.3" />
-    </svg>
-  )
-}
-
-export function DevOpsTerminalThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#0a0a0a" />
-      {/* Top bar */}
-      <rect x="0" y="0" width="80" height="8" fill="#1a1a1a" />
-      <rect x="4" y="3" width="36" height="2" rx="0.5" fill="#666" opacity="0.5" />
-      <rect x="58" y="3" width="18" height="2" rx="0.5" fill="#666" opacity="0.4" />
-      {/* Log lines */}
-      {[
-        ["#666", "#ffae00", color],
-        ["#666", "#ffae00", "#dcdcdc"],
-        ["#666", "#ffae00", "#dcdcdc"],
-        [color, "#ffae00", "#dcdcdc"],
-        ["#666", null, "#313244"],
-        ["#666", "#ffae00", "#dcdcdc"],
-        ["#666", "#ffae00", "#dcdcdc"],
-        [color, "#ffae00", "#dcdcdc"],
-        ["#666", null, "#313244"],
-        ["#666", "#ffae00", "#dcdcdc"],
-        ["#666", "#ffae00", "#dcdcdc"],
-        [color, "#ffae00", "#dcdcdc"],
-      ].map((row, i) => row[1] ? (
-        <g key={i}>
-          <rect x="4" y={12 + i * 7} width="10" height="2" rx="0.5" fill={row[0] ?? undefined} opacity="0.7" />
-          <rect x="16" y={12 + i * 7} width="12" height="2" rx="0.5" fill={row[1] ?? undefined} opacity="0.8" />
-          <rect x="30" y={12 + i * 7} width="44" height="2" rx="0.5" fill={row[2] as string} opacity="0.65" />
-        </g>
-      ) : (
-        <rect key={i} x="4" y={12 + i * 7} width="72" height="0.8" rx="0" fill={row[0] ?? undefined} opacity="0.4" />
-      ))}
-      {/* Cursor */}
-      <rect x="8" y="98" width="4" height="6" rx="0.5" fill={color} opacity="0.8" />
-      {/* Bottom bar */}
-      <rect x="0" y="104" width="80" height="6" fill="#1a1a1a" />
-      <rect x="4" y="106" width="16" height="1.5" rx="0.5" fill="#666" opacity="0.5" />
-      <rect x="55" y="106" width="20" height="1.5" rx="0.5" fill="#666" opacity="0.4" />
     </svg>
   )
 }
@@ -1353,39 +1119,6 @@ export function BartenderCVThumb({ color }: { color: string }) {
   )
 }
 
-export function PostcardCVThumb({ color }: { color: string }) {
-  const red = color || "#c1352e"
-  const sky = "#cfe6f0"
-  const green = "#3a7d44"
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#fcf6e8" />
-      <rect x="4" y="4" width="72" height="46" fill="#fff" stroke="#1f1a14" strokeWidth="0.5" />
-      <rect x="5" y="5" width="34" height="44" fill={sky} />
-      <polygon points="5,35 20,22 35,30 39,25 39,49 5,49" fill={green} opacity="0.6" />
-      <polygon points="5,42 22,30 35,36 39,32 39,49 5,49" fill={green} />
-      <circle cx="32" cy="12" r="4" fill="#ffd23f" />
-      <rect x="66" y="6" width="9" height="11" fill="none" stroke={red} strokeWidth="0.7" />
-      <text x="46" y="16" fontSize="5" fontFamily="serif" fill="#1f1a14" fontStyle="italic">{"¡Hola!"}</text>
-      <rect x="41" y="19" width="22" height="1.5" rx="0.5" fill="#1f1a14" opacity="0.15" />
-      <rect x="41" y="22" width="18" height="1.5" rx="0.5" fill="#1f1a14" opacity="0.12" />
-      {[0,1,2,3].map((i) => (
-        <g key={i}>
-          <rect x="4" y={56 + i * 12} width="8" height="1.5" rx="0.5" fill={red} opacity="0.6" />
-          <rect x="14" y={56 + i * 12} width="24" height="1.5" rx="0.5" fill="#1f1a14" opacity="0.2" />
-          <line x1="4" y1={64 + i * 12} x2="38" y2={64 + i * 12} stroke="#1f1a14" strokeWidth="0.3" strokeDasharray="1,1" />
-        </g>
-      ))}
-      {[0,1,2,3].map((i) => (
-        <g key={i}>
-          <rect x="44" y={56 + i * 12} width="18" height="1.5" rx="0.5" fill={red} opacity="0.4" />
-          <rect x="44" y={59 + i * 12} width="30" height="1.5" rx="0.5" fill="#1f1a14" opacity="0.15" />
-        </g>
-      ))}
-    </svg>
-  )
-}
-
 export function LegalBriefThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fbfaf6" /><line x1="12" y1="8" x2="12" y2="102" stroke={color} strokeWidth="0.8" opacity="0.5" /><line x1="14.5" y1="8" x2="14.5" y2="102" stroke={color} strokeWidth="0.5" opacity="0.4" /><rect x="18" y="8" width="44" height="1.5" rx="0.75" fill={color} opacity="0.6" /><rect x="18" y="14" width="48" height="4" rx="1" fill="#0d0d0d" opacity="0.8" /><rect x="24" y="20" width="32" height="1.5" rx="0.75" fill={color} opacity="0.5" /><rect x="18" y="28" width="8" height="1.5" rx="0.75" fill={color} /><rect x="28" y="28" width="28" height="1.5" rx="0.75" fill="#0d0d0d" opacity="0.6" /><rect x="18" y="32" width="56" height="1" rx="0.5" fill="#0d0d0d" opacity="0.2" /><rect x="18" y="35" width="50" height="1" rx="0.5" fill="#0d0d0d" opacity="0.2" /><rect x="18" y="42" width="8" height="1.5" rx="0.75" fill={color} /><rect x="28" y="42" width="32" height="1.5" rx="0.75" fill="#0d0d0d" opacity="0.6" />{[0,1,2,3].map((i) => (<rect key={i} x="18" y={47 + i * 5} width="52" height="1" rx="0.5" fill="#0d0d0d" opacity="0.18" />))}<rect x="18" y="70" width="8" height="1.5" rx="0.75" fill={color} /><rect x="28" y="70" width="28" height="1.5" rx="0.75" fill="#0d0d0d" opacity="0.6" /><rect x="18" y="75" width="52" height="1" rx="0.5" fill="#0d0d0d" opacity="0.18" /><rect x="38" y="92" width="28" height="3" rx="1.5" fill={color} opacity="0.3" /></svg>)
 }
@@ -1504,16 +1237,8 @@ export function UXTokensThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#1a1a2e" /><rect x="4" y="4" width="72" height="22" rx="2" fill="#252542" /><rect x="8" y="8" width="32" height="3" rx="1" fill="#eee" opacity="0.9" /><rect x="8" y="14" width="20" height="2" rx="0.5" fill={color} opacity="0.8" /><rect x="4" y="30" width="34" height="36" rx="2" fill="#252542" /><rect x="8" y="33" width="14" height="1.5" rx="0.5" fill={color} opacity="0.6" /><rect x="8" y="37" width="26" height="2" rx="0.5" fill="#eee" opacity="0.7" /><rect x="8" y="42" width="26" height="2" rx="0.5" fill="#eee" opacity="0.4" /><rect x="42" y="30" width="34" height="36" rx="2" fill="#252542" /><rect x="46" y="33" width="14" height="1.5" rx="0.5" fill={color} opacity="0.6" /><rect x="46" y="37" width="26" height="2" rx="0.5" fill="#eee" opacity="0.7" /><rect x="4" y="70" width="72" height="36" rx="2" fill="#252542" /><rect x="8" y="74" width="14" height="1.5" rx="0.5" fill={color} opacity="0.6" />{[0,1,2,3].map(i=><rect key={i} x={8+i*18} y={78} width={14} height={20} rx="1" fill={color} opacity={0.1+i*0.05} />)}</svg>)
 }
 
-export function SketchbookIllustratorThumb({ color }: { color: string }) {
-  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fffef5" />{[14,22,30,38,46,54,62,70,78,86,94,102].map(y=><line key={y} x1="0" y1={y} x2="80" y2={y} stroke="#c8d8f0" strokeWidth="0.5" />)}<line x1="18" y1="0" x2="18" y2="110" stroke="#f08080" strokeWidth="1" opacity="0.6" /><rect x="22" y="6" width="48" height="5" rx="1" fill="#333" opacity="0.7" /><rect x="22" y="14" width="30" height="2.5" rx="0.5" fill={color} opacity="0.7" /><rect x="22" y="26" width="20" height="2" rx="0.5" fill="#333" opacity="0.5" /><rect x="22" y="31" width="50" height="1.5" rx="0.5" fill="#888" opacity="0.4" /><rect x="22" y="34" width="42" height="1.5" rx="0.5" fill="#888" opacity="0.4" /><circle cx="10" cy="12" r="5" fill="#e8d5c0" stroke="#999" strokeWidth="0.5" /></svg>)
-}
-
 export function BlueprintCVThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#1a3a5c" />{[10,20,30,40,50,60,70,80,90,100].map(y=><line key={y} x1="0" y1={y} x2="80" y2={y} stroke="#4a7ab5" strokeWidth="0.3" opacity="0.5" />)}{[8,16,24,32,40,48,56,64,72].map(x=><line key={x} x1={x} y1="0" x2={x} y2="110" stroke="#4a7ab5" strokeWidth="0.3" opacity="0.5" />)}<rect x="6" y="6" width="68" height="98" fill="none" stroke="#7ab8e8" strokeWidth="1" /><rect x="10" y="10" width="26" height="18" fill="none" stroke="#7ab8e8" strokeWidth="0.7" /><rect x="40" y="10" width="30" height="18" fill="none" stroke="#7ab8e8" strokeWidth="0.7" /><rect x="10" y="32" width="56" height="22" fill="none" stroke="#7ab8e8" strokeWidth="0.7" /><rect x="14" y="7" width="12" height="3" rx="0.5" fill="#7ab8e8" opacity="0.7" /><rect x="44" y="7" width="12" height="3" rx="0.5" fill="#7ab8e8" opacity="0.7" /></svg>)
-}
-
-export function ContactSheetThumb({ color }: { color: string }) {
-  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#111" /><rect x="2" y="2" width="76" height="12" rx="1" fill="#222" /><rect x="4" y="4.5" width="20" height="7" rx="0.5" fill="#444" /><rect x="4" y="4.5" width="20" height="7" rx="0.5" fill="none" stroke={color} strokeWidth="0.5" />{[[0,0],[24,0],[48,0],[0,16],[24,16],[48,16],[0,32],[24,32],[48,32]].map(([dx,dy],i)=><rect key={i} x={4+dx} y={18+dy} width="18" height="13" rx="0.5" fill="#2a2a2a" stroke="#444" strokeWidth="0.3" />)}<rect x="4" y="66" width="72" height="1.5" rx="0.5" fill={color} opacity="0.6" /><rect x="4" y="70" width="40" height="2" rx="0.5" fill="#eee" opacity="0.5" /><rect x="4" y="75" width="30" height="1.5" rx="0.5" fill="#aaa" opacity="0.4" /></svg>)
 }
 
 export function AnnualReportThumb({ color }: { color: string }) {
@@ -1718,27 +1443,6 @@ export function NauticalThumb({ color }: { color: string }) {
   )
 }
 
-export function ObsidianThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#1a1a2e" />
-      <rect x="0" y="0" width="80" height="30" fill="#16213e" />
-      <circle cx="40" cy="15" r="8" fill={color} opacity="0.5" />
-      <rect x="10" y="33" width="60" height="3" rx="0.5" fill="#fff" opacity="0.8" />
-      <rect x="20" y="38" width="40" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="6" y="47" width="68" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-      <rect x="6" y="50" width="55" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-      <rect x="6" y="53" width="60" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-      <rect x="6" y="60" width="30" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="6" y="64" width="68" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-      <rect x="6" y="67" width="55" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-      <rect x="6" y="75" width="30" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="6" y="79" width="68" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-      <rect x="6" y="82" width="60" height="1" rx="0.3" fill="#fff" opacity="0.3" />
-    </svg>
-  )
-}
-
 export function PrismThumb({ color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -1900,59 +1604,6 @@ export function VetCVThumb({ color }: { color: string }) {
   )
 }
 
-
-export function NotebookCVThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#fdfaf5" />
-      <rect x="0" y="0" width="8" height="110" fill={color} opacity="0.15" />
-      <line x1="8" y1="0" x2="8" y2="110" stroke={color} strokeWidth="1.2" />
-      <circle cx="4" cy="20" r="2" fill={color} opacity="0.6" />
-      <circle cx="4" cy="40" r="2" fill={color} opacity="0.6" />
-      <circle cx="4" cy="60" r="2" fill={color} opacity="0.6" />
-      <circle cx="4" cy="80" r="2" fill={color} opacity="0.6" />
-      <rect x="14" y="10" width="40" height="4" rx="0.5" fill="#1a1a1a" opacity="0.85" />
-      <rect x="14" y="17" width="28" height="2" rx="0.5" fill="#555" opacity="0.6" />
-      <line x1="14" y1="25" x2="66" y2="25" stroke={color} strokeWidth="0.8" />
-      <rect x="14" y="29" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="14" y="33" width="52" height="1" rx="0.3" fill="#333" opacity="0.7" />
-      <rect x="14" y="36" width="46" height="1" rx="0.3" fill="#333" opacity="0.5" />
-      <rect x="14" y="44" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="14" y="48" width="52" height="1" rx="0.3" fill="#333" opacity="0.7" />
-      <rect x="14" y="51" width="38" height="1" rx="0.3" fill="#333" opacity="0.5" />
-      <rect x="14" y="59" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="14" y="63" width="44" height="1" rx="0.3" fill="#333" opacity="0.7" />
-    </svg>
-  )
-}
-
-export function FieldJournalThumb({ color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#ede2c8" />
-      <line x1="0" y1="20" x2="80" y2="20" stroke="rgba(0,0,0,0.06)" strokeWidth="0.8" />
-      <line x1="0" y1="46" x2="80" y2="46" stroke="rgba(0,0,0,0.06)" strokeWidth="0.8" />
-      <line x1="0" y1="72" x2="80" y2="72" stroke="rgba(0,0,0,0.06)" strokeWidth="0.8" />
-      <line x1="4" y1="22" x2="76" y2="22" stroke="#1f1a0e" strokeWidth="1.2" />
-      <rect x="4" y="5" width="20" height="1.2" rx="0.3" fill="#8a3a1f" opacity="0.7" />
-      <rect x="54" y="5" width="22" height="1.2" rx="0.3" fill="#8a3a1f" opacity="0.7" />
-      <rect x="4" y="10" width="52" height="5" rx="0.5" fill="#1f1a0e" opacity="0.85" />
-      <rect x="4" y="17" width="36" height="2.5" rx="0.5" fill="#1f1a0e" opacity="0.6" />
-      <rect x="4" y="26" width="22" height="2" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="4" y="30" width="36" height="1.2" rx="0.3" fill="#333" opacity="0.8" />
-      <rect x="4" y="40" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="4" y="47" width="30" height="1.5" rx="0.5" fill="#333" />
-      <rect x="4" y="57" width="28" height="1.5" rx="0.5" fill="#333" />
-      <rect x="44" y="26" width="33" height="24" fill="#d6cdb0" stroke="#1f1a0e" strokeWidth="0.5" />
-      <path d="M44 38 Q52 30 60 40 T78 35 L78 50 L44 50 Z" fill={color} opacity="0.2" />
-      <circle cx="52" cy="44" r="1.5" fill="#8a3a1f" />
-      <circle cx="64" cy="40" r="1.5" fill="#8a3a1f" />
-      <rect x="44" y="54" width="20" height="1.5" rx="0.5" fill={color} opacity="0.7" />
-      <rect x="44" y="58" width="32" height="1" rx="0.3" fill="#555" />
-      <line x1="4" y1="103" x2="76" y2="103" stroke="#1f1a0e" strokeWidth="0.6" />
-    </svg>
-  )
-}
 
 export function ATSThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#fff" /><rect x="8" y="8" width="40" height="4" rx="0.5" fill="#111" opacity="0.85" /><rect x="8" y="14" width="26" height="2" rx="0.5" fill="#666" opacity="0.5" /><rect x="8" y="21" width="64" height="1.5" rx="0" fill={color} opacity="0.65" /><rect x="8" y="27" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[31,35,39].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="47" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[51,55,59,63].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}<rect x="8" y="71" width="22" height="2" rx="0.5" fill={color} opacity="0.6" />{[75,79,83].map(y=><rect key={y} x="8" y={y} width="64" height="1.2" rx="0.3" fill="#ddd" />)}</svg>)

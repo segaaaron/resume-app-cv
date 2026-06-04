@@ -22,6 +22,37 @@ import MonogramTemplate from "./templates/MonogramTemplate"
 import ArchitectTemplate from "./templates/ArchitectTemplate"
 import DiagonalTemplate from "./templates/DiagonalTemplate"
 import NewspaperTemplate from "./templates/NewspaperTemplate"
+// ── 30 premium templates (cover-letter v2) ───────────────────────────────
+import EchoTemplate from "./templates/EchoTemplate"
+import LumenTemplate from "./templates/LumenTemplate"
+import StarkTemplate from "./templates/StarkTemplate"
+import AtlasTemplate from "./templates/AtlasTemplate"
+import ConsulTemplate from "./templates/ConsulTemplate"
+import SterlingTemplate from "./templates/SterlingTemplate"
+import FortisTemplate from "./templates/FortisTemplate"
+import PrismTemplate from "./templates/PrismTemplate"
+import EmberTemplate from "./templates/EmberTemplate"
+import VantageTemplate from "./templates/VantageTemplate"
+import MosaicTemplate from "./templates/MosaicTemplate"
+import CircuitTemplate from "./templates/CircuitTemplate"
+import VertexTemplate from "./templates/VertexTemplate"
+import PulseTemplate from "./templates/PulseTemplate"
+import FolioTemplate from "./templates/FolioTemplate"
+import GazetteTemplate from "./templates/GazetteTemplate"
+import VersoTemplate from "./templates/VersoTemplate"
+import AurumTemplate from "./templates/AurumTemplate"
+import OnyxTemplate from "./templates/OnyxTemplate"
+import VelvetTemplate from "./templates/VelvetTemplate"
+import SignalTemplate from "./templates/SignalTemplate"
+import MeridianTemplate from "./templates/MeridianTemplate"
+import NovaTemplate from "./templates/NovaTemplate"
+import ObsidianTemplate from "./templates/ObsidianTemplate"
+import CodexTemplate from "./templates/CodexTemplate"
+import AxiomTemplate from "./templates/AxiomTemplate"
+import TerraTemplate from "./templates/TerraTemplate"
+import FlareTemplate from "./templates/FlareTemplate"
+import HeraldTemplate from "./templates/HeraldTemplate"
+import BloomTemplate from "./templates/BloomTemplate"
 import type { CandidateData, CoverLetterContent } from "./templates/types"
 
 interface Props {
@@ -83,6 +114,37 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
     if (templateId === "architect") return <ArchitectTemplate {...props} />
     if (templateId === "diagonal") return <DiagonalTemplate {...props} />
     if (templateId === "newspaper") return <NewspaperTemplate {...props} />
+    // ── 30 premium templates (cover-letter v2) ──
+    if (templateId === "echo") return <EchoTemplate {...props} />
+    if (templateId === "lumen") return <LumenTemplate {...props} />
+    if (templateId === "stark") return <StarkTemplate {...props} />
+    if (templateId === "atlas") return <AtlasTemplate {...props} />
+    if (templateId === "consul") return <ConsulTemplate {...props} />
+    if (templateId === "sterling") return <SterlingTemplate {...props} />
+    if (templateId === "fortis") return <FortisTemplate {...props} />
+    if (templateId === "prism") return <PrismTemplate {...props} />
+    if (templateId === "ember") return <EmberTemplate {...props} />
+    if (templateId === "vantage") return <VantageTemplate {...props} />
+    if (templateId === "mosaic") return <MosaicTemplate {...props} />
+    if (templateId === "circuit") return <CircuitTemplate {...props} />
+    if (templateId === "vertex") return <VertexTemplate {...props} />
+    if (templateId === "pulse") return <PulseTemplate {...props} />
+    if (templateId === "folio") return <FolioTemplate {...props} />
+    if (templateId === "gazette") return <GazetteTemplate {...props} />
+    if (templateId === "verso") return <VersoTemplate {...props} />
+    if (templateId === "aurum") return <AurumTemplate {...props} />
+    if (templateId === "onyx") return <OnyxTemplate {...props} />
+    if (templateId === "velvet") return <VelvetTemplate {...props} />
+    if (templateId === "signal") return <SignalTemplate {...props} />
+    if (templateId === "meridian") return <MeridianTemplate {...props} />
+    if (templateId === "nova") return <NovaTemplate {...props} />
+    if (templateId === "obsidian") return <ObsidianTemplate {...props} />
+    if (templateId === "codex") return <CodexTemplate {...props} />
+    if (templateId === "axiom") return <AxiomTemplate {...props} />
+    if (templateId === "terra") return <TerraTemplate {...props} />
+    if (templateId === "flare") return <FlareTemplate {...props} />
+    if (templateId === "herald") return <HeraldTemplate {...props} />
+    if (templateId === "bloom") return <BloomTemplate {...props} />
     return <ElegantTemplate {...props} />
   }
 

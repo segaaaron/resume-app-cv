@@ -38,7 +38,6 @@ const DARK_TEMPLATES = new Set<string>([
   "midnight",
   "navyexecutive",
   "noir",
-  "obsidian",
   "onyx",
   "prism",
 ])

@@ -141,7 +141,6 @@ const TEMPLATE_VISUALS: Record<string, {
   havana:   { bg: "#fff",    accent: "#c0645a", headerBg: "#c0645a",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
   lisbon:   { bg: "#fff",    accent: "#2a72d7", headerBg: "#2a72d7",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
   nautical: { bg: "#fff",    accent: "#1e3a5f", headerBg: "#1e3a5f",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
-  obsidian: { bg: "#1a1a2e", accent: "#7c3aed", headerBg: "#1a1a2e",  headerText: "#fff",    style: "dark",      tag: "Foto" },
   tokyo:    { bg: "#fff",    accent: "#0D0D0D", headerBg: "#0D0D0D",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
   vitae:    { bg: "#fff",    accent: "#1e2d3d", headerBg: "#1e2d3d",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
 }
@@ -345,14 +344,14 @@ export default async function TemplatesPage({
   // PRO_IDS imported from @/components/editor/template-switcher (single source of truth)
 
   const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
-    { key: "featured", label: t("cat_featured"), ids: ["aurora","lumiere","consul","rose","minimal","wave","banner","vertex","prestige","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","obsidian","prism","tokyo","vitae"] },
+    { key: "featured", label: t("cat_featured"), ids: ["aurora","lumiere","consul","rose","minimal","banner","vertex","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","prism","tokyo","vitae"] },
     { key: "city", label: t("cat_city"), ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
-    { key: "creative", label: t("cat_creative"), ids: ["risodesigner","uxtokens","sketchbookillustrator","blueprintcv","contactsheet","charcoalclassic","navyexecutive","coralsidebar","neobrutalist","sagebotanical"] },
-    { key: "business", label: t("cat_business"), ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","boardingpass","magazinespread","terminalcv","iosappcv"] },
-    { key: "health", label: t("cat_health"), ids: ["medicalchart","vitalsigns","vetcv","fieldjournal"] },
+    { key: "creative", label: t("cat_creative"), ids: ["risodesigner","uxtokens","blueprintcv","charcoalclassic","navyexecutive","coralsidebar","sagebotanical"] },
+    { key: "business", label: t("cat_business"), ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","magazinespread","iosappcv"] },
+    { key: "health", label: t("cat_health"), ids: ["medicalchart","vitalsigns","vetcv"] },
     { key: "legal", label: t("cat_legal"), ids: ["legalbrief","engraved","chalkboard","academiccv","psychologist"] },
-    { key: "hospitality", label: t("cat_hospitality"), ids: ["chefmenu","sommelier","hotelcv","bartendercv","postcardcv"] },
-    { key: "engineering", label: t("cat_engineering"), ids: ["codeeditor","civileng","mechanical","devopsterminal","processflow","neon","sharp","bauhaus"] },
+    { key: "hospitality", label: t("cat_hospitality"), ids: ["chefmenu","sommelier","hotelcv","bartendercv"] },
+    { key: "engineering", label: t("cat_engineering"), ids: ["civileng","processflow","neon","sharp","bauhaus"] },
     { key: "arts", label: t("cat_arts"), ids: ["frontpage","vinylcv","callsheet","copywritermag","animatorcv"] },
     { key: "other", label: t("cat_other"), ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
   ]
