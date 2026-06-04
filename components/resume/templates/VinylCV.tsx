@@ -27,7 +27,7 @@ export default function VinylCVTemplate() {
       minHeight: "297mm",
       background: cream,
       color: black,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 11,
       display: "flex",
       flexDirection: "column",

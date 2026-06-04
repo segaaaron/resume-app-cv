@@ -52,7 +52,7 @@ export default function HotelCVTemplate() {
       minHeight: "297mm",
       background: sand,
       color: ink,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 11,
       padding: 0,
       display: "flex",

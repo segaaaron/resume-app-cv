@@ -28,7 +28,7 @@ export default function ProcessFlowTemplate() {
   function H({ children }: { children: React.ReactNode }) {
     return (
       <h2 style={{
-        fontFamily: "'Inter Tight', 'Inter', sans-serif", fontWeight: 800, fontSize: 14,
+        fontFamily: "inherit", fontWeight: 800, fontSize: 14,
         margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: "0.06em", color: blue,
       }}>{children}</h2>
     )
@@ -53,7 +53,7 @@ export default function ProcessFlowTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
-      fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 11,
+      fontFamily: "inherit", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>
@@ -63,7 +63,7 @@ export default function ProcessFlowTemplate() {
           <span>PROCESS FLOW · v{new Date().getFullYear()}.{String(new Date().getMonth() + 1).padStart(2, "0")}</span>
           <span>{pd.jobTitle ? pd.jobTitle.toUpperCase() : "PROFESSIONAL CV"}</span>
         </div>
-        <h1 style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif", fontWeight: 900, fontSize: 48, margin: "8px 0 2px", letterSpacing: "-0.03em" }}>
+        <h1 style={{ fontFamily: "inherit", fontWeight: 900, fontSize: 48, margin: "8px 0 2px", letterSpacing: "-0.03em" }}>
           {fullName.toUpperCase()}
         </h1>
         {pd.jobTitle && (

@@ -54,7 +54,7 @@ export default function OnboardingFormTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
-      fontFamily: "'Inter', sans-serif", fontSize: 11,
+      fontFamily: "inherit", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

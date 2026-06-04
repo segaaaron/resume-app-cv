@@ -44,7 +44,7 @@ export default function VetCVTemplate() {
       minHeight: "297mm",
       background: sand,
       color: ink,
-      fontFamily: "'DM Sans', 'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 11,
       padding: 0,
       display: "flex",

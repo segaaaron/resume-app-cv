@@ -266,6 +266,50 @@ export type TemplateId =
   | "prism"
   | "tokyo"
   | "vitae"
+  | "elite-atlas"
+  | "exec-porcelain"
+  | "luxe-noir"
+  | "elite-counsel"
+  | "elite-aura"
+  | "elite-pulse"
+  | "elite-cuvee"
+  | "elite-cadence"
+  | "elite-meridian"
+  | "luxe-aurum"
+  | "luxe-vellum"
+  | "luxe-regent"
+  | "luxe-apex"
+  | "exec-regency"
+  | "exec-sovereign"
+  | "exec-citadel"
+  | "exec-dynasty"
+  | "exec-oxblood"
+  | "exec-cobalt"
+  | "exec-terra"
+  | "exec-nocturne"
+  | "exec-platine"
+  | "atelier"
+  | "bloom"
+  | "velvet"
+  | "sahara"
+  | "pearl"
+  | "editorial2"
+  | "confetti"
+  | "frame"
+  | "show-cameo"
+  | "show-marquis"
+  | "show-soiree"
+  | "show-plume"
+  | "chef"
+  | "teacher"
+  | "journalist"
+  | "communicator"
+  | "filmmaker"
+  | "photographer"
+  | "architect"
+  | "doctor"
+  | "fashion"
+  | "writer"
 
 export interface ResumeConfig {
   templateId: TemplateId
@@ -408,6 +452,56 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "campaignposter",       name: "Campaign Poster ⭐",        description: "Cartel de campaña política, gran titular HIRE [NAME]!, badge giratorio, fondos bold", columns: "single", hasPhoto: true },
   { id: "salespitch",           name: "Sales Pitch ⭐",            description: "Diapositiva de pitch deck, métricas en caja oscura, dos columnas con chips de habilidades", columns: "double", hasPhoto: false },
   { id: "ledgercv",             name: "Ledger CV ⭐",              description: "Libro contable con filas de debe/haber, entradas tipo asiento contable, balance final", columns: "single", hasPhoto: false },
+  // ─── Elite / Exec / Luxe — premium showpieces (planillas-lujosas-Jun-2026) ───
+  { id: "elite-atlas",          name: "Atlas ✦",                  description: "Creative Director · Showpiece estructurado con panel charcoal, numeración editorial 01·02·03 y acento ochre", columns: "double", hasPhoto: true },
+  { id: "exec-porcelain",       name: "Porcelain ✦",              description: "Executive ivory & champagne wave — masthead centrado, guilloché SVG y serif Cormorant para perfiles directivos", columns: "single", hasPhoto: false },
+  { id: "luxe-noir",            name: "Noir ✦",                   description: "Obsidian & gold — monograma SVG sellado, marco filigrana en esquinas y composición serif para perfiles luxe", columns: "single", hasPhoto: false },
+  // ─── Elite / Exec / Luxe — lote completo (planillas-lujosas-Jun-2026) ───
+  { id: "elite-counsel",        name: "Counsel ✦",                description: "Lawyer · Dark luxe editorial con panel lateral derecho charcoal, acento dorado y tipografía serif para perfiles legales", columns: "double", hasPhoto: true },
+  { id: "elite-aura",           name: "Aura ✦",                   description: "Designer · Banda hero con degradado violeta-rosa, gauges de habilidades y partículas sparkle para perfiles creativos", columns: "single", hasPhoto: false },
+  { id: "elite-pulse",          name: "Pulse ✦",                  description: "Marketing · Header bold navy con espina timeline magenta y tipografía impactante para perfiles de marketing", columns: "single", hasPhoto: false },
+  { id: "elite-cuvee",          name: "Cuvée ✦",                  description: "Chef · Menú luxe sobre fondo obsidian, secciones bordeadas en oro y tipografía serif para perfiles culinarios", columns: "double", hasPhoto: true },
+  { id: "elite-cadence",        name: "Cadence ✦",                description: "Filmmaker · Estética cinematográfica ámbar, banda amber rule y timeline sobre fondo oscuro para perfiles audiovisuales", columns: "single", hasPhoto: true },
+  { id: "elite-meridian",       name: "Meridian ✦",               description: "Doctor · Clinical luxe con banda teal, paneles blancos y layout estructurado para perfiles médicos", columns: "single", hasPhoto: false },
+  { id: "luxe-aurum",           name: "Aurum ✦",                  description: "Cream & gold — gauges de habilidades en anillos SVG dorados, fondo crema cálido para perfiles signature", columns: "double", hasPhoto: true },
+  { id: "luxe-vellum",          name: "Vellum ✦",                 description: "Ivory editorial — guilloché SVG en ondas, tipografía centrada serif y estructura editorial para perfiles luxe", columns: "single", hasPhoto: false },
+  { id: "luxe-regent",          name: "Régent ✦",                 description: "Emerald executive — banda métrica de trayectoria, fondo esmeralda y composición ejecutiva para perfiles directivos", columns: "single", hasPhoto: false },
+  { id: "luxe-apex",            name: "Luxe Apex ✦",              description: "Charcoal tech-luxe — marca de compás SVG, tipografía mono y fondo oscuro técnico para perfiles tech-executive", columns: "single", hasPhoto: false },
+  { id: "exec-regency",         name: "Regency ✦",                description: "Executive · Bandas editoriales horizontales negro-dorado, serif headline para perfiles ejecutivos de alto nivel", columns: "single", hasPhoto: false },
+  { id: "exec-sovereign",       name: "Sovereign ✦",              description: "Executive · Rail navy lateral izquierdo, marco circular de retrato y grid estructurado para perfiles C-suite", columns: "double", hasPhoto: true },
+  { id: "exec-citadel",         name: "Citadel ✦",                description: "Executive · Doble marco Art-Deco navy, banda masthead invertida y chevrones dorados para perfiles ejecutivos premium", columns: "single", hasPhoto: false },
+  { id: "exec-dynasty",         name: "Dynasty ✦",                description: "Executive · Rosetones ornamentales en esquinas, guilloché diagonal y monograma diamante sobre fondo obsidian", columns: "single", hasPhoto: false },
+  { id: "exec-oxblood",         name: "Oxblood ✦",                description: "Executive · Panel lateral bordeaux, sello de cera SVG y tipografía serif para perfiles ejecutivos con carácter", columns: "double", hasPhoto: false },
+  { id: "exec-cobalt",          name: "Exec Cobalt ✦",            description: "Executive · Fondo midnight, constelación de nodos platino SVG y tipografía técnica para perfiles tech-executive", columns: "single", hasPhoto: false },
+  { id: "exec-terra",           name: "Terra ✦",                  description: "Executive · Arco arquitectónico terracota, toques tierra y tipografía serif warm para perfiles ejecutivos creativos", columns: "single", hasPhoto: false },
+  { id: "exec-nocturne",        name: "Nocturne ✦",               description: "Executive · Banda plum, acentos rose-gold y gauges de anillos SVG para perfiles ejecutivos con estética nocturna", columns: "single", hasPhoto: false },
+  { id: "exec-platine",         name: "Platine ✦",                description: "Executive · Black & platinum, numerales outline de índice y layout minimalista elegante para perfiles C-suite", columns: "single", hasPhoto: false },
+  // ─── Signature / Tpl ───
+  { id: "atelier",              name: "Atelier ✦",                description: "Editorial magazine — tipografía serif oversize, pullquote lateral y layout de revista para perfiles creativos", columns: "single", hasPhoto: true },
+  { id: "bloom",                name: "Bloom ✦",                  description: "Creative pastel — blobs degradados suaves, hero centrado con foto circular y chips de habilidades con colores", columns: "single", hasPhoto: true },
+  { id: "velvet",               name: "Velvet ✦",                 description: "Product purple — degradado violeta oscuro, iniciales como watermark y layout de dos columnas para perfiles de producto", columns: "double", hasPhoto: true },
+  { id: "sahara",               name: "Sahara ✦",                 description: "Editorial earth tones — panel lateral tierra, tipografía serif warm y composición de columna para perfiles creativos", columns: "double", hasPhoto: true },
+  { id: "pearl",                name: "Pearl ✦",                  description: "Luxe ivory & rose-gold — héroe centrado blanco, acentos dorados y layout minimal elegante para perfiles premium", columns: "single", hasPhoto: true },
+  // ─── Flagship Premium ───
+  { id: "editorial2",           name: "Gazette ✦",                description: "Newspaper flyer — años gigantes en tipografía editorial, layout periódico y composición de portada para perfiles creativos", columns: "double", hasPhoto: false },
+  { id: "confetti",             name: "Confetti ✦",               description: "Gradient circular — foto circular con marco degradado, fondo vibrante y layout festivo para perfiles creativos", columns: "single", hasPhoto: true },
+  { id: "frame",                name: "Frame ✦",                  description: "Teal border & QR — marco teal estructurado, código QR decorativo y layout limpio para perfiles modernos", columns: "single", hasPhoto: false },
+  // ─── Showcase ───
+  { id: "show-cameo",           name: "Caméo ✦",                  description: "Fashion symmetric blush — composición simétrica rosa, tipografía couture y layout de moda para perfiles fashion", columns: "single", hasPhoto: true },
+  { id: "show-marquis",         name: "Marquis ✦",                description: "Scientist emerald band — banda verde esmeralda, layout científico estructurado para perfiles académicos", columns: "double", hasPhoto: false },
+  { id: "show-soiree",          name: "Soirée ✦",                 description: "DJ black & champagne deco — fondo negro total, detalles champagne art-deco y composición nocturna para perfiles creativos", columns: "double", hasPhoto: true },
+  { id: "show-plume",           name: "Plume ✦",                  description: "Writer warm editorial — pluma SVG, tipografía serif cálida y drop-cap dinámico para perfiles de escritura y contenido", columns: "single", hasPhoto: false },
+  // ─── By Profession ───
+  { id: "chef",                 name: "Le Chef ✦",                description: "Chef charcoal & copper — fondo carbón oscuro, acentos cobre y menú de secciones para perfiles culinarios", columns: "single", hasPhoto: true },
+  { id: "teacher",              name: "Teacher ✦",                description: "Teacher warm & friendly — estética pizarra, colores mint cálidos y layout estructurado para perfiles educativos", columns: "single", hasPhoto: true },
+  { id: "journalist",           name: "The Record ✦",             description: "Journalist newsprint — layout periódico con drop-cap, doble columna y tipografía editorial para perfiles de medios", columns: "double", hasPhoto: true },
+  { id: "communicator",         name: "Broadcast ✦",              description: "Comms magenta gradient — gradiente magenta, barras de idiomas y composición dinámica para perfiles de comunicaciones", columns: "single", hasPhoto: true },
+  { id: "filmmaker",            name: "Reel ✦",                   description: "Filmmaker cinematic — perforaciones de film, estética ámbar cinematográfica y layout de créditos para perfiles audiovisuales", columns: "single", hasPhoto: true },
+  { id: "photographer",         name: "Aperture ✦",               description: "Photographer contact sheet — grid de contact sheet con marcos numerados, apertura SVG y layout fotográfico", columns: "single", hasPhoto: true },
+  { id: "architect",            name: "Drafting ✦",               description: "Architect blueprint grid — fondo de cuadrícula técnica, tipografía mono DWG y layout de plano para perfiles de arquitectura", columns: "single", hasPhoto: false },
+  { id: "doctor",               name: "Vitals ✦",                 description: "Doctor clinical teal — pulso SVG, sidebar teal clínico y barras de idiomas para perfiles médicos", columns: "double", hasPhoto: true },
+  { id: "fashion",              name: "Atelier Fashion ✦",        description: "Fashion blush couture — aguja SVG, tipografía italiana blush y composición couture para perfiles de moda", columns: "single", hasPhoto: true },
+  { id: "writer",               name: "Manuscript ✦",             description: "Writer literary serif — pluma SVG, nombre serif oversize y pullquote con sepia para perfiles de escritura", columns: "single", hasPhoto: false },
 ]
 
 export const FONT_OPTIONS = [

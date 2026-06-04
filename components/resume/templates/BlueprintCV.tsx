@@ -20,8 +20,9 @@ export default function BlueprintCVTemplate() {
   const blue = "#0d3b66"
   const lineColor = "rgba(255,255,255,0.18)"
   const white = "#f6f8fb"
-  const subdue = "#9ec1e8"
   const faint = "#cfdef0"
+  const accent = config.colorScheme || "#9ec1e8"
+  const subdue = accent
 
   // Section labels for SVG floor plan
   const expLabel = label("workExperience").toUpperCase()

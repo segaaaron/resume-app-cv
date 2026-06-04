@@ -41,7 +41,7 @@ export default function BartenderCVTemplate() {
       minHeight: "297mm",
       background: black,
       color: cream,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 11,
       padding: 0,
       position: "relative",

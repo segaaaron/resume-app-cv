@@ -39,13 +39,14 @@ export default function NavyExecutiveTemplate() {
 
   const navy = "#0e2a44"
   const ivory = "#f7f3e8"
-  const gold = "#b48a3c"
   const ink = "#1a1a1a"
+  const accent = config.colorScheme || "#b48a3c"
+  const gold = accent
 
   return (
     <div data-print-layout="sidebar-left" style={{
       minHeight: "297mm", background: ivory, color: ink,
-      fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.55,
       display: "grid", gridTemplateColumns: "260px 1fr",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
       "--pdf-sidebar-bg": "#0e2a44",

@@ -28,7 +28,7 @@ export default function CivilEngTemplate() {
   function H({ children }: { children: React.ReactNode }) {
     return (
       <h2 style={{
-        fontFamily: "'Inter Tight', sans-serif", fontWeight: 800, fontSize: 14,
+        fontFamily: "inherit", fontWeight: 800, fontSize: 14,
         margin: "16px 0 8px", textTransform: "uppercase", letterSpacing: "0.06em", color: orange,
       }}>{children}</h2>
     )
@@ -37,7 +37,7 @@ export default function CivilEngTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
-      fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 10.5,
+      fontFamily: "inherit", fontSize: 10.5,
       padding: 36, display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>
@@ -47,7 +47,7 @@ export default function CivilEngTemplate() {
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.25em", color: orange }}>
             ★ {config.language === "en" ? "GENERAL CONTRACTOR CV" : "CV PROFESIONAL"} · {new Date().getFullYear()}
           </div>
-          <h1 style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif", fontWeight: 800, fontSize: 42, margin: "8px 0 2px", letterSpacing: "-0.02em" }}>
+          <h1 style={{ fontFamily: "inherit", fontWeight: 800, fontSize: 42, margin: "8px 0 2px", letterSpacing: "-0.02em" }}>
             {fullName}
           </h1>
           {pd.jobTitle && (

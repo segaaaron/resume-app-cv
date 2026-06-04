@@ -296,7 +296,7 @@ function inferCategory(t: TemplateInfo): TemplateCategory {
   const id = t.id.toLowerCase()
   if (id === "ats") return "ats"
   if (/(code|tech|terminal|carbon|blueprint|cyber|helix|prism|finance)/.test(id)) return "tech"
-  if (/(executive|lumiere|navyexecutive|consul|windsor)/.test(id)) return "executive"
+  if (/(executive|lumiere|navyexecutive|consul|windsor|exec-|elite-|luxe-)/.test(id)) return "executive"
   if (/(creative|aurora|neon|bauhaus|risodesigner|magazinespread|vogue|frontpage|callsheet|vinylcv|copywritermag|animatorcv|chalkboard|herbariumcv|campaignposter)/.test(id)) return "creative"
   if (/(minimal|simple|nordic|outline|chrono|geneva|oslo|kyoto|copenhagen|swissgrid|dublin|berlin|reykjavik|stockholm|helsinki|barcelona|lagos|seoul|porto|milan|zurich)/.test(id)) return "minimal"
   if (/(modern|professional|spark|glass|metro|fold|sidebar|consul|sharp|cobalt|duality|havana|lisbon|nautical|tokyo|vitae|apex|nova|cascade|onyx|mosaic|larsson|thompson)/.test(id)) return "modern"

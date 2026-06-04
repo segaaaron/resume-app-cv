@@ -40,7 +40,8 @@ export default function DualityTemplate() {
   ]
 
   const dark = "#1a2744"
-  const cyan = "#00bcd4"
+  const accent = config.colorScheme || "#00bcd4"
+  const cyan = accent
   const L = getResumeLabels(config.language)
   const present = L.present
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
@@ -110,7 +111,7 @@ export default function DualityTemplate() {
             })()}
         </div>
 
-        <RightSection title={L.contact}>
+        <RightSection title={L.contact} color={cyan}>
           <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 9.5 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={cyan} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={cyan} />{email}</span>
@@ -120,7 +121,7 @@ export default function DualityTemplate() {
         </RightSection>
 
         {visible("education") && (
-          <RightSection title={L.education}>
+          <RightSection title={L.education} color={cyan}>
             {edus.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 10, fontWeight: 700 }}>{edu.degree}</p>
@@ -132,7 +133,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("languages") && (
-          <RightSection title={L.languages}>
+          <RightSection title={L.languages} color={cyan}>
             {langs.map((l) => (
               <p key={l.id} style={{ fontSize: 9.5, marginBottom: 4, opacity: 0.85 }}>{l.name}</p>
             ))}
@@ -152,10 +153,10 @@ function LeftSection({ title, color, children }: { title: string; color: string;
   )
 }
 
-function RightSection({ title, children }: { title: string; children: React.ReactNode }) {
+function RightSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "#00bcd4", marginBottom: 8 }}>{title}</p>
+      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color, marginBottom: 8 }}>{title}</p>
       {children}
     </div>
   )

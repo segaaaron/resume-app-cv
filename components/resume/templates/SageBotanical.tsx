@@ -30,7 +30,7 @@ export default function SageBotanicalTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: dark,
-      fontFamily: "'DM Sans', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.6,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.6,
       padding: 0, display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

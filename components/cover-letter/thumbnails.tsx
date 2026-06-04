@@ -337,32 +337,6 @@ function LumenThumb() {
   )
 }
 
-function StarkThumb() {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#2A2A3A" />
-      <rect x="0" y="0" width="80" height="8" fill="#22222F" />
-      <circle cx="6" cy="4" r="1.5" fill="#FF5F57" />
-      <circle cx="11" cy="4" r="1.5" fill="#FFBD2E" />
-      <circle cx="16" cy="4" r="1.5" fill="#28C941" />
-      <rect x="20" y="2" width="22" height="4" fill="#2A2A3A" />
-      <rect x="0" y="8" width="10" height="98" fill="#22222F" />
-      <rect x="14" y="14" width="22" height="2" fill="#CBA6F7" />
-      <rect x="14" y="18" width="14" height="1" fill="#89DCEB" />
-      <rect x="14" y="24" width="34" height="1" fill="#A6E3A1" />
-      <rect x="14" y="28" width="34" height="1" fill="#A6E3A1" />
-      <rect x="14" y="32" width="34" height="1" fill="#A6E3A1" />
-      <rect x="14" y="40" width="40" height="1" fill="#CDD6F4" opacity="0.7" />
-      <rect x="14" y="44" width="36" height="1" fill="#CDD6F4" opacity="0.7" />
-      <rect x="14" y="48" width="42" height="1" fill="#CDD6F4" opacity="0.7" />
-      <rect x="14" y="56" width="40" height="1" fill="#CDD6F4" opacity="0.7" />
-      <rect x="14" y="60" width="36" height="1" fill="#CDD6F4" opacity="0.7" />
-      <rect x="14" y="90" width="22" height="2" fill="#CBA6F7" />
-      <rect x="0" y="103" width="80" height="7" fill="#89B4FA" />
-    </svg>
-  )
-}
-
 function AtlasThumb() {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -565,29 +539,6 @@ function MosaicThumb() {
   )
 }
 
-function CircuitThumb() {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#1A1F2A" />
-      <defs><linearGradient id="circ-grad" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stopColor="#3DD68C" /><stop offset="0.8" stopColor="#1a6e40" /><stop offset="1" stopColor="transparent" /></linearGradient></defs>
-      <rect x="6" y="6" width="68" height="1" fill="url(#circ-grad)" />
-      <rect x="6" y="12" width="34" height="5" fill="#3DD68C" />
-      <rect x="6" y="18" width="22" height="1.4" fill="#8B949E" />
-      <rect x="6" y="26" width="68" height="14" rx="2" fill="#222831" stroke="#30363D" strokeWidth="0.5" />
-      <rect x="10" y="30" width="14" height="1" fill="#79C0FF" />
-      <rect x="26" y="30" width="14" height="1" fill="#3DD68C" />
-      <rect x="42" y="30" width="14" height="1" fill="#79C0FF" />
-      <rect x="58" y="30" width="14" height="1" fill="#3DD68C" />
-      <rect x="6" y="48" width="60" height="1.2" rx="0.6" fill="#C9D1D9" opacity="0.6" />
-      <rect x="6" y="52" width="56" height="1.2" rx="0.6" fill="#C9D1D9" opacity="0.6" />
-      <rect x="6" y="60" width="60" height="1.2" rx="0.6" fill="#C9D1D9" opacity="0.4" />
-      <rect x="6" y="64" width="48" height="1.2" rx="0.6" fill="#C9D1D9" opacity="0.4" />
-      <rect x="6" y="92" width="22" height="2" fill="#3DD68C" />
-      <rect x="6" y="102" width="68" height="1" fill="url(#circ-grad)" />
-    </svg>
-  )
-}
-
 function VertexThumb() {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
@@ -614,30 +565,6 @@ function VertexThumb() {
       <rect x="6" y="54" width="60" height="1.2" rx="0.6" fill="#e5e7eb" />
       <rect x="6" y="58" width="48" height="1.2" rx="0.6" fill="#e5e7eb" />
       <rect x="6" y="92" width="22" height="2" fill="#2563EB" />
-    </svg>
-  )
-}
-
-function PulseThumb() {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#F0F9FF" />
-      <rect x="6" y="8" width="28" height="3.5" fill="#0C4A6E" />
-      <rect x="6" y="14" width="18" height="1.2" fill="#0EA5E9" />
-      <rect x="6" y="22" width="68" height="3" rx="1.5" fill="#BAE6FD" />
-      <rect x="6" y="22" width="60" height="3" rx="1.5" fill="#0EA5E9" />
-      <rect x="6" y="28" width="68" height="3" rx="1.5" fill="#BAE6FD" />
-      <rect x="6" y="28" width="54" height="3" rx="1.5" fill="#0EA5E9" />
-      <rect x="6" y="34" width="68" height="3" rx="1.5" fill="#BAE6FD" />
-      <rect x="6" y="34" width="56" height="3" rx="1.5" fill="#0EA5E9" />
-      <rect x="6" y="44" width="14" height="3" rx="1.5" fill="#E0F2FE" stroke="#BAE6FD" strokeWidth="0.4" />
-      <rect x="22" y="44" width="14" height="3" rx="1.5" fill="#E0F2FE" stroke="#BAE6FD" strokeWidth="0.4" />
-      <rect x="38" y="44" width="14" height="3" rx="1.5" fill="#E0F2FE" stroke="#BAE6FD" strokeWidth="0.4" />
-      <rect x="6" y="54" width="60" height="1.2" rx="0.6" fill="#0C4A6E" opacity="0.4" />
-      <rect x="6" y="58" width="54" height="1.2" rx="0.6" fill="#0C4A6E" opacity="0.4" />
-      <rect x="6" y="66" width="60" height="1.2" rx="0.6" fill="#0C4A6E" opacity="0.25" />
-      <rect x="6" y="70" width="50" height="1.2" rx="0.6" fill="#0C4A6E" opacity="0.25" />
-      <rect x="6" y="92" width="22" height="2" fill="#0EA5E9" />
     </svg>
   )
 }
@@ -1089,7 +1016,6 @@ export function CoverLetterThumbnail({ id, color }: { id: string; color: string 
   // ── 30 premium templates (cover-letter v2). Fixed palette; colorScheme is ignored. ──
   if (id === "echo") return <EchoThumb />
   if (id === "lumen") return <LumenThumb />
-  if (id === "stark") return <StarkThumb />
   if (id === "atlas") return <AtlasThumb />
   if (id === "consul") return <ConsulThumb />
   if (id === "sterling") return <SterlingThumb />
@@ -1098,9 +1024,7 @@ export function CoverLetterThumbnail({ id, color }: { id: string; color: string 
   if (id === "ember") return <EmberThumb />
   if (id === "vantage") return <VantageThumb />
   if (id === "mosaic") return <MosaicThumb />
-  if (id === "circuit") return <CircuitThumb />
   if (id === "vertex") return <VertexThumb />
-  if (id === "pulse") return <PulseThumb />
   if (id === "folio") return <FolioThumb />
   if (id === "gazette") return <GazetteThumb />
   if (id === "verso") return <VersoThumb />

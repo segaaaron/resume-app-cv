@@ -43,7 +43,7 @@ export default function TimelineVerticalTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
-      fontFamily: "'DM Sans', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.55,
       padding: "48px 56px", display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

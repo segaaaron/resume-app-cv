@@ -40,7 +40,7 @@ export default function CobaltTemplate() {
   ]
 
   const sidebar = "#0d2137"
-  const accent = "#1e88e5"
+  const accent = config.colorScheme || "#1e88e5"
   const L = getResumeLabels(config.language)
   const present = L.present
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
@@ -61,7 +61,7 @@ export default function CobaltTemplate() {
             })()}
         </div>
 
-        <SideHead text={L.contact} />
+        <SideHead text={L.contact} color={accent} />
         <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 9.5, marginBottom: 16 }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={accent} />{phone}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={accent} />{email}</span>
@@ -71,7 +71,7 @@ export default function CobaltTemplate() {
 
         {visible("languages") && (
           <>
-            <SideHead text={L.languages} />
+            <SideHead text={L.languages} color={accent} />
             <div style={{ marginBottom: 16 }}>
               {langs.map((l) => <p key={l.id} style={{ fontSize: 9.5, marginBottom: 3, opacity: 0.85 }}>{l.name}</p>)}
             </div>
@@ -80,7 +80,7 @@ export default function CobaltTemplate() {
 
         {visible("skills") && (
           <>
-            <SideHead text={L.skills} />
+            <SideHead text={L.skills} color={accent} />
             <div style={{ marginBottom: 16 }}>
               {sks.map((sk) => (
                 <div key={sk.id} style={{ marginBottom: 7 }}>
@@ -96,7 +96,7 @@ export default function CobaltTemplate() {
 
         {visible("hobbies") && (
           <>
-            <SideHead text={L.hobbies} />
+            <SideHead text={L.hobbies} color={accent} />
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
               {(hobbies || "Gym, Gaming, Música").split(",").map((h, i) => (
                 <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
@@ -151,8 +151,8 @@ export default function CobaltTemplate() {
   )
 }
 
-function SideHead({ text }: { text: string }) {
-  return <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "#1e88e5", marginBottom: 8 }}>{text}</p>
+function SideHead({ text, color }: { text: string; color: string }) {
+  return <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color, marginBottom: 8 }}>{text}</p>
 }
 
 function MainSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {

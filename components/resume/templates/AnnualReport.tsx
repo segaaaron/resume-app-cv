@@ -47,7 +47,7 @@ export default function AnnualReportTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
-      fontFamily: "'Inter', sans-serif", fontSize: 10.5, padding: 48,
+      fontFamily: "inherit", fontSize: 10.5, padding: 48,
       display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

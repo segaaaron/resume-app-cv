@@ -18,6 +18,22 @@ export const PRO_IDS: string[] = [
   "ledgercv", "neon", "medicalchart", "vitalsigns", "vetcv",
   "sharp", "bauhaus", "cobalt", "duality", "havana", "helix", "lisbon", "nautical",
   "prism", "tokyo", "vitae", "meridian",
+  // ─── Elite / Exec / Luxe — premium showpieces (planillas-lujosas-Jun-2026) ───
+  "elite-atlas", "exec-porcelain", "luxe-noir",
+  "elite-counsel", "elite-aura", "elite-pulse",
+  "elite-cuvee", "elite-cadence", "elite-meridian",
+  "luxe-aurum", "luxe-vellum", "luxe-regent", "luxe-apex",
+  "exec-regency", "exec-sovereign", "exec-citadel", "exec-dynasty",
+  "exec-oxblood", "exec-cobalt", "exec-terra", "exec-nocturne", "exec-platine",
+  // ─── Signature / Tpl ───
+  "atelier", "bloom", "velvet", "sahara", "pearl",
+  // ─── Flagship Premium ───
+  "editorial2", "confetti", "frame",
+  // ─── Showcase ───
+  "show-cameo", "show-marquis", "show-soiree", "show-plume",
+  // ─── By Profession ───
+  "chef", "teacher", "journalist", "communicator", "filmmaker",
+  "photographer", "architect", "doctor", "fashion", "writer",
 ]
 
 export type TemplateLayout = "single-column" | "sidebar-left" | "sidebar-right"

@@ -37,7 +37,7 @@ export default function AnimatorCVTemplate() {
       minHeight: "297mm",
       background: cream,
       color: ink,
-      fontFamily: "'Inter Tight', 'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 11,
       padding: 36,
       display: "flex",
@@ -51,7 +51,7 @@ export default function AnimatorCVTemplate() {
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.25em", color: red }}>
             ANIMATIC · 24FPS · CV CYCLE
           </div>
-          <h1 style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif", fontWeight: 900, fontSize: 48, margin: "6px 0 0", letterSpacing: "-0.03em" }}>
+          <h1 style={{ fontFamily: "inherit", fontWeight: 900, fontSize: 48, margin: "6px 0 0", letterSpacing: "-0.03em" }}>
             {(pd.firstName || "FIRST").toUpperCase()} {(pd.lastName || "LAST").toUpperCase()}
           </h1>
           {pd.jobTitle && (
@@ -234,7 +234,7 @@ export default function AnimatorCVTemplate() {
 function H({ children, red }: { children: React.ReactNode; red: string }) {
   return (
     <h2 style={{
-      fontFamily: "'Inter Tight', 'Inter', sans-serif",
+      fontFamily: "inherit",
       fontWeight: 800,
       fontSize: 15,
       margin: "14px 0 8px",

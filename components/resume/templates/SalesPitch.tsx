@@ -54,7 +54,7 @@ export default function SalesPitchTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
-      fontFamily: "'Inter Tight', sans-serif", fontSize: 11, padding: 0,
+      fontFamily: "inherit", fontSize: 11, padding: 0,
       display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

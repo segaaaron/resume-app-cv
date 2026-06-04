@@ -28,7 +28,7 @@ export default function CallSheetTemplate() {
       minHeight: "297mm",
       background: paper,
       color: ink,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 10,
       display: "flex",
       flexDirection: "column",
@@ -63,11 +63,11 @@ export default function CallSheetTemplate() {
                 {config.language === "en" ? "PRODUCTION" : "PRODUCCIÓN"} · "{pd.jobTitle.toUpperCase()}"
               </div>
             )}
-            <h1 style={{ fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 42, fontWeight: 900, margin: "4px 0 0", letterSpacing: "-0.025em" }}>
+            <h1 style={{ fontFamily: "inherit", fontSize: 42, fontWeight: 900, margin: "4px 0 0", letterSpacing: "-0.025em" }}>
               {pd.firstName || "First"} {pd.lastName || "Last"}
             </h1>
             {pd.jobTitle && (
-              <div style={{ fontSize: 13, fontFamily: "'Inter Tight', 'Inter', sans-serif", fontWeight: 600 }}>{pd.jobTitle}</div>
+              <div style={{ fontSize: 13, fontFamily: "inherit", fontWeight: 600 }}>{pd.jobTitle}</div>
             )}
           </div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, lineHeight: 1.7, textAlign: "right" }}>

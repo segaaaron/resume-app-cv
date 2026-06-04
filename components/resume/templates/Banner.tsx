@@ -43,7 +43,7 @@ export default function BannerTemplate() {
   ]
 
   const navy = "#0d3b6e"
-  const accent = "#1565c0"
+  const accent = config.colorScheme || "#1565c0"
   const L = getResumeLabels(config.language)
   const present = L.present
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }

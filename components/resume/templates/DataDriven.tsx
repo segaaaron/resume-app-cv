@@ -71,7 +71,7 @@ export default function DataDrivenTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
-      fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.5,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.5,
       padding: 44, display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

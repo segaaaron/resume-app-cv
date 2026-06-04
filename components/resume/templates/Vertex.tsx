@@ -43,7 +43,7 @@ export default function VertexTemplate() {
   ]
 
   const navy = "#1e3a5f"
-  const gold = "#c9a84c"
+  const gold = config.colorScheme || "#c9a84c"
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
   const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }

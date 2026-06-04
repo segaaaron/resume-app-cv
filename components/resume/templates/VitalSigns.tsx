@@ -41,7 +41,7 @@ export default function VitalSignsTemplate() {
       minHeight: "297mm",
       background: paper,
       color: ink,
-      fontFamily: "'DM Sans', 'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 10.5,
       padding: 36,
       display: "flex",

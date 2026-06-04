@@ -25,7 +25,7 @@ export default function UXTokensTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: text,
-      fontFamily: "'Inter', sans-serif", fontSize: 11,
+      fontFamily: "inherit", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column", gap: 16,
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

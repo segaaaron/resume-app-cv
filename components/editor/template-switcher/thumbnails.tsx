@@ -36,6 +36,17 @@ import {
   ATSThumb, CasualThumb, CircularThumb, CoralThumb,
   FoldThumb, LuxuriousThumb, MetroThumb, RivieraThumb, SharpThumb,
   SparkThumb, VogueThumb,
+  EliteAtlasThumb, ExecPorcelainThumb, LuxeNoirThumb,
+  EliteCounselThumb, EliteAuraThumb, ElitePulseThumb,
+  EliteCuveeThumb, EliteCadenceThumb, EliteMeridianThumb,
+  LuxeAurumThumb, LuxeVellumThumb, LuxeRegentThumb, LuxeApexThumb,
+  ExecRegencyThumb, ExecSovereignThumb, ExecCitadelThumb, ExecDynastyThumb,
+  ExecOxbloodThumb, ExecCobaltThumb, ExecTerraThumb, ExecNocturneThumb, ExecPlatineThumb,
+  TplAtelierThumb, TplBloomThumb, TplVelvetThumb, TplSaharaThumb, TplPearlThumb,
+  TplGazetteThumb, TplConfettiThumb, TplFrameThumb,
+  ShowCameoThumb, ShowMarquisThumb, ShowSoireeThumb, ShowPlumeThumb,
+  TplChefThumb, TplTeacherThumb, TplJournalistThumb, TplCommunicatorThumb, TplFilmmakerThumb,
+  TplPhotographerThumb, TplArchitectThumb, TplDoctorThumb, TplFashionThumb, TplWriterThumb,
 } from "./thumbnails-pro-c"
 
 export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
@@ -150,6 +161,55 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "sharp":        return <SharpThumb color={color} />
     case "spark":        return <SparkThumb color={color} />
     case "vogue":        return <VogueThumb color={color} />
-    default:             return <ClassicThumb color={color} />
+    // Elite / Exec / Luxe — full batch (planillas-lujosas-Jun-2026)
+    case "elite-atlas":      return <EliteAtlasThumb color={color} />
+    case "exec-porcelain":   return <ExecPorcelainThumb color={color} />
+    case "luxe-noir":        return <LuxeNoirThumb color={color} />
+    case "elite-counsel":    return <EliteCounselThumb color={color} />
+    case "elite-aura":       return <EliteAuraThumb color={color} />
+    case "elite-pulse":      return <ElitePulseThumb color={color} />
+    case "elite-cuvee":      return <EliteCuveeThumb color={color} />
+    case "elite-cadence":    return <EliteCadenceThumb color={color} />
+    case "elite-meridian":   return <EliteMeridianThumb color={color} />
+    case "luxe-aurum":       return <LuxeAurumThumb color={color} />
+    case "luxe-vellum":      return <LuxeVellumThumb color={color} />
+    case "luxe-regent":      return <LuxeRegentThumb color={color} />
+    case "luxe-apex":        return <LuxeApexThumb color={color} />
+    case "exec-regency":     return <ExecRegencyThumb color={color} />
+    case "exec-sovereign":   return <ExecSovereignThumb color={color} />
+    case "exec-citadel":     return <ExecCitadelThumb color={color} />
+    case "exec-dynasty":     return <ExecDynastyThumb color={color} />
+    case "exec-oxblood":     return <ExecOxbloodThumb color={color} />
+    case "exec-cobalt":      return <ExecCobaltThumb color={color} />
+    case "exec-terra":       return <ExecTerraThumb color={color} />
+    case "exec-nocturne":    return <ExecNocturneThumb color={color} />
+    case "exec-platine":     return <ExecPlatineThumb color={color} />
+    // Signature / Tpl
+    case "atelier":          return <TplAtelierThumb color={color} />
+    case "bloom":            return <TplBloomThumb color={color} />
+    case "velvet":           return <TplVelvetThumb color={color} />
+    case "sahara":           return <TplSaharaThumb color={color} />
+    case "pearl":            return <TplPearlThumb color={color} />
+    // Flagship Premium
+    case "editorial2":       return <TplGazetteThumb color={color} />
+    case "confetti":         return <TplConfettiThumb color={color} />
+    case "frame":            return <TplFrameThumb color={color} />
+    // Showcase
+    case "show-cameo":       return <ShowCameoThumb color={color} />
+    case "show-marquis":     return <ShowMarquisThumb color={color} />
+    case "show-soiree":      return <ShowSoireeThumb color={color} />
+    case "show-plume":       return <ShowPlumeThumb color={color} />
+    // By Profession
+    case "chef":             return <TplChefThumb color={color} />
+    case "teacher":          return <TplTeacherThumb color={color} />
+    case "journalist":       return <TplJournalistThumb color={color} />
+    case "communicator":     return <TplCommunicatorThumb color={color} />
+    case "filmmaker":        return <TplFilmmakerThumb color={color} />
+    case "photographer":     return <TplPhotographerThumb color={color} />
+    case "architect":        return <TplArchitectThumb color={color} />
+    case "doctor":           return <TplDoctorThumb color={color} />
+    case "fashion":          return <TplFashionThumb color={color} />
+    case "writer":           return <TplWriterThumb color={color} />
+    default:                 return <ClassicThumb color={color} />
   }
 }

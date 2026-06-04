@@ -44,7 +44,7 @@ export default function RoseTemplate() {
   ]
   const hob = hobbies || "Lectura, Yoga, Viajes"
 
-  const accent = "#c9947a"
+  const accent = config.colorScheme || "#c9947a"
   const sidebarBg = "#f5e6e0"
   const dark = "#2d2d2d"
   const L = getResumeLabels(config.language)

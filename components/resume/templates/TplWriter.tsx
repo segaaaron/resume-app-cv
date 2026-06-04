@@ -1,0 +1,225 @@
+"use client"
+
+/**
+ * Manuscript (TplWriter) — warm editorial serif layout.
+ * Source: planillas-lujosas-Jun-29026/cv-professions-b.jsx (TplWriter).
+ *
+ * Design fidelity:
+ *  - Cream #f7f3ea backdrop, ink #211d17, sepia accent #7a5c3a.
+ *  - Quill SVG floats top-right; italic surname under huge name.
+ *  - Pull-quote summary with sepia left rule.
+ *  - Numbered selected works (italic sepia numerals).
+ * Font: serif → Georgia (replaces Cormorant Garamond).
+ */
+
+import { fmtDesc } from "@/lib/utils"
+import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
+
+const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
+const SERIF = 'Georgia, "Times New Roman", serif'
+
+export default function TplWriterTemplate() {
+  const ink = "#211d17"
+
+  const { config, sections } = useResumeStore(
+    useShallow((s) => ({ config: s.config, sections: s.sections })),
+  )
+  const acc = config.colorScheme || "#7a5c3a"
+  const data = useTemplateSectionData()
+  const {
+    personalDetails: pd, summary, workExperience, education,
+    skills, languages, certifications, projects,
+  } = data
+  const present = config.language === "en" ? "Present" : "Presente"
+  const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
+  const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
+
+  const Mail = () => (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="4" width="20" height="16" rx="2" /><path d="m2 7 10 6 10-6" />
+    </svg>
+  )
+  const Phone = () => (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.97.36 1.92.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.89.34 1.84.57 2.81.7A2 2 0 0 1 22 16.92z" />
+    </svg>
+  )
+  const Pin = () => (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z" /><circle cx="12" cy="10" r="3" />
+    </svg>
+  )
+  const Globe = () => (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" /><path d="M2 12h20M12 2a15 15 0 0 1 0 20 15 15 0 0 1 0-20z" />
+    </svg>
+  )
+  const Award = () => (
+    <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="8" r="6" /><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12" />
+    </svg>
+  )
+
+  const contacts: Array<[React.ReactNode, string]> = []
+  if (pd.email) contacts.push([<Mail key="m" />, pd.email])
+  if (pd.phone) contacts.push([<Phone key="p" />, pd.phone])
+  const place = [pd.city, pd.country].filter(Boolean).join(", ")
+  if (place) contacts.push([<Pin key="i" />, place])
+  if (pd.website) contacts.push([<Globe key="g" />, pd.website])
+
+  const WrH = ({ children }: { children: React.ReactNode }) => (
+    <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: acc, margin: "18px 0 12px", fontWeight: 600 }}>
+      {children}
+    </div>
+  )
+
+  return (
+    <div
+      data-print-layout="single-column"
+      style={{
+        width: "100%",
+        minHeight: "297mm",
+        background: "#f7f3ea",
+        color: ink,
+        fontFamily: "inherit",
+        position: "relative",
+        padding: "52px 58px",
+        WebkitPrintColorAdjust: "exact",
+        printColorAdjust: "exact",
+      }}
+    >
+      <svg viewBox="0 0 60 60" width="58" height="58" style={{ position: "absolute", top: 44, right: 56, opacity: 0.5 }}>
+        <path d="M48 10 q-30 6 -34 40 q18 -2 30 -18 q8 -10 4 -22 Z" fill="none" stroke={acc} strokeWidth="1.6" />
+        <path d="M14 50 q12 -22 30 -34" fill="none" stroke={acc} strokeWidth="1.2" />
+        <path d="M12 52 l-6 6" stroke={acc} strokeWidth="1.6" strokeLinecap="round" />
+      </svg>
+
+      <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.4em", textTransform: "uppercase", color: acc, marginBottom: 14 }}>
+        {pd.jobTitle || (config.language === "en" ? "Author · Copywriter" : "Autor · Copywriter")}
+      </div>
+      <h1 style={{ fontSize: 72, fontWeight: 500, margin: 0, lineHeight: 0.9, letterSpacing: "-0.01em" }}>
+        {pd.firstName || "Your"}<br />
+        <span style={{ fontStyle: "italic" }}>{pd.lastName || "Name"}</span>
+      </h1>
+
+      {contacts.length > 0 && (
+        <div style={{ fontFamily: "inherit", display: "flex", gap: 20, marginTop: 18, fontSize: 11.5, color: "#6a5f4e", flexWrap: "wrap" }}>
+          {contacts.map(([I, t], i) => (
+            <span key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ color: acc, fontSize: 12, display: "inline-flex" }}>{I}</span>{t}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {visible("summary") && summary && (
+        <p style={{ fontSize: 20, lineHeight: 1.5, fontStyle: "italic", color: "#4a4234", margin: "24px 0", maxWidth: 600, borderLeft: `3px solid ${acc}`, paddingLeft: 18, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+          “{summary}”
+        </p>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1.6fr 1fr", gap: 40 }}>
+        <div>
+          {visible("workExperience") && workExperience.length > 0 && (
+            <>
+              <WrH>{labelFor("workExperience")}</WrH>
+              {workExperience.map((e, i) => (
+                <div key={e.id} className="resume-entry" style={{ marginBottom: 17, breakInside: "avoid" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                    <span style={{ fontSize: 26, fontStyle: "italic", color: acc }}>{String(i + 1).padStart(2, "0")}</span>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
+                        <div style={{ fontSize: 19, fontWeight: 600 }}>{e.jobTitle}</div>
+                        <div style={{ fontFamily: "inherit", fontSize: 11, color: acc, whiteSpace: "nowrap" }}>
+                          {e.startDate}
+                          {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
+                        </div>
+                      </div>
+                      <div style={{ fontFamily: "inherit", fontSize: 11.5, color: "#8a7d68", fontStyle: "italic", marginBottom: 4 }}>
+                        {e.employer}{e.city ? ` · ${e.city}` : ""}
+                      </div>
+                      {e.description && (
+                        <div
+                          className="resume-desc"
+                          style={{ fontFamily: "inherit", fontSize: 12, color: "#4a4234", lineHeight: 1.55 }}
+                          dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div style={{ fontFamily: "inherit" }}>
+          {visible("skills") && skills.length > 0 && (
+            <>
+              <WrH>{labelFor("skills")}</WrH>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                {skills.map((s) => (
+                  <span key={s.id} style={{ fontSize: 11, background: ink, color: "#f7f3ea", padding: "4px 10px", borderRadius: 1, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            </>
+          )}
+
+          {visible("projects") && projects.length > 0 && (
+            <>
+              <WrH>{labelFor("projects")}</WrH>
+              {projects.map((p) => (
+                <div key={p.id} style={{ fontFamily: "inherit", fontSize: 15, fontStyle: "italic", color: "#4a4234", marginBottom: 3 }}>
+                  {p.name}{p.role ? ` — ${p.role}` : ""}
+                </div>
+              ))}
+            </>
+          )}
+
+          {visible("education") && education.length > 0 && (
+            <>
+              <WrH>{labelFor("education")}</WrH>
+              {education.map((ed) => (
+                <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
+                  <div style={{ fontSize: 12.5, fontWeight: 700 }}>
+                    {ed.degree}{ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
+                  </div>
+                  <div style={{ fontSize: 11.5, color: "#8a7d68" }}>
+                    {ed.institution} · {ed.startDate}
+                    {ed.currentlyStudying ? ` — ${present}` : ed.endDate ? ` — ${ed.endDate}` : ""}
+                  </div>
+                </div>
+              ))}
+            </>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <WrH>{labelFor("certifications")}</WrH>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ fontFamily: "inherit", fontSize: 15, fontStyle: "italic", color: "#4a4234", display: "flex", gap: 8, marginBottom: 3 }}>
+                  <span style={{ color: acc, fontSize: 14, display: "inline-flex" }}><Award /></span>{c.name}
+                </div>
+              ))}
+            </>
+          )}
+
+          {visible("languages") && languages.length > 0 && (
+            <>
+              <WrH>{labelFor("languages")}</WrH>
+              {languages.map((l) => (
+                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3, color: "#4a4234" }}>
+                  <span style={{ fontWeight: 600 }}>{l.name}</span>
+                  <span style={{ color: "#8a7d68" }}>{l.level?.toUpperCase()}</span>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

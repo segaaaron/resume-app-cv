@@ -26,7 +26,7 @@ export default function AthleteCardTemplate() {
   function H({ children }: { children: React.ReactNode }) {
     return (
       <h2 style={{
-        fontFamily: "'Inter Tight', 'Inter', sans-serif",
+        fontFamily: "inherit",
         fontWeight: 800, fontSize: 14, margin: "16px 0 8px",
         textTransform: "uppercase", letterSpacing: "0.06em", color: navy,
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
@@ -40,7 +40,7 @@ export default function AthleteCardTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
-      fontFamily: "'Inter Tight', 'Inter', sans-serif", fontSize: 11,
+      fontFamily: "inherit", fontSize: 11,
       padding: 36, display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>
@@ -56,7 +56,7 @@ export default function AthleteCardTemplate() {
             ★ TRADING CARD · {new Date().getFullYear()} ★
           </div>
           <h1 style={{
-            fontFamily: "'Inter Tight', 'Inter', sans-serif",
+            fontFamily: "inherit",
             fontWeight: 900, fontSize: 46, margin: "6px 0 0",
             letterSpacing: "-0.03em", color: cream,
             textTransform: "uppercase",
@@ -92,7 +92,7 @@ export default function AthleteCardTemplate() {
                   <div style={{ height: 10, background: "#eee", borderRadius: 2, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
                     <div style={{ width: `${pct}%`, height: "100%", background: orange, borderRadius: 2, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
                   </div>
-                  <span style={{ fontFamily: "'Inter Tight', 'Inter'", fontWeight: 800, fontSize: 14 }}>{pct}</span>
+                  <span style={{ fontFamily: "inherit", fontWeight: 800, fontSize: 14 }}>{pct}</span>
                 </div>
               )
             })}

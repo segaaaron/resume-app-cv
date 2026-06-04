@@ -10,7 +10,7 @@ const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 8
 function SideSection({ title, ink, rule, children }: { title: string; ink: string; rule: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 24 }}>
-      <h3 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 11, letterSpacing: "0.22em", margin: "0 0 8px", paddingBottom: 6, borderBottom: `1px solid ${rule}`, textTransform: "uppercase", color: ink, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</h3>
+      <h3 style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.22em", margin: "0 0 8px", paddingBottom: 6, borderBottom: `1px solid ${rule}`, textTransform: "uppercase", color: ink, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>{title}</h3>
       <ul style={{ margin: 0, padding: 0, listStyle: "none", fontSize: 10.5 }}>{children}</ul>
     </section>
   )
@@ -19,7 +19,7 @@ function SideSection({ title, ink, rule, children }: { title: string; ink: strin
 function MainBlock({ title, ink, rule, accent, children }: { title: string; ink: string; rule: string; accent: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 24 }}>
-      <h2 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 14, letterSpacing: "0.22em", margin: "0 0 12px", textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${ink}`, color: ink }}>{title}</h2>
+      <h2 style={{ fontFamily: "inherit", fontSize: 14, letterSpacing: "0.22em", margin: "0 0 12px", textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${ink}`, color: ink }}>{title}</h2>
       {children}
     </section>
   )
@@ -44,7 +44,7 @@ export default function CharcoalClassicTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: bg, color: ink,
-      fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.55,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.55,
       padding: "32px 36px", display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>
@@ -63,7 +63,7 @@ export default function CharcoalClassicTemplate() {
           )
         })()}
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1, color: bg }}>
+          <h1 style={{ fontFamily: "inherit", fontSize: 32, fontWeight: 700, margin: 0, letterSpacing: "0.04em", textTransform: "uppercase", lineHeight: 1, color: bg }}>
             {(pd.firstName || "First").toUpperCase()} {(pd.lastName || "Last").toUpperCase()}
           </h1>
           {pd.jobTitle && (

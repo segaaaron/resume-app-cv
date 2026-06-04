@@ -24,7 +24,7 @@ export default function RisoDesignerTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: blue,
-      fontFamily: "'Space Grotesk', 'Inter', sans-serif", fontSize: 11, padding: 0,
+      fontFamily: "inherit", fontSize: 11, padding: 0,
       display: "flex", flexDirection: "column", overflow: "hidden", position: "relative",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>
@@ -46,7 +46,7 @@ export default function RisoDesignerTemplate() {
           RISO PRINT · {new Date().getFullYear()}
         </div>
         <h1 style={{
-          fontFamily: "'Archivo Black', 'Inter', sans-serif", fontSize: 84, lineHeight: 0.9,
+          fontFamily: "inherit", fontSize: 84, lineHeight: 0.9,
           margin: "12px 0 0", letterSpacing: "-0.04em", textTransform: "uppercase",
         }}>
           {pd.firstName || "First"}<br />{pd.lastName || "Last"}
@@ -194,7 +194,7 @@ export default function RisoDesignerTemplate() {
 function H({ children, red, blue }: { children: React.ReactNode; red: string; blue: string }) {
   return (
     <h3 style={{
-      fontFamily: "'Archivo Black', 'Inter', sans-serif", fontSize: 14,
+      fontFamily: "inherit", fontSize: 14,
       margin: "20px 0 10px", textTransform: "uppercase", color: red,
     }}>
       {children}

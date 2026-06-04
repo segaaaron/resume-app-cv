@@ -42,7 +42,7 @@ export default function NauticalTemplate() {
   ]
 
   const sidebar = "#1e3a5f"
-  const accent = "#2d6bbf"
+  const accent = config.colorScheme || "#2d6bbf"
   const present = config.language === "en" ? "Present" : "Presente"
   const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 

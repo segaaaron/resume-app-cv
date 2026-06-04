@@ -45,7 +45,7 @@ export default function MedicalChartTemplate() {
       minHeight: "297mm",
       background: paper,
       color: ink,
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "inherit",
       fontSize: 10.5,
       padding: 0,
       display: "flex",
@@ -74,7 +74,7 @@ export default function MedicalChartTemplate() {
             <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.2em" }}>
               {config.language === "en" ? "PATIENT-FACING RECORD · CV" : "REGISTRO PROFESIONAL · CV"}
             </div>
-            <div style={{ fontFamily: "'Inter Tight', sans-serif", fontWeight: 800, fontSize: 22, marginTop: 2 }}>
+            <div style={{ fontFamily: "inherit", fontWeight: 800, fontSize: 22, marginTop: 2 }}>
               {fullName.toUpperCase()}
             </div>
           </div>
@@ -91,7 +91,7 @@ export default function MedicalChartTemplate() {
             <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, color: "#777", letterSpacing: "0.2em" }}>
               {config.language === "en" ? "PROFESSIONAL NAME" : "NOMBRE PROFESIONAL"}
             </div>
-            <h1 style={{ fontFamily: "'Inter Tight', sans-serif", fontSize: 38, fontWeight: 800, margin: "4px 0 0", letterSpacing: "-0.02em" }}>
+            <h1 style={{ fontFamily: "inherit", fontSize: 38, fontWeight: 800, margin: "4px 0 0", letterSpacing: "-0.02em" }}>
               {fullName}
             </h1>
             {pd.jobTitle && (

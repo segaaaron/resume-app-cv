@@ -33,7 +33,7 @@ export default function EditorialSerifTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: cream, color: ink,
-      fontFamily: "'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.6,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.6,
       padding: "56px 64px", display: "flex", flexDirection: "column",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>

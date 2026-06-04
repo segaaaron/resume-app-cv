@@ -9,10 +9,10 @@ type TemplateId =
   | "classic" | "sidebar" | "elegant" | "split" | "executive" | "material"
   | "gradient" | "minimal" | "twotone" | "timeline" | "monogram"
   | "architect" | "diagonal" | "newspaper"
-  | "echo" | "lumen" | "stark"
+  | "echo" | "lumen"
   | "atlas" | "consul" | "sterling" | "fortis"
   | "prism" | "ember" | "vantage" | "mosaic"
-  | "circuit" | "vertex" | "pulse"
+  | "vertex"
   | "folio" | "gazette" | "verso"
   | "aurum" | "onyx" | "velvet"
   | "signal" | "meridian" | "nova" | "obsidian" | "codex" | "axiom" | "terra"
@@ -22,50 +22,47 @@ const FREE_TEMPLATES: { id: TemplateId; labelKey: string }[] = [
   { id: "elegant", labelKey: "template_elegant" },
 ]
 
+// Alphabetical by `id` for consistency with the sidebar grid in CoverLetterEditor.tsx.
 const PRO_TEMPLATES: { id: TemplateId; labelKey: string }[] = [
-  { id: "sidebar",   labelKey: "template_sidebar" },
-  { id: "split",     labelKey: "template_split" },
+  { id: "architect", labelKey: "template_architect" },
+  { id: "atlas",     labelKey: "template_atlas" },
+  { id: "aurum",     labelKey: "template_aurum" },
+  { id: "axiom",     labelKey: "template_axiom" },
+  { id: "bloom",     labelKey: "template_bloom" },
+  { id: "codex",     labelKey: "template_codex" },
+  { id: "consul",    labelKey: "template_consul" },
+  { id: "diagonal",  labelKey: "template_diagonal" },
+  { id: "echo",      labelKey: "template_echo" },
+  { id: "ember",     labelKey: "template_ember" },
   { id: "executive", labelKey: "template_executive" },
-  { id: "material",  labelKey: "template_material" },
+  { id: "flare",     labelKey: "template_flare" },
+  { id: "folio",     labelKey: "template_folio" },
+  { id: "fortis",    labelKey: "template_fortis" },
+  { id: "gazette",   labelKey: "template_gazette" },
   { id: "gradient",  labelKey: "template_gradient" },
-  { id: "twotone",   labelKey: "template_twotone" },
-  { id: "timeline",  labelKey: "template_timeline" },
+  { id: "herald",    labelKey: "template_herald" },
+  { id: "lumen",     labelKey: "template_lumen" },
+  { id: "material",  labelKey: "template_material" },
+  { id: "meridian",  labelKey: "template_meridian" },
   { id: "minimal",   labelKey: "template_minimal" },
   { id: "monogram",  labelKey: "template_monogram" },
-  { id: "architect", labelKey: "template_architect" },
-  { id: "diagonal",  labelKey: "template_diagonal" },
+  { id: "mosaic",    labelKey: "template_mosaic" },
   { id: "newspaper", labelKey: "template_newspaper" },
-  // ── 30 premium templates (cover-letter v2) ──
-  { id: "echo",     labelKey: "template_echo" },
-  { id: "lumen",    labelKey: "template_lumen" },
-  { id: "stark",    labelKey: "template_stark" },
-  { id: "atlas",    labelKey: "template_atlas" },
-  { id: "consul",   labelKey: "template_consul" },
-  { id: "sterling", labelKey: "template_sterling" },
-  { id: "fortis",   labelKey: "template_fortis" },
-  { id: "prism",    labelKey: "template_prism" },
-  { id: "ember",    labelKey: "template_ember" },
-  { id: "vantage",  labelKey: "template_vantage" },
-  { id: "mosaic",   labelKey: "template_mosaic" },
-  { id: "circuit",  labelKey: "template_circuit" },
-  { id: "vertex",   labelKey: "template_vertex" },
-  { id: "pulse",    labelKey: "template_pulse" },
-  { id: "folio",    labelKey: "template_folio" },
-  { id: "gazette",  labelKey: "template_gazette" },
-  { id: "verso",    labelKey: "template_verso" },
-  { id: "aurum",    labelKey: "template_aurum" },
-  { id: "onyx",     labelKey: "template_onyx" },
-  { id: "velvet",   labelKey: "template_velvet" },
-  { id: "signal",   labelKey: "template_signal" },
-  { id: "meridian", labelKey: "template_meridian" },
-  { id: "nova",     labelKey: "template_nova" },
-  { id: "obsidian", labelKey: "template_obsidian" },
-  { id: "codex",    labelKey: "template_codex" },
-  { id: "axiom",    labelKey: "template_axiom" },
-  { id: "terra",    labelKey: "template_terra" },
-  { id: "flare",    labelKey: "template_flare" },
-  { id: "herald",   labelKey: "template_herald" },
-  { id: "bloom",    labelKey: "template_bloom" },
+  { id: "nova",      labelKey: "template_nova" },
+  { id: "obsidian",  labelKey: "template_obsidian" },
+  { id: "onyx",      labelKey: "template_onyx" },
+  { id: "prism",     labelKey: "template_prism" },
+  { id: "sidebar",   labelKey: "template_sidebar" },
+  { id: "signal",    labelKey: "template_signal" },
+  { id: "split",     labelKey: "template_split" },
+  { id: "sterling",  labelKey: "template_sterling" },
+  { id: "terra",     labelKey: "template_terra" },
+  { id: "timeline",  labelKey: "template_timeline" },
+  { id: "twotone",   labelKey: "template_twotone" },
+  { id: "vantage",   labelKey: "template_vantage" },
+  { id: "velvet",    labelKey: "template_velvet" },
+  { id: "verso",     labelKey: "template_verso" },
+  { id: "vertex",    labelKey: "template_vertex" },
 ]
 
 const ARROW_STYLE: React.CSSProperties = {

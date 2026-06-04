@@ -25,7 +25,6 @@ import NewspaperTemplate from "./templates/NewspaperTemplate"
 // ── 30 premium templates (cover-letter v2) ───────────────────────────────
 import EchoTemplate from "./templates/EchoTemplate"
 import LumenTemplate from "./templates/LumenTemplate"
-import StarkTemplate from "./templates/StarkTemplate"
 import AtlasTemplate from "./templates/AtlasTemplate"
 import ConsulTemplate from "./templates/ConsulTemplate"
 import SterlingTemplate from "./templates/SterlingTemplate"
@@ -34,9 +33,7 @@ import PrismTemplate from "./templates/PrismTemplate"
 import EmberTemplate from "./templates/EmberTemplate"
 import VantageTemplate from "./templates/VantageTemplate"
 import MosaicTemplate from "./templates/MosaicTemplate"
-import CircuitTemplate from "./templates/CircuitTemplate"
 import VertexTemplate from "./templates/VertexTemplate"
-import PulseTemplate from "./templates/PulseTemplate"
 import FolioTemplate from "./templates/FolioTemplate"
 import GazetteTemplate from "./templates/GazetteTemplate"
 import VersoTemplate from "./templates/VersoTemplate"
@@ -117,7 +114,6 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
     // ── 30 premium templates (cover-letter v2) ──
     if (templateId === "echo") return <EchoTemplate {...props} />
     if (templateId === "lumen") return <LumenTemplate {...props} />
-    if (templateId === "stark") return <StarkTemplate {...props} />
     if (templateId === "atlas") return <AtlasTemplate {...props} />
     if (templateId === "consul") return <ConsulTemplate {...props} />
     if (templateId === "sterling") return <SterlingTemplate {...props} />
@@ -126,9 +122,7 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
     if (templateId === "ember") return <EmberTemplate {...props} />
     if (templateId === "vantage") return <VantageTemplate {...props} />
     if (templateId === "mosaic") return <MosaicTemplate {...props} />
-    if (templateId === "circuit") return <CircuitTemplate {...props} />
     if (templateId === "vertex") return <VertexTemplate {...props} />
-    if (templateId === "pulse") return <PulseTemplate {...props} />
     if (templateId === "folio") return <FolioTemplate {...props} />
     if (templateId === "gazette") return <GazetteTemplate {...props} />
     if (templateId === "verso") return <VersoTemplate {...props} />

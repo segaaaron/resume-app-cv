@@ -37,7 +37,7 @@ export default function SwissGridTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: paper, color: ink,
-      fontFamily: "'Inter Tight', 'Helvetica Neue', 'Inter', sans-serif", fontSize: 10, lineHeight: 1.5,
+      fontFamily: "inherit", fontSize: 10, lineHeight: 1.5,
       padding: 48, display: "flex", flexDirection: "column",
       backgroundImage: `linear-gradient(${gridColor} 1px, transparent 1px), linear-gradient(90deg, ${gridColor} 1px, transparent 1px)`,
       backgroundSize: "32px 32px",
@@ -46,7 +46,7 @@ export default function SwissGridTemplate() {
       {/* Header: big number + name */}
       <header style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 32, padding: "28px 0 24px", borderBottom: `1px solid ${ink}` }}>
         <div>
-          <div style={{ fontFamily: "'Inter Tight', 'Helvetica Neue', sans-serif", fontWeight: 900, fontSize: 180, lineHeight: 0.85, letterSpacing: "-0.07em", color: ink }}>
+          <div style={{ fontFamily: "inherit", fontWeight: 900, fontSize: 180, lineHeight: 0.85, letterSpacing: "-0.07em", color: ink }}>
             {yearsExp}
           </div>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, letterSpacing: "0.18em", color: accent, marginTop: 4 }}>
@@ -54,7 +54,7 @@ export default function SwissGridTemplate() {
           </div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-          <h1 style={{ fontFamily: "'Inter Tight', 'Helvetica Neue', sans-serif", fontWeight: 800, fontSize: 36, lineHeight: 1, margin: 0, letterSpacing: "-0.03em" }}>
+          <h1 style={{ fontFamily: "inherit", fontWeight: 800, fontSize: 36, lineHeight: 1, margin: 0, letterSpacing: "-0.03em" }}>
             {pd.firstName || "First"}<br />{pd.lastName || "Last"}
           </h1>
           {pd.jobTitle && (

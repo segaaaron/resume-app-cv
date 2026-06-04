@@ -344,7 +344,7 @@ export default async function TemplatesPage({
   // PRO_IDS imported from @/components/editor/template-switcher (single source of truth)
 
   const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
-    { key: "featured", label: t("cat_featured"), ids: ["aurora","lumiere","consul","rose","minimal","banner","vertex","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","prism","tokyo","vitae"] },
+    { key: "featured", label: t("cat_featured"), ids: ["elite-atlas","exec-porcelain","luxe-noir","aurora","lumiere","consul","rose","minimal","banner","vertex","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","prism","tokyo","vitae"] },
     { key: "city", label: t("cat_city"), ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
     { key: "creative", label: t("cat_creative"), ids: ["risodesigner","uxtokens","blueprintcv","charcoalclassic","navyexecutive","coralsidebar","sagebotanical"] },
     { key: "business", label: t("cat_business"), ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","magazinespread","iosappcv"] },

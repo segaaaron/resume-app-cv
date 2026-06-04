@@ -24,7 +24,7 @@ export default function BoldBlockTemplate() {
   return (
     <div data-print-layout="single-column" style={{
       minHeight: "297mm", background: sand, color: ink,
-      fontFamily: "'Archivo', 'Inter', sans-serif", fontSize: 10.5, lineHeight: 1.5,
+      fontFamily: "inherit", fontSize: 10.5, lineHeight: 1.5,
       display: "grid", gridTemplateRows: "auto 1fr",
       WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
     }}>
@@ -45,7 +45,7 @@ export default function BoldBlockTemplate() {
         <div style={{ position: "relative", zIndex: 1 }}>
           <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, letterSpacing: "0.25em", color: accent, marginBottom: 10 }}>HOLA, SOY</div>
           <h1 style={{
-            fontFamily: "'Archivo Black', 'Archivo', 'Inter', sans-serif", fontWeight: 900, fontSize: 72,
+            fontFamily: "inherit", fontWeight: 900, fontSize: 72,
             lineHeight: 0.9, margin: 0, letterSpacing: "-0.04em", textTransform: "uppercase",
           }}>
             {pd.firstName || "Nombre"}<br />{pd.lastName || "Apellido"}
@@ -129,7 +129,7 @@ export default function BoldBlockTemplate() {
                     background: ink, color: sand, padding: "10px 12px",
                     WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
                   }}>
-                    <div style={{ fontFamily: "'Archivo Black', 'Archivo', sans-serif", fontSize: 22, lineHeight: 1 }}>{lang.name.slice(0, 2).toUpperCase()}</div>
+                    <div style={{ fontFamily: "inherit", fontSize: 22, lineHeight: 1 }}>{lang.name.slice(0, 2).toUpperCase()}</div>
                     <div style={{ fontSize: 9.5, color: muted, marginTop: 2 }}>{lang.level.toUpperCase()}</div>
                   </div>
                 ))}
@@ -167,7 +167,7 @@ export default function BoldBlockTemplate() {
               <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("projects").toLowerCase()}</h2>
               {projects.map((proj, i) => (
                 <div key={proj.id} style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, marginBottom: 12, alignItems: "start" }}>
-                  <div style={{ fontFamily: "'Archivo Black', 'Archivo', sans-serif", fontSize: 22, color: accent, lineHeight: 1 }}>{String(i + 1).padStart(2, "0")}</div>
+                  <div style={{ fontFamily: "inherit", fontSize: 22, color: accent, lineHeight: 1 }}>{String(i + 1).padStart(2, "0")}</div>
                   <div>
                     <div style={{ fontWeight: 800, fontSize: 12 }}>{proj.name}</div>
                     {proj.role && <div style={{ fontSize: 10.5, color: accent, fontWeight: 600 }}>{proj.role}</div>}
