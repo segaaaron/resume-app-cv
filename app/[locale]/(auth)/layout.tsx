@@ -43,7 +43,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
           </Link>
 
           {/* Main copy */}
-          <div className="mt-auto mb-auto pt-20">
+          <div className="mt-auto mb-auto pt-20" suppressHydrationWarning>
             <p className="text-[11px] font-bold tracking-[0.16em] uppercase mb-4"
               style={{ color: "#00D4FF" }}>
               {t("tagline")}

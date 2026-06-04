@@ -1,5 +1,6 @@
 "use client"
 
+import { Fragment } from "react"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -106,15 +107,15 @@ export default function AnnualReportTemplate() {
                       : job.endDate?.match(/\d{4}/)?.[0]?.slice(2) ?? ""
                     const fyRange = startY && endY ? `${startY}—${endY}` : startY || ""
                     return (
-                      <>
-                        <tr key={job.id} style={{ borderBottom: job.description ? "none" : "1px solid #ddd" }}>
+                      <Fragment key={job.id}>
+                        <tr style={{ borderBottom: job.description ? "none" : "1px solid #ddd" }}>
                           <td style={{ padding: "6px 4px", fontFamily: "ui-monospace, monospace", fontSize: 10 }}>{fyRange}</td>
                           <td style={{ padding: "6px 4px", fontWeight: 700 }}>{job.jobTitle}</td>
                           <td style={{ padding: "6px 4px" }}>{job.employer}</td>
                           <td style={{ padding: "6px 4px", textAlign: "right", color: "#666" }}>{job.city || ""}</td>
                         </tr>
                         {job.description && (
-                          <tr key={`${job.id}-d`} style={{ borderBottom: "1px solid #ddd" }}>
+                          <tr style={{ borderBottom: "1px solid #ddd" }}>
                             <td />
                             <td colSpan={3} style={{ padding: "2px 4px 8px" }}>
                               <div className="resume-desc" style={{ fontSize: 10.5, color: "#444", lineHeight: 1.55 }}
@@ -122,7 +123,7 @@ export default function AnnualReportTemplate() {
                             </td>
                           </tr>
                         )}
-                      </>
+                      </Fragment>
                     )
                   })}
                 </tbody>

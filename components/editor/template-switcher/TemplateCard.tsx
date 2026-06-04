@@ -43,7 +43,7 @@ export const TemplateCard = memo(function TemplateCard({
       onClick={() => onSelect(template.id, locked)}
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
-      className="flex flex-col items-center gap-2 w-full group"
+      className="flex flex-col items-center gap-2 w-full group pt-4"
       style={{ cursor: locked ? "not-allowed" : "pointer" }}
     >
       {/* Card frame */}
@@ -65,7 +65,7 @@ export const TemplateCard = memo(function TemplateCard({
             : "1px solid #d8e3f0",
           boxShadow: active ? activeShadow : hover && interactive ? hoverShadow : baseShadow,
           // Minimal inner padding — let the document breathe inside the frame
-          padding: 6,
+          padding: 25,
           transition:
             "transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease, border-color 180ms ease, background 180ms ease",
           transform: hover && interactive && !active ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
