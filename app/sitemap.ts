@@ -158,7 +158,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
-  // Template detail pages — 129 templates × 2 locales = 258 URLs
+  // Template detail pages — 164 templates × 2 locales = 328 URLs
   for (const locale of locales) {
     for (const tpl of templatesSEO) {
       entries.push({

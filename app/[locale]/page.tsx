@@ -100,7 +100,7 @@ const jsonLdWebApp = {
   name: "ReadyCVV",
   url: "https://readycvv.com",
   description:
-    "AI-powered resume builder with ATS analysis. 139+ professional templates, cover letter generator, job application tracker.",
+    "AI-powered resume builder with ATS analysis. 164+ professional templates, cover letter generator, job application tracker.",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   browserRequirements: "Requires JavaScript. Requires HTML5.",
@@ -109,19 +109,19 @@ const jsonLdWebApp = {
       "@type": "Offer",
       price: "15.00",
       priceCurrency: "USD",
-      description: "Pro Plan: 139+ templates, 7 AI tools, ATS Score, cover letter generator, application tracker",
+      description: "Pro Plan: 164+ templates, 7 AI tools, ATS Score, cover letter generator, application tracker",
       priceValidUntil: "2027-01-01",
     },
     {
       "@type": "Offer",
       price: "144.00",
       priceCurrency: "USD",
-      description: "Pro Plan Annual (save 20%): 139+ templates, 7 AI tools, ATS Score, cover letter generator",
+      description: "Pro Plan Annual (save 20%): 164+ templates, 7 AI tools, ATS Score, cover letter generator",
       priceValidUntil: "2027-01-01",
     },
   ],
   featureList: [
-    "139+ professional resume templates",
+    "164+ professional resume templates",
     "ATS Score analysis with AI",
     "AI bullet point improvement",
     "AI professional summary generator",
@@ -150,7 +150,7 @@ const jsonLdFaq = {
       name: "What is ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes 139+ professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.",
+        text: "ReadyCVV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes 164+ professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.",
       },
     },
     {
@@ -174,7 +174,7 @@ const jsonLdFaq = {
       name: "How much does ReadyCVV cost?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all 139+ templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.",
+        text: "ReadyCVV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all 164+ templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.",
       },
     },
     {
@@ -190,7 +190,7 @@ const jsonLdFaq = {
       name: "¿Qué es ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye más de 139 plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.",
+        text: "ReadyCVV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye más de 164 plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.",
       },
     },
     {
@@ -198,7 +198,7 @@ const jsonLdFaq = {
       name: "¿Cuánto cuesta ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, todas las 139+ plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.",
+        text: "ReadyCVV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, todas las 164+ plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.",
       },
     },
   ],

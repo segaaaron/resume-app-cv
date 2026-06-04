@@ -20,9 +20,9 @@ const jsonLdItemList = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   name: "Professional Resume Templates — ReadyCVV",
-  description: "129+ ATS-optimized professional resume templates for every industry",
+  description: "164+ ATS-optimized professional resume templates for every industry",
   url: "https://readycvv.com/templates",
-  numberOfItems: 129,
+  numberOfItems: 164,
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://readycvv.com/templates#featured" },
     { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://readycvv.com/templates#city" },
