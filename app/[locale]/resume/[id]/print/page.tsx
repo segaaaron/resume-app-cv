@@ -62,7 +62,7 @@ export default async function PrintPage({
 
   const [resume, user] = await Promise.all([
     db.resume.findFirst({ where: { id, userId } }),
-    db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true } }),
+    db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true } }),
   ])
 
   if (!resume) notFound()
@@ -85,6 +85,10 @@ export default async function PrintPage({
     user?.plan ?? "UNSUBSCRIBED",
     user?.subscriptionEndsAt ?? null,
     user?.subscriptionStatus ?? null,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
   )
 
   return (

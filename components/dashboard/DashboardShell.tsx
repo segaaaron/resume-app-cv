@@ -13,6 +13,7 @@ import { apiFetch } from "@/lib/apiFetch"
 interface DashboardShellProps {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
   isPro: boolean
+  isManaged?: boolean
   pastDueBanner?: React.ReactNode
   resumeCount?: number
   letterCount?: number
@@ -156,6 +157,7 @@ function TopbarSaveSettingsButton() {
 export default function DashboardShell({
   user,
   isPro,
+  isManaged = false,
   pastDueBanner,
   resumeCount,
   letterCount,
@@ -216,6 +218,7 @@ export default function DashboardShell({
         <DashboardNav
           user={user}
           isPro={isPro}
+          isManaged={isManaged}
           resumeCount={resumeCount}
           letterCount={letterCount}
           drawerOpen={drawerOpen}

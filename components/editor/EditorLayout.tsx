@@ -21,12 +21,15 @@ interface Props {
   subscriptionStatus?: string | null
   subscriptionEndsAt?: string | null
   role?: string
+  isManaged?: boolean
+  managedBlocked?: boolean
+  managedExpiresAt?: string | null
   isNew?: boolean
 }
 
 type MobileView = "form" | "preview"
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isNew = false }: Props) {
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isManaged, managedBlocked, managedExpiresAt, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const router = useRouter()
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
@@ -48,7 +51,11 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   const hasAccess = isSuperAdmin(role) || isActive(
     plan,
     subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
-    subscriptionStatus
+    subscriptionStatus,
+    role,
+    isManaged,
+    managedBlocked,
+    managedExpiresAt ? new Date(managedExpiresAt) : null,
   )
 
   const [mobileView, setMobileView] = useState<MobileView>("form")

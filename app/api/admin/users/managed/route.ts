@@ -5,33 +5,10 @@ import { checkOrigin } from "@/lib/csrf"
 import { createLogger } from "@/lib/logger"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
-import { randomBytes } from "crypto"
 import { ResendEmailService } from "@/lib/services/email/ResendEmailService"
+import { generateManagedPassword } from "@/lib/managed-password"
 
 const logger = createLogger("admin-managed-users")
-
-const PASSWORD_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()-_=+"
-const PASSWORD_LENGTH = 16
-
-export function generateManagedPassword(): string {
-  const bytes = randomBytes(PASSWORD_LENGTH)
-  let password = ""
-  for (let i = 0; i < PASSWORD_LENGTH; i++) {
-    password += PASSWORD_CHARS[bytes[i] % PASSWORD_CHARS.length]
-  }
-  const categories = [
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-    "abcdefghijklmnopqrstuvwxyz",
-    "0123456789",
-    "!@#$%^&*()-_=+",
-  ]
-  const arr = password.split("")
-  for (let i = 0; i < categories.length; i++) {
-    const src = categories[i]
-    arr[i] = src[randomBytes(1)[0] % src.length]
-  }
-  return arr.join("")
-}
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -55,6 +32,9 @@ export async function POST(req: Request) {
 
   const { email, expiresAt: expiresAtStr, downloadLimit, note } = parsed.data
   const managedExpiresAt = new Date(expiresAtStr)
+  // Treat the supplied date as end-of-day UTC so an admin picking "today" via a
+  // `<input type="date">` does not accidentally pass an already-past midnight.
+  managedExpiresAt.setUTCHours(23, 59, 59, 999)
   if (managedExpiresAt <= new Date()) return NextResponse.json({ error: "expiresAt must be in the future" }, { status: 422 })
 
   const existing = await db.user.findUnique({
@@ -63,7 +43,14 @@ export async function POST(req: Request) {
   })
 
   if (existing) {
-    if (existing.stripeCustomerId || (existing.subscriptionStatus && existing.subscriptionStatus !== "NONE")) {
+    // Only block when the Stripe subscription is currently live (ACTIVE / PAST_DUE).
+    // Ex-PRO users whose subscription is CANCELED / EXPIRED / NONE are eligible to be
+    // converted into managed users — their stripeCustomerId is irrelevant here.
+    const STRIPE_ACTIVE_STATUSES = ["ACTIVE", "PAST_DUE"] as const
+    const hasLiveStripeSub =
+      !!existing.subscriptionStatus &&
+      (STRIPE_ACTIVE_STATUSES as readonly string[]).includes(existing.subscriptionStatus)
+    if (hasLiveStripeSub) {
       return NextResponse.json({ code: "STRIPE_ACTIVE", error: "Este email tiene una suscripción de Stripe activa" }, { status: 400 })
     }
     return NextResponse.json({ code: "EMAIL_EXISTS", error: "Email ya registrado" }, { status: 400 })

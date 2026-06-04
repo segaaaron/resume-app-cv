@@ -73,6 +73,10 @@ export class ReferralService {
 
     const totalReferred = referred.length
     const totalPaid = referred.filter(
+      // Intentional: referral counting only checks plan + subscription state.
+      // role / managed flags are deliberately omitted — managed users
+      // (plan=LIMITED) and admins must NOT count as paid referrals.
+      // Decision per PO. Do not "complete" the args list.
       (u) => isActive(u.plan, u.subscriptionEndsAt, u.subscriptionStatus)
     ).length
 
@@ -105,6 +109,9 @@ export class ReferralService {
       .reduce((sum, t) => sum + t.creditCents, 0)
 
     const rewardsHistory: ReferralRewardHistoryItem[] = conversions.map((c) => {
+      // Intentional: referral conversion verification only checks plan + subscription
+      // state. role / managed flags are deliberately omitted — same reasoning as
+      // above (PO decision). Do not "complete" the args list.
       const verified = c.referred.emailVerified !== null
         && isActive(c.referred.plan, c.referred.subscriptionEndsAt, c.referred.subscriptionStatus)
       return {

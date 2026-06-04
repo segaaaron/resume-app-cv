@@ -32,6 +32,9 @@ export default async function DashboardLayout({
     session.user.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session.user.subscriptionStatus ?? null,
     session.user.role,
+    session.user.isManaged,
+    session.user.managedBlocked,
+    session.user.managedExpiresAt ? new Date(session.user.managedExpiresAt) : null,
   )
 
   const pastDueBanner = session.user.subscriptionStatus === "PAST_DUE" ? <PastDueBanner /> : undefined
@@ -50,6 +53,7 @@ export default async function DashboardLayout({
         role: session.user.role,
       }}
       isPro={isPro}
+      isManaged={!!session.user.isManaged}
       pastDueBanner={pastDueBanner}
       resumeCount={resumeCount}
       letterCount={letterCount}

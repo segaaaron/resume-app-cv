@@ -7,7 +7,7 @@ export async function GET() {
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  const users = await db.user.findMany({
+  const rows = await db.user.findMany({
     where: { isManaged: true },
     select: {
       id: true,
@@ -23,5 +23,5 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   })
 
-  return NextResponse.json(users)
+  return NextResponse.json(rows)
 }

@@ -324,7 +324,7 @@ export default async function TemplatesPage({
     ? await import("@/lib/db").then(({ db }) =>
         db.user.findUnique({
           where: { id: session.user.id },
-          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+          select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
         })
       )
     : null
@@ -334,7 +334,11 @@ export default async function TemplatesPage({
       isActive(
         dbUser.plan,
         dbUser.subscriptionEndsAt,
-        dbUser.subscriptionStatus
+        dbUser.subscriptionStatus,
+        dbUser.role,
+        dbUser.isManaged,
+        dbUser.managedBlocked,
+        dbUser.managedExpiresAt,
       )
     : false
 

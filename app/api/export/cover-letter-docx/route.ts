@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isActive, isSuperAdmin } from "@/lib/plans"
+import { isActive } from "@/lib/plans"
+import { checkAndIncrementRateLimit, PDF_RATE_LIMIT_WINDOW_MS } from "@/lib/rate-limit"
+
+const DOWNLOAD_DAILY_LIMIT = 15
 import {
   Document,
   Packer,
@@ -75,18 +78,25 @@ export async function GET(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+    select: {
+      plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true,
+      isManaged: true, managedBlocked: true, managedExpiresAt: true,
+      managedDownloadLimit: true, managedDownloadsUsed: true,
+    },
   })
 
-  const isPro = isSuperAdmin(user?.role) || isActive(
+  if (!isActive(
     user?.plan ?? "UNSUBSCRIBED",
-    user?.subscriptionEndsAt ?? null,
-    user?.subscriptionStatus ?? null,
-  )
-  if (!isPro) {
+    user?.subscriptionEndsAt,
+    user?.subscriptionStatus,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
+  )) {
     db.auditLog.create({
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "docx", target: "cover-letter" } },
-    }).catch(() => { /* fire-and-forget */ })
+    }).catch(() => undefined)
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
@@ -94,8 +104,33 @@ export async function GET(req: Request) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
+  // Shared DOCX-only bucket with CV DOCX export — independent of PDF quotas
+  // (PDF exports use a different bucket). 15 DOCX/day per user combined.
+  const allowed = await checkAndIncrementRateLimit(session.user.id, "download-export", DOWNLOAD_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
+  if (!allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 exports per day.", code: "RATE_LIMIT_EXCEEDED" }, { status: 429 })
+  }
+
+  let managedClaimed = false
+  if (user?.isManaged && user.managedDownloadLimit !== null) {
+    const claimed = await db.user.updateMany({
+      where: { id: session.user.id, isManaged: true, managedDownloadsUsed: { lt: user.managedDownloadLimit } },
+      data: { managedDownloadsUsed: { increment: 1 } },
+    })
+    if (claimed.count === 0) {
+      return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
+    }
+    managedClaimed = true
+  }
+
   const letter = await db.coverLetter.findFirst({ where: { id, userId: session.user.id } })
-  if (!letter) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!letter) {
+    if (managedClaimed) {
+      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
+        .catch(() => undefined)
+    }
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
 
   const c = (letter.content as Record<string, string>) ?? {}
   const rawHex = (letter.colorScheme ?? "#2a72d7").replace(/#/g, "").toUpperCase()
@@ -286,13 +321,21 @@ export async function GET(req: Request) {
     }],
   })
 
-  const buffer = await Packer.toBuffer(doc)
-  const filename = `${(letter.title || "carta").replace(/[^a-z0-9]/gi, "_")}.docx`
+  try {
+    const buffer = await Packer.toBuffer(doc)
+    const filename = `${(letter.title || "carta").replace(/[^a-z0-9]/gi, "_")}.docx`
 
-  return new NextResponse(new Uint8Array(buffer), {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  })
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    })
+  } catch (err) {
+    if (managedClaimed) {
+      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
+        .catch(() => undefined)
+    }
+    throw err
+  }
 }

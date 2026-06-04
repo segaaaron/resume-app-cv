@@ -5,16 +5,25 @@ interface ManagedWelcomeProps {
   loginUrl: string
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString("es-ES", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  })
+/** Defensive HTML escape — the password is randomly generated and may include `<`, `>`, `&`, etc. */
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
 }
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("es-ES", { day: "numeric", month: "long", year: "numeric" })
+}
+
+export const managedWelcomeSubject = "Tu acceso a ReadyCV está listo"
 
 export function managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUrl }: ManagedWelcomeProps): string {
   const expiresStr = formatDate(expiresAt)
+  const safePassword = escapeHtml(password)
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -73,7 +82,7 @@ export function managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUr
                                 <span style="font-size:14px;color:#6b7280;">Contraseña temporal</span>
                               </td>
                               <td align="right" style="padding:10px 0;border-bottom:1px solid #e5edff;">
-                                <code style="font-size:14px;font-weight:700;color:#111827;background:#e8f0fe;padding:3px 10px;border-radius:6px;letter-spacing:0.5px;">${password}</code>
+                                <code style="font-size:14px;font-weight:700;color:#111827;background:#e8f0fe;padding:3px 10px;border-radius:6px;letter-spacing:0.5px;">${safePassword}</code>
                               </td>
                             </tr>
                             <tr>
@@ -145,7 +154,7 @@ export function managedWelcomeText({ password, expiresAt, downloadLimit, loginUr
   const expiresStr = formatDate(expiresAt)
   const downloadLine = downloadLimit !== null ? `Descargas de CV incluidas: ${downloadLimit}\n` : ""
 
-  return `Bienvenido a READY CV
+  return `Tu acceso a ReadyCV está listo
 
 Tu cuenta Premium ha sido configurada.
 
@@ -154,7 +163,7 @@ DATOS DE ACCESO
 Contraseña temporal: ${password}
 Acceso válido hasta: ${expiresStr}
 ${downloadLine}
-Puedes cambiar tu contraseña desde la configuración de tu cuenta.
+Puedes cambiar tu contraseña en cualquier momento desde la configuración de tu cuenta una vez que hayas iniciado sesión.
 
 Iniciar sesión: ${loginUrl}
 

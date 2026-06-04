@@ -37,6 +37,9 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session?.user?.subscriptionStatus,
     session?.user?.role,
+    session?.user?.isManaged,
+    session?.user?.managedBlocked,
+    session?.user?.managedExpiresAt ? new Date(session.user.managedExpiresAt) : null,
   )
   const isManaged = !!session?.user?.isManaged
   const [resumes, setResumes] = useState(initialResumes)

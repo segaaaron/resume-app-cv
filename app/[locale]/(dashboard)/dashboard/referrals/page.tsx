@@ -23,6 +23,9 @@ export default async function ReferralsPage({ params }: { params: Promise<{ loca
   const session = await auth()
   if (!session?.user?.id) redirect(`/${locale}/login`)
 
+  // Managed users (plan=LIMITED) cannot access referrals — feature unavailable.
+  if (session.user.isManaged) redirect(`/${locale}/dashboard`)
+
   // Fetch server-side so the page paints instantly without flicker
   const status = await referralService.getStatus(session.user.id)
 

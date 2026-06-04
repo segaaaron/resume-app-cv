@@ -347,11 +347,22 @@ export class ResumeService {
     const [user, resume] = await Promise.all([
       db.user.findUnique({
         where: { id: userId },
-        select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+        select: {
+          plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true,
+          isManaged: true, managedBlocked: true, managedExpiresAt: true,
+        },
       }),
       db.resume.findFirst({ where: { id: resumeId, userId } }),
     ])
-    if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
+    if (!isActive(
+      user?.plan ?? "UNSUBSCRIBED",
+      user?.subscriptionEndsAt,
+      user?.subscriptionStatus,
+      user?.role,
+      user?.isManaged,
+      user?.managedBlocked,
+      user?.managedExpiresAt,
+    )) {
       throw new AppError("pro_required", 403)
     }
     if (!resume) throw new AppError("not_found", 404)

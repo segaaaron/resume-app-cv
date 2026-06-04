@@ -2,6 +2,9 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
+import { checkAndIncrementRateLimit, PDF_RATE_LIMIT_WINDOW_MS } from "@/lib/rate-limit"
+
+const DOWNLOAD_DAILY_LIMIT = 15
 import {
   Document,
   Packer,
@@ -24,13 +27,25 @@ export async function GET(req: Request) {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+    select: {
+      plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true,
+      isManaged: true, managedBlocked: true, managedExpiresAt: true,
+      managedDownloadLimit: true, managedDownloadsUsed: true,
+    },
   })
 
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role)) {
+  if (!isActive(
+    user?.plan ?? "UNSUBSCRIBED",
+    user?.subscriptionEndsAt,
+    user?.subscriptionStatus,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
+  )) {
     db.auditLog.create({
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "docx" } },
-    }).catch(() => { /* fire-and-forget */ })
+    }).catch(() => undefined)
     return NextResponse.json({ error: "subscription_required" }, { status: 403 })
   }
 
@@ -38,8 +53,35 @@ export async function GET(req: Request) {
   const id = searchParams.get("id")
   if (!id) return NextResponse.json({ error: "Missing id" }, { status: 400 })
 
+  // Separate rate-limit bucket from PDF exports (15 DOCX/day per user,
+  // independent of PDF quota). This bucket is shared with cover-letter DOCX.
+  // Counter applies before managed-claim so rate-limited requests don't
+  // consume managedDownloadLimit slots.
+  const allowed = await checkAndIncrementRateLimit(session.user.id, "download-export", DOWNLOAD_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
+  if (!allowed) {
+    return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 exports per day.", code: "RATE_LIMIT_EXCEEDED" }, { status: 429 })
+  }
+
+  let managedClaimed = false
+  if (user?.isManaged && user.managedDownloadLimit !== null) {
+    const claimed = await db.user.updateMany({
+      where: { id: session.user.id, isManaged: true, managedDownloadsUsed: { lt: user.managedDownloadLimit } },
+      data: { managedDownloadsUsed: { increment: 1 } },
+    })
+    if (claimed.count === 0) {
+      return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
+    }
+    managedClaimed = true
+  }
+
   const resume = await db.resume.findFirst({ where: { id, userId: session.user.id } })
-  if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!resume) {
+    if (managedClaimed) {
+      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
+        .catch(() => undefined)
+    }
+    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
 
   const data = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
   const pd = data.personalDetails
@@ -251,16 +293,25 @@ export async function GET(req: Request) {
     }],
   })
 
-  const buffer = await Packer.toBuffer(doc)
-  const filename = `${resume.title.replace(/[^a-z0-9]/gi, "_")}.docx`
+  try {
+    const buffer = await Packer.toBuffer(doc)
+    const filename = `${resume.title.replace(/[^a-z0-9]/gi, "_")}.docx`
 
-  // Convert Node Buffer to Uint8Array for compatibility with NextResponse BodyInit
-  const uint8 = new Uint8Array(buffer)
+    // Convert Node Buffer to Uint8Array for compatibility with NextResponse BodyInit
+    const uint8 = new Uint8Array(buffer)
 
-  return new NextResponse(uint8, {
-    headers: {
-      "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-      "Content-Disposition": `attachment; filename="${filename}"`,
-    },
-  })
+    return new NextResponse(uint8, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "Content-Disposition": `attachment; filename="${filename}"`,
+      },
+    })
+  } catch (err) {
+    if (managedClaimed) {
+      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
+        .catch(() => undefined)
+    }
+    void err
+    return NextResponse.json({ error: "DOCX render failed" }, { status: 500 })
+  }
 }

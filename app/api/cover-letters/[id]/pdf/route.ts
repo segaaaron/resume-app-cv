@@ -32,8 +32,13 @@ export async function GET(req: Request, { params }: Params) {
   const rawLocale = url.searchParams.get("locale") ?? ""
   const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
 
-  const allowed = await checkAndIncrementRateLimit(authResult.userId, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
-  if (!allowed) return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
+  // Skip rate-limit for PRO users and SUPER_ADMIN (paid/admin, legitimate usage doesn't hit cap).
+  // LIMITED/managed users remain rate-limited and respect managedDownloadLimit below.
+  const skipRateLimit = authResult.user.plan === "PRO" || authResult.user.role === "SUPER_ADMIN"
+  if (!skipRateLimit) {
+    const allowed = await checkAndIncrementRateLimit(authResult.userId, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
+    if (!allowed) return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
+  }
 
   let managedClaimed = false
   if (authResult.user.isManaged && authResult.user.managedDownloadLimit !== null) {

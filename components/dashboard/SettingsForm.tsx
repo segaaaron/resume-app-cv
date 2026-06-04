@@ -100,8 +100,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const isActive = subscriptionStatus === "ACTIVE"
   const endsAt   = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
   const isManaged = !!user.isManaged
-  const managedExpiresAt = user.managedExpiresAt ? new Date(user.managedExpiresAt) : null
-  const managedActive = isManaged && !user.managedBlocked && managedExpiresAt != null && managedExpiresAt > new Date()
 
   async function saveProfile() {
     if (saving) return
@@ -260,7 +258,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
         </div>
       </div>
 
-      {/* ── Card 2: Plan y cuenta ── */}
+      {/* ── Card 2: Plan y cuenta — hidden for LIMITED (managed) users ── */}
+      {!isManaged && (
       <div className="bg-white border border-dash-border rounded-[10px] overflow-hidden">
         <CardHead>
           <CardIco>
@@ -274,16 +273,6 @@ export default function SettingsForm({ user }: { user: UserData }) {
           </div>
         </CardHead>
         <div className="px-5 py-[18px]">
-          {isManaged ? (
-            <ManagedPlanCard
-              active={managedActive}
-              expiresAt={managedExpiresAt}
-              locale={locale}
-              dateLocale={dateLocale}
-              t={t}
-            />
-          ) : (
-          <>
           {/* Plan row */}
           <div className="flex items-center gap-[14px] px-4 py-[14px] rounded-md mb-4 relative overflow-hidden border bg-gradient-to-br from-[rgba(0,212,255,0.05)] to-[rgba(0,212,255,0.02)] border-[rgba(0,212,255,0.15)]">
             {/* top shimmer line */}
@@ -401,20 +390,22 @@ export default function SettingsForm({ user }: { user: UserData }) {
               Activar PRO
             </BtnGold>
           )}
-          </>
-          )}
         </div>
       </div>
+      )}
 
-      {/* ── Card 3: Mis datos ── */}
+      {/* ── Card 3: Mis datos — hidden for LIMITED (managed) users ── */}
+      {!isManaged && (
       <DataCard
         exportLoading={exportLoading}
         deleteLoading={deleteLoading}
         handleDataExport={handleDataExport}
         handleDeleteAccount={handleDeleteAccount}
       />
+      )}
 
-      {/* ── Card 4: Programa de referidos (full width) ── */}
+      {/* ── Card 4: Programa de referidos (full width) — hidden for managed users ── */}
+      {!isManaged && (
       <div className="col-span-1 sm:col-span-2 bg-white border border-dash-border rounded-[10px] overflow-hidden">
         <CardHead>
           <CardIco>
@@ -435,61 +426,9 @@ export default function SettingsForm({ user }: { user: UserData }) {
           <ReferralCard embeddedMode />
         </div>
       </div>
+      )}
 
     </div>
   )
 }
 
-// ── Managed user plan card ────────────────────────────────────────────────────
-// Replaces the Stripe-based subscription panel when the user was provisioned
-// manually by an admin (no Stripe customer, no checkout, no portal).
-function ManagedPlanCard({
-  active,
-  expiresAt,
-  locale,
-  dateLocale,
-  t,
-}: {
-  active: boolean
-  expiresAt: Date | null
-  locale: string
-  dateLocale: Locale
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  t: any
-}) {
-  const fmtDate = expiresAt
-    ? format(expiresAt, locale === "es" ? "d 'de' MMMM yyyy" : "MMMM d, yyyy", { locale: dateLocale })
-    : "—"
-  return (
-    <div className="flex items-center gap-[14px] px-4 py-[14px] rounded-md mb-2 relative overflow-hidden border bg-gradient-to-br from-[rgba(0,212,255,0.05)] to-[rgba(0,212,255,0.02)] border-[rgba(0,212,255,0.15)]">
-      <div className="absolute top-0 left-0 right-0 h-px opacity-40 bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent" />
-      <div className="w-9 h-9 rounded-[9px] flex items-center justify-center text-dash-cyan flex-shrink-0 border bg-[rgba(0,212,255,0.1)] border-[rgba(0,212,255,0.2)]">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M8 1.5l1.8 4.2H14l-3.6 2.6 1.4 4.2L8 10.2l-3.8 2.3 1.4-4.2L2 5.7h4.2L8 1.5z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
-        </svg>
-      </div>
-      <div className="flex-1">
-        <div className="text-sm font-bold text-dash-navy tracking-[-0.02em] [font-family:var(--dash-serif)]">
-          {t("managed_plan_label")}
-        </div>
-        <div className="text-[11.5px] text-dash-muted mt-[2px] flex gap-[10px] flex-wrap items-center">
-          <span
-            className={`inline-flex items-center rounded border px-[7px] py-[1px] text-[10px] font-semibold tracking-[0.04em] ${
-              active
-                ? "text-[#7AAE8A] bg-[rgba(90,140,106,0.12)] border-[rgba(90,140,106,0.2)]"
-                : "text-[#C26B6B] bg-[rgba(220,80,80,0.1)] border-[rgba(220,80,80,0.2)]"
-            }`}
-          >
-            {active ? t("managed_status_active") : t("managed_status_expired")}
-          </span>
-          <span className="text-[11.5px] text-dash-muted">
-            {t("managed_valid_until")} <strong>{fmtDate}</strong>
-          </span>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// Re-export the date-fns Locale type alias used by ManagedPlanCard.
-type Locale = typeof import("date-fns/locale").es

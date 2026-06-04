@@ -43,9 +43,14 @@ export default function ManagedUsersPanel() {
   const fetchList = useCallback(async () => {
     setListLoading(true)
     try {
-      const res = await apiFetch("/api/admin/users/managed/list", { silent: true })
-      if (res.ok) { const d = await res.json(); setUsers(Array.isArray(d) ? d : []) }
-    } finally { setListLoading(false) }
+      const res = await apiFetch(`/api/admin/users/managed/list`, { silent: true })
+      if (res.ok) {
+        const d = await res.json()
+        setUsers(Array.isArray(d) ? d : [])
+      }
+    } finally {
+      setListLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetchList() }, [fetchList])

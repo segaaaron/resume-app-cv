@@ -19,6 +19,7 @@ import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
   isPro?: boolean
+  isManaged?: boolean
   resumeCount?: number
   letterCount?: number
   drawerOpen?: boolean
@@ -28,6 +29,7 @@ interface Props {
 export default function DashboardNav({
   user,
   isPro = false,
+  isManaged = false,
   resumeCount,
   letterCount,
   drawerOpen = false,
@@ -67,16 +69,19 @@ export default function DashboardNav({
     },
   ]
 
-  const recompensas = [
-    {
-      label: t("referrals"),
-      href: `/${locale}/dashboard/referrals`,
-      icon: Gift,
-      proOnly: false,
-      count: null as number | null,
-      isNew: true,
-    },
-  ]
+  // Managed users (plan=LIMITED) cannot access referrals — hide entire section.
+  const recompensas = isManaged
+    ? []
+    : [
+        {
+          label: t("referrals"),
+          href: `/${locale}/dashboard/referrals`,
+          icon: Gift,
+          proOnly: false,
+          count: null as number | null,
+          isNew: true,
+        },
+      ]
 
   const sistema =
     user.role === "SUPER_ADMIN"
@@ -149,11 +154,15 @@ export default function DashboardNav({
           <NavItem key={item.href} {...item} locked={item.proOnly && !isPro} active={isActive(item.href)} onClick={onDrawerClose} />
         ))}
 
-        <NavSeparator />
-        <SectionLabel label={t("section_rewards")} />
-        {recompensas.map((item) => (
-          <NavItem key={item.href} {...item} locked={item.proOnly && !isPro} active={isActive(item.href)} onClick={onDrawerClose} />
-        ))}
+        {recompensas.length > 0 && (
+          <>
+            <NavSeparator />
+            <SectionLabel label={t("section_rewards")} />
+            {recompensas.map((item) => (
+              <NavItem key={item.href} {...item} locked={item.proOnly && !isPro} active={isActive(item.href)} onClick={onDrawerClose} />
+            ))}
+          </>
+        )}
 
         {sistema.length > 0 && (
           <>

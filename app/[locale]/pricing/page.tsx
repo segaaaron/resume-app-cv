@@ -8,6 +8,7 @@ import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
+import { redirect } from "next/navigation"
 import { isEUUser } from "@/lib/geoip"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
@@ -123,10 +124,21 @@ export default async function PricingPage({
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, role: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
     })
+    if (dbUser?.isManaged || dbUser?.plan === "LIMITED") {
+      redirect(`/${locale}/dashboard`)
+    }
     if (dbUser) {
-      userIsPro = isActive(dbUser.plan, dbUser.subscriptionEndsAt, dbUser.subscriptionStatus, dbUser.role)
+      userIsPro = isActive(
+        dbUser.plan,
+        dbUser.subscriptionEndsAt,
+        dbUser.subscriptionStatus,
+        dbUser.role,
+        dbUser.isManaged,
+        dbUser.managedBlocked,
+        dbUser.managedExpiresAt,
+      )
       subscriptionEndsAt = dbUser.subscriptionEndsAt
       planInterval = dbUser.planInterval
     }

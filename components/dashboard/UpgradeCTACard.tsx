@@ -30,6 +30,9 @@ export default function UpgradeCTACard() {
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session?.user?.subscriptionStatus,
     session?.user?.role,
+    session?.user?.isManaged,
+    session?.user?.managedBlocked,
+    session?.user?.managedExpiresAt ? new Date(session.user.managedExpiresAt) : null,
   )
 
   if (pro) return null

@@ -1,4 +1,4 @@
--- AlterTable
+-- Backfill: ensure managed columns exist in PROD (may have been baselined without running)
 ALTER TABLE "User"
   ADD COLUMN IF NOT EXISTS "isManaged"            BOOLEAN NOT NULL DEFAULT false,
   ADD COLUMN IF NOT EXISTS "managedExpiresAt"     TIMESTAMP(3),

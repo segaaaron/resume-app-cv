@@ -33,17 +33,26 @@ const TIERS = [
 export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: boolean }) {
   const t = useTranslations("referral")
   const { data: session } = useSession()
+  const isManaged = !!session?.user?.isManaged
   const isPro = isActive(
     session?.user?.plan ?? "UNSUBSCRIBED",
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
     session?.user?.subscriptionStatus,
     session?.user?.role,
+    session?.user?.isManaged,
+    session?.user?.managedBlocked,
+    session?.user?.managedExpiresAt ? new Date(session.user.managedExpiresAt) : null,
   )
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Managed users (plan=LIMITED) cannot use referrals — skip API call.
+    if (isManaged) {
+      setLoading(false)
+      return
+    }
     fetch("/api/referrals")
       .then((r) => {
         if (!r.ok) throw new Error("referrals fetch failed")
@@ -52,7 +61,10 @@ export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: 
       .then(setStats)
       .catch(() => toast.error(t("load_error")))
       .finally(() => setLoading(false))
-  }, [t])
+  }, [t, isManaged])
+
+  // Managed users — feature unavailable, render nothing.
+  if (isManaged) return null
 
   const referralUrl =
     typeof window !== "undefined" && stats

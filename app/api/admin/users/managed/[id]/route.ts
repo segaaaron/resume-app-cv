@@ -6,7 +6,7 @@ import { createLogger } from "@/lib/logger"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
 import { ResendEmailService } from "@/lib/services/email/ResendEmailService"
-import { generateManagedPassword } from "../route"
+import { generateManagedPassword } from "@/lib/managed-password"
 
 const logger = createLogger("admin-managed-user-actions")
 
@@ -56,12 +56,15 @@ export async function PATCH(req: Request, { params }: Params) {
     logger.info("admin: managed user block toggled", { targetUserId: id, managedBlocked, byAdmin: session.user.id })
     db.auditLog.create({
       data: { userId: session.user.id, action: managedBlocked ? "MANAGED_USER_BLOCKED" : "MANAGED_USER_UNBLOCKED", metadata: { targetUserId: id, email: existing.email } },
-    }).catch(() => undefined)
+    }).catch((err) => logger.error("auditLog MANAGED_USER_BLOCKED/UNBLOCKED failed", { targetUserId: id }, err instanceof Error ? err : undefined))
     return NextResponse.json({ id, managedBlocked })
   }
 
   if (data.action === "edit") {
     const managedExpiresAt = new Date(data.expiresAt)
+    // Match POST: treat the supplied date as end-of-day UTC so picking "today"
+    // does not flip into the past at the moment of update.
+    managedExpiresAt.setUTCHours(23, 59, 59, 999)
     if (managedExpiresAt <= new Date()) return NextResponse.json({ error: "expiresAt must be in the future" }, { status: 422 })
     await db.user.update({
       where: { id },
@@ -71,7 +74,7 @@ export async function PATCH(req: Request, { params }: Params) {
     logger.info("admin: managed user edited", { targetUserId: id, managedExpiresAt, byAdmin: session.user.id })
     db.auditLog.create({
       data: { userId: session.user.id, action: "MANAGED_USER_EDITED", metadata: { targetUserId: id, email: existing.email, managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null } },
-    }).catch(() => undefined)
+    }).catch((err) => logger.error("auditLog MANAGED_USER_EDITED failed", { targetUserId: id }, err instanceof Error ? err : undefined))
     return NextResponse.json({ id, managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null })
   }
 
@@ -81,7 +84,7 @@ export async function PATCH(req: Request, { params }: Params) {
     logger.info("admin: managed user downloads reset", { targetUserId: id, byAdmin: session.user.id })
     db.auditLog.create({
       data: { userId: session.user.id, action: "MANAGED_USER_DOWNLOADS_RESET", metadata: { targetUserId: id, email: existing.email } },
-    }).catch(() => undefined)
+    }).catch((err) => logger.error("auditLog MANAGED_USER_DOWNLOADS_RESET failed", { targetUserId: id }, err instanceof Error ? err : undefined))
     return NextResponse.json({ id, managedDownloadsUsed: 0 })
   }
 
@@ -100,7 +103,7 @@ export async function PATCH(req: Request, { params }: Params) {
     logger.info("admin: managed user password reset", { targetUserId: id, byAdmin: session.user.id })
     db.auditLog.create({
       data: { userId: session.user.id, action: "MANAGED_USER_PASSWORD_RESET", metadata: { targetUserId: id, email: existing.email } },
-    }).catch(() => undefined)
+    }).catch((err) => logger.error("auditLog MANAGED_USER_PASSWORD_RESET failed", { targetUserId: id }, err instanceof Error ? err : undefined))
     return NextResponse.json({ id, generatedPassword: newPassword })
   }
 
@@ -120,12 +123,20 @@ export async function DELETE(req: Request, { params }: Params) {
   if (!existing) return NextResponse.json({ error: "User not found" }, { status: 404 })
   if (!existing.isManaged) return NextResponse.json({ error: "Not a managed user" }, { status: 400 })
 
-  await db.user.delete({ where: { id } })
-
-  logger.info("admin: managed user hard-deleted", { targetUserId: id, email: existing.email, byAdmin: session.user.id })
-  db.auditLog.create({
+  // Audit BEFORE delete — once the user row is gone, AuditLog rows with userId pointing to
+  // the deleted user would cascade away. Log against the admin's userId instead, with the
+  // target email captured in metadata for trace.
+  await db.auditLog.create({
     data: { userId: session.user.id, action: "MANAGED_USER_DELETED", metadata: { targetUserId: id, email: existing.email } },
-  }).catch(() => undefined)
+  }).catch((err) => logger.error("auditLog MANAGED_USER_DELETED failed", { targetUserId: id }, err instanceof Error ? err : undefined))
+
+  // Hard delete: cascade removes Resume, CoverLetter, AuditLog (target's own), ConsentLog,
+  // ReferralConversion, AIRateLimit/AIUsageLog (no FK, fine), Account, Session, etc.
+  // Email becomes free for re-registration.
+  await db.user.delete({ where: { id } })
+  purgeUserCache(id)
+
+  logger.info("admin: managed user hard-deleted", { targetUserId: id, byAdmin: session.user.id })
 
   return new Response(null, { status: 204 })
 }

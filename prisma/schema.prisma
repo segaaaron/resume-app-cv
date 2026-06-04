@@ -66,6 +66,8 @@ model User {
   @@index([deletedAt])
   @@index([plan, subscriptionStatus, subscriptionEndsAt])
   @@index([subscriptionStatus])
+  @@index([plan, managedExpiresAt, managedBlocked])
+  @@index([isManaged])
 }
 
 model ConsentLog {

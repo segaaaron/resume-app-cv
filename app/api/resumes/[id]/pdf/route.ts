@@ -42,7 +42,15 @@ export async function GET(req: Request, { params }: Params) {
     return new Response(null, { status: 304 })
   }
 
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role, user?.isManaged, user?.managedBlocked, user?.managedExpiresAt)) {
+  if (!isActive(
+    user?.plan ?? "UNSUBSCRIBED",
+    user?.subscriptionEndsAt,
+    user?.subscriptionStatus,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
+  )) {
     db.auditLog.create({
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })

@@ -24,7 +24,8 @@ export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEnds
     isActive(
       plan,
       subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
-      subscriptionStatus
+      subscriptionStatus,
+      role,
     )
 
   function handleSelectTemplate(templateId: TemplateId, locked: boolean) {

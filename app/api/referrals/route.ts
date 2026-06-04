@@ -8,6 +8,14 @@ export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
+  // Managed users (plan=LIMITED) cannot use referrals — feature unavailable.
+  if (session.user.isManaged) {
+    return NextResponse.json(
+      { error: "Feature unavailable for managed users", code: "feature_unavailable" },
+      { status: 403 },
+    )
+  }
+
   try {
     const result = await referralService.getStatus(session.user.id)
     return NextResponse.json(result)

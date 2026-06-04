@@ -114,14 +114,15 @@ export function isPro(plan: string): boolean {
 }
 
 export function isActive(
-  plan: string,
+  plan: Plan | string,
   subscriptionEndsAt?: Date | null,
-  subscriptionStatus?: string | null,
+  subscriptionStatus?: SubscriptionStatus | string | null,
   role?: string | null,
   isManaged?: boolean,
   managedBlocked?: boolean,
   managedExpiresAt?: Date | null,
 ): boolean {
+  void isManaged
   if (isSuperAdmin(role)) return true
   if (plan === "LIMITED") {
     if (managedBlocked) return false

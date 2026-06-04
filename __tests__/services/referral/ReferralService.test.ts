@@ -128,9 +128,9 @@ describe("ReferralService.getStatus", () => {
       { plan: "UNSUBSCRIBED", subscriptionStatus: "NONE", subscriptionEndsAt: null },
     ]
     vi.mocked(db.user.findMany).mockResolvedValue(referred as never)
-    vi.mocked(isActive).mockImplementation((_plan, _ends, _status) => {
+    vi.mocked(isActive).mockImplementation((plan, _endsAt, status) => {
       // first two active, third not
-      return (_plan === "PRO" && _status === "ACTIVE")
+      return (plan === "PRO" && status === "ACTIVE")
     })
 
     const result = await makeService().getStatus(USER_ID)

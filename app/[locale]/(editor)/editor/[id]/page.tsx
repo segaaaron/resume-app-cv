@@ -28,6 +28,9 @@ export default async function EditorPage({ params, searchParams }: { params: Pro
   const subscriptionStatus = (freshUser?.subscriptionStatus ?? session.user.subscriptionStatus) ?? "NONE"
   const subscriptionEndsAt = (freshUser?.subscriptionEndsAt?.toISOString() ?? session.user.subscriptionEndsAt) ?? null
   const role = session.user.role ?? "USER"
+  const isManaged = session.user.isManaged ?? false
+  const managedBlocked = session.user.managedBlocked ?? false
+  const managedExpiresAt = session.user.managedExpiresAt ?? null
 
   if (!resume) notFound()
 
@@ -72,6 +75,9 @@ export default async function EditorPage({ params, searchParams }: { params: Pro
       subscriptionStatus={subscriptionStatus}
       subscriptionEndsAt={subscriptionEndsAt}
       role={role}
+      isManaged={isManaged}
+      managedBlocked={managedBlocked}
+      managedExpiresAt={managedExpiresAt}
     />
   )
 }

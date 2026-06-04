@@ -17,7 +17,10 @@ export default async function CoverLetterPage({ params, searchParams }: { params
     db.coverLetter.findFirst({ where: { id, userId: session.user.id } }),
     db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true },
+      select: {
+        plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true,
+        isManaged: true, managedBlocked: true, managedExpiresAt: true,
+      },
     }),
     db.resume.findFirst({
       where: { userId: session.user.id },
@@ -32,6 +35,10 @@ export default async function CoverLetterPage({ params, searchParams }: { params
     user?.plan ?? "UNSUBSCRIBED",
     user?.subscriptionEndsAt ?? null,
     user?.subscriptionStatus ?? null,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
   )
 
   const content = (letter.content as Record<string, string>) ?? {}

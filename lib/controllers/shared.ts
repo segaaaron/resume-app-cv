@@ -30,7 +30,15 @@ export async function requireProUser(userId: string): Promise<NextResponse | nul
     where: { id: userId },
     select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
   })
-  if (!isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role, user?.isManaged, user?.managedBlocked, user?.managedExpiresAt)) {
+  if (!isActive(
+    user?.plan ?? "UNSUBSCRIBED",
+    user?.subscriptionEndsAt,
+    user?.subscriptionStatus,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
+  )) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
   return null
@@ -96,7 +104,15 @@ export async function requireUser(
     return NextResponse.json({ error: "email_not_verified" }, { status: 403 })
   }
 
-  if (opts.pro && !isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, user.role, user.isManaged, user.managedBlocked, user.managedExpiresAt)) {
+  if (opts.pro && !isActive(
+    user.plan,
+    user.subscriptionEndsAt,
+    user.subscriptionStatus,
+    user.role,
+    user.isManaged,
+    user.managedBlocked,
+    user.managedExpiresAt,
+  )) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
 
