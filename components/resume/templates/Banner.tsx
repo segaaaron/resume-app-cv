@@ -131,7 +131,7 @@ export default function BannerTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <>
+            <div style={{ marginTop: 18 }}>
               <BannerHead text={L.certifications} />
               {certifications.map((c) => (
                 <div key={c.id} style={{ marginBottom: 6, breakInside: "avoid" }}>
@@ -140,7 +140,7 @@ export default function BannerTemplate() {
                   {c.date && <p style={{ fontSize: 9, color: "#888" }}>{c.date}</p>}
                 </div>
               ))}
-            </>
+            </div>
           )}
         </div>
 

@@ -238,7 +238,7 @@ export default function ExecCitadelTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <>
+            <div style={{ marginTop: 18 }}>
               <SectionHead icon={<IcoShield />}>{labelFor("certifications")}</SectionHead>
               <div style={{ marginBottom: 22 }}>
                 {certifications.map((c) => (
@@ -252,7 +252,7 @@ export default function ExecCitadelTemplate() {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
 
           {/* Trajectory ornament box */}

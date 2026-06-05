@@ -139,7 +139,7 @@ export default function BoldBlockTemplate() {
 
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
-            <div>
+            <div style={{ marginTop: 18 }}>
               <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("certifications").toLowerCase()}</h2>
               {certifications.map((c) => (
                 <div key={c.id} style={{ borderLeft: `4px solid ${accent}`, paddingLeft: 12, marginBottom: 12, breakInside: "avoid", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>

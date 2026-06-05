@@ -298,7 +298,7 @@ export default function ExecTerraTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <div>
+            <div style={{ marginTop: 18 }}>
               <Sec k="edu">{labelFor("certifications")}</Sec>
               {certifications.map((c) => (
                 <div key={c.id} style={{ marginBottom: 12, breakInside: "avoid" }}>

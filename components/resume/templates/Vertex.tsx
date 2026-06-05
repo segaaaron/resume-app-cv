@@ -90,7 +90,7 @@ export default function VertexTemplate() {
 
         {/* About me full width */}
         {visible("summary") && (
-          <div style={{ marginBottom: 16 }}>
+          <div style={{ marginTop: 18, marginBottom: 16 }}>
             <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: gold, marginBottom: 6 }}>About Me</p>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </div>
@@ -166,7 +166,7 @@ export default function VertexTemplate() {
             )}
 
             {visible("certifications") && certifications.length > 0 && (
-              <div style={{ marginBottom: 16 }}>
+              <div style={{ marginTop: 18, marginBottom: 16 }}>
                 <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: gold, marginBottom: 8 }}>{config.language === "en" ? "Certifications" : "Certificaciones"}</p>
                 {certifications.map((c) => (
                   <div key={c.id} className="resume-entry" style={{ marginBottom: 8, paddingLeft: 10, borderLeft: `2px solid ${gold}`, breakInside: "avoid" }}>

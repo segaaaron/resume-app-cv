@@ -257,7 +257,7 @@ export default function ExecNocturneTemplate() {
           {visible("skills") && skills.length > 0 && (
             <>
               <Sec k="star">{labelFor("skills")}</Sec>
-              <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 22, flexWrap: "wrap", gap: 8 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px 6px", marginBottom: 22 }}>
                 {skills.map((s) => (
                   <Gauge key={s.id} pct={SKILL_PCT[s.level] ?? 70} label={s.name} rose={rose} cream={cream} />
                 ))}
@@ -285,7 +285,7 @@ export default function ExecNocturneTemplate() {
             </>
           )}
           {visible("certifications") && certifications.length > 0 && (
-            <>
+            <div style={{ marginTop: 18 }}>
               <Sec k="edu">{labelFor("certifications")}</Sec>
               <div style={{ marginBottom: 22 }}>
                 {certifications.map((c) => (
@@ -302,7 +302,7 @@ export default function ExecNocturneTemplate() {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

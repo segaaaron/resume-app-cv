@@ -125,7 +125,7 @@ export default function RoseTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <>
+          <div style={{ marginTop: 18 }}>
             <SectionHead text={L.certifications} />
             {certifications.map((c) => (
               <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>

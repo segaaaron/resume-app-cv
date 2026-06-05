@@ -254,7 +254,7 @@ export default function ExecDynastyTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <>
+            <div style={{ marginTop: 18 }}>
               <SectionHead icon={<IcoShield />}>{labelFor("certifications")}</SectionHead>
               <div>
                 {certifications.map((c) => (
@@ -268,7 +268,7 @@ export default function ExecDynastyTemplate() {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
         </div>
       </div>

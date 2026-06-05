@@ -85,7 +85,7 @@ export default function MinimalTemplate() {
           </div>
 
           {visible("skills") && (
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginTop: 18, marginBottom: 18 }}>
               <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: navy, marginBottom: 8 }}>Habilidades</p>
               {sks.map((sk) => (
                 <div key={sk.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
@@ -109,7 +109,7 @@ export default function MinimalTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <div style={{ marginBottom: 18 }}>
+            <div style={{ marginTop: 18, marginBottom: 18 }}>
               <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: navy, marginBottom: 8 }}>{config.language === "en" ? "Certifications" : "Certificaciones"}</p>
               {certifications.map((c) => (
                 <div key={c.id} style={{ marginBottom: 7, breakInside: "avoid" }}>

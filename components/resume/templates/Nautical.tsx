@@ -86,7 +86,7 @@ export default function NauticalTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <SideSection title={config.language === "en" ? "Certifications" : "Certificaciones"}>
+            <div style={{ marginTop: 18 }}><SideSection title={config.language === "en" ? "Certifications" : "Certificaciones"}>
               {certifications.map((c) => (
                 <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <p style={{ fontSize: 9.5, fontWeight: 700, lineHeight: 1.25 }}>{c.name}</p>
@@ -94,7 +94,7 @@ export default function NauticalTemplate() {
                   {c.date && <p style={{ fontSize: 9, opacity: 0.6 }}>{c.date}</p>}
                 </div>
               ))}
-            </SideSection>
+            </SideSection></div>
           )}
 
           {visible("hobbies") && (

@@ -79,7 +79,7 @@ export default function CobaltTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <>
+          <div style={{ marginTop: 18 }}>
             <SideHead text={L.certifications} color={accent} />
             <div style={{ marginBottom: 16 }}>
               {certifications.map((c) => (

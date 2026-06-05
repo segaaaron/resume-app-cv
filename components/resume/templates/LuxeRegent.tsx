@@ -349,7 +349,7 @@ export default function LuxeRegentTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <>
+            <div style={{ marginTop: 18 }}>
               <LxHead color={green} line={line}>{labelFor("certifications")}</LxHead>
               <div style={{ marginBottom: 22 }}>
                 {certifications.map((c) => (
@@ -360,7 +360,7 @@ export default function LuxeRegentTemplate() {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
 
           {visible("projects") && projects.length > 0 && (

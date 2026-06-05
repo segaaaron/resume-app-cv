@@ -242,7 +242,7 @@ export default function ExecSovereignTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <>
+          <div style={{ marginTop: 18 }}>
             <SideHead icon={<IcoShield />}>{labelFor("certifications")}</SideHead>
             <div>
               {certifications.map((c) => (

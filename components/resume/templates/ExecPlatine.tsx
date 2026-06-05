@@ -216,7 +216,7 @@ export default function ExecPlatineTemplate() {
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, marginTop: 22 }}>
         {visible("skills") && skills.length > 0 && (
-          <div>
+          <div style={{ marginTop: 18 }}>
             <SubHead letter="B" label={labelFor("skills")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
               {skills.map((s) => (
@@ -260,7 +260,7 @@ export default function ExecPlatineTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <div>
+          <div style={{ marginTop: 18 }}>
             <SubHead letter="D" label={labelFor("certifications")} />
             {certifications.map((c) => (
               <div key={c.id} style={{ marginBottom: 10, breakInside: "avoid" }}>

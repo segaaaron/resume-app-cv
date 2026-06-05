@@ -370,7 +370,7 @@ export default function LuxeApexTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <>
+            <div style={{ marginTop: 18 }}>
               <LxHead color={ice} line={line}>{labelFor("certifications")}</LxHead>
               <div style={{ marginBottom: 22 }}>
                 {certifications.map((c) => (
@@ -381,7 +381,7 @@ export default function LuxeApexTemplate() {
                   </div>
                 ))}
               </div>
-            </>
+            </div>
           )}
 
           {visible("education") && education.length > 0 && (

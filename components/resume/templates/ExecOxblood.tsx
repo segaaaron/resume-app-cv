@@ -236,7 +236,7 @@ export default function ExecOxbloodTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <>
+          <div style={{ marginTop: 18 }}>
             <Sec k="book">{labelFor("certifications")}</Sec>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {certifications.map((c) => (

@@ -141,7 +141,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <RightSection title={L.certifications} color={cyan}>
+          <div style={{ marginTop: 18 }}><RightSection title={L.certifications} color={cyan}>
             {certifications.map((c) => (
               <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
                 <p style={{ fontSize: 10, fontWeight: 700 }}>{c.name}</p>
@@ -149,7 +149,7 @@ export default function DualityTemplate() {
                 {c.date && <p style={{ fontSize: 9, opacity: 0.6 }}>{c.date}</p>}
               </div>
             ))}
-          </RightSection>
+          </RightSection></div>
         )}
       </div>
     </div>
