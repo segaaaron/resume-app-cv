@@ -1,0 +1,82 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.createBrowser = createBrowser;
+exports.getBrowser = getBrowser;
+exports.ensureHealthyBrowser = ensureHealthyBrowser;
+const puppeteer_core_1 = __importDefault(require("puppeteer-core"));
+const PUPPETEER_ARGS = [
+    "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage",
+    "--disable-gpu", "--disable-extensions",
+    // Allow cross-origin image loads (user photos/logos on CDN). Safe: internal service, all URLs are signed.
+    "--disable-web-security",
+    "--allow-running-insecure-content",
+    "--disable-background-timer-throttling", "--disable-backgrounding-occluded-windows",
+    "--disable-renderer-backgrounding", "--disable-features=TranslateUI",
+    "--disable-ipc-flooding-protection",
+];
+let browserPromise = null;
+/** Resolves the Chrome executable path or throws with a clear setup message. */
+function resolveExecutablePath() {
+    const path = process.env.PUPPETEER_EXECUTABLE_PATH;
+    if (!path)
+        throw new Error("[browser] PUPPETEER_EXECUTABLE_PATH not set — provide the full path to Chrome/Chromium");
+    return path;
+}
+/** Launches a new Chrome instance and wires up the disconnect handler. */
+async function launchBrowser(executablePath) {
+    const browser = await puppeteer_core_1.default.launch({ headless: true, executablePath, args: PUPPETEER_ARGS });
+    browser.on("disconnected", handleDisconnect);
+    console.log("[browser] Chrome ready");
+    return browser;
+}
+/** Clears the cached promise so the next request triggers a fresh launch. */
+function handleDisconnect() {
+    console.warn("[browser] Chrome exited unexpectedly (OOM/crash). Will relaunch on next request.");
+    browserPromise = null;
+}
+/**
+ * Creates a new browser instance.
+ * Logs the executable path before launching and throws descriptively on failure.
+ */
+async function createBrowser() {
+    const executablePath = resolveExecutablePath();
+    console.log(`[browser] launching Chrome: ${executablePath}`);
+    try {
+        return await launchBrowser(executablePath);
+    }
+    catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[browser] Chrome launch failed — verify binary exists at "${executablePath}". ${msg}`);
+        throw err;
+    }
+}
+/** Returns the shared browser singleton, launching it if not yet running. */
+function getBrowser() {
+    if (!browserPromise) {
+        browserPromise = createBrowser().catch((err) => { browserPromise = null; throw err; });
+    }
+    return browserPromise;
+}
+/** Verifies the browser is responsive; reconnects if health check fails. */
+async function ensureHealthyBrowser() {
+    const browser = await getBrowser();
+    try {
+        await Promise.race([browser.version(), healthTimeout()]);
+        return browser;
+    }
+    catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        console.warn(`[browser] health check failed (${msg}) — reconnecting`);
+        browserPromise = null;
+        return getBrowser();
+    }
+}
+function healthTimeout() {
+    return new Promise((_, reject) => {
+        const t = setTimeout(() => reject(new Error("health timeout")), 2000);
+        t.unref();
+    });
+}

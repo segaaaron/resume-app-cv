@@ -31,7 +31,7 @@ async function setupPage(page: Page, opts: RenderCoverLetterOptions): Promise<vo
   await applyCookies(page, opts.cookieHeader, opts.appUrl)
   await gotoAndWaitForContent(page, opts.printUrl, COVER_LETTER_SELECTOR)
   await emulateMediaType(page)
-  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())))
+  await page.evaluate(() => new Promise<void>((resolve) => setTimeout(resolve, 0)))
   await waitForFonts(page)
   await waitForImages(page)
 }

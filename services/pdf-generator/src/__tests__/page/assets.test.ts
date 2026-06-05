@@ -35,15 +35,16 @@ describe("waitForImages", () => {
   })
 
   it("warns and resolves on timeout", async () => {
-    jest.useFakeTimers()
     const warnSpy = jest.spyOn(console, "warn").mockImplementation(() => {})
-    const page = { evaluate: jest.fn().mockReturnValue(new Promise(() => {})) } as unknown as Page
-    const p = waitForImages(page, 3000)
-    jest.runAllTimers()
-    await p
-    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("3000ms"))
+    let callCount = 0
+    // First call returns false (images not ready); second call returns 0 (brokenCount)
+    const page = {
+      evaluate: jest.fn().mockImplementation(() => Promise.resolve(callCount++ === 0 ? false : 0)),
+    } as unknown as Page
+    await waitForImages(page, 50)
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("50ms"))
     warnSpy.mockRestore()
-  })
+  }, 3000)
 })
 
 describe("evaluateImages (browser-side fn, tested in Node with mocked document)", () => {

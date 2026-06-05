@@ -26,9 +26,9 @@ describe("renderCoverLetterPdf", () => {
     expect(mockPdf).toHaveBeenCalledWith(expect.objectContaining({ printBackground: true }))
   })
 
-  it("calls evaluate to reset element height", async () => {
+  it("calls evaluate twice: frame flush + height reset", async () => {
     await renderCoverLetterPdf(mockPage, OPTS)
-    expect(mockEvaluate).toHaveBeenCalledTimes(1)
+    expect(mockEvaluate).toHaveBeenCalledTimes(2)
   })
 
   it("calls embedPdfMetadata with letter title and author", async () => {
@@ -38,29 +38,37 @@ describe("renderCoverLetterPdf", () => {
   })
 
   it("evaluate callback sets min-height:0 and height:auto on .cover-letter-page", async () => {
-    // Capture the evaluate callback and run it against a mock DOM element
+    // Call 1: frame flush (setTimeout 0) — just resolve
+    mockEvaluate.mockImplementationOnce(() => Promise.resolve())
+    // Call 2: height reset — capture callback + args
     let capturedCallback: (() => void) | null = null
-    mockEvaluate.mockImplementationOnce((fn: () => void) => { capturedCallback = fn; return Promise.resolve() })
+    mockEvaluate.mockImplementationOnce((fn: (selector: string) => void, ...args: unknown[]) => {
+      capturedCallback = () => fn(...(args as [string]))
+      return Promise.resolve()
+    })
 
     await renderCoverLetterPdf(mockPage, OPTS)
 
-    // Simulate a DOM environment for the captured callback
     const mockEl = { style: { setProperty: jest.fn() } }
-    const origQS = (global as any).document?.querySelector
     ;(global as any).document = { querySelector: jest.fn().mockReturnValue(mockEl) }
     capturedCallback!()
     expect(mockEl.style.setProperty).toHaveBeenCalledWith("min-height", "0", "important")
     expect(mockEl.style.setProperty).toHaveBeenCalledWith("height", "auto", "important")
-    if (origQS !== undefined) (global as any).document.querySelector = origQS
+    delete (global as any).document
   })
 
   it("evaluate callback is safe when .cover-letter-page element not found", async () => {
+    mockEvaluate.mockImplementationOnce(() => Promise.resolve())
     let capturedCallback: (() => void) | null = null
-    mockEvaluate.mockImplementationOnce((fn: () => void) => { capturedCallback = fn; return Promise.resolve() })
+    mockEvaluate.mockImplementationOnce((fn: (selector: string) => void, ...args: unknown[]) => {
+      capturedCallback = () => fn(...(args as [string]))
+      return Promise.resolve()
+    })
 
     await renderCoverLetterPdf(mockPage, OPTS)
 
     ;(global as any).document = { querySelector: jest.fn().mockReturnValue(null) }
     expect(() => capturedCallback!()).not.toThrow()
+    delete (global as any).document
   })
 })

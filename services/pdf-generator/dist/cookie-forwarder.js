@@ -1,19 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.parseCookies = parseCookies;
 exports.applyCookies = applyCookies;
-const ALLOWED_COOKIES = new Set([
-    "authjs.session-token",
-    "__Secure-authjs.session-token",
-    "authjs.csrf-token",
-    "__Host-authjs.csrf-token",
-    "authjs.callback-url",
-    "__Secure-authjs.callback-url",
-    "NEXT_LOCALE",
-]);
-const SESSION_COOKIE_NAMES = new Set([
-    "authjs.session-token",
-    "__Secure-authjs.session-token",
-]);
+const contracts_1 = require("./contracts");
 function parseCookies(cookieHeader, hostname, appUrl) {
     return cookieHeader
         .split(";")
@@ -47,8 +36,8 @@ async function applyCookies(page, cookieHeader, appUrl) {
     const all = parseCookies(cookieHeader, hostname, appUrl);
     if (all.length === 0)
         return;
-    const allowed = all.filter((c) => ALLOWED_COOKIES.has(c.name));
-    const hasSession = allowed.some((c) => SESSION_COOKIE_NAMES.has(c.name));
+    const allowed = all.filter((c) => contracts_1.ALLOWED_COOKIE_NAMES.has(c.name));
+    const hasSession = allowed.some((c) => contracts_1.SESSION_COOKIE_NAMES.has(c.name));
     if (!hasSession) {
         console.warn("[pdf] session cookie not found in whitelist — forwarding all as fallback");
         await page.setCookie(...all);

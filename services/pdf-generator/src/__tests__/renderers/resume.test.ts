@@ -8,8 +8,9 @@ jest.mock("../../lib/pdf-metadata", () => ({ embedPdfMetadata: jest.fn().mockImp
 import { renderResumePdf } from "../../renderers/resume"
 import type { Page } from "puppeteer-core"
 
+const mockEvaluate = jest.fn().mockResolvedValue(undefined)
 const mockPdf = jest.fn().mockResolvedValue(Buffer.from("%PDF-1.4"))
-const mockPage = { pdf: mockPdf } as unknown as Page
+const mockPage = { evaluate: mockEvaluate, pdf: mockPdf } as unknown as Page
 
 const OPTS = { printUrl: "https://app.test/resume/1/print", cookieHeader: "", appUrl: "https://app.test", candidateName: "Jane", resumeTitle: "My CV" }
 
