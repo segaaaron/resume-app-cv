@@ -90,7 +90,7 @@ export default function CobaltTemplate() {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
 
         {visible("skills") && (

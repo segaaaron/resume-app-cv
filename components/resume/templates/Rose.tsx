@@ -134,7 +134,7 @@ export default function RoseTemplate() {
                 {c.date && <p style={{ fontSize: 9, color: "#888" }}>{c.date}</p>}
               </div>
             ))}
-          </>
+          </div>
         )}
       </div>
 

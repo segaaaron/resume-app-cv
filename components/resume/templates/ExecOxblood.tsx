@@ -247,7 +247,7 @@ export default function ExecOxbloodTemplate() {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
 

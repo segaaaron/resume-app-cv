@@ -253,7 +253,7 @@ export default function ExecSovereignTemplate() {
                 </div>
               ))}
             </div>
-          </>
+          </div>
         )}
       </div>
 
