@@ -11,7 +11,6 @@
 // imports would force async wiring for no benefit and break tree-shaking.
 
 import { NextRequest } from "next/server"
-import { renderToStaticMarkup } from "react-dom/server"
 import sharp from "sharp"
 import React from "react"
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit"
@@ -173,6 +172,7 @@ export async function GET(
     try {
       // Thumbs render into a viewBox of 80x110 so the markup is already sized.
       // We scale to 220x311 (≈ A4 aspect 210/297) for retina-quality card art.
+      const { renderToStaticMarkup } = await import("react-dom/server")
       const svgString = renderToStaticMarkup(element)
       webpBuffer = await sharp(Buffer.from(svgString))
         .resize(220, 311, { fit: "fill" })
