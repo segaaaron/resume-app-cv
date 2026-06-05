@@ -62,14 +62,14 @@ describe("PasswordResetService.requestReset", () => {
 
   it("Google-only account (no password) → records failure, throws 409 google_account", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: false })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: false, plan: "PRO" })
     await expect(makeService().requestReset("1.2.3.4", "a@b.com")).rejects.toMatchObject({ code: "google_account", status: 409 })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
   })
 
   it("happy path → upserts reset record, sends email, returns { sent: true }", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
     const result = await makeService().requestReset("1.2.3.4", "a@b.com")
@@ -143,7 +143,7 @@ describe("PasswordResetService.confirmReset", () => {
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({ email: "a@b.com", otpHash: hash, expiresAt: new Date(Date.now() + 60000), attempts: 0, usedAt: null })
     vi.mocked(mockResets.incrementAttempts).mockResolvedValue()
-    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null })
+    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null, plan: "PRO" })
     vi.mocked(mockUsers.updatePassword).mockResolvedValue()
     vi.mocked(mockResets.markUsed).mockResolvedValue(true)
     const { db } = await import("@/lib/db")

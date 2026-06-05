@@ -10,7 +10,7 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
-  const authResult = await requireUser(req, { csrf: true, emailVerified: true })
+  const authResult = await requireUser(req, { csrf: true })
   if (authResult instanceof NextResponse) return authResult
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))

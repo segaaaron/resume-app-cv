@@ -520,6 +520,7 @@
       "forgot_link": "¿Olvidaste tu contraseña?",
       "sent_message": "Si el email está registrado, recibirás un código en tu bandeja de entrada.",
       "google_account": "Esta cuenta usa Google para iniciar sesión. No necesitas contraseña.",
+      "plan_not_allowed": "Tu plan no permite cambiar la contraseña. Contacta a tu proveedor.",
       "rate_limit": "Demasiados intentos. Intenta de nuevo más tarde.",
       "verify": {
         "title": "Ingresa tu código",
@@ -1400,6 +1401,8 @@
       "error_pdf_429": "Demasiadas solicitudes. Intenta de nuevo en unos minutos.",
       "error_pdf_404": "CV no encontrado.",
       "error_pdf_500": "El servicio de PDF falló. Intenta de nuevo en unos momentos.",
+      "pdf_pro_required": "La descarga de PDF requiere un plan Pro activo.",
+      "see_plans": "Ver planes",
       "pro_only_word": "La exportación Word es exclusiva del plan Pro",
       "watermark_text": "readycvv.com",
       "watermark_upgrade": "Activa tu plan Pro en readycvv.com",
@@ -1830,6 +1833,7 @@
     "reject_chip_6": "No encajaba"
   },
   "cover_letter_editor": {
+    "back_to_editor": "Volver al editor",
     "ai_title": "Generar con IA",
     "ai_pro_badge": "Pro",
     "ai_resume_label": "CV de referencia (opcional)",
@@ -1965,6 +1969,8 @@
     "download_applying_styles": "Aplicando estilos...",
     "download_almost_done": "Casi listo...",
     "download_success": "{filename} descargado",
+    "pdf_pro_required": "La descarga de PDF requiere un plan Pro activo.",
+    "see_plans": "Ver planes",
     "pdf_error": "Error al generar el PDF",
     "word_error": "Error al generar el archivo Word",
     "word_download_error": "Error al descargar el archivo Word",

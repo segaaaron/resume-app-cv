@@ -38,7 +38,7 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   }, [resumeId, init])
 
   useEffect(() => {
-    if (searchParams.get("auto") === "true") {
+    if (searchParams.get("auto") === "true" && isPro) {
       handleDownloadPdf()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -125,6 +125,12 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
   }, [])
 
   async function handleDownloadPdf() {
+    if (!isPro) {
+      toast.error(t("pdf_pro_required"), {
+        action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
+      })
+      return
+    }
     setDownloadingPdf(true)
     try {
       const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
@@ -173,7 +179,7 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
             href="/pricing"
             className="text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
           >
-            Actualizar a Pro →
+            {t("see_plans")} →
           </a>
         </div>
       )}

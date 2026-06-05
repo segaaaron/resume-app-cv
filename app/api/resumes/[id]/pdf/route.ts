@@ -69,7 +69,8 @@ export async function GET(req: Request, { params }: Params) {
         where: { id: session.user.id },
         select: { managedDownloadsUsed: true, managedDownloadLimit: true },
       })
-      if (!fresh || fresh.managedDownloadLimit === null) return { allowed: false }
+      if (!fresh) return { allowed: false }
+      if (fresh.managedDownloadLimit === null) return { allowed: true }
       if (fresh.managedDownloadsUsed >= fresh.managedDownloadLimit) return { allowed: false }
       await tx.user.update({
         where: { id: session.user.id },

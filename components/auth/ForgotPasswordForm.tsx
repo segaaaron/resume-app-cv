@@ -23,6 +23,7 @@ export default function ForgotPasswordForm() {
   const [googleError, setGoogleError] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [notRegistered, setNotRegistered] = useState(false)
+  const [planNotAllowed, setPlanNotAllowed] = useState(false)
 
   const {
     register,
@@ -33,6 +34,7 @@ export default function ForgotPasswordForm() {
   async function onSubmit(data: FormData) {
     setGoogleError(false)
     setNotRegistered(false)
+    setPlanNotAllowed(false)
     let res: Response
     try {
       res = await apiFetch("/api/auth/reset-password/request", {
@@ -53,6 +55,11 @@ export default function ForgotPasswordForm() {
 
     if (body.error === "google_account") {
       setGoogleError(true)
+      return
+    }
+
+    if (body.error === "plan_not_allowed") {
+      setPlanNotAllowed(true)
       return
     }
 
@@ -113,6 +120,14 @@ export default function ForgotPasswordForm() {
               {t("continue_with_google")}
             </button>
           </div>
+        </div>
+      )}
+
+      {planNotAllowed && (
+        <div className="mb-4 p-3.5 rounded-[10px] flex items-start gap-2.5"
+          style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
+          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
+          <p className="text-[13px] text-red-700">{t("plan_not_allowed")}</p>
         </div>
       )}
 

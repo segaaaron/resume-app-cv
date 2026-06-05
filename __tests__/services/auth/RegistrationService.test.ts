@@ -63,7 +63,7 @@ describe("RegistrationService.requestOtp", () => {
 
   it("email exists with password → throws 409 email_exists_credentials", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: input.email, hasPassword: true, referralCode: null })
+    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: input.email, hasPassword: true, referralCode: null, plan: "PRO" })
     await expect(makeService().requestOtp(input)).rejects.toMatchObject({ code: "email_exists_credentials", status: 409 })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith(input.ipAddress, "register")
     expect(mockPending.upsert).not.toHaveBeenCalled()
@@ -71,7 +71,7 @@ describe("RegistrationService.requestOtp", () => {
 
   it("email exists as Google account → throws 409 email_exists_google", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: input.email, hasPassword: false, referralCode: null })
+    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: input.email, hasPassword: false, referralCode: null, plan: "PRO" })
     await expect(makeService().requestOtp(input)).rejects.toMatchObject({ code: "email_exists_google", status: 409 })
   })
 
@@ -165,7 +165,7 @@ describe("RegistrationService.confirmOtp", () => {
       ageConsent: true, referralCode: null, otpHash: hash, attempts: 0,
       otpExp: new Date(Date.now() + 60000),
     })
-    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null })
+    vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null, plan: "PRO" })
     vi.mocked(mockPending.deleteByEmail).mockResolvedValue()
     await expect(makeService().confirmOtp({ email: "a@b.com", code: "654321" })).rejects.toMatchObject({ code: "email_taken", status: 409 })
   })

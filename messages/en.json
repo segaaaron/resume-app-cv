@@ -520,6 +520,7 @@
       "forgot_link": "Forgot your password?",
       "sent_message": "If the email is registered, you'll receive a code in your inbox.",
       "google_account": "This account uses Google to sign in. You don't need a password.",
+      "plan_not_allowed": "Your plan does not allow password changes. Contact your provider.",
       "rate_limit": "Too many attempts. Please try again later.",
       "verify": {
         "title": "Enter your code",
@@ -1400,6 +1401,8 @@
       "error_pdf_429": "Too many requests. Try again in a few minutes.",
       "error_pdf_404": "Resume not found.",
       "error_pdf_500": "PDF service failed. Try again in a moment.",
+      "pdf_pro_required": "PDF download requires an active Pro plan.",
+      "see_plans": "See plans",
       "pro_only_word": "Word export is exclusive to the Pro plan",
       "watermark_text": "readycvv.com",
       "watermark_upgrade": "Activate your Pro plan at readycvv.com",
@@ -1830,6 +1833,7 @@
     "reject_chip_6": "Not a fit"
   },
   "cover_letter_editor": {
+    "back_to_editor": "Back to editor",
     "ai_title": "Generate with AI",
     "ai_pro_badge": "Pro",
     "ai_resume_label": "Reference CV (optional)",
@@ -1965,6 +1969,8 @@
     "download_applying_styles": "Applying styles...",
     "download_almost_done": "Almost done...",
     "download_success": "{filename} downloaded",
+    "pdf_pro_required": "PDF download requires an active Pro plan.",
+    "see_plans": "See plans",
     "pdf_error": "Error generating the PDF",
     "word_error": "Error generating the Word file",
     "word_download_error": "Error downloading the Word file",

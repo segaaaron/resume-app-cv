@@ -11,10 +11,10 @@ export class PrismaUserRepository implements IUserRepository {
   async findByEmail(email: string): Promise<UserAuthRecord | null> {
     const user = await db.user.findUnique({
       where: { email },
-      select: { id: true, name: true, email: true, password: true, referralCode: true },
+      select: { id: true, name: true, email: true, password: true, referralCode: true, plan: true },
     })
     if (!user) return null
-    return { id: user.id, name: user.name, email: user.email, hasPassword: !!user.password, referralCode: user.referralCode }
+    return { id: user.id, name: user.name, email: user.email, hasPassword: !!user.password, referralCode: user.referralCode, plan: user.plan }
   }
 
   async findByReferralCode(code: string): Promise<{ id: string } | null> {
@@ -40,13 +40,13 @@ export class PrismaUserRepository implements IUserRepository {
     ])
   }
 
-  async findForReset(email: string): Promise<{ id: string; name: string | null; hasPassword: boolean } | null> {
+  async findForReset(email: string): Promise<{ id: string; name: string | null; hasPassword: boolean; plan: string } | null> {
     const user = await db.user.findUnique({
       where: { email },
-      select: { id: true, name: true, password: true },
+      select: { id: true, name: true, password: true, plan: true },
     })
     if (!user) return null
-    return { id: user.id, name: user.name, hasPassword: !!user.password }
+    return { id: user.id, name: user.name, hasPassword: !!user.password, plan: user.plan }
   }
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {

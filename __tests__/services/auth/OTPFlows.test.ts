@@ -476,6 +476,7 @@ describe("B. RegistrationService — requestOtp", () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: REGISTER_INPUT.email, hasPassword: true, referralCode: null,
+      plan: "PRO",
     })
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
       .rejects.toMatchObject({ code: "email_exists_credentials", status: 409 })
@@ -487,6 +488,7 @@ describe("B. RegistrationService — requestOtp", () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: REGISTER_INPUT.email, hasPassword: false, referralCode: null,
+      plan: "PRO",
     })
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
       .rejects.toMatchObject({ code: "email_exists_google", status: 409 })
@@ -661,6 +663,7 @@ describe("B. RegistrationService — confirmOtp", () => {
     })
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u99", name: "Other", email: "a@b.com", hasPassword: true, referralCode: null,
+      plan: "PRO",
     })
     vi.mocked(mockPending.deleteByEmail).mockResolvedValue()
 
@@ -746,6 +749,7 @@ describe("B. RegistrationService — confirmOtp", () => {
     })
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null,
+      plan: "PRO",
     })
     vi.mocked(mockPending.deleteByEmail).mockResolvedValue()
 
@@ -779,7 +783,7 @@ describe("C. PasswordResetService — requestReset", () => {
   it("C03 Google-only account (no password) → records failure, throws 409 google_account", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({
-      id: "u1", name: "Ana", hasPassword: false,
+      id: "u1", name: "Ana", hasPassword: false, plan: "PRO",
     })
     await expect(makePasswordResetService().requestReset("1.2.3.4", "a@b.com"))
       .rejects.toMatchObject({ code: "google_account", status: 409 })
@@ -788,7 +792,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C04 happy path → upserts reset record, sends OTP email, returns { sent: true }", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -800,7 +804,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C05 user with null name → uses fallback 'Usuario' in the email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: null, hasPassword: true })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: null, hasPassword: true, plan: "PRO" })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -816,7 +820,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C07 OTP stored is bcrypt hash, not plain text", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -827,7 +831,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C08 OTP expiry is 10 minutes from now", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -960,6 +964,7 @@ describe("C. PasswordResetService — confirmReset", () => {
     vi.mocked(mockResets.incrementAttempts).mockResolvedValue()
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null,
+      plan: "PRO",
     })
     vi.mocked(mockUsers.updatePassword).mockResolvedValue()
     vi.mocked(mockResets.markUsed).mockResolvedValue(true)
@@ -986,6 +991,7 @@ describe("C. PasswordResetService — confirmReset", () => {
     vi.mocked(mockResets.incrementAttempts).mockResolvedValue()
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null,
+      plan: "PRO",
     })
     vi.mocked(mockUsers.updatePassword).mockResolvedValue()
     vi.mocked(mockResets.markUsed).mockResolvedValue(true)
@@ -1013,6 +1019,7 @@ describe("C. PasswordResetService — confirmReset", () => {
     vi.mocked(mockResets.incrementAttempts).mockResolvedValue()
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: "a@b.com", hasPassword: true, referralCode: null,
+      plan: "PRO",
     })
     vi.mocked(mockUsers.updatePassword).mockResolvedValue()
     vi.mocked(mockResets.markUsed).mockResolvedValue(true)

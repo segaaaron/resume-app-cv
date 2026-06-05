@@ -361,6 +361,12 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   }, [])
 
   const downloadPDF = useCallback(async () => {
+    if (!isPro) {
+      toast.error(t("pdf_pro_required"), {
+        action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
+      })
+      return
+    }
     setDownloadingPdf(true)
     try {
       if (dirty) await save()

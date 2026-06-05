@@ -23,7 +23,7 @@ export async function GET(req: Request) {
 export async function POST(request: Request) {
   // Freemium guard: UNSUBSCRIBED can create 1 resume. ResumeService.create enforces the
   // count limit per plan. Email verification is required to prevent throwaway accounts.
-  const authResult = await requireUser(request, { csrf: true, emailVerified: true, pro: true })
+  const authResult = await requireUser(request, { csrf: true })
   if (authResult instanceof NextResponse) return authResult
 
   let templateId: string | undefined

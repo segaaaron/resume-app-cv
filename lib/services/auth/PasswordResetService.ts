@@ -38,6 +38,11 @@ export class PasswordResetService {
       throw new AppError("not_registered", 404)
     }
 
+    if (user.plan === "LIMITED") {
+      await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
+      throw new AppError("plan_not_allowed", 403)
+    }
+
     if (!user.hasPassword) {
       await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
       throw new AppError("google_account", 409)
@@ -74,6 +79,7 @@ export class PasswordResetService {
 
     const user = await this.users.findByEmail(input.email)
     if (!user) throw new AppError("user_not_found", 400)
+    if (user.plan === "LIMITED") throw new AppError("plan_not_allowed", 403)
 
     // Claim the OTP atomically before hashing — prevents TOCTOU where two
     // concurrent requests both pass the usedAt check and both reset the password.

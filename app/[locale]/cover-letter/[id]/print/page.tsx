@@ -2,6 +2,7 @@ import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { verifyPrintToken } from "@/lib/pdf/print-token"
+import { isActive } from "@/lib/plans"
 import CoverLetterPrintLayout from "@/components/cover-letter/CoverLetterPrintLayout"
 
 export const dynamic = "force-dynamic"
@@ -29,14 +30,19 @@ export default async function CoverLetterPrintPage({
     userId = session.user.id
   }
 
-  const [letter, latestResume] = await Promise.all([
+  const [letter, latestResume, user] = await Promise.all([
     db.coverLetter.findFirst({ where: { id, userId } }),
     db.resume.findFirst({
       where: { userId },
       orderBy: { updatedAt: "desc" },
       select: { personalDetails: true, photoUrl: true },
     }),
+    db.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
+    }),
   ])
+  const isPro = isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role, user?.isManaged, user?.managedBlocked, user?.managedExpiresAt)
 
   if (!letter) notFound()
 
@@ -73,6 +79,7 @@ export default async function CoverLetterPrintPage({
       }}
       candidate={candidate}
       locale={locale}
+      isPro={isPro}
     />
   )
 }

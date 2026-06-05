@@ -22,7 +22,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   // UNSUBSCRIBED gets 1 cover letter (freemium). Quota enforced inside the service.
-  const authResult = await requireUser(req, { csrf: true, emailVerified: true, pro: true })
+  const authResult = await requireUser(req, { csrf: true })
   if (authResult instanceof NextResponse) return authResult
 
   try {

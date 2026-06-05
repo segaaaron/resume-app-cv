@@ -61,21 +61,28 @@ interface Props {
   content: CoverLetterContent
   candidate: CandidateData
   locale: string
+  isPro?: boolean
 }
 
-export default function CoverLetterPrintLayout({ letterId, title, colorScheme, fontFamily, templateId, content, candidate, locale }: Props) {
+export default function CoverLetterPrintLayout({ letterId, title, colorScheme, fontFamily, templateId, content, candidate, locale, isPro = false }: Props) {
   const t = useTranslations("cover_letter_editor")
   const [downloading, setDownloading] = useState(false)
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    if (searchParams.get("auto") === "true") {
+    if (searchParams.get("auto") === "true" && isPro) {
       handleDownload()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleDownload() {
+    if (!isPro) {
+      toast.error(t("pdf_pro_required"), {
+        action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
+      })
+      return
+    }
     setDownloading(true)
     try {
       const res = await apiFetch(`/api/cover-letters/${letterId}/pdf?locale=${locale}`)
@@ -148,14 +155,14 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="sm" asChild>
             <Link href={`/${locale}/cover-letter/${letterId}`}>
-              <ArrowLeft className="h-4 w-4 mr-1" /> Volver al editor
+              <ArrowLeft className="h-4 w-4 mr-1" /> {t("back_to_editor")}
             </Link>
           </Button>
           <span className="text-sm text-muted-foreground">{title}</span>
         </div>
         <Button onClick={handleDownload} size="sm" className="gap-2" disabled={downloading}>
           {downloading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-          Descargar PDF
+          {t("download")}
         </Button>
       </div>
 
