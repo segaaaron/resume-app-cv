@@ -117,7 +117,7 @@ export default function LuxeRegentTemplate() {
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
-    skills, languages, projects,
+    skills, languages, projects, certifications,
   } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -316,7 +316,7 @@ export default function LuxeRegentTemplate() {
             <>
               <LxHead color={green} line={line}>{labelFor("skills")}</LxHead>
               <div style={{ marginBottom: 22 }}>
-                {skills.slice(0, 6).map((s) => {
+                {skills.map((s) => {
                   const p = skillPct(s.level)
                   return (
                     <div key={s.id} style={{ marginBottom: 10 }}>
@@ -337,12 +337,29 @@ export default function LuxeRegentTemplate() {
           {visible("languages") && languages.length > 0 && (
             <>
               <LxHead color={green} line={line}>{labelFor("languages")}</LxHead>
-              {languages.map((l) => (
-                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 6 }}>
-                  <span style={{ fontWeight: 600 }}>{l.name}</span>
-                  <span style={{ color: slate }}>{langLbl(l.level)}</span>
-                </div>
-              ))}
+              <div style={{ marginBottom: 22 }}>
+                {languages.map((l) => (
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 6 }}>
+                    <span style={{ fontWeight: 600 }}>{l.name}</span>
+                    <span style={{ color: slate }}>{langLbl(l.level)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <LxHead color={green} line={line}>{labelFor("certifications")}</LxHead>
+              <div style={{ marginBottom: 22 }}>
+                {certifications.map((c) => (
+                  <div key={c.id} style={{ marginBottom: 9, breakInside: "avoid" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: green, lineHeight: 1.25 }}>{c.name}</div>
+                    {c.issuer && <div style={{ fontSize: 10.5, color: "#9a7d3e", fontWeight: 600 }}>{c.issuer}</div>}
+                    {c.date && <div style={{ fontSize: 10, color: slate }}>{c.date}</div>}
+                  </div>
+                ))}
+              </div>
             </>
           )}
 

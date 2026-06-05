@@ -10,7 +10,7 @@ export default function VertexTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sectionData = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies, certifications } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
@@ -162,6 +162,19 @@ export default function VertexTemplate() {
                 <div style={{ display: "flex", gap: 14, flexWrap: "wrap" }}>
                   {langs.map((l) => <CircleGauge key={l.id} pct={LANG_PCT[l.level] ?? 50} label={l.name} />)}
                 </div>
+              </div>
+            )}
+
+            {visible("certifications") && certifications.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: gold, marginBottom: 8 }}>{config.language === "en" ? "Certifications" : "Certificaciones"}</p>
+                {certifications.map((c) => (
+                  <div key={c.id} className="resume-entry" style={{ marginBottom: 8, paddingLeft: 10, borderLeft: `2px solid ${gold}`, breakInside: "avoid" }}>
+                    <p style={{ fontSize: 10.5, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.25 }}>{c.name}</p>
+                    {c.issuer && <p style={{ fontSize: 9.5, color: navy }}>{c.issuer}</p>}
+                    {c.date && <p style={{ fontSize: 9, color: "#aaa" }}>{c.date}</p>}
+                  </div>
+                ))}
               </div>
             )}
 

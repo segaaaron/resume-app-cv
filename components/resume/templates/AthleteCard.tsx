@@ -82,7 +82,7 @@ export default function AthleteCardTemplate() {
             <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, color: navy, letterSpacing: "0.2em", marginBottom: 10 }}>
               {label("skills").toUpperCase()} · 0–100
             </div>
-            {skills.slice(0, 8).map((sk) => {
+            {skills.map((sk) => {
               const pct = SKILL_PCT[sk.level] ?? 50
               return (
                 <div key={sk.id} style={{ display: "grid", gridTemplateColumns: "80px 1fr 36px", alignItems: "center", gap: 10, padding: "5px 0" }}>

@@ -263,7 +263,7 @@ export default function LuxeVellumTemplate() {
           <div>
             <LxHead accent={accent} line={line}>{labelFor("skills")}</LxHead>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 7 }}>
-              {skills.slice(0, 12).map((s) => (
+              {skills.map((s) => (
                 <span
                   key={s.id}
                   style={{

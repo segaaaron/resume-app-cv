@@ -11,7 +11,7 @@ export default function BannerTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sectionData = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies, certifications } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
@@ -126,6 +126,19 @@ export default function BannerTemplate() {
               <BannerHead text={L.languages} />
               {langs.map((l) => (
                 <p key={l.id} style={{ fontSize: 9.5, color: "#444", marginBottom: 3 }}>{l.name}</p>
+              ))}
+            </>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <BannerHead text={L.certifications} />
+              {certifications.map((c) => (
+                <div key={c.id} style={{ marginBottom: 6, breakInside: "avoid" }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.25 }}>{c.name}</p>
+                  {c.issuer && <p style={{ fontSize: 9.5, color: accent }}>{c.issuer}</p>}
+                  {c.date && <p style={{ fontSize: 9, color: "#888" }}>{c.date}</p>}
+                </div>
               ))}
             </>
           )}

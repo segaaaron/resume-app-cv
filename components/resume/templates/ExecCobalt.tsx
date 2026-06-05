@@ -115,7 +115,7 @@ export default function ExecCobaltTemplate() {
   const silver = accent
   const line = `${accent}2e`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -264,7 +264,7 @@ export default function ExecCobaltTemplate() {
             <>
               <Sec k="skill">{labelFor("skills")}</Sec>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
-                {skills.slice(0, 8).map((s) => (
+                {skills.map((s) => (
                   <div
                     key={s.id}
                     style={{
@@ -325,6 +325,19 @@ export default function ExecCobaltTemplate() {
                 >
                   <span>{l.name}</span>
                   <span style={{ fontFamily: MONO, color: silver }}>{langLbl(l.level)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <Sec k="edu">{labelFor("certifications")}</Sec>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ marginBottom: 9, breakInside: "avoid" }}>
+                  <div style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                  {c.issuer && <div style={{ fontSize: 10, color: mut }}>{c.issuer}</div>}
+                  {c.date && <div style={{ fontFamily: MONO, fontSize: 9, color: silver, marginTop: 2 }}>{c.date}</div>}
                 </div>
               ))}
             </div>

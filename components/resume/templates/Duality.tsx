@@ -11,7 +11,7 @@ export default function DualityTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sectionData = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies, certifications } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const name = [pd.firstName || "Johnson", pd.lastName || "Smith"].join(" ")
@@ -136,6 +136,18 @@ export default function DualityTemplate() {
           <RightSection title={L.languages} color={cyan}>
             {langs.map((l) => (
               <p key={l.id} style={{ fontSize: 9.5, marginBottom: 4, opacity: 0.85 }}>{l.name}</p>
+            ))}
+          </RightSection>
+        )}
+
+        {visible("certifications") && certifications.length > 0 && (
+          <RightSection title={L.certifications} color={cyan}>
+            {certifications.map((c) => (
+              <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
+                <p style={{ fontSize: 10, fontWeight: 700 }}>{c.name}</p>
+                {c.issuer && <p style={{ fontSize: 9.5, color: cyan }}>{c.issuer}</p>}
+                {c.date && <p style={{ fontSize: 9, opacity: 0.6 }}>{c.date}</p>}
+              </div>
             ))}
           </RightSection>
         )}

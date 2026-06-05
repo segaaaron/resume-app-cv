@@ -80,7 +80,7 @@ export default function ExecTerraTemplate() {
   const accent = config.colorScheme || "#b4543a"
   const terra = accent
   const data = useTemplateSectionData()
-  const { personalDetails: pd, workExperience, education, skills, languages } = data
+  const { personalDetails: pd, workExperience, education, skills, languages, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -230,7 +230,7 @@ export default function ExecTerraTemplate() {
             <>
               <Sec k="skill">{labelFor("skills")}</Sec>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 24 }}>
-                {skills.slice(0, 8).map((s) => (
+                {skills.map((s) => (
                   <div
                     key={s.id}
                     style={{
@@ -277,7 +277,7 @@ export default function ExecTerraTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <div>
+            <div style={{ marginBottom: 24 }}>
               <Sec k="lang">{labelFor("languages")}</Sec>
               {languages.map((l) => (
                 <div
@@ -292,6 +292,19 @@ export default function ExecTerraTemplate() {
                 >
                   <span>{l.name}</span>
                   <span style={{ color: terra }}>{langLbl(l.level)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <div>
+              <Sec k="edu">{labelFor("certifications")}</Sec>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ marginBottom: 12, breakInside: "avoid" }}>
+                  <div style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 600, color: ink, lineHeight: 1.25 }}>{c.name}</div>
+                  {c.issuer && <div style={{ fontSize: 10, color: mut }}>{c.issuer}</div>}
+                  {c.date && <div style={{ fontSize: 9.5, color: terra, marginTop: 2 }}>{c.date}</div>}
                 </div>
               ))}
             </div>

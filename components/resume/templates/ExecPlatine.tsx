@@ -36,7 +36,7 @@ export default function ExecPlatineTemplate() {
   const plat = accent
   const line = `${accent}33`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -254,6 +254,27 @@ export default function ExecPlatineTemplate() {
                   {ed.startDate}
                   {ed.currentlyStudying ? ` — ${present}` : ed.endDate ? ` — ${ed.endDate}` : ""}
                 </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {visible("certifications") && certifications.length > 0 && (
+          <div>
+            <SubHead letter="D" label={labelFor("certifications")} />
+            {certifications.map((c) => (
+              <div key={c.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                {c.issuer && (
+                  <div style={{ fontFamily: MONO, fontSize: 10, color: plat, marginTop: 3 }}>
+                    {c.issuer.toUpperCase()}
+                  </div>
+                )}
+                {c.date && (
+                  <div style={{ fontFamily: MONO, fontSize: 10, color: mut, marginTop: 2 }}>
+                    {c.date}
+                  </div>
+                )}
               </div>
             ))}
           </div>

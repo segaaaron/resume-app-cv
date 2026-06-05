@@ -91,7 +91,7 @@ export default function ExecDynastyTemplate() {
   const gold = accent
   const line = `${accent}3d`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -242,11 +242,29 @@ export default function ExecDynastyTemplate() {
           {visible("skills") && skills.length > 0 && (
             <>
               <SectionHead icon={<IcoBulb />}>{labelFor("skills")}</SectionHead>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px" }}>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "6px 10px", marginBottom: 18 }}>
                 {skills.map((s) => (
                   <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 10.5, color: cream }}>
                     <span style={{ width: 4, height: 4, background: gold, transform: "rotate(45deg)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
                     {s.name}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <SectionHead icon={<IcoShield />}>{labelFor("certifications")}</SectionHead>
+              <div>
+                {certifications.map((c) => (
+                  <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
+                    <div style={{ fontFamily: "inherit", fontSize: 12, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                    {(c.issuer || c.date) && (
+                      <div style={{ fontSize: 9.5, color: gold }}>
+                        {c.issuer || ""}{c.issuer && c.date ? " · " : ""}{c.date || ""}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

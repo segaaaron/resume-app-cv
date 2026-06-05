@@ -166,7 +166,7 @@ export default function MagazineSpreadTemplate() {
 
       {/* Footer */}
       <footer style={{ marginTop: 28, borderTop: `1px solid ${ink}`, paddingTop: 14, display: "flex", justifyContent: "space-between", fontFamily: "ui-monospace, monospace", fontSize: 9, letterSpacing: "0.18em", color: "#6b5e4d" }}>
-        {skills.slice(0, 8).map((sk, i) => (
+        {skills.map((sk, i) => (
           <span key={sk.id}>{i > 0 ? "·" : ""} {sk.name.toUpperCase()}</span>
         ))}
       </footer>

@@ -101,7 +101,7 @@ export default function ExecNocturneTemplate() {
   const roseHi = accent
   const line = `${accent}38`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -258,7 +258,7 @@ export default function ExecNocturneTemplate() {
             <>
               <Sec k="star">{labelFor("skills")}</Sec>
               <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 22, flexWrap: "wrap", gap: 8 }}>
-                {skills.slice(0, 3).map((s) => (
+                {skills.map((s) => (
                   <Gauge key={s.id} pct={SKILL_PCT[s.level] ?? 70} label={s.name} rose={rose} cream={cream} />
                 ))}
               </div>
@@ -282,6 +282,26 @@ export default function ExecNocturneTemplate() {
                   </div>
                 )
               })}
+            </>
+          )}
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <Sec k="edu">{labelFor("certifications")}</Sec>
+              <div style={{ marginBottom: 22 }}>
+                {certifications.map((c) => (
+                  <div key={c.id} style={{ display: "flex", gap: 10, marginBottom: 8, breakInside: "avoid" }}>
+                    <span style={{ color: rose, fontSize: 8, marginTop: 3, flexShrink: 0 }}>◆</span>
+                    <div>
+                      <div style={{ fontSize: 11, color: cream, fontWeight: 600, lineHeight: 1.3 }}>{c.name}</div>
+                      {(c.issuer || c.date) && (
+                        <div style={{ fontSize: 9.5, color: mut }}>
+                          {c.issuer}{c.issuer && c.date ? " · " : ""}{c.date}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </>
           )}
         </div>

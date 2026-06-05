@@ -9,7 +9,7 @@ export default function BoldBlockTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sd = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, projects } = sd
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, projects, certifications } = sd
   const accent = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
@@ -121,7 +121,7 @@ export default function BoldBlockTemplate() {
 
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
-            <div>
+            <div style={{ marginBottom: 24 }}>
               <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("languages").toLowerCase()}</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {languages.map((lang) => (
@@ -134,6 +134,21 @@ export default function BoldBlockTemplate() {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Certifications */}
+          {visible("certifications") && certifications.length > 0 && (
+            <div>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("certifications").toLowerCase()}</h2>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ borderLeft: `4px solid ${accent}`, paddingLeft: 12, marginBottom: 12, breakInside: "avoid", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                  <div style={{ fontWeight: 800, fontSize: 12 }}>{c.name}</div>
+                  <div style={{ fontSize: 10.5, color: darkMuted }}>
+                    {c.issuer || ""}{c.issuer && c.date ? " · " : ""}{c.date || ""}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

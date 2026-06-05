@@ -252,7 +252,7 @@ export default function LedgerCVTemplate() {
       {/* Three-column footer cells */}
       <section style={{ marginTop: 24, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 18 }}>
         <Cell title={`${config.language === "en" ? "ASSETS" : "ACTIVOS"} · ${label("skills")}`}>
-          {skills.slice(0, 6).map((sk) => (
+          {skills.map((sk) => (
             <div key={sk.id}>● {sk.name}</div>
           ))}
         </Cell>

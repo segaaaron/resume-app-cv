@@ -94,7 +94,7 @@ export default function HelixTemplate() {
               {/* Hex background */}
               <polygon points="47,1 93,27 93,81 47,107 1,81 1,27" fill={DARK2} stroke={color} strokeWidth="2" />
               {config.photoUrl
-                ? <image href={config.photoUrl} x="1" y="1" width="92" height="106" preserveAspectRatio="xMidYMid slice" clipPath="url(#hex-photo-clip)" />
+                ? <image href={config.photoUrl} x="1" y="1" width="92" height="106" preserveAspectRatio={`xMid${(config.photoPosition ?? 15) < 30 ? "YMin" : (config.photoPosition ?? 15) > 70 ? "YMax" : "YMid"} slice`} clipPath="url(#hex-photo-clip)" />
                 : <text x="47" y="64" textAnchor="middle" fill={color} fontSize="26" fontWeight="800">{initials || "N"}</text>
               }
             </svg>
@@ -156,7 +156,7 @@ export default function HelixTemplate() {
             <div style={{ width: "100%", padding: "0 18px", marginBottom: 18 }}>
               <HelixSideTitle title={label("skills")} color={color} />
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                {skills.slice(0, 9).map((sk) => (
+                {skills.map((sk) => (
                   <div key={sk.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
                     <RingProgress pct={SKILL_PCT[sk.level] ?? 55} color={color} size={30} />
                     <span style={{ fontSize: "10px", color: "rgba(255,255,255,0.78)", fontWeight: 500 }}>

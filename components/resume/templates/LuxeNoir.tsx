@@ -360,7 +360,7 @@ export default function LuxeNoirTemplate() {
           {visible("skills") && skills.length > 0 && (
             <div style={{ marginBottom: 22 }}>
               <LxHead gold={gold} line={line}>{labelFor("skills")}</LxHead>
-              {skills.slice(0, 7).map((s, i, a) => (
+              {skills.map((s, i, a) => (
                 <div
                   key={s.id}
                   style={{

@@ -10,7 +10,7 @@ export default function NauticalTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sectionData = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies, certifications } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const firstName = pd.firstName || "Lucía"
@@ -80,6 +80,18 @@ export default function NauticalTemplate() {
                   <div style={{ height: 4, borderRadius: 99, backgroundColor: "#ffffff22", marginTop: 3 }}>
                     <div style={{ height: "100%", borderRadius: 99, width: `${LANG_W[l.level] ?? 50}%`, backgroundColor: accent }} />
                   </div>
+                </div>
+              ))}
+            </SideSection>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <SideSection title={config.language === "en" ? "Certifications" : "Certificaciones"}>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
+                  <p style={{ fontSize: 9.5, fontWeight: 700, lineHeight: 1.25 }}>{c.name}</p>
+                  {c.issuer && <p style={{ fontSize: 9, opacity: 0.85 }}>{c.issuer}</p>}
+                  {c.date && <p style={{ fontSize: 9, opacity: 0.6 }}>{c.date}</p>}
                 </div>
               ))}
             </SideSection>

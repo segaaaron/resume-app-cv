@@ -82,7 +82,7 @@ export default function ExecSovereignTemplate() {
   const line = `${accent}3d`
   const lineS = `${accent}47`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -222,20 +222,37 @@ export default function ExecSovereignTemplate() {
         {visible("languages") && languages.length > 0 && (
           <>
             <SideHead icon={<IcoGlobe />}>{labelFor("languages")}</SideHead>
-            {languages.map((l) => {
-              const pct = LANG_PCT[l.level] ?? 60
-              return (
-                <div key={l.id} style={{ marginBottom: 8 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 4 }}>
-                    <span>{l.name}</span>
-                    <span style={{ color: gold }}>{langLbl(l.level)}</span>
+            <div style={{ marginBottom: 24 }}>
+              {languages.map((l) => {
+                const pct = LANG_PCT[l.level] ?? 60
+                return (
+                  <div key={l.id} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, marginBottom: 4 }}>
+                      <span>{l.name}</span>
+                      <span style={{ color: gold }}>{langLbl(l.level)}</span>
+                    </div>
+                    <div style={{ height: 2, background: "rgba(255,255,255,0.12)", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
+                      <div style={{ width: `${pct}%`, height: "100%", background: gold, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
+                    </div>
                   </div>
-                  <div style={{ height: 2, background: "rgba(255,255,255,0.12)", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: gold, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {visible("certifications") && certifications.length > 0 && (
+          <>
+            <SideHead icon={<IcoShield />}>{labelFor("certifications")}</SideHead>
+            <div>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                  {c.issuer && <div style={{ fontSize: 10, color: "#c2c4cf" }}>{c.issuer}</div>}
+                  {c.date && <div style={{ fontSize: 9.5, color: gold, marginTop: 1 }}>{c.date}</div>}
                 </div>
-              )
-            })}
+              ))}
+            </div>
           </>
         )}
       </div>

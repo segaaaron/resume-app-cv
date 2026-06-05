@@ -11,7 +11,7 @@ export default function RoseTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sectionData = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies, certifications } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
@@ -119,6 +119,19 @@ export default function RoseTemplate() {
                 <div style={{ height: 4, borderRadius: 99, backgroundColor: accent + "33", marginTop: 2 }}>
                   <div style={{ height: "100%", borderRadius: 99, width: `${LANG_W[l.level] ?? 50}%`, backgroundColor: accent }} />
                 </div>
+              </div>
+            ))}
+          </>
+        )}
+
+        {visible("certifications") && certifications.length > 0 && (
+          <>
+            <SectionHead text={L.certifications} />
+            {certifications.map((c) => (
+              <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
+                <p style={{ fontSize: 10, fontWeight: 700, color: dark, lineHeight: 1.25 }}>{c.name}</p>
+                {c.issuer && <p style={{ fontSize: 9.5, color: accent, fontWeight: 600 }}>{c.issuer}</p>}
+                {c.date && <p style={{ fontSize: 9, color: "#888" }}>{c.date}</p>}
               </div>
             ))}
           </>

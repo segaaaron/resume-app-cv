@@ -97,7 +97,7 @@ export default function ExecOxbloodTemplate() {
   const accent = config.colorScheme || "#caa24c"
   const gold = accent
   const data = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -213,23 +213,40 @@ export default function ExecOxbloodTemplate() {
         {visible("languages") && languages.length > 0 && (
           <>
             <Sec k="book">{labelFor("languages")}</Sec>
-            {languages.map((l) => (
-              <div
-                key={l.id}
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  fontSize: 10.5,
-                  padding: "4px 0",
-                  borderBottom: "1px solid rgba(255,255,255,0.1)",
-                  WebkitPrintColorAdjust: "exact",
-                  printColorAdjust: "exact",
-                }}
-              >
-                <span>{l.name}</span>
-                <span style={{ color: gold }}>{langLbl(l.level)}</span>
-              </div>
-            ))}
+            <div style={{ marginBottom: 26 }}>
+              {languages.map((l) => (
+                <div
+                  key={l.id}
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 10.5,
+                    padding: "4px 0",
+                    borderBottom: "1px solid rgba(255,255,255,0.1)",
+                    WebkitPrintColorAdjust: "exact",
+                    printColorAdjust: "exact",
+                  }}
+                >
+                  <span>{l.name}</span>
+                  <span style={{ color: gold }}>{langLbl(l.level)}</span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+
+        {visible("certifications") && certifications.length > 0 && (
+          <>
+            <Sec k="book">{labelFor("certifications")}</Sec>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ breakInside: "avoid" }}>
+                  <div style={{ fontSize: 11.5, fontWeight: 600, color: "#ecdfd3", lineHeight: 1.25 }}>{c.name}</div>
+                  {c.issuer && <div style={{ fontSize: 10, color: "#d8c5b3" }}>{c.issuer}</div>}
+                  {c.date && <div style={{ fontSize: 9.5, color: gold }}>{c.date}</div>}
+                </div>
+              ))}
+            </div>
           </>
         )}
       </div>

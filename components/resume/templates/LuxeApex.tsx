@@ -145,7 +145,7 @@ export default function LuxeApexTemplate() {
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,
-    skills, languages,
+    skills, languages, certifications,
   } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
@@ -301,7 +301,7 @@ export default function LuxeApexTemplate() {
             <>
               <LxHead color={ice} line={line}>{labelFor("skills")}</LxHead>
               <div style={{ marginBottom: 22 }}>
-                {skills.slice(0, 6).map((s) => {
+                {skills.map((s) => {
                   const p = skillPct(s.level)
                   return (
                     <div key={s.id} style={{ marginBottom: 10 }}>
@@ -363,6 +363,21 @@ export default function LuxeApexTemplate() {
                   >
                     <span>{l.name}</span>
                     <span style={{ color: ice }}>{langLbl(l.level)}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <LxHead color={ice} line={line}>{labelFor("certifications")}</LxHead>
+              <div style={{ marginBottom: 22 }}>
+                {certifications.map((c) => (
+                  <div key={c.id} style={{ marginBottom: 9, breakInside: "avoid" }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                    {c.issuer && <div style={{ fontFamily: MONO, fontSize: 9.5, color: mut }}>{c.issuer}</div>}
+                    {c.date && <div style={{ fontFamily: MONO, fontSize: 9.5, color: ice, marginTop: 2 }}>{c.date}</div>}
                   </div>
                 ))}
               </div>

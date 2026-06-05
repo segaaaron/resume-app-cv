@@ -11,7 +11,7 @@ export default function CobaltTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sectionData = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies } = sectionData
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, hobbies, certifications } = sectionData
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const name = [pd.firstName || "Carlos", pd.lastName || "García Ruiz"].join(" ")
@@ -74,6 +74,21 @@ export default function CobaltTemplate() {
             <SideHead text={L.languages} color={accent} />
             <div style={{ marginBottom: 16 }}>
               {langs.map((l) => <p key={l.id} style={{ fontSize: 9.5, marginBottom: 3, opacity: 0.85 }}>{l.name}</p>)}
+            </div>
+          </>
+        )}
+
+        {visible("certifications") && certifications.length > 0 && (
+          <>
+            <SideHead text={L.certifications} color={accent} />
+            <div style={{ marginBottom: 16 }}>
+              {certifications.map((c) => (
+                <div key={c.id} style={{ marginBottom: 7, breakInside: "avoid" }}>
+                  <p style={{ fontSize: 9.5, fontWeight: 700 }}>{c.name}</p>
+                  {c.issuer && <p style={{ fontSize: 9, color: accent }}>{c.issuer}</p>}
+                  {c.date && <p style={{ fontSize: 9, opacity: 0.6 }}>{c.date}</p>}
+                </div>
+              ))}
             </div>
           </>
         )}

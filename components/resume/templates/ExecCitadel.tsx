@@ -81,7 +81,7 @@ export default function ExecCitadelTemplate() {
   const line = `${accent}3d`
   const lineFaint = `${accent}1f`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, workExperience, education, skills } = data
+  const { personalDetails: pd, workExperience, education, skills, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -231,6 +231,24 @@ export default function ExecCitadelTemplate() {
                   <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 10.5, color: cream }}>
                     <span style={{ width: 4, height: 4, background: gold, transform: "rotate(45deg)", flexShrink: 0, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
                     {s.name}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {visible("certifications") && certifications.length > 0 && (
+            <>
+              <SectionHead icon={<IcoShield />}>{labelFor("certifications")}</SectionHead>
+              <div style={{ marginBottom: 22 }}>
+                {certifications.map((c) => (
+                  <div key={c.id} style={{ marginBottom: 9, breakInside: "avoid" }}>
+                    <div style={{ fontFamily: "inherit", fontSize: 12, color: "#fff" }}>{c.name}</div>
+                    {(c.issuer || c.date) && (
+                      <div style={{ fontSize: 9.5, color: gold }}>
+                        {c.issuer || ""}{c.issuer && c.date ? " · " : ""}{c.date || ""}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

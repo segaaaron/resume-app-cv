@@ -154,7 +154,7 @@ export default function LuxeAurumTemplate() {
 
   const firstLine = pd.firstName || "Your"
   const lastLine = pd.lastName || "Name"
-  const gauges = skills.slice(0, 3).map((s) => ({ label: s.name, pct: skillPct(s.level) }))
+  const gauges = skills.map((s) => ({ label: s.name, pct: skillPct(s.level) }))
 
   return (
     <div
@@ -201,6 +201,7 @@ export default function LuxeAurumTemplate() {
                 height: 128,
                 borderRadius: "50%",
                 objectFit: "cover",
+                objectPosition: `center ${config.photoPosition ?? 15}%`,
                 display: "block",
               }}
             />
