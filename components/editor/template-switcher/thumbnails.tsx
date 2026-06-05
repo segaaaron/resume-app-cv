@@ -1,4 +1,5 @@
 import React from "react"
+import dynamic from "next/dynamic"
 import {
   ClassicThumb, ModernThumb, SidebarResumeThumb, ElegantResumeThumb,
   ProfessionalThumb, ExecutiveResumeThumb, MinimalResumeThumb,
@@ -15,39 +16,15 @@ import {
   StockholmThumb, DublinThumb, HelsinkiThumb, LagosThumb, SeoulThumb,
   CopenhagenThumb, GenevanoirThumb, ReykjavikThumb,
 } from "./thumbnails-pro-b"
-import {
-  ClassicMonoThumb, EditorialSerifThumb, BoldBlockThumb, TimelineVerticalThumb,
-  SwissGridThumb, ApexThumb, NovaThumb, CascadeThumb, OnyxThumb, MosaicThumb,
-  ThompsonThumb, LarssonThumb, CharcoalClassicThumb, NavyExecutiveThumb,
-  CoralSidebarThumb, SageBotanicalThumb,
-  IOSAppCVThumb, DataDrivenThumb, MagazineSpreadThumb,
-  CivilEngThumb,
-  ProcessFlowThumb, FrontPageThumb, VinylCVThumb, CallSheetThumb,
-  CopywriterMagThumb, AnimatorCVThumb, ChefMenuThumb, SommelierThumb,
-  HotelCVThumb, BartenderCVThumb, LegalBriefThumb,
-  EngravedThumb, ChalkboardThumb, AcademicCVThumb, PsychologistThumb,
-  PilotLogThumb, OnboardingFormThumb, AthleteCardThumb, TranslatorCVThumb,
-  HerbariumCVThumb, RisoDesignerThumb, UXTokensThumb,
-  BlueprintCVThumb, AnnualReportThumb, FinanceTerminalThumb,
-  CampaignPosterThumb, SalesPitchThumb, LedgerCVThumb, CobaltThumb,
-  DualityThumb, HavanaThumb, HelixThumb, LisbonThumb, NauticalThumb,
-  PrismThumb, TokyoThumb, VitaeThumb, MedicalChartThumb,
-  VitalSignsThumb, VetCVThumb,
-  ATSThumb, CasualThumb, CircularThumb, CoralThumb,
-  FoldThumb, LuxuriousThumb, MetroThumb, RivieraThumb, SharpThumb,
-  SparkThumb, VogueThumb,
-  EliteAtlasThumb, ExecPorcelainThumb, LuxeNoirThumb,
-  EliteCounselThumb, EliteAuraThumb, ElitePulseThumb,
-  EliteCuveeThumb, EliteCadenceThumb, EliteMeridianThumb,
-  LuxeAurumThumb, LuxeVellumThumb, LuxeRegentThumb, LuxeApexThumb,
-  ExecRegencyThumb, ExecSovereignThumb, ExecCitadelThumb, ExecDynastyThumb,
-  ExecOxbloodThumb, ExecCobaltThumb, ExecTerraThumb, ExecNocturneThumb, ExecPlatineThumb,
-  TplAtelierThumb, TplBloomThumb, TplVelvetThumb, TplSaharaThumb, TplPearlThumb,
-  TplGazetteThumb, TplConfettiThumb, TplFrameThumb,
-  ShowCameoThumb, ShowMarquisThumb, ShowSoireeThumb, ShowPlumeThumb,
-  TplChefThumb, TplTeacherThumb, TplJournalistThumb, TplCommunicatorThumb, TplFilmmakerThumb,
-  TplPhotographerThumb, TplArchitectThumb, TplDoctorThumb, TplFashionThumb, TplWriterThumb,
-} from "./thumbnails-pro-c"
+
+// Pro-C is split into 3 lazy chunks. Each chunk loads only when one of its
+// templates is requested, keeping initial bundle small. PRO-C templates are
+// ~100 SVGs; loading them all eagerly was the bottleneck before this split.
+const Skeleton = () => <div className="w-full h-full bg-slate-100 animate-pulse rounded-lg" />
+
+const ProC1 = dynamic(() => import("./thumbnails-pro-c1"), { ssr: false, loading: () => <Skeleton /> })
+const ProC2 = dynamic(() => import("./thumbnails-pro-c2"), { ssr: false, loading: () => <Skeleton /> })
+const ProC3 = dynamic(() => import("./thumbnails-pro-c3"), { ssr: false, loading: () => <Skeleton /> })
 
 export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
   switch (id) {
@@ -90,126 +67,131 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "copenhagen":   return <CopenhagenThumb color={color} />
     case "genevanoir":   return <GenevanoirThumb color={color} />
     case "reykjavik":    return <ReykjavikThumb color={color} />
-    case "apex":         return <ApexThumb color={color} />
-    case "nova":         return <NovaThumb color={color} />
-    case "cascade":      return <CascadeThumb color={color} />
-    case "onyx":         return <OnyxThumb color={color} />
-    case "mosaic":       return <MosaicThumb color={color} />
-    case "larsson":         return <LarssonThumb color={color} />
-    case "thompson":        return <ThompsonThumb color={color} />
-    case "classicmono":     return <ClassicMonoThumb color={color} />
-    case "editorialserif":  return <EditorialSerifThumb color={color} />
-    case "boldblock":       return <BoldBlockThumb color={color} />
-    case "timelinevertical":return <TimelineVerticalThumb color={color} />
-    case "swissgrid":       return <SwissGridThumb color={color} />
-    case "charcoalclassic":  return <CharcoalClassicThumb color={color} />
-    case "navyexecutive":    return <NavyExecutiveThumb color={color} />
-    case "coralsidebar":     return <CoralSidebarThumb color={color} />
-    case "sagebotanical":    return <SageBotanicalThumb color={color} />
-    case "iosappcv":         return <IOSAppCVThumb color={color} />
-    case "datadriven":       return <DataDrivenThumb color={color} />
-    case "magazinespread":   return <MagazineSpreadThumb color={color} />
-    case "legalbrief":       return <LegalBriefThumb color={color} />
-    case "engraved":         return <EngravedThumb color={color} />
-    case "chalkboard":       return <ChalkboardThumb color={color} />
-    case "academiccv":       return <AcademicCVThumb color={color} />
-    case "psychologist":     return <PsychologistThumb color={color} />
-    case "chefmenu":         return <ChefMenuThumb color={color} />
-    case "sommelier":        return <SommelierThumb color={color} />
-    case "hotelcv":          return <HotelCVThumb color={color} />
-    case "bartendercv":      return <BartenderCVThumb color={color} />
-    case "medicalchart":     return <MedicalChartThumb color={color} />
-    case "vitalsigns":       return <VitalSignsThumb color={color} />
-    case "vetcv":            return <VetCVThumb color={color} />
-    case "pilotlog":         return <PilotLogThumb color={color} />
-    case "onboardingform":   return <OnboardingFormThumb color={color} />
-    case "athletecard":      return <AthleteCardThumb color={color} />
-    case "translatorcv":     return <TranslatorCVThumb color={color} />
-    case "herbariumcv":      return <HerbariumCVThumb color={color} />
-    case "frontpage":        return <FrontPageThumb color={color} />
-    case "vinylcv":          return <VinylCVThumb color={color} />
-    case "callsheet":        return <CallSheetThumb color={color} />
-    case "copywritermag":    return <CopywriterMagThumb color={color} />
-    case "animatorcv":       return <AnimatorCVThumb color={color} />
-    case "civileng":         return <CivilEngThumb color={color} />
-    case "processflow":           return <ProcessFlowThumb color={color} />
-    case "risodesigner":          return <RisoDesignerThumb color={color} />
-    case "uxtokens":              return <UXTokensThumb color={color} />
-    case "blueprintcv":           return <BlueprintCVThumb color={color} />
-    case "annualreport":          return <AnnualReportThumb color={color} />
-    case "financeterminal":       return <FinanceTerminalThumb color={color} />
-    case "campaignposter":        return <CampaignPosterThumb color={color} />
-    case "salespitch":            return <SalesPitchThumb color={color} />
-    case "ledgercv":              return <LedgerCVThumb color={color} />
-    case "cobalt":         return <CobaltThumb color={color} />
-    case "duality":        return <DualityThumb color={color} />
-    case "havana":         return <HavanaThumb color={color} />
-    case "helix":          return <HelixThumb color={color} />
-    case "lisbon":         return <LisbonThumb color={color} />
-    case "nautical":       return <NauticalThumb color={color} />
-    case "prism":          return <PrismThumb color={color} />
-    case "tokyo":          return <TokyoThumb color={color} />
-    case "vitae":          return <VitaeThumb color={color} />
-    case "ats":          return <ATSThumb color={color} />
-    case "casual":       return <CasualThumb color={color} />
-    case "circular":     return <CircularThumb color={color} />
-    case "coral":        return <CoralThumb color={color} />
-    case "fold":         return <FoldThumb color={color} />
-    case "luxurious":    return <LuxuriousThumb color={color} />
-    case "metro":        return <MetroThumb color={color} />
-    case "riviera":      return <RivieraThumb color={color} />
-    case "sharp":        return <SharpThumb color={color} />
-    case "spark":        return <SparkThumb color={color} />
-    case "vogue":        return <VogueThumb color={color} />
-    // Elite / Exec / Luxe — full batch (planillas-lujosas-Jun-2026)
-    case "elite-atlas":      return <EliteAtlasThumb color={color} />
-    case "exec-porcelain":   return <ExecPorcelainThumb color={color} />
-    case "luxe-noir":        return <LuxeNoirThumb color={color} />
-    case "elite-counsel":    return <EliteCounselThumb color={color} />
-    case "elite-aura":       return <EliteAuraThumb color={color} />
-    case "elite-pulse":      return <ElitePulseThumb color={color} />
-    case "elite-cuvee":      return <EliteCuveeThumb color={color} />
-    case "elite-cadence":    return <EliteCadenceThumb color={color} />
-    case "elite-meridian":   return <EliteMeridianThumb color={color} />
-    case "luxe-aurum":       return <LuxeAurumThumb color={color} />
-    case "luxe-vellum":      return <LuxeVellumThumb color={color} />
-    case "luxe-regent":      return <LuxeRegentThumb color={color} />
-    case "luxe-apex":        return <LuxeApexThumb color={color} />
-    case "exec-regency":     return <ExecRegencyThumb color={color} />
-    case "exec-sovereign":   return <ExecSovereignThumb color={color} />
-    case "exec-citadel":     return <ExecCitadelThumb color={color} />
-    case "exec-dynasty":     return <ExecDynastyThumb color={color} />
-    case "exec-oxblood":     return <ExecOxbloodThumb color={color} />
-    case "exec-cobalt":      return <ExecCobaltThumb color={color} />
-    case "exec-terra":       return <ExecTerraThumb color={color} />
-    case "exec-nocturne":    return <ExecNocturneThumb color={color} />
-    case "exec-platine":     return <ExecPlatineThumb color={color} />
-    // Signature / Tpl
-    case "atelier":          return <TplAtelierThumb color={color} />
-    case "bloom":            return <TplBloomThumb color={color} />
-    case "velvet":           return <TplVelvetThumb color={color} />
-    case "sahara":           return <TplSaharaThumb color={color} />
-    case "pearl":            return <TplPearlThumb color={color} />
-    // Flagship Premium
-    case "editorial2":       return <TplGazetteThumb color={color} />
-    case "confetti":         return <TplConfettiThumb color={color} />
-    case "frame":            return <TplFrameThumb color={color} />
-    // Showcase
-    case "show-cameo":       return <ShowCameoThumb color={color} />
-    case "show-marquis":     return <ShowMarquisThumb color={color} />
-    case "show-soiree":      return <ShowSoireeThumb color={color} />
-    case "show-plume":       return <ShowPlumeThumb color={color} />
-    // By Profession
-    case "chef":             return <TplChefThumb color={color} />
-    case "teacher":          return <TplTeacherThumb color={color} />
-    case "journalist":       return <TplJournalistThumb color={color} />
-    case "communicator":     return <TplCommunicatorThumb color={color} />
-    case "filmmaker":        return <TplFilmmakerThumb color={color} />
-    case "photographer":     return <TplPhotographerThumb color={color} />
-    case "architect":        return <TplArchitectThumb color={color} />
-    case "doctor":           return <TplDoctorThumb color={color} />
-    case "fashion":          return <TplFashionThumb color={color} />
-    case "writer":           return <TplWriterThumb color={color} />
-    default:                 return <ClassicThumb color={color} />
+
+    // ── Pro-C Group 1 (specialty/creative) — lazy-loaded ──
+    case "classicmono":
+    case "editorialserif":
+    case "boldblock":
+    case "timelinevertical":
+    case "swissgrid":
+    case "apex":
+    case "nova":
+    case "cascade":
+    case "onyx":
+    case "mosaic":
+    case "thompson":
+    case "larsson":
+    case "charcoalclassic":
+    case "navyexecutive":
+    case "coralsidebar":
+    case "sagebotanical":
+    case "iosappcv":
+    case "datadriven":
+    case "magazinespread":
+    case "civileng":
+    case "processflow":
+    case "frontpage":
+    case "vinylcv":
+    case "callsheet":
+    case "copywritermag":
+    case "animatorcv":
+    case "chefmenu":
+    case "sommelier":
+    case "hotelcv":
+    case "bartendercv":
+    case "legalbrief":
+    case "engraved":
+    case "chalkboard":
+    case "academiccv":
+    case "psychologist":
+    case "pilotlog":
+    case "onboardingform":
+    case "athletecard":
+    case "translatorcv":
+    case "herbariumcv":
+    case "risodesigner":
+    case "uxtokens":
+    case "blueprintcv":
+    case "annualreport":
+    case "financeterminal":
+    case "campaignposter":
+    case "salespitch":
+    case "ledgercv":
+      return <ProC1 id={id} color={color} />
+
+    // ── Pro-C Group 2 (city/style) — lazy-loaded ──
+    case "cobalt":
+    case "duality":
+    case "havana":
+    case "helix":
+    case "lisbon":
+    case "nautical":
+    case "prism":
+    case "tokyo":
+    case "vitae":
+    case "medicalchart":
+    case "vitalsigns":
+    case "vetcv":
+    case "ats":
+    case "casual":
+    case "circular":
+    case "coral":
+    case "fold":
+    case "luxurious":
+    case "metro":
+    case "riviera":
+    case "sharp":
+    case "spark":
+    case "vogue":
+      return <ProC2 id={id} color={color} />
+
+    // ── Pro-C Group 3 (elite/exec/luxe/tpl/show) — lazy-loaded ──
+    case "elite-atlas":
+    case "exec-porcelain":
+    case "luxe-noir":
+    case "elite-counsel":
+    case "elite-aura":
+    case "elite-pulse":
+    case "elite-cuvee":
+    case "elite-cadence":
+    case "elite-meridian":
+    case "luxe-aurum":
+    case "luxe-vellum":
+    case "luxe-regent":
+    case "luxe-apex":
+    case "exec-regency":
+    case "exec-sovereign":
+    case "exec-citadel":
+    case "exec-dynasty":
+    case "exec-oxblood":
+    case "exec-cobalt":
+    case "exec-terra":
+    case "exec-nocturne":
+    case "exec-platine":
+    case "atelier":
+    case "bloom":
+    case "velvet":
+    case "sahara":
+    case "pearl":
+    case "editorial2":
+    case "confetti":
+    case "frame":
+    case "show-cameo":
+    case "show-marquis":
+    case "show-soiree":
+    case "show-plume":
+    case "chef":
+    case "teacher":
+    case "journalist":
+    case "communicator":
+    case "filmmaker":
+    case "photographer":
+    case "architect":
+    case "doctor":
+    case "fashion":
+    case "writer":
+      return <ProC3 id={id} color={color} />
+
+    default: return <ClassicThumb color={color} />
   }
 }

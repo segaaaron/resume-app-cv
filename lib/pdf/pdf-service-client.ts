@@ -1,6 +1,49 @@
 // web app — API contract with pdf-generator microservice (services/pdf-generator).
 // These fields are consumed by generate-pdf.route.ts in the microservice.
 // If fields change here, update the microservice route in sync.
+
+// Simple async semaphore — no external deps
+type QueueEntry = { cancelled: boolean; acquire: () => void }
+
+let activePdfRequests = 0
+const PDF_CONCURRENCY_LIMIT = 4
+const pdfQueue: QueueEntry[] = []
+
+function acquirePdfSlot(): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    if (activePdfRequests < PDF_CONCURRENCY_LIMIT) {
+      activePdfRequests++
+      resolve()
+      return
+    }
+    const entry: QueueEntry = {
+      cancelled: false,
+      acquire: () => { activePdfRequests++; resolve() },
+    }
+    pdfQueue.push(entry)
+    const timer = setTimeout(() => {
+      entry.cancelled = true
+      reject(new Error("pdf_queue_timeout: PDF service queue full or stalled"))
+    }, 30_000)
+    // Ensure timer doesn't keep process alive
+    if (typeof timer === "object" && "unref" in timer) (timer as NodeJS.Timeout).unref()
+  })
+}
+
+function releasePdfSlot(): void {
+  // Skip cancelled entries (timed-out waiters) until we find a live one
+  while (pdfQueue.length > 0) {
+    const entry = pdfQueue.shift()!
+    if (!entry.cancelled) {
+      entry.acquire()
+      return
+    }
+    // entry was cancelled: don't increment activePdfRequests, just discard it
+  }
+  // No live waiters — decrement normally
+  activePdfRequests--
+}
+
 export type PdfServiceOpts = {
   printUrl: string
   cookies: string
@@ -76,7 +119,7 @@ export async function callScreenshotService(printUrl: string, cookies: string): 
   }
 }
 
-export async function callPdfService(opts: PdfServiceOpts): Promise<Buffer> {
+async function callPdfServiceInternal(opts: PdfServiceOpts): Promise<Buffer> {
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 30_000)
 
@@ -101,5 +144,14 @@ export async function callPdfService(opts: PdfServiceOpts): Promise<Buffer> {
     }
   } finally {
     clearTimeout(timeout)
+  }
+}
+
+export async function callPdfService(opts: PdfServiceOpts): Promise<Buffer> {
+  await acquirePdfSlot()
+  try {
+    return await callPdfServiceInternal(opts)
+  } finally {
+    releasePdfSlot()
   }
 }

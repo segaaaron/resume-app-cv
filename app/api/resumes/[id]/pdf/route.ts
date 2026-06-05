@@ -63,12 +63,21 @@ export async function GET(req: Request, { params }: Params) {
   }
 
   let managedClaimed = false
-  if (user?.isManaged && user.managedDownloadLimit !== null) {
-    const claimed = await db.user.updateMany({
-      where: { id: session.user.id, isManaged: true, managedDownloadsUsed: { lt: user.managedDownloadLimit } },
-      data: { managedDownloadsUsed: { increment: 1 } },
+  if (user?.isManaged) {
+    const managedResult = await db.$transaction(async (tx) => {
+      const fresh = await tx.user.findUnique({
+        where: { id: session.user.id },
+        select: { managedDownloadsUsed: true, managedDownloadLimit: true },
+      })
+      if (!fresh || fresh.managedDownloadLimit === null) return { allowed: false }
+      if (fresh.managedDownloadsUsed >= fresh.managedDownloadLimit) return { allowed: false }
+      await tx.user.update({
+        where: { id: session.user.id },
+        data: { managedDownloadsUsed: { increment: 1 } },
+      })
+      return { allowed: true }
     })
-    if (claimed.count === 0) {
+    if (!managedResult.allowed) {
       return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
     }
     managedClaimed = true

@@ -39,7 +39,11 @@ export async function checkRateLimit(userId: string, endpoint: string, limit = 2
   const now  = Date.now()
   const hit  = rateLimitCache.get(key)
 
-  if (hit && now - hit.cachedAt < CACHE_TTL_MS) {
+  // Near-limit: bypass cache to prevent over-admission
+  if (hit && hit.count > limit - 3) {
+    rateLimitCache.delete(key)
+    // Fall through to DB read
+  } else if (hit && now - hit.cachedAt < CACHE_TTL_MS) {
     if (hit.resetAt < now) return true       // window expired in cache — allow
     return hit.count < limit
   }

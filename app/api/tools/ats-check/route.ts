@@ -4,7 +4,7 @@ import { z } from "zod"
 import { db } from "@/lib/db"
 import { analyzeAts } from "@/lib/ats/analyzer"
 import { extractTextFromPDF } from "@/lib/ats/pdf-parser"
-import { checkAtsRateLimit } from "@/lib/ats/store"
+import { checkAndIncrementRateLimit } from "@/lib/rate-limit"
 import { checkOrigin } from "@/lib/csrf"
 
 export const runtime = "nodejs"
@@ -44,13 +44,12 @@ export async function POST(req: NextRequest) {
   // -------------------- rate limit (per IP) --------------------
   const ip = getClientIp(req)
   const ipHash = hashIp(ip)
-  const rl = checkAtsRateLimit(ipHash)
-  if (!rl.allowed) {
+  const allowed = await checkAndIncrementRateLimit(ipHash, "ats-check", 3, 60 * 60 * 1000)
+  if (!allowed) {
     return NextResponse.json(
       {
         error: "rate_limited",
         message: "Too many checks from your IP. Try again in an hour.",
-        resetAt: rl.resetAt,
       },
       { status: 429 },
     )
@@ -154,7 +153,7 @@ export async function POST(req: NextRequest) {
       allQuickWins: result.full.allQuickWins,
       detailedSuggestions: result.full.detailedSuggestions,
       upgradePath: result.full.upgradePath,
-      rateLimit: { remaining: rl.remaining, resetAt: rl.resetAt },
+      rateLimit: { remaining: null, resetAt: null },
     },
     { status: 200 },
   )

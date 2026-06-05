@@ -34,7 +34,7 @@ const LOGIN_RATE_LIMIT_WINDOW_MS  = 15 * 60 * 1000  // 15 minutes
 // equalizing response time and preventing user enumeration via timing.
 const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
-const CACHE_TTL_MS        = 5 * 60 * 1000        // 5 minutes
+const CACHE_TTL_MS        = 15 * 60 * 1000        // 15 minutes — reduces thundering herd 3x; plan changes invalidate via sessionVersion
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000        // 30 min — used only in authorize stale-session check
 
 interface UserPlanCacheEntry {
@@ -53,6 +53,16 @@ interface UserPlanCacheEntry {
 }
 
 const userPlanCache = new Map<string, UserPlanCacheEntry>()
+
+// Purge expired entries every hour to prevent unbounded growth
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    const now = Date.now()
+    for (const [key, entry] of userPlanCache) {
+      if (entry.expiresAt < now) userPlanCache.delete(key)
+    }
+  }, 60 * 60 * 1000).unref()  // .unref() so it doesn't prevent process exit
+}
 
 export function purgeUserCache(userId: string) {
   userPlanCache.delete(userId)

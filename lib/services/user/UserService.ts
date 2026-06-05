@@ -171,6 +171,8 @@ export class UserService {
     const referralConversions = await db.referralConversion.findMany({
       where: { referrerId: userId },
       select: { referredId: true, createdAt: true },
+      take: 1000,
+      orderBy: { createdAt: "desc" },
     })
 
     this.logger.info("UserService.exportData: export generated", { userId })

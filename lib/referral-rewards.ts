@@ -47,11 +47,15 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
 
     const referrerId = newUser.referredBy
 
-    // H1: idempotent — only count each referred user once per referrer
+    // H1: idempotent — only count each referred user once per referrer.
+    // The ReferralConversion model has a DB-level @@unique([referrerId, referredId]) constraint.
+    // A P2002 (unique violation) on create means this conversion was already recorded — safe to exit.
+    // Webhook replays and concurrent calls are both handled: the second call hits the constraint and returns early.
+    // No stripeEventId guard is needed because the unique key on the conversion row is sufficient.
     try {
       await db.referralConversion.create({ data: { referrerId, referredId: newProUserId } })
     } catch (e: unknown) {
-      if ((e as { code?: string })?.code === "P2002") return // already counted
+      if ((e as { code?: string })?.code === "P2002") return // already counted — idempotent exit
       throw e
     }
 

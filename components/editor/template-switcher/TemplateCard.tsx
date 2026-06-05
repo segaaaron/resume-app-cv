@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useState } from "react"
+import { memo, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
 import { Lock, Check } from "lucide-react"
 import { TEMPLATES, TemplateId } from "@/types/resume"
@@ -26,8 +26,41 @@ export const TemplateCard = memo(function TemplateCard({
   onSelect,
 }: TemplateCardProps) {
   const [hover, setHover] = useState(false)
+  const [visible, setVisible] = useState(false)
+  // On-demand WebP fallback: the <img> hits /api/thumbnails/[id] which renders
+  // the SVG component server-side, rasterises with sharp, and returns a WebP
+  // cached for a year (browser + CDN). If the route 5xx's for any reason, we
+  // fall back to the live in-process SVG <ResumeThumbnail>.
+  const [imgFailed, setImgFailed] = useState(false)
+  const cardRef = useRef<HTMLDivElement>(null)
   const active = isSelected && !locked
   const interactive = !locked
+
+  // Lazy-mount the heavy ResumeThumbnail only once the card scrolls near the viewport.
+  // Once visible, we disconnect the observer so the thumbnail stays mounted (no flicker on re-scroll).
+  useEffect(() => {
+    if (visible) return
+    const node = cardRef.current
+    if (!node) return
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true)
+      return
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            setVisible(true)
+            observer.disconnect()
+            break
+          }
+        }
+      },
+      { rootMargin: "200px" }
+    )
+    observer.observe(node)
+    return () => observer.disconnect()
+  }, [visible])
 
   // Premium multi-layer shadow — soft ambient + subtle navy tint + cyan glow when active
   const baseShadow =
@@ -48,6 +81,7 @@ export const TemplateCard = memo(function TemplateCard({
     >
       {/* Card frame */}
       <div
+        ref={cardRef}
         style={{
           width: "100%",
           aspectRatio: "210/297",
@@ -108,7 +142,22 @@ export const TemplateCard = memo(function TemplateCard({
               "0 1px 2px rgba(15,23,42,0.06), 0 2px 8px rgba(15,23,42,0.06), 0 0 0 0.5px rgba(15,23,42,0.04) inset",
           }}
         >
-          <ResumeThumbnail id={template.id} color={locked ? "#9ca3af" : colorScheme} />
+          {visible ? (
+            imgFailed ? (
+              <ResumeThumbnail id={template.id} color={locked ? "#9ca3af" : colorScheme} />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={`/api/thumbnails/${template.id}?color=${encodeURIComponent(locked ? "#9ca3af" : colorScheme)}`}
+                alt=""
+                className="w-full h-full object-cover object-top"
+                onError={() => setImgFailed(true)}
+                draggable={false}
+              />
+            )
+          ) : (
+            <div className="w-full h-full bg-slate-100 animate-pulse rounded-lg" />
+          )}
         </div>
 
         {/* Locked overlay — premium frosted look */}
