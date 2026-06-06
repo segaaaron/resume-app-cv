@@ -1,6 +1,9 @@
 import { db } from "@/lib/db"
+import { createLogger } from "@/lib/logger"
 import type { IPendingRegistrationRepository, PendingUpsertData } from "@/lib/interfaces/IPendingRegistrationRepository"
 import type { PendingRecord } from "@/lib/interfaces/IUserRepository"
+
+const logger = createLogger("pending-registration-repo")
 
 export class PrismaPendingRegistrationRepository implements IPendingRegistrationRepository {
   async findByEmail(email: string): Promise<PendingRecord | null> {
@@ -20,6 +23,8 @@ export class PrismaPendingRegistrationRepository implements IPendingRegistration
   }
 
   async deleteByEmail(email: string): Promise<void> {
-    await db.pendingRegistration.delete({ where: { email } }).catch(() => {})
+    await db.pendingRegistration.delete({ where: { email } }).catch((err) => {
+      logger.error("PrismaPendingRegistrationRepository.deleteByEmail failed", { email }, err instanceof Error ? err : undefined)
+    })
   }
 }

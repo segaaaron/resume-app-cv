@@ -106,7 +106,7 @@ export class CoverLetterService {
       if (limitHit) {
         db.auditLog
           .create({ data: { userId, action: "FREE_COVER_LETTER_LIMIT_HIT", metadata: { limit: limits.maxCoverLetters } } })
-          .catch(() => { /* fire-and-forget */ })
+          .catch((auditErr) => { this.logger.error("cover-letter.create: auditLog FREE_COVER_LETTER_LIMIT_HIT failed", { userId }, auditErr instanceof Error ? auditErr : undefined) })
       }
       throw err
     })

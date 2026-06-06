@@ -27,7 +27,7 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
   const planParam = searchParams.get("plan")
   const refParam = searchParams.get("ref")
   const [googleLoading, setGoogleLoading] = useState(false)
-  const [emailConflict, setEmailConflict] = useState<"credentials" | "google" | null>(null)
+  const [emailConflict, setEmailConflict] = useState<"exists" | null>(null)
   const [showPassword, setShowPassword] = useState(false)
   const [step, setStep] = useState<RegisterStep>("form")
   const [submittedEmail, setSubmittedEmail] = useState("")
@@ -68,12 +68,8 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
 
     const body = await res.json().catch(() => ({}))
 
-    if (res.status === 409 && body.error === "email_exists_credentials") {
-      setEmailConflict("credentials")
-      return
-    }
-    if (res.status === 409 && body.error === "email_exists_google") {
-      setEmailConflict("google")
+    if (res.status === 409 && body.error === "email_exists") {
+      setEmailConflict("exists")
       return
     }
 
@@ -387,40 +383,19 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
           </label>
         </div>
 
-        {/* Email conflict banners */}
-        {emailConflict === "credentials" && (
+        {/* Email conflict banner */}
+        {emailConflict === "exists" && (
           <div className="p-3.5 rounded-[10px] flex items-start gap-2.5"
             style={{ background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.2)" }}>
             <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
             <div>
-              <p className="text-[13px] text-blue-800">{t("fp_banner_credentials")}</p>
+              <p className="text-[13px] text-blue-800">{t("email_already_registered")}</p>
               <button
                 type="button"
                 onClick={() => router.push(`/${locale}/login`)}
                 className="mt-1.5 text-[12px] font-semibold text-blue-700 hover:text-blue-900 underline underline-offset-2 transition-colors"
               >
                 {t("fp_banner_credentials_cta")}
-              </button>
-            </div>
-          </div>
-        )}
-        {emailConflict === "google" && (
-          <div className="p-3.5 rounded-[10px] flex items-start gap-2.5"
-            style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
-            <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-            <div>
-              <p className="text-[13px] text-amber-800">{t("fp_banner_google")}</p>
-              <button
-                type="button"
-                disabled={googleLoading}
-                onClick={async () => {
-                  setGoogleLoading(true)
-                  await signIn("google", { callbackUrl: `/${locale}/dashboard/resumes` })
-                }}
-                className="mt-1.5 text-[12px] font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2 transition-colors flex items-center gap-1 disabled:opacity-60"
-              >
-                {googleLoading && <Loader2 className="w-3 h-3 animate-spin" />}
-                {t("fp_banner_google_cta")}
               </button>
             </div>
           </div>

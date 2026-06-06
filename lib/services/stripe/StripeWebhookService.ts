@@ -16,6 +16,19 @@ function isDuplicate(e: unknown): boolean {
   return (e as PrismaUniqueError)?.code === "P2002"
 }
 
+type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
+
+/** Claim an event for idempotent processing. Returns false if already processed. */
+async function claimEvent(tx: TxClient, eventId: string, extra?: Record<string, unknown>): Promise<boolean> {
+  try {
+    await tx.stripeEvent.create({ data: { id: eventId, ...extra } })
+    return true
+  } catch (e) {
+    if (isDuplicate(e)) return false
+    throw e
+  }
+}
+
 export class StripeWebhookService {
   constructor(
     private readonly stripeClient: IStripeClient,
@@ -87,8 +100,7 @@ export class StripeWebhookService {
     }
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id, userId, checkoutSessionId: session.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true }; throw e }
+      if (!await claimEvent(tx, event.id, { userId, checkoutSessionId: session.id })) return { skip: true }
       const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { isManaged: true } })
       if (targetUser?.isManaged) return { skip: true }
       await tx.user.update({
@@ -127,13 +139,14 @@ export class StripeWebhookService {
     const firstItem = subscription.items.data[0]
     if (!firstItem) return
     const renewalDate = new Date(firstItem.current_period_end * 1000)
+    const invoiceInterval = firstItem.price?.recurring?.interval
+    const planInterval = (invoiceInterval === "year" ? "annual" : "monthly") as "monthly" | "annual"
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, user: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
       const user = await tx.user.findUnique({
         where: { stripeCustomerId: customerId },
-        select: { id: true, name: true, email: true, planInterval: true, isManaged: true },
+        select: { id: true, name: true, email: true, isManaged: true },
       })
       if (!user) return { skip: false, user: null }
       if (user.isManaged) return { skip: true, user: null }
@@ -144,6 +157,7 @@ export class StripeWebhookService {
           plan: "PRO",
           subscriptionStatus: "ACTIVE",
           subscriptionEndsAt: renewalDate,
+          planInterval,
           sessionVersion: { increment: 1 },
         },
       })
@@ -157,7 +171,6 @@ export class StripeWebhookService {
       this.logger.error("handleInvoicePaid: user has no email — confirmation email skipped", { eventId: event.id, userId: result.user.id })
     }
     if (emailEnabled() && resend && result.user.email) {
-      const planInterval = (result.user.planInterval ?? "monthly") as "monthly" | "annual"
       await resend.emails.send({
         from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: result.user.email,
@@ -173,8 +186,7 @@ export class StripeWebhookService {
     const customerId = sub.customer as string
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true } })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }
@@ -210,8 +222,7 @@ export class StripeWebhookService {
     const customerId = sub.customer as string
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true } })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }
@@ -231,8 +242,7 @@ export class StripeWebhookService {
     if (sub.status !== "active") return
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true } })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }
@@ -252,8 +262,7 @@ export class StripeWebhookService {
     if (!customerId) return
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null, partial: false, subscriptionId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, partial: false, subscriptionId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, subscriptionId: true } })
       if (!user) return { skip: false, userId: null, partial: false, subscriptionId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
@@ -288,8 +297,7 @@ export class StripeWebhookService {
     const resolvedCustomerId = customerId
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null, subscriptionId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, subscriptionId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: resolvedCustomerId }, select: { id: true, subscriptionId: true } })
       if (!user) return { skip: false, userId: null, subscriptionId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
@@ -321,8 +329,7 @@ export class StripeWebhookService {
     const disputeWon = dispute.status === "won"
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null, userEmail: null, userName: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, userEmail: null, userName: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: resolvedCustomerId }, select: { id: true, email: true, name: true } })
       if (!user) return { skip: false, userId: null, userEmail: null, userName: null }
       await tx.auditLog.create({ data: { userId: user.id, action: disputeWon ? "DISPUTE_WON_MANUAL_REVIEW" : "DISPUTE_CLOSED", metadata: { disputeId: dispute.id, chargeId, status: dispute.status, amount: dispute.amount } } })
@@ -357,8 +364,7 @@ export class StripeWebhookService {
     const invoiceUrl = invoice.hosted_invoice_url ?? null
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, user: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
       const user = await tx.user.findUnique({
         where: { stripeCustomerId: customerId },
         select: { id: true, name: true, email: true },
@@ -397,8 +403,7 @@ export class StripeWebhookService {
     if (!customerId) return
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null, subscriptionId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, subscriptionId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, subscriptionId: true } })
       if (!user) return { skip: false, userId: null, subscriptionId: null }
       await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
@@ -432,8 +437,7 @@ export class StripeWebhookService {
     if (!newName) return
 
     const result = await db.$transaction(async (tx) => {
-      try { await tx.stripeEvent.create({ data: { id: event.id } }) }
-      catch (e) { if (isDuplicate(e)) return { skip: true, userId: null }; throw e }
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
       const user = await tx.user.findUnique({ where: { stripeCustomerId: customer.id }, select: { id: true, isManaged: true } })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }

@@ -6,7 +6,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson } from "../shared/ai-helpers"
-import { logAICost } from "../shared/cost-tracker"
+import { computeCostUsd } from "../shared/cost-tracker"
 import type { BulletResult, ImproveBulletInput } from "../shared/ai-types"
 
 export class AIBulletModule {
@@ -111,8 +111,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       throw new AppError("off_topic", 422)
     }
 
-    logAIUsage(userId, "improve-bullet")
-    logAICost(this.logger, userId, "improve-bullet", plan)
+    const usage = response.usage
+    logAIUsage(userId, "improve-bullet", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: usage?.prompt_tokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+    })
     return { bullets: (parsed.bullets as string[]).slice(0, 10) }
   }
 }

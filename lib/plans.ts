@@ -109,9 +109,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   },
 }
 
-export function isPro(plan: string): boolean {
-  return plan === "PRO" || plan === "LIMITED"
-}
 
 export function isActive(
   plan: Plan | string,

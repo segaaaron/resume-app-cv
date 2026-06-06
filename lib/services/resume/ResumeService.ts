@@ -1,16 +1,36 @@
 // lib/services/resume/ResumeService.ts
 import { db } from "@/lib/db"
+import { createLogger } from "@/lib/logger"
 import type { ILogger } from "@/lib/interfaces/ILogger"
+
+const moduleLogger = createLogger("resume-service")
 import { AppError } from "@/lib/services/auth/AppError"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
 import { getLimits, isActive } from "@/lib/plans"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 
+// ─── Shared helpers ──────────────────────────────────────────────────────────
+
+type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
+
+async function enforceResumeLimit(tx: TxClient, userId: string, maxResumes: number, op = "create"): Promise<void> {
+  if (maxResumes === -1) return
+  const count = await tx.resume.count({ where: { userId } })
+  if (count >= maxResumes) {
+    db.auditLog.create({
+      data: { userId, action: "FREE_RESUME_LIMIT_HIT", metadata: { limit: maxResumes, op } },
+    }).catch((err) => {
+      moduleLogger.error("enforceResumeLimit: auditLog FREE_RESUME_LIMIT_HIT failed", { userId, op }, err instanceof Error ? err : undefined)
+    })
+    throw new AppError("plan_limit_resume", 403, { limit: maxResumes })
+  }
+}
+
 // ─── Snapshot schema (mirrors autosave fields) ────────────────────────────────
 
 export const snapshotConfigSchema = z.object({
-  templateId:    z.string().optional(),
+  templateId:    z.string().max(100).optional(),
   colorScheme:   z.string().optional(),
   fontFamily:    z.string().optional(),
   fontSize:      z.number().optional(),
@@ -39,7 +59,7 @@ export const resumePatchSchema = z.object({
     { message: "sectionData too large" }
   ),
   config: z.object({
-    templateId:    z.string().optional(),
+    templateId:    z.string().max(100).optional(),
     colorScheme:   z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
     fontFamily:    z.string().max(100).optional(),
     fontSize:      z.number().int().min(8).max(24).optional(),
@@ -147,15 +167,8 @@ export class ResumeService {
 
     // Transaction ensures count-check and create are atomic — prevents two concurrent
     // requests from both passing the limit check and creating two resumes.
-    let limitHit = false
     const resume = await db.$transaction(async (tx) => {
-      if (limits.maxResumes !== -1) {
-        const count = await tx.resume.count({ where: { userId } })
-        if (count >= limits.maxResumes) {
-          limitHit = true
-          throw new AppError("plan_limit_resume", 403, { limit: limits.maxResumes })
-        }
-      }
+      await enforceResumeLimit(tx, userId, limits.maxResumes)
       return tx.resume.create({
         data: {
           userId,
@@ -165,15 +178,6 @@ export class ResumeService {
           ...(templateId ? { templateId } : {}),
         },
       })
-    }).catch((err) => {
-      if (limitHit) {
-        db.auditLog.create({
-          data: { userId, action: "FREE_RESUME_LIMIT_HIT", metadata: { limit: limits.maxResumes } },
-        }).catch((auditErr) => {
-          this.logger.error("[ResumeService] auditLog FREE_RESUME_LIMIT_HIT failed", { userId }, auditErr)
-        })
-      }
-      throw err
     })
 
     this.logger.info("[ResumeService] create", { userId, resumeId: resume.id })
@@ -242,17 +246,7 @@ export class ResumeService {
     const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
 
     const copy = await db.$transaction(async (tx) => {
-      if (limits.maxResumes !== -1) {
-        const count = await tx.resume.count({ where: { userId } })
-        if (count >= limits.maxResumes) {
-          db.auditLog.create({
-            data: { userId, action: "FREE_RESUME_LIMIT_HIT", metadata: { limit: limits.maxResumes, op: "duplicate" } },
-          }).catch((err) => {
-            this.logger.error("[ResumeService] auditLog FREE_RESUME_LIMIT_HIT (duplicate) failed", { userId }, err)
-          })
-          throw new AppError("plan_limit_resume", 403, { limit: limits.maxResumes })
-        }
-      }
+      await enforceResumeLimit(tx, userId, limits.maxResumes, "duplicate")
       return tx.resume.create({
         data: {
           userId,

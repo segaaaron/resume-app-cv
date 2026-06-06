@@ -9,11 +9,8 @@ import { checkAndIncrementRateLimit, checkRateLimit, recordRateLimitFailure } fr
 
 const logger = createLogger("auth")
 
-class UserNotFoundError extends CredentialsSignin {
-  code = "user_not_found" as const
-}
-class InvalidPasswordError extends CredentialsSignin {
-  code = "invalid_password" as const
+class InvalidCredentialsError extends CredentialsSignin {
+  code = "invalid_credentials" as const
 }
 class ActiveSessionError extends CredentialsSignin {
   code = "active_session" as const
@@ -137,7 +134,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           await bcrypt.compare(credentials.password as string, DUMMY_HASH)
           // Count user-not-found against IP only (email is unknown/invalid — no per-email counter).
           await recordRateLimitFailure(ipKey, "login-password")
-          throw new UserNotFoundError()
+          throw new InvalidCredentialsError()
         }
         if (user.deletedAt !== null) return null
 
@@ -155,7 +152,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             ipBlocked:    !ipStillAllowed,
           })
           if (!emailStillAllowed || !ipStillAllowed) throw new RateLimitedError()
-          throw new InvalidPasswordError()
+          throw new InvalidCredentialsError()
         }
 
         // Block if account is challenge-blocked
@@ -374,7 +371,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           tokenHas: token.activeSessionToken as string,
           dbHas: dbUser.activeSessionToken ?? undefined,
         })
-        await db.user.update({ where: { id: userId }, data: { activeSessionToken: null } }).catch(() => {})
+        await db.user.update({ where: { id: userId }, data: { activeSessionToken: null } }).catch((err) => {
+          logger.error("JWT callback: clear activeSessionToken failed", { userId }, err instanceof Error ? err : undefined)
+        })
         purgeUserCache(userId)
         return null
       }

@@ -4,6 +4,7 @@ import { Users as UsersIcon, ArrowRight } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import AdminUsersTable from "@/components/admin/AdminUsersTable"
+import AIUsagePanel from "@/components/admin/AIUsagePanel"
 import { getTranslations } from "next-intl/server"
 
 export const dynamic = "force-dynamic"
@@ -202,6 +203,9 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
           <ArrowRight className="w-4 h-4 text-[#00D4FF] transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </div>
+
+      {/* AI Usage Panel */}
+      <AIUsagePanel />
 
       {/* Table — horizontal scroll on mobile */}
       <div className="dash-card-in overflow-x-auto" style={{ animationDelay: "120ms" }}>

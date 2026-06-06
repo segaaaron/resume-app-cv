@@ -147,6 +147,7 @@ model Resume {
   updatedAt       DateTime        @updatedAt
 
   @@index([userId])
+  @@index([userId, updatedAt(sort: Desc)])
 }
 
 model ResumeVersion {
@@ -173,6 +174,7 @@ model CoverLetter {
   updatedAt   DateTime @updatedAt
 
   @@index([userId])
+  @@index([userId, updatedAt(sort: Desc)])
 }
 
 model Application {
@@ -223,10 +225,15 @@ model AIRateLimit {
 }
 
 model AIUsageLog {
-  id        String   @id @default(cuid())
-  userId    String
-  endpoint  String
-  createdAt DateTime @default(now())
+  id               String   @id @default(cuid())
+  userId           String
+  endpoint         String
+  model            String   @default("")
+  plan             String   @default("")
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  costUsd          Float    @default(0)
+  createdAt        DateTime @default(now())
 
   @@index([userId])
   @@index([endpoint])

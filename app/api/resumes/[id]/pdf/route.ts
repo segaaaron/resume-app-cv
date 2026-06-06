@@ -6,10 +6,8 @@ import { createLogger } from "@/lib/logger"
 const logger = createLogger("resume-pdf")
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
-import { checkAndIncrementRateLimit, PDF_RATE_LIMIT_WINDOW_MS } from "@/lib/rate-limit"
 import { isActive } from "@/lib/plans"
 
-const PDF_DAILY_LIMIT = 15
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -55,11 +53,6 @@ export async function GET(req: Request, { params }: Params) {
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })
     return NextResponse.json({ error: "subscription_required" }, { status: 403 })
-  }
-
-  const allowed = await checkAndIncrementRateLimit(session.user.id, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
-  if (!allowed) {
-    return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
   }
 
   let managedClaimed = false

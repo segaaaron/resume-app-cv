@@ -2,7 +2,10 @@
 import { db } from "@/lib/db"
 import { checkAndIncrementAIQuota } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
+import { createLogger } from "@/lib/logger"
 import type { AiEndpointName } from "@/lib/plans"
+
+const logger = createLogger("quota-enforcer")
 
 /**
  * Enforces per-plan AI quota. On failure, emits a fire-and-forget AuditLog entry
@@ -24,7 +27,7 @@ export async function enforceAIQuota(
   if (check.reason === "blocked") {
     db.auditLog
       .create({ data: { userId, action: "FREE_AI_ENDPOINT_BLOCKED", metadata: { endpoint } } })
-      .catch(() => { /* fire-and-forget */ })
+      .catch((err) => { logger.error("quota-enforcer: auditLog write failed", { userId, endpoint }, err instanceof Error ? err : undefined) })
     throw new AppError("feature_pro_only", 403, { endpoint })
   }
 
@@ -37,6 +40,6 @@ export async function enforceAIQuota(
         metadata: { endpoint, used: check.used, limit: check.limit },
       },
     })
-    .catch(() => { /* fire-and-forget */ })
+    .catch((err) => { logger.error("quota-enforcer: auditLog write failed", { userId, endpoint }, err instanceof Error ? err : undefined) })
   throw new AppError("free_quota_exhausted", 429, { endpoint, used: check.used, limit: check.limit })
 }

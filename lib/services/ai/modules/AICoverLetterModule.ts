@@ -12,7 +12,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, escapeHtml } from "../shared/ai-helpers"
-import { logAICost } from "../shared/cost-tracker"
+import { computeCostUsd } from "../shared/cost-tracker"
 import type {
   CoverLetterResult,
   GenerateCoverLetterInput,
@@ -149,8 +149,14 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       .map((p: string) => `<p>${p.split(/\n/).map(escapeHtml).join("<br>").trim()}</p>`)
       .join("")
 
-    logAIUsage(userId, "generate-cover-letter")
-    logAICost(this.logger, userId, "generate-cover-letter", plan)
+    const genUsage = response.usage
+    logAIUsage(userId, "generate-cover-letter", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: genUsage?.prompt_tokens ?? 0,
+      completionTokens: genUsage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, genUsage?.prompt_tokens ?? 0, genUsage?.completion_tokens ?? 0),
+    })
     return { body: html }
   }
 
@@ -248,8 +254,14 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
       throw new AppError("off_topic", 422)
     }
 
-    logAIUsage(userId, "improve-cover-letter")
-    logAICost(this.logger, userId, "improve-cover-letter", plan)
+    const improveUsage = response.usage
+    logAIUsage(userId, "improve-cover-letter", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: improveUsage?.prompt_tokens ?? 0,
+      completionTokens: improveUsage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, improveUsage?.prompt_tokens ?? 0, improveUsage?.completion_tokens ?? 0),
+    })
     return { versions: (parsed.versions as string[]).slice(0, 3) }
   }
 }

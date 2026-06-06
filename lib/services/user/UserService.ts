@@ -231,7 +231,9 @@ export class UserService {
     }
 
     if (record.expires < new Date()) {
-      await db.verificationToken.delete({ where: { token } }).catch(() => {})
+      await db.verificationToken.delete({ where: { token } }).catch((err) => {
+        this.logger.error("UserService.verifyEmail: delete expired token failed", { token }, err instanceof Error ? err : undefined)
+      })
       throw new AppError("token_expired", 400)
     }
 

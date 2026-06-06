@@ -6,7 +6,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson } from "../shared/ai-helpers"
-import { logAICost } from "../shared/cost-tracker"
+import { computeCostUsd } from "../shared/cost-tracker"
 import type { SuggestSkillsInput, SuggestSkillsResult } from "../shared/ai-types"
 
 export class AISkillsModule {
@@ -86,8 +86,14 @@ Rules:
         level: validLevels.has(s.level) ? s.level : "intermediate",
       }))
 
-    logAIUsage(userId, "suggest-skills")
-    logAICost(this.logger, userId, "suggest-skills", plan)
+    const usage = response.usage
+    logAIUsage(userId, "suggest-skills", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: usage?.prompt_tokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+    })
     return { skills }
   }
 }

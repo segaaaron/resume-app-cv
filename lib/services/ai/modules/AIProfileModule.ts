@@ -11,7 +11,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, buildSectionContext } from "../shared/ai-helpers"
-import { logAICost } from "../shared/cost-tracker"
+import { computeCostUsd } from "../shared/cost-tracker"
 import {
   FillProfileResponseSchema,
   type FillProfileInput,
@@ -186,8 +186,14 @@ Reglas:
     const validProjIds = new Set(((sd.projects ?? []) as { id: string }[]).map((p) => p.id))
     const validVolIds = new Set(((sd.volunteer ?? []) as { id: string }[]).map((v) => v.id))
 
-    logAIUsage(userId, "fill-profile")
-    logAICost(this.logger, userId, "fill-profile", plan)
+    const usage = response.usage
+    logAIUsage(userId, "fill-profile", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: usage?.prompt_tokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+    })
     return {
       summary: data.summary ?? null,
       jobTitle: data.jobTitle ?? null,

@@ -58,16 +58,8 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
       redirect: false,
     })
 
-    if (result?.code === "user_not_found") {
-      toast.error(t("error_user_not_found"), {
-        action: {
-          label: t("register_link"),
-          onClick: () => router.push(planParam ? `/${locale}/register?plan=${planParam}` : `/${locale}/register`),
-        },
-        duration: 6000,
-      })
-    } else if (result?.code === "invalid_password") {
-      toast.error(t("error_invalid_password"))
+    if (result?.code === "invalid_credentials") {
+      toast.error(t("error_invalid_credentials"))
     } else if (result?.code === "rate_limited") {
       toast.error(t("error_rate_limited"))
     } else if (result?.code === "active_session") {

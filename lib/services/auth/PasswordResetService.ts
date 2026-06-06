@@ -33,19 +33,9 @@ export class PasswordResetService {
     }
 
     const user = await this.users.findForReset(emailAddress)
-    if (!user) {
+    if (!user || user.plan === "LIMITED" || !user.hasPassword) {
       await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
-      throw new AppError("not_registered", 404)
-    }
-
-    if (user.plan === "LIMITED") {
-      await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
-      throw new AppError("plan_not_allowed", 403)
-    }
-
-    if (!user.hasPassword) {
-      await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
-      throw new AppError("google_account", 409)
+      return { sent: true }
     }
 
     const code = this.generateOtp()

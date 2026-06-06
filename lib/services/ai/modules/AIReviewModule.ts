@@ -13,7 +13,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson } from "../shared/ai-helpers"
-import { logAICost } from "../shared/cost-tracker"
+import { computeCostUsd } from "../shared/cost-tracker"
 import {
   ReviewItemSchema,
   ReviewResponseSchema,
@@ -133,8 +133,14 @@ Reglas de evaluación:
       throw new AppError("off_topic", 422)
     }
 
-    logAIUsage(userId, "ats-score")
-    logAICost(this.logger, userId, "ats-score", plan)
+    const atsUsage = response.usage
+    logAIUsage(userId, "ats-score", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: atsUsage?.prompt_tokens ?? 0,
+      completionTokens: atsUsage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, atsUsage?.prompt_tokens ?? 0, atsUsage?.completion_tokens ?? 0),
+    })
     return parsed
   }
 
@@ -285,11 +291,19 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         : undefined,
     })
 
+    const reviewUsage = response.usage
+    const reviewLogOpts = {
+      model: AI_MODEL,
+      plan,
+      promptTokens: reviewUsage?.prompt_tokens ?? 0,
+      completionTokens: reviewUsage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, reviewUsage?.prompt_tokens ?? 0, reviewUsage?.completion_tokens ?? 0),
+    }
+
     const validated = ReviewResponseSchema.safeParse(parsed)
     if (!validated.success) {
       this.logger.warn("[AIService.reviewCV] Zod validation failed, returning without suggestions", { error: validated.error.flatten() })
-      logAIUsage(userId, "review-cv")
-      logAICost(this.logger, userId, "review-cv", plan)
+      logAIUsage(userId, "review-cv", reviewLogOpts)
       return {
         summary: parsed.summary ?? "",
         strengths: (parsed.strengths ?? []).slice(0, 5).map((s: unknown) =>
@@ -302,8 +316,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       }
     }
 
-    logAIUsage(userId, "review-cv")
-    logAICost(this.logger, userId, "review-cv", plan)
+    logAIUsage(userId, "review-cv", reviewLogOpts)
     return {
       summary: validated.data.summary,
       strengths: validated.data.strengths.map(sanitizeItem),

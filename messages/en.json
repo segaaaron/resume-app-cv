@@ -456,7 +456,8 @@
       "subtitle": "Enter your credentials to continue",
       "secure_connection": "Secure connection · SSL encrypted",
       "show_password": "Show password",
-      "hide_password": "Hide password"
+      "hide_password": "Hide password",
+      "error_invalid_credentials": "Incorrect email or password."
     },
     "register": {
       "title": "Create your account",
@@ -509,7 +510,8 @@
       "password_lowercase": "Must contain at least one lowercase letter",
       "password_number": "Must contain at least one number",
       "show_password": "Show password",
-      "hide_password": "Hide password"
+      "hide_password": "Hide password",
+      "email_already_registered": "This email is already registered."
     },
     "forgot_password": {
       "title": "Forgot your password?",
@@ -1109,7 +1111,10 @@
       "managed_status_active": "Active",
       "managed_status_expired": "Expired",
       "managed_valid_until": "Access valid until:",
-      "managed_expired_help": "Your access has expired. Contact your provider to renew it."
+      "managed_expired_help": "Your access has expired. Contact your provider to renew it.",
+      "eyebrow_account": "Account",
+      "page_title": "Settings",
+      "page_subtitle": "Manage your profile and account preferences"
     },
     "referrals": {
       "meta": {
@@ -1981,7 +1986,9 @@
     "body_complete_title": "Your letter body is already ready!",
     "body_complete_desc": "You already have content in the letter body. If you want to replace it with a new AI-generated version, clear the current content first.",
     "body_complete_clear": "Clear body and generate again",
-    "tab_assistant": "AI Assistant"
+    "tab_assistant": "AI Assistant",
+    "mobile_edit": "Edit",
+    "mobile_preview": "Preview"
   },
   "public_cv": {
     "shared_via": "CV shared via",

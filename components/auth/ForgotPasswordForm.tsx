@@ -1,7 +1,5 @@
 "use client"
 
-import { useState } from "react"
-import { signIn } from "next-auth/react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { useForm } from "react-hook-form"
@@ -10,6 +8,7 @@ import { z } from "zod"
 import { Loader2, AlertCircle, ArrowLeft, KeyRound } from "lucide-react"
 import { useTranslations, useLocale } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
+import { toast } from "sonner"
 
 const schema = z.object({
   email: z.string().email(),
@@ -20,10 +19,6 @@ export default function ForgotPasswordForm() {
   const t = useTranslations("auth.forgot_password")
   const router = useRouter()
   const locale = useLocale()
-  const [googleError, setGoogleError] = useState(false)
-  const [googleLoading, setGoogleLoading] = useState(false)
-  const [notRegistered, setNotRegistered] = useState(false)
-  const [planNotAllowed, setPlanNotAllowed] = useState(false)
 
   const {
     register,
@@ -32,9 +27,6 @@ export default function ForgotPasswordForm() {
   } = useForm<FormData>({ resolver: zodResolver(schema) })
 
   async function onSubmit(data: FormData) {
-    setGoogleError(false)
-    setNotRegistered(false)
-    setPlanNotAllowed(false)
     let res: Response
     try {
       res = await apiFetch("/api/auth/reset-password/request", {
@@ -48,27 +40,12 @@ export default function ForgotPasswordForm() {
 
     const body = await res.json().catch(() => ({}))
 
-    if (body.error === "not_registered") {
-      setNotRegistered(true)
-      return
-    }
-
-    if (body.error === "google_account") {
-      setGoogleError(true)
-      return
-    }
-
-    if (body.error === "plan_not_allowed") {
-      setPlanNotAllowed(true)
+    if (body.error === "rate_limited") {
+      toast.error(t("rate_limit"))
       return
     }
 
     router.push(`/${locale}/forgot-password/verify?email=${encodeURIComponent(data.email)}`)
-  }
-
-  async function handleGoogleSignIn() {
-    setGoogleLoading(true)
-    await signIn("google", { callbackUrl: `/${locale}/dashboard/resumes` })
   }
 
   return (
@@ -86,50 +63,6 @@ export default function ForgotPasswordForm() {
         </div>
         <p className="text-[14px] text-[#6B7A8C] leading-[1.55]">{t("subtitle")}</p>
       </div>
-
-      {/* Not registered banner */}
-      {notRegistered && (
-        <div className="mb-4 p-3.5 rounded-[10px] flex items-start gap-2.5"
-          style={{ background: "rgba(59,130,246,0.07)", border: "1px solid rgba(59,130,246,0.2)" }}>
-          <AlertCircle className="w-4 h-4 text-blue-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-[13px] text-blue-800">{t("not_registered")}</p>
-            <Link
-              href={`/${locale}/register`}
-              className="inline-block mt-1.5 text-[12px] font-semibold text-blue-700 hover:text-blue-900 underline underline-offset-2 transition-colors"
-            >
-              {t("not_registered_cta")}
-            </Link>
-          </div>
-        </div>
-      )}
-
-      {/* Google account banner */}
-      {googleError && (
-        <div className="mb-4 p-3.5 rounded-[10px] flex items-start gap-2.5"
-          style={{ background: "rgba(245,158,11,0.07)", border: "1px solid rgba(245,158,11,0.2)" }}>
-          <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
-          <div>
-            <p className="text-[13px] text-amber-800">{t("google_account")}</p>
-            <button
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading}
-              className="mt-1.5 flex items-center gap-1.5 text-[12px] font-semibold text-amber-700 hover:text-amber-900 transition-colors disabled:opacity-60"
-            >
-              {googleLoading && <Loader2 className="w-3 h-3 animate-spin" />}
-              {t("continue_with_google")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      {planNotAllowed && (
-        <div className="mb-4 p-3.5 rounded-[10px] flex items-start gap-2.5"
-          style={{ background: "rgba(239,68,68,0.07)", border: "1px solid rgba(239,68,68,0.2)" }}>
-          <AlertCircle className="w-4 h-4 text-red-500 mt-0.5 shrink-0" />
-          <p className="text-[13px] text-red-700">{t("plan_not_allowed")}</p>
-        </div>
-      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>

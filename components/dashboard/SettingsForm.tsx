@@ -387,15 +387,15 @@ export default function SettingsForm({ user }: { user: UserData }) {
             </>
           ) : (
             <BtnGold onClick={() => { window.location.href = `/${locale}/pricing` }} fullWidth>
-              Activar PRO
+              {t("activate_pro")}
             </BtnGold>
           )}
         </div>
       </div>
       )}
 
-      {/* ── Card 3: Mis datos — hidden for LIMITED (managed) users ── */}
-      {!isManaged && (
+      {/* ── Card 3: Mis datos — hidden for LIMITED (managed) and UNSUBSCRIBED users ── */}
+      {!isManaged && isPro && (
       <DataCard
         exportLoading={exportLoading}
         deleteLoading={deleteLoading}

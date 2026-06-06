@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server"
 import { requireAuth, requireUser, handleError } from "@/lib/controllers/shared"
 import { resumeService } from "@/lib/controllers/resume-deps"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("resumes-route")
 
 export async function GET(req: Request) {
   const authResult = await requireAuth(req)
@@ -21,8 +24,6 @@ export async function GET(req: Request) {
 }
 
 export async function POST(request: Request) {
-  // Freemium guard: UNSUBSCRIBED can create 1 resume. ResumeService.create enforces the
-  // count limit per plan. Email verification is required to prevent throwaway accounts.
   const authResult = await requireUser(request, { csrf: true })
   if (authResult instanceof NextResponse) return authResult
 
@@ -30,7 +31,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json()
     if (body?.templateId) templateId = body.templateId
-  } catch {}
+  } catch (err) {
+    logger.warn("resumes POST: failed to parse body — creating resume without templateId", { userId: authResult.userId, error: err instanceof Error ? err.message : String(err) })
+  }
 
   try {
     const resume = await resumeService.create(authResult.userId, templateId)

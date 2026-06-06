@@ -23,8 +23,22 @@ export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — repro
 export const AI_TEMPERATURE_STRUCTURED = 0.3 as const // profile fill — faithful to user input, minimal creative drift
 
 // Fire-and-forget usage log — never throws
-export function logAIUsage(userId: string, endpoint: string): void {
-  db.aIUsageLog.create({ data: { userId, endpoint } }).catch((err) => {
+export function logAIUsage(
+  userId: string,
+  endpoint: string,
+  opts: { model: string; plan: string; promptTokens: number; completionTokens: number; costUsd: number },
+): void {
+  db.aIUsageLog.create({
+    data: {
+      userId,
+      endpoint,
+      model: opts.model,
+      plan: opts.plan,
+      promptTokens: opts.promptTokens,
+      completionTokens: opts.completionTokens,
+      costUsd: opts.costUsd,
+    },
+  }).catch((err) => {
     logger.error("logAIUsage: failed to write usage log", { userId, endpoint }, err)
   })
 }

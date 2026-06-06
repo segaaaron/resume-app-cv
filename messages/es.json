@@ -456,7 +456,8 @@
       "subtitle": "Ingresa tus credenciales para continuar",
       "secure_connection": "Conexión segura · SSL cifrado",
       "show_password": "Mostrar contraseña",
-      "hide_password": "Ocultar contraseña"
+      "hide_password": "Ocultar contraseña",
+      "error_invalid_credentials": "Email o contraseña incorrectos."
     },
     "register": {
       "title": "Crea tu cuenta",
@@ -509,7 +510,8 @@
       "password_lowercase": "Debe contener al menos una minúscula",
       "password_number": "Debe contener al menos un número",
       "show_password": "Mostrar contraseña",
-      "hide_password": "Ocultar contraseña"
+      "hide_password": "Ocultar contraseña",
+      "email_already_registered": "Este email ya está registrado."
     },
     "forgot_password": {
       "title": "¿Olvidaste tu contraseña?",
@@ -1109,7 +1111,10 @@
       "managed_status_active": "Activo",
       "managed_status_expired": "Expirado",
       "managed_valid_until": "Acceso válido hasta:",
-      "managed_expired_help": "Tu acceso venció. Contacta a tu proveedor para renovarlo."
+      "managed_expired_help": "Tu acceso venció. Contacta a tu proveedor para renovarlo.",
+      "eyebrow_account": "Cuenta",
+      "page_title": "Configuración",
+      "page_subtitle": "Gestiona tu perfil y preferencias de cuenta"
     },
     "referrals": {
       "meta": {
@@ -1981,7 +1986,9 @@
     "body_complete_title": "¡El cuerpo de tu carta ya está listo!",
     "body_complete_desc": "Ya tienes contenido en el cuerpo de la carta. Si deseas reemplazarlo con una nueva versión generada por IA, limpia el contenido actual primero.",
     "body_complete_clear": "Limpiar cuerpo y generar de nuevo",
-    "tab_assistant": "Asistente IA"
+    "tab_assistant": "Asistente IA",
+    "mobile_edit": "Editar",
+    "mobile_preview": "Vista previa"
   },
   "public_cv": {
     "shared_via": "CV compartido via",

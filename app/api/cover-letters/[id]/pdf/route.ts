@@ -1,44 +1,32 @@
 import { NextResponse } from "next/server"
 import { requireUser, handleError } from "@/lib/controllers/shared"
 import { coverLetterService } from "@/lib/controllers/cover-letter-deps"
-import { checkAndIncrementRateLimit, PDF_RATE_LIMIT_WINDOW_MS } from "@/lib/rate-limit"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
 import { createLogger } from "@/lib/logger"
+import { isActive } from "@/lib/plans"
 import { db } from "@/lib/db"
 
 const logger = createLogger("cover-letter-pdf")
-const PDF_DAILY_LIMIT = 15
 
 type Params = { params: Promise<{ id: string }> }
 
 export async function GET(req: Request, { params }: Params) {
   const { id } = await params
 
-  // Two-stage auth: first check identity to log FREE_DOWNLOAD_BLOCKED for UNSUBSCRIBED,
-  // then enforce Pro plan.
-  const baseAuth = await requireUser(req, {})
-  if (baseAuth instanceof NextResponse) return baseAuth
+  const authResult = await requireUser(req, {})
+  if (authResult instanceof NextResponse) return authResult
 
-  const authResult = await requireUser(req, { pro: true })
-  if (authResult instanceof NextResponse) {
+  if (!isActive(authResult.user.plan, authResult.user.subscriptionEndsAt, authResult.user.subscriptionStatus, authResult.user.role, authResult.user.isManaged, authResult.user.managedBlocked, authResult.user.managedExpiresAt)) {
     db.auditLog.create({
-      data: { userId: baseAuth.userId, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", coverLetterId: id } },
-    }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED cover-letter failed", { userId: baseAuth.userId, coverLetterId: id }, err) })
+      data: { userId: authResult.userId, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", coverLetterId: id } },
+    }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED cover-letter failed", { userId: authResult.userId, coverLetterId: id }, err) })
     return NextResponse.json({ error: "subscription_required" }, { status: 403 })
   }
 
   const url = new URL(req.url)
   const rawLocale = url.searchParams.get("locale") ?? ""
   const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
-
-  // Skip rate-limit for PRO users and SUPER_ADMIN (paid/admin, legitimate usage doesn't hit cap).
-  // LIMITED/managed users remain rate-limited and respect managedDownloadLimit below.
-  const skipRateLimit = authResult.user.plan === "PRO" || authResult.user.role === "SUPER_ADMIN"
-  if (!skipRateLimit) {
-    const allowed = await checkAndIncrementRateLimit(authResult.userId, "pdf-export", PDF_DAILY_LIMIT, PDF_RATE_LIMIT_WINDOW_MS)
-    if (!allowed) return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 PDF exports per day (CVs + cover letters combined)." }, { status: 429 })
-  }
 
   let managedClaimed = false
   if (authResult.user.isManaged && authResult.user.managedDownloadLimit !== null) {

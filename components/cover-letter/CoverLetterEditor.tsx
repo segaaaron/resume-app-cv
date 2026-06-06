@@ -1008,8 +1008,8 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       <div className="md:hidden print:hidden fixed bottom-0 left-0 right-0 flex h-14 z-50 bg-[#0B1B3D] border-t border-dash-cyan/15"
         style={{ boxShadow: "0 -4px 24px rgba(11,27,61,0.35)" }}>
         {([
-          { view: "form" as const, icon: <FileText className="w-[18px] h-[18px]" />, label: "Editar" },
-          { view: "preview" as const, icon: <Eye className="w-[18px] h-[18px]" />, label: "Vista previa" },
+          { view: "form" as const, icon: <FileText className="w-[18px] h-[18px]" />, label: t("mobile_edit") },
+          { view: "preview" as const, icon: <Eye className="w-[18px] h-[18px]" />, label: t("mobile_preview") },
         ]).map(({ view, icon, label }) => {
           const active = mobileView === view
           return (

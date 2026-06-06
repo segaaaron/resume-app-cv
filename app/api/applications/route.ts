@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server"
-import { auth } from "@/lib/auth"
-import { checkOrigin } from "@/lib/csrf"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireAuth, requireUser, handleError } from "@/lib/controllers/shared"
 import { applicationService } from "@/lib/controllers/application-deps"
 import { applicationCreateSchema } from "@/lib/services/application/ApplicationService"
 
 export async function DELETE(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  const authResult = await requireAuth(req)
+  if (authResult instanceof NextResponse) return authResult
   try {
-    await applicationService.deleteAll(session.user.id)
+    await applicationService.deleteAll(authResult.userId)
     return NextResponse.json({ success: true })
   } catch (err) {
     return handleError(err)
@@ -18,15 +15,15 @@ export async function DELETE(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const authResult = await requireUser(req, {})
+  if (authResult instanceof NextResponse) return authResult
 
   try {
     const { searchParams } = new URL(req.url)
     const limit  = Math.min(parseInt(searchParams.get("limit") ?? "50") || 50, 100)
     const cursor = searchParams.get("cursor") ?? undefined
 
-    const result = await applicationService.list(session.user.id, limit, cursor)
+    const result = await applicationService.list(authResult.userId, limit, cursor)
     return NextResponse.json(result, {
       headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=60" },
     })

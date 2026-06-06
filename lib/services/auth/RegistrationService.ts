@@ -42,7 +42,7 @@ export class RegistrationService {
     if (existing) {
       await this.rateLimit.recordFailure(input.ipAddress, "register")
       this.logger.warn("RegistrationService.requestOtp: email already exists", { email: input.email })
-      throw new AppError(existing.hasPassword ? "email_exists_credentials" : "email_exists_google", 409)
+      throw new AppError("email_exists", 409)
     }
 
     const passwordHash = await bcrypt.hash(input.password, 12)

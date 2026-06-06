@@ -11,7 +11,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson } from "../shared/ai-helpers"
-import { logAICost } from "../shared/cost-tracker"
+import { computeCostUsd } from "../shared/cost-tracker"
 import type { TailorCVInput, TailorCVResult } from "../shared/ai-types"
 
 export class AITailorModule {
@@ -120,8 +120,14 @@ Reglas:
       throw new AppError("off_topic", 422)
     }
 
-    logAIUsage(userId, "tailor-cv")
-    logAICost(this.logger, userId, "tailor-cv", plan)
+    const usage = response.usage
+    logAIUsage(userId, "tailor-cv", {
+      model: AI_MODEL,
+      plan,
+      promptTokens: usage?.prompt_tokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+    })
     return {
       summaryVersion: raw.summaryVersion ?? "",
       bulletSuggestions: (raw.bulletSuggestions ?? []).slice(0, 3),

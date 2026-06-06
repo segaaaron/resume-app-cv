@@ -22,28 +22,6 @@ export function handleError(err: unknown): NextResponse {
   return NextResponse.json({ error: "server_error" }, { status: 500 })
 }
 
-/** @deprecated Use requireUser({ pro: true }) to avoid double DB round-trip */
-export async function requireProUser(userId: string): Promise<NextResponse | null> {
-  const { db } = await import("@/lib/db")
-  const { isActive } = await import("@/lib/plans")
-  const user = await db.user.findUnique({
-    where: { id: userId },
-    select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
-  })
-  if (!isActive(
-    user?.plan ?? "UNSUBSCRIBED",
-    user?.subscriptionEndsAt,
-    user?.subscriptionStatus,
-    user?.role,
-    user?.isManaged,
-    user?.managedBlocked,
-    user?.managedExpiresAt,
-  )) {
-    return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
-  }
-  return null
-}
-
 interface RequireUserOptions {
   /** When true, checks that the user has an active Pro plan. Returns 403 if not. */
   pro?: boolean
@@ -75,7 +53,7 @@ interface RequireUserSuccess {
 }
 
 /**
- * Single-query auth helper. Replaces the requireAuth + requireProUser two-step:
+ * Single-query auth helper. Combines session check + plan check in one DB round-trip:
  * 1. Calls auth() once for the session.
  * 2. Calls db.user.findUnique() once with the fields needed for plan checks.
  * 3. Optionally enforces Pro plan and/or CSRF origin.
