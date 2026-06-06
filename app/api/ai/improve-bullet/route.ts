@@ -2,12 +2,13 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, handleError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
+import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 
 const schema = z.object({
-  text: z.string().min(5).max(2000),
-  jobTitle: z.string().max(200).optional(),
-  employer: z.string().max(200).optional(),
-  industry: z.string().max(100).optional(),
+  text: z.string().min(5).max(AI_INPUT_LIMITS.bulletText),
+  jobTitle: z.string().max(AI_INPUT_LIMITS.jobTitle).optional(),
+  employer: z.string().max(AI_INPUT_LIMITS.jobTitle).optional(),
+  industry: z.string().max(AI_INPUT_LIMITS.industry).optional(),
   language: z.enum(["es", "en"]).optional(),
 })
 

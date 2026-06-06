@@ -84,6 +84,7 @@ model ConsentLog {
 
   @@index([userId])
   @@index([acceptedAt])
+  @@index([userId, acceptedAt])
 }
 
 model Account {
@@ -263,6 +264,7 @@ model StripeEvent {
   @@index([processedAt])
   @@index([userId])
   @@index([checkoutSessionId])
+  @@index([userId, processedAt])
 }
 
 model AuditLog {
@@ -308,6 +310,7 @@ enum AuditAction {
   MANAGED_USER_EDITED
   MANAGED_USER_DOWNLOADS_RESET
   MANAGED_USER_PASSWORD_RESET
+  MANAGED_DOWNLOAD_REFUND_FAILED
 }
 
 enum Role {

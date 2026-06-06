@@ -12,9 +12,10 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
+  AI_INPUT_LIMITS,
   ReviewItemSchema,
   ReviewResponseSchema,
   type ATSScoreInput,
@@ -33,18 +34,17 @@ export class AIReviewModule {
     await enforceAIQuota(userId, "ats-score", plan)
 
     const { jobDescription, sectionData, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
-    const validation = validateAIInput(jobDescription, 6000)
+    const validation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
     // Truncate to 6000 chars — covers 95%+ of real job descriptions without quality loss
-    const jobDescriptionTruncated = jobDescription.slice(0, 6000)
+    const jobDescriptionTruncated = jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)
 
     const resumeText = buildResumeContext(sectionData ?? {}, language)
     if (!resumeText.trim()) throw new AppError("not_enough_resume_data", 400)
-    const resumeTextValidation = validateAIInput(resumeText, 5000)
+    const resumeTextValidation = validateAIInput(resumeText, AI_INPUT_LIMITS.resumeText)
     if (!resumeTextValidation.valid) throw new AppError("invalid_input", 400)
 
     const prompt = language === "en"
@@ -148,16 +148,15 @@ Reglas de evaluación:
     await enforceAIQuota(userId, "review-cv", plan)
 
     const { sectionData, question, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const resumeContext = buildResumeContext(sectionData, language)
     if (!resumeContext.trim()) throw new AppError("not_enough_data", 400)
-    const resumeCtxValidation = validateAIInput(resumeContext, 5000)
+    const resumeCtxValidation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!resumeCtxValidation.valid) throw new AppError("invalid_input", 400)
 
     if (question) {
-      const validation = validateAIInput(String(question), 300)
+      const validation = validateAIInput(String(question), AI_INPUT_LIMITS.question)
       if (!validation.valid) throw new AppError("invalid_input", 400)
     }
 

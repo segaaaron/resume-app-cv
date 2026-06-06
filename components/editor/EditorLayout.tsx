@@ -33,7 +33,9 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   const init = useResumeStore((s) => s.init)
   const router = useRouter()
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
-  propsRef.current = { resumeId, title, sections, sectionData, config }
+  useEffect(() => {
+    propsRef.current = { resumeId, title, sections, sectionData, config }
+  }, [resumeId, title, sections, sectionData, config])
   useEffect(() => {
     const { resumeId, title, sections, sectionData, config } = propsRef.current
     init(resumeId, title, sections, sectionData, config)

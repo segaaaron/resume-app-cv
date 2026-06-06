@@ -192,16 +192,10 @@ export class ResumeService {
   // ── UPDATE ────────────────────────────────────────────────────────────────
 
   async update(userId: string, resumeId: string, patch: ResumePatch): Promise<void> {
-    const existing = await db.resume.findFirst({
-      where: { id: resumeId, userId },
-      select: { id: true },
-    })
-    if (!existing) throw new AppError("not_found", 404)
-
     const { title, sections, sectionData, config } = patch
 
-    await db.resume.update({
-      where: { id: resumeId },
+    const r = await db.resume.updateMany({
+      where: { id: resumeId, userId },
       data: {
         title:           title ?? undefined,
         sections:        sections ? (sections as object[]) : undefined,
@@ -216,6 +210,7 @@ export class ResumeService {
         language:        config?.language ?? undefined,
       },
     })
+    if (r.count === 0) throw new AppError("not_found", 404)
 
     this.logger.info("[ResumeService] update", { userId, resumeId })
   }
@@ -223,13 +218,8 @@ export class ResumeService {
   // ── DELETE ────────────────────────────────────────────────────────────────
 
   async delete(userId: string, resumeId: string): Promise<void> {
-    const existing = await db.resume.findFirst({
-      where: { id: resumeId, userId },
-      select: { id: true },
-    })
-    if (!existing) throw new AppError("not_found", 404)
-
-    await db.resume.delete({ where: { id: resumeId } })
+    const r = await db.resume.deleteMany({ where: { id: resumeId, userId } })
+    if (r.count === 0) throw new AppError("not_found", 404)
     this.logger.info("[ResumeService] delete", { userId, resumeId })
   }
 
@@ -445,10 +435,11 @@ export class ResumeService {
   // ── PHOTO — UPDATE ────────────────────────────────────────────────────────
 
   async updatePhoto(userId: string, resumeId: string, base64: string): Promise<{ photoUrl: string }> {
-    const existing = await db.resume.findFirst({ where: { id: resumeId, userId }, select: { id: true } })
-    if (!existing) throw new AppError("not_found", 404)
-
-    await db.resume.update({ where: { id: resumeId }, data: { photoUrl: base64 } })
+    const r = await db.resume.updateMany({
+      where: { id: resumeId, userId },
+      data: { photoUrl: base64 },
+    })
+    if (r.count === 0) throw new AppError("not_found", 404)
     this.logger.info("[ResumeService] updatePhoto", { userId, resumeId })
     return { photoUrl: base64 }
   }
@@ -456,10 +447,11 @@ export class ResumeService {
   // ── PHOTO — DELETE ────────────────────────────────────────────────────────
 
   async deletePhoto(userId: string, resumeId: string): Promise<void> {
-    const existing = await db.resume.findFirst({ where: { id: resumeId, userId }, select: { id: true } })
-    if (!existing) throw new AppError("not_found", 404)
-
-    await db.resume.update({ where: { id: resumeId }, data: { photoUrl: null } })
+    const r = await db.resume.updateMany({
+      where: { id: resumeId, userId },
+      data: { photoUrl: null },
+    })
+    if (r.count === 0) throw new AppError("not_found", 404)
     this.logger.info("[ResumeService] deletePhoto", { userId, resumeId })
   }
 }

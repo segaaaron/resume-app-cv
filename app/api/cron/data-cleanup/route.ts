@@ -18,11 +18,30 @@ export async function GET(req: Request) {
 
   const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000)
 
-  // M6: run all deletes in parallel — no data dependency between them
-  const [deleted, deletedLogs, deletedAuditLogs] = await Promise.all([
-    db.user.deleteMany({
-      where: { deletedAt: { lte: cutoff } },
-    }),
+  // Users are deleted in small batches to keep transactions short and let Prisma
+  // cascades (Resume, CoverLetter, Application, etc.) finish without blocking the DB.
+  // Logs/audit deletes have no FK fan-out, so they can run in parallel with the loop.
+  const BATCH_SIZE = 100
+
+  const userDeletePromise = (async () => {
+    let totalDeleted = 0
+    while (true) {
+      const ids = await db.user.findMany({
+        where: { deletedAt: { lte: cutoff } },
+        select: { id: true },
+        take: BATCH_SIZE,
+      })
+      if (ids.length === 0) break
+      const res = await db.user.deleteMany({ where: { id: { in: ids.map((u) => u.id) } } })
+      totalDeleted += res.count
+      // small pause between batches to ease DB pressure
+      await new Promise((r) => setTimeout(r, 100))
+    }
+    return totalDeleted
+  })()
+
+  const [deletedCount, deletedLogs, deletedAuditLogs] = await Promise.all([
+    userDeletePromise,
     db.aIUsageLog.deleteMany({
       where: { createdAt: { lt: cutoff } },
     }),
@@ -32,5 +51,5 @@ export async function GET(req: Request) {
     }),
   ])
 
-  return NextResponse.json({ deleted: deleted.count, deletedLogs: deletedLogs.count, deletedAuditLogs: deletedAuditLogs.count })
+  return NextResponse.json({ deleted: deletedCount, deletedLogs: deletedLogs.count, deletedAuditLogs: deletedAuditLogs.count })
 }

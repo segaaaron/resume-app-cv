@@ -31,8 +31,9 @@ const LOGIN_RATE_LIMIT_WINDOW_MS  = 15 * 60 * 1000  // 15 minutes
 // equalizing response time and preventing user enumeration via timing.
 const DUMMY_HASH = "$2b$10$AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 
-const CACHE_TTL_MS        = 15 * 60 * 1000        // 15 minutes — reduces thundering herd 3x; plan changes invalidate via sessionVersion
+const CACHE_TTL_MS        = 3 * 60 * 1000         // 3 minutes — short TTL; plan changes invalidate via sessionVersion
 const INACTIVITY_LIMIT_MS = 30 * 60 * 1000        // 30 min — used only in authorize stale-session check
+const PURGE_INTERVAL_MS   = 5 * 60 * 1000         // opportunistic purge cadence (replaces global setInterval)
 
 interface UserPlanCacheEntry {
   plan:                string
@@ -51,14 +52,16 @@ interface UserPlanCacheEntry {
 
 const userPlanCache = new Map<string, UserPlanCacheEntry>()
 
-// Purge expired entries every hour to prevent unbounded growth
-if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now()
-    for (const [key, entry] of userPlanCache) {
-      if (entry.expiresAt < now) userPlanCache.delete(key)
-    }
-  }, 60 * 60 * 1000).unref()  // .unref() so it doesn't prevent process exit
+// Opportunistic purge — runs at most once per PURGE_INTERVAL_MS, triggered by cache reads.
+// Avoids global setInterval which leaks timers under HMR / multi-instance deploys.
+let lastPurgeAt = 0
+function maybePurgeExpired() {
+  const now = Date.now()
+  if (now - lastPurgeAt < PURGE_INTERVAL_MS) return
+  lastPurgeAt = now
+  for (const [key, entry] of userPlanCache) {
+    if (entry.expiresAt < now) userPlanCache.delete(key)
+  }
 }
 
 export function purgeUserCache(userId: string) {
@@ -289,6 +292,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (assigned) token.activeSessionToken = googleSessionToken
       }
 
+      maybePurgeExpired()
       const now = Date.now()
       const cached = userPlanCache.get(userId)
 

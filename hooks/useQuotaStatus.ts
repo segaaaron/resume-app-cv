@@ -51,37 +51,54 @@ export function useQuotaStatus(): UseQuotaStatusResult {
   const [error, setError] = useState<Error | null>(null)
   const inFlight = useRef<Promise<void> | null>(null)
   const lastFetch = useRef<number>(0)
+  // Mirror of `data` so `fetcher` doesn't need it in deps — keeps the callback
+  // stable across renders and prevents listener re-subscription on every state change.
+  const dataRef = useRef<QuotaStatusPayload | null>(null)
+  // Abort in-flight fetch on unmount.
+  const abortRef = useRef<AbortController | null>(null)
+
+  useEffect(() => { dataRef.current = data }, [data])
 
   const fetcher = useCallback(async (): Promise<void> => {
-    // de-dupe within REFRESH_DEDUPE_MS
-    if (Date.now() - lastFetch.current < REFRESH_DEDUPE_MS && data) return
+    // de-dupe within REFRESH_DEDUPE_MS (read latest data via ref to keep deps empty)
+    if (Date.now() - lastFetch.current < REFRESH_DEDUPE_MS && dataRef.current) return
     if (inFlight.current) return inFlight.current
+
+    const ctrl = new AbortController()
+    abortRef.current = ctrl
 
     const p = (async () => {
       try {
-        const res = await apiFetch("/api/user/quota-status", { silent: true })
+        const res = await apiFetch("/api/user/quota-status", { silent: true, signal: ctrl.signal })
         if (!res.ok) {
           throw new Error(`quota-status ${res.status}`)
         }
         const json = (await res.json()) as QuotaStatusPayload
+        if (ctrl.signal.aborted) return
         setData(json)
         setError(null)
         lastFetch.current = Date.now()
       } catch (err) {
+        if (ctrl.signal.aborted) return
+        if (err instanceof Error && err.name === "AbortError") return
         setError(err instanceof Error ? err : new Error("quota-status failed"))
       } finally {
-        setIsLoading(false)
+        if (!ctrl.signal.aborted) setIsLoading(false)
+        if (abortRef.current === ctrl) abortRef.current = null
         inFlight.current = null
       }
     })()
 
     inFlight.current = p
     return p
-  }, [data])
+  }, [])
 
-  // initial fetch
+  // initial fetch + cancel in-flight on unmount
   useEffect(() => {
     fetcher()
+    return () => {
+      abortRef.current?.abort()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

@@ -201,3 +201,27 @@ export interface TailorCVResultV2 {
   missingSkills: string[]
   keywordsToAdd: string[]
 }
+
+// ─── Central input character limits ────────────────────────────────────────────
+// Single source of truth for max input lengths across Zod route schemas and
+// downstream validateAIInput() calls in modules. Tightening any value here is
+// a real behavioural change at the validation boundary.
+export const AI_INPUT_LIMITS = {
+  jobDescription: 6000,
+  resumeContext: 5000,
+  resumeText: 5000,
+  summary: 3000,
+  body: 3000,
+  userText: 3000,
+  userPrompt: 500,
+  userDescription: 500,
+  company: 200,
+  jobTitle: 200,
+  recipientName: 100,
+  recipientTitle: 100,
+  industry: 100,
+  question: 300,
+  skill: 100,
+  bulletText: 2000,
+  prompt: 500,
+} as const

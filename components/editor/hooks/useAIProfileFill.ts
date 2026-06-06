@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { useTranslations, useLocale } from "next-intl"
 import { useAICooldown } from "./useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
@@ -40,7 +41,9 @@ export function useAIProfileFill() {
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
-  const { sectionData } = useResumeStore()
+  const { sectionData } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData }))
+  )
 
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)

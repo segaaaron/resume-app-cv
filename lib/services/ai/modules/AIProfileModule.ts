@@ -10,9 +10,10 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, buildSectionContext } from "../shared/ai-helpers"
+import { parseAIJson, buildSectionContext, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
+  AI_INPUT_LIMITS,
   FillProfileResponseSchema,
   type FillProfileInput,
   type FillProfileResult,
@@ -28,15 +29,14 @@ export class AIProfileModule {
     await enforceAIQuota(userId, "fill-profile", plan)
 
     const { prompt, sectionData, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
-    const validation = validateAIInput(prompt, 500)
+    const validation = validateAIInput(prompt, AI_INPUT_LIMITS.prompt)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
     const sd = sectionData ?? {}
     const resumeContext = buildResumeContext(sd, language)
-    const fillCtxValidation = validateAIInput(resumeContext, 5000)
+    const fillCtxValidation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!fillCtxValidation.valid) throw new AppError("invalid_input", 400)
 
     const existingSkills = ((sd.skills ?? []) as { name: string }[]).map((s) => s.name).join(", ")

@@ -21,6 +21,17 @@ interface CacheEntry {
 
 const rateLimitCache = new Map<string, CacheEntry>()
 
+const PURGE_INTERVAL_MS = 5 * 60 * 1000  // 5 min
+let lastPurgeAt = 0
+
+function maybePurgeExpired(now: number) {
+  if (now - lastPurgeAt < PURGE_INTERVAL_MS) return
+  lastPurgeAt = now
+  for (const [k, v] of rateLimitCache) {
+    if (v.cachedAt + CACHE_TTL_MS < now) rateLimitCache.delete(k)
+  }
+}
+
 export function clearRateLimitCache() {
   rateLimitCache.clear()
 }
@@ -37,6 +48,7 @@ function cacheKey(userId: string, endpoint: string) {
 export async function checkRateLimit(userId: string, endpoint: string, limit = 20): Promise<boolean> {
   const key  = cacheKey(userId, endpoint)
   const now  = Date.now()
+  maybePurgeExpired(now)
   const hit  = rateLimitCache.get(key)
 
   // Near-limit: bypass cache to prevent over-admission

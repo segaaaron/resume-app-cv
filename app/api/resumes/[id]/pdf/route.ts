@@ -57,24 +57,51 @@ export async function GET(req: Request, { params }: Params) {
 
   let managedClaimed = false
   if (user?.isManaged) {
-    const managedResult = await db.$transaction(async (tx) => {
-      const fresh = await tx.user.findUnique({
-        where: { id: session.user.id },
-        select: { managedDownloadsUsed: true, managedDownloadLimit: true },
-      })
-      if (!fresh) return { allowed: false }
-      if (fresh.managedDownloadLimit === null) return { allowed: true }
-      if (fresh.managedDownloadsUsed >= fresh.managedDownloadLimit) return { allowed: false }
-      await tx.user.update({
-        where: { id: session.user.id },
+    // Atomic reservation: increment only if user is still under limit (or limit is null = unlimited).
+    // Single conditional updateMany — no transaction needed, no race between read+update.
+    if (user.managedDownloadLimit === null) {
+      // unlimited — still increment for accounting, but no cap check
+      const r = await db.user.updateMany({
+        where: { id: session.user.id, isManaged: true },
         data: { managedDownloadsUsed: { increment: 1 } },
       })
-      return { allowed: true }
-    })
-    if (!managedResult.allowed) {
-      return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
+      if (r.count === 0) {
+        // Race: user is no longer managed between initial read and update.
+        // Distinguish "access changed" (409) from genuine limit-reached (403).
+        const fresh = await db.user.findUnique({
+          where: { id: session.user.id },
+          select: { isManaged: true, managedDownloadsUsed: true, managedDownloadLimit: true },
+        })
+        if (!fresh?.isManaged) {
+          return NextResponse.json({ error: "El acceso de descarga ha cambiado. Refresca la página." }, { status: 409 })
+        }
+        return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
+      }
+      managedClaimed = true
+    } else {
+      const r = await db.user.updateMany({
+        where: {
+          id: session.user.id,
+          isManaged: true,
+          managedDownloadLimit: { not: null },
+          managedDownloadsUsed: { lt: user.managedDownloadLimit },
+        },
+        data: { managedDownloadsUsed: { increment: 1 } },
+      })
+      if (r.count === 0) {
+        // Race: user is no longer managed between initial read and update.
+        // Distinguish "access changed" (409) from genuine limit-reached (403).
+        const fresh = await db.user.findUnique({
+          where: { id: session.user.id },
+          select: { isManaged: true, managedDownloadsUsed: true, managedDownloadLimit: true },
+        })
+        if (!fresh?.isManaged) {
+          return NextResponse.json({ error: "El acceso de descarga ha cambiado. Refresca la página." }, { status: 409 })
+        }
+        return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
+      }
+      managedClaimed = true
     }
-    managedClaimed = true
   }
 
   const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
@@ -106,8 +133,41 @@ export async function GET(req: Request, { params }: Params) {
   } catch (err) {
     logger.error("render failed", { resumeId: id, userId: session.user.id }, err instanceof Error ? err : undefined)
     if (managedClaimed) {
-      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
-        .catch(() => undefined)
+      const delays = [100, 300, 900]
+      let refunded = false
+      let lastErr: unknown
+      for (const delay of delays) {
+        try {
+          await db.user.update({
+            where: { id: session.user.id },
+            data: { managedDownloadsUsed: { decrement: 1 } },
+          })
+          refunded = true
+          break
+        } catch (e) {
+          lastErr = e
+          await new Promise((r) => setTimeout(r, delay))
+        }
+      }
+      if (!refunded) {
+        logger.error("managed download refund failed after retries — writing AuditLog", {
+          userId: session.user.id, resumeId: id,
+        }, lastErr instanceof Error ? lastErr : undefined)
+        await db.auditLog.create({
+          data: {
+            userId: session.user.id,
+            action: "MANAGED_DOWNLOAD_REFUND_FAILED",
+            metadata: {
+              resumeId: id,
+              error: lastErr instanceof Error ? lastErr.message : String(lastErr),
+            },
+          },
+        }).catch((auditErr) => {
+          logger.error("AuditLog write for MANAGED_DOWNLOAD_REFUND_FAILED also failed", {
+            userId: session.user.id, resumeId: id,
+          }, auditErr instanceof Error ? auditErr : undefined)
+        })
+      }
     }
     return NextResponse.json({ error: "PDF render failed" }, { status: 500 })
   }

@@ -3,6 +3,7 @@
 import { useState, type CSSProperties, type ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import SectionBlock, { SectionDropdownProvider } from "./SectionBlock"
 import DesignPanel from "./DesignPanel"
 import ATSScorePanel from "./ATSScorePanel"
@@ -34,7 +35,9 @@ interface Props {
 
 export default function FormPanel({ plan = "", subscriptionStatus, subscriptionEndsAt, role, onAfterTemplateSwitch }: Props) {
   const t = useTranslations("editor")
-  const { sections } = useResumeStore()
+  const { sections } = useResumeStore(
+    useShallow((s) => ({ sections: s.sections }))
+  )
   const visibleSections = sections.filter((s) => s.visible)
   const hiddenSections = sections.filter((s) => !s.visible)
   const [activeTab, setActiveTab] = useState<TabKey>("content")

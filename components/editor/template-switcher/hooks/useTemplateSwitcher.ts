@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { TemplateId } from "@/types/resume"
 import { isProTemplate } from "../template-data"
 import { isActive, isSuperAdmin } from "@/lib/plans"
@@ -15,7 +16,14 @@ interface Options {
 }
 
 export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role, onAfterSwitch }: Options) {
-  const { config, setTemplateWithAdapt, save, triggerThumbnail } = useResumeStore()
+  const { config, setTemplateWithAdapt, save, triggerThumbnail } = useResumeStore(
+    useShallow((s) => ({
+      config: s.config,
+      setTemplateWithAdapt: s.setTemplateWithAdapt,
+      save: s.save,
+      triggerThumbnail: s.triggerThumbnail,
+    }))
+  )
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null)
 

@@ -14,6 +14,9 @@ import { NextRequest } from "next/server"
 import sharp from "sharp"
 import React from "react"
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("thumbnails")
 
 import {
   ClassicThumb, ModernThumb, SidebarResumeThumb, ElegantResumeThumb,
@@ -42,6 +45,11 @@ export const dynamic = "force-dynamic"
 // Max ~500 entries × ~12KB avg = ~6MB RAM ceiling
 const thumbCache = new Map<string, Buffer>()
 const CACHE_MAX = 500
+
+// In-flight render dedup — prevents cache stampede when many concurrent
+// requests hit the same cold (id, color) pair. Subsequent callers await the
+// existing render promise instead of each kicking off their own sharp pipeline.
+const inFlightThumbs = new Map<string, Promise<Buffer>>()
 
 // IDs handled by each split Pro-C dispatcher. Kept in sync with the switch in
 // components/editor/template-switcher/thumbnails.tsx.
@@ -161,31 +169,56 @@ export async function GET(
   }
   const cacheKey = `${id}:${color}`
 
-  // Check cache first
+  // Check cache first — LRU: on hit, delete + re-insert to bump key to the
+  // most-recently-used end of the Map insertion order. On miss, evict the
+  // least-recently-used (first key in iteration order) when at capacity.
   let webpBuffer = thumbCache.get(cacheKey)
-  if (!webpBuffer) {
-    const element = getThumbnailElement(id, color)
-    if (!element) {
-      return new Response("Not found", { status: 404 })
-    }
+  if (webpBuffer) {
+    // Bump to MRU position
+    thumbCache.delete(cacheKey)
+    thumbCache.set(cacheKey, webpBuffer)
+  } else {
+    // Stampede protection: if another request is already rendering this
+    // (id, color), await its promise instead of starting a duplicate render.
+    const existing = inFlightThumbs.get(cacheKey)
+    if (existing) {
+      try {
+        webpBuffer = await existing
+      } catch (err) {
+        logger.error("thumbnails.render_failed_awaited", { id, error: err instanceof Error ? err.message : String(err) })
+        return new Response("Render failed", { status: 500 })
+      }
+    } else {
+      const element = getThumbnailElement(id, color)
+      if (!element) {
+        return new Response("Not found", { status: 404 })
+      }
 
-    try {
       // Thumbs render into a viewBox of 80x110 so the markup is already sized.
       // We scale to 220x311 (≈ A4 aspect 210/297) for retina-quality card art.
-      const { renderToStaticMarkup } = await import("react-dom/server")
-      const svgString = renderToStaticMarkup(element)
-      webpBuffer = await sharp(Buffer.from(svgString))
-        .resize(220, 311, { fit: "fill" })
-        .webp({ quality: 85 })
-        .toBuffer()
-      // Evict oldest entry if at capacity
-      if (thumbCache.size >= CACHE_MAX) {
-        thumbCache.delete(thumbCache.keys().next().value!)
+      const renderPromise: Promise<Buffer> = (async () => {
+        const { renderToStaticMarkup } = await import("react-dom/server")
+        const svgString = renderToStaticMarkup(element)
+        return await sharp(Buffer.from(svgString))
+          .resize(220, 311, { fit: "fill" })
+          .webp({ quality: 85 })
+          .toBuffer()
+      })()
+      inFlightThumbs.set(cacheKey, renderPromise)
+      try {
+        webpBuffer = await renderPromise
+        // Evict least-recently-used entry if at capacity (first key in Map order)
+        if (thumbCache.size >= CACHE_MAX) {
+          const oldest = thumbCache.keys().next().value
+          if (oldest !== undefined) thumbCache.delete(oldest)
+        }
+        thumbCache.set(cacheKey, webpBuffer)
+      } catch (err) {
+        logger.error("thumbnails.render_failed", { id, error: err instanceof Error ? err.message : String(err) })
+        return new Response("Render failed", { status: 500 })
+      } finally {
+        inFlightThumbs.delete(cacheKey)
       }
-      thumbCache.set(cacheKey, webpBuffer)
-    } catch (err) {
-      console.error("[thumbnail] render failed", { id, error: err })
-      return new Response("Render failed", { status: 500 })
     }
   }
 

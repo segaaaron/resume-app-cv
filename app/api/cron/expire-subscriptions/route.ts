@@ -2,10 +2,12 @@ import { NextResponse } from "next/server"
 import { timingSafeEqual } from "crypto"
 import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
+import { createLogger } from "@/lib/logger"
 
-// Module-level guard: prevents overlapping executions on single-instance deploys (Dokploy).
-// The flag resets automatically in the finally block, even if the handler throws.
-let cronRunning = false
+const logger = createLogger("cron.expire-subscriptions")
+
+// Postgres advisory lock key — arbitrary stable int32 unique to this cron
+const ADVISORY_LOCK_KEY = 727301
 
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
@@ -17,11 +19,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  if (cronRunning) {
-    console.warn("[cron/expire-subscriptions] already running — skipping overlapping execution")
-    return NextResponse.json({ ok: true, skipped: true })
+  // Multi-instance safe: pg_try_advisory_lock returns false if another instance holds it.
+  const [{ locked }] = await db.$queryRaw<[{ locked: boolean }]>`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_KEY}) AS locked`
+  if (!locked) {
+    return NextResponse.json({ skipped: true, reason: "lock_held" })
   }
-  cronRunning = true
 
   try {
     const now = new Date()
@@ -80,6 +82,10 @@ export async function GET(req: Request) {
       expiredLimited: limitedIds.length,
     })
   } finally {
-    cronRunning = false
+    try {
+      await db.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_KEY})`
+    } catch (e) {
+      logger.error("cron.expire_subscriptions.unlock_failed", { error: e instanceof Error ? e.message : String(e) })
+    }
   }
 }

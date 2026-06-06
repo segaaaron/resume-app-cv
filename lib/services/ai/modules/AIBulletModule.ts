@@ -5,9 +5,9 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import type { BulletResult, ImproveBulletInput } from "../shared/ai-types"
+import { AI_INPUT_LIMITS, type BulletResult, type ImproveBulletInput } from "../shared/ai-types"
 
 export class AIBulletModule {
   constructor(
@@ -19,10 +19,9 @@ export class AIBulletModule {
     await enforceAIQuota(userId, "improve-bullet", plan)
 
     const { text, jobTitle, employer, industry, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
-    const validation = validateAIInput(text, 2000)
+    const validation = validateAIInput(text, AI_INPUT_LIMITS.bulletText)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
     const context = [

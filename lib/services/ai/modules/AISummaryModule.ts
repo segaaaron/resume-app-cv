@@ -10,12 +10,13 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import type {
-  GenerateSummaryInput,
-  ImproveSummaryInput,
-  VersionsResult,
+import {
+  AI_INPUT_LIMITS,
+  type GenerateSummaryInput,
+  type ImproveSummaryInput,
+  type VersionsResult,
 } from "../shared/ai-types"
 
 export class AISummaryModule {
@@ -28,13 +29,12 @@ export class AISummaryModule {
     await enforceAIQuota(userId, "generate-summary", plan)
 
     const { sectionData, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const resumeContext = buildResumeContext(sectionData ?? {}, language)
     if (!resumeContext.trim()) throw new AppError("not_enough_data", 400)
 
-    const validation = validateAIInput(resumeContext, 5000)
+    const validation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
     const prompt = language === "en"
@@ -139,8 +139,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     await enforceAIQuota(userId, "improve-summary", plan)
 
     const { summary, userDescription, sectionData, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const hasSummary = summary && typeof summary === "string" && summary.trim().length > 10
     const hasDescription = userDescription && typeof userDescription === "string" && userDescription.trim().length >= 5
@@ -148,11 +147,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     if (!hasSummary && !hasDescription) throw new AppError("missing_content", 400)
 
     if (hasSummary) {
-      const validation = validateAIInput(summary!, 3000)
+      const validation = validateAIInput(summary!, AI_INPUT_LIMITS.summary)
       if (!validation.valid) throw new AppError("invalid_input", 400)
     }
     if (hasDescription) {
-      const validation = validateAIInput(userDescription!, 500)
+      const validation = validateAIInput(userDescription!, AI_INPUT_LIMITS.userDescription)
       if (!validation.valid) throw new AppError("invalid_input", 400)
     }
 

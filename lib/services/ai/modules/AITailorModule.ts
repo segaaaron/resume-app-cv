@@ -10,9 +10,9 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import type { TailorCVInput, TailorCVResultV2, TailorExperienceResult } from "../shared/ai-types"
+import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2, type TailorExperienceResult } from "../shared/ai-types"
 
 export class AITailorModule {
   constructor(
@@ -24,14 +24,13 @@ export class AITailorModule {
     await enforceAIQuota(userId, "tailor-cv", plan)
 
     const { sectionData, jobDescription, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
-    const jdValidation = validateAIInput(jobDescription, 6000)
+    const jdValidation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
     if (!jdValidation.valid) throw new AppError(jdValidation.error ?? "invalid_input", 400)
 
     const resumeContext = buildResumeContext(sectionData, language)
-    const ctxValidation = validateAIInput(resumeContext, 5000)
+    const ctxValidation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!ctxValidation.valid) throw new AppError("invalid_input", 400)
 
     const work = (sectionData.workExperience ?? []) as { id?: string; jobTitle?: string; employer?: string; description?: string }[]

@@ -171,13 +171,17 @@ export class StripeWebhookService {
       this.logger.error("handleInvoicePaid: user has no email — confirmation email skipped", { eventId: event.id, userId: result.user.id })
     }
     if (emailEnabled() && resend && result.user.email) {
-      await resend.emails.send({
+      const toEmail = result.user.email
+      const userName = result.user.name ?? "Usuario"
+      const userId = result.user.id
+      const resendClient = resend
+      Promise.resolve().then(() => resendClient.emails.send({
         from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
-        to: result.user.email,
+        to: toEmail,
         subject: "¡Tu suscripción Pro está activa! 🎉",
-        html: subscriptionConfirmationHtml({ userName: result.user.name ?? "Usuario", userId: result.user.id, planInterval, renewalDate }),
-        text: subscriptionConfirmationText({ userName: result.user.name ?? "Usuario", userId: result.user.id, planInterval, renewalDate }),
-      }).catch((e) => this.logger.error("invoice.paid email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
+        html: subscriptionConfirmationHtml({ userName, userId, planInterval, renewalDate }),
+        text: subscriptionConfirmationText({ userName, userId, planInterval, renewalDate }),
+      })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.paid" }))
     }
   }
 
@@ -348,12 +352,14 @@ export class StripeWebhookService {
         eventId: event.id, userId, disputeId: dispute.id, amount: dispute.amount,
       })
       if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
-        await resend.emails.send({
+        const resendClient = resend
+        const adminEmail = process.env.ADMIN_EMAIL
+        Promise.resolve().then(() => resendClient.emails.send({
           from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
-          to: process.env.ADMIN_EMAIL,
+          to: adminEmail,
           subject: `[ACTION REQUIRED] Dispute won — user locked out: ${userEmail ?? userId}`,
           text: `Stripe dispute ${dispute.id} was WON.\n\nUser: ${userName ?? "unknown"} (${userEmail ?? "no email"})\nUser ID: ${userId}\nAmount: $${(dispute.amount / 100).toFixed(2)}\n\nThe user lost Pro access when the dispute was created. Their account is currently LOCKED OUT.\n\nTo re-activate:\n1. Go to Stripe Dashboard → create a new subscription for this customer\n2. Then run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n   This syncs the new subscription to the database and restores Pro access.\n\nAlternatively, issue a manual account credit in Stripe if no new subscription is needed.`,
-        }).catch((e) => this.logger.error("dispute won admin email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
+        })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "dispute.won.admin" }))
       }
     }
   }
@@ -384,13 +390,16 @@ export class StripeWebhookService {
     if (!emailEnabled() || !resend || !result.user.email) return
 
     const firstName = result.user.name?.split(" ")[0] ?? "Usuario"
-    await resend.emails.send({
+    const toEmail = result.user.email
+    const userId = result.user.id
+    const resendClient = resend
+    Promise.resolve().then(() => resendClient.emails.send({
       from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
-      to: result.user.email,
+      to: toEmail,
       subject: "Acción requerida: problema con tu pago en READY CV",
-      html: paymentFailedHtml({ firstName, userId: result.user.id, invoiceUrl }),
+      html: paymentFailedHtml({ firstName, userId, invoiceUrl }),
       text: paymentFailedText({ firstName, invoiceUrl }),
-    }).catch((e) => this.logger.error("invoice.payment_failed email failed", { eventId: event.id }, e instanceof Error ? e : undefined))
+    })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.payment_failed" }))
   }
 
   private async handleFraudWarning(event: Stripe.Event): Promise<void> {

@@ -22,6 +22,11 @@ export function usePostPurchaseSync(): {
   const activeRef = useRef(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const channelRef = useRef<BroadcastChannel | null>(null)
+  const updateRef = useRef(update)
+  const routerRef = useRef(router)
+
+  useEffect(() => { updateRef.current = update }, [update])
+  useEffect(() => { routerRef.current = router }, [router])
 
   // Cleanup on unmount — stops any in-flight poll and pending setTimeout
   useEffect(() => {
@@ -41,13 +46,12 @@ export function usePostPurchaseSync(): {
         activeRef.current = false
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
         setSyncState("synced")
-        await update()
-        router.refresh()
+        await updateRef.current()
+        routerRef.current.refresh()
       }
     }
 
     return () => channel.close()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const startSync = useCallback(() => {
@@ -88,8 +92,8 @@ export function usePostPurchaseSync(): {
           if (active) {
             activeRef.current = false
             setSyncState("synced")
-            await update()
-            router.refresh()
+            await updateRef.current()
+            routerRef.current.refresh()
             channelRef.current?.postMessage({ type: "BILLING_SYNCED" })
             return
           }
@@ -103,7 +107,7 @@ export function usePostPurchaseSync(): {
     }
 
     poll()
-  }, [update, router])
+  }, [])
 
   return { syncState, startSync }
 }

@@ -4,6 +4,9 @@ import { immer } from "zustand/middleware/immer"
 import { devtools } from "zustand/middleware"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("resumeStore")
 import {
   ResumeSection,
   ResumeSections,
@@ -113,6 +116,45 @@ export function useTemplateSectionData() {
   return useMemo(() => applySectionOrder(raw), [raw])
 }
 
+/**
+ * Cross-tab dedupe for thumbnail jobs.
+ * Lazy singleton BroadcastChannel — multiple tabs editing the same resume
+ * sync their `lastThumbnailAt` so only one tab dispatches the server job
+ * within the 60s window. Best-effort: race between simultaneous tabs is
+ * accepted (the dedupe is not mutual exclusion).
+ *
+ * Fallback graceful: SSR or browsers without BroadcastChannel → returns null
+ * and triggerThumbnail behaves exactly as before.
+ */
+let thumbChannel: BroadcastChannel | null = null
+function getThumbChannel(): BroadcastChannel | null {
+  if (typeof window === "undefined") return null
+  if (typeof BroadcastChannel === "undefined") return null
+  if (!thumbChannel) {
+    thumbChannel = new BroadcastChannel("readycv.thumbnail")
+    thumbChannel.onmessage = (e: MessageEvent) => {
+      const data = (e?.data ?? {}) as { resumeId?: string; ts?: number }
+      const { resumeId, ts } = data
+      if (!resumeId || typeof ts !== "number") return
+      // Only adopt the timestamp if the other tab is editing the same resume.
+      try {
+        const current = useResumeStore.getState()
+        if (current.resumeId !== resumeId) return
+        // Take the max — never go backwards.
+        const local = current.lastThumbnailAt ?? 0
+        if (ts > local) {
+          useResumeStore.setState((s) => {
+            s.lastThumbnailAt = ts
+          })
+        }
+      } catch {
+        // Defensive: never let cross-tab message break the store.
+      }
+    }
+  }
+  return thumbChannel
+}
+
 export const useResumeStore = create<ResumeState & ResumeActions>()(
   devtools(
     immer((set, get) => ({
@@ -206,6 +248,14 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
         const now = Date.now()
         if (!force && lastThumbnailAt && now - lastThumbnailAt < 60_000) return
         set((state) => { state.lastThumbnailAt = now })
+        // Cross-tab dedupe: notify peers so other tabs editing the same
+        // resume skip their next 60s window. Best-effort; no-op on SSR or
+        // browsers without BroadcastChannel.
+        try {
+          getThumbChannel()?.postMessage({ resumeId, ts: now })
+        } catch {
+          // Swallow — broadcast failure must never block the thumbnail job.
+        }
         const locale = typeof window !== "undefined"
           ? (["es", "en"].includes(window.location.pathname.split("/")[1]) ? window.location.pathname.split("/")[1] : "es")
           : "es"
@@ -214,14 +264,14 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
             if (!r.ok) {
               set((state) => { state.lastThumbnailAt = lastThumbnailAt })
               if (r.status === 503) {
-                console.warn("[thumbnail] PDF microservice unavailable (503)")
+                logger.warn("thumbnail.service_unavailable", { status: 503 })
               } else {
                 const body = await r.json().catch(() => ({})) as { error?: string }
                 if (body.error) toast.error(body.error)
               }
             }
           })
-          .catch((err) => { set((state) => { state.lastThumbnailAt = lastThumbnailAt }); console.warn("[thumbnail] network error:", err) })
+          .catch((err) => { set((state) => { state.lastThumbnailAt = lastThumbnailAt }); logger.warn("thumbnail.network_error", { error: err instanceof Error ? err.message : String(err) }) })
       },
 
       save: async (opts) => {

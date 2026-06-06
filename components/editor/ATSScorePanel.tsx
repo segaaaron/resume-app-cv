@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
@@ -11,6 +12,7 @@ import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./Su
 import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
 import type { ReviewItem } from "./hooks/useATSScore"
+import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 
 function ScoreRing({ score }: { score: number }) {
   const r = 70
@@ -114,7 +116,12 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
 
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
-  const { sectionData, updateSectionData } = useResumeStore()
+  const { sectionData, updateSectionData } = useResumeStore(
+    useShallow((s) => ({
+      sectionData: s.sectionData,
+      updateSectionData: s.updateSectionData,
+    }))
+  )
   const {
     input, setInput,
     loading,
@@ -329,6 +336,7 @@ export default function ATSScorePanel() {
             onChange={(e) => setInput(e.target.value)}
             placeholder={t("placeholder")}
             disabled={!cvReady}
+            maxLength={AI_INPUT_LIMITS.jobDescription}
             className="w-full min-h-[110px] resize-none rounded-2xl border border-cyan-100 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           />
           {input.trim().length > 0 && (

@@ -2,10 +2,11 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, handleError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
+import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 
 const schema = z.object({
   sectionData: z.record(z.string(), z.unknown()),
-  question: z.string().max(300).optional(),
+  question: z.string().max(AI_INPUT_LIMITS.question).optional(),
   language: z.enum(["es", "en"]).optional(),
 })
 

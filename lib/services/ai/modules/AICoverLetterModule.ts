@@ -11,13 +11,14 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, escapeHtml } from "../shared/ai-helpers"
+import { parseAIJson, escapeHtml, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import type {
-  CoverLetterResult,
-  GenerateCoverLetterInput,
-  ImproveCoverLetterInput,
-  VersionsResult,
+import {
+  AI_INPUT_LIMITS,
+  type CoverLetterResult,
+  type GenerateCoverLetterInput,
+  type ImproveCoverLetterInput,
+  type VersionsResult,
 } from "../shared/ai-types"
 
 export class AICoverLetterModule {
@@ -30,17 +31,16 @@ export class AICoverLetterModule {
     await enforceAIQuota(userId, "generate-cover-letter", plan)
 
     const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt].filter(Boolean).join(" ")
-    const validation = validateAIInput(userText, 3000)
+    const validation = validateAIInput(userText, AI_INPUT_LIMITS.userText)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
-    if (company) { const v = validateAIInput(company, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
-    if (recipientName) { const v = validateAIInput(recipientName, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
-    if (jobTitle) { const v = validateAIInput(jobTitle, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
-    if (userPrompt) { const v = validateAIInput(userPrompt, 2000); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (company) { const v = validateAIInput(company, AI_INPUT_LIMITS.company); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (recipientName) { const v = validateAIInput(recipientName, AI_INPUT_LIMITS.recipientName); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (jobTitle) { const v = validateAIInput(jobTitle, AI_INPUT_LIMITS.jobTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (userPrompt) { const v = validateAIInput(userPrompt, AI_INPUT_LIMITS.userPrompt); if (!v.valid) throw new AppError("invalid_input", 400) }
 
     let resumeContext = ""
     if (resumeId) {
@@ -164,15 +164,14 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     await enforceAIQuota(userId, "improve-cover-letter", plan)
 
     const { body, company, jobTitle, recipientTitle, language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
-    const validation = validateAIInput(body, 3000)
+    const validation = validateAIInput(body, AI_INPUT_LIMITS.body)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
-    if (company) { const v = validateAIInput(company, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
-    if (jobTitle) { const v = validateAIInput(jobTitle, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
-    if (recipientTitle) { const v = validateAIInput(recipientTitle, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (company) { const v = validateAIInput(company, AI_INPUT_LIMITS.company); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (jobTitle) { const v = validateAIInput(jobTitle, AI_INPUT_LIMITS.jobTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (recipientTitle) { const v = validateAIInput(recipientTitle, AI_INPUT_LIMITS.recipientTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
 
     const context = language === "en"
       ? [

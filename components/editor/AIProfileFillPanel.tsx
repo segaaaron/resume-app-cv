@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import type {
   PersonalDetails, SkillItem, WorkExperienceItem,
   EducationItem, ProjectItem, VolunteerItem, LanguageItem,
@@ -132,7 +133,13 @@ function SectionUpdateBlock({
 
 export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean }) {
   const t = useTranslations("editor.ai_profile_fill")
-  const { sectionData, updateSectionData, save } = useResumeStore()
+  const { sectionData, updateSectionData, save } = useResumeStore(
+    useShallow((s) => ({
+      sectionData: s.sectionData,
+      updateSectionData: s.updateSectionData,
+      save: s.save,
+    }))
+  )
   const { prompt, setPrompt, loading, result, generate } = useAIProfileFill()
   const [expanded, setExpanded] = useState(inTab)
 

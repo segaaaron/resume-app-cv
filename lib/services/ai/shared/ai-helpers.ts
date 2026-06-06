@@ -42,3 +42,10 @@ export function escapeHtml(str: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
 }
+
+/** Normalizes a raw locale into "es" | "en" and returns the matching system instruction. */
+export function resolveLanguage(raw?: string): { language: "es" | "en"; langInstruction: string } {
+  const language: "es" | "en" = raw === "en" ? "en" : "es"
+  const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+  return { language, langInstruction }
+}

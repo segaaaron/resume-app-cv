@@ -5,9 +5,9 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import type { SuggestSkillsInput, SuggestSkillsResult } from "../shared/ai-types"
+import { AI_INPUT_LIMITS, type SuggestSkillsInput, type SuggestSkillsResult } from "../shared/ai-types"
 
 export class AISkillsModule {
   constructor(
@@ -19,16 +19,15 @@ export class AISkillsModule {
     await enforceAIQuota(userId, "suggest-skills", plan)
 
     const { jobTitle, industry, existingSkills = [], language: rawLanguage } = input
-    const language = rawLanguage === "en" ? "en" : "es"
-    const langInstruction = language === "en" ? "Always respond in English." : "Responde siempre en español."
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const validation = validateAIInput(jobTitle)
     if (!validation.valid) throw new AppError(validation.error ?? "invalid_input", 400)
 
-    if (industry) { const v = validateAIInput(industry, 500); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (industry) { const v = validateAIInput(industry, AI_INPUT_LIMITS.industry); if (!v.valid) throw new AppError("invalid_input", 400) }
 
     for (const skill of existingSkills) {
-      const v = validateAIInput(skill, 100)
+      const v = validateAIInput(skill, AI_INPUT_LIMITS.skill)
       if (!v.valid) throw new AppError("invalid_input", 400)
     }
 

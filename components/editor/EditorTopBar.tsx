@@ -54,23 +54,35 @@ export default function EditorTopBar({ hasAccess }: Props) {
 
   useEffect(() => {
     if (!resumeId) return
-    apiFetch(`/api/resumes/${resumeId}`)
+    const ctrl = new AbortController()
+    apiFetch(`/api/resumes/${resumeId}`, { signal: ctrl.signal })
       .then((r) => r.json())
       .then((data) => {
+        if (ctrl.signal.aborted) return
         if (data?.isPublic !== undefined) {
           setIsPublic(data.isPublic)
           setPublicSlug(data.publicSlug ?? null)
         }
       })
-      .catch(() => {})
+      .catch((e) => {
+        if (e?.name !== "AbortError") {/* swallow */}
+      })
+    return () => ctrl.abort()
   }, [resumeId])
 
   useEffect(() => {
     if (!resumeId || !isPublic) return
-    apiFetch(`/api/resumes/views?resumeId=${resumeId}`)
+    const ctrl = new AbortController()
+    apiFetch(`/api/resumes/views?resumeId=${resumeId}`, { signal: ctrl.signal })
       .then((r) => r.json())
-      .then((data) => setViewStats({ total: data.total ?? 0, last7d: data.last7d ?? 0 }))
-      .catch(() => {})
+      .then((data) => {
+        if (ctrl.signal.aborted) return
+        setViewStats({ total: data.total ?? 0, last7d: data.last7d ?? 0 })
+      })
+      .catch((e) => {
+        if (e?.name !== "AbortError") {/* swallow */}
+      })
+    return () => ctrl.abort()
   }, [resumeId, isPublic])
 
   useEffect(() => {

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
+import { useShallow } from "zustand/react/shallow"
 import {
   MessageSquare, Loader2, CheckCircle2, TrendingUp,
   Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock,
@@ -107,7 +108,13 @@ function ReviewItemRow({
 export default function CVReviewPanel() {
   const t = useTranslations("editor.cv_review")
   const tAts = useTranslations("editor.ats")
-  const { sectionData, updateSectionData, save } = useResumeStore()
+  const { sectionData, updateSectionData, save } = useResumeStore(
+    useShallow((s) => ({
+      sectionData: s.sectionData,
+      updateSectionData: s.updateSectionData,
+      save: s.save,
+    }))
+  )
   const { question, setQuestion, loading, result, review, cooldownUntil } = useCVReview()
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
