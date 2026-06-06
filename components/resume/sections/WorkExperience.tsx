@@ -142,8 +142,18 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await onSuccess()
+
+      // Check status FIRST (new behavior)
+      if (data.status === "already_optimized") {
+        lastKeyRef.current = key
+        setCooldownUntil(Date.now() + 120_000)
+        setAlreadyOptimized(true)
+        return
+      }
+
       const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
       if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
+      // Normalize comparison as fallback for compatibility
       const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
       if (normalize(bullets.join("\n")) === normalize(job.description)) {
         lastKeyRef.current = key

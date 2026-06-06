@@ -6,10 +6,12 @@ import { z } from "zod"
 
 export interface VersionsResult {
   versions: string[]
+  status?: "improved" | "already_optimized"
 }
 
 export interface BulletResult {
   bullets: string[]
+  status?: "improved" | "already_optimized"
 }
 
 export interface ATSScoreResult {
@@ -176,6 +178,26 @@ export interface TailorCVInput {
 export interface TailorCVResult {
   summaryVersion: string
   bulletSuggestions: Array<{ targetId: string; jobTitle: string; employer: string; improved: string }>
+  missingSkills: string[]
+  keywordsToAdd: string[]
+}
+
+// V2 — bullet-level granular suggestions
+export interface TailorBulletChange {
+  index: number   // posición 0-based del bullet en la descripción original
+  text: string    // texto mejorado del bullet
+}
+
+export interface TailorExperienceResult {
+  targetId: string
+  jobTitle: string
+  employer: string
+  changedBullets: TailorBulletChange[]  // vacío = todos los bullets ya están bien
+}
+
+export interface TailorCVResultV2 {
+  summary: string | null            // null = resumen ya está bien
+  experiences: TailorExperienceResult[]
   missingSkills: string[]
   keywordsToAdd: string[]
 }

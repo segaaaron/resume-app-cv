@@ -32,7 +32,9 @@ export class AIBulletModule {
     ].filter(Boolean).join(" | ")
 
     const prompt = language === "en"
-      ? `TASK: Transform this work experience description into high-impact professional bullets for an executive resume.
+      ? `STEP 0 — QUALITY CHECK: Evaluate if this description already has high-impact bullets (strong action verb + metric/placeholder + specific context). If YES for ALL bullets → return {"status": "already_optimized", "bullets": []} to avoid unnecessary token usage.
+
+TASK: Transform this work experience description into high-impact professional bullets for an executive resume.
 
 ${context ? `Position context: ${context}` : ""}
 
@@ -57,7 +59,9 @@ TRANSFORMATION RULES:
 
 Respond ONLY with valid JSON (no markdown):
 {"bullets": ["• bullet1", "• bullet2", ...]}`
-      : `TAREA: Transforma esta descripción de experiencia laboral en bullets profesionales de alto impacto, listos para un CV ejecutivo.
+      : `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si esta descripción ya tiene bullets de alto impacto (verbo de acción fuerte + métrica/placeholder + contexto específico). Si SÍ para TODOS los bullets → devuelve {"status": "already_optimized", "bullets": []} para evitar consumo innecesario de tokens.
+
+TAREA: Transforma esta descripción de experiencia laboral en bullets profesionales de alto impacto, listos para un CV ejecutivo.
 
 ${context ? `Contexto del puesto: ${context}` : ""}
 
@@ -104,7 +108,18 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     })
 
     const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ bullets?: unknown }>(raw)
+    const parsed = parseAIJson<{ bullets?: unknown; status?: unknown }>(raw)
+
+    if (parsed.status === "already_optimized") {
+      const usage = response.usage
+      logAIUsage(userId, "improve-bullet", {
+        model: AI_MODEL, plan,
+        promptTokens: usage?.prompt_tokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      })
+      return { status: "already_optimized", bullets: [] }
+    }
 
     if (!Array.isArray(parsed.bullets)) throw new AppError("invalid_response_format", 500)
     if (parsed.bullets.length === 0) {

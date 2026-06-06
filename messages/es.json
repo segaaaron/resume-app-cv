@@ -1359,7 +1359,8 @@
       "version_type_value_prop": "Propuesta de Valor",
       "version_desc_executive": "Impacto de negocio, liderazgo y resultados cuantificables",
       "version_desc_specialist": "Stack técnico, herramientas y frameworks (iOS, SwiftUI, MVVM…)",
-      "version_desc_value_prop": "Logro pasado + habilidad diferencial + valor futuro que aportas"
+      "version_desc_value_prop": "Logro pasado + habilidad diferencial + valor futuro que aportas",
+      "summary_already_optimized": "Tu resumen ya está optimizado. No se encontraron mejoras."
     },
     "template_switch": {
       "title": "Vista previa: {name}",
@@ -1461,7 +1462,8 @@
       "cooldown": "Espera {seconds} antes de volver a adaptar",
       "cooldown_btn": "Espera {seconds}",
       "all_applied_title": "¡Adaptaciones aplicadas con éxito!",
-      "all_applied_desc": "Resumen, experiencia y habilidades actualizados para esta oferta."
+      "all_applied_desc": "Resumen, experiencia y habilidades actualizados para esta oferta.",
+      "no_improvements": "Tus bullets ya están optimizados para esta oferta"
     },
     "download_generating_pdf": "Generando PDF...",
     "download_generating_word": "Generando Word...",

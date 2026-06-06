@@ -129,6 +129,15 @@ export default function SummarySection() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await onSuccess()
+
+      // Check already_optimized status
+      if (data.status === "already_optimized") {
+        lastKeyRef.current = key
+        setCooldownUntil(Date.now() + 120_000)
+        toast.info(ai("summary_already_optimized"))
+        return
+      }
+
       const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
       setVersions((data.versions as string[]).map((text, i) => ({ type: types[i] ?? "executive", text })))
       lastKeyRef.current = key

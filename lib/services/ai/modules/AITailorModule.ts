@@ -12,7 +12,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import type { TailorCVInput, TailorCVResult } from "../shared/ai-types"
+import type { TailorCVInput, TailorCVResultV2, TailorExperienceResult } from "../shared/ai-types"
 
 export class AITailorModule {
   constructor(
@@ -20,7 +20,7 @@ export class AITailorModule {
     private readonly logger: ILogger,
   ) {}
 
-  async tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResult> {
+  async tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
     await enforceAIQuota(userId, "tailor-cv", plan)
 
     const { sectionData, jobDescription, language: rawLanguage } = input
@@ -35,9 +35,11 @@ export class AITailorModule {
     if (!ctxValidation.valid) throw new AppError("invalid_input", 400)
 
     const work = (sectionData.workExperience ?? []) as { id?: string; jobTitle?: string; employer?: string; description?: string }[]
-    const workList = work.slice(0, 4).map((j) =>
-      `ID:${j.id ?? "?"} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}: ${(j.description ?? "").slice(0, 300)}`
-    ).join("\n")
+    const workList = work.slice(0, 4).map((j) => {
+      const lines = (j.description ?? "").split("\n").map(l => l.trim()).filter(Boolean)
+      const bulletLines = lines.map((l, i) => `  [${i}] ${l.slice(0, 80)}${l.length > 80 ? "..." : ""}`).join("\n")
+      return `ID:${j.id ?? "?"} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}:\n${bulletLines || "  (sin bullets)"}`
+    }).join("\n\n")
 
     const prompt = language === "en"
       ? `You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
@@ -48,27 +50,35 @@ ${jobDescription.slice(0, 4000)}
 CANDIDATE CV:
 ${resumeContext}
 
-WORK EXPERIENCE DETAILS:
+WORK EXPERIENCE DETAILS (bullets indexed by position):
 ${workList}
 
-Return a JSON object with this structure:
+Return a JSON object:
 {
-  "summaryVersion": "rewritten professional summary (3-4 sentences, 80-120 words) aligned to this job",
-  "bulletSuggestions": [
-    { "targetId": "work experience ID from the list", "jobTitle": "job title", "employer": "employer", "improved": "• Bullet 1 rewritten with CAR method\n• Bullet 2 rewritten\n• Bullet 3 if needed" }
+  "summary": "rewritten summary aligned to job OR null if already strong",
+  "experiences": [
+    {
+      "targetId": "ID",
+      "jobTitle": "title",
+      "employer": "company",
+      "changedBullets": [
+        { "index": 1, "text": "• Improved bullet text using CAR method" }
+      ]
+    }
   ],
-  "missingSkills": ["skill1", "skill2"],
-  "keywordsToAdd": ["keyword1", "keyword2"]
+  "missingSkills": ["skill1"],
+  "keywordsToAdd": ["keyword1"]
 }
 
 Rules:
-- summaryVersion: mirror the job's language and keywords naturally; no exaggeration
-- bulletSuggestions: only for work experiences where improvement would meaningfully help; max 3
-- improved: MUST use • bullet format, one bullet per line separated by \n. Match the original number of bullets. Each bullet uses CAR method (Context/Action/Result). No markdown, no asterisks.
-- missingSkills: skills required by the job that the candidate doesn't have (max 5)
-- keywordsToAdd: ATS keywords from the job not present in the CV (max 8)
-- Be specific and actionable; no generic advice
-- Only return the JSON object`
+- summary: rewrite if it lacks job keywords or impact metrics. Return null if it's already strong.
+- experiences: include ALL jobs from the work experience list, even those with no changes
+- changedBullets: ONLY include bullets that need improvement. If a bullet already has a strong action verb, metric/placeholder, and is relevant to this job → OMIT it (empty array = all bullets are good)
+- For each changed bullet: use • prefix, CAR method, keep placeholder [X%] if no real metrics exist
+- NEVER add new bullets that don't exist in the original — only replace existing ones by index
+- missingSkills: skills required by job not present in CV (max 5)
+- keywordsToAdd: ATS keywords from JD missing in CV (max 8)
+- If all bullets and summary are already well-optimized: return summary null, empty changedBullets for all experiences`
       : `Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
 
 OFERTA DE TRABAJO:
@@ -77,27 +87,35 @@ ${jobDescription.slice(0, 4000)}
 CV DEL CANDIDATO:
 ${resumeContext}
 
-DETALLES DE EXPERIENCIA LABORAL:
+DETALLES DE EXPERIENCIA LABORAL (bullets indexados por posición):
 ${workList}
 
-Devuelve un objeto JSON con esta estructura:
+Devuelve un objeto JSON:
 {
-  "summaryVersion": "resumen profesional reescrito (3-4 oraciones, 80-120 palabras) alineado a esta oferta",
-  "bulletSuggestions": [
-    { "targetId": "ID de la experiencia laboral", "jobTitle": "puesto", "employer": "empresa", "improved": "• Bullet 1 reescrito con método CAR\n• Bullet 2 reescrito\n• Bullet 3 si aplica" }
+  "summary": "resumen reescrito alineado a la oferta O null si ya está bien",
+  "experiences": [
+    {
+      "targetId": "ID",
+      "jobTitle": "puesto",
+      "employer": "empresa",
+      "changedBullets": [
+        { "index": 1, "text": "• Texto mejorado del bullet con método CAR" }
+      ]
+    }
   ],
-  "missingSkills": ["habilidad1", "habilidad2"],
-  "keywordsToAdd": ["keyword1", "keyword2"]
+  "missingSkills": ["habilidad1"],
+  "keywordsToAdd": ["keyword1"]
 }
 
 Reglas:
-- summaryVersion: refleja el lenguaje y palabras clave de la oferta de forma natural; sin exageraciones
-- bulletSuggestions: solo para experiencias donde la mejora aporte valor real; máximo 3
-- improved: DEBE usar formato • bullet, un bullet por línea separado por \n. Iguala el número de bullets del original. Cada bullet usa método CAR (Contexto/Acción/Resultado). Sin markdown, sin asteriscos.
-- missingSkills: habilidades requeridas por la oferta que el candidato no tiene (máximo 5)
+- summary: reescribir si le faltan keywords de la oferta o métricas de impacto. Devolver null si ya está bien.
+- experiences: incluir TODOS los puestos de la lista de experiencia, incluso los que no tienen cambios
+- changedBullets: SOLO incluir bullets que necesitan mejora. Si un bullet ya tiene verbo de acción fuerte, métrica/placeholder y es relevante → OMITIRLO (array vacío = todos los bullets están bien)
+- Para cada bullet cambiado: usar prefijo •, método CAR, mantener placeholder [X%] si no hay métricas reales
+- NUNCA agregar bullets nuevos que no existen en el original — solo reemplazar existentes por índice
+- missingSkills: habilidades requeridas por la oferta no presentes en el CV (máximo 5)
 - keywordsToAdd: keywords ATS de la oferta no presentes en el CV (máximo 8)
-- Sé específico y accionable; nada genérico
-- Solo devuelve el objeto JSON`
+- Si todos los bullets y el resumen ya están bien optimizados: devolver summary null, changedBullets vacíos para todas las experiencias`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
@@ -107,16 +125,19 @@ Reglas:
       messages: [
         {
           role: "system",
-          content: `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summaryVersion": "", "bulletSuggestions": [], "missingSkills": [], "keywordsToAdd": [] }. ${langInstruction}`,
+          content: `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summary": null, "experiences": [], "missingSkills": [], "keywordsToAdd": [] }. A bullet is already good if it has: (1) strong action verb at start, (2) metric or explicit placeholder [X%], (3) relevant context for this specific job. Only mark as unchanged if it genuinely meets all three. ${langInstruction}`,
         },
         { role: "user", content: prompt },
       ],
     })
 
     const content = response.choices[0]?.message?.content ?? "{}"
-    const raw = parseAIJson<TailorCVResult>(content)
+    const raw = parseAIJson<TailorCVResultV2>(content)
 
-    if (!raw.summaryVersion && !raw.bulletSuggestions?.length && !raw.missingSkills?.length) {
+    // off_topic = model returned no experiences at all (system prompt returns [] for nonsense input)
+    // CV already optimized = experiences present but changedBullets empty → valid result, not off_topic
+    const hasExperiences = (raw.experiences?.length ?? 0) > 0
+    if (!raw.summary && !hasExperiences && !raw.missingSkills?.length && !raw.keywordsToAdd?.length) {
       throw new AppError("off_topic", 422)
     }
 
@@ -129,10 +150,18 @@ Reglas:
       costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
     return {
-      summaryVersion: raw.summaryVersion ?? "",
-      bulletSuggestions: (raw.bulletSuggestions ?? []).slice(0, 3),
+      summary: raw.summary ?? null,
+      experiences: (raw.experiences ?? []).map((e) => ({
+        targetId: e.targetId ?? "",
+        jobTitle: e.jobTitle ?? "",
+        employer: e.employer ?? "",
+        changedBullets: (e.changedBullets ?? []).map((b) => ({
+          index: typeof b.index === "number" ? b.index : 0,
+          text: typeof b.text === "string" ? b.text : "",
+        })).filter((b) => b.text),
+      })),
       missingSkills: (raw.missingSkills ?? []).slice(0, 5),
       keywordsToAdd: (raw.keywordsToAdd ?? []).slice(0, 8),
-    }
+    } satisfies TailorCVResultV2
   }
 }

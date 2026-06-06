@@ -17,8 +17,13 @@ import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
 
 interface TailorResult {
-  summaryVersion: string
-  bulletSuggestions: Array<{ targetId: string; jobTitle: string; employer: string; improved: string }>
+  summary: string | null
+  experiences: Array<{
+    targetId: string
+    jobTitle: string
+    employer: string
+    changedBullets: Array<{ index: number; text: string }>
+  }>
   missingSkills: string[]
   keywordsToAdd: string[]
 }
@@ -37,9 +42,14 @@ export default function TailorCVPanel() {
   const [result, setResult] = useState<TailorResult | null>(null)
   const [expanded, setExpanded] = useState(false)
   const [appliedSummary, setAppliedSummary] = useState(false)
-  const [appliedBullets, setAppliedBullets] = useState<Set<string>>(new Set())
+  const [appliedBullets, setAppliedBullets] = useState<Map<string, Set<number>>>(new Map())
   const [addedSkills, setAddedSkills] = useState<Set<string>>(new Set())
-  const [pendingBullet, setPendingBullet] = useState<{ targetId: string; improved: string; currentDescription: string } | null>(null)
+  const [pendingBullet, setPendingBullet] = useState<{
+    targetId: string
+    bulletIndex: number
+    text: string
+    currentDescription: string
+  } | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_tailor")
   const [now, setNow] = useState(Date.now())
   const lastTailorKeyRef = useRef<string | null>(null)
@@ -78,7 +88,7 @@ export default function TailorCVPanel() {
     setResult(null)
     setExpanded(false)
     setAppliedSummary(false)
-    setAppliedBullets(new Set())
+    setAppliedBullets(new Map())
     setAddedSkills(new Set())
     preCheck("tailor-cv")
     try {
@@ -112,24 +122,37 @@ export default function TailorCVPanel() {
   }
 
   function applySummary() {
-    if (!result?.summaryVersion) return
-    updateSectionData("summary", result.summaryVersion)
+    if (!result?.summary) return
+    updateSectionData("summary", result.summary)
     setAppliedSummary(true)
     toast.success(t("summary_applied"))
   }
 
-  function openBulletDiff(b: { targetId: string; improved: string }) {
-    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
-    const item = work.find((j) => j.id === b.targetId)
-    setPendingBullet({ targetId: b.targetId, improved: b.improved, currentDescription: item?.description ?? "" })
+  function isBulletApplied(targetId: string, index: number): boolean {
+    return appliedBullets.get(targetId)?.has(index) ?? false
   }
 
   function confirmApplyBullet() {
     if (!pendingBullet) return
+    const { targetId, bulletIndex, text, currentDescription } = pendingBullet
+    const lines = currentDescription.split("\n").map(l => l.trim()).filter(Boolean)
+    if (bulletIndex >= 0 && bulletIndex < lines.length) {
+      lines[bulletIndex] = text
+    } else {
+      lines.push(text)
+    }
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
-    const updated = work.map((j) => j.id === pendingBullet.targetId ? { ...j, description: pendingBullet.improved } : j)
+    const updated = work.map((j) =>
+      j.id === targetId ? { ...j, description: lines.join("\n") } : j
+    )
     updateSectionData("workExperience", updated)
-    setAppliedBullets((prev) => new Set(prev).add(pendingBullet.targetId))
+    setAppliedBullets((prev) => {
+      const next = new Map(prev)
+      const current = next.get(targetId) ?? new Set<number>()
+      current.add(bulletIndex)
+      next.set(targetId, current)
+      return next
+    })
     toast.success(t("bullet_applied"))
     setPendingBullet(null)
   }
@@ -214,28 +237,44 @@ export default function TailorCVPanel() {
 
           {/* All-applied success banner */}
           {result && (() => {
-            const summaryDone = !result.summaryVersion || appliedSummary
-            const bulletsDone = result.bulletSuggestions.every((b) => appliedBullets.has(b.targetId))
+            const allChangedBullets = result.experiences.flatMap(e => e.changedBullets.map(b => ({ targetId: e.targetId, index: b.index })))
+            const bulletsDone = allChangedBullets.every(({ targetId, index }) => isBulletApplied(targetId, index))
+            const summaryDone = !result.summary || appliedSummary
             const skillsDone = result.missingSkills.every((s) => addedSkills.has(s))
-            const hasActionable = !!(result.summaryVersion || result.bulletSuggestions.length || result.missingSkills.length)
+            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || result.missingSkills?.length)
             const allDone = hasActionable && summaryDone && bulletsDone && skillsDone
-            return allDone ? (
-              <div className="mx-0 mb-2 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-3 flex items-start gap-2.5">
-                <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-sm shrink-0 mt-0.5">
-                  <Check size={13} className="text-white" />
-                </div>
-                <div>
-                  <p className="text-[11.5px] font-bold text-emerald-800 leading-tight">{t("all_applied_title")}</p>
-                  <p className="text-[10.5px] text-emerald-600 mt-0.5 leading-snug">{t("all_applied_desc")}</p>
-                </div>
-              </div>
-            ) : null
+            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && !result.missingSkills?.length
+            return (
+              <>
+                {allDone && !nothingToImprove ? (
+                  <div className="mx-0 mb-2 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-3 flex items-start gap-2.5">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-sm shrink-0 mt-0.5">
+                      <Check size={13} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[11.5px] font-bold text-emerald-800 leading-tight">{t("all_applied_title")}</p>
+                      <p className="text-[10.5px] text-emerald-600 mt-0.5 leading-snug">{t("all_applied_desc")}</p>
+                    </div>
+                  </div>
+                ) : null}
+                {nothingToImprove ? (
+                  <div className="mx-0 mb-2 rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-3 flex items-start gap-2.5">
+                    <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-gradient-to-br from-emerald-400 to-teal-500 shadow-sm shrink-0 mt-0.5">
+                      <Check size={13} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[11.5px] font-bold text-emerald-800 leading-tight">{t("no_improvements")}</p>
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )
           })()}
 
           {expanded && (
             <div className="space-y-4">
               {/* Tailored summary */}
-              {result.summaryVersion && (
+              {result.summary && (
                 <div className="rounded-lg p-3 border border-[rgba(0,212,255,0.15)] bg-white/60">
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider">{t("section_summary")}</p>
@@ -253,34 +292,51 @@ export default function TailorCVPanel() {
                       {appliedSummary ? t("applied") : t("apply")}
                     </button>
                   </div>
-                  <p className="text-[11px] text-[#334155] leading-relaxed">{result.summaryVersion}</p>
+                  <p className="text-[11px] text-[#334155] leading-relaxed">{result.summary}</p>
                 </div>
               )}
 
-              {/* Bullet suggestions */}
-              {result.bulletSuggestions.length > 0 && (
+              {/* Bullet suggestions — granular by experience and index */}
+              {result.experiences.filter(e => e.changedBullets.length > 0).length > 0 && (
                 <div>
                   <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-2">{t("section_bullets")}</p>
                   <div className="space-y-2">
-                    {result.bulletSuggestions.map((b) => (
-                      <div key={b.targetId} className="rounded-lg p-3 border border-[rgba(0,212,255,0.15)] bg-white/60">
-                        <div className="flex items-center justify-between mb-1.5">
-                          <p className="text-[10px] text-[#7A9BB5] truncate flex-1 mr-2">{b.jobTitle} · {b.employer}</p>
-                          <button
-                            onClick={() => openBulletDiff(b)}
-                            disabled={appliedBullets.has(b.targetId)}
-                            className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-semibold shrink-0 transition-all duration-200 disabled:opacity-60"
-                            style={{
-                              background: appliedBullets.has(b.targetId) ? "rgba(16,185,129,0.1)" : "rgba(0,212,255,0.12)",
-                              color: appliedBullets.has(b.targetId) ? "#10B981" : "#00A8CC",
-                              border: `1px solid ${appliedBullets.has(b.targetId) ? "rgba(16,185,129,0.3)" : "rgba(0,212,255,0.3)"}`,
-                            }}
-                          >
-                            {appliedBullets.has(b.targetId) ? <Check size={10} /> : <Copy size={10} />}
-                            {appliedBullets.has(b.targetId) ? t("applied") : t("apply")}
-                          </button>
+                    {result.experiences.filter(e => e.changedBullets.length > 0).map((exp) => (
+                      <div key={exp.targetId} className="rounded-lg p-3 border border-[rgba(0,212,255,0.15)] bg-white/60">
+                        <p className="text-[10px] text-[#7A9BB5] truncate mb-2">{exp.jobTitle} · {exp.employer}</p>
+                        <div className="space-y-2">
+                          {exp.changedBullets.map((bullet) => {
+                            const applied = isBulletApplied(exp.targetId, bullet.index)
+                            return (
+                              <div key={`${exp.targetId}-${bullet.index}`} className="flex items-start justify-between gap-2">
+                                <p className="text-[11px] text-[#334155] leading-relaxed flex-1">{bullet.text}</p>
+                                <button
+                                  onClick={() => {
+                                    if (applied) return
+                                    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+                                    const job = work.find(j => j.id === exp.targetId)
+                                    setPendingBullet({
+                                      targetId: exp.targetId,
+                                      bulletIndex: bullet.index,
+                                      text: bullet.text,
+                                      currentDescription: job?.description ?? "",
+                                    })
+                                  }}
+                                  disabled={applied}
+                                  className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-semibold shrink-0 transition-all duration-200 disabled:opacity-60"
+                                  style={{
+                                    background: applied ? "rgba(16,185,129,0.1)" : "rgba(0,212,255,0.12)",
+                                    color: applied ? "#10B981" : "#00A8CC",
+                                    border: `1px solid ${applied ? "rgba(16,185,129,0.3)" : "rgba(0,212,255,0.3)"}`,
+                                  }}
+                                >
+                                  {applied ? <Check size={10} /> : <Copy size={10} />}
+                                  {applied ? t("applied") : t("apply")}
+                                </button>
+                              </div>
+                            )
+                          })}
                         </div>
-                        <p className="text-[11px] text-[#334155] leading-relaxed">{b.improved}</p>
                       </div>
                     ))}
                   </div>
@@ -346,7 +402,7 @@ export default function TailorCVPanel() {
           suggestion={{
             field: "workExperience.description",
             type: "replace",
-            preview: pendingBullet.improved,
+            preview: pendingBullet.text,
             reason: t("diff_replace_reason"),
             targetId: pendingBullet.targetId,
           }}

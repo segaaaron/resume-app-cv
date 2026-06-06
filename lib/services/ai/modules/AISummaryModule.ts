@@ -160,7 +160,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 
     const prompt = language === "en"
       ? hasSummary
-        ? `TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
+        ? `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) strong action verb or role title at start, (b) at least one metric or explicit placeholder [X%], (c) no clichés ("passionate", "team player", "looking for"), (d) 60-120 words, (e) no personal pronouns. If ALL criteria are met → return {"status": "already_optimized", "versions": []} immediately.
+
+TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
 
 ${hasDescription ? `Candidate instruction: "${userDescription!.trim()}"` : ""}
 ${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
@@ -210,7 +212,9 @@ RULES:
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
       : hasSummary
-        ? `TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
+        ? `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) al menos una métrica o placeholder explícito [X%], (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) 60-120 palabras, (e) sin pronombres personales. Si TODOS los criterios se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente.
+
+TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
 
 ${hasDescription ? `Instrucción del candidato: "${userDescription!.trim()}"` : ""}
 ${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
@@ -281,7 +285,19 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     })
 
     const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ versions?: unknown }>(raw)
+    const parsed = parseAIJson<{ versions?: unknown; status?: unknown }>(raw)
+
+    if (parsed.status === "already_optimized") {
+      const usage = response.usage
+      logAIUsage(userId, "improve-summary", {
+        model: AI_MODEL,
+        plan,
+        promptTokens: usage?.prompt_tokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      })
+      return { status: "already_optimized", versions: [] }
+    }
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
     if (parsed.versions.length === 0) {

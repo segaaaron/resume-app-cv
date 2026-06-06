@@ -1359,7 +1359,8 @@
       "version_type_value_prop": "Value Proposition",
       "version_desc_executive": "Business impact, leadership and quantifiable results",
       "version_desc_specialist": "Technical stack, tools and frameworks (iOS, SwiftUI, MVVM…)",
-      "version_desc_value_prop": "Past achievement + differential skill + future value you bring"
+      "version_desc_value_prop": "Past achievement + differential skill + future value you bring",
+      "summary_already_optimized": "Your summary is already well-optimized. No improvements needed."
     },
     "template_switch": {
       "title": "Preview: {name}",
@@ -1461,7 +1462,8 @@
       "cooldown": "Wait {seconds} before tailoring again",
       "cooldown_btn": "Wait {seconds}",
       "all_applied_title": "Adaptations applied successfully!",
-      "all_applied_desc": "Summary, experience and skills updated for this job posting."
+      "all_applied_desc": "Summary, experience and skills updated for this job posting.",
+      "no_improvements": "Your CV bullets are already optimized for this job"
     },
     "download_generating_pdf": "Generating PDF...",
     "download_generating_word": "Generating Word...",

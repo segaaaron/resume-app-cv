@@ -33,7 +33,7 @@ import type {
   SuggestSkillsInput,
   SuggestSkillsResult,
   TailorCVInput,
-  TailorCVResult,
+  TailorCVResultV2,
   VersionsResult,
 } from "./shared/ai-types"
 
@@ -58,6 +58,7 @@ export type {
   SuggestSkillsInput,
   TailorCVInput,
   TailorCVResult,
+  TailorCVResultV2,
 } from "./shared/ai-types"
 
 export class AIService {
@@ -115,7 +116,7 @@ export class AIService {
     return this.skillsModule.suggestSkills(userId, input, plan)
   }
 
-  tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResult> {
+  tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
     return this.tailorModule.tailorCV(userId, input, plan)
   }
 }
