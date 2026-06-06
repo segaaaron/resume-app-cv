@@ -12,6 +12,7 @@ vi.mock("@/lib/ai-client", () => ({
   AI_TEMPERATURE_BALANCED: 0.5,
   AI_TEMPERATURE_PRECISE: 0.1,
   AI_TEMPERATURE_STRUCTURED: 0.3,
+  AI_TEMPERATURE_GENERATIVE: 0.6,
   checkRateLimit: vi.fn().mockResolvedValue(true),
   checkAndIncrementRateLimit: vi.fn().mockResolvedValue(true),
   checkAndIncrementAIQuota: vi.fn().mockResolvedValue({ allowed: true }),
@@ -280,7 +281,7 @@ describe("AIService", () => {
       const service = new AIService(aiClient, logger)
 
       const result = await service.fillProfile("user-1", {
-        prompt: "I worked at Google as a software engineer",
+        prompt: "I worked at Google as a software engineer using React and TypeScript for frontend development",
         sectionData: {
           workExperience: [{ id: "we-1", employer: "Google", jobTitle: "SWE" }],
         },

@@ -10,7 +10,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2, type TailorExperienceResult } from "../shared/ai-types"
 
@@ -41,7 +41,13 @@ export class AITailorModule {
     }).join("\n\n")
 
     const prompt = language === "en"
-      ? `You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. ONLY rewrite using information present in the CANDIDATE CV below. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, or dates not present in the CV.
+2. Bullet rewrites must apply the CAR method using ONLY results explicitly stated in the source. If a bullet has no real metric, keep the [X%] / [N users] placeholder — never replace a placeholder with an invented figure.
+3. missingSkills must list skills required by the JOB DESCRIPTION; do not invent skill names. keywordsToAdd must come from the JOB DESCRIPTION verbatim.
+4. If you cannot improve a bullet without inventing content, OMIT it from changedBullets — never fabricate to fill space.
+
+You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
 
 JOB DESCRIPTION:
 ${jobDescription.slice(0, 4000)}
@@ -78,7 +84,13 @@ Rules:
 - missingSkills: skills required by job not present in CV (max 5)
 - keywordsToAdd: ATS keywords from JD missing in CV (max 8)
 - If all bullets and summary are already well-optimized: return summary null, empty changedBullets for all experiences`
-      : `Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. SOLO reescribe usando información presente en el CV DEL CANDIDATO. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el CV.
+2. Las reescrituras de bullets aplican el método CAR usando ÚNICAMENTE resultados explícitos del source. Si un bullet no tiene métrica real, conserva el placeholder [X%] / [N usuarios] — nunca lo sustituyas por una cifra inventada.
+3. missingSkills debe listar habilidades requeridas por la OFERTA DE TRABAJO; no inventes nombres de habilidades. keywordsToAdd debe provenir literalmente de la OFERTA DE TRABAJO.
+4. Si no puedes mejorar un bullet sin inventar, OMÍTELO de changedBullets — nunca fabriques contenido para rellenar.
+
+Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
 
 OFERTA DE TRABAJO:
 ${jobDescription.slice(0, 4000)}
@@ -148,19 +160,59 @@ Reglas:
       completionTokens: usage?.completion_tokens ?? 0,
       costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
-    return {
-      summary: raw.summary ?? null,
-      experiences: (raw.experiences ?? []).map((e) => ({
+    // Anti-hallucination sanitization: drop bullet rewrites that introduce
+    // content not derivable from the resume context. Filter missingSkills /
+    // keywordsToAdd so only items present in the JD survive (the model is
+    // supposed to extract them — never invent).
+    const jdLower = jobDescription.toLowerCase()
+    const resumeLower = resumeContext.toLowerCase()
+    let droppedBullets = 0
+
+    const sanitizedExperiences = (raw.experiences ?? []).map((e) => {
+      const cleanedBullets = (e.changedBullets ?? [])
+        .map((b) => ({
+          index: typeof b.index === "number" ? b.index : 0,
+          text: typeof b.text === "string" ? b.text : "",
+        }))
+        .filter((b) => b.text)
+        .filter((b) => {
+          if (detectHallucination(b.text, resumeContext, { allowPlaceholders: true })) {
+            droppedBullets++
+            return false
+          }
+          return true
+        })
+      return {
         targetId: e.targetId ?? "",
         jobTitle: e.jobTitle ?? "",
         employer: e.employer ?? "",
-        changedBullets: (e.changedBullets ?? []).map((b) => ({
-          index: typeof b.index === "number" ? b.index : 0,
-          text: typeof b.text === "string" ? b.text : "",
-        })).filter((b) => b.text),
-      })),
-      missingSkills: (raw.missingSkills ?? []).slice(0, 5),
-      keywordsToAdd: (raw.keywordsToAdd ?? []).slice(0, 8),
+        changedBullets: cleanedBullets,
+      }
+    })
+
+    const cleanMissingSkills = (raw.missingSkills ?? [])
+      .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
+      .filter((s) => {
+        const sl = s.toLowerCase().trim()
+        // Must be referenced somewhere in JD or CV — never invent skill names.
+        return jdLower.includes(sl) || resumeLower.includes(sl)
+      })
+      .slice(0, 5)
+
+    const cleanKeywordsToAdd = (raw.keywordsToAdd ?? [])
+      .filter((k): k is string => typeof k === "string" && k.trim().length > 0)
+      .filter((k) => jdLower.includes(k.toLowerCase().trim()))
+      .slice(0, 8)
+
+    if (droppedBullets > 0) {
+      this.logger.warn("[AIService.tailorCV] dropped hallucinated bullets", { droppedBullets })
+    }
+
+    return {
+      summary: raw.summary ?? null,
+      experiences: sanitizedExperiences,
+      missingSkills: cleanMissingSkills,
+      keywordsToAdd: cleanKeywordsToAdd,
     } satisfies TailorCVResultV2
   }
 }

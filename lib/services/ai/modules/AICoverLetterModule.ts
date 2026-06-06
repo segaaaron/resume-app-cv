@@ -4,6 +4,7 @@ import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
   AI_TEMPERATURE_CREATIVE,
+  AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
@@ -11,7 +12,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, escapeHtml, resolveLanguage } from "../shared/ai-helpers"
+import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -186,7 +187,12 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
         ].filter(Boolean).join(" | ")
 
     const prompt = language === "en"
-      ? `TASK: Improve this cover letter body and generate 3 optimized versions.
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. ONLY rewrite using information already present in the current letter and the context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the source.
+2. Preserve real metrics from the original. If none exist, use ONLY the documented placeholders [X%], [N projects], [$Z]. Never replace placeholders with invented figures.
+3. If a version would require fabricating content to be impactful, prefer a shorter, conservative rewrite anchored to the source.
+
+TASK: Improve this cover letter body and generate 3 optimized versions.
 
 ${context ? `Context: ${context}` : ""}
 Current letter:
@@ -205,7 +211,12 @@ GOLDEN RULES (apply all):
 
 Respond ONLY with valid JSON (no markdown, no explanations):
 {"versions": ["version1", "version2", "version3"]}`
-      : `TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones optimizadas.
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.
+2. Conserva métricas reales del original. Si no las hay, usa ÚNICAMENTE los placeholders documentados [X%], [N proyectos], [$Z]. Nunca sustituyas placeholders por cifras inventadas.
+3. Si una versión requiere fabricar contenido para ser impactante, prefiere una reescritura más corta y conservadora anclada al source.
+
+TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones optimizadas.
 
 ${context ? `Contexto: ${context}` : ""}
 Carta actual:
@@ -228,7 +239,9 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 1000,
-      temperature: AI_TEMPERATURE_CREATIVE,
+      // improve-cover-letter uses 0.3 — must stay close to the original body
+      // and avoid inventing metrics or technologies.
+      temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -253,6 +266,27 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
       throw new AppError("off_topic", 422)
     }
 
+    // Anti-hallucination filter — source = original body + context fields.
+    const source = [body, company ?? "", jobTitle ?? "", recipientTitle ?? ""].join("\n")
+    const rawVersions = (parsed.versions as unknown[]).slice(0, 3).filter(
+      (v): v is string => typeof v === "string" && v.trim().length > 0,
+    )
+    let droppedVersions = 0
+    const cleanVersions = rawVersions.filter((v) => {
+      if (detectHallucination(v, source, { allowPlaceholders: true })) {
+        droppedVersions++
+        return false
+      }
+      return true
+    })
+
+    if (droppedVersions > 0) {
+      this.logger.warn("[AIService.improveCoverLetter] dropped hallucinated versions", {
+        droppedVersions,
+        keptVersions: cleanVersions.length,
+      })
+    }
+
     const improveUsage = response.usage
     logAIUsage(userId, "improve-cover-letter", {
       model: AI_MODEL,
@@ -261,6 +295,12 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
       completionTokens: improveUsage?.completion_tokens ?? 0,
       costUsd: computeCostUsd(AI_MODEL, improveUsage?.prompt_tokens ?? 0, improveUsage?.completion_tokens ?? 0),
     })
-    return { versions: (parsed.versions as string[]).slice(0, 3) }
+
+    // Fail-safe: if every version was dropped, fall back to the original body
+    // so the frontend never receives invented content.
+    if (cleanVersions.length === 0) {
+      return { versions: [body.trim()], status: "already_optimized" }
+    }
+    return { versions: cleanVersions }
   }
 }

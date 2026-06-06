@@ -6,7 +6,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import {
   MessageSquare, Loader2, CheckCircle2, TrendingUp,
-  Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock,
+  Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock, Info,
 } from "lucide-react"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -69,7 +69,34 @@ function ReviewItemRow({
 }) {
   const colors = REVIEW_COLORS[index % REVIEW_COLORS.length]
   const isStrength = itemKey.startsWith("strength")
-  const canApply = Boolean(item.suggestion) && !applied
+  const hasSuggestion = Boolean(item.suggestion)
+  const canApply = hasSuggestion && !applied
+
+  // Advice-only variant: improvement without an actionable suggestion.
+  // Visually distinct (amber accent + info icon) and not interactive — user applies it manually.
+  if (!hasSuggestion && !isStrength) {
+    return (
+      <div
+        className="relative rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/70 to-orange-50/40 p-3.5 shadow-sm shadow-amber-100/40"
+        title={t("advice_only_description")}
+      >
+        <div className="absolute left-0 top-3 bottom-3 w-0.5 rounded-full" style={{ background: "#F59E0B" }} />
+
+        <div className="flex items-center gap-1.5 mb-1.5 text-amber-700">
+          <Info className="h-3.5 w-3.5 shrink-0" />
+          <span className="text-[10px] font-black tracking-widest uppercase">
+            {t("improvements_label")}
+          </span>
+        </div>
+
+        <p className="text-xs text-slate-700 leading-relaxed mb-2">{item.text}</p>
+
+        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-amber-700 bg-white/80 ring-1 ring-amber-200">
+          <Lightbulb className="h-2.5 w-2.5" /> {t("advice_only_badge")}
+        </span>
+      </div>
+    )
+  }
 
   return (
     <div

@@ -2,7 +2,7 @@
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
-  AI_TEMPERATURE_STRUCTURED,
+  AI_TEMPERATURE,
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
@@ -10,7 +10,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, buildSectionContext, resolveLanguage } from "../shared/ai-helpers"
+import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -62,7 +62,13 @@ export class AIProfileModule {
     const sectionsWithIds = [workExpCtx, educationCtx, projectsCtx, volunteerCtx].filter(Boolean).join("\n")
 
     const userPrompt = language === "en"
-      ? `The candidate wants to improve their resume with this instruction:
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. ONLY produce content derivable from the candidate's instruction and the CURRENT RESUME above. Do NOT invent technologies, frameworks, libraries, company names, job titles, certifications, dates, percentages, or real numbers not provided.
+2. NEVER use placeholders like [X%] or [N users] in final output — if the user didn't provide a metric, omit it.
+3. For workExperienceNew: every entry must come from a company/role explicitly mentioned in the instruction. If you cannot fully ground a new entry in the user's input, OMIT the entry — never fill gaps with invented details.
+4. For suggestedSkills: only skills explicitly mentioned in the instruction or the current resume. Never invent unrelated skills.
+
+The candidate wants to improve their resume with this instruction:
 "${prompt.trim()}"
 
 === CURRENT RESUME ===
@@ -103,8 +109,14 @@ Respond ONLY with valid JSON (no markdown). Only include fields that actually ch
 Rules:
 - ALWAYS use the exact ids from the section listing above. Never invent an id.
 - Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
-- Do not invent data (dates, companies, metrics) the candidate didn't mention. Use [X] as placeholder if the candidate wants metrics.`
-      : `El candidato quiere mejorar su CV con esta instrucción:
+- Do not invent data (dates, companies, metrics) the candidate didn't mention.`
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO inventes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
+2. NUNCA uses placeholders como [X%] o [N usuarios] en el output final — si el usuario no proporcionó una métrica, omítela.
+3. Para workExperienceNew: cada entrada debe provenir de una empresa/rol mencionado explícitamente en la instrucción. Si no puedes fundamentar completamente una entrada nueva en el input del usuario, OMÍTELA — nunca rellenes huecos con detalles inventados.
+4. Para suggestedSkills: solo habilidades mencionadas explícitamente en la instrucción o en el CV actual. Nunca inventes habilidades no relacionadas.
+
+El candidato quiere mejorar su CV con esta instrucción:
 "${prompt.trim()}"
 
 === CV ACTUAL ===
@@ -145,12 +157,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
 Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Nunca inventes un id.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
-- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó. Usa [X] como placeholder si el candidato quiere métricas.`
+- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó.`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 700,
-      temperature: AI_TEMPERATURE_STRUCTURED,
+      // fill-profile uses 0.4 — needs some creativity to map natural-language
+      // instructions to structured fields, but stays faithful to user input.
+      temperature: AI_TEMPERATURE,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -186,6 +200,57 @@ Reglas:
     const validProjIds = new Set(((sd.projects ?? []) as { id: string }[]).map((p) => p.id))
     const validVolIds = new Set(((sd.volunteer ?? []) as { id: string }[]).map((v) => v.id))
 
+    // Anti-hallucination grounding source = user instruction + current resume.
+    const groundingSource = `${prompt}\n${resumeContext}`.toLowerCase()
+
+    // suggestedSkills: keep only those mentioned in prompt or sectionData.
+    let droppedSkills = 0
+    const cleanSkills = (data.suggestedSkills ?? [])
+      .filter((s: string) => !skillBlocklist.has(s.toLowerCase().trim()))
+      .filter((s: string) => {
+        const sl = s.toLowerCase().trim()
+        if (!sl) return false
+        if (groundingSource.includes(sl)) return true
+        droppedSkills++
+        return false
+      })
+      .slice(0, 8)
+
+    // workExperienceNew: drop entries whose employer or jobTitle cannot be
+    // grounded in the user's instruction (the resume's existing items are
+    // handled via workExperienceUpdates, so new ones must come from the prompt).
+    const promptLower = prompt.toLowerCase()
+    let droppedNewWork = 0
+    const cleanNewWork = (data.workExperienceNew ?? [])
+      .filter((entry) => {
+        const employer = (entry.employer ?? "").toLowerCase().trim()
+        const role = (entry.jobTitle ?? "").toLowerCase().trim()
+        const employerGrounded = !!employer && promptLower.includes(employer)
+        const roleGrounded = !!role && promptLower.includes(role)
+        // Require BOTH employer and jobTitle to be derivable from the prompt.
+        if (!employerGrounded || !roleGrounded) {
+          droppedNewWork++
+          return false
+        }
+        // Description must not introduce hallucinated tech/metrics.
+        if (
+          entry.description &&
+          detectHallucination(entry.description, `${prompt}\n${resumeContext}`)
+        ) {
+          droppedNewWork++
+          return false
+        }
+        return true
+      })
+      .slice(0, 3)
+
+    if (droppedSkills > 0 || droppedNewWork > 0) {
+      this.logger.warn("[AIService.fillProfile] dropped hallucinated content", {
+        droppedSkills,
+        droppedNewWork,
+      })
+    }
+
     const usage = response.usage
     logAIUsage(userId, "fill-profile", {
       model: AI_MODEL,
@@ -198,12 +263,10 @@ Reglas:
       summary: data.summary ?? null,
       jobTitle: data.jobTitle ?? null,
       hobbies: data.hobbies ?? null,
-      suggestedSkills: (data.suggestedSkills ?? [])
-        .filter((s: string) => !skillBlocklist.has(s.toLowerCase().trim()))
-        .slice(0, 8),
+      suggestedSkills: cleanSkills,
       suggestedLanguages: (data.suggestedLanguages ?? []).slice(0, 5),
       workExperienceUpdates: (data.workExperienceUpdates ?? []).filter((u: { id: string }) => validWorkIds.has(u.id)),
-      workExperienceNew: (data.workExperienceNew ?? []).slice(0, 3),
+      workExperienceNew: cleanNewWork,
       educationUpdates: (data.educationUpdates ?? []).filter((u: { id: string }) => validEduIds.has(u.id)),
       projectUpdates: (data.projectUpdates ?? []).filter((u: { id: string }) => validProjIds.has(u.id)),
       volunteerUpdates: (data.volunteerUpdates ?? []).filter((u: { id: string }) => validVolIds.has(u.id)),

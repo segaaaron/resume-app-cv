@@ -1563,7 +1563,9 @@
       "review_cooldown": "Wait {seconds}s before reviewing again",
       "review_wait": "Wait {seconds}",
       "all_applied_title": "Improvements applied successfully!",
-      "all_applied_desc": "All suggested changes have been applied. Review your updated CV in the preview."
+      "all_applied_desc": "All suggested changes have been applied. Review your updated CV in the preview.",
+      "advice_only_badge": "Tip",
+      "advice_only_description": "Manual tip: review it and apply it yourself from the corresponding section."
     },
     "ai_profile_fill": {
       "title": "AI Assistant",

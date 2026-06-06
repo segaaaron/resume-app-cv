@@ -1563,7 +1563,9 @@
       "review_cooldown": "Espera {seconds}s antes de volver a revisar",
       "review_wait": "Espera {seconds}",
       "all_applied_title": "¡Mejoras aplicadas con éxito!",
-      "all_applied_desc": "Todos los cambios sugeridos han sido aplicados. Revisa tu CV actualizado en el preview."
+      "all_applied_desc": "Todos los cambios sugeridos han sido aplicados. Revisa tu CV actualizado en el preview.",
+      "advice_only_badge": "Consejo",
+      "advice_only_description": "Consejo manual: revísalo y aplícalo tú mismo desde la sección correspondiente."
     },
     "ai_profile_fill": {
       "title": "Ayúdate con la IA",

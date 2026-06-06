@@ -2,7 +2,8 @@
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
-  AI_TEMPERATURE,
+  AI_TEMPERATURE_GENERATIVE,
+  AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
@@ -10,7 +11,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -38,7 +39,12 @@ export class AISummaryModule {
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
     const prompt = language === "en"
-      ? `TASK: Analyze this professional profile and generate 3 high-impact resume summaries, each with a different positioning.
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. ONLY use information present in the CANDIDATE PROFILE below. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the profile.
+2. When a real metric is missing, use ONLY the documented placeholders [X years], [N projects], [X%], [N teams]. Never replace placeholders with invented figures.
+3. If a version would require fabricating content to be impactful, prefer a shorter, more conservative version anchored to the actual profile.
+
+TASK: Analyze this professional profile and generate 3 high-impact resume summaries, each with a different positioning.
 
 === CANDIDATE PROFILE ===
 ${resumeContext}
@@ -66,7 +72,12 @@ ABSOLUTE RULES:
 
 Respond ONLY with valid JSON (no markdown, no explanations):
 {"versions": ["version1", "version2", "version3"]}`
-      : `TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impacto, cada uno con posicionamiento diferente.
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. SOLO usa información presente en el PERFIL DEL CANDIDATO de abajo. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el perfil.
+2. Cuando falte una métrica real, usa ÚNICAMENTE los placeholders documentados [X años], [N proyectos], [X%], [N equipos]. Nunca los sustituyas por cifras inventadas.
+3. Si una versión requiere fabricar contenido para ser impactante, prefiere una versión más corta y conservadora, anclada al perfil real.
+
+TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impacto, cada uno con posicionamiento diferente.
 
 === PERFIL DEL CANDIDATO ===
 ${resumeContext}
@@ -98,7 +109,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 600,
-      temperature: AI_TEMPERATURE,
+      // generate-summary uses 0.6 to keep variety across the 3 versions while
+      // staying anchored to the candidate profile.
+      temperature: AI_TEMPERATURE_GENERATIVE,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -124,6 +137,28 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       throw new AppError("off_topic", 422)
     }
 
+    // Anti-hallucination filter — source = candidate profile context. Drop any
+    // version that introduces tech or real metrics not present in the source.
+    // (Placeholders are allowed by design here.)
+    const rawVersions = (parsed.versions as unknown[]).slice(0, 3).filter(
+      (v): v is string => typeof v === "string" && v.trim().length > 0,
+    )
+    let droppedVersions = 0
+    const cleanVersions = rawVersions.filter((v) => {
+      if (detectHallucination(v, resumeContext, { allowPlaceholders: true })) {
+        droppedVersions++
+        return false
+      }
+      return true
+    })
+
+    if (droppedVersions > 0) {
+      this.logger.warn("[AIService.generateSummary] dropped hallucinated versions", {
+        droppedVersions,
+        keptVersions: cleanVersions.length,
+      })
+    }
+
     const usage = response.usage
     logAIUsage(userId, "generate-summary", {
       model: AI_MODEL,
@@ -132,7 +167,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       completionTokens: usage?.completion_tokens ?? 0,
       costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
-    return { versions: (parsed.versions as string[]).slice(0, 3) }
+
+    // No previous summary to fall back to in generate-summary. If every version
+    // was dropped, return empty array with a status flag so the frontend can
+    // show its own empty-state — never surface invented content.
+    if (cleanVersions.length === 0) {
+      return { versions: [], status: "already_optimized" }
+    }
+    return { versions: cleanVersions }
   }
 
   async improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {
@@ -157,9 +199,22 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 
     const resumeContext = sectionData ? buildResumeContext(sectionData, language) : ""
 
+    const criticalEN = `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. ONLY rewrite using information already present in the original summary, candidate instruction, or resume context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not stated by the user.
+2. Preserve real metrics from the original. If none exist, use ONLY the documented placeholders [X years], [N projects], [X%], [$Z]. Never replace placeholders with invented figures.
+3. If you cannot improve a version without inventing content, return a conservative rewording that stays anchored to the source.
+
+`
+    const criticalES = `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. SOLO reescribe usando información ya presente en el resumen original, la instrucción del candidato o el contexto del CV. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no aportadas por el usuario.
+2. Conserva métricas reales del original. Si no las hay, usa ÚNICAMENTE los placeholders documentados [X años], [N proyectos], [X%], [$Z]. Nunca sustituyas placeholders por cifras inventadas.
+3. Si no puedes mejorar una versión sin inventar contenido, devuelve una reescritura conservadora anclada al source.
+
+`
+
     const prompt = language === "en"
       ? hasSummary
-        ? `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) strong action verb or role title at start, (b) at least one metric or explicit placeholder [X%], (c) no clichés ("passionate", "team player", "looking for"), (d) 60-120 words, (e) no personal pronouns. If ALL criteria are met → return {"status": "already_optimized", "versions": []} immediately.
+        ? criticalEN + `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) strong action verb or role title at start, (b) at least one metric or explicit placeholder [X%], (c) no clichés ("passionate", "team player", "looking for"), (d) 60-120 words, (e) no personal pronouns. If ALL criteria are met → return {"status": "already_optimized", "versions": []} immediately.
 
 TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
 
@@ -190,7 +245,7 @@ ABSOLUTE RULES:
 
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
-        : `TASK: Create a high-impact professional summary from scratch based on the candidate's description. Return 3 distinct versions.
+        : criticalEN + `TASK: Create a high-impact professional summary from scratch based on the candidate's description. Return 3 distinct versions.
 
 Candidate description: "${userDescription!.trim()}"
 ${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
@@ -211,7 +266,7 @@ RULES:
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
       : hasSummary
-        ? `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) al menos una métrica o placeholder explícito [X%], (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) 60-120 palabras, (e) sin pronombres personales. Si TODOS los criterios se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente.
+        ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) al menos una métrica o placeholder explícito [X%], (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) 60-120 palabras, (e) sin pronombres personales. Si TODOS los criterios se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente.
 
 TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
 
@@ -242,7 +297,7 @@ REGLAS ABSOLUTAS:
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"versions": ["version1", "version2", "version3"]}`
-        : `TAREA: Crea un resumen profesional de alto impacto desde cero, basado en la descripción del candidato. Devuelve 3 versiones distintas.
+        : criticalES + `TAREA: Crea un resumen profesional de alto impacto desde cero, basado en la descripción del candidato. Devuelve 3 versiones distintas.
 
 Descripción del candidato: "${userDescription!.trim()}"
 ${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
@@ -266,7 +321,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 700,
-      temperature: AI_TEMPERATURE,
+      // improve-summary uses 0.3 — must stay close to the existing summary and
+      // avoid inventing metrics or technologies.
+      temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -303,6 +360,28 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       throw new AppError("off_topic", 422)
     }
 
+    // Anti-hallucination filter — source = original summary + resume context.
+    // Placeholders are explicitly allowed in this endpoint.
+    const improveSource = [summary ?? "", userDescription ?? "", resumeContext].join("\n")
+    const rawVersions = (parsed.versions as unknown[]).slice(0, 3).filter(
+      (v): v is string => typeof v === "string" && v.trim().length > 0,
+    )
+    let droppedVersions = 0
+    const cleanVersions = rawVersions.filter((v) => {
+      if (detectHallucination(v, improveSource, { allowPlaceholders: true })) {
+        droppedVersions++
+        return false
+      }
+      return true
+    })
+
+    if (droppedVersions > 0) {
+      this.logger.warn("[AIService.improveSummary] dropped hallucinated versions", {
+        droppedVersions,
+        keptVersions: cleanVersions.length,
+      })
+    }
+
     const usage = response.usage
     logAIUsage(userId, "improve-summary", {
       model: AI_MODEL,
@@ -311,6 +390,15 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       completionTokens: usage?.completion_tokens ?? 0,
       costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
-    return { versions: (parsed.versions as string[]).slice(0, 3) }
+
+    // Fail-safe: if every version was dropped, fall back to the original
+    // summary unchanged when we have one. Otherwise return empty + already_optimized.
+    if (cleanVersions.length === 0) {
+      if (hasSummary && summary) {
+        return { versions: [summary.trim()], status: "already_optimized" }
+      }
+      return { versions: [], status: "already_optimized" }
+    }
+    return { versions: cleanVersions }
   }
 }

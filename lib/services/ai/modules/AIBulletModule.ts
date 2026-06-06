@@ -1,11 +1,11 @@
 // lib/services/ai/modules/AIBulletModule.ts
 import { validateAIInput } from "@/lib/ai-safety"
-import { AI_MODEL, AI_TEMPERATURE_CREATIVE, logAIUsage } from "@/lib/ai-client"
+import { AI_MODEL, AI_TEMPERATURE_STRUCTURED, logAIUsage } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { AI_INPUT_LIMITS, type BulletResult, type ImproveBulletInput } from "../shared/ai-types"
 
@@ -31,7 +31,13 @@ export class AIBulletModule {
     ].filter(Boolean).join(" | ")
 
     const prompt = language === "en"
-      ? `STEP 0 — QUALITY CHECK: Evaluate if this description already has high-impact bullets (strong action verb + metric/placeholder + specific context). If YES for ALL bullets → return {"status": "already_optimized", "bullets": []} to avoid unnecessary token usage.
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. ONLY rewrite using information present in the original description and context above. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, dates, or any metric not explicitly provided.
+2. When a real metric is missing, use ONLY the documented placeholders [X%], [N users], [$Z], [N months]. Never replace placeholders with invented figures.
+3. CAR method (Action-Context-Result) — the "Result" segment can only cite results EXPLICITLY in the source. If a bullet would require inventing data to be improved, return it essentially unchanged (preserve the original meaning).
+4. If you cannot improve a bullet without inventing content, prefer to keep the original wording over fabricating a new one.
+
+STEP 0 — QUALITY CHECK: Evaluate if this description already has high-impact bullets (strong action verb + metric/placeholder + specific context). If YES for ALL bullets → return {"status": "already_optimized", "bullets": []} to avoid unnecessary token usage.
 
 TASK: Transform this work experience description into high-impact professional bullets for an executive resume.
 
@@ -58,7 +64,13 @@ TRANSFORMATION RULES:
 
 Respond ONLY with valid JSON (no markdown):
 {"bullets": ["• bullet1", "• bullet2", ...]}`
-      : `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si esta descripción ya tiene bullets de alto impacto (verbo de acción fuerte + métrica/placeholder + contexto específico). Si SÍ para TODOS los bullets → devuelve {"status": "already_optimized", "bullets": []} para evitar consumo innecesario de tokens.
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. SOLO reescribe usando información presente en la descripción original y el contexto de arriba. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales, fechas, ni métricas no proporcionadas.
+2. Cuando falte una métrica real, usa ÚNICAMENTE los placeholders documentados [X%], [N usuarios], [$Z], [N meses]. Nunca sustituyas los placeholders por cifras inventadas.
+3. Método CAR (Acción-Contexto-Resultado) — el "Resultado" solo puede citar resultados EXPLÍCITOS en el source. Si un bullet requiere inventar datos para mejorar, devuélvelo prácticamente sin cambios (preserva el significado original).
+4. Si no puedes mejorar un bullet sin inventar contenido, prefiere conservar la redacción original antes que fabricar uno nuevo.
+
+PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si esta descripción ya tiene bullets de alto impacto (verbo de acción fuerte + métrica/placeholder + contexto específico). Si SÍ para TODOS los bullets → devuelve {"status": "already_optimized", "bullets": []} para evitar consumo innecesario de tokens.
 
 TAREA: Transforma esta descripción de experiencia laboral en bullets profesionales de alto impacto, listos para un CV ejecutivo.
 
@@ -89,7 +101,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 600,
-      temperature: AI_TEMPERATURE_CREATIVE,
+      // improve-bullet uses low temperature (0.3) to reduce hallucinations.
+      temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -125,6 +138,29 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       throw new AppError("off_topic", 422)
     }
 
+    // Anti-hallucination sanitization: drop bullets that introduce data not
+    // present in the original description / context (placeholders are allowed
+    // because the prompt explicitly instructs the model to use them).
+    const source = [text, jobTitle ?? "", employer ?? "", industry ?? ""].join("\n")
+    const rawBullets = (parsed.bullets as string[]).slice(0, 10)
+    const cleanBullets: string[] = []
+    let droppedCount = 0
+    for (const bullet of rawBullets) {
+      if (typeof bullet !== "string" || !bullet.trim()) continue
+      if (detectHallucination(bullet, source, { allowPlaceholders: true })) {
+        droppedCount++
+        continue
+      }
+      cleanBullets.push(bullet)
+    }
+
+    if (droppedCount > 0) {
+      this.logger.warn("[AIService.improveBullet] dropped hallucinated bullets", {
+        droppedCount,
+        keptCount: cleanBullets.length,
+      })
+    }
+
     const usage = response.usage
     logAIUsage(userId, "improve-bullet", {
       model: AI_MODEL,
@@ -133,6 +169,13 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       completionTokens: usage?.completion_tokens ?? 0,
       costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
-    return { bullets: (parsed.bullets as string[]).slice(0, 10) }
+
+    // Fail-safe: if every bullet was dropped as hallucinated, signal
+    // "already_optimized" so the frontend preserves the original text rather
+    // than showing invented content.
+    if (cleanBullets.length === 0) {
+      return { status: "already_optimized", bullets: [] }
+    }
+    return { bullets: cleanBullets }
   }
 }

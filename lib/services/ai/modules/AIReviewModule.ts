@@ -3,8 +3,8 @@ import { z } from "zod"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
-  AI_TEMPERATURE,
   AI_TEMPERATURE_PRECISE,
+  AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
   logAIUsage,
 } from "@/lib/ai-client"
@@ -12,7 +12,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -192,12 +192,13 @@ For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. 
 
 For STRENGTHS: do NOT include suggestion. Strengths confirm what is already working well — never suggest replacing or rewriting them.
 
-Do NOT include suggestion if:
-- The improvement requires data the AI doesn't have (dates, company names, real metrics)
-- The improvement is general advice ("get references", "gain more experience")
-- The field is not in the allowed list
-- You are not sure of the final value
-- The result would be shorter or more generic than what already exists
+CRITICAL RULES FOR SUGGESTIONS (mandatory, no exceptions):
+1. ONLY include "suggestion" if you can rewrite using ONLY information already present in the resume context above. Otherwise OMIT the "suggestion" field entirely.
+2. DO NOT invent: technologies, frameworks, libraries, tools, company names, job titles, certifications, percentages, numbers, dates, or any metric not explicitly stated in the input.
+3. DO NOT add bullets with new content. Only rewrite existing text to be clearer or more impactful.
+4. If the improvement requires data the user did not provide, OMIT "suggestion" and use ONLY "text" to describe what the user should add manually (e.g., "Add measurable metrics to your achievements" — NOT "Achieved 80% reduction in load time").
+5. NEVER use placeholders like [X%], [N users], <number>, or similar in the preview field. The preview must be production-ready text.
+6. If in doubt, OMIT "suggestion". A descriptive "text"-only advice is always preferable to an invented preview.
 
 Respond ONLY with valid JSON (no markdown):
 {
@@ -234,12 +235,13 @@ Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la 
 
 Para STRENGTHS: NO incluyas suggestion. Las fortalezas confirman lo que ya funciona bien — nunca sugieras reemplazar ni reescribir el contenido existente.
 
-NO incluyas suggestion si:
-- La mejora requiere datos que la IA no tiene (fechas, nombres de empresas, métricas reales)
-- La mejora es un consejo general ("busca referencias", "consigue más experiencia")
-- El campo no está en la lista de fields permitidos
-- No estás seguro del valor final
-- El resultado sería más corto o más genérico que lo que ya existe
+REGLAS CRÍTICAS PARA SUGGESTIONS (obligatorias, sin excepciones):
+1. SOLO incluye "suggestion" si puedes reescribir usando ÚNICAMENTE información ya presente en el contexto del CV de arriba. Si no, OMITE el campo "suggestion" por completo.
+2. NO inventes: tecnologías, frameworks, librerías, herramientas, nombres de empresas, cargos, certificaciones, porcentajes, números, fechas, ni ninguna métrica que no esté explícitamente declarada en el input.
+3. NO añadas bullets con contenido nuevo. Solo reescribe texto existente para que sea más claro o impactante.
+4. Si la mejora requiere datos que el usuario no proporcionó, OMITE "suggestion" y usa SOLO "text" para describir qué debe añadir manualmente (ej.: "Añade métricas medibles a tus logros" — NO "Logré reducir el tiempo de carga en un 80%").
+5. NUNCA uses placeholders como [X%], [N usuarios], <número>, ni similares en el campo preview. El preview debe ser texto listo para producción.
+6. Ante la duda, OMITE "suggestion". Un consejo descriptivo en "text" sin preview es siempre preferible a un preview inventado.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {
@@ -257,7 +259,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 900,
-      temperature: AI_TEMPERATURE,
+      // review-cv usa temperatura baja (0.3) para reducir alucinaciones en suggestions.preview.
+      // No afecta a otros endpoints — cada módulo elige la suya.
+      temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -283,12 +287,23 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const sanitizePreview = (text: string) =>
       text.replace(/[*_`#>]/g, "").replace(/\n{3,}/g, "\n\n").trim()
 
-    const sanitizeItem = (item: z.infer<typeof ReviewItemSchema>) => ({
-      ...item,
-      suggestion: item.suggestion
-        ? { ...item.suggestion, preview: sanitizePreview(item.suggestion.preview) }
-        : undefined,
-    })
+    const sanitizeItem = (item: z.infer<typeof ReviewItemSchema>) => {
+      if (!item.suggestion) return { ...item, suggestion: undefined }
+      const cleanedPreview = sanitizePreview(item.suggestion.preview)
+      // Fail-safe: if preview seems to have invented data not present in the
+      // resume context, drop the suggestion and keep only the advisory text.
+      if (detectHallucination(cleanedPreview, resumeContext)) {
+        this.logger.warn("[AIService.reviewCV] dropped hallucinated suggestion", {
+          field: item.suggestion.field,
+          previewSample: cleanedPreview.slice(0, 120),
+        })
+        return { ...item, suggestion: undefined }
+      }
+      return {
+        ...item,
+        suggestion: { ...item.suggestion, preview: cleanedPreview },
+      }
+    }
 
     const reviewUsage = response.usage
     const reviewLogOpts = {

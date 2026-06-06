@@ -28,7 +28,7 @@ interface SuggestionDiffModalProps {
   open: boolean
   onClose: () => void
   onConfirm: () => void
-  suggestion: Suggestion
+  suggestion: Suggestion | undefined
   currentValue: string
 }
 
@@ -50,6 +50,11 @@ export default function SuggestionDiffModal({
   currentValue,
 }: SuggestionDiffModalProps) {
   const t = useTranslations("editor.cv_review")
+
+  // Defensive guard: never render the diff modal without a concrete suggestion.
+  // Normal flow already prevents this (panel only opens modal when suggestion exists),
+  // but this keeps the component safe if invoked elsewhere.
+  if (!suggestion) return null
 
   const afterValue = suggestion.type === "append"
     ? [currentValue, suggestion.preview].filter(Boolean).join(" ")
