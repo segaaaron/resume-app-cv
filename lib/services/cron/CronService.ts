@@ -145,6 +145,8 @@ export class CronService {
       })
       totalDeleted += count
       if (rows.length < BATCH_SIZE) break
+      // small pause between batches to ease DB pressure during high-volume purges
+      await new Promise((r) => setTimeout(r, 100))
     }
 
     this.logger.info(`[CronService] purgeStripeEvents: deleted=${totalDeleted}`)
