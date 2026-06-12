@@ -8,12 +8,14 @@ vi.mock("@/lib/db", () => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db: any = {
     resume: {
-      findMany:  vi.fn(),
-      findFirst: vi.fn(),
-      count:     vi.fn(),
-      create:    vi.fn(),
-      update:    vi.fn(),
-      delete:    vi.fn(),
+      findMany:   vi.fn(),
+      findFirst:  vi.fn(),
+      count:      vi.fn(),
+      create:     vi.fn(),
+      update:     vi.fn(),
+      updateMany: vi.fn(),
+      delete:     vi.fn(),
+      deleteMany: vi.fn(),
     },
     resumeVersion: {
       findMany:   vi.fn(),
@@ -186,14 +188,13 @@ describe("ResumeService.create", () => {
 describe("ResumeService.update", () => {
   it("updates resume fields", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue({ id: RESUME_ID } as never)
-    vi.mocked(db.resume.update).mockResolvedValue({} as never)
+    vi.mocked(db.resume.updateMany).mockResolvedValue({ count: 1 } as never)
 
     await makeService().update(USER_ID, RESUME_ID, { title: "New Title" })
 
-    expect(db.resume.update).toHaveBeenCalledWith(
+    expect(db.resume.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: RESUME_ID },
+        where: { id: RESUME_ID, userId: USER_ID },
         data: expect.objectContaining({ title: "New Title" }),
       }),
     )
@@ -201,12 +202,11 @@ describe("ResumeService.update", () => {
 
   it("throws not_found (404) when resume does not belong to user", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue(null)
+    vi.mocked(db.resume.updateMany).mockResolvedValue({ count: 0 } as never)
 
     await expect(makeService().update(USER_ID, RESUME_ID, {})).rejects.toMatchObject({
       code: "not_found", status: 404,
     })
-    expect(db.resume.update).not.toHaveBeenCalled()
   })
 })
 
@@ -217,22 +217,20 @@ describe("ResumeService.update", () => {
 describe("ResumeService.delete", () => {
   it("deletes resume when it belongs to user", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue({ id: RESUME_ID } as never)
-    vi.mocked(db.resume.delete).mockResolvedValue({} as never)
+    vi.mocked(db.resume.deleteMany).mockResolvedValue({ count: 1 } as never)
 
     await makeService().delete(USER_ID, RESUME_ID)
 
-    expect(db.resume.delete).toHaveBeenCalledWith({ where: { id: RESUME_ID } })
+    expect(db.resume.deleteMany).toHaveBeenCalledWith({ where: { id: RESUME_ID, userId: USER_ID } })
   })
 
   it("throws not_found (404) when resume does not belong to user", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue(null)
+    vi.mocked(db.resume.deleteMany).mockResolvedValue({ count: 0 } as never)
 
     await expect(makeService().delete(USER_ID, RESUME_ID)).rejects.toMatchObject({
       code: "not_found", status: 404,
     })
-    expect(db.resume.delete).not.toHaveBeenCalled()
   })
 })
 
@@ -529,22 +527,21 @@ describe("ResumeService.restoreVersion", () => {
 describe("ResumeService.updatePhoto", () => {
   it("saves base64 photo to resume", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue({ id: RESUME_ID } as never)
-    vi.mocked(db.resume.update).mockResolvedValue({} as never)
+    vi.mocked(db.resume.updateMany).mockResolvedValue({ count: 1 } as never)
 
     const base64 = "data:image/png;base64,abc=="
     const result = await makeService().updatePhoto(USER_ID, RESUME_ID, base64)
 
     expect(result).toEqual({ photoUrl: base64 })
-    expect(db.resume.update).toHaveBeenCalledWith({
-      where: { id: RESUME_ID },
+    expect(db.resume.updateMany).toHaveBeenCalledWith({
+      where: { id: RESUME_ID, userId: USER_ID },
       data: { photoUrl: base64 },
     })
   })
 
   it("throws not_found (404) when resume does not belong to user", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue(null)
+    vi.mocked(db.resume.updateMany).mockResolvedValue({ count: 0 } as never)
 
     await expect(makeService().updatePhoto(USER_ID, RESUME_ID, "data:image/png;base64,abc")).rejects.toMatchObject({
       code: "not_found", status: 404,
@@ -555,20 +552,19 @@ describe("ResumeService.updatePhoto", () => {
 describe("ResumeService.deletePhoto", () => {
   it("sets photoUrl to null", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue({ id: RESUME_ID } as never)
-    vi.mocked(db.resume.update).mockResolvedValue({} as never)
+    vi.mocked(db.resume.updateMany).mockResolvedValue({ count: 1 } as never)
 
     await makeService().deletePhoto(USER_ID, RESUME_ID)
 
-    expect(db.resume.update).toHaveBeenCalledWith({
-      where: { id: RESUME_ID },
+    expect(db.resume.updateMany).toHaveBeenCalledWith({
+      where: { id: RESUME_ID, userId: USER_ID },
       data: { photoUrl: null },
     })
   })
 
   it("throws not_found (404) when resume does not belong to user", async () => {
     const { db } = await import("@/lib/db")
-    vi.mocked(db.resume.findFirst).mockResolvedValue(null)
+    vi.mocked(db.resume.updateMany).mockResolvedValue({ count: 0 } as never)
 
     await expect(makeService().deletePhoto(USER_ID, RESUME_ID)).rejects.toMatchObject({
       code: "not_found", status: 404,

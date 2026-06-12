@@ -101,6 +101,11 @@ describe("apiFetch", () => {
     global.fetch = mockFetch
     const apiFetch = await getApiFetch()
     await apiFetch("/api/test", { method: "POST", headers: { "X-Test": "1" } })
-    expect(mockFetch).toHaveBeenCalledWith("/api/test", { method: "POST", headers: { "X-Test": "1" } })
+    // apiFetch attaches an AbortSignal for its timeout handling
+    expect(mockFetch).toHaveBeenCalledWith("/api/test", expect.objectContaining({
+      method: "POST",
+      headers: { "X-Test": "1" },
+      signal: expect.any(AbortSignal),
+    }))
   })
 })

@@ -14,6 +14,13 @@ export interface BulletResult {
   status?: "improved" | "already_optimized"
 }
 
+// Shared API↔UI contract for /api/ai/improve-bullet — the client must parse
+// the response with this schema instead of trusting the shape blindly.
+export const ImproveBulletResponseSchema = z.object({
+  bullets: z.array(z.string()),
+  status: z.enum(["improved", "already_optimized"]).optional(),
+})
+
 export interface ATSScoreResult {
   score: number
   label: string
@@ -208,7 +215,7 @@ export interface TailorCVResultV2 {
 // a real behavioural change at the validation boundary.
 export const AI_INPUT_LIMITS = {
   jobDescription: 6000,
-  resumeContext: 5000,
+  resumeContext: 12000,
   resumeText: 5000,
   summary: 3000,
   body: 3000,
@@ -222,6 +229,6 @@ export const AI_INPUT_LIMITS = {
   industry: 100,
   question: 300,
   skill: 100,
-  bulletText: 2000,
+  bulletText: 4000,
   prompt: 500,
 } as const

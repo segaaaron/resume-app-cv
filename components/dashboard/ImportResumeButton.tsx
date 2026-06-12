@@ -46,6 +46,9 @@ export default function ImportResumeButton({ disabled }: Props) {
       }
 
       toast.success(t("import_success"))
+      if (data.truncated) {
+        toast.warning(t("import_truncated"), { duration: 12_000 })
+      }
       router.push(`/editor/${data.id}`)
     } catch {
       toast.error(t("import_error"))

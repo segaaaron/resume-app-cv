@@ -5,7 +5,7 @@ import { checkOrigin } from "@/lib/csrf"
 import { buildSections, ResumeSectionsSchema } from "@/types/resume"
 import { getLimits, isSuperAdmin } from "@/lib/plans"
 import mammoth from "mammoth"
-import { parseResumeText, detectLanguage } from "@/lib/parseResumeText"
+import { parseResumeText, detectLanguage, PARSE_LIMITS } from "@/lib/parseResumeText"
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> = require("pdf-parse")
 
@@ -82,7 +82,8 @@ export async function POST(req: Request) {
   const lang = detectLanguage(rawText.slice(0, 14000))
 
   // ── 3. Parse with heuristic extractor ───────────────────────────────────
-  const extracted = parseResumeText(rawText.slice(0, 14000))
+  const truncated = rawText.length > PARSE_LIMITS.rawTextChars
+  const extracted = parseResumeText(rawText.slice(0, PARSE_LIMITS.rawTextChars))
 
   // ── 4. Validate and fill defaults ────────────────────────────────────────
   const sectionData = ResumeSectionsSchema.parse(extracted)
@@ -117,5 +118,5 @@ export async function POST(req: Request) {
     },
   })
 
-  return NextResponse.json({ id: resume.id }, { status: 201 })
+  return NextResponse.json({ id: resume.id, truncated }, { status: 201 })
 }

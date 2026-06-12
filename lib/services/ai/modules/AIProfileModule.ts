@@ -161,7 +161,7 @@ Reglas:
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 700,
+      max_tokens: 2000,
       // fill-profile uses 0.4 — needs some creativity to map natural-language
       // instructions to structured fields, but stays faithful to user input.
       temperature: AI_TEMPERATURE,

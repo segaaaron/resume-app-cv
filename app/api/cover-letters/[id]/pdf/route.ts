@@ -6,6 +6,7 @@ import { createPrintToken } from "@/lib/pdf/print-token"
 import { createLogger } from "@/lib/logger"
 import { isActive } from "@/lib/plans"
 import { db } from "@/lib/db"
+import { claimManagedDownload, refundManagedDownload } from "@/lib/services/downloads/managed-quota"
 
 const logger = createLogger("cover-letter-pdf")
 
@@ -28,17 +29,12 @@ export async function GET(req: Request, { params }: Params) {
   const rawLocale = url.searchParams.get("locale") ?? ""
   const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
 
-  let managedClaimed = false
-  if (authResult.user.isManaged && authResult.user.managedDownloadLimit !== null) {
-    const claimed = await db.user.updateMany({
-      where: { id: authResult.userId, isManaged: true, managedDownloadsUsed: { lt: authResult.user.managedDownloadLimit } },
-      data: { managedDownloadsUsed: { increment: 1 } },
-    })
-    if (claimed.count === 0) {
-      return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
-    }
-    managedClaimed = true
-  }
+  const claim = await claimManagedDownload(authResult.userId, {
+    isManaged: authResult.user.isManaged,
+    managedDownloadLimit: authResult.user.managedDownloadLimit,
+  })
+  if (!claim.ok) return NextResponse.json({ error: claim.error }, { status: claim.status })
+  const managedClaimed = claim.claimed
 
   try {
     const letter = await coverLetterService.getPdfMeta(authResult.userId, id)
@@ -62,14 +58,13 @@ export async function GET(req: Request, { params }: Params) {
       headers: {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename*=UTF-8''${filename}.pdf`,
-        "Cache-Control": "no-store",
+        "Cache-Control": "private, no-cache",
       },
     })
   } catch (err) {
     logger.error("render failed", { letterId: id, userId: authResult.userId }, err instanceof Error ? err : undefined)
     if (managedClaimed) {
-      db.user.update({ where: { id: authResult.userId }, data: { managedDownloadsUsed: { decrement: 1 } } })
-        .catch(() => undefined)
+      await refundManagedDownload(authResult.userId, { coverLetterId: id })
     }
     return handleError(err)
   }

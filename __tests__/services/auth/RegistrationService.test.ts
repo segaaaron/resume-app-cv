@@ -61,18 +61,18 @@ describe("RegistrationService.requestOtp", () => {
     expect(mockPending.upsert).not.toHaveBeenCalled()
   })
 
-  it("email exists with password → throws 409 email_exists_credentials", async () => {
+  it("email exists with password → throws 409 generic email_exists (no account-type leak)", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: input.email, hasPassword: true, referralCode: null, plan: "PRO" })
-    await expect(makeService().requestOtp(input)).rejects.toMatchObject({ code: "email_exists_credentials", status: 409 })
+    await expect(makeService().requestOtp(input)).rejects.toMatchObject({ code: "email_exists", status: 409 })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith(input.ipAddress, "register")
     expect(mockPending.upsert).not.toHaveBeenCalled()
   })
 
-  it("email exists as Google account → throws 409 email_exists_google", async () => {
+  it("email exists as Google account → throws 409 generic email_exists (no account-type leak)", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({ id: "u1", name: "Ana", email: input.email, hasPassword: false, referralCode: null, plan: "PRO" })
-    await expect(makeService().requestOtp(input)).rejects.toMatchObject({ code: "email_exists_google", status: 409 })
+    await expect(makeService().requestOtp(input)).rejects.toMatchObject({ code: "email_exists", status: 409 })
   })
 
   it("happy path → upserts pending, sends email, returns { pending: true }", async () => {

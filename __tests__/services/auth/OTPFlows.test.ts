@@ -472,26 +472,26 @@ describe("B. RegistrationService — requestOtp", () => {
     expect(mockPending.upsert).not.toHaveBeenCalled()
   })
 
-  it("B02 email already exists with password → records failure, throws 409 email_exists_credentials", async () => {
+  it("B02 email already exists with password → records failure, throws 409 generic email_exists", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: REGISTER_INPUT.email, hasPassword: true, referralCode: null,
       plan: "PRO",
     })
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
-      .rejects.toMatchObject({ code: "email_exists_credentials", status: 409 })
+      .rejects.toMatchObject({ code: "email_exists", status: 409 })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith(REGISTER_INPUT.ipAddress, "register")
     expect(mockPending.upsert).not.toHaveBeenCalled()
   })
 
-  it("B03 email exists as Google-only account (no password) → throws 409 email_exists_google", async () => {
+  it("B03 email exists as Google-only account (no password) → throws 409 generic email_exists (no account-type leak)", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: REGISTER_INPUT.email, hasPassword: false, referralCode: null,
       plan: "PRO",
     })
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
-      .rejects.toMatchObject({ code: "email_exists_google", status: 409 })
+      .rejects.toMatchObject({ code: "email_exists", status: 409 })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith(REGISTER_INPUT.ipAddress, "register")
   })
 
@@ -769,25 +769,24 @@ describe("C. PasswordResetService — requestReset", () => {
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
-  it("C02 non-existent email → records failure, throws 404 not_registered (NOT anti-enumeration silent)", async () => {
-    // NOTE: PasswordResetService does NOT do anti-enumeration — it throws 404 not_registered.
-    // This IS a difference from SessionChallengeService.issueChallenge.
+  it("C02 non-existent email → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue(null)
     await expect(makePasswordResetService().requestReset("1.2.3.4", "nobody@b.com"))
-      .rejects.toMatchObject({ code: "not_registered", status: 404 })
+      .resolves.toEqual({ sent: true })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
     expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
-  it("C03 Google-only account (no password) → records failure, throws 409 google_account", async () => {
+  it("C03 Google-only account (no password) → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({
       id: "u1", name: "Ana", hasPassword: false, plan: "PRO",
     })
     await expect(makePasswordResetService().requestReset("1.2.3.4", "a@b.com"))
-      .rejects.toMatchObject({ code: "google_account", status: 409 })
+      .resolves.toEqual({ sent: true })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
+    expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
   it("C04 happy path → upserts reset record, sends OTP email, returns { sent: true }", async () => {

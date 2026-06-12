@@ -29,7 +29,7 @@ export function buildSectionContext(
   if (!items.length) return ""
   return `\n${label}:\n` + items.map((item, i) => {
     const name = item.employer ?? item.organization ?? item.name ?? item.title ?? item.degree ?? item.role ?? item.jobTitle ?? ""
-    const desc = item.description ? `\n    Descripción actual: ${item.description.slice(0, 200)}` : ""
+    const desc = item.description ? `\n    Descripción actual: ${item.description.slice(0, 500)}` : ""
     return `  [${i + 1}] id="${item.id}" | ${name}${desc}`
   }).join("\n")
 }

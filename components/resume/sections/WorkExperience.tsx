@@ -23,6 +23,7 @@ import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
+import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
@@ -143,15 +144,18 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
       if (!res.ok) throw new Error(data.error)
       await onSuccess()
 
-      // Check status FIRST (new behavior)
-      if (data.status === "already_optimized") {
+      // Shared API↔UI contract: validate the response shape before touching state.
+      const contract = ImproveBulletResponseSchema.safeParse(data)
+      if (!contract.success) { toast.error(ai("error_bullet")); return }
+
+      if (contract.data.status === "already_optimized") {
         lastKeyRef.current = key
         setCooldownUntil(Date.now() + 120_000)
         setAlreadyOptimized(true)
         return
       }
 
-      const bullets = Array.isArray(data.bullets) ? (data.bullets as string[]) : []
+      const bullets = contract.data.bullets
       if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
       // Normalize comparison as fallback for compatibility
       const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
@@ -162,8 +166,14 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
         return
       }
       const origLines = job.description.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
-      const working: string[] = bullets.map((_, i) => origLines[i] ?? "")
-      const pairs: BulletPair[] = bullets.map((b, i) => ({ original: origLines[i] ?? "", improved: b }))
+      // working must cover EVERY original line: the AI may return fewer bullets
+      // than it received, and applying suggestions must never delete the rest.
+      const count = Math.max(origLines.length, bullets.length)
+      const working: string[] = Array.from({ length: count }, (_, i) => origLines[i] ?? "")
+      const pairs: BulletPair[] = bullets.map((b, i) => {
+        const original = origLines[i] ?? ""
+        return { original, improved: b.trim() ? b : original }
+      })
       setBulletModal({ pairs, working })
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
@@ -184,10 +194,23 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
 
   function applyAllBullets() {
     if (!bulletModal) return
-    onUpdate("description", bulletModal.pairs.map((p) => p.improved).join("\n"))
+    const previous = job.description
+    // Merge over working so original bullets without an AI suggestion survive.
+    const merged = bulletModal.working.map((w, i) => bulletModal.pairs[i]?.improved ?? w)
+    onUpdate("description", merged.filter(Boolean).join("\n"))
     setBulletModal(null)
     setImproved(true)
-    toast.success(ai("bullets_all_applied"))
+    toast.success(ai("bullets_all_applied"), {
+      duration: 10_000,
+      action: {
+        label: ai("undo"),
+        onClick: () => {
+          onUpdate("description", previous)
+          setImproved(false)
+          toast.info(ai("bullets_undone"))
+        },
+      },
+    })
   }
 
   return (

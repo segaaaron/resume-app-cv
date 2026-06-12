@@ -56,10 +56,7 @@ TRANSFORMATION RULES:
    - Leadership/Management: Led, Mentored, Coordinated, Aligned, Consolidated, Transformed, Prioritized
    - Operations/Process: Reduced, Standardized, Implemented, Centralized, Increased, Structured
    - Sales/Business/Marketing: Grew, Closed, Negotiated, Expanded, Positioned, Captured, Generated
-6. Quantity based on content richness:
-   - Basic (1-2 generic responsibilities): 3-4 dense bullets
-   - Medium (several responsibilities, some achievements): 4-6 bullets
-   - Rich (concrete achievements, projects, metrics, leadership): 6-8 bullets
+6. Bullet count: return EXACTLY one improved bullet per original bullet line, in the SAME order — never merge, drop, or reorder originals. Only exception: if the original is a single paragraph without bullet structure, split it into 3-5 bullets.
 7. ATS: naturally incorporate 1-2 industry/role keywords within bullets.
 
 Respond ONLY with valid JSON (no markdown):
@@ -89,10 +86,7 @@ REGLAS DE TRANSFORMACIÓN:
    - Liderazgo/Gestión: Lideré, Mentoré, Coordiné, Alineé, Consolidé, Transformé, Prioricé
    - Operaciones/Procesos: Reduje, Estandaricé, Implementé, Centralicé, Incrementé, Estructuré
    - Ventas/Negocio/Marketing: Crecí, Cerré, Negocié, Expandí, Posicioné, Capturé, Generé
-6. Cantidad según riqueza del contenido:
-   - Básico (1-2 responsabilidades genéricas): 3-4 bullets densos
-   - Medio (varias responsabilidades, algún logro): 4-6 bullets
-   - Rico (logros concretos, proyectos, métricas, liderazgo): 6-8 bullets
+6. Cantidad: devuelve EXACTAMENTE un bullet mejorado por cada línea/bullet original, en el MISMO orden — nunca fusiones, elimines ni reordenes los originales. Única excepción: si el original es un solo párrafo sin estructura de bullets, divídelo en 3-5 bullets.
 7. ATS: incorpora 1-2 keywords del sector/puesto de forma natural dentro de los bullets.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
@@ -100,7 +94,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 600,
+      max_tokens: 1200,
       // improve-bullet uses low temperature (0.3) to reduce hallucinations.
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
@@ -142,13 +136,16 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // present in the original description / context (placeholders are allowed
     // because the prompt explicitly instructs the model to use them).
     const source = [text, jobTitle ?? "", employer ?? "", industry ?? ""].join("\n")
-    const rawBullets = (parsed.bullets as string[]).slice(0, 10)
+    const rawBullets = (parsed.bullets as string[]).slice(0, 15)
     const cleanBullets: string[] = []
     let droppedCount = 0
     for (const bullet of rawBullets) {
-      if (typeof bullet !== "string" || !bullet.trim()) continue
+      // Push "" instead of skipping: the frontend pairs bullets with original
+      // lines by index, so dropping an entry would shift every later pairing.
+      if (typeof bullet !== "string" || !bullet.trim()) { cleanBullets.push(""); continue }
       if (detectHallucination(bullet, source, { allowPlaceholders: true })) {
         droppedCount++
+        cleanBullets.push("")
         continue
       }
       cleanBullets.push(bullet)
@@ -173,7 +170,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // Fail-safe: if every bullet was dropped as hallucinated, signal
     // "already_optimized" so the frontend preserves the original text rather
     // than showing invented content.
-    if (cleanBullets.length === 0) {
+    if (cleanBullets.every((b) => !b.trim())) {
       return { status: "already_optimized", bullets: [] }
     }
     return { bullets: cleanBullets }

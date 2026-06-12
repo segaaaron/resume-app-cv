@@ -80,7 +80,7 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
 
   if (workExperience?.length) {
     lines.push(en ? "Work Experience:" : "Experiencia laboral:")
-    workExperience.slice(0, 5).forEach((j) => {
+    workExperience.slice(0, 10).forEach((j) => {
       const present = en ? "Present" : "Presente"
       const at = en ? "at" : "en"
       const period = [j.startDate, j.endDate ?? present].filter(Boolean).join(" - ")
@@ -91,7 +91,7 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
 
   if (education?.length) {
     lines.push(en ? "Education:" : "Educación:")
-    education.slice(0, 3).forEach((e) => {
+    education.slice(0, 6).forEach((e) => {
       const at = en ? "at" : "en"
       lines.push(`  - ${e.degree ?? ""} ${at} ${e.institution ?? e.school ?? ""}`)
     })
@@ -108,14 +108,14 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
   }
 
   if (certifications?.length) {
-    const certList = certifications.slice(0, 3).map((c) => c.name).filter(Boolean).join(", ")
+    const certList = certifications.slice(0, 6).map((c) => c.name).filter(Boolean).join(", ")
     if (certList) lines.push(`${en ? "Certifications" : "Certificaciones"}: ${certList}`)
   }
 
   if (projects?.length) {
     lines.push(en ? "Projects:" : "Proyectos:")
-    projects.slice(0, 3).forEach((p) => {
-      lines.push(`  - ${p.name ?? ""}${p.description ? `: ${p.description.slice(0, 100)}` : ""}`)
+    projects.slice(0, 6).forEach((p) => {
+      lines.push(`  - ${p.name ?? ""}${p.description ? `: ${p.description.slice(0, 300)}` : ""}`)
     })
   }
 

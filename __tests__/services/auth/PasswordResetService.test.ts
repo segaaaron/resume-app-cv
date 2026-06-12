@@ -53,18 +53,20 @@ describe("PasswordResetService.requestReset", () => {
     await expect(makeService().requestReset("1.2.3.4", "a@b.com")).rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
-  it("email not registered → records failure, throws 404 not_registered", async () => {
+  it("email not registered → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue(null)
-    await expect(makeService().requestReset("1.2.3.4", "a@b.com")).rejects.toMatchObject({ code: "not_registered", status: 404 })
+    await expect(makeService().requestReset("1.2.3.4", "a@b.com")).resolves.toEqual({ sent: true })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
+    expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
-  it("Google-only account (no password) → records failure, throws 409 google_account", async () => {
+  it("Google-only account (no password) → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: false, plan: "PRO" })
-    await expect(makeService().requestReset("1.2.3.4", "a@b.com")).rejects.toMatchObject({ code: "google_account", status: 409 })
+    await expect(makeService().requestReset("1.2.3.4", "a@b.com")).resolves.toEqual({ sent: true })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
+    expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
   it("happy path → upserts reset record, sends email, returns { sent: true }", async () => {

@@ -95,14 +95,14 @@ describe("AIService", () => {
       expect(aiClient.chat).toHaveBeenCalledOnce()
     })
 
-    it("slices to 10 bullets maximum", async () => {
-      const elevenBullets = Array.from({ length: 11 }, (_, i) => `• Bullet ${i + 1}`)
-      const aiClient = makeMockAIClient(JSON.stringify({ bullets: elevenBullets }))
+    it("slices to 15 bullets maximum", async () => {
+      const sixteenBullets = Array.from({ length: 16 }, (_, i) => `• Bullet ${i + 1}`)
+      const aiClient = makeMockAIClient(JSON.stringify({ bullets: sixteenBullets }))
       const service = new AIService(aiClient, logger)
 
       const result = await service.improveBullet("user-1", { text: "Rich description with many responsibilities" }, "PRO")
 
-      expect(result.bullets).toHaveLength(10)
+      expect(result.bullets).toHaveLength(15)
     })
 
     it("throws AppError 429 free_quota_exhausted when AI quota exhausted", async () => {

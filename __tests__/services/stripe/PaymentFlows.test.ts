@@ -387,19 +387,18 @@ describe("B. handleInvoicePaid", () => {
     expect(purgeUserCache).toHaveBeenCalledWith("u1")
   })
 
-  it("planInterval preserved from DB (not overwritten by invoice.paid)", async () => {
+  it("planInterval derived from Stripe subscription price interval (source of truth)", async () => {
     const { db } = await import("@/lib/db")
     vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeInvoicePaidEvent())
+    // Stripe says the subscription is yearly — DB value must be overwritten with it
     vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
-      items: { data: [{ current_period_end: 2000000000 }] },
+      items: { data: [{ current_period_end: 2000000000, price: { recurring: { interval: "year" } } }] },
     } as unknown as Stripe.Subscription)
-    // User has annual plan in DB
-    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ id: "u1", email: "a@b.com", name: "Alice", planInterval: "annual", subscriptionStatus: "ACTIVE" }) })
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ id: "u1", email: "a@b.com", name: "Alice", planInterval: "monthly", subscriptionStatus: "ACTIVE" }) })
     await mockTx(db, tx)
     await makeWebhook().handleEvent("body", "sig", "secret")
-    // The invoice.paid handler does NOT set planInterval — confirm planInterval is NOT in update data
     expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.not.objectContaining({ planInterval: expect.anything() }),
+      data: expect.objectContaining({ planInterval: "annual" }),
     }))
   })
 })

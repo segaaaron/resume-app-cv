@@ -3,6 +3,20 @@
  * Funciona con PDFs y DOCX sin necesidad de IA externa.
  */
 
+// Topes del parser — protegen contra inputs patológicos sin recortar CVs
+// reales. Si un CV legítimo choca con un tope, el caller debe avisar al
+// usuario (nunca truncar en silencio).
+export const PARSE_LIMITS = {
+  /** ~4 páginas impresas de texto plano */
+  rawTextChars: 40_000,
+  bulletsPerJob: 30,
+  skills: 80,
+  education: 12,
+  projects: 12,
+  volunteer: 10,
+  summaryChars: 2_500,
+} as const
+
 export interface ParsedResume {
   personalDetails: {
     firstName: string; lastName: string; jobTitle: string
@@ -451,7 +465,7 @@ function parseWorkBlock(block: string[], id: string) {
     }
   }
 
-  job.description = descLines.slice(0, 20).map(d => `• ${d}`).join("\n")
+  job.description = descLines.slice(0, PARSE_LIMITS.bulletsPerJob).map(d => `• ${d}`).join("\n")
   return job
 }
 
@@ -635,7 +649,7 @@ export function parseResumeText(rawText: string): ParsedResume {
   // ── Summary ───────────────────────────────────────────────────────────
   const summarySection = get("summary")
   if (summarySection) {
-    result.summary = summarySection.lines.join(" ").slice(0, 2500).trim()
+    result.summary = summarySection.lines.join(" ").slice(0, PARSE_LIMITS.summaryChars).trim()
   }
 
   // ── Work Experience (block-based) ─────────────────────────────────────
@@ -716,7 +730,7 @@ export function parseResumeText(rawText: string): ParsedResume {
     // For education, also try splitting by degree keywords if blocks fail
     const blocks = splitIntoBlocks(sec.lines, 5)
     for (const block of blocks) {
-      if (result.education.length >= 8) break
+      if (result.education.length >= PARSE_LIMITS.education) break
       if (!block[0]) continue
       // Only parse if it looks like an education entry
       if (!DEGREE_RE.test(block.join(" ")) && !HAS_YEAR.test(block.join(" "))) continue
@@ -735,7 +749,7 @@ export function parseResumeText(rawText: string): ParsedResume {
       }
     }
   }
-  result.skills = Array.from(skillNames).slice(0, 60).map((name, i) => ({
+  result.skills = Array.from(skillNames).slice(0, PARSE_LIMITS.skills).map((name, i) => ({
     id: `sk${i + 1}`, name, level: "intermediate",
   }))
 
@@ -908,7 +922,7 @@ export function parseResumeText(rawText: string): ParsedResume {
     // Fallback: if no blocks detected, treat each non-bullet line as a project
     const entries = blocks.length > 0 ? blocks : sec.lines.filter(l => !isBullet(l) && l.length > 2).map(l => [l])
     for (const block of entries) {
-      if (result.projects.length >= 8) break
+      if (result.projects.length >= PARSE_LIMITS.projects) break
       const proj = {
         id: `pr${result.projects.length + 1}`,
         name: clean(block[0] ?? ""), role: "",
@@ -927,7 +941,7 @@ export function parseResumeText(rawText: string): ParsedResume {
     const blocks = splitIntoBlocks(sec.lines, 5)
     const entries = blocks.length > 0 ? blocks : sec.lines.filter(l => !isBullet(l)).map(l => [l])
     for (const block of entries) {
-      if (result.volunteer.length >= 6) break
+      if (result.volunteer.length >= PARSE_LIMITS.volunteer) break
       const dr = extractDateRange(block.join(" "))
       result.volunteer.push({
         id: `vo${result.volunteer.length + 1}`,

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
 import { checkAndIncrementRateLimit, PDF_RATE_LIMIT_WINDOW_MS } from "@/lib/rate-limit"
+import { claimManagedDownload, refundManagedDownload } from "@/lib/services/downloads/managed-quota"
 
 const DOWNLOAD_DAILY_LIMIT = 15
 import {
@@ -62,23 +63,17 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Rate limit exceeded. Maximum 15 exports per day.", code: "RATE_LIMIT_EXCEEDED" }, { status: 429 })
   }
 
-  let managedClaimed = false
-  if (user?.isManaged && user.managedDownloadLimit !== null) {
-    const claimed = await db.user.updateMany({
-      where: { id: session.user.id, isManaged: true, managedDownloadsUsed: { lt: user.managedDownloadLimit } },
-      data: { managedDownloadsUsed: { increment: 1 } },
-    })
-    if (claimed.count === 0) {
-      return NextResponse.json({ error: "Has alcanzado el límite de descargas de tu plan." }, { status: 403 })
-    }
-    managedClaimed = true
-  }
+  const claim = await claimManagedDownload(session.user.id, {
+    isManaged: user?.isManaged ?? false,
+    managedDownloadLimit: user?.managedDownloadLimit ?? null,
+  })
+  if (!claim.ok) return NextResponse.json({ error: claim.error }, { status: claim.status })
+  const managedClaimed = claim.claimed
 
   const resume = await db.resume.findFirst({ where: { id, userId: session.user.id } })
   if (!resume) {
     if (managedClaimed) {
-      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
-        .catch(() => undefined)
+      await refundManagedDownload(session.user.id, { resumeId: id, type: "docx" })
     }
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
@@ -295,7 +290,7 @@ export async function GET(req: Request) {
 
   try {
     const buffer = await Packer.toBuffer(doc)
-    const filename = `${resume.title.replace(/[^a-z0-9]/gi, "_")}.docx`
+    const filename = encodeURIComponent(resume.title || "resume")
 
     // Convert Node Buffer to Uint8Array for compatibility with NextResponse BodyInit
     const uint8 = new Uint8Array(buffer)
@@ -303,13 +298,12 @@ export async function GET(req: Request) {
     return new NextResponse(uint8, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "Content-Disposition": `attachment; filename="${filename}"`,
+        "Content-Disposition": `attachment; filename*=UTF-8''${filename}.docx`,
       },
     })
   } catch (err) {
     if (managedClaimed) {
-      db.user.update({ where: { id: session.user.id }, data: { managedDownloadsUsed: { decrement: 1 } } })
-        .catch(() => undefined)
+      await refundManagedDownload(session.user.id, { resumeId: id, type: "docx" })
     }
     void err
     return NextResponse.json({ error: "DOCX render failed" }, { status: 500 })
