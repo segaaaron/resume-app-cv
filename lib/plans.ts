@@ -37,6 +37,28 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "review-cv",
 ] as const
 
+/**
+ * Cap diario anti-abuso para planes con AI ilimitada (PRO/LIMITED).
+ * El editor ya impone cooldown de 2 min por experiencia, así que un usuario
+ * legítimo intensivo ronda 10-15 llamadas/día — estos topes solo frenan
+ * scripting. Ventana de 24h auto-reseteable vía checkAndIncrementRateLimit
+ * (sin cron). Costo máximo acotado: ~$0.05/día por usuario.
+ */
+export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
+  "improve-bullet": 30,
+  "improve-summary": 20,
+  "generate-summary": 20,
+  "suggest-skills": 20,
+  "generate-cover-letter": 20,
+  "improve-cover-letter": 20,
+  "fill-profile": 10,
+  "tailor-cv": 10,
+  "ats-score": 10,
+  "review-cv": 10,
+}
+
+export const AI_DAILY_CAP_WINDOW_MS = 24 * 60 * 60 * 1000
+
 export type PlanLimits = {
   /** -1 = unlimited */
   maxResumes: number

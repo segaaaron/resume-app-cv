@@ -14,10 +14,6 @@ import {
   HeadingLevel,
   AlignmentType,
   BorderStyle,
-  Table,
-  TableRow,
-  TableCell,
-  WidthType,
   convertInchesToTwip,
 } from "docx"
 import { ResumeSectionsSchema } from "@/types/resume"

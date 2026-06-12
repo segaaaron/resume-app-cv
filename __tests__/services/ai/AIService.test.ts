@@ -95,6 +95,32 @@ describe("AIService", () => {
       expect(aiClient.chat).toHaveBeenCalledOnce()
     })
 
+    it("returns already_optimized when the AI echoes every original bullet unchanged", async () => {
+      const original = "• Led a team of 5 engineers\n• Reduced costs by [X%]"
+      const aiClient = makeMockAIClient(JSON.stringify({
+        bullets: ["• Led a team of 5 engineers", "• Reduced costs by [X%]."],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: original }, "PRO")
+
+      expect(result.status).toBe("already_optimized")
+      expect(result.bullets).toEqual([])
+    })
+
+    it("PRO over daily cap → throws 429 daily_cap_reached with ai-daily key", async () => {
+      const { checkAndIncrementRateLimit } = vi.mocked(await import("@/lib/ai-client"))
+      checkAndIncrementRateLimit.mockResolvedValueOnce(false)
+      const aiClient = makeMockAIClient(JSON.stringify({ bullets: ["• x"] }))
+      const service = new AIService(aiClient, logger)
+
+      await expect(
+        service.improveBullet("user-1", { text: "Managed a team and delivered projects" }, "PRO")
+      ).rejects.toMatchObject({ code: "daily_cap_reached", status: 429 })
+      expect(checkAndIncrementRateLimit).toHaveBeenCalledWith("user-1", "ai-daily:improve-bullet", 30, 86_400_000)
+      expect(aiClient.chat).not.toHaveBeenCalled()
+    })
+
     it("slices to 15 bullets maximum", async () => {
       const sixteenBullets = Array.from({ length: 16 }, (_, i) => `• Bullet ${i + 1}`)
       const aiClient = makeMockAIClient(JSON.stringify({ bullets: sixteenBullets }))

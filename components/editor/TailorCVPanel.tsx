@@ -30,6 +30,7 @@ interface TailorResult {
 
 export default function TailorCVPanel() {
   const t = useTranslations("editor.tailor")
+  const aiT = useTranslations("editor.ai")
   const locale = useLocale()
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
@@ -103,6 +104,7 @@ export default function TailorCVPanel() {
           redirect: (p) => router.push(p),
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit") : t("pro_only")),
+          dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return
       }

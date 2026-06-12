@@ -87,6 +87,12 @@ export interface HandleApiErrorOptions {
   locale: string
   /** Called when no error code matched a freemium trigger. */
   fallbackToast?: () => void
+  /**
+   * Called on 429 `daily_cap_reached` (anti-abuse cap for unlimited plans).
+   * Must NOT show an upgrade prompt — the user already pays. Falls back to
+   * `fallbackToast` when not provided.
+   */
+  dailyCapToast?: () => void
   onUnhandled?: (error: ApiErrorPayload) => void
 }
 
@@ -134,6 +140,11 @@ export async function handleApiError(
 
   if (code === "email_not_verified") {
     opts.redirect(`/${opts.locale}/verify-email`)
+    return true
+  }
+
+  if (code === "daily_cap_reached") {
+    ;(opts.dailyCapToast ?? opts.fallbackToast)?.()
     return true
   }
 

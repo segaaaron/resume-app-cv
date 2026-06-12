@@ -173,6 +173,20 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (cleanBullets.every((b) => !b.trim())) {
       return { status: "already_optimized", bullets: [] }
     }
+
+    // Echo detection: anti-hallucination rule 4 tells the model to return a
+    // bullet unchanged when it cannot improve it without inventing data. If
+    // EVERY bullet came back unchanged, showing the suggestions modal would be
+    // a no-op for the user — report "already_optimized" instead.
+    const normalizeForCompare = (s: string) =>
+      s.toLowerCase().replace(/^[•\-*\s]+/, "").replace(/\s+/g, " ").replace(/[.;]+$/, "").trim()
+    const originalLines = text.split("\n").map(normalizeForCompare).filter(Boolean)
+    const allUnchanged = cleanBullets.every((b, i) =>
+      !b.trim() || normalizeForCompare(b) === (originalLines[i] ?? "")
+    )
+    if (allUnchanged) {
+      return { status: "already_optimized", bullets: [] }
+    }
     return { bullets: cleanBullets }
   }
 }

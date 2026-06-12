@@ -34,7 +34,14 @@ export default function WorkExperienceSection() {
   )
   const jobs = sectionData.workExperience
   const [openId, setOpenId] = useState<string | null>(null)
-  useEffect(() => { if (jobs[0]?.id) setOpenId(jobs[0].id) }, [jobs[0]?.id])
+  // Adjust-during-render (React docs pattern): open the first job when the
+  // list's head changes, without an effect that would cascade a re-render.
+  const firstJobId = jobs[0]?.id
+  const [prevFirstJobId, setPrevFirstJobId] = useState<string | undefined>(undefined)
+  if (firstJobId !== prevFirstJobId) {
+    setPrevFirstJobId(firstJobId)
+    if (firstJobId) setOpenId(firstJobId)
+  }
 
   function addJob() {
     const newJob: WorkExperienceItem = { id: nanoid(), employer: "", jobTitle: "", city: "", startDate: "", endDate: "", currentlyWorking: false, description: "" }
@@ -136,6 +143,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
           redirect: (p) => router.push(p),
           locale: localeForErr,
           fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
+          dailyCapToast: () => toast.warning(ai("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return
       }
@@ -345,7 +353,7 @@ function Field({ label, value, onChange, placeholder, icon: Icon }: {
 }) {
   const [local, setLocal] = useState(value)
   const commitRef = useRef(onChange)
-  commitRef.current = onChange
+  useEffect(() => { commitRef.current = onChange })
 
   useEffect(() => { setLocal(value) }, [value])
 

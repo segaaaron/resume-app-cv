@@ -152,6 +152,7 @@ export default function CoverLetterEditor({
   isNew = false,
 }: Props) {
   const t = useTranslations("cover_letter_editor")
+  const aiT = useTranslations("editor.ai")
   const locale = useLocale()
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
@@ -264,6 +265,7 @@ export default function CoverLetterEditor({
           redirect: (p) => router.push(p),
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? t("ai_rate_limit") : t("ai_pro_only")),
+          dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return
       }

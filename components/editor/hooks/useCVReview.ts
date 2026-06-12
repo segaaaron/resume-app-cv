@@ -29,6 +29,7 @@ const COOLDOWN_MS = 120_000
 
 export function useCVReview() {
   const t = useTranslations("editor.cv_review")
+  const aiT = useTranslations("editor.ai")
   const locale = useLocale()
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
@@ -81,6 +82,7 @@ export function useCVReview() {
           redirect: (p) => router.push(p),
           locale,
           fallbackToast: () => toast.error(t("pro_only")),
+          dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return
       }
@@ -97,7 +99,7 @@ export function useCVReview() {
     } finally {
       setLoading(false)
     }
-  }, [question, sectionData, locale, t, cooldownUntil, loading])
+  }, [question, sectionData, locale, t, aiT, cooldownUntil, loading])
 
   const reset = useCallback(() => {
     setResult(null)

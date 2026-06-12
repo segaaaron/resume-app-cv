@@ -11,8 +11,21 @@ export type { AIQuotaCheck } from "@/lib/rate-limit"
 // Lazy singleton — never instantiate at module level (Docker build fails without OPENAI_API_KEY)
 let _openai: OpenAI | null = null
 export function getOpenAI(): OpenAI {
-  return (_openai ??= new OpenAI({ apiKey: process.env.OPENAI_API_KEY }))
+  if (!_openai) {
+    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    // Cost guard: gpt-4o costs 17x gpt-4o-mini. A silent env change must
+    // leave a loud trace on every boot, while still allowing a deliberate upgrade.
+    if (AI_MODEL !== EXPECTED_AI_MODEL) {
+      logger.warn(
+        `AI_MODEL="${AI_MODEL}" difiere del esperado "${EXPECTED_AI_MODEL}" — verifica que el cambio sea intencional (impacto directo de costo por llamada)`,
+        { configured: AI_MODEL, expected: EXPECTED_AI_MODEL },
+      )
+    }
+  }
+  return _openai
 }
+
+export const EXPECTED_AI_MODEL = "gpt-4o-mini"
 
 // Shared model config
 export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4o-mini") as string

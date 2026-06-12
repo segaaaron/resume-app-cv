@@ -1347,6 +1347,7 @@
       "bullets_all_applied": "Todas aplicadas",
       "undo": "Deshacer",
       "bullets_undone": "Cambios revertidos",
+      "daily_cap_reached": "Alcanzaste el límite de usos de IA por hoy en esta función. Se renueva automáticamente mañana.",
       "diff_before": "Actual",
       "diff_after": "Mejora",
       "skills_suggested_title": "Habilidades sugeridas",

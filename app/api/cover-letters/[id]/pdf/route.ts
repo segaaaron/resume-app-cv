@@ -29,6 +29,18 @@ export async function GET(req: Request, { params }: Params) {
   const rawLocale = url.searchParams.get("locale") ?? ""
   const locale = ["es", "en"].includes(rawLocale) ? rawLocale : "es"
 
+  // ETag check runs BEFORE the managed claim — a 304 must not consume a slot.
+  let letter: { id: string; title: string | null; updatedAt: Date }
+  try {
+    letter = await coverLetterService.getPdfMeta(authResult.userId, id)
+  } catch (err) {
+    return handleError(err)
+  }
+  const etag = `"${letter.id}-${letter.updatedAt.getTime()}"`
+  if (req.headers.get("if-none-match") === etag) {
+    return new Response(null, { status: 304 })
+  }
+
   const claim = await claimManagedDownload(authResult.userId, {
     isManaged: authResult.user.isManaged,
     managedDownloadLimit: authResult.user.managedDownloadLimit,
@@ -37,8 +49,6 @@ export async function GET(req: Request, { params }: Params) {
   const managedClaimed = claim.claimed
 
   try {
-    const letter = await coverLetterService.getPdfMeta(authResult.userId, id)
-
     const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
     const printToken = createPrintToken(authResult.userId, id)
     const printUrl = `${internalUrl}/${locale}/cover-letter/${id}/print?pdf=1&pt=${printToken}`
@@ -59,6 +69,7 @@ export async function GET(req: Request, { params }: Params) {
         "Content-Type": "application/pdf",
         "Content-Disposition": `attachment; filename*=UTF-8''${filename}.pdf`,
         "Cache-Control": "private, no-cache",
+        "ETag": etag,
       },
     })
   } catch (err) {

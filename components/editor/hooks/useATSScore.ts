@@ -45,6 +45,7 @@ export function isQuestion(text: string): boolean {
 
 export function useATSScore() {
   const t = useTranslations("editor.ats")
+  const aiT = useTranslations("editor.ai")
   const locale = useLocale()
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
@@ -99,6 +100,7 @@ export function useATSScore() {
             redirect: (p) => router.push(p),
             locale,
             fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit_exceeded") : t("pro_only")),
+            dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
           })
           if (handled || res.status === 429 || res.status === 403) return
         }
@@ -121,6 +123,7 @@ export function useATSScore() {
             redirect: (p) => router.push(p),
             locale,
             fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit_exceeded") : t("pro_only")),
+            dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
           })
           if (handled || res.status === 429 || res.status === 403) return
         }
@@ -138,7 +141,7 @@ export function useATSScore() {
     } finally {
       setLoading(false)
     }
-  }, [input, sectionData, locale, t, loading, cooldownUntil])
+  }, [input, sectionData, locale, t, aiT, loading, cooldownUntil])
 
   const hasResult = atsResult !== null || reviewResult !== null
 

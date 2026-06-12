@@ -1347,6 +1347,7 @@
       "bullets_all_applied": "All applied",
       "undo": "Undo",
       "bullets_undone": "Changes reverted",
+      "daily_cap_reached": "You've reached today's AI usage limit for this feature. It resets automatically tomorrow.",
       "diff_before": "Current",
       "diff_after": "Improvement",
       "skills_suggested_title": "Suggested skills",

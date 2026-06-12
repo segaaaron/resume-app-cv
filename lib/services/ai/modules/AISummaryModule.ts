@@ -399,6 +399,17 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       }
       return { versions: [], status: "already_optimized" }
     }
+
+    // Echo detection: if the model skipped STEP 0 but still returned versions
+    // that match the original summary, surface "already_optimized" instead of
+    // offering no-op suggestions (same contract as improve-bullet).
+    if (hasSummary && summary) {
+      const normalizeForCompare = (s: string) => s.toLowerCase().replace(/\s+/g, " ").replace(/[.;]+$/, "").trim()
+      const originalNorm = normalizeForCompare(summary)
+      if (cleanVersions.every((v) => normalizeForCompare(v) === originalNorm)) {
+        return { versions: [], status: "already_optimized" }
+      }
+    }
     return { versions: cleanVersions }
   }
 }

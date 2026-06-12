@@ -77,6 +77,7 @@ export default function SummarySection() {
           redirect: (p) => router.push(p),
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
+          dailyCapToast: () => toast.warning(ai("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return
       }
@@ -121,6 +122,7 @@ export default function SummarySection() {
           redirect: (p) => router.push(p),
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
+          dailyCapToast: () => toast.warning(ai("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return
       }

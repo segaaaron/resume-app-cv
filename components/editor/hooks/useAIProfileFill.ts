@@ -37,6 +37,7 @@ export interface FillProfileResult {
 
 export function useAIProfileFill() {
   const t = useTranslations("editor.ai_profile_fill")
+  const aiT = useTranslations("editor.ai")
   const locale = useLocale()
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
@@ -80,6 +81,7 @@ export function useAIProfileFill() {
           redirect: (p) => router.push(p),
           locale,
           fallbackToast: () => toast.error(res.status === 429 ? t("toast_rate_limit") : t("toast_pro_only")),
+          dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
         })
         if (handled || res.status === 429 || res.status === 403) return undefined
       }
@@ -98,7 +100,7 @@ export function useAIProfileFill() {
     } finally {
       setLoading(false)
     }
-  }, [prompt, sectionData, locale, t, loading, cooldownUntil])
+  }, [prompt, sectionData, locale, t, aiT, loading, cooldownUntil])
 
   const reset = useCallback(() => {
     setResult(null)

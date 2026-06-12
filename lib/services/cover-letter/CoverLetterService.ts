@@ -140,10 +140,10 @@ export class CoverLetterService {
     this.logger.info("cover-letter.delete", { userId, letterId: id })
   }
 
-  async getPdfMeta(userId: string, id: string): Promise<{ id: string; title: string | null }> {
+  async getPdfMeta(userId: string, id: string): Promise<{ id: string; title: string | null; updatedAt: Date }> {
     const letter = await db.coverLetter.findFirst({
       where: { id, userId },
-      select: { id: true, title: true },
+      select: { id: true, title: true, updatedAt: true },
     })
     if (!letter) throw new AppError("not_found", 404)
     return letter

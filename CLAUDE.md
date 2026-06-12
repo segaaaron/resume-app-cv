@@ -2,7 +2,8 @@
 
 ## Rules
 
-- **REGLA DE QA:** Toda feature nueva o fix requiere visto bueno del agente `readycvv-qa-senior` antes de commit/deploy. Sin excepción.
+- **AUTORIDAD MÁXIMA — CEO:** La última palabra en toda decisión (feature, arquitectura, deploy, diseño, prioridad, scope) la tiene el CEO del proyecto (el usuario). Ningún agente, skill ni Claude puede anular, ignorar ni superar una decisión del CEO. Si hay conflicto entre una regla y una instrucción del CEO en ese turno, el CEO gana.
+- **REGLA DE QA:** Toda feature nueva o fix requiere visto bueno del skill `cvv-qa-engineer` antes de commit/deploy. Sin excepción.
 - **REGLA DE QA — VERIFICAR ANTES DE REPORTAR:** QA NUNCA reporta un issue sin haber leído el código exacto primero. Pasos obligatorios: (1) leer el archivo, (2) confirmar que el problema existe en el código actual, (3) entonces reportar. Reportar sin leer = issue inválido.
 - **REGLA DE ORO:** NUNCA hacer `git commit`, `git push`, ni crear PR sin autorización explícita del usuario en ese turno. Un "sí" anterior no vale. Siempre preguntar.
 - **PLANES:** Existen 3 planes: `PRO` (suscripción paga $15/mo · $144/yr), `LIMITED` (usuarios managed creados por admin), `UNSUBSCRIBED` (freemium con acceso limitado por marketing). NUNCA usar `"free"` como valor de plan. Reglas UNSUBSCRIBED: 1 resume, 1 cover letter, 2 usos por endpoint AI (fill-profile, improve-bullet, improve-summary, generate-summary, suggest-skills, generate-cover-letter, improve-cover-letter), tailor-cv/ats-score/review-cv bloqueados, sin descarga PDF, sin cambio de contraseña. PRO y LIMITED tienen acceso completo (LIMITED con límite de descargas PDF configurado por admin).
@@ -24,47 +25,43 @@
 
 ## Equipo Élite Autorizado
 
-**SOLO los siguientes agentes y skills pueden ejecutar trabajo en este proyecto. Cualquier otro = PROHIBIDO sin autorización explícita del usuario en ese turno. No spawnear subagents redundantes ni "por si acaso".**
+**SOLO los siguientes skills pueden ejecutar trabajo en este proyecto. Cualquier otro = PROHIBIDO sin autorización explícita del CEO en ese turno. No spawnear subagents redundantes ni "por si acaso".**
 
-### Agentes (10) — roles únicos
+### Skills del Proyecto (6) — herramientas core
 
-| Agente | Rol |
-|--------|-----|
-| `readycvv-qa-senior` | QA Lead. Auditoría templates, Stripe, API, seguridad, pre-deploy. Obligatorio antes commit/PR/deploy. |
-| `readycv-product-owner` | Product Owner. Backlog, MoSCoW, user stories, retención, análisis churn/feedback. |
-| `frontend-doc-architect` | Document Engineer. Templates CV, PDF/Word export, print layouts, Tailwind avanzado, Next.js components. |
-| `backend-dev` | Backend Engineer. API routes, Prisma, Stripe webhooks, endpoints AI, validación Zod. |
-| `security-auditor` | Security Lead. Auth, JWT, CSRF, rate-limit, secrets, OWASP, PII. |
-| `tester` | Test Engineer. Unit, integration, edge cases, regression. |
-| `reviewer` | Code Reviewer. Calidad, smells, patrones, consistency. Pre-PR. |
-| `Explore` | Code Search. Localizar archivos, símbolos, referencias. |
-| `Plan` | Solution Architect. Diseño multi-paso, trade-offs, estrategia. Tareas >3 archivos. |
-| `production-validator` | Deploy Gate. Verificar prod-ready, env vars, build, migraciones. Antes Dokploy deploy. |
+| Skill | Rol |
+|-------|-----|
+| `cv-frontend-engineer` | Staff FE Engineer. Arquitectura Next.js, templates CV, Tailwind, PDF export, Screaming Architecture, Server-First. |
+| `stripe-billing-expert` | Billing Engineer. Webhooks, idempotency, plan provisioning, Stripe lifecycle. |
+| `ai-prompt-engineer` | AI Engineer. Optimización prompts, 10 endpoints AI, token cost, límites por plan. |
+| `cvv-qa-engineer` | QA Élite. Code quality, AI audit, Stripe integrity, PDF fidelity. Pre-deploy gate obligatorio. |
+| `cvv-cpo` | Chief Product Officer. Roadmap, backlog MoSCoW, SEO técnico, competitive intel, monetización. |
+| `frontend-design` | UI genérico premium. Componentes, layouts, estética bold. |
 
-### Skills (13) — herramientas autorizadas
+### Skills Globales Autorizados
 
+- `ui-ux-pro-max:ui-ux-pro-max` — sistemas diseño, paletas, 50+ estilos
 - `readycv-auth-validator` — validar auth/Pro Gate
-- `frontend-design` — componentes UI premium
-- `ui-ux-pro-max:ui-ux-pro-max` — sistemas diseño, paletas, layouts
-- `claude-api` — endpoints AI (fill-profile, summary)
 - `tdd` — features con tests primero
 - `diagnose` — bugs reproducibles
-- `systematic-debugging` — bugs complejos
-- `verification-before-completion` — verificar antes "done"
-- `brainstorming` — pre-implementación features
-- `writing-plans` — specs multi-step
 - `verify` — confirmar fix funciona
 - `run` — lanzar app real navegador
 - `security-review` — diff seguridad pre-commit
+- `code-review` — calidad pre-commit
+
+### Agentes Permitidos (built-in Claude Code)
+
+- `Explore` — búsqueda de archivos/símbolos/referencias en codebase
+- `Plan` — arquitectura multi-paso, trade-offs, estrategia (tareas >3 archivos)
 
 ### Reglas de uso
 
-1. NO invocar agentes/skills fuera de esta lista sin OK explícito del usuario en ese turno.
-2. Cada agente cumple SU rol — no duplicar trabajo entre agentes.
-3. NO spawnear subagents redundantes para tareas que el agente principal puede resolver.
-4. Excepción permitida: `update-config` solo si usuario pide cambiar `settings.json`.
-5. Para dudas Claude Code/SDK puede usarse `claude-code-guide` puntualmente.
-6. Si tarea requiere capacidad fuera del equipo, AVISAR al usuario y esperar autorización antes de invocar otro agente/skill.
+1. CEO tiene autoridad absoluta — su instrucción en ese turno supera cualquier regla.
+2. NO invocar agentes/skills fuera de esta lista sin OK explícito del CEO en ese turno.
+3. Cada skill cumple SU rol — no duplicar trabajo entre skills.
+4. NO spawnear subagents redundantes para tareas que el skill principal puede resolver.
+5. `cvv-qa-engineer` es obligatorio antes de todo commit/PR/deploy — sin excepción.
+6. Si tarea requiere capacidad fuera del equipo, AVISAR al CEO y esperar autorización.
 
 ## Build & Test
 
