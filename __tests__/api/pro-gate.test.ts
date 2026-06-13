@@ -74,11 +74,11 @@ describe("Freemium gate — improve-bullet route", () => {
     expect(res.status).toBe(401)
   })
 
-  it("unverified email → 403 email_not_verified", async () => {
+  it("unverified email is NOT gated — email verification removed from AI endpoints → 200", async () => {
     mockAuth.mockResolvedValue({ user: { id: "user-1" } })
     mockFindUnique.mockResolvedValue({ id: "user-1", plan: "UNSUBSCRIBED", subscriptionStatus: null, subscriptionEndsAt: null, role: "USER", emailVerified: null })
     const res = await callHandler(makeRequest())
-    expect(res.status).toBe(403)
+    expect(res.status).toBe(200)
   })
 
   it("UNSUBSCRIBED + verified + quota available → 200", async () => {

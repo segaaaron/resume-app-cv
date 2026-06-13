@@ -7,7 +7,6 @@
  *  - plan_limit_resume (403)      → 'second-resume'
  *  - plan_limit_cover_letter (403)→ 'second-cover-letter'
  *  - subscription_required (403)  → 'download'
- *  - email_not_verified (403)     → redirect /verify-email (no modal)
  *
  * Usage (legacy — still supported):
  *   const handle = createApiErrorHandler({ open, redirect, locale })
@@ -49,18 +48,13 @@ const TRIGGER_MAP: Record<string, UpgradeTrigger> = {
 }
 
 export function createApiErrorHandler(deps: ApiErrorHandlerDeps) {
-  const { open, redirect, locale, onUnhandled } = deps
+  const { open, onUnhandled } = deps
 
   return function handleApiError(error: ApiErrorPayload): boolean {
     const code = error?.code ?? error?.error
     if (!code) {
       onUnhandled?.(error)
       return false
-    }
-
-    if (code === "email_not_verified") {
-      redirect(`/${locale}/verify-email`)
-      return true
     }
 
     const trigger = TRIGGER_MAP[code]
@@ -137,11 +131,6 @@ export async function handleApiError(
 ): Promise<boolean> {
   const payload = await extractPayload(err)
   const code = payload?.code ?? payload?.error
-
-  if (code === "email_not_verified") {
-    opts.redirect(`/${opts.locale}/verify-email`)
-    return true
-  }
 
   if (code === "daily_cap_reached") {
     ;(opts.dailyCapToast ?? opts.fallbackToast)?.()

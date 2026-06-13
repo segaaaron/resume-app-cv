@@ -1,12 +1,16 @@
 # Project Configuration
 
+## Trabajo en curso — leer al inicio de sesión
+
+- **PageFlow Engine (Motor de Plantillas v2):** plan completo en `docs/pageflow-engine-plan.md`. Leer antes de cualquier trabajo relacionado con templates, preview, PDF, watermark o paginación. Estado: plan aprobado, pendiente inicio F0 (spike sobre `Classic.tsx` en rama `develop`).
+
 ## Rules
 
 - **AUTORIDAD MÁXIMA — CEO:** La última palabra en toda decisión (feature, arquitectura, deploy, diseño, prioridad, scope) la tiene el CEO del proyecto (el usuario). Ningún agente, skill ni Claude puede anular, ignorar ni superar una decisión del CEO. Si hay conflicto entre una regla y una instrucción del CEO en ese turno, el CEO gana.
 - **REGLA DE QA:** Toda feature nueva o fix requiere visto bueno del skill `cvv-qa-engineer` antes de commit/deploy. Sin excepción.
 - **REGLA DE QA — VERIFICAR ANTES DE REPORTAR:** QA NUNCA reporta un issue sin haber leído el código exacto primero. Pasos obligatorios: (1) leer el archivo, (2) confirmar que el problema existe en el código actual, (3) entonces reportar. Reportar sin leer = issue inválido.
 - **REGLA DE ORO:** NUNCA hacer `git commit`, `git push`, ni crear PR sin autorización explícita del usuario en ese turno. Un "sí" anterior no vale. Siempre preguntar.
-- **PLANES:** Existen 3 planes: `PRO` (suscripción paga $15/mo · $144/yr), `LIMITED` (usuarios managed creados por admin), `UNSUBSCRIBED` (freemium con acceso limitado por marketing). NUNCA usar `"free"` como valor de plan. Reglas UNSUBSCRIBED: 1 resume, 1 cover letter, 2 usos por endpoint AI (fill-profile, improve-bullet, improve-summary, generate-summary, suggest-skills, generate-cover-letter, improve-cover-letter), tailor-cv/ats-score/review-cv bloqueados, sin descarga PDF, sin cambio de contraseña. PRO y LIMITED tienen acceso completo (LIMITED con límite de descargas PDF configurado por admin).
+- **PLANES:** Existen 3 planes: `PRO` (suscripción paga $15/mo · $144/yr), `LIMITED` (usuarios managed creados por admin), `UNSUBSCRIBED` (freemium con acceso limitado por marketing). NUNCA usar `"free"` como valor de plan. Reglas UNSUBSCRIBED: 1 resume, 1 cover letter, 2 usos por endpoint AI (fill-profile, improve-bullet, improve-summary, generate-summary, suggest-skills, generate-cover-letter, improve-cover-letter), tailor-cv/ats-score/review-cv bloqueados, sin descarga PDF. UNSUBSCRIBED SÍ puede cambiar su contraseña. NO se requiere verificación de email para usar los endpoints AI. PRO y LIMITED tienen acceso completo (LIMITED con límite de descargas PDF configurado por admin). LIMITED es el ÚNICO plan que NO puede cambiar contraseña (debe contactar a su administrador).
 - **REGLA DE ORO 2:** NUNCA realizar cambios que no fueron pedidos explícitamente. No tocar archivos, componentes, estilos, lógica ni nada fuera del alcance exacto de la tarea solicitada. Alcance = solo lo que el usuario pidió, nada más.
 - **NO PEDIR PERMISOS** para leer archivos, ejecutar comandos read-only, o usar herramientas MCP — ejecutar directamente.
 - **REPORTE FINAL OBLIGATORIO:** Al terminar cualquier tarea, entregar reporte gerencial detallado: qué se hizo, archivos modificados, decisiones tomadas, impacto, pendientes. Sin excepción.
