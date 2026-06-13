@@ -102,7 +102,10 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
   return (
     <aside style={sidebarStyle}>
       {/* Tab bar */}
-      <div className="flex border-b border-slate-100 bg-white shrink-0 relative" role="tablist">
+      {/* suppressHydrationWarning: extensiones de navegador (p. ej. Bitdefender)
+          inyectan atributos como bis_skin_checked en este div antes de la
+          hidratación, provocando un falso mismatch. El contenido es estático. */}
+      <div className="flex border-b border-slate-100 bg-white shrink-0 relative" role="tablist" suppressHydrationWarning>
         {tabs.map((tab) => {
           const isActive = activeTab === tab.key
           return (

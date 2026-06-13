@@ -22,18 +22,6 @@ import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
-const SKILL_LEVEL_LABEL_ES: Record<string, string> = {
-  beginner: "Inicial",
-  intermediate: "Intermedio",
-  advanced: "Avanzado",
-  expert: "Experto",
-}
-const SKILL_LEVEL_LABEL_EN: Record<string, string> = {
-  beginner: "Basic",
-  intermediate: "Intermediate",
-  advanced: "Advanced",
-  expert: "Expert",
-}
 const LANG_LEVEL_LABEL: Record<string, string> = {
   a1: "A1", a2: "A2", b1: "B1", b2: "B2", c1: "C1", c2: "C2", native: "Native",
 }
@@ -57,8 +45,6 @@ export default function EliteAtlasTemplate() {
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const langLbl = (lvl: string) => LANG_LEVEL_LABEL[lvl] ?? lvl.toUpperCase()
-  const skillLbl = (lvl: string) =>
-    (config.language === "en" ? SKILL_LEVEL_LABEL_EN : SKILL_LEVEL_LABEL_ES)[lvl] ?? lvl
 
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ") || "Your Name"
   const firstLine = pd.firstName || "Your"
@@ -392,12 +378,6 @@ export default function EliteAtlasTemplate() {
           )}
         </div>
 
-        {/* Skill levels caption (printed for screen-readers / clarity, mirrors source taxonomy without overriding layout) */}
-        {visible("skills") && skills.length > 0 && (
-          <div style={{ marginTop: 14, fontSize: 9.5, color: stone, letterSpacing: "0.04em" }}>
-            {skills.map((s) => `${s.name} · ${skillLbl(s.level)}`).join(" · ")}
-          </div>
-        )}
       </div>
     </div>
   )
