@@ -132,3 +132,16 @@ export function detectHallucination(
 
   return false
 }
+
+// Summary/cover-letter prompts label each variant ("Version 1 — EXECUTIVE", etc.)
+// as a styling instruction. Models sometimes echo that header into the body, so
+// the saved text ends up reading "Version 2: ...". Strip a single leading
+// "Version N"/"Versión N" label (with an optional style word + separator). Only
+// the start is touched — never the real prose.
+const VERSION_LABEL_REGEX =
+  /^\s*versi[oó]n\s*\d+\s*(?:[—–-]\s*[\p{Lu}][\p{L} ]{1,30}?)?\s*[:—–-]\s+/iu
+
+export function stripVersionLabel(text: string): string {
+  if (!text) return text
+  return text.replace(VERSION_LABEL_REGEX, "").trimStart()
+}

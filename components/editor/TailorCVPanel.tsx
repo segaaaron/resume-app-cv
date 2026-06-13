@@ -50,6 +50,7 @@ export default function TailorCVPanel() {
     bulletIndex: number
     text: string
     currentDescription: string
+    currentBullet: string
   } | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_tailor")
   const [now, setNow] = useState(Date.now())
@@ -317,11 +318,16 @@ export default function TailorCVPanel() {
                                     if (applied) return
                                     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
                                     const job = work.find(j => j.id === exp.targetId)
+                                    const desc = job?.description ?? ""
+                                    // Same transform as confirmApplyBullet so the "Current" shown
+                                    // is exactly the line that will be replaced (per-bullet diff).
+                                    const lines = desc.split("\n").map(l => l.trim()).filter(Boolean)
                                     setPendingBullet({
                                       targetId: exp.targetId,
                                       bulletIndex: bullet.index,
                                       text: bullet.text,
-                                      currentDescription: job?.description ?? "",
+                                      currentDescription: desc,
+                                      currentBullet: lines[bullet.index] ?? "",
                                     })
                                   }}
                                   disabled={applied}
@@ -405,10 +411,10 @@ export default function TailorCVPanel() {
             field: "workExperience.description",
             type: "replace",
             preview: pendingBullet.text,
-            reason: t("diff_replace_reason"),
+            reason: pendingBullet.currentBullet ? t("diff_replace_reason") : t("diff_add_reason"),
             targetId: pendingBullet.targetId,
           }}
-          currentValue={pendingBullet.currentDescription}
+          currentValue={pendingBullet.currentBullet}
         />
       )}
     </div>

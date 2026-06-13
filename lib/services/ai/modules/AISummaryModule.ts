@@ -11,7 +11,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, detectHallucination, stripVersionLabel } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -140,9 +140,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     // Anti-hallucination filter — source = candidate profile context. Drop any
     // version that introduces tech or real metrics not present in the source.
     // (Placeholders are allowed by design here.)
-    const rawVersions = (parsed.versions as unknown[]).slice(0, 3).filter(
-      (v): v is string => typeof v === "string" && v.trim().length > 0,
-    )
+    const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map(stripVersionLabel)
+      .filter((v) => v.trim().length > 0)
     let droppedVersions = 0
     const cleanVersions = rawVersions.filter((v) => {
       if (detectHallucination(v, resumeContext, { allowPlaceholders: true })) {
@@ -363,9 +364,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // Anti-hallucination filter — source = original summary + resume context.
     // Placeholders are explicitly allowed in this endpoint.
     const improveSource = [summary ?? "", userDescription ?? "", resumeContext].join("\n")
-    const rawVersions = (parsed.versions as unknown[]).slice(0, 3).filter(
-      (v): v is string => typeof v === "string" && v.trim().length > 0,
-    )
+    const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map(stripVersionLabel)
+      .filter((v) => v.trim().length > 0)
     let droppedVersions = 0
     const cleanVersions = rawVersions.filter((v) => {
       if (detectHallucination(v, improveSource, { allowPlaceholders: true })) {
