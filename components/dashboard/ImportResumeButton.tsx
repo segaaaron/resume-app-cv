@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { Upload, Loader2, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
@@ -14,6 +14,7 @@ interface Props {
 
 export default function ImportResumeButton({ disabled }: Props) {
   const t = useTranslations("dashboard.resumes")
+  const locale = useLocale()
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
@@ -49,7 +50,7 @@ export default function ImportResumeButton({ disabled }: Props) {
       if (data.truncated) {
         toast.warning(t("import_truncated"), { duration: 12_000 })
       }
-      router.push(`/editor/${data.id}`)
+      router.push(`/${locale}/editor/${data.id}`)
     } catch {
       toast.error(t("import_error"))
       setFile(null)

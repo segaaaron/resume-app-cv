@@ -1,7 +1,19 @@
 /**
  * parseResumeText — Extrae datos estructurados de texto plano de un CV.
  * Funciona con PDFs y DOCX sin necesidad de IA externa.
+ *
+ * Para PDFs el texto debe venir de `lib/resume-parser/extract-pdf` (extracción
+ * posicional con columnas y celdas \t-separadas). Los módulos especializados
+ * viven en `lib/resume-parser/`.
  */
+
+import {
+  clean, HAS_YEAR, ROLE_KEYWORDS, INSTITUTION_RE, DEGREE_RE,
+  SIDEBAR_LABEL_RE, CONTACT_LINE_RE, COLUMN_BREAK,
+} from "./resume-parser/patterns"
+import { detectTabularWork, parseTabularWork, detectRowDatedWork, parseRowDatedWork } from "./resume-parser/tabular-work"
+import { parseLanguageLines, KNOWN_LANGUAGES, LANG_LEVEL_MAP } from "./resume-parser/languages"
+import { parseSkillLines } from "./resume-parser/skills"
 
 // Topes del parser — protegen contra inputs patológicos sin recortar CVs
 // reales. Si un CV legítimo choca con un tope, el caller debe avisar al
@@ -49,12 +61,16 @@ const SECTION_MAP: Record<string, string> = {
   "experiencia": "work", "experiencia laboral": "work", "experiencia profesional": "work",
   "historial laboral": "work", "trayectoria profesional": "work", "trayectoria laboral": "work",
   "empleo": "work", "empleos": "work", "historia profesional": "work",
+  "experiencia de trabajo": "work", "experiencias laborales": "work", "vida laboral": "work",
+  "carrera profesional": "work", "carrera laboral": "work", "trayectoria": "work",
+  "trabajos": "work", "trabajo": "work", "logros profesionales": "work",
   "experience": "work", "work experience": "work", "professional experience": "work",
   "employment": "work", "employment history": "work", "work history": "work",
   "career": "work", "career history": "work",
   "relevant experience": "work", "related experience": "work", "job experience": "work",
   "professional background": "work", "career background": "work", "work background": "work",
   "positions held": "work", "positions": "work", "job history": "work",
+  "technical experience": "work", "selected experience": "work", "additional experience": "work",
   "educación": "education", "educacion": "education", "formación": "education",
   "formacion": "education", "formación académica": "education", "formacion academica": "education",
   "estudios": "education", "estudios realizados": "education",
@@ -83,22 +99,71 @@ const SECTION_MAP: Record<string, string> = {
   "summary": "summary", "profile": "summary", "professional summary": "summary",
   "professional profile": "summary", "objective": "summary", "about me": "summary",
   "voluntariado": "volunteer", "trabajo voluntario": "volunteer",
+  "experiencia de voluntariado": "volunteer", "servicio comunitario": "volunteer",
   "volunteer": "volunteer", "volunteering": "volunteer",
+  "volunteer experience": "volunteer", "volunteer work": "volunteer", "community service": "volunteer",
+  "referencias": "references", "referencias profesionales": "references",
+  "referencias personales": "references", "contactos de referencia": "references",
+  "references": "references", "professional references": "references",
+  "personal references": "references", "reference": "references",
   "intereses": "hobbies", "hobbies": "hobbies", "aficiones": "hobbies",
   "pasatiempos": "hobbies", "interests": "hobbies", "hobbies & interests": "hobbies",
+  "intereses personales": "hobbies", "personal interests": "hobbies", "interests & hobbies": "hobbies",
+  "contacto": "contact", "contact": "contact", "contact me": "contact",
+  "contact information": "contact", "información de contacto": "contact",
+  "informacion de contacto": "contact", "datos de contacto": "contact",
+  "contact details": "contact", "datos personales": "contact",
+  "información personal": "contact", "informacion personal": "contact",
+  "get in touch": "contact",
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function clean(s: string) {
-  return s.replace(/\s+/g, " ").trim()
+// Keys sorted longest-first so prefix matching tries most specific keys first
+const SECTION_KEYS_BY_LENGTH = Object.entries(SECTION_MAP).sort(([a], [b]) => b.length - a.length)
+
+function normalizeLine(line: string): string {
+  return line.toLowerCase().trim()
+    // Numeración de plantilla: "1) PROFILE", "2. EXPERIENCE", "3 - SKILLS"
+    .replace(/^\d{1,2}\s*[).:\-–—]\s*/, "")
+    .replace(/[:\-_•*\/\\|]/g, "")
+    .replace(/\s+/g, " ").trim()
+}
+
+// Líneas de adorno de plantilla (banners estilo terminal, timestamps, latín)
+function isNoiseLine(line: string): boolean {
+  if (/<[A-Z]{2,8}>/.test(line)) return true            // tags tipo <GO>, <HELP>
+  if (/^\d{2}[·.:]\d{2}[·.:]\d{2}/.test(line)) return true // timestamps 06·05·26
+  // Adorno con letras espaciadas: "C U R R I C U L U M", "I N FIDEM SCRIPSI",
+  // a menudo con símbolos decorativos (★ — ●). ≥4 letras sueltas = decorativo.
+  const singleChars = line.match(/(?:^|\s)\p{L}(?=\s|$)/gu)
+  if (singleChars && singleChars.length >= 4) return true
+  return false
 }
 
 function isSectionHeading(line: string): string | null {
-  const norm = line.toLowerCase().trim()
-    .replace(/[:\-_•*\/\\|]/g, "")
-    .replace(/\s+/g, " ").trim()
-  return SECTION_MAP[norm] ?? null
+  const norm = normalizeLine(line)
+  // Exact match
+  if (SECTION_MAP[norm]) return SECTION_MAP[norm]
+  // Heading combinado: "Languages & Contact", "Contacto y Datos", "Skills + Tools".
+  // Si AMBAS mitades son headings conocidos, gana el tipo de la primera; el
+  // contenido se enruta por su parser real (idiomas→languages, email→contacto global).
+  const combo = norm.split(/\s+(?:&|y|and|\+|·|\/)\s+/)
+  if (combo.length === 2 && SECTION_MAP[combo[0]] && SECTION_MAP[combo[1]]) {
+    return SECTION_MAP[combo[0]]
+  }
+  // Double-heading concatenation: "EXPERIENCIA PROFESIONALCOMPETENCIAS Swift..."
+  // Only match if the remainder ALSO starts with a known section heading key.
+  // This avoids false positives like "Experienced..." being detected as "experience".
+  for (const [key, type] of SECTION_KEYS_BY_LENGTH) {
+    if (!norm.startsWith(key) || norm.length <= key.length) continue
+    const rest = norm.slice(key.length)
+    // Confirm by checking rest starts with another known heading (concatenation artifact)
+    if (SECTION_KEYS_BY_LENGTH.some(([k2]) => rest.startsWith(k2))) {
+      return type
+    }
+  }
+  return null
 }
 
 function extractEmail(text: string): string {
@@ -134,7 +199,6 @@ function extractWebsite(text: string): string {
 }
 
 const CURRENT_WORDS = /\b(presente|actual|current|present|currently|now|hoy|actualidad|ongoing|till\s+date|to\s+date)\b/i
-const HAS_YEAR = /\b(20\d{2}|19\d{2})\b/
 
 const MONTH_NAMES: Record<string, string> = {
   "ene": "01", "enero": "01", "jan": "01", "january": "01",
@@ -282,7 +346,7 @@ function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
 
     // Case A: explicit separator  →  "Title | Employer | 2022–2023"
     if (line.length < 90) {
-      const segments = line.split(/\s*[|·]\s*/)
+      const segments = line.split(/\s*[|·\t]\s*/)
       if (
         segments.length >= 2 &&
         !HAS_YEAR.test(segments[0]) &&
@@ -311,7 +375,23 @@ function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
   }
 
   if (entryStarts.size === 0) {
-    // Fallback: return all lines as one block
+    // Fallback: try to split by blank-line boundaries between entries.
+    // This handles CVs where dates are missing/unrecognized but entries
+    // are visually separated by empty lines in the extracted text.
+    const blankSplits: number[] = []
+    for (let i = 1; i < lines.length; i++) {
+      // A blank line followed by a short capitalized line = new entry boundary
+      if (!lines[i - 1] && lines[i] && /^[A-ZÁÉÍÓÚÜÑ]/.test(lines[i]) && isShortTitleLine(lines[i])) {
+        blankSplits.push(i)
+      }
+    }
+    if (blankSplits.length > 0) {
+      const starts = [0, ...blankSplits]
+      return starts.map((start, idx) => {
+        const end = idx + 1 < starts.length ? starts[idx + 1] : lines.length
+        return lines.slice(start, end).filter(l => l.length > 0)
+      }).filter(b => b.length > 0)
+    }
     return lines.length > 0 ? [lines] : []
   }
 
@@ -327,9 +407,6 @@ function splitIntoBlocks(lines: string[], lookahead = 6): string[][] {
 
   return blocks
 }
-
-// Keywords that strongly suggest a line is a job role/title (not a company name)
-const ROLE_KEYWORDS = /\b(developer|engineer|manager|designer|director|lead|senior|junior|intern|analyst|consultant|architect|scientist|specialist|coordinator|executive|officer|head|vp|cto|ceo|coo|cfo|devops|fullstack|frontend|backend|mobile|ios|android|qa|tester|scrum|agile|product|project|software|web|data|cloud|security|network|system|support|recruiter|hr|marketing|sales|account)\b/i
 
 // ─── Merge wrapped lines (PDF word-wrap continuation) ────────────────────────
 function mergeWrappedLines(lines: string[]): string[] {
@@ -367,7 +444,7 @@ function parseWorkBlock(block: string[], id: string) {
 
     if (i === 0) {
       // First line: parse with separator, or inline date, or plain title
-      const parts = line.split(/\s*[|·]\s*/)
+      const parts = line.split(/\s*[|·\t]\s*/)
       if (parts.length >= 2) {
         // Separator format: "Title | Company | Date" or "Company | Date"
         job.jobTitle = clean(parts[0])
@@ -416,51 +493,64 @@ function parseWorkBlock(block: string[], id: string) {
       job.currentlyWorking = dr.current
       const remainder = stripDates(line).trim()
       if (remainder.length > 1) {
-        const rparts = remainder.split(/\s*[|·,]\s*/).map(clean).filter(p => p.length > 1)
-        if (!job.employer && rparts[0]) job.employer = rparts[0]
-        if (!job.city && rparts[1]) job.city = rparts[1]
+        const rparts = remainder.split(/\s*[|·,\t]\s*/).map(clean).filter(p => p.length > 1)
+        // Skip institution names — they are education entries interleaved by pdf-parse from the right column
+        if (!job.employer && rparts[0] && !INSTITUTION_RE.test(rparts[0])) job.employer = rparts[0]
+        if (!job.city && rparts[1] && !SIDEBAR_LABEL_RE.test(rparts[1])) job.city = rparts[1]
       }
       continue
     }
 
-    // Bullet points → description
+    // Bullet points → description (filter skill/cert items: < 5 words and no verb-like structure)
     if (isBullet(line)) {
-      descLines.push(line.replace(/^[•\-–·▪▸►→✓✔*]\s*/, "").trim())
+      const stripped = line.replace(/^[•\-–·▪▸►→✓✔*]\s*/, "").trim()
+      const wordCount = stripped.split(/\s+/).length
+      // Skip very short items (1-4 words without action verb) — likely skill/cert names from sidebar
+      const hasActionVerb = /\b(implement|develop|build|creat|design|manag|lead|improv|deliver|optim|collaborat|integrat|maintain|support|enhanc|reduc|increas|achiev|establi|launch|migrat|refactor|test|deploy|analyz|coordin|provid)\w*/i.test(stripped)
+      if (wordCount <= 4 && !hasActionVerb) continue
+      descLines.push(stripped)
       continue
     }
 
+    // Skip known sidebar template labels — these appear as sub-headings in some PDF templates
+    // (e.g. "Studied at", "GPA") and get interleaved into work blocks by pdf-parse.
+    if (SIDEBAR_LABEL_RE.test(line.trim())) continue
+
     // Short line without date → fill jobTitle, employer, or city in order
     if (line.length < 80 && !HAS_YEAR.test(line)) {
-      const parts = line.split(/\s*[|·,]\s*/).map(clean).filter(p => p.length > 1)
+      const parts = line.split(/\s*[|·,\t]\s*/).map(clean).filter(p => p.length > 1)
       const looksLikeSentence = line.endsWith(".") || line.endsWith(",") || line.length > 50
       if (!job.jobTitle && !job.employer) {
         job.jobTitle = parts[0] ?? ""
-        if (parts.length >= 2 && !job.city) job.city = parts[1]
+        if (parts.length >= 2 && !job.city && !SIDEBAR_LABEL_RE.test(parts[1] ?? "")) job.city = parts[1]
       } else if (!job.jobTitle) {
         job.jobTitle = parts[0] ?? ""
-        if (parts.length >= 2 && !job.city) job.city = parts[1]
+        if (parts.length >= 2 && !job.city && !SIDEBAR_LABEL_RE.test(parts[1] ?? "")) job.city = parts[1]
       } else if (!job.employer && !looksLikeSentence) {
         // If the line is a single role-keyword word that could be a title continuation,
         // merge it into jobTitle instead of setting as employer
         const wordCount = parts[0]?.split(/\s+/).length ?? 0
         if (wordCount <= 2 && ROLE_KEYWORDS.test(parts[0] ?? "") && !job.startDate) {
           job.jobTitle = job.jobTitle + " " + (parts[0] ?? "")
+        } else if (INSTITUTION_RE.test(parts[0] ?? "")) {
+          // Academic institution interleaved from right column — not an employer, skip
+          continue
         } else {
           job.employer = parts[0] ?? ""
-          if (parts.length >= 2 && !job.city) job.city = parts[1]
+          if (parts.length >= 2 && !job.city && !SIDEBAR_LABEL_RE.test(parts[1] ?? "")) job.city = parts[1]
         }
       } else if (!job.city && parts.length === 1 && !looksLikeSentence && line.length < 45) {
         job.city = parts[0]
       } else if (job.startDate) {
         const wordCount = line.trim().split(/\s+/).length
         const looksLikeLeakedSidebarItem = wordCount <= 3 && line.length <= 25 && !/[.,]$/.test(line) && descLines.length > 0
-        if (!looksLikeLeakedSidebarItem) descLines.push(line)
+        if (!looksLikeLeakedSidebarItem && !CONTACT_LINE_RE.test(line)) descLines.push(line)
       }
       continue
     }
 
     // Long line → description (only after we have dates)
-    if (line.length >= 40 && job.startDate) {
+    if (line.length >= 40 && job.startDate && !CONTACT_LINE_RE.test(line)) {
       descLines.push(line)
     }
   }
@@ -488,18 +578,31 @@ function parseEduBlock(block: string[], id: string) {
     const dr = extractDateRange(line)
 
     if (i === 0) {
-      const parts = line.split(/\s*[|·]\s*/)
+      // Filtrar vacíos: líneas con viñeta inicial ("· Systems engineer ...")
+      // producen un primer elemento vacío al separar.
+      const parts = line.split(/\s*[|·\t]\s*/).map(p => p.trim()).filter(Boolean)
       if (parts.length >= 2) {
-        edu.degree = clean(parts[0])
-        if (!HAS_YEAR.test(parts[1])) edu.institution = clean(parts[1])
-        if (parts.length >= 3 && !HAS_YEAR.test(parts[2])) edu.city = clean(parts[2])
-        // Check for dates in parts
+        const p0 = clean(parts[0])
+        const p1 = clean(parts[1])
+        // If first part is institution name (not a degree keyword) → assign correctly
+        if (INSTITUTION_RE.test(p0) && !DEGREE_RE.test(p0) && !HAS_YEAR.test(p0)) {
+          edu.institution = p0
+          if (!HAS_YEAR.test(p1)) edu.degree = clean(stripDates(p1))
+        } else {
+          // El degree puede traer las fechas inline: "Systems engineer 2010 - 2015"
+          edu.degree = clean(stripDates(p0))
+          if (!HAS_YEAR.test(p1)) edu.institution = p1
+          if (parts.length >= 3 && !HAS_YEAR.test(parts[2]) && !SIDEBAR_LABEL_RE.test(clean(parts[2]))) edu.city = clean(parts[2])
+        }
         for (const p of parts) {
           if (HAS_YEAR.test(p) && !edu.startDate) {
             const d = extractDateRange(p)
             if (d.startDate) { edu.startDate = d.startDate; edu.endDate = d.endDate; edu.currentlyStudying = d.current }
           }
         }
+      } else if (INSTITUTION_RE.test(line) && !DEGREE_RE.test(line) && !HAS_YEAR.test(line)) {
+        // Institution-first ordering: 2-col PDFs often place institution name on the first line
+        edu.institution = clean(line)
       } else {
         edu.degree = clean(line)
       }
@@ -511,17 +614,30 @@ function parseEduBlock(block: string[], id: string) {
       edu.endDate = dr.endDate
       edu.currentlyStudying = dr.current
       const rem = stripDates(line).replace(/[|·,]/g, " ").trim()
-      if (rem.length > 1 && !edu.institution) edu.institution = rem
+      if (rem.length > 1) {
+        if (!edu.institution && !DEGREE_RE.test(rem)) edu.institution = rem
+        else if (!edu.degree && DEGREE_RE.test(rem)) edu.degree = rem
+        else if (!edu.institution) edu.institution = rem
+      }
       continue
     }
 
     if (!isBullet(line) && line.length < 80 && !HAS_YEAR.test(line)) {
-      const parts = line.split(/\s*[|·,]\s*/).map(clean).filter(p => p.length > 1)
+      if (SIDEBAR_LABEL_RE.test(line.trim())) continue
+      const parts = line.split(/\s*[|·,\t]\s*/).map(clean).filter(p => p.length > 1)
+      const p0 = parts[0] ?? ""
       if (!edu.institution) {
-        edu.institution = parts[0] ?? ""
-        if (parts.length >= 2 && !edu.city) edu.city = parts[1]
+        // Institution not set yet — assign this line to institution
+        edu.institution = p0
+        if (parts.length >= 2 && !edu.city && !SIDEBAR_LABEL_RE.test(parts[1] ?? "")) edu.city = parts[1]
+      } else if (INSTITUTION_RE.test(p0) && parts.length === 1 && p0.length < 40 && !DEGREE_RE.test(p0)) {
+        // Continuación del nombre de institución envuelto: "Catolica" + "University"
+        edu.institution = `${edu.institution} ${p0}`
+      } else if (!edu.degree && !INSTITUTION_RE.test(p0)) {
+        // Institution already set, degree empty, and line is not another institution → it's the degree
+        edu.degree = p0
       } else if (!edu.city && parts.length === 1) {
-        edu.city = parts[0]
+        edu.city = p0
       }
     }
   }
@@ -587,7 +703,7 @@ export function parseResumeText(rawText: string): ParsedResume {
       .replace(/((?:19|20)\d{2})([A-Za-záéíóúüñ])/g, "$1 $2")
       // Insert space when a month name is directly concatenated to a preceding word
       .replace(/([a-záéíóúüñ])(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|Ene|Abr|Ago|Dic)/g, "$1 $2")
-  ).filter(Boolean)
+  ).filter(Boolean).filter(l => !isNoiseLine(l))
 
   type Section = { type: string; lines: string[] }
   const sections: Section[] = []
@@ -599,6 +715,13 @@ export function parseResumeText(rawText: string): ParsedResume {
 
   for (let li = 0; li < lines.length; li++) {
     const line = lines[li]
+    // Salto de columna emitido por extract-pdf: el sidebar empieza aquí.
+    // Cerrar la sección actual para que su contenido no absorba el sidebar.
+    if (line === COLUMN_BREAK) {
+      if (cur.lines.length > 0 || cur.type !== "header") sections.push(cur)
+      cur = { type: "unknown", lines: [] }
+      continue
+    }
     const type = isSectionHeading(line)
     if (type) {
       // Guard: if we're inside a work/education section and this heading is a
@@ -616,11 +739,44 @@ export function parseResumeText(rawText: string): ParsedResume {
       }
       if (cur.lines.length > 0 || cur.type !== "header") sections.push(cur)
       cur = { type, lines: [] }
+    } else if (
+      // Encabezado numerado DESCONOCIDO en mayúsculas ("4) METRICS") — corta la
+      // sección actual para que su contenido no contamine la sección anterior.
+      /^\d{1,2}\s*[).:]\s+\S{2,}/.test(line) &&
+      line.length < 40 &&
+      line === line.toUpperCase() &&
+      !isBullet(line)
+    ) {
+      if (cur.lines.length > 0 || cur.type !== "header") sections.push(cur)
+      cur = { type: "unknown", lines: [] }
     } else {
       cur.lines.push(line)
     }
   }
   sections.push(cur)
+
+  // ── Post-process: re-split sections whose lines contain embedded section headings ──
+  // 2-column PDFs often dump a heading like "EXPERIENCIA PROFESIONAL" inside the summary
+  // section (after the prefix-match detection still failed due to different line ordering).
+  // Scan every section's lines for headings; when found, split the section there.
+  {
+    const expanded: typeof sections = []
+    for (const sec of sections) {
+      let cur2 = { type: sec.type, lines: [] as string[] }
+      for (const line of sec.lines) {
+        const t = isSectionHeading(line)
+        if (t && t !== sec.type) {
+          if (cur2.lines.length > 0) expanded.push(cur2)
+          cur2 = { type: t, lines: [] }
+        } else {
+          cur2.lines.push(line)
+        }
+      }
+      if (cur2.lines.length > 0 || cur2.type !== sec.type) expanded.push(cur2)
+    }
+    sections.length = 0
+    sections.push(...expanded)
+  }
 
   const get = (type: string) => sections.find(s => s.type === type)
   const getAll = (type: string) => sections.filter(s => s.type === type)
@@ -629,7 +785,10 @@ export function parseResumeText(rawText: string): ParsedResume {
   const header = get("header")
   if (header) {
     const contactRe = /[@+]|linkedin|github|http|www\.|\.com|\.mx|\.es|\d{5,}/i
-    const cands = header.lines.filter(l => !contactRe.test(l) && l.length > 1 && l.length < 70)
+    // Candidato a nombre: debe empezar con letra (excluye adornos "● LIVE ·...")
+    const cands = header.lines.filter(l =>
+      !contactRe.test(l) && l.length > 1 && l.length < 70 && /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(l)
+    )
     if (cands[0]) {
       const parts = clean(cands[0]).split(/\s+/)
       result.personalDetails.firstName = parts[0] ?? ""
@@ -638,11 +797,89 @@ export function parseResumeText(rawText: string): ParsedResume {
     if (cands[1] && !cands[1].match(/^\d/)) {
       result.personalDetails.jobTitle = clean(cands[1])
     }
+    // Ubicación: línea dedicada "Ciudad, País"…
     const locLine = header.lines.find(l => /,\s*[A-ZÁÉÍÓÚÜÑ]/.test(l) && !contactRe.test(l) && l.length < 60)
     if (locLine) {
       const parts = locLine.split(",").map(p => clean(p))
       result.personalDetails.city = parts[0]
       result.personalDetails.country = parts[parts.length - 1]
+    } else {
+      // …o embebida en una línea de contacto: "email | +34... | Madrid, España"
+      for (const line of header.lines) {
+        const m = line.match(/(?:^|[|·•])\s*([A-ZÁÉÍÓÚÜÑ][\wáéíóúüñ.\- ]{1,28}),\s*([A-ZÁÉÍÓÚÜÑ][\wáéíóúüñ.\- ]{1,28})(?:$|[|·•])/)
+        if (m && !/@/.test(m[1]) && !/\d{4}/.test(m[0])) {
+          result.personalDetails.city = clean(m[1])
+          result.personalDetails.country = clean(m[2])
+          break
+        }
+      }
+    }
+  }
+
+  // ── Fallback de nombre: el header no dio nombre ────────────────────────
+  // Plantillas que arrancan con un heading ("CONTACTO") dejan el header vacío.
+  // Buscar en las primeras líneas del doc una línea con pinta de nombre:
+  // 2-4 palabras, cada una iniciando en mayúscula, sin dígitos ni keywords de rol.
+  if (!result.personalDetails.firstName) {
+    const NAME_WORD = /^[A-ZÁÉÍÓÚÜÑ][A-Za-zÁÉÍÓÚÜÑáéíóúüñ.'\-]*$/
+    // Primeras líneas del doc + inicio de secciones contact/unknown (sidebars
+    // se emiten al final del texto, donde puede vivir el nombre).
+    const scanLines: string[] = [
+      ...lines.slice(0, 25),
+      ...sections.filter(s => ["contact", "unknown"].includes(s.type)).flatMap(s => s.lines.slice(0, 10)),
+    ]
+    for (let i = 0; i < scanLines.length; i++) {
+      const line = scanLines[i]
+      if (isSectionHeading(line)) continue
+      if (CONTACT_LINE_RE.test(line) || /\d/.test(line)) continue
+      if (ROLE_KEYWORDS.test(line) || INSTITUTION_RE.test(line)) continue
+      const words = clean(line).split(/\s+/)
+      if (words.length < 2 || words.length > 4) continue
+      if (!words.every(w => NAME_WORD.test(w))) continue
+      result.personalDetails.firstName = words[0]
+      result.personalDetails.lastName = words.slice(1).join(" ")
+      // El cargo suele venir justo después del nombre
+      const next = scanLines[i + 1]
+      if (!result.personalDetails.jobTitle && next && next.length < 60 &&
+          !isSectionHeading(next) && !CONTACT_LINE_RE.test(next) && !/\d{4}/.test(next)) {
+        result.personalDetails.jobTitle = clean(next)
+      }
+      break
+    }
+  }
+
+  // ── Ciudad: buscar patrón "Ciudad, País" o línea corta en contact/languages ─
+  // Headings combinados ("Languages & Contact") enrutan el contacto al tipo de
+  // la primera mitad, así que escaneamos varios tipos de sección.
+  if (!result.personalDetails.city) {
+    const fullName = `${result.personalDetails.firstName} ${result.personalDetails.lastName}`.trim().toLowerCase()
+    const sectionsForCity = sections.filter(s => ["contact", "languages", "unknown", "header"].includes(s.type))
+    // Pase 1: "Ciudad, País" (la coma es la señal más fuerte)
+    outerCity: for (const sec of sectionsForCity) {
+      for (const line of sec.lines) {
+        if (CONTACT_LINE_RE.test(line) || HAS_YEAR.test(line)) continue
+        if (line.length >= 40 || !/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+        if (!/^[A-ZÁÉÍÓÚÜÑ][\wáéíóúüñ.\- ]*,\s*[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+        const parts = clean(line).split(",").map(p => p.trim())
+        if (parts.length === 2 && parts.every(p => p.split(/\s+/).length <= 3)) {
+          result.personalDetails.city = parts[0]
+          result.personalDetails.country = parts[1]
+          break outerCity
+        }
+      }
+    }
+    // Pase 2 (solo secciones contact explícitas): línea corta sin dígitos
+    if (!result.personalDetails.city) {
+      outerCity2: for (const sec of getAll("contact")) {
+        for (const line of sec.lines) {
+          if (CONTACT_LINE_RE.test(line) || /\d/.test(line)) continue
+          if (line.length >= 40 || !/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
+          const cleaned = clean(line)
+          if (cleaned.toLowerCase() === fullName || cleaned.split(/\s+/).length > 4) continue
+          result.personalDetails.city = cleaned
+          break outerCity2
+        }
+      }
     }
   }
 
@@ -652,8 +889,53 @@ export function parseResumeText(rawText: string): ParsedResume {
     result.summary = summarySection.lines.join(" ").slice(0, PARSE_LIMITS.summaryChars).trim()
   }
 
-  // ── Work Experience (block-based) ─────────────────────────────────────
+  // Summary rescue: sidebars suelen poner el perfil SIN heading (párrafo suelto).
+  // Buscar en header/contact/unknown un bloque de ≥2 líneas largas consecutivas.
+  if (!result.summary) {
+    outerSummary: for (const sec of sections) {
+      if (!["header", "contact", "unknown"].includes(sec.type)) continue
+      let run: string[] = []
+      for (const line of sec.lines) {
+        const isProse = line.length > 60 && !HAS_YEAR.test(line) && !isBullet(line) && !CONTACT_LINE_RE.test(line)
+        if (isProse) {
+          run.push(line)
+        } else {
+          if (run.length >= 2) break
+          run = []
+        }
+      }
+      if (run.length >= 2) {
+        result.summary = run.join(" ").slice(0, PARSE_LIMITS.summaryChars).trim()
+        break outerSummary
+      }
+    }
+  }
+
+  // ── Work Experience ───────────────────────────────────────────────────
+  // Tres formatos, detectados por caso (más específico primero):
+  //  1. Date-first rows:  "2015–2016 ⇥ Rol ⇥ Empresa · Ciudad" + bullets
+  //  2. Tabla YR/ROLE/FIRM/LOC (años partidos en líneas)
+  //  3. Bloques clásicos:  "Título | Empresa | Fecha" + bullets
+  const tabularWorkSections = new Set<object>()
   for (const sec of getAll("work")) {
+    const pushJobs = (jobs: typeof result.workExperience) => {
+      for (const job of jobs) {
+        if (result.workExperience.length >= 12) break
+        job.id = `we${result.workExperience.length + 1}`
+        result.workExperience.push(job)
+      }
+    }
+
+    if (detectRowDatedWork(sec.lines)) {
+      tabularWorkSections.add(sec)
+      pushJobs(parseRowDatedWork(sec.lines, 12 - result.workExperience.length, PARSE_LIMITS.bulletsPerJob))
+      continue
+    }
+    if (detectTabularWork(sec.lines)) {
+      tabularWorkSections.add(sec)
+      pushJobs(parseTabularWork(sec.lines, 12 - result.workExperience.length, PARSE_LIMITS.bulletsPerJob))
+      continue
+    }
     const blocks = splitIntoBlocks(sec.lines, 6)
     for (const block of blocks) {
       if (result.workExperience.length >= 12) break
@@ -668,7 +950,7 @@ export function parseResumeText(rawText: string): ParsedResume {
   // Scan non-work sections for long sentences (real bullets) and append them to the
   // most recently added job — done BEFORE the rescue pass + sort so order is correct.
   if (result.workExperience.length > 0) {
-    const SKIP_FOR_DESC_RESCUE = new Set(["work", "header", "summary", "education", "certifications", "projects", "volunteer", "hobbies"])
+    const SKIP_FOR_DESC_RESCUE = new Set(["work", "header", "summary", "education", "certifications", "projects", "volunteer", "hobbies", "contact"])
     for (const sec of sections) {
       if (SKIP_FOR_DESC_RESCUE.has(sec.type)) continue
       const rescuedBullets: string[] = []
@@ -698,17 +980,27 @@ export function parseResumeText(rawText: string): ParsedResume {
       result.workExperience.map(j => `${j.jobTitle.toLowerCase()}|${j.employer.toLowerCase()}`)
     )
     for (const sec of sections) {
-      // Exclude sections that have their own dedicated parsers or are clearly not work
-      if (["work", "header", "education", "summary", "certifications", "projects", "volunteer", "hobbies"].includes(sec.type)) continue
+      // Skip: "work" (already parsed), "summary" (own parser), "hobbies"/"contact" (not work)
+      // Include certifications/languages/skills — 2-column PDFs often route job entries there
+      if (["work", "summary", "hobbies", "contact"].includes(sec.type)) continue
+      // Si esta sección de trabajo ya se parseó con tabular/row-dated, no re-escanear
+      if (tabularWorkSections.has(sec)) continue
       // Only attempt rescue if section has year-dated, non-bullet lines
       if (!sec.lines.some(l => (HAS_YEAR.test(l) || CURRENT_WORDS.test(l)) && !isBullet(l))) continue
       const blocks = splitIntoBlocks(sec.lines, 6)
       for (const block of blocks) {
         if (result.workExperience.length >= 12) break
         const job = parseWorkBlock(block, `we${result.workExperience.length + 1}`)
-        // Require a title/employer AND a year-based start date (avoids false positives)
-        if (!(job.jobTitle || job.employer)) continue
+        // Require BOTH title AND employer AND a year-based start date (strict — avoids skills/certs rescued as jobs)
+        if (!job.jobTitle || !job.employer) continue
         if (!job.startDate.match(/\d{4}/)) continue
+        // Un "título" que es solo un año = celda de fecha mal asignada (certs "2023 <nombre>")
+        if (/^\d{2,4}$/.test(job.jobTitle.trim())) continue
+        // Título con keyword de grado académico = entrada de educación, no trabajo
+        if (DEGREE_RE.test(job.jobTitle)) continue
+        // Rescate estricto: el título DEBE parecer un rol real. Certs/cursos
+        // ("Functional Programming", "Concurrency IOS") no tienen rol → se descartan.
+        if (!ROLE_KEYWORDS.test(job.jobTitle)) continue
         const key = `${job.jobTitle.toLowerCase()}|${job.employer.toLowerCase()}`
         if (seenJobs.has(key)) continue
         result.workExperience.push(job)
@@ -724,34 +1016,95 @@ export function parseResumeText(rawText: string): ParsedResume {
   }
 
   // ── Education (block-based) ───────────────────────────────────────────
-  const DEGREE_RE = /\b(licenciatura|ingeniería|ingenieria|bachillerato|maestría|maestria|doctorado|técnico|tecnico|bachelor|master|phd|mba|degree|diploma|carrera|grado|engineer|science|arts|technology|business|medicine|law)\b/i
-
   for (const sec of getAll("education")) {
     // For education, also try splitting by degree keywords if blocks fail
     const blocks = splitIntoBlocks(sec.lines, 5)
     for (const block of blocks) {
       if (result.education.length >= PARSE_LIMITS.education) break
       if (!block[0]) continue
-      // Only parse if it looks like an education entry
-      if (!DEGREE_RE.test(block.join(" ")) && !HAS_YEAR.test(block.join(" "))) continue
+      // Accept if block has a degree keyword OR an institution name (e.g. "Catalica University")
+      // HAS_YEAR alone is too loose — accepts job titles like "iOS Developer 2023-2026"
+      if (!DEGREE_RE.test(block.join(" ")) && !INSTITUTION_RE.test(block.join(" "))) continue
       const edu = parseEduBlock(block, `ed${result.education.length + 1}`)
       if (edu.degree || edu.institution) result.education.push(edu)
     }
   }
 
-  // ── Skills ────────────────────────────────────────────────────────────
-  const skillNames = new Set<string>()
-  for (const sec of getAll("skills")) {
-    for (const line of sec.lines) {
-      for (const part of line.split(/[,|•·\t\/]/)) {
-        const s = clean(part)
-        if (s.length > 1 && s.length < 50 && !/^\d+$/.test(s)) skillNames.add(s)
+  // ── Education rescue: recover entries interleaved into other sections by pdf-parse ──
+  // Runs always (not only when empty) — deduplicates against already-parsed entries.
+  // 2-column PDFs route education right-column content into work/language/skill sections.
+  {
+    const seenEduKeys = new Set(
+      result.education.map(e => `${e.degree.toLowerCase()}|${e.institution.toLowerCase()}`)
+    )
+    for (const sec of sections) {
+      if (["education", "summary", "hobbies"].includes(sec.type)) continue
+      if (!sec.lines.some(l => INSTITUTION_RE.test(l))) continue
+      const blocks = splitIntoBlocks(sec.lines, 5)
+      for (const block of blocks) {
+        if (result.education.length >= PARSE_LIMITS.education) break
+        if (block.length < 2) continue
+        // INSTITUTION_RE must appear AFTER line 0 — line 0 is always degree/title
+        if (!INSTITUTION_RE.test(block.slice(1).join(" "))) continue
+        const edu = parseEduBlock(block, `ed${result.education.length + 1}`)
+        if (!edu.degree || !edu.institution) continue
+        const key = `${edu.degree.toLowerCase()}|${edu.institution.toLowerCase()}`
+        if (seenEduKeys.has(key)) continue
+        seenEduKeys.add(key)
+        result.education.push(edu)
       }
     }
   }
-  result.skills = Array.from(skillNames).slice(0, PARSE_LIMITS.skills).map((name, i) => ({
-    id: `sk${i + 1}`, name, level: "intermediate",
-  }))
+
+  // ── Prune work entries that are actually education ─────────────────────
+  // When a 2-col PDF interleaves education into work section, parseWorkBlock
+  // creates a work entry with empty employer. If dates match an education entry,
+  // it's the same entry → remove from work to avoid showing it twice.
+  if (result.education.length > 0) {
+    const eduDateKeys = new Set(result.education.map(e => `${e.startDate}|${e.endDate}`))
+    const before = result.workExperience.length
+    result.workExperience = result.workExperience.filter(
+      job => !(job.employer === "" && job.startDate && eduDateKeys.has(`${job.startDate}|${job.endDate}`))
+    )
+    if (result.workExperience.length < before) {
+      result.workExperience.forEach((j, i) => { j.id = `we${i + 1}` })
+    }
+  }
+
+  // ── Prune education entries that are mis-parsed work entries ──────────
+  // When a 2-col PDF routes job info into the education section, parseEduBlock
+  // creates an entry with degree = jobTitle. If degree + startDate match a work
+  // entry, it's a duplicate → remove from education.
+  if (result.workExperience.length > 0) {
+    const before = result.education.length
+    result.education = result.education.filter(edu => {
+      if (!edu.degree) return true
+      return !result.workExperience.some(job =>
+        job.jobTitle && job.jobTitle.toLowerCase() === edu.degree.toLowerCase() &&
+        job.startDate && job.startDate === edu.startDate
+      )
+    })
+    if (result.education.length < before) {
+      result.education.forEach((e, i) => { e.id = `ed${i + 1}` })
+    }
+  }
+
+  // ── Skills ────────────────────────────────────────────────────────────
+  // Módulo dedicado: prioriza celdas \t (preserva "CI/CD", "UX Design"),
+  // fallback camelCase para tokens concatenados de texto plano.
+  {
+    const allSkillLines = getAll("skills").flatMap(sec => sec.lines)
+    // El nombre/cargo de la persona pueden caer dentro de la sección skills
+    // en layouts de sidebar — nunca son habilidades.
+    const pd = result.personalDetails
+    const notSkills = new Set(
+      [`${pd.firstName} ${pd.lastName}`, pd.jobTitle, pd.city, pd.country]
+        .map(s => s.trim().toLowerCase()).filter(Boolean)
+    )
+    result.skills = parseSkillLines(allSkillLines, PARSE_LIMITS.skills)
+      .filter(name => !notSkills.has(name.toLowerCase()))
+      .map((name, i) => ({ id: `sk${i + 1}`, name, level: "intermediate" }))
+  }
 
   // ── Skill rescue: collect short tokens from sidebar overflow in any section ──
   // 2-column PDFs split the skills sidebar across work/education blocks.
@@ -769,10 +1122,20 @@ export function parseResumeText(rawText: string): ParsedResume {
     }
   }
 
-  // From education institutions (e.g. "Catalica University")
+  // From education institutions (parsed entries)
   for (const edu of result.education) {
     if (edu.institution) workBlocklist.add(edu.institution.toLowerCase().trim())
     if (edu.city) workBlocklist.add(edu.city.toLowerCase().trim())
+  }
+
+  // From education section lines — even entries filtered by DEGREE_RE (e.g. "Catalica University")
+  for (const sec of sections) {
+    if (sec.type !== "education") continue
+    for (const line of sec.lines) {
+      if (INSTITUTION_RE.test(line) && line.length < 80 && !HAS_YEAR.test(line) && !isBullet(line)) {
+        workBlocklist.add(line.toLowerCase().trim())
+      }
+    }
   }
 
   // Personal location
@@ -795,13 +1158,22 @@ export function parseResumeText(rawText: string): ParsedResume {
     }
   }
 
+  // Palabras de header de tabla y palabras sueltas de empleadores — nunca son skills
+  const TABLE_HEADER_WORDS = new Set(["yr", "year", "años", "año", "role", "firm", "loc", "company", "employer", "location", "puesto", "empresa"])
+  for (const job of result.workExperience) {
+    for (const word of `${job.employer} ${job.city}`.split(/\s+/)) {
+      if (word.length >= 4) workBlocklist.add(word.toLowerCase().trim())
+    }
+  }
+
   const existingSkillNames = new Set(result.skills.map(s => s.name.toLowerCase()))
   for (const sec of sections) {
-    if (["skills", "header", "summary", "languages", "hobbies"].includes(sec.type)) continue
+    if (["skills", "header", "summary", "languages", "hobbies", "unknown", "contact", "references", "volunteer", "projects", "certifications"].includes(sec.type)) continue
     for (const line of sec.lines) {
       if (line.length > 35 || line.endsWith(".") || line.endsWith(",")) continue
       if (/\d{4}/.test(line)) continue
       if (isBullet(line)) continue
+      if (CONTACT_LINE_RE.test(line)) continue
       if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
       // Don't split on "/" — preserves tokens like "CI/CD", "iOS back-end services"
       for (const part of line.split(/[,|•·\t]/)) {
@@ -811,6 +1183,8 @@ export function parseResumeText(rawText: string): ParsedResume {
           !/^\d+$/.test(s) &&
           !existingSkillNames.has(s.toLowerCase()) &&
           !workBlocklist.has(s.toLowerCase().trim()) &&
+          !TABLE_HEADER_WORDS.has(s.toLowerCase()) &&
+          !INSTITUTION_RE.test(s) &&
           result.skills.length < 60
         ) {
           result.skills.push({ id: `sk${result.skills.length + 1}`, name: s, level: "intermediate" })
@@ -821,61 +1195,14 @@ export function parseResumeText(rawText: string): ParsedResume {
   }
 
   // ── Languages ─────────────────────────────────────────────────────────
-  const LANG_LEVEL_MAP: Record<string, string> = {
-    "nativo": "native", "native": "native", "materno": "native",
-    "bilingüe": "native", "bilingue": "native", "bilingual": "native",
-    "fluido": "full_professional", "fluent": "full_professional",
-    "avanzado": "full_professional", "advanced": "full_professional", "c1": "full_professional", "c2": "native",
-    "profesional": "professional", "professional": "professional",
-    "intermedio": "professional", "intermediate": "professional", "b2": "professional", "b1": "limited",
-    "básico": "limited", "basico": "limited", "basic": "limited",
-    "elemental": "elementary", "elementary": "elementary", "a1": "elementary", "a2": "elementary",
-  }
-
-  // Known language names (covers most CVs in ES/EN)
-  const KNOWN_LANGUAGES = new Set([
-    "español", "espanol", "spanish", "inglés", "ingles", "english",
-    "francés", "frances", "french", "alemán", "aleman", "german",
-    "italiano", "italian", "portugués", "portugues", "portuguese",
-    "chino", "chinese", "mandarín", "mandarin", "japonés", "japones", "japanese",
-    "coreano", "korean", "árabe", "arabe", "arabic", "ruso", "russian",
-    "holandés", "holandes", "dutch", "sueco", "swedish", "noruego", "norwegian",
-    "danés", "danish", "finlandés", "finnish", "polaco", "polish",
-    "catalán", "catalan", "euskera", "basque", "gallego", "galician",
-    "hindi", "bengali", "turco", "turkish", "griego", "greek",
-    "hebreo", "hebrew", "tailandés", "thai", "vietnamita", "vietnamese",
-  ])
-
-  const LANG_LEVEL_WORDS = new Set(Object.keys(LANG_LEVEL_MAP))
-
-  for (const sec of getAll("languages")) {
-    for (const line of sec.lines) {
-      // Skip lines that are clearly sentence fragments (contain periods, start lowercase, too long)
-      if (/\.\s/.test(line) || line.endsWith(".")) continue
-      if (line.length > 60) continue
-      if (!/^[A-ZÁÉÍÓÚÜÑ]/.test(line)) continue
-
-      const parts = line.split(/\s*[-–:|()\[\]\/]\s*/).map(p => clean(p)).filter(Boolean)
-      if (!parts[0] || parts[0].length < 2 || parts[0].length > 35) continue
-
-      const name = parts[0]
-      const rawLevel = parts.slice(1).join(" ").toLowerCase()
-
-      // Validate: must be a known language OR the line must contain a level keyword
-      const nameNorm = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      const nameNormAccent = name.toLowerCase()
-      const isKnownLang = KNOWN_LANGUAGES.has(nameNorm) || KNOWN_LANGUAGES.has(nameNormAccent)
-      const hasLevelWord = Array.from(LANG_LEVEL_WORDS).some(k => rawLevel.includes(k))
-
-      if (!isKnownLang && !hasLevelWord) continue
-
-      // Language name should be 1-3 words, no sentence structure
-      const wordCount = name.trim().split(/\s+/).length
-      if (wordCount > 3) continue
-
-      const level = Object.entries(LANG_LEVEL_MAP).find(([k]) => rawLevel.includes(k))?.[1] ?? "professional"
-      if (!result.languages.find(l => l.name.toLowerCase() === name.toLowerCase())) {
-        result.languages.push({ id: `la${result.languages.length + 1}`, name, level })
+  // Módulo dedicado: soporta varios idiomas por línea ("Spanish · NATIVE English · B2")
+  {
+    const langLines = getAll("languages").flatMap(sec =>
+      sec.lines.filter(l => !/\.\s/.test(l) && !l.endsWith(".") && l.length <= 120)
+    )
+    for (const lang of parseLanguageLines(langLines)) {
+      if (!result.languages.find(l => l.name.toLowerCase() === lang.name.toLowerCase())) {
+        result.languages.push({ id: `la${result.languages.length + 1}`, name: lang.name, level: lang.level })
       }
     }
   }
@@ -904,9 +1231,16 @@ export function parseResumeText(rawText: string): ParsedResume {
   for (const sec of getAll("certifications")) {
     for (const line of sec.lines) {
       if (line.length < 3) continue
+      // Skip job description bullets: long sentences ending in punctuation
+      if (line.length > 80 && /[.!?]$/.test(line)) continue
+      // Skip lines that look like job entries: role keyword + date RANGE.
+      // Un año suelto al inicio ("2025  Concurrency IOS...") es formato fecha+nombre de cert.
+      if (ROLE_KEYWORDS.test(line) && /\b(19|20)\d{2}\s*[-–—]\s*((19|20)\d{2}|present|presente|actual)/i.test(line)) continue
+      // Skip continuation bullets that are clearly job descriptions (start lowercase after bullet)
+      if (/^[a-z]/.test(line) && line.length > 20) continue
       const dr = extractDateRange(line)
       const nameClean = stripDates(line).replace(/^[•\-·]\s*/, "").trim()
-      if (nameClean.length > 2) {
+      if (nameClean.length > 2 && nameClean.length < 120) {
         result.certifications.push({
           id: `ce${result.certifications.length + 1}`,
           name: nameClean, issuer: "",
@@ -923,11 +1257,21 @@ export function parseResumeText(rawText: string): ParsedResume {
     const entries = blocks.length > 0 ? blocks : sec.lines.filter(l => !isBullet(l) && l.length > 2).map(l => [l])
     for (const block of entries) {
       if (result.projects.length >= PARSE_LIMITS.projects) break
+      // Primera línea "Nombre — Descripción" o "Nombre | Rol": separar nombre del resto
+      const first = clean(block[0] ?? "")
+      const sep = first.match(/^(.{2,60}?)\s*[—–|·:]\s*(.+)$/)
+      let name = first
+      let inlineDesc = ""
+      if (sep && sep[1].split(/\s+/).length <= 8) {
+        name = clean(sep[1])
+        inlineDesc = clean(sep[2])
+      }
+      const restDesc = block.slice(1).map(l => l.replace(/^[•\-·]\s*/, "").trim()).join(" ")
       const proj = {
         id: `pr${result.projects.length + 1}`,
-        name: clean(block[0] ?? ""), role: "",
+        name, role: "",
         startDate: "", endDate: "",
-        description: block.slice(1).map(l => l.replace(/^[•\-·]\s*/, "").trim()).join(" ").slice(0, 300),
+        description: [inlineDesc, restDesc].filter(Boolean).join(" ").slice(0, 300),
         url: "",
       }
       const urlMatch = (block.join(" ")).match(/https?:\/\/[\w\-./]+/)
@@ -943,11 +1287,51 @@ export function parseResumeText(rawText: string): ParsedResume {
     for (const block of entries) {
       if (result.volunteer.length >= PARSE_LIMITS.volunteer) break
       const dr = extractDateRange(block.join(" "))
+      // Primera línea puede traer "Rol | Organización | Fecha" en celdas
+      const firstParts = (block[0] ?? "").split(/\s*[|·\t]\s*/)
+        .map(p => clean(stripDates(p))).filter(p => p.length > 1 && !HAS_YEAR.test(p))
+      const role = firstParts[0] ?? clean(block[0] ?? "")
+      const organization = firstParts[1] ?? clean(block[1] ?? "")
+      const descLines = block.slice(firstParts[1] ? 1 : 2).filter(l => isBullet(l) || l.length > 30)
       result.volunteer.push({
         id: `vo${result.volunteer.length + 1}`,
-        role: clean(block[0] ?? ""), organization: clean(block[1] ?? ""),
-        startDate: dr.startDate, endDate: dr.endDate, description: "",
+        role, organization,
+        startDate: dr.startDate, endDate: dr.endDate,
+        description: descLines.map(l => l.replace(/^[•\-·]\s*/, "").trim()).join(" ").slice(0, 300),
       })
+    }
+  }
+
+  // ── References ────────────────────────────────────────────────────────
+  // Formatos comunes: "Nombre — Empresa", "Nombre | Cargo en Empresa",
+  // con email/teléfono en líneas adyacentes. Soporta "Disponible a solicitud".
+  for (const sec of getAll("references")) {
+    const blocks = splitIntoBlocks(sec.lines, 4)
+    const entries = blocks.length > 0 ? blocks : sec.lines.map(l => [l])
+    for (const block of entries) {
+      if (result.references.length >= 10) break
+      const joined = block.join(" ")
+      // "Disponibles a solicitud" / "Available upon request" → no es una referencia real
+      if (/solicitud|request|upon request|petición|peticion/i.test(joined) && !extractEmail(joined)) continue
+      const nameLine = clean(block[0] ?? "")
+      if (!nameLine || nameLine.length < 2) continue
+      // El nombre puede venir con cargo/empresa: "Juan Pérez — CTO en Acme"
+      const nameParts = nameLine.split(/\s*[|·—–]\s*|\s+(?:en|at|de|from)\s+/i)
+      const ref = {
+        id: `re${result.references.length + 1}`,
+        name: clean(nameParts[0] ?? ""),
+        company: clean(nameParts.slice(1).join(" ")),
+        phone: extractPhone(joined),
+        email: extractEmail(joined),
+      }
+      // Si la empresa no salió del nombre, buscar en líneas siguientes
+      if (!ref.company) {
+        const companyLine = block.slice(1).find(l =>
+          !CONTACT_LINE_RE.test(l) && !extractPhone(l) && clean(l).length > 1
+        )
+        if (companyLine) ref.company = clean(companyLine)
+      }
+      if (ref.name) result.references.push(ref)
     }
   }
 

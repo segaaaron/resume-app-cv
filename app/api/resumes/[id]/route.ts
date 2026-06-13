@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { requireAuth, handleError } from "@/lib/controllers/shared"
 import { resumeService, } from "@/lib/controllers/resume-deps"
 import { resumePatchSchema } from "@/lib/services/resume/ResumeService"
+import { AppError } from "@/lib/services/auth/AppError"
 
 type Params = { params: Promise<{ id: string }> }
 
@@ -53,6 +54,10 @@ export async function DELETE(req: Request, { params }: Params) {
     await resumeService.delete(authResult.userId, id)
     return NextResponse.json({ success: true })
   } catch (err) {
+    // Already deleted — idempotent DELETE: treat as success
+    if (err instanceof AppError && err.status === 404) {
+      return NextResponse.json({ success: true })
+    }
     return handleError(err)
   }
 }

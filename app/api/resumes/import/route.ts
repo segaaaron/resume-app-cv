@@ -6,6 +6,7 @@ import { buildSections, ResumeSectionsSchema } from "@/types/resume"
 import { getLimits, isSuperAdmin } from "@/lib/plans"
 import mammoth from "mammoth"
 import { parseResumeText, detectLanguage, PARSE_LIMITS } from "@/lib/parseResumeText"
+import { extractPdfText } from "@/lib/resume-parser/extract-pdf"
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> = require("pdf-parse")
 
@@ -61,8 +62,14 @@ export async function POST(req: Request) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer())
     if (ext === "pdf") {
-      const data = await withTimeout(pdfParse(buffer), 10_000)
-      rawText = data.text
+      // Extracción posicional (columnas + celdas) — fallback a pdf-parse plano
+      try {
+        const data = await withTimeout(extractPdfText(buffer), 10_000)
+        rawText = data.text
+      } catch {
+        const data = await withTimeout(pdfParse(buffer), 10_000)
+        rawText = data.text
+      }
     } else {
       const result = await withTimeout(mammoth.extractRawText({ buffer }), 10_000)
       rawText = result.value
@@ -73,6 +80,9 @@ export async function POST(req: Request) {
       : "No se pudo leer el archivo. Asegúrate de que no esté protegido con contraseña."
     return NextResponse.json({ error: msg }, { status: 422 })
   }
+
+  // Strip null bytes — some PDFs embed them; PostgreSQL rejects 0x00 in UTF-8 columns
+  rawText = rawText.replace(/\x00/g, "")
 
   if (!rawText.trim()) {
     return NextResponse.json({ error: "El archivo está vacío o no tiene texto legible" }, { status: 422 })
