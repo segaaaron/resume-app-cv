@@ -44,6 +44,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const isManaged = !!session?.user?.isManaged
   const [resumes, setResumes] = useState(initialResumes)
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [deleting, setDeleting] = useState(false)
   const [renameId, setRenameId] = useState<string | null>(null)
   const [renameDraft, setRenameDraft] = useState("")
   const [renaming, setRenaming] = useState(false)
@@ -193,6 +194,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   async function deleteResume(id: string) {
+    setDeleting(true)
     try {
       const res = await apiFetch(`/api/resumes/${id}`, { method: "DELETE" })
       if (!res.ok) { toast.error(t("delete_error")); return }
@@ -201,6 +203,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       toast.success(t("delete_success"))
     } catch {
       toast.error(t("delete_error"))
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -377,7 +381,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
 
       {/* ── Delete dialog ── */}
-      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && setDeleteId(null)}>
+      <AlertDialog open={!!deleteId} onOpenChange={(o) => !o && !deleting && setDeleteId(null)}>
         <AlertDialogContent
           className="p-0 overflow-hidden rounded-2xl max-w-[400px] border border-dash-border shadow-[0_40px_100px_rgba(0,212,255,0.08)]"
         >
@@ -409,15 +413,16 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             </div>
           </div>
           <div className="flex gap-[10px] px-6 pt-[18px] pb-[22px]">
-            <AlertDialogCancel className="flex-1 px-4 py-[11px] text-[13px] font-medium justify-center">
+            <AlertDialogCancel disabled={deleting} className="flex-1 px-4 py-[11px] text-[13px] font-medium justify-center disabled:opacity-50">
               {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deleteId && deleteResume(deleteId)}
-              className="flex-1 px-4 py-[11px] text-[13px] font-semibold text-white justify-center border-none cursor-pointer shadow-[0_2px_8px_rgba(220,38,38,0.25)]"
+              onClick={(e) => { e.preventDefault(); deleteId && deleteResume(deleteId) }}
+              disabled={deleting}
+              className="flex-1 px-4 py-[11px] text-[13px] font-semibold text-white justify-center border-none cursor-pointer shadow-[0_2px_8px_rgba(220,38,38,0.25)] disabled:opacity-80 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)" }}
             >
-              {t("delete")}
+              {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("delete")}
             </AlertDialogAction>
           </div>
         </AlertDialogContent>
