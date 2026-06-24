@@ -5,7 +5,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { TemplateId } from "@/types/resume"
 import { isProTemplate } from "../template-data"
-import { isActive, isSuperAdmin } from "@/lib/plans"
+import { isSuperAdmin, effectivePlan, canUsePremiumTemplates } from "@/lib/plans"
 
 interface Options {
   plan: string
@@ -27,14 +27,11 @@ export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEnds
   const [upgradeOpen, setUpgradeOpen] = useState(false)
   const [pendingTemplate, setPendingTemplate] = useState<TemplateId | null>(null)
 
+  // Premium (PRO) templates are unlocked for SPRINT/PRO/LIMITED (and admin).
+  // BASIC/UNSUBSCRIBED can preview but selecting a PRO template opens the upgrade modal.
   const hasAccess =
     isSuperAdmin(role) ||
-    isActive(
-      plan,
-      subscriptionEndsAt ? new Date(subscriptionEndsAt) : null,
-      subscriptionStatus,
-      role,
-    )
+    canUsePremiumTemplates(effectivePlan({ plan, subscriptionEndsAt: subscriptionEndsAt ? new Date(subscriptionEndsAt) : null }))
 
   function handleSelectTemplate(templateId: TemplateId, locked: boolean) {
     if (locked) { setUpgradeOpen(true); return }

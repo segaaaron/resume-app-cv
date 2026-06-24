@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     const now = new Date()
 
     // Parallelize all queries — independent, no shared state
-    const [canceled, activeStale, expiredLimited] = await Promise.all([
+    const [canceled, activeStale, expiredLimited, expiredOneTime] = await Promise.all([
       // Users who canceled and whose period has now ended
       db.user.findMany({
         where: { plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: { lt: now }, isManaged: false },
@@ -46,9 +46,14 @@ export async function GET(req: Request) {
         where: { plan: "LIMITED", managedExpiresAt: { lt: now }, managedBlocked: false },
         select: { id: true },
       }),
+      // One-time plans (BASIC/SPRINT) whose purchased window has ended
+      db.user.findMany({
+        where: { plan: { in: ["BASIC", "SPRINT"] }, subscriptionEndsAt: { lt: now }, isManaged: false },
+        select: { id: true },
+      }),
     ])
 
-    const ids = [...new Set([...canceled, ...activeStale].map((u) => u.id))]
+    const ids = [...new Set([...canceled, ...activeStale, ...expiredOneTime].map((u) => u.id))]
     const limitedIds = expiredLimited.map((u) => u.id)
 
     await Promise.all([

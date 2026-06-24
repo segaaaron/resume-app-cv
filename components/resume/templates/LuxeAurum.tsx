@@ -58,30 +58,30 @@ function LxHead({ gold, line, children }: { gold: string; line: string; children
 
 // Circular ring gauge (from source LxRing)
 function LxRing({ pct, label, val, color, track, ink }: { pct: number; label: string; val: string; color: string; track: string; ink: string }) {
-  const r = 27
+  const r = 14
   const c = 2 * Math.PI * r
   const off = c * (1 - pct / 100)
   return (
-    <div style={{ textAlign: "center" }}>
-      <svg viewBox="0 0 72 72" width="72" height="72">
-        <circle cx="36" cy="36" r={r} fill="none" stroke={track} strokeWidth="4" />
+    <div style={{ textAlign: "center", width: 36 }}>
+      <svg viewBox="0 0 34 34" width="34" height="34">
+        <circle cx="17" cy="17" r={r} fill="none" stroke={track} strokeWidth="2" opacity="0.5" />
         <circle
-          cx="36" cy="36" r={r}
+          cx="17" cy="17" r={r}
           fill="none"
           stroke={color}
-          strokeWidth="4"
+          strokeWidth="2.5"
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={off}
-          transform="rotate(-90 36 36)"
+          transform="rotate(-90 17 17)"
         />
         <text
-          x="36" y="36"
+          x="17" y="17"
           textAnchor="middle"
           dominantBaseline="central"
           fontFamily='"Inter", sans-serif'
-          fontSize="14"
-          fontWeight="700"
+          fontSize="9"
+          fontWeight="600"
           fill={ink}
         >
           {val}
@@ -90,15 +90,16 @@ function LxRing({ pct, label, val, color, track, ink }: { pct: number; label: st
       <div
         style={{
           fontFamily: "inherit",
-          fontSize: 9.5,
-          letterSpacing: "0.08em",
+          fontSize: 7,
+          letterSpacing: "0.03em",
+          lineHeight: 1.15,
           color: ink,
-          marginTop: 2,
+          marginTop: 3,
           fontWeight: 500,
           overflow: "hidden",
           textOverflow: "ellipsis",
           whiteSpace: "nowrap",
-          maxWidth: 78,
+          maxWidth: 40,
         }}
       >
         {label}
@@ -209,7 +210,7 @@ export default function LuxeAurumTemplate() {
         )}
 
         {gauges.length > 0 && (
-          <div style={{ display: "flex", justifyContent: "space-around", marginBottom: 26, gap: 6 }}>
+          <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", marginBottom: 26, gap: "12px 7px" }}>
             {gauges.map((g, i) => (
               <LxRing
                 key={i}

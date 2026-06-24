@@ -191,7 +191,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
 
         {activeTab === "ats" && (
           <div style={otherPadStyle}>
-            <AIProGate feature="ATS Checker">
+            <AIProGate feature="ATS Checker" endpoint="ats-score">
               <ATSScorePanel />
             </AIProGate>
           </div>
@@ -199,7 +199,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
 
         {activeTab === "review" && (
           <div style={otherPadStyle}>
-            <AIProGate feature="CV Review">
+            <AIProGate feature="CV Review" endpoint="review-cv">
               <CVReviewPanel />
             </AIProGate>
           </div>
@@ -207,7 +207,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
 
         {activeTab === "ai" && (
           <div style={otherPadStyle}>
-            <AIProGate feature="AI Profile Fill">
+            <AIProGate feature="AI Profile Fill" endpoint="fill-profile">
               <AIProfileFillPanel inTab />
             </AIProGate>
           </div>

@@ -11,12 +11,17 @@ export class StripeCheckoutService {
     private readonly logger: ILogger,
   ) {}
 
-  async createSession(userId: string, plan: "monthly" | "annual", locale: string): Promise<{ url: string }> {
+  async createSession(userId: string, plan: "monthly" | "annual" | "basic" | "sprint", locale: string): Promise<{ url: string }> {
     if (!stripeEnabled()) throw new AppError("payments_not_configured", 503)
+
+    // BASIC/SPRINT are one-time purchases (no recurring subscription).
+    const isOneTime = plan === "basic" || plan === "sprint"
 
     const PRICE_IDS: Record<string, string | undefined> = {
       monthly: process.env.STRIPE_PRICE_ID_MONTHLY,
       annual:  process.env.STRIPE_PRICE_ID_ANNUAL,
+      basic:   process.env.STRIPE_PRICE_ID_BASIC,
+      sprint:  process.env.STRIPE_PRICE_ID_SPRINT,
     }
     const priceId = PRICE_IDS[plan]
     if (!priceId) throw new AppError("plan_not_configured", 503)
@@ -31,7 +36,7 @@ export class StripeCheckoutService {
       throw new AppError("already_subscribed", 400)
     }
 
-    if (user.subscriptionId && user.subscriptionStatus === "CANCELED") {
+    if (!isOneTime && user.subscriptionId && user.subscriptionStatus === "CANCELED") {
       const oldSubId = user.subscriptionId
       let cancelSucceeded = false
       await this.stripeClient.cancelSubscription(oldSubId)
@@ -83,13 +88,14 @@ export class StripeCheckoutService {
 
     const checkoutSession = await this.stripeClient.createCheckoutSession({
       customer: customerId,
-      mode: "subscription",
+      mode: isOneTime ? "payment" : "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl.replace(/\/$/, "")}/${locale}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/pricing`,
-      metadata: { userId, planInterval: plan },
-      subscription_data: { metadata: { userId, planInterval: plan } },
+      // One-time → planType drives provisioning (BASIC/SPRINT). Subscription → planInterval.
+      metadata: isOneTime ? { userId, planType: plan } : { userId, planInterval: plan },
+      ...(isOneTime ? {} : { subscription_data: { metadata: { userId, planInterval: plan } } }),
     })
 
     if (!checkoutSession.url) throw new AppError("checkout_url_missing", 500)

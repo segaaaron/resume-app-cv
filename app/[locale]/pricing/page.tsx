@@ -195,6 +195,7 @@ export default async function PricingPage({
           }
           planInterval={planInterval}
           isEU={isEU}
+          isEs={locale === "es"}
         />
       </main>
       <Footer />

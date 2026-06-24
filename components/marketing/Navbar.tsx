@@ -27,7 +27,6 @@ export default function Navbar() {
 
   const links = [
     { path: "/templates",   label: t("templates"),  gradient: false },
-    { path: "/pro-disenos", label: t("pro_designs"), gradient: true  },
     { path: "/blog",        label: t("blog"),        gradient: false },
     { path: "/guide",       label: t("guide"),       gradient: false },
     { path: "/pricing",     label: t("pricing"),     gradient: false },

@@ -320,6 +320,8 @@ enum Role {
 
 enum Plan {
   UNSUBSCRIBED
+  BASIC
+  SPRINT
   PRO
   LIMITED
 }

@@ -69,7 +69,7 @@ export async function requireUser(
   if (opts.csrf && !checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
   const { db } = await import("@/lib/db")
-  const { isActive } = await import("@/lib/plans")
+  const { isActive, effectivePlan } = await import("@/lib/plans")
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
@@ -93,6 +93,11 @@ export async function requireUser(
   )) {
     return NextResponse.json({ error: "Pro plan required" }, { status: 403 })
   }
+
+  // Resolve the EFFECTIVE plan (expired BASIC/SPRINT → UNSUBSCRIBED) so every
+  // downstream consumer (AI quota, cover-letter limits, …) gates correctly even
+  // before the cron downgrades the row.
+  user.plan = effectivePlan(user) as typeof user.plan
 
   return { userId: user.id, user }
 }

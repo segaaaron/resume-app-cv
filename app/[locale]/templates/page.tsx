@@ -7,11 +7,11 @@ import type { Metadata } from "next"
 import Script from "next/script"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
-import UseTemplateButton from "@/components/marketing/UseTemplateButton"
 import { auth } from "@/lib/auth"
-import { isActive, isSuperAdmin } from "@/lib/plans"
-import { Lock } from "lucide-react"
+import { isSuperAdmin, effectivePlan, canUsePremiumTemplates } from "@/lib/plans"
+import { Lock, Sparkles, Crown, ArrowRight, Check, Zap } from "lucide-react"
 import { PRO_IDS } from "@/components/editor/template-switcher"
+import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
 
 export const dynamic = "force-dynamic"
 
@@ -145,158 +145,6 @@ const TEMPLATE_VISUALS: Record<string, {
   vitae:    { bg: "#fff",    accent: "#1e2d3d", headerBg: "#1e2d3d",  headerText: "#fff",    style: "sidebar",   tag: "Foto" },
 }
 
-function TemplatePreview({ id, visual }: { id: string; visual: typeof TEMPLATE_VISUALS[string] }) {
-  const { bg, accent, headerBg, headerText, style } = visual
-
-  const lines = (n: number, color = "#e5e7eb", widths = [75, 60, 85, 50, 70]) =>
-    Array.from({ length: n }, (_, i) => (
-      <div key={i} className="rounded-full" style={{ height: 4, width: `${widths[i % widths.length]}%`, backgroundColor: color, marginBottom: 4 }} />
-    ))
-
-  const sectionLabel = (color: string) => (
-    <div style={{ height: 5, width: "45%", backgroundColor: color, borderRadius: 2, marginBottom: 6, marginTop: 8, opacity: 0.7 }} />
-  )
-
-  if (style === "dark") {
-    return (
-      <div className="w-full h-full flex overflow-hidden rounded-xl" style={{ backgroundColor: bg }}>
-        <div className="flex flex-col gap-2 p-2" style={{ width: "38%", backgroundColor: headerBg }}>
-          <div className="rounded-full mx-auto mt-1" style={{ width: 28, height: 28, backgroundColor: accent + "30", border: `2px solid ${accent}` }} />
-          {sectionLabel(accent)}
-          {lines(3, accent + "40")}
-          {sectionLabel(accent)}
-          {lines(4, accent + "30")}
-        </div>
-        <div className="flex-1 p-2" style={{ backgroundColor: "#111827" }}>
-          <div style={{ height: 6, width: "80%", backgroundColor: "#f1f5f9", borderRadius: 2, marginBottom: 3 }} />
-          <div style={{ height: 4, width: "50%", backgroundColor: accent, borderRadius: 2, marginBottom: 10 }} />
-          {sectionLabel(accent)}
-          {lines(4, "#374151")}
-          {sectionLabel(accent)}
-          {lines(3, "#374151")}
-        </div>
-      </div>
-    )
-  }
-
-  if (style === "sidebar") {
-    return (
-      <div className="w-full h-full flex overflow-hidden rounded-xl" style={{ backgroundColor: bg }}>
-        <div className="flex flex-col gap-2 p-2" style={{ width: "38%", backgroundColor: headerBg }}>
-          <div className="rounded-full mx-auto mt-1" style={{ width: 28, height: 28, backgroundColor: "#ffffff40", border: "2px solid #ffffff80" }} />
-          {lines(2, "#ffffff60")}
-          {sectionLabel("#ffffff80")}
-          {lines(4, "#ffffff40")}
-          {sectionLabel("#ffffff80")}
-          {lines(3, "#ffffff40")}
-        </div>
-        <div className="flex-1 p-2">
-          <div style={{ height: 6, width: "80%", backgroundColor: "#111827", borderRadius: 2, marginBottom: 3 }} />
-          <div style={{ height: 4, width: "50%", backgroundColor: accent, borderRadius: 2, marginBottom: 10 }} />
-          {sectionLabel(accent)}
-          {lines(4)}
-          {sectionLabel(accent)}
-          {lines(3)}
-        </div>
-      </div>
-    )
-  }
-
-  if (style === "split") {
-    return (
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-xl" style={{ backgroundColor: bg }}>
-        <div className="flex items-center gap-2 px-3 py-2" style={{ background: headerBg }}>
-          <div style={{ width: 22, height: 22, borderRadius: "50%", backgroundColor: "#ffffff30", flexShrink: 0 }} />
-          <div>
-            <div style={{ height: 5, width: 70, backgroundColor: headerText === "#fff" ? "#fff" : "#111827", borderRadius: 2 }} />
-            <div style={{ height: 3, width: 40, backgroundColor: accent, borderRadius: 2, marginTop: 3 }} />
-          </div>
-        </div>
-        <div className="flex flex-1 gap-0">
-          <div className="flex-1 p-2">
-            {sectionLabel(accent)}
-            {lines(4)}
-            {sectionLabel(accent)}
-            {lines(3)}
-          </div>
-          <div className="p-2" style={{ width: "38%", borderLeft: `2px solid ${accent}20` }}>
-            {sectionLabel(accent)}
-            {lines(3, "#d1d5db")}
-            {sectionLabel(accent)}
-            {lines(4, "#d1d5db")}
-          </div>
-        </div>
-      </div>
-    )
-  }
-
-  if (style === "neon") {
-    return (
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-xl" style={{ backgroundColor: bg }}>
-        <div className="p-3" style={{ backgroundColor: accent, boxShadow: `4px 4px 0 #000`, border: "2px solid #000", margin: 6 }}>
-          <div style={{ height: 7, width: "75%", backgroundColor: "#fff", borderRadius: 2, marginBottom: 4 }} />
-          <div style={{ height: 4, width: "50%", backgroundColor: "#ffffff80", borderRadius: 2 }} />
-        </div>
-        <div className="px-3">
-          {sectionLabel(accent)}
-          {lines(4)}
-          {sectionLabel(accent)}
-          {lines(3)}
-        </div>
-      </div>
-    )
-  }
-
-  if (style === "bordered") {
-    return (
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-xl p-2" style={{ backgroundColor: bg, border: `2px solid ${accent}30` }}>
-        <div className="p-2 rounded-lg mb-2" style={{ backgroundColor: headerBg, border: `1.5px solid ${accent}` }}>
-          <div style={{ height: 6, width: "70%", backgroundColor: headerText === "#1d4ed8" ? headerText : accent, borderRadius: 2, marginBottom: 3 }} />
-          <div style={{ height: 3, width: "45%", backgroundColor: accent + "80", borderRadius: 2 }} />
-        </div>
-        {sectionLabel(accent)}
-        {lines(4)}
-        {sectionLabel(accent)}
-        {lines(3)}
-      </div>
-    )
-  }
-
-  if (style === "minimal") {
-    return (
-      <div className="w-full h-full flex flex-col overflow-hidden rounded-xl p-3" style={{ backgroundColor: bg }}>
-        <div style={{ height: 7, width: "70%", backgroundColor: "#111827", borderRadius: 2, marginBottom: 3 }} />
-        <div style={{ height: 3, width: "45%", backgroundColor: accent, borderRadius: 2, marginBottom: 10 }} />
-        <div style={{ height: 1, backgroundColor: accent + "40", marginBottom: 8 }} />
-        {sectionLabel(accent)}
-        {lines(4)}
-        {sectionLabel(accent)}
-        {lines(3)}
-      </div>
-    )
-  }
-
-  // default: top-band
-  return (
-    <div className="w-full h-full flex flex-col overflow-hidden rounded-xl" style={{ backgroundColor: bg }}>
-      <div className="px-3 py-3" style={{ background: headerBg }}>
-        <div style={{ height: 7, width: "70%", backgroundColor: headerText === "#fff" ? "#fff" : "#111827", borderRadius: 2, marginBottom: 4 }} />
-        <div style={{ height: 3, width: "45%", backgroundColor: headerText === "#fff" ? "#ffffff80" : accent, borderRadius: 2 }} />
-        <div className="flex gap-2 mt-2">
-          {[40, 30, 35].map((w, i) => (
-            <div key={i} style={{ height: 2.5, width: w, backgroundColor: headerText === "#fff" ? "#ffffff50" : "#9ca3af", borderRadius: 99 }} />
-          ))}
-        </div>
-      </div>
-      <div className="flex-1 px-3">
-        {sectionLabel(accent)}
-        {lines(4)}
-        {sectionLabel(accent)}
-        {lines(3)}
-      </div>
-    </div>
-  )
-}
 
 export default async function TemplatesPage({
   params,
@@ -328,36 +176,23 @@ export default async function TemplatesPage({
       )
     : null
 
+  // Premium (PRO) templates are unlocked for SPRINT/PRO/LIMITED (and admin).
+  // BASIC/UNSUBSCRIBED can preview but not use them. effectivePlan() makes an
+  // expired BASIC/SPRINT fall back to UNSUBSCRIBED.
   const hasAccess = dbUser
-    ? isSuperAdmin(dbUser.role) ||
-      isActive(
-        dbUser.plan,
-        dbUser.subscriptionEndsAt,
-        dbUser.subscriptionStatus,
-        dbUser.role,
-        dbUser.isManaged,
-        dbUser.managedBlocked,
-        dbUser.managedExpiresAt,
-      )
+    ? isSuperAdmin(dbUser.role) || canUsePremiumTemplates(effectivePlan(dbUser))
     : false
 
   // PRO_IDS imported from @/components/editor/template-switcher (single source of truth)
-
-  const CATEGORIES: { key: string; label: string; ids: string[] }[] = [
-    { key: "featured", label: t("cat_featured"), ids: ["elite-atlas","exec-porcelain","luxe-noir","aurora","lumiere","consul","rose","minimal","banner","vertex","apex","nova","cascade","onyx","mosaic","larsson","thompson","classicmono","editorialserif","boldblock","timelinevertical","swissgrid","cobalt","duality","havana","helix","lisbon","nautical","prism","tokyo","vitae"] },
-    { key: "city", label: t("cat_city"), ids: ["kyoto","geneva","windsor","vienna","berlin","seoul","copenhagen","genevanoir","reykjavik"] },
-    { key: "creative", label: t("cat_creative"), ids: ["risodesigner","uxtokens","blueprintcv","charcoalclassic","navyexecutive","coralsidebar","sagebotanical"] },
-    { key: "business", label: t("cat_business"), ids: ["annualreport","financeterminal","campaignposter","salespitch","ledgercv","datadriven","magazinespread","iosappcv"] },
-    { key: "health", label: t("cat_health"), ids: ["medicalchart","vitalsigns","vetcv"] },
-    { key: "legal", label: t("cat_legal"), ids: ["legalbrief","engraved","chalkboard","academiccv","psychologist"] },
-    { key: "hospitality", label: t("cat_hospitality"), ids: ["chefmenu","sommelier","hotelcv","bartendercv"] },
-    { key: "engineering", label: t("cat_engineering"), ids: ["civileng","processflow","neon","sharp","bauhaus"] },
-    { key: "arts", label: t("cat_arts"), ids: ["frontpage","vinylcv","callsheet","copywritermag","animatorcv"] },
-    { key: "other", label: t("cat_other"), ids: ["pilotlog","onboardingform","athletecard","translatorcv","herbariumcv"] },
-  ]
+  const isEs = locale === "es"
 
   const proTemplates     = TEMPLATES.filter((t) => PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
   const regularTemplates = TEMPLATES.filter((t) => !PRO_IDS.includes(t.id)).sort((a, b) => a.name.localeCompare(b.name))
+
+  // "Use template" sends logged-in users into the dashboard to create; guests
+  // go to login (which offers account creation). Plan/PRO is enforced later at
+  // the create/download gate — the preview itself stays open to everyone.
+  const ctaHref = session?.user ? `/${locale}/dashboard/resumes` : `/${locale}/login`
 
   const TemplateCard = ({ template, locked = false }: { template: typeof TEMPLATES[number]; locked?: boolean }) => {
     const visual = TEMPLATE_VISUALS[template.id] ?? {
@@ -368,31 +203,23 @@ export default async function TemplatesPage({
         <div
           className={`relative aspect-[3/4] overflow-hidden rounded-xl border transition-all duration-200 group-hover:shadow-xl group-hover:-translate-y-1 ${
             locked
-              ? "border-border opacity-80 group-hover:border-amber-400/60"
+              ? "border-border group-hover:border-amber-400/60"
               : "border-border group-hover:border-primary/40"
           }`}
           style={{ backgroundColor: visual.bg }}
         >
-          <TemplatePreview id={template.id} visual={visual} />
+          <MockTemplatePreview templateId={template.id} />
 
-          {locked ? (
-            /* Lock overlay */
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-[1px] rounded-xl flex flex-col items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              <div className="bg-white/90 rounded-full p-2 shadow-md">
-                <Lock className="h-4 w-4 text-amber-500" />
-              </div>
-              <Link
-                href={`/${locale}/pricing`}
-                className="bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs px-3 py-1.5 rounded-full shadow-md transition-colors"
-              >
-                {t("upgrade_label")}
-              </Link>
-            </div>
-          ) : (
-            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-200 rounded-xl flex items-center justify-center">
-              <UseTemplateButton templateId={template.id} label={t("use_template")} />
-            </div>
-          )}
+          {/* Preview stays fully visible for everyone; CTA appears on hover and
+              routes to dashboard (logged in) or login (guest). */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-all duration-200 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100">
+            <Link
+              href={ctaHref}
+              className="inline-flex items-center gap-1.5 bg-white text-primary font-semibold text-xs px-3 py-1.5 rounded-full shadow-md hover:bg-slate-50 transition-colors"
+            >
+              {t("use_template")}
+            </Link>
+          </div>
 
           {/* Always-visible lock icon for locked templates */}
           {locked && (
@@ -421,9 +248,7 @@ export default async function TemplatesPage({
             href={`/${locale}/templates/design/${template.id}`}
             className="group/title block focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 rounded"
           >
-            <h3
-              className={`font-semibold text-sm leading-tight transition-colors group-hover/title:text-primary ${locked ? "text-muted-foreground" : ""}`}
-            >
+            <h3 className="font-semibold text-sm leading-tight transition-colors group-hover/title:text-primary">
               {template.name}
             </h3>
             <p className="text-[11px] text-muted-foreground mt-0.5 leading-snug line-clamp-2">
@@ -448,73 +273,146 @@ export default async function TemplatesPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdItemList) }}
       />
       <Navbar />
-      <main className="flex-1 py-12 sm:py-20 px-4">
-        <div className="max-w-7xl mx-auto">
-          {/* Hero */}
-          <div className="text-center mb-10 sm:mb-16">
-            <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">
-              {t("badge")}
+      <main className="flex-1">
+        {/* ───────────────────────── HERO ───────────────────────── */}
+        <section
+          className="relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1a2e4a 0%, #0f1a2e 55%, #0a1322 100%)" }}
+        >
+          <div className="absolute top-0 inset-x-0 h-px" style={{ background: "linear-gradient(90deg, transparent, #00D4FF, transparent)" }} />
+          <div className="absolute -top-40 -right-32 w-[520px] h-[520px] rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle, #00D4FF 0%, transparent 70%)" }} />
+          <div className="absolute -bottom-44 -left-32 w-[480px] h-[480px] rounded-full opacity-10 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle, #7c5cff 0%, transparent 70%)" }} />
+
+          <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-20 sm:py-28 text-center text-white">
+            <span className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[#00D4FF] bg-[#00D4FF]/10 ring-1 ring-[#00D4FF]/30 px-3 py-1.5 rounded-full mb-6">
+              <Sparkles className="h-3.5 w-3.5" /> {t("badge")}
             </span>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold tracking-tight mb-4">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.05] mb-5">
               {t("title")}
             </h1>
-            <p className="text-muted-foreground text-base sm:text-lg max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-cyan-100/80 max-w-2xl mx-auto mb-9">
               {t("subtitle")}
             </p>
+            <div className="flex flex-wrap items-center justify-center gap-2.5 mb-10">
+              {[
+                isEs ? `${TEMPLATES.length}+ plantillas` : `${TEMPLATES.length}+ templates`,
+                "ATS-ready",
+                isEs ? "Export PDF & Word" : "PDF & Word export",
+              ].map((s) => (
+                <span key={s} className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-50/90 bg-white/5 ring-1 ring-white/10 px-3 py-1.5 rounded-full">
+                  <Check className="h-3 w-3 text-[#00D4FF]" /> {s}
+                </span>
+              ))}
+            </div>
+            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-white/5 ring-1 ring-white/10 backdrop-blur">
+              <a href="#gratis" className="px-6 py-2 rounded-full text-sm font-semibold text-white/90 hover:bg-white/10 transition-colors">
+                {isEs ? "Gratis" : "Free"}
+              </a>
+              <a
+                href="#pro"
+                className="inline-flex items-center gap-1.5 px-6 py-2 rounded-full text-sm font-bold text-[#0a1322] bg-gradient-to-r from-[#00D4FF] to-cyan-300 shadow-[0_6px_20px_-6px_rgba(0,212,255,0.7)] hover:from-cyan-300 hover:to-[#00D4FF] transition-all"
+              >
+                <Crown className="h-3.5 w-3.5" /> PRO
+              </a>
+            </div>
           </div>
+        </section>
 
-          {/* Pro Diseños */}
-          <div className="mb-12">
-            <div className="flex items-center gap-4 mb-8">
-              <div className="flex-1 h-px bg-border" />
-              <div className="flex items-center gap-2">
-                <span className="text-lg font-extrabold tracking-tight">{t("pro_label")}</span>
-                <span className="text-xs font-bold uppercase tracking-widest bg-gradient-to-r from-violet-500 to-cyan-500 text-white px-2.5 py-0.5 rounded-full">
-                  {t("premium_badge")}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+          {/* ───────────────────────── FREE GROUP ───────────────────────── */}
+          <section id="gratis" className="scroll-mt-24 pt-16 sm:pt-20 pb-12">
+            <div className="flex flex-wrap items-end justify-between gap-4 mb-8">
+              <div>
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-600 bg-emerald-500/10 ring-1 ring-emerald-500/20 px-2.5 py-1 rounded-full mb-3">
+                  <Check className="h-3 w-3" /> {isEs ? "Incluidas gratis" : "Free forever"}
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-[#1a2e4a]">
+                  {isEs ? "Plantillas gratis" : "Free templates"}
+                </h2>
+                <p className="text-slate-500 mt-1.5 max-w-md">
+                  {isEs ? "Empieza sin pagar. Diseños limpios y listos para ATS." : "Start for free. Clean, ATS-ready designs."}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-slate-400 tabular-nums">
+                {regularTemplates.length} {isEs ? "diseños" : "designs"}
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
+              {regularTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} />)}
+            </div>
+          </section>
+
+          {/* ───────────────────────── PRO GROUP ───────────────────────── */}
+          <section id="pro" className="scroll-mt-24 pt-8 pb-16 sm:pb-20">
+            <div
+              className="relative overflow-hidden rounded-3xl px-6 sm:px-10 py-8 sm:py-10 mb-8"
+              style={{ background: "linear-gradient(120deg, #1a2e4a 0%, #20183f 60%, #0f1a2e 100%)" }}
+            >
+              <div className="absolute -top-24 -right-16 w-80 h-80 rounded-full opacity-20 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle, #7c5cff 0%, transparent 70%)" }} />
+              <div className="relative flex flex-wrap items-end justify-between gap-5">
+                <div className="max-w-xl">
+                  <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-300 bg-amber-400/10 ring-1 ring-amber-400/30 px-2.5 py-1 rounded-full mb-3">
+                    <Zap className="h-3 w-3" /> {t("premium_badge")}
+                  </span>
+                  <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2">
+                    <Crown className="h-6 w-6 text-amber-300" />
+                    <span className="bg-gradient-to-r from-white via-cyan-100 to-[#00D4FF] bg-clip-text text-transparent">
+                      {isEs ? "Diseños PRO" : "PRO designs"}
+                    </span>
+                  </h2>
+                  <p className="text-cyan-100/75 mt-2">
+                    {isEs
+                      ? "Layouts únicos y tipografías premium que hacen que tu CV destaque entre cientos."
+                      : "Unique layouts and premium type that make your CV stand out from hundreds."}
+                  </p>
+                  <ul className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
+                    {(isEs
+                      ? ["Tipografías premium & layouts únicos", "Optimizadas para ATS", "Descarga ilimitada PDF & Word"]
+                      : ["Premium type & unique layouts", "ATS-optimized", "Unlimited PDF & Word download"]
+                    ).map((b) => (
+                      <li key={b} className="inline-flex items-center gap-1.5 text-sm text-cyan-50/90">
+                        <Check className="h-3.5 w-3.5 text-[#00D4FF]" /> {b}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+                <span className="text-sm font-semibold text-cyan-100/60 tabular-nums">
+                  {proTemplates.length} {isEs ? "diseños PRO" : "PRO designs"}
                 </span>
               </div>
-              <div className="flex-1 h-px bg-border" />
             </div>
 
-            {CATEGORIES.map((cat) => {
-              const catTemplates = proTemplates.filter((tmpl) => cat.ids.includes(tmpl.id))
-              if (catTemplates.length === 0) return null
-              return (
-                <div key={cat.key} id={cat.key} className="mb-10">
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
-                    <span className="h-px flex-1 bg-border" />
-                    {cat.label}
-                    <span className="h-px flex-1 bg-border" />
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
-                    {catTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Divider */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="flex-1 h-px bg-border" />
-            <span className="text-sm font-semibold text-muted-foreground uppercase tracking-widest">{t("all_templates")}</span>
-            <div className="flex-1 h-px bg-border" />
-          </div>
-
-          {/* Regular grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 sm:gap-5">
-            {regularTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
-          </div>
-
-          {/* CTA */}
-          <div className="mt-20 text-center bg-muted/40 rounded-2xl py-12 px-6">
-            <h2 className="text-2xl font-bold mb-2">{t("cta_title")}</h2>
-            <p className="text-muted-foreground mb-6">{t("cta_subtitle")}</p>
-            <Button size="lg" asChild>
-              <Link href="/register">{t("cta_button")}</Link>
-            </Button>
-          </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+              {proTemplates.map((tmpl) => <TemplateCard key={tmpl.id} template={tmpl} locked={!hasAccess} />)}
+            </div>
+          </section>
         </div>
+
+        {/* ───────────────────────── FINAL MARKETING CTA ───────────────────────── */}
+        <section className="relative overflow-hidden" style={{ background: "linear-gradient(135deg, #1a2e4a 0%, #0f1a2e 50%, #0a1322 100%)" }}>
+          <div className="absolute -bottom-32 -right-24 w-[460px] h-[460px] rounded-full opacity-25 blur-3xl pointer-events-none" style={{ background: "radial-gradient(circle, #00D4FF 0%, transparent 70%)" }} />
+          <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-20 text-center text-white">
+            <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight mb-4">
+              {isEs ? "¿Viste un diseño que te encanta?" : "Found a design you love?"}
+            </h2>
+            <p className="text-lg text-cyan-100/80 mb-9">
+              {isEs
+                ? "Créalo gratis en minutos con tu información y descárgalo cuando estés listo."
+                : "Build it free in minutes with your info and download it when you're ready."}
+            </p>
+            <Link href={`/${locale}/register`}>
+              <Button
+                size="lg"
+                className="gap-2 text-base font-semibold bg-[#00D4FF] hover:bg-[#00D4FF]/90 text-[#0a1322] shadow-[0_12px_45px_-10px_rgba(0,212,255,0.7)] hover:shadow-[0_18px_60px_-10px_rgba(0,212,255,0.9)] transition-all px-8"
+              >
+                {t("cta_button")} <ArrowRight className="h-4 w-4" />
+              </Button>
+            </Link>
+            <p className="text-xs text-cyan-100/50 mt-4">
+              {isEs ? "Sin tarjeta · Empieza gratis" : "No card required · Start free"}
+            </p>
+          </div>
+        </section>
       </main>
       <Footer />
     </div>

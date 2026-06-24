@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
 
 interface Props {
-  plan: "monthly" | "annual"
+  plan: "monthly" | "annual" | "basic" | "sprint"
   isPro?: boolean
   theme?: "light" | "dark"
   buttonClassName?: string

@@ -1,15 +1,11 @@
-import Link from "next/link"
-import { ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import type { TemplateSEO } from "@/lib/templates-seo"
+import TemplateUseButton from "@/components/templates-detail/TemplateUseButton"
 
 interface Props {
-  template: TemplateSEO
   locale: "en" | "es"
   t: (k: string) => string
 }
 
-export default function TemplateDetailCta({ template, locale, t }: Props) {
+export default function TemplateDetailCta({ locale, t }: Props) {
   return (
     <section
       className="relative overflow-hidden py-20 px-4 sm:px-6"
@@ -26,14 +22,7 @@ export default function TemplateDetailCta({ template, locale, t }: Props) {
           {t("final_cta_title")}
         </h2>
         <p className="text-lg text-cyan-100/80 mb-10">{t("final_cta_subtitle")}</p>
-        <Link href={`/${locale}/register?template=${template.id}`}>
-          <Button
-            size="lg"
-            className="gap-2 text-base font-semibold bg-[#00D4FF] hover:bg-[#00D4FF]/90 text-[#0a1322] shadow-[0_10px_40px_-10px_rgba(0,212,255,0.7)] hover:shadow-[0_20px_60px_-10px_rgba(0,212,255,0.9)] transition-all px-8"
-          >
-            {t("final_cta_button")} <ArrowRight className="h-4 w-4" />
-          </Button>
-        </Link>
+        <TemplateUseButton locale={locale} label={t("final_cta_button")} />
       </div>
     </section>
   )

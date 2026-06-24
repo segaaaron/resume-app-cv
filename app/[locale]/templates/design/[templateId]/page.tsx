@@ -205,7 +205,7 @@ export default async function TemplateDetailPage({
           t={t}
         />
 
-        <TemplateDetailCta template={template} locale={locale} t={t} />
+        <TemplateDetailCta locale={locale} t={t} />
       </main>
 
       <Footer />

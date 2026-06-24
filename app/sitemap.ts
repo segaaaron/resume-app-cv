@@ -25,7 +25,6 @@ const corePages: Array<Page & { lastModified: Date }> = [
   { path: "/tools/ats-checker", changeFrequency: "weekly", priority: 0.9, lastModified: new Date("2026-06-01") },
   { path: "/tools/salary-calculator", changeFrequency: "weekly", priority: 0.9, lastModified: new Date("2026-06-01") },
   { path: "/faq",          changeFrequency: "monthly", priority: 0.7, lastModified: new Date("2026-05-09") },
-  { path: "/pro-disenos",  changeFrequency: "monthly", priority: 0.5, lastModified: new Date("2026-04-29") },
   { path: "/privacy",      changeFrequency: "yearly",  priority: 0.2, lastModified: new Date("2026-04-01") },
   { path: "/terms",        changeFrequency: "yearly",  priority: 0.2, lastModified: new Date("2026-04-01") },
   { path: "/cookie-policy", changeFrequency: "yearly", priority: 0.2, lastModified: new Date("2026-04-01") },

@@ -6,7 +6,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 const moduleLogger = createLogger("resume-service")
 import { AppError } from "@/lib/services/auth/AppError"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
-import { getLimits, isActive } from "@/lib/plans"
+import { getLimits, isActive, effectivePlan } from "@/lib/plans"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 
@@ -152,8 +152,8 @@ export class ResumeService {
   // ── CREATE ────────────────────────────────────────────────────────────────
 
   async create(userId: string, templateId?: string) {
-    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, name: true } })
-    const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
+    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, name: true, subscriptionEndsAt: true } })
+    const limits = getLimits(user ? effectivePlan(user) : "UNSUBSCRIBED")
 
     const defaultData = ResumeSectionsSchema.parse({})
 
@@ -228,12 +228,12 @@ export class ResumeService {
   async duplicate(userId: string, resumeId: string) {
     const [original, user] = await Promise.all([
       db.resume.findFirst({ where: { id: resumeId, userId } }),
-      db.user.findUnique({ where: { id: userId }, select: { plan: true } }),
+      db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionEndsAt: true } }),
     ])
 
     if (!original) throw new AppError("not_found", 404)
 
-    const limits = getLimits(user?.plan ?? "UNSUBSCRIBED")
+    const limits = getLimits(user ? effectivePlan(user) : "UNSUBSCRIBED")
 
     const copy = await db.$transaction(async (tx) => {
       await enforceResumeLimit(tx, userId, limits.maxResumes, "duplicate")

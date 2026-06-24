@@ -1,4 +1,5 @@
 import type Stripe from "stripe"
+import { addMonths, addDays } from "date-fns"
 import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
 import { checkAndApplyReferralReward } from "@/lib/referral-rewards"
@@ -82,6 +83,14 @@ export class StripeWebhookService {
     if (!userId) return
     if (session.payment_status !== "paid") return
 
+    // ── One-time plans (BASIC / SPRINT) ─────────────────────────────────────
+    // No Stripe subscription; provision a time-boxed plan with our own expiry.
+    const planType = session.metadata?.planType
+    if (planType === "basic" || planType === "sprint") {
+      await this.handleOneTimeCheckout(event, userId, planType)
+      return
+    }
+
     const subscriptionId = typeof session.subscription === "string"
       ? session.subscription
       : (session.subscription as Stripe.Subscription | null)?.id ?? null
@@ -117,6 +126,41 @@ export class StripeWebhookService {
     Promise.resolve(checkAndApplyReferralReward(userId)).catch((e) =>
       this.logger.error("checkAndApplyReferralReward failed after checkout", { userId, eventId: event.id }, e instanceof Error ? e : undefined)
     )
+  }
+
+  /**
+   * Provision a one-time plan (BASIC / SPRINT) from checkout.session.completed.
+   * No Stripe subscription exists — we set our own expiry window:
+   *   BASIC  → +1 calendar month, SPRINT → +7 days.
+   * isActive(BASIC|SPRINT) relies on subscriptionEndsAt, not subscriptionStatus.
+   * Idempotent via claimEvent; managed (LIMITED) users are never overwritten.
+   */
+  private async handleOneTimeCheckout(event: Stripe.Event, userId: string, planType: "basic" | "sprint"): Promise<void> {
+    const newPlan = planType === "basic" ? "BASIC" : "SPRINT"
+    const now = new Date()
+    const subscriptionEndsAt = planType === "basic" ? addMonths(now, 1) : addDays(now, 7)
+
+    const result = await db.$transaction(async (tx) => {
+      if (!await claimEvent(tx, event.id, { userId })) return { skip: true }
+      const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { isManaged: true } })
+      if (targetUser?.isManaged) return { skip: true }
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          plan: newPlan,
+          planInterval: null,
+          subscriptionId: null,
+          subscriptionStatus: "NONE",
+          subscriptionEndsAt,
+          sessionVersion: { increment: 1 },
+        },
+      })
+      return { skip: false }
+    }, TX_OPTS)
+
+    if (result.skip) return
+    purgeUserCache(userId)
+    this.logger.info("StripeWebhookService.handleOneTimeCheckout", { userId, planType, subscriptionEndsAt: subscriptionEndsAt.toISOString() })
   }
 
   private async handleInvoicePaid(event: Stripe.Event): Promise<void> {

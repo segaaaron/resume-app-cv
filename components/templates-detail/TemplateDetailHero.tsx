@@ -1,7 +1,8 @@
 import Link from "next/link"
-import { ArrowRight, CheckCircle2, Sparkles, Award } from "lucide-react"
+import { CheckCircle2, Sparkles, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import TemplatePreviewLarge from "@/components/templates-detail/TemplatePreviewLarge"
+import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
+import TemplateUseButton from "@/components/templates-detail/TemplateUseButton"
 import type { TemplateSEO } from "@/lib/templates-seo"
 
 interface Props {
@@ -117,14 +118,7 @@ export default function TemplateDetailHero({
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3">
-            <Link href={`/${locale}/register?template=${template.id}`}>
-              <Button
-                size="lg"
-                className="gap-2 text-base font-semibold bg-[#00D4FF] hover:bg-[#00D4FF]/90 text-[#0a1322] shadow-[0_10px_40px_-10px_rgba(0,212,255,0.6)] hover:shadow-[0_15px_50px_-10px_rgba(0,212,255,0.8)] transition-all"
-              >
-                {t("use_template_cta")} <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            <TemplateUseButton locale={locale} label={t("use_template_cta")} />
             <Link href={`/${locale}/templates`}>
               <Button
                 size="lg"
@@ -144,8 +138,8 @@ export default function TemplateDetailHero({
               background: "radial-gradient(circle at 50% 50%, #00D4FF 0%, transparent 60%)",
             }}
           />
-          <div className="relative">
-            <TemplatePreviewLarge template={template} />
+          <div className="relative aspect-[3/4] max-w-md mx-auto lg:max-w-none rounded-2xl overflow-hidden border border-white/10 shadow-[0_30px_80px_-20px_rgba(0,0,0,0.6)]">
+            <MockTemplatePreview templateId={template.id} />
           </div>
         </div>
       </div>

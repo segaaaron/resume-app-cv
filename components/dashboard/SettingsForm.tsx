@@ -97,6 +97,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
     .join("") || "U"
 
   const isPro    = user.plan === "PRO"
+  const isOneTime = user.plan === "BASIC" || user.plan === "SPRINT"
   const isActive = subscriptionStatus === "ACTIVE"
   const endsAt   = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
   const isManaged = !!user.isManaged
@@ -258,8 +259,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
         </div>
       </div>
 
-      {/* ── Card 2: Plan y cuenta — hidden for LIMITED (managed) users ── */}
-      {!isManaged && (
+      {/* ── Card 2: Plan y cuenta — hidden for LIMITED (managed) and one-time (BASIC/SPRINT) users ── */}
+      {!isManaged && !isOneTime && (
       <div className="bg-white border border-dash-border rounded-[10px] overflow-hidden">
         <CardHead>
           <CardIco>
@@ -392,6 +393,36 @@ export default function SettingsForm({ user }: { user: UserData }) {
           )}
         </div>
       </div>
+      )}
+
+      {/* ── One-time plan info (BASIC/SPRINT): no billing management, just expiry ── */}
+      {isOneTime && (
+        <div className="bg-white border border-dash-border rounded-[10px] overflow-hidden mb-4">
+          <CardHead>
+            <CardIco>
+              <svg width="15" height="15" viewBox="0 0 15 15" fill="none">
+                <path d="M7.5 1l1.8 4.5H14l-3.7 2.7 1.4 4.3L7.5 10l-4.2 2.5 1.4-4.3L1 5.5h4.7L7.5 1z" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round"/>
+              </svg>
+            </CardIco>
+            <div>
+              <CardTitle>{locale === "es" ? "Tu plan" : "Your plan"}</CardTitle>
+              <CardSub>{locale === "es" ? "Acceso de pago único" : "One-time access"}</CardSub>
+            </div>
+          </CardHead>
+          <div className="px-5 py-[18px] flex items-center gap-[14px]">
+            <span className="inline-flex items-center rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.06em] text-dash-cyan bg-[rgba(0,212,255,0.1)] border border-[rgba(0,212,255,0.2)]">
+              {user.plan === "SPRINT" ? "Job Sprint" : "Basic"}
+            </span>
+            {user.subscriptionEndsAt && (
+              <span className="text-[12.5px] text-dash-muted">
+                {locale === "es" ? "Vence el " : "Expires "}
+                <strong className="text-dash-navy">
+                  {format(new Date(user.subscriptionEndsAt), "d MMM yyyy", { locale: locale === "es" ? es : enUS })}
+                </strong>
+              </span>
+            )}
+          </div>
+        </div>
       )}
 
       {/* ── Card 3: Mis datos — hidden for LIMITED (managed) and UNSUBSCRIBED users ── */}

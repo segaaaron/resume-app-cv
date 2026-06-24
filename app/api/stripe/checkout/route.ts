@@ -13,7 +13,7 @@ import { createHash } from "crypto"
 const CONSENT_VERSION = "v1_2026"
 
 const schema = z.object({
-  plan:         z.enum(["monthly", "annual"]),
+  plan:         z.enum(["monthly", "annual", "basic", "sprint"]),
   locale:       z.enum(["es", "en"]).optional(),
   consent:      z.literal(true).optional(),
   consentText:  z.string().max(1000).optional(),

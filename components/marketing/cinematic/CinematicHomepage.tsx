@@ -167,7 +167,6 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
   const navLinks = [
     { href: `/${locale}/templates`,   label: nav("templates"),   special: false },
-    { href: `/${locale}/pro-disenos`, label: nav("pro_designs"), special: true  },
     { href: `/${locale}/blog`,        label: nav("blog"),        special: false },
     { href: `/${locale}/guide`,       label: nav("guide"),       special: false },
     { href: `/${locale}/pricing`,     label: nav("pricing"),     special: false },

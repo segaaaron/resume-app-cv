@@ -27,6 +27,7 @@ interface Props {
   subscriptionEndsAt: string | null
   planInterval: string | null
   isEU: boolean
+  isEs: boolean
 }
 
 const featureIcons = ["◆","◆","◆","◆","◆","◆","◆","◆","◆","◆","◆"]
@@ -50,8 +51,36 @@ export default function PricingClientSection({
   subscriptionEndsAt,
   planInterval,
   isEU,
+  isEs,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
+
+  // One-time entry plans (shown to non-PRO visitors). Copy inline (bilingual)
+  // to avoid an i18n migration; these are secondary to the PRO hero cards.
+  const oneTime = [
+    {
+      plan: "basic" as const,
+      name: "Basic",
+      price: "2.99",
+      unit: isEs ? "pago único" : "one-time",
+      validity: isEs ? "Acceso 1 mes" : "1-month access",
+      accent: "#1a2e4a",
+      perks: isEs
+        ? ["Descarga tu CV (PDF)", "Descargas ilimitadas", "Sin asistente de IA"]
+        : ["Download your CV (PDF)", "Unlimited downloads", "No AI assistant"],
+    },
+    {
+      plan: "sprint" as const,
+      name: "Job Sprint",
+      price: "7.99",
+      unit: isEs ? "pago único" : "one-time",
+      validity: isEs ? "Acceso 7 días" : "7-day access",
+      accent: "#00D4FF",
+      perks: isEs
+        ? ["IA de contenido", "Plantillas PRO", "Sin ATS ni Revisión IA"]
+        : ["Content AI", "PRO templates", "No ATS / AI Review"],
+    },
+  ]
 
   const revealVariants = {
     visible: (i: number) => ({
@@ -374,6 +403,71 @@ export default function PricingClientSection({
             </motion.div>
           </TimelineContent>
         </div>
+
+        {/* ══════════ ONE-TIME PLANS (Basic / Sprint) ══════════ */}
+        {!userIsPro && (
+          <div className="mt-14 relative z-10">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A0AABE] whitespace-nowrap">
+                {isEs ? "¿Sin suscripción? Pago único" : "No subscription? One-time"}
+              </span>
+              <div className="h-px flex-1 bg-[#E2E8F4]" />
+            </div>
+
+            <div className="grid sm:grid-cols-2 gap-5">
+              {oneTime.map((o) => (
+                <motion.div
+                  key={o.plan}
+                  whileHover={{ y: -4 }}
+                  transition={{ type: "spring", stiffness: 280, damping: 22 }}
+                  className="bg-white rounded-[18px] border border-[#E2E8F4] p-6 sm:p-7 shadow-[0_2px_16px_rgba(26,46,74,0.05)] flex flex-col"
+                >
+                  <div className="flex items-center justify-between mb-4">
+                    <span className="text-[15px] font-extrabold text-[#1a2e4a]">{o.name}</span>
+                    <span
+                      className="text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full"
+                      style={{ background: `${o.accent}14`, color: o.accent }}
+                    >
+                      {o.validity}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline gap-1.5 mb-1">
+                    <span className="text-[13px] font-semibold text-[#94A3B8] self-start mt-1.5">$</span>
+                    <span className="text-[40px] font-extrabold text-[#1a2e4a] tracking-[-0.04em] leading-none">{o.price}</span>
+                    <span className="text-[13px] text-[#A0AABE] font-medium">{o.unit}</span>
+                  </div>
+
+                  <div className="h-px bg-[#F1F5F9] my-5" />
+
+                  <ul className="flex flex-col gap-2.5 mb-6">
+                    {o.perks.map((p) => (
+                      <li key={p} className="flex items-start gap-2.5">
+                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0 mt-0.5">
+                          <circle cx="7" cy="7" r="7" fill={`${o.accent}1A`} />
+                          <path d="M4 7l2 2 4-4" stroke={o.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+                        <span className="text-[13px] text-[#475569] leading-[1.5]">{p}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  <div className="mt-auto">
+                    <PricingButtons
+                      plan={o.plan}
+                      isEU={isEU}
+                      buttonClassName={
+                        o.plan === "sprint"
+                          ? "!bg-[#00D4FF] !text-[#071525] !font-bold !rounded-[12px] !border-0 !py-3"
+                          : "!bg-white !text-[#1a2e4a] !font-semibold !rounded-[12px] !border !border-[#1a2e4a]/20 hover:!bg-[#1a2e4a]/[0.03] !py-3"
+                      }
+                    />
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </>
   )

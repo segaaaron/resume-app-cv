@@ -5,11 +5,15 @@ import { useEditorPro } from "./EditorContext"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "next-intl"
+import { getLimits, type AiEndpointName } from "@/lib/plans"
 
 interface AIProGateProps {
   children: React.ReactNode
   /** Optional feature label propagated to the shared UpgradeModal (e.g. "ATS Checker"). */
   feature?: string
+  /** AI endpoint this gate protects — unlocks only when the plan grants it (limit === -1).
+   *  Lets SPRINT use content AI while ATS/Review stay PRO-only. Falls back to isPro. */
+  endpoint?: AiEndpointName
 }
 
 /**
@@ -17,12 +21,17 @@ interface AIProGateProps {
  * instead of the children. CTA opens the shared freemium UpgradeModal with
  * trigger 'pro-feature' (replacing the previous editor-internal modal).
  */
-export default function AIProGate({ children, feature }: AIProGateProps) {
-  const { isPro } = useEditorPro()
+export default function AIProGate({ children, feature, endpoint }: AIProGateProps) {
+  const { isPro, plan } = useEditorPro()
   const { open } = useUpgradeModal()
   const t = useTranslations("editor.ai_gate")
 
-  if (isPro) return <>{children}</>
+  // Endpoint-aware: unlocked only when the effective plan grants unlimited use of
+  // that endpoint (SPRINT content AI = -1; SPRINT ats/review = 0 → stays locked).
+  // Without an endpoint, fall back to the blanket isPro flag.
+  const unlocked = endpoint ? getLimits(plan).aiLimitsByEndpoint[endpoint] === -1 : isPro
+
+  if (unlocked) return <>{children}</>
 
   return (
     <div className="relative rounded-xl border-2 border-dashed border-primary/30 bg-primary/5 px-5 py-6 flex flex-col items-center gap-3 text-center">

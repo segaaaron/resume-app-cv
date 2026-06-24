@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { checkOrigin } from "@/lib/csrf"
 import { buildSections, ResumeSectionsSchema } from "@/types/resume"
-import { getLimits, isSuperAdmin } from "@/lib/plans"
+import { getLimits, isSuperAdmin, effectivePlan } from "@/lib/plans"
 import mammoth from "mammoth"
 import { parseResumeText, detectLanguage, PARSE_LIMITS } from "@/lib/parseResumeText"
 import { extractPdfText } from "@/lib/resume-parser/extract-pdf"
@@ -25,9 +25,9 @@ export async function POST(req: Request) {
 
   if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, role: true } })
+  const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, role: true, subscriptionEndsAt: true } })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!isSuperAdmin(dbUser.role) && !getLimits(dbUser.plan).canImport) {
+  if (!isSuperAdmin(dbUser.role) && !getLimits(effectivePlan(dbUser)).canImport) {
     return NextResponse.json({ error: "Upgrade your plan to import resumes" }, { status: 403 })
   }
 

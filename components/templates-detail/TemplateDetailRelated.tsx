@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Lock } from "lucide-react"
-import TemplatePreviewLarge from "@/components/templates-detail/TemplatePreviewLarge"
+import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
 import type { TemplateSEO } from "@/lib/templates-seo"
 
 interface Props {
@@ -22,8 +22,8 @@ export default function TemplateDetailRelated({ related, locale, categoryLabelFo
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
           {related.map((rel) => (
             <Link key={rel.id} href={`/${locale}/templates/design/${rel.slug}`} className="group block">
-              <div className="aspect-[3/4] mb-2.5">
-                <TemplatePreviewLarge template={rel} />
+              <div className="relative aspect-[3/4] mb-2.5 rounded-lg overflow-hidden border border-slate-200/60 group-hover:border-[#00D4FF]/40 transition-colors">
+                <MockTemplatePreview templateId={rel.id} />
               </div>
               <div className="px-1">
                 <h3 className="font-bold text-sm text-[#1a2e4a] leading-tight group-hover:text-[#00D4FF] transition-colors flex items-center gap-1.5">

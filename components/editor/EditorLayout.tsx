@@ -8,7 +8,8 @@ import FormPanel from "./FormPanel"
 import PreviewPanel from "./PreviewPanel"
 import EditorTopBar from "./EditorTopBar"
 import { EditorProvider } from "./EditorContext"
-import { isActive, isSuperAdmin } from "@/lib/plans"
+import { isActive, isSuperAdmin, effectivePlan } from "@/lib/plans"
+import UpgradeBanner from "./UpgradeBanner"
 import { FileText, Eye } from "lucide-react"
 
 interface Props {
@@ -60,6 +61,12 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     managedExpiresAt ? new Date(managedExpiresAt) : null,
   )
 
+  // Effective plan drives per-endpoint AI gates (BASIC has no AI; SPRINT has
+  // content AI but not ATS/Review). Admin/LIMITED are treated as full-access.
+  const effPlan = isSuperAdmin(role) || isManaged
+    ? "PRO"
+    : effectivePlan({ plan, subscriptionEndsAt: subscriptionEndsAt ? new Date(subscriptionEndsAt) : null })
+
   const [mobileView, setMobileView] = useState<MobileView>("form")
 
   const TAB_CLS = (active: boolean) =>
@@ -68,8 +75,11 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     }`
 
   return (
-    <EditorProvider isPro={hasAccess}>
+    <EditorProvider isPro={hasAccess} plan={effPlan}>
       <div className="flex flex-col overflow-hidden h-dvh bg-[#FAFCFF] text-[#0F172A]">
+        {!isSuperAdmin(role) && !isManaged && (
+          <UpgradeBanner plan={effPlan} />
+        )}
         <EditorTopBar hasAccess={hasAccess} />
 
         {/* Main body */}

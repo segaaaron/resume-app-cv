@@ -8,7 +8,7 @@
  *   - No import
  */
 
-export type Plan = "UNSUBSCRIBED" | "PRO" | "LIMITED"
+export type Plan = "UNSUBSCRIBED" | "BASIC" | "SPRINT" | "PRO" | "LIMITED"
 export type SubscriptionStatus = "NONE" | "ACTIVE" | "CANCELED" | "EXPIRED" | "PAST_DUE"
 export type Role = "USER" | "SUPER_ADMIN"
 
@@ -111,6 +111,45 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "review-cv": 0,
     },
   },
+  // BASIC: one-time, 1 calendar month. 1 CV, download it unlimited times, NO AI.
+  // "descarga las veces que quiera" = unlimited downloads (canExportPdf), not unlimited CVs.
+  BASIC: {
+    maxResumes: 1,
+    maxCoverLetters: 1,
+    canExportPdf: true,
+    canImport: false,
+    aiLimitsByEndpoint: {
+      "fill-profile": 0,
+      "improve-bullet": 0,
+      "improve-summary": 0,
+      "generate-summary": 0,
+      "suggest-skills": 0,
+      "tailor-cv": 0,
+      "generate-cover-letter": 0,
+      "improve-cover-letter": 0,
+      "ats-score": 0,
+      "review-cv": 0,
+    },
+  },
+  // SPRINT: one-time, 7 days. Content AI + PRO templates. NO tailor-cv / ats-score / review-cv (PRO only).
+  SPRINT: {
+    maxResumes: -1,
+    maxCoverLetters: -1,
+    canExportPdf: true,
+    canImport: true,
+    aiLimitsByEndpoint: {
+      "fill-profile": -1,
+      "improve-bullet": -1,
+      "improve-summary": -1,
+      "generate-summary": -1,
+      "suggest-skills": -1,
+      "tailor-cv": 0,
+      "generate-cover-letter": -1,
+      "improve-cover-letter": -1,
+      "ats-score": 0,
+      "review-cv": 0,
+    },
+  },
   PRO: {
     maxResumes: -1,
     maxCoverLetters: -1,
@@ -155,7 +194,32 @@ export function isActive(
     // PAST_DUE: payment failed, Stripe retrying — user keeps access during retry window
     return subscriptionStatus === "ACTIVE" || subscriptionStatus === "CANCELED" || subscriptionStatus === "PAST_DUE"
   }
+  // One-time plans (no Stripe subscription): active strictly while within the
+  // purchased window. Expiry is set at purchase (BASIC = +1 calendar month,
+  // SPRINT = +7 days). The cron / refund flow downgrades to UNSUBSCRIBED.
+  if (plan === "BASIC" || plan === "SPRINT") {
+    if (!subscriptionEndsAt) return false
+    return new Date() <= subscriptionEndsAt
+  }
   return false
+}
+
+/**
+ * The plan that ACTUALLY applies right now. One-time plans (BASIC/SPRINT) fall
+ * back to UNSUBSCRIBED once their window has passed, so every gate must resolve
+ * the effective plan before reading limits — never trust the raw `plan` column.
+ */
+export function effectivePlan(user: { plan: Plan | string; subscriptionEndsAt?: Date | null }): Plan {
+  if (user.plan === "BASIC" || user.plan === "SPRINT") {
+    if (!user.subscriptionEndsAt || new Date() > user.subscriptionEndsAt) return "UNSUBSCRIBED"
+    return user.plan
+  }
+  return (user.plan as Plan) ?? "UNSUBSCRIBED"
+}
+
+/** Premium (PRO) templates: available on SPRINT, PRO and LIMITED. */
+export function canUsePremiumTemplates(plan: string): boolean {
+  return plan === "SPRINT" || plan === "PRO" || plan === "LIMITED"
 }
 
 export function canDownloadPDF(user: { isManaged: boolean; managedDownloadLimit: number | null; managedDownloadsUsed: number }): boolean {
@@ -167,5 +231,7 @@ export function canDownloadPDF(user: { isManaged: boolean; managedDownloadLimit:
 export function getLimits(plan: string): PlanLimits {
   if (plan === "PRO") return PLAN_LIMITS.PRO
   if (plan === "LIMITED") return PLAN_LIMITS.LIMITED
+  if (plan === "SPRINT") return PLAN_LIMITS.SPRINT
+  if (plan === "BASIC") return PLAN_LIMITS.BASIC
   return PLAN_LIMITS.UNSUBSCRIBED
 }

@@ -1,5 +1,5 @@
-import { useMemo } from "react"
-import { create } from "zustand"
+import { useMemo, useContext, createContext, createElement, type ReactNode } from "react"
+import { createStore, useStore } from "zustand"
 import { immer } from "zustand/middleware/immer"
 import { devtools } from "zustand/middleware"
 import { toast } from "sonner"
@@ -155,7 +155,8 @@ function getThumbChannel(): BroadcastChannel | null {
   return thumbChannel
 }
 
-export const useResumeStore = create<ResumeState & ResumeActions>()(
+function makeResumeStore() {
+  return createStore<ResumeState & ResumeActions>()(
   devtools(
     immer((set, get) => ({
       resumeId: null,
@@ -311,4 +312,42 @@ export const useResumeStore = create<ResumeState & ResumeActions>()(
     // M4: disable devtools serialization overhead in production
     { name: "resume-store", enabled: process.env.NODE_ENV === "development" }
   )
+  )
+}
+
+// ── Global store (editor + app) and isolated stores (marketing previews) ──────
+// The editor uses the global store. Template previews on marketing pages wrap
+// each render in <ResumeStoreProvider store={isolatedStore}> so they can show
+// DIFFERENT mock personas side by side without colliding on one global state.
+const globalResumeStore = makeResumeStore()
+
+/** Create an isolated store instance (for a preview persona). */
+export function createIsolatedResumeStore() {
+  return makeResumeStore()
+}
+
+type ResumeStoreApi = ReturnType<typeof makeResumeStore>
+
+const ResumeStoreContext = createContext<ResumeStoreApi | null>(null)
+
+export function ResumeStoreProvider({ store, children }: { store: ResumeStoreApi; children: ReactNode }) {
+  return createElement(ResumeStoreContext.Provider, { value: store }, children)
+}
+
+/**
+ * Reads from the nearest provided store (preview) or the global store (editor).
+ * Templates keep calling useResumeStore(selector) unchanged.
+ */
+export const useResumeStore = Object.assign(
+  function useResumeStore<T = ResumeState & ResumeActions>(
+    selector?: (s: ResumeState & ResumeActions) => T,
+  ): T {
+    const ctx = useContext(ResumeStoreContext)
+    return useStore(ctx ?? globalResumeStore, selector ?? ((s) => s as unknown as T))
+  },
+  {
+    getState: globalResumeStore.getState,
+    setState: globalResumeStore.setState,
+    subscribe: globalResumeStore.subscribe,
+  },
 )

@@ -40,6 +40,12 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/**/*": ["./node_modules/geoip-lite/data/**/*.dat"],
   },
+  async redirects() {
+    // "PRO diseños" merged into the unified /templates page (PRO group).
+    return [
+      { source: "/:locale/pro-disenos", destination: "/:locale/templates#pro", permanent: true },
+    ]
+  },
   async headers() {
     return [
       {
