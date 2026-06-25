@@ -6,7 +6,8 @@ import { createLogger } from "@/lib/logger"
 const logger = createLogger("resume-pdf")
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
-import { isActive } from "@/lib/plans"
+import { isActive, isSuperAdmin, effectivePlan, canUsePremiumTemplates } from "@/lib/plans"
+import { PRO_IDS } from "@/components/editor/template-switcher/template-data"
 import { claimManagedDownload, refundManagedDownload } from "@/lib/services/downloads/managed-quota"
 
 
@@ -54,6 +55,15 @@ export async function GET(req: Request, { params }: Params) {
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })
     return NextResponse.json({ error: "subscription_required" }, { status: 403 })
+  }
+
+  // Premium (PRO) templates require a plan that grants them (SPRINT/PRO/LIMITED/admin).
+  // Closes the UI-only soft gate: a BASIC user can't download a PRO template via direct API.
+  const allowsPremium = isSuperAdmin(user?.role) || canUsePremiumTemplates(
+    effectivePlan({ plan: user?.plan ?? "UNSUBSCRIBED", subscriptionEndsAt: user?.subscriptionEndsAt }),
+  )
+  if (resume.templateId && PRO_IDS.includes(resume.templateId) && !allowsPremium) {
+    return NextResponse.json({ error: "premium_template_requires_upgrade" }, { status: 403 })
   }
 
   const claim = await claimManagedDownload(session.user.id, {

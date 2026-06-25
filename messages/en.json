@@ -191,7 +191,7 @@
     "step2_title": "Choose your template",
     "step2_desc": "Customize with one of our 164 professional templates for your industry and style.",
     "step3_title": "Download your CV",
-    "step3_desc": "Export as PDF or Word, analyze your ATS compatibility, and apply with confidence."
+    "step3_desc": "Export as PDF, analyze your ATS compatibility, and apply with confidence."
   },
   "features": {
     "title": "Everything you need to get hired",
@@ -241,11 +241,11 @@
     "section_plan": "Plan & Pricing",
     "section_privacy": "Privacy & Security",
     "q1": "What does the Pro plan include?",
-    "a1": "The Pro plan includes: 164 professional templates, up to 10 personal CVs, 7 AI tools (bullets, summary, ATS Score, skills, review, profile fill, cover letter), PDF and Word export, job application tracker, shareable public CV, and version history.",
+    "a1": "The Pro plan includes: 164 professional templates, up to 10 personal CVs, 7 AI tools (bullets, summary, ATS Score, skills, review, profile fill, cover letter), PDF export, job application tracker, shareable public CV, and version history.",
     "q2": "Can I switch templates without losing my data?",
     "a2": "Yes. Your data is separated from the template. You can switch between all 164 templates at any time and your content remains intact.",
     "q3": "What formats can I download my resume in?",
-    "a3": "You can download in high-resolution PDF or Word (.docx), ready to edit. Both formats are included in the Pro plan.",
+    "a3": "You can download in high-resolution PDF, ready to edit. Included in the Pro plan.",
     "q4": "Can I create more than one resume?",
     "a4": "Yes. With the Pro plan you can create up to 10 personal resumes, allowing you to tailor your CV for different positions or industries.",
     "q5": "Can I import my existing resume?",
@@ -329,7 +329,7 @@
     "feature2": "164 templates for every industry",
     "feature3": "High-quality PDF export",
     "feature4": "AI cover letter in 30 seconds",
-    "feature5": "Word (.docx) export ready to send",
+    "feature5": "High-resolution PDF export ready to send",
     "feature6": "ATS Score — check compatibility before you apply",
     "feature7": "7 AI tools to write and improve your CV",
     "feature8": "Application tracker with Kanban board",
@@ -636,7 +636,7 @@
     "row_pdf": "PDF export",
     "val_pdf_free": "With watermark",
     "val_pdf_pro": "No watermark",
-    "row_word": "Word (.docx) export",
+    "row_word": "High-resolution PDF export",
     "row_ai_bullet": "AI: bullet improvement",
     "row_ai_summary": "AI: summary generator",
     "row_ats": "ATS Score",
@@ -747,7 +747,7 @@
     "s2_body": "ReadyCVV allows users to:",
     "s2_i1": "Create, edit and manage resumes using pre-designed templates.",
     "s2_i2": "Generate personalized cover letters.",
-    "s2_i3": "Export documents in PDF and Word (.docx) formats.",
+    "s2_i3": "Export documents in PDF format.",
     "s2_i4": "Obtain ATS compatibility analysis against job descriptions.",
     "s2_i5": "Share resumes publicly via a unique link.",
     "s2_i6": "Access AI-powered features to improve resume content.",
@@ -2647,13 +2647,13 @@
     "related_subtitle": "Other designs you might like",
     "faq_title": "Frequently asked questions",
     "faq_q1": "Is this template free to use?",
-    "faq_a1": "You can preview every template for free. To download, customize and export to PDF or Word you need a ReadyCV Pro subscription ($15/month).",
+    "faq_a1": "You can preview every template for free. To download, customize and export to PDF you need a ReadyCV Pro subscription ($15/month).",
     "faq_q2": "Will this template pass ATS systems?",
     "faq_a2": "Yes. Every ReadyCV template is built on semantic HTML that ATS parsers can read. Templates marked ATS Score 90+ have been tested against Workday, Greenhouse, Lever and Taleo.",
     "faq_q3": "Can I edit colors, fonts and layout?",
     "faq_a3": "Yes. In the ReadyCV editor you can change the color scheme, swap fonts, reorder sections, hide blocks and customize spacing — all in real time.",
     "faq_q4": "What file formats can I export to?",
-    "faq_a4": "PDF (print-ready) and Word (.docx). Both formats preserve the template design and are optimized for ATS submission.",
+    "faq_a4": "PDF (print-ready). It preserves the template design and is optimized for ATS submission.",
     "faq_q5": "Can I switch templates later without losing my data?",
     "faq_a5": "Yes. Your content is saved separately from the template. Switch designs anytime — all your experience, skills and education stay intact.",
     "final_cta_title": "Create your resume with this template",
@@ -3101,7 +3101,7 @@
     },
     "download": {
       "title": "Subscribe to download your CV",
-      "body": "PDF and Word downloads are part of the PRO plan. Unlock unlimited high-quality exports without watermark.",
+      "body": "PDF downloads are part of the PRO plan. Unlock unlimited high-quality exports without watermark.",
       "cta": "Get PRO and download"
     },
     "aiQuota": {
@@ -3128,7 +3128,7 @@
     },
     "watermarkRemove": {
       "title": "Remove watermark",
-      "body": "Your free preview ships with a watermark. PRO removes it and unlocks clean PDF/Word downloads.",
+      "body": "Your free preview ships with a watermark. PRO removes it and unlocks clean PDF downloads.",
       "cta": "Remove watermark with PRO"
     }
   },

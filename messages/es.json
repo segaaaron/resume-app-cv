@@ -191,7 +191,7 @@
     "step2_title": "Elige tu plantilla",
     "step2_desc": "Personaliza con una de nuestras 164 plantillas profesionales para tu sector y estilo.",
     "step3_title": "Descarga tu CV",
-    "step3_desc": "Exporta en PDF o Word, analiza tu compatibilidad ATS y aplica con confianza."
+    "step3_desc": "Exporta en PDF, analiza tu compatibilidad ATS y aplica con confianza."
   },
   "features": {
     "title": "Todo lo que necesitas para conseguir el trabajo",
@@ -241,11 +241,11 @@
     "section_plan": "Plan y precios",
     "section_privacy": "Privacidad y seguridad",
     "q1": "¿Qué incluye el plan Pro?",
-    "a1": "El plan Pro incluye: 164 plantillas profesionales, hasta 10 CVs personales, 7 herramientas de IA (bullets, resumen, ATS Score, habilidades, revisión, relleno de perfil, carta de presentación), exportación PDF y Word, tracker de candidaturas, CV público compartible e historial de versiones.",
+    "a1": "El plan Pro incluye: 164 plantillas profesionales, hasta 10 CVs personales, 7 herramientas de IA (bullets, resumen, ATS Score, habilidades, revisión, relleno de perfil, carta de presentación), exportación PDF, tracker de candidaturas, CV público compartible e historial de versiones.",
     "q2": "¿Puedo cambiar de plantilla sin perder mis datos?",
     "a2": "Sí. Tus datos están separados de la plantilla. Puedes cambiar entre las 164 plantillas en cualquier momento y tu contenido se mantiene intacto.",
     "q3": "¿En qué formatos puedo descargar mi CV?",
-    "a3": "Puedes descargar en PDF de alta resolución o en Word (.docx), listo para editar. Ambos formatos incluidos en el plan Pro.",
+    "a3": "Puedes descargar en PDF de alta resolución, listo para editar. Incluido en el plan Pro.",
     "q4": "¿Puedo crear más de un CV?",
     "a4": "Sí. Con el plan Pro puedes crear hasta 10 CVs personales, lo que te permite adaptar tu currículum a diferentes puestos o industrias.",
     "q5": "¿Puedo importar mi CV existente?",
@@ -329,7 +329,7 @@
     "feature2": "164 plantillas para todos los sectores",
     "feature3": "Exportación PDF en alta calidad",
     "feature4": "Carta de presentación con IA en 30 segundos",
-    "feature5": "Exportación Word (.docx) lista para enviar",
+    "feature5": "Exportación PDF de alta resolución lista para enviar",
     "feature6": "ATS Score — mide tu compatibilidad antes de aplicar",
     "feature7": "7 herramientas de IA para redactar y mejorar",
     "feature8": "Tracker de candidaturas con tablero Kanban",
@@ -636,7 +636,7 @@
     "row_pdf": "Exportación PDF",
     "val_pdf_free": "Con marca de agua",
     "val_pdf_pro": "Sin marca de agua",
-    "row_word": "Exportación Word (.docx)",
+    "row_word": "Exportación PDF de alta resolución",
     "row_ai_bullet": "IA: mejora bullets",
     "row_ai_summary": "IA: generador de resumen",
     "row_ats": "ATS Score",
@@ -747,7 +747,7 @@
     "s2_body": "ReadyCVV permite a los Usuarios:",
     "s2_i1": "Crear, editar y gestionar currículums vitae (CVs) utilizando plantillas prediseñadas.",
     "s2_i2": "Generar cartas de presentación personalizadas.",
-    "s2_i3": "Exportar documentos en formato PDF y Word (.docx).",
+    "s2_i3": "Exportar documentos en formato PDF.",
     "s2_i4": "Obtener análisis de compatibilidad ATS comparando el CV con descripciones de puestos de trabajo.",
     "s2_i5": "Compartir CVs de forma pública mediante un enlace único.",
     "s2_i6": "Acceder a funcionalidades potenciadas por inteligencia artificial para mejorar el contenido del CV.",
@@ -2647,13 +2647,13 @@
     "related_subtitle": "Otros diseños que podrían gustarte",
     "faq_title": "Preguntas frecuentes",
     "faq_q1": "¿Es gratuita esta plantilla?",
-    "faq_a1": "Puedes previsualizar cada plantilla gratis. Para descargar, personalizar y exportar a PDF o Word necesitas una suscripción ReadyCV Pro ($15/mes).",
+    "faq_a1": "Puedes previsualizar cada plantilla gratis. Para descargar, personalizar y exportar a PDF necesitas una suscripción ReadyCV Pro ($15/mes).",
     "faq_q2": "¿Esta plantilla pasa los sistemas ATS?",
     "faq_a2": "Sí. Cada plantilla de ReadyCV está construida con HTML semántico que los parsers ATS pueden leer. Las plantillas con ATS Score 90+ han sido probadas contra Workday, Greenhouse, Lever y Taleo.",
     "faq_q3": "¿Puedo editar colores, fuentes y diseño?",
     "faq_a3": "Sí. En el editor de ReadyCV puedes cambiar el esquema de color, cambiar fuentes, reordenar secciones, ocultar bloques y personalizar espaciado — todo en tiempo real.",
     "faq_q4": "¿A qué formatos puedo exportar?",
-    "faq_a4": "PDF (listo para imprimir) y Word (.docx). Ambos formatos preservan el diseño y están optimizados para envío a ATS.",
+    "faq_a4": "PDF (listo para imprimir). Preserva el diseño y está optimizado para envío a ATS.",
     "faq_q5": "¿Puedo cambiar de plantilla después sin perder mis datos?",
     "faq_a5": "Sí. Tu contenido se guarda separado de la plantilla. Cambia de diseño cuando quieras — tu experiencia, habilidades y educación se mantienen intactas.",
     "final_cta_title": "Crea tu CV con esta plantilla",
@@ -3101,7 +3101,7 @@
     },
     "download": {
       "title": "Suscríbete para descargar tu CV",
-      "body": "Las descargas en PDF y Word forman parte del plan PRO. Desbloquea exportaciones ilimitadas y sin marca de agua.",
+      "body": "Las descargas en PDF forman parte del plan PRO. Desbloquea exportaciones ilimitadas y sin marca de agua.",
       "cta": "Hazte PRO y descarga"
     },
     "aiQuota": {
@@ -3128,7 +3128,7 @@
     },
     "watermarkRemove": {
       "title": "Quita la marca de agua",
-      "body": "Tu vista previa gratuita incluye marca de agua. PRO la elimina y desbloquea descargas limpias en PDF/Word.",
+      "body": "Tu vista previa gratuita incluye marca de agua. PRO la elimina y desbloquea descargas limpias en PDF.",
       "cta": "Quitar marca con PRO"
     }
   },

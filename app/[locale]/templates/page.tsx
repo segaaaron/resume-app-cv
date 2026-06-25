@@ -297,7 +297,7 @@ export default async function TemplatesPage({
               {[
                 isEs ? `${TEMPLATES.length}+ plantillas` : `${TEMPLATES.length}+ templates`,
                 "ATS-ready",
-                isEs ? "Export PDF & Word" : "PDF & Word export",
+                isEs ? "Exporta a PDF" : "PDF export",
               ].map((s) => (
                 <span key={s} className="inline-flex items-center gap-1.5 text-xs font-medium text-cyan-50/90 bg-white/5 ring-1 ring-white/10 px-3 py-1.5 rounded-full">
                   <Check className="h-3 w-3 text-[#00D4FF]" /> {s}
@@ -367,8 +367,8 @@ export default async function TemplatesPage({
                   </p>
                   <ul className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
                     {(isEs
-                      ? ["Tipografías premium & layouts únicos", "Optimizadas para ATS", "Descarga ilimitada PDF & Word"]
-                      : ["Premium type & unique layouts", "ATS-optimized", "Unlimited PDF & Word download"]
+                      ? ["Tipografías premium & layouts únicos", "Optimizadas para ATS", "Descarga PDF ilimitada"]
+                      : ["Premium type & unique layouts", "ATS-optimized", "Unlimited PDF download"]
                     ).map((b) => (
                       <li key={b} className="inline-flex items-center gap-1.5 text-sm text-cyan-50/90">
                         <Check className="h-3.5 w-3.5 text-[#00D4FF]" /> {b}

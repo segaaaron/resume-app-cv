@@ -4,6 +4,10 @@ RUN apk add --no-cache libc6-compat openssl
 WORKDIR /app
 
 COPY package.json package-lock.json* ./
+# Prisma schema + config are needed because the `postinstall` script runs
+# `prisma generate` during `npm ci`.
+COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
 # Skip Puppeteer's bundled Chrome — we use system Chromium on Alpine instead
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN npm ci
