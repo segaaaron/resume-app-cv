@@ -8,7 +8,8 @@
  * URLs: /en/templates/design/aurora, /es/templates/design/cobalt, …
  *
  * Strategy:
- * - generateStaticParams emits 129 templates × 2 locales = 258 static pages.
+ * - generateStaticParams emits one page per template (from templatesSEO) × 2 locales.
+ * - Unknown / removed template slugs resolve to notFound() → 404 (de-indexed).
  * - generateMetadata produces locale-aware title, description, OG, canonical,
  *   hreflang and twitter card.
  * - Page composes sub-components (hero, features, best-for, description,
