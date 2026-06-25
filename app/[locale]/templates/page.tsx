@@ -273,7 +273,7 @@ export default async function TemplatesPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdItemList) }}
       />
       <Navbar />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* ───────────────────────── HERO ───────────────────────── */}
         <section
           className="relative overflow-hidden"

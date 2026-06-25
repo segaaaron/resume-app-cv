@@ -38,7 +38,7 @@ export default async function DmcaPage({
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1 py-16 px-4">
+      <main id="main-content" className="flex-1 py-16 px-4">
         <div className="max-w-3xl mx-auto prose prose-neutral">
           <h1>{t("title")}</h1>
           <p className="text-muted-foreground text-sm">{t("last_updated")}</p>

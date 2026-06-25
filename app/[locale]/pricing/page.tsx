@@ -171,7 +171,7 @@ export default async function PricingPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdSoftwareApp) }}
       />
       <Navbar />
-      <main className="flex-1 py-12 sm:py-16">
+      <main id="main-content" className="flex-1 py-12 sm:py-16">
         <PricingClientSection
           features={features}
           userIsPro={userIsPro}

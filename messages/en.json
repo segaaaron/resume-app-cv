@@ -152,6 +152,10 @@
     "register": {
       "title": "Create Account",
       "description": "Sign up on READY CV and start creating your professional resume today."
+    },
+    "accessibility": {
+      "title": "Accessibility Statement",
+      "description": "ReadyCVV's commitment to digital accessibility and how to report a barrier."
     }
   },
   "nav": {
@@ -163,7 +167,8 @@
     "blog": "Blog",
     "login": "Sign in",
     "register": "Create CV",
-    "dashboard": "My Dashboard"
+    "dashboard": "My Dashboard",
+    "skip_to_content": "Skip to main content"
   },
   "hero": {
     "rating": "Trusted by thousands of professionals",
@@ -306,7 +311,8 @@
     "blog": "Blog",
     "legal": "Legal",
     "cookies": "Cookies",
-    "copyright": "© {year} ReadyCVV. All rights reserved."
+    "copyright": "© {year} ReadyCVV. All rights reserved.",
+    "accessibility": "Accessibility"
   },
   "pricing": {
     "title": "One price, everything included",
@@ -341,7 +347,8 @@
     "toast_connection_error": "Connection error",
     "toast_payment_error": "Error starting the payment",
     "breadcrumb_pricing": "Pricing",
-    "checkout_consent": "I request immediate access to the service and acknowledge that, by doing so, I waive my 14-day right of withdrawal (EU Directive 2011/83/EU). The subscription renews automatically at the end of each billing period. I can cancel at any time."
+    "checkout_consent": "I request immediate access to the service and acknowledge that, by doing so, I waive my 14-day right of withdrawal (EU Directive 2011/83/EU). The subscription renews automatically at the end of each billing period. I can cancel at any time.",
+    "checkout_consent_onetime": "I request immediate access to the service and acknowledge that, by doing so, I waive my 14-day right of withdrawal (EU Directive 2011/83/EU). This is a one-time purchase for the stated access period and does not renew automatically."
   },
   "templates_page": {
     "badge": "164 templates",
@@ -791,6 +798,7 @@
     "s8_body1_link_label": "Privacy Policy",
     "s8_body1_post": ". When AI features are used, the relevant CV text is sent to third-party AI provider servers. ReadyCVV does not transmit additional identity data beyond the text required to generate the requested suggestion.",
     "s8_body2": "When the User enables the public resume link, the resume content becomes publicly accessible to anyone with that link. The User is responsible for deciding what personal information to include in a public resume. <b>The public link can be disabled at any time from the editor.</b>",
+    "s8_body3": "<b>Sensitive data.</b> The User is solely responsible for the information they choose to enter, upload, or publish through the Platform, including any sensitive or special-category data (such as data revealing health, religious or political beliefs, trade-union membership, racial or ethnic origin, or sexual orientation). By submitting such data, the User gives explicit consent to its processing for the sole purpose of providing the Service and acknowledges that MS Saravia Tech Stack LLC bears no liability for sensitive data the User voluntarily includes. ReadyCVV recommends not including sensitive data unless strictly necessary for the User's professional objective.",
     "s9_title": "Acceptable Use Policy",
     "s9_intro": "The User agrees not to use ReadyCVV to:",
     "s9_i1": "Create documents containing false, fraudulent or misleading information to deceive employers or third parties.",
@@ -832,7 +840,8 @@
     "s17_body2": "MS Saravia Tech Stack LLC is a growth-stage company operating primarily under the laws of New Mexico, United States. These Terms and the Privacy Policy were drafted with the assistance of artificial intelligence tools and represent the Company's reasonable best effort to address its known legal obligations. MS Saravia Tech Stack LLC has no obligation to proactively know, anticipate or comply with the specific legislation of every international jurisdiction in which a User may reside. Accordingly, the Company accepts no liability arising from lack of awareness of additional local regulations.",
     "s18_title": "Contact",
     "s18_website_label": "Website:",
-    "s18_email_label": "Email:"
+    "s18_email_label": "Email:",
+    "s4_refund_consumed": "<b>Service consumed.</b> Because ReadyCVV is digital content supplied immediately, once the User has used any AI feature or downloaded/exported any document, the service is deemed fully performed and consumed. From that moment no refund will be issued and the EU right of withdrawal no longer applies, in accordance with Article 16(m) of Directive 2011/83/EU."
   },
   "locale_switcher": {
     "label": "Language"
@@ -3144,5 +3153,22 @@
     "errors": {
       "unexpected": "Unexpected error. Please try again."
     }
+  },
+  "accessibility_page": {
+    "badge": "Accessibility",
+    "title_h1": "Accessibility Statement",
+    "last_updated": "Last updated: June 2026",
+    "intro": "ReadyCVV (operated by MS Saravia Tech Stack LLC) is committed to making its platform usable by as many people as possible. We continually work to improve accessibility and aim to align with the Web Content Accessibility Guidelines (WCAG) 2.1, Level AA. Accessibility is an ongoing effort; we do not claim full conformance at all times.",
+    "s1_title": "Measures we take",
+    "s1_body": "We build with semantic HTML, descriptive alternative text for meaningful images, language attributes, keyboard-operable controls, and color choices intended to provide sufficient contrast. Accessibility is considered as part of our ongoing development process.",
+    "s2_title": "Known limitations",
+    "s2_body": "Despite our efforts, some parts of the platform may not yet be fully accessible. Third-party components, user-generated documents and certain interactive features may present barriers. We prioritize fixes by impact. Listing limitations reflects our good-faith, continuing commitment and is not a guarantee of full conformance.",
+    "s3_title": "Feedback and how to report a barrier",
+    "s3_body": "If you encounter an accessibility barrier on ReadyCVV, we want to hear from you. Please include the page address, a description of the issue, and the assistive technology you use. We aim to acknowledge reports within a reasonable timeframe and to remediate confirmed issues as promptly as practicable.",
+    "s4_title": "Standards and scope",
+    "s4_body": "This statement applies to the ReadyCVV website; our target standard is WCAG 2.1 Level AA. Nothing in this statement waives or limits any rights you may have under applicable law, nor does it constitute a representation or warranty of full conformance.",
+    "contact_title": "Report an accessibility issue",
+    "contact_pre": "Email us at",
+    "contact_post": " and we will respond as soon as reasonably possible."
   }
 }

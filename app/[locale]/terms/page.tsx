@@ -51,7 +51,7 @@ export default async function TermsPage({
   return (
     <div className="flex flex-col min-h-screen bg-background">
       <Navbar />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Hero header */}
         <div className="border-b bg-muted/30">
           <div className="max-w-3xl mx-auto px-4 py-12">
@@ -168,6 +168,7 @@ export default async function TermsPage({
                       <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a>{" "}
                       {t("s4_refund_post")}
                     </p>
+                    <p>{t.rich("s4_refund_consumed", { b })}</p>
                     <p><strong className="text-foreground">{t("s4_price_label")}</strong> {t("s4_price")}</p>
                   </div>
                 </div>
@@ -231,6 +232,7 @@ export default async function TermsPage({
                   {t("s8_body1_post")}
                 </p>
                 <p className="text-muted-foreground leading-relaxed">{t.rich("s8_body2", { b })}</p>
+                <p className="text-muted-foreground leading-relaxed">{t.rich("s8_body3", { b })}</p>
               </section>
 
               {/* Section 9 */}

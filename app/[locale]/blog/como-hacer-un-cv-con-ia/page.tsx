@@ -114,7 +114,7 @@ export default async function AIResumeArticlePage({
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1 py-12 sm:py-20 px-4">
+      <main id="main-content" className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-2xl mx-auto">
           <Link
             href={`/${locale}/blog`}

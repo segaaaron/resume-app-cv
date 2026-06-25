@@ -2,9 +2,9 @@
 
 import { TimelineContent } from "@/components/ui/timeline-animation"
 import { VerticalCutReveal } from "@/components/ui/vertical-cut-reveal"
-import { BadgeCheck } from "lucide-react"
+import { BadgeCheck, Check, FileText, Zap, Crown } from "lucide-react"
 import { motion } from "framer-motion"
-import { useRef } from "react"
+import { useRef, useState } from "react"
 import PricingButtons from "@/components/marketing/PricingButtons"
 import ManageBillingButton from "@/components/marketing/ManageBillingButton"
 
@@ -30,8 +30,6 @@ interface Props {
   isEs: boolean
 }
 
-const featureIcons = ["◆","◆","◆","◆","◆","◆","◆","◆","◆","◆","◆"]
-
 export default function PricingClientSection({
   features,
   userIsPro,
@@ -54,421 +52,275 @@ export default function PricingClientSection({
   isEs,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
+  const [billing, setBilling] = useState<"annual" | "monthly">("annual")
 
-  // One-time entry plans (shown to non-PRO visitors). Copy inline (bilingual)
-  // to avoid an i18n migration; these are secondary to the PRO hero cards.
-  const oneTime = [
-    {
-      plan: "basic" as const,
-      name: "Basic",
-      price: "2.99",
-      unit: isEs ? "pago único" : "one-time",
-      validity: isEs ? "Acceso 1 mes" : "1-month access",
-      accent: "#1a2e4a",
-      perks: isEs
-        ? ["Descarga tu CV (PDF)", "Descargas ilimitadas", "Sin asistente de IA"]
-        : ["Download your CV (PDF)", "Unlimited downloads", "No AI assistant"],
-    },
-    {
-      plan: "sprint" as const,
-      name: "Job Sprint",
-      price: "7.99",
-      unit: isEs ? "pago único" : "one-time",
-      validity: isEs ? "Acceso 7 días" : "7-day access",
-      accent: "#00D4FF",
-      perks: isEs
-        ? ["IA de contenido", "Plantillas PRO", "Sin ATS ni Revisión IA"]
-        : ["Content AI", "PRO templates", "No ATS / AI Review"],
-    },
-  ]
+  const t = (es: string, en: string) => (isEs ? es : en)
 
   const revealVariants = {
     visible: (i: number) => ({
       y: 0, opacity: 1, filter: "blur(0px)",
-      transition: { delay: i * 0.18, duration: 0.45 },
+      transition: { delay: i * 0.12, duration: 0.45 },
     }),
     hidden: { filter: "blur(10px)", y: -20, opacity: 0 },
   }
 
-  // Split features into 2 columns for annual card
-  const half = Math.ceil(features.length / 2)
-  const col1 = features.slice(0, half)
-  const col2 = features.slice(half)
+  // One-time entry tiers
+  const basicPerks = isEs
+    ? ["Descarga tu CV en PDF", "Descargas ilimitadas", "Sin asistente de IA"]
+    : ["Download your CV as PDF", "Unlimited downloads", "No AI assistant"]
+  const sprintPerks = isEs
+    ? ["IA de contenido para redactar", "Acceso a plantillas PRO", "Sin ATS ni Revisión IA"]
+    : ["Content AI to write faster", "Access to PRO templates", "No ATS / AI Review"]
+
+  // CheckRow — shared feature row
+  const CheckRow = ({ text, accent }: { text: string; accent: string }) => (
+    <li className="flex items-start gap-2.5">
+      <span
+        className="mt-0.5 flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full"
+        style={{ background: `${accent}1A` }}
+      >
+        <Check className="h-3 w-3" strokeWidth={3} style={{ color: accent }} />
+      </span>
+      <span className="text-[13px] leading-snug text-slate-600">{text}</span>
+    </li>
+  )
+
+  const proPrice = billing === "annual" ? "144" : "15"
+  const proSuffix = billing === "annual" ? t("/año", "/yr") : t("/mes", "/mo")
+  const proPlan = billing === "annual" ? "annual" : "monthly"
 
   return (
-    <>
-      <div className="px-4 pt-8 pb-20 max-w-5xl mx-auto relative" ref={sectionRef}>
+    <div className="px-4 pt-8 pb-24 max-w-6xl mx-auto relative" ref={sectionRef}>
 
-        {/* Header */}
-        <article className="text-left mb-12 max-w-2xl relative z-10">
-          {/* Accent line */}
-          <div style={{
-            display: "flex", alignItems: "center", gap: 10, marginBottom: 16,
-          }}>
-            <div style={{ width: 28, height: 2, background: "#00D4FF", borderRadius: 2 }} />
-            <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.14em", textTransform: "uppercase", color: "#00D4FF" }}>
-              {accentLabel}
-            </span>
-          </div>
-
-          <h1 className="text-4xl sm:text-5xl font-semibold" style={{ color: "#1a2e4a", letterSpacing: "-0.02em" }}>
-            <VerticalCutReveal
-              splitBy="words"
-              staggerDuration={0.12}
-              staggerFrom="first"
-              reverse={true}
-              containerClassName="justify-start flex-wrap"
-              transition={{ type: "spring", stiffness: 250, damping: 40, delay: 0 }}
-            >
-              {titleText}
-            </VerticalCutReveal>
-          </h1>
-
-          <TimelineContent
-            animationNum={0}
-            timelineRef={sectionRef}
-            customVariants={revealVariants}
-            className="text-base mt-4 max-w-lg text-[#6B7A8C]"
+      {/* Header */}
+      <article className="text-center mb-12 max-w-2xl mx-auto relative z-10">
+        <div className="flex items-center justify-center gap-2.5 mb-4">
+          <span className="h-px w-7 rounded bg-[#00D4FF]" />
+          <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#00D4FF]">{accentLabel}</span>
+          <span className="h-px w-7 rounded bg-[#00D4FF]" />
+        </div>
+        <h1 className="text-4xl sm:text-5xl font-semibold tracking-[-0.02em] text-[#1a2e4a]">
+          <VerticalCutReveal
+            splitBy="words"
+            staggerDuration={0.1}
+            staggerFrom="first"
+            reverse
+            containerClassName="justify-center flex-wrap"
+            transition={{ type: "spring", stiffness: 250, damping: 40, delay: 0 }}
           >
-            {subtitleText}
-          </TimelineContent>
-        </article>
+            {titleText}
+          </VerticalCutReveal>
+        </h1>
+        <TimelineContent
+          animationNum={0}
+          timelineRef={sectionRef}
+          customVariants={revealVariants}
+          className="text-base mt-4 mx-auto max-w-lg text-[#6B7A8C]"
+        >
+          {subtitleText}
+        </TimelineContent>
+      </article>
 
-        {/* Pro member banner */}
-        {userIsPro && (
-          <TimelineContent animationNum={1} timelineRef={sectionRef} customVariants={revealVariants} className="mb-8 relative z-10">
-            <div style={{
-              background: "linear-gradient(135deg, rgba(0,212,255,0.06), rgba(26,46,74,0.04))",
-              border: "1px solid rgba(0,212,255,0.2)",
-              borderRadius: 16, padding: "18px 24px",
-              display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 16,
-            }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <BadgeCheck style={{ width: 26, height: 26, color: "#00D4FF", flexShrink: 0 }} />
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-                    <p style={{ fontWeight: 700, color: "#1a2e4a", fontSize: 15 }}>{proMemberTitle}</p>
-                    {planInterval && (
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase",
-                        padding: "2px 8px", borderRadius: 999,
-                        background: "rgba(0,212,255,0.1)", color: "#00D4FF", border: "1px solid rgba(0,212,255,0.2)",
-                      }}>
-                        {planInterval === "annual" ? planAnnual : planMonthly}
-                      </span>
-                    )}
-                  </div>
-                  <p style={{ fontSize: 13, color: "#6B7A8C", marginTop: 2 }}>
-                    {subscriptionEndsAt ? `${proMemberRenews} ${subscriptionEndsAt}` : proMemberActive}
-                  </p>
+      {/* Pro member banner */}
+      {userIsPro && (
+        <TimelineContent animationNum={1} timelineRef={sectionRef} customVariants={revealVariants} className="mb-8 relative z-10">
+          <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-[#00D4FF]/25 bg-gradient-to-br from-[#00D4FF]/[0.07] to-[#1a2e4a]/[0.04] px-6 py-4">
+            <div className="flex items-center gap-3">
+              <BadgeCheck className="h-6 w-6 shrink-0 text-[#00D4FF]" />
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-[15px] font-bold text-[#1a2e4a]">{proMemberTitle}</p>
+                  {planInterval && (
+                    <span className="rounded-full border border-[#00D4FF]/20 bg-[#00D4FF]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#00D4FF]">
+                      {planInterval === "annual" ? planAnnual : planMonthly}
+                    </span>
+                  )}
                 </div>
+                <p className="mt-0.5 text-[13px] text-[#6B7A8C]">
+                  {subscriptionEndsAt ? `${proMemberRenews} ${subscriptionEndsAt}` : proMemberActive}
+                </p>
               </div>
-              <ManageBillingButton />
             </div>
-          </TimelineContent>
-        )}
+            <ManageBillingButton />
+          </div>
+        </TimelineContent>
+      )}
 
-        {/* ── Cards grid ── */}
-        <div className="grid sm:grid-cols-2 gap-6 relative z-10" style={{ alignItems: "start" }}>
+      {/* ── Unified 3-tier grid ── */}
+      <div className="grid gap-6 lg:grid-cols-3 items-stretch relative z-10">
 
-          {/* ══════════ MONTHLY CARD ══════════ */}
-          <TimelineContent animationNum={2} timelineRef={sectionRef} customVariants={revealVariants}>
-            <motion.div
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 280, damping: 22 }}
-              style={{
-                background: "white",
-                border: "1.5px solid #E2E8F4",
-                borderRadius: 22,
-                overflow: "hidden",
-                boxShadow: "0 2px 20px rgba(26,46,74,0.06)",
-                transition: "border-color 0.22s, box-shadow 0.22s",
-              }}
-              onHoverStart={(e) => {
-                const el = (e.target as HTMLElement).closest(".monthly-card-inner") as HTMLElement
-                if (el) { el.style.borderColor = "#CBD5E1"; el.style.boxShadow = "0 8px 36px rgba(26,46,74,0.10)" }
-              }}
-            >
-              <div className="monthly-card-inner" style={{ padding: "28px 28px 24px" }}>
-                {/* Plan label */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                  <span style={{
-                    fontSize: 10, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase",
-                    color: "#A0AABE",
-                  }}>
-                    {monthlyLabel}
+        {/* ───────── BASIC ───────── */}
+        <TimelineContent animationNum={2} timelineRef={sectionRef} customVariants={revealVariants} className="h-full">
+          <motion.div
+            whileHover={{ y: -6 }}
+            transition={{ type: "spring", stiffness: 280, damping: 22 }}
+            className="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_2px_18px_rgba(26,46,74,0.05)] transition-colors hover:border-slate-300"
+          >
+            <div className="mb-5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-[#1a2e4a]">
+                <FileText className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[15px] font-bold text-[#1a2e4a]">Basic</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("Acceso 1 mes", "1-month access")}</p>
+              </div>
+            </div>
+            <div className="mb-1 flex items-baseline gap-1">
+              <span className="self-start mt-1 text-sm font-semibold text-slate-400">$</span>
+              <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">2.99</span>
+              <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
+            </div>
+            <p className="mb-5 text-[13px] text-slate-400">{t("Un solo pago · sin renovación", "One payment · no renewal")}</p>
+            <div className="mb-5 h-px bg-slate-100" />
+            <ul className="mb-7 flex flex-col gap-3">
+              {basicPerks.map((p) => <CheckRow key={p} text={p} accent="#1a2e4a" />)}
+            </ul>
+            <div className="mt-auto">
+              <PricingButtons
+                plan="basic"
+                isEU={isEU}
+                buttonClassName="!bg-white !text-[#1a2e4a] !font-semibold !rounded-[14px] !border !border-[#1a2e4a]/20 hover:!bg-[#1a2e4a]/[0.03] !py-3.5 w-full"
+              />
+              <p className="mt-2.5 text-center text-[11px] text-slate-300">{t("Pago único, sin renovación", "One-time, no renewal")}</p>
+            </div>
+          </motion.div>
+        </TimelineContent>
+
+        {/* ───────── JOB SPRINT ───────── */}
+        <TimelineContent animationNum={3} timelineRef={sectionRef} customVariants={revealVariants} className="h-full">
+          <motion.div
+            whileHover={{ y: -6 }}
+            transition={{ type: "spring", stiffness: 280, damping: 22 }}
+            className="group flex h-full flex-col rounded-3xl border border-[#00D4FF]/25 bg-white p-7 shadow-[0_2px_18px_rgba(0,212,255,0.08)] transition-colors hover:border-[#00D4FF]/45"
+          >
+            <div className="mb-5 flex items-center gap-3">
+              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00D4FF]/10 text-[#00B4DB]">
+                <Zap className="h-5 w-5" />
+              </span>
+              <div>
+                <p className="text-[15px] font-bold text-[#1a2e4a]">Job Sprint</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#00B4DB]">{t("Acceso 7 días", "7-day access")}</p>
+              </div>
+            </div>
+            <div className="mb-1 flex items-baseline gap-1">
+              <span className="self-start mt-1 text-sm font-semibold text-slate-400">$</span>
+              <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">7.99</span>
+              <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
+            </div>
+            <p className="mb-5 text-[13px] text-slate-400">{t("Sprint de 7 días para postular", "7-day sprint to apply")}</p>
+            <div className="mb-5 h-px bg-slate-100" />
+            <ul className="mb-7 flex flex-col gap-3">
+              {sprintPerks.map((p) => <CheckRow key={p} text={p} accent="#00B4DB" />)}
+            </ul>
+            <div className="mt-auto">
+              <PricingButtons
+                plan="sprint"
+                isEU={isEU}
+                buttonClassName="!bg-[#00D4FF] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 hover:!brightness-105 w-full"
+              />
+              <p className="mt-2.5 text-center text-[11px] text-slate-300">{t("Pago único, sin renovación", "One-time, no renewal")}</p>
+            </div>
+          </motion.div>
+        </TimelineContent>
+
+        {/* ───────── PRO (featured) ───────── */}
+        <TimelineContent animationNum={4} timelineRef={sectionRef} customVariants={revealVariants} className="h-full">
+          <motion.div
+            whileHover={{ y: -6 }}
+            transition={{ type: "spring", stiffness: 280, damping: 22 }}
+            className="relative h-full lg:scale-[1.03]"
+          >
+            {/* glow */}
+            <div className="pointer-events-none absolute -inset-1 rounded-[28px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,212,255,0.35),transparent_70%)] blur-xl" />
+            {/* gradient ring */}
+            <div className="relative h-full rounded-[26px] bg-gradient-to-b from-[#00D4FF] via-[#0099CC] to-[#1a2e4a] p-[1.5px] shadow-[0_12px_40px_rgba(0,150,200,0.25)]">
+              <div className="flex h-full flex-col rounded-[24px] bg-white p-7">
+                {/* badge */}
+                <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#00D4FF] to-[#0066FF] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white shadow-lg">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-white" />
+                  {t("Más popular", "Most popular")}
+                </span>
+
+                <div className="mb-5 mt-1 flex items-center gap-3">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-[#1a2e4a] to-[#0a1e35] text-[#00D4FF]">
+                    <Crown className="h-5 w-5" />
                   </span>
-                  <div style={{
-                    width: 8, height: 8, borderRadius: "50%",
-                    background: "#CBD5E1",
-                  }} />
-                </div>
-
-                {/* Price */}
-                <div style={{ marginBottom: 24 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 4 }}>
-                    <span style={{ fontSize: 13, fontWeight: 600, color: "#94A3B8", marginBottom: 8, display: "block", alignSelf: "flex-start", marginTop: 8 }}>$</span>
-                    <span style={{ fontSize: 52, fontWeight: 800, color: "#1a2e4a", letterSpacing: "-0.04em", lineHeight: 1 }}>15</span>
-                    <span style={{ fontSize: 14, color: "#A0AABE", fontWeight: 500 }}>/mo</span>
+                  <div>
+                    <p className="text-[15px] font-bold text-[#1a2e4a]">Pro</p>
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("Todo incluido", "Everything included")}</p>
                   </div>
                 </div>
 
-                {/* Divider */}
-                <div style={{ height: 1, background: "#F1F5F9", marginBottom: 20 }} />
+                {/* billing toggle */}
+                <div className="mb-5 inline-flex w-full rounded-xl bg-slate-100 p-1">
+                  {(["annual", "monthly"] as const).map((opt) => {
+                    const active = billing === opt
+                    return (
+                      <button
+                        key={opt}
+                        type="button"
+                        onClick={() => setBilling(opt)}
+                        className="relative flex-1 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors"
+                        aria-pressed={active}
+                      >
+                        {active && (
+                          <motion.span
+                            layoutId="billing-pill"
+                            className="absolute inset-0 rounded-lg bg-white shadow-sm"
+                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                          />
+                        )}
+                        <span className={`relative z-10 ${active ? "text-[#1a2e4a]" : "text-slate-400"}`}>
+                          {opt === "annual" ? annualLabel : monthlyLabel}
+                          {opt === "annual" && (
+                            <span className="ml-1 rounded bg-[#00D4FF]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#00B4DB]">
+                              {annualBadge}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
 
-                {/* Features single column */}
-                <ul style={{ display: "flex", flexDirection: "column", gap: 9, marginBottom: 28 }}>
-                  {features.map((f, i) => (
-                    <motion.li
-                      key={f}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.4 + i * 0.04, duration: 0.3 }}
-                      style={{ display: "flex", alignItems: "flex-start", gap: 10 }}
-                    >
-                      <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 3 }}>
-                        <circle cx="7" cy="7" r="7" fill="#F1F5F9" />
-                        <path d="M4 7l2 2 4-4" stroke="#1a2e4a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                      </svg>
-                      <span style={{ fontSize: 13, color: "#475569", lineHeight: 1.55 }}>{f}</span>
-                    </motion.li>
-                  ))}
+                {/* price */}
+                <div className="mb-1 flex items-baseline gap-1">
+                  <span className="self-start mt-1 text-sm font-semibold text-[#00B4DB]">$</span>
+                  <motion.span
+                    key={proPrice}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]"
+                  >
+                    {proPrice}
+                  </motion.span>
+                  <span className="text-sm font-medium text-slate-400">{proSuffix}</span>
+                </div>
+                <p className="mb-5 h-[18px] text-[13px] font-semibold text-[#00B4DB]">
+                  {billing === "annual" ? annualEquiv : " "}
+                </p>
+
+                <div className="mb-5 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
+
+                <ul className="mb-7 grid grid-cols-1 gap-2.5">
+                  {features.map((f) => <CheckRow key={f} text={f} accent="#00B4DB" />)}
                 </ul>
 
-                {/* CTA */}
-                <PricingButtons
-                  plan="monthly"
-                  isPro={userIsPro}
-                  isEU={isEU}
-                  buttonClassName="!bg-[#1a2e4a] !text-white !font-semibold !rounded-[14px] !border-0 !py-3.5"
-                />
-                <p style={{ fontSize: 11, color: "#CBD5E1", textAlign: "center", marginTop: 10 }}>{cancelAnytime}</p>
-              </div>
-            </motion.div>
-          </TimelineContent>
-
-          {/* ══════════ ANNUAL CARD ══════════ */}
-          <TimelineContent animationNum={3} timelineRef={sectionRef} customVariants={revealVariants}>
-            <motion.div
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 280, damping: 22 }}
-              style={{ position: "relative" }}
-            >
-              {/* Glow halo behind card */}
-              <div style={{
-                position: "absolute",
-                inset: -1,
-                borderRadius: 26,
-                background: "radial-gradient(ellipse at 50% 0%, rgba(0,212,255,0.3) 0%, rgba(0,102,255,0.15) 40%, transparent 70%)",
-                filter: "blur(16px)",
-                zIndex: -1,
-              }} />
-
-              {/* Gradient animated border wrapper */}
-              <div className="annual-border-wrap">
-                <div style={{
-                  background: "linear-gradient(160deg, #071525 0%, #0a1e35 50%, #071525 100%)",
-                  borderRadius: 22,
-                  padding: "28px 28px 24px",
-                  position: "relative",
-                  overflow: "hidden",
-                }}>
-
-                  {/* Interior orbs */}
-                  <div style={{
-                    position: "absolute", top: -60, right: -40, width: 180, height: 180,
-                    borderRadius: "50%",
-                    background: "radial-gradient(circle, rgba(0,212,255,0.10) 0%, transparent 70%)",
-                    animation: "floatOrb 6s ease-in-out infinite",
-                    pointerEvents: "none",
-                  }} />
-                  <div style={{
-                    position: "absolute", bottom: 60, left: -50, width: 140, height: 140,
-                    borderRadius: "50%",
-                    background: "radial-gradient(circle, rgba(0,102,255,0.08) 0%, transparent 70%)",
-                    animation: "floatOrb 8s ease-in-out infinite reverse",
-                    pointerEvents: "none",
-                  }} />
-
-                  {/* Subtle tech grid */}
-                  <div style={{
-                    position: "absolute", inset: 0, pointerEvents: "none", opacity: 0.4,
-                    backgroundImage: "linear-gradient(rgba(0,212,255,0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(0,212,255,0.05) 1px, transparent 1px)",
-                    backgroundSize: "32px 32px",
-                  }} />
-
-                  {/* Plan label + badge */}
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, position: "relative" }}>
-                    <span style={{
-                      fontSize: 10, fontWeight: 800, letterSpacing: "0.12em", textTransform: "uppercase",
-                      color: "rgba(0,212,255,0.6)",
-                    }}>
-                      {annualLabel}
-                    </span>
-                    <span style={{
-                      display: "inline-flex", alignItems: "center", gap: 5,
-                      background: "rgba(0,212,255,0.12)",
-                      border: "1px solid rgba(0,212,255,0.3)",
-                      color: "#00D4FF",
-                      fontSize: 10, fontWeight: 800, letterSpacing: "0.08em", textTransform: "uppercase",
-                      padding: "3px 10px", borderRadius: 999,
-                    }}>
-                      <span style={{
-                        width: 5, height: 5, borderRadius: "50%",
-                        background: "#00D4FF",
-                        display: "inline-block",
-                        animation: "pulse-dot 1.8s ease-in-out infinite",
-                      }} />
-                      {annualBadge}
-                    </span>
-                  </div>
-
-                  {/* Price — gradient text */}
-                  <div style={{ marginBottom: 24, position: "relative" }}>
-                    <div style={{ display: "flex", alignItems: "baseline", gap: 3, marginBottom: 6 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(0,212,255,0.5)", alignSelf: "flex-start", marginTop: 8 }}>$</span>
-                      <span style={{
-                        fontSize: 52, fontWeight: 800, letterSpacing: "-0.04em", lineHeight: 1,
-                        background: "linear-gradient(135deg, #ffffff 30%, #00D4FF 100%)",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent",
-                        backgroundClip: "text",
-                      }}>144</span>
-                      <span style={{ fontSize: 14, color: "rgba(255,255,255,0.3)", fontWeight: 500 }}>/yr</span>
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{
-                        fontSize: 12, color: "#00D4FF", fontWeight: 600,
-                      }}>
-                        {annualEquiv}
-                      </span>
-                      <div style={{ height: 1, flex: 1, background: "rgba(0,212,255,0.15)" }} />
-                    </div>
-                  </div>
-
-                  {/* Divider */}
-                  <div style={{
-                    height: 1,
-                    background: "linear-gradient(90deg, transparent, rgba(0,212,255,0.25), transparent)",
-                    marginBottom: 20, position: "relative",
-                  }} />
-
-                  {/* Features — 2 column grid */}
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px", marginBottom: 28, position: "relative" }}>
-                    {col1.map((f, i) => (
-                      <motion.div
-                        key={f}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.5 + i * 0.05 }}
-                        style={{ display: "flex", alignItems: "flex-start", gap: 7 }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0, marginTop: 3 }}>
-                          <circle cx="6.5" cy="6.5" r="6.5" fill="rgba(0,212,255,0.12)" />
-                          <path d="M3.5 6.5l2 2 4-4" stroke="#00D4FF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>{f}</span>
-                      </motion.div>
-                    ))}
-                    {col2.map((f, i) => (
-                      <motion.div
-                        key={f}
-                        initial={{ opacity: 0, y: 6 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.55 + i * 0.05 }}
-                        style={{ display: "flex", alignItems: "flex-start", gap: 7 }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style={{ flexShrink: 0, marginTop: 3 }}>
-                          <circle cx="6.5" cy="6.5" r="6.5" fill="rgba(0,212,255,0.12)" />
-                          <path d="M3.5 6.5l2 2 4-4" stroke="#00D4FF" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <span style={{ fontSize: 12, color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>{f}</span>
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* CTA — shimmer button */}
+                <div className="mt-auto">
                   <PricingButtons
-                    plan="annual"
+                    plan={proPlan}
                     isPro={userIsPro}
                     isEU={isEU}
-                    theme="dark"
-                    buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#071525] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_0_24px_rgba(0,212,255,0.35),_0_4px_12px_rgba(0,0,0,0.3)]"
+                    buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_8px_24px_rgba(0,212,255,0.35)] hover:!brightness-105 w-full"
                   />
-                  <p style={{ fontSize: 11, color: "rgba(255,255,255,0.25)", textAlign: "center", marginTop: 10, position: "relative" }}>
-                    {cancelAnytime}
-                  </p>
+                  <p className="mt-2.5 text-center text-[11px] text-slate-300">{cancelAnytime}</p>
                 </div>
               </div>
-            </motion.div>
-          </TimelineContent>
-        </div>
-
-        {/* ══════════ ONE-TIME PLANS (Basic / Sprint) ══════════ */}
-        {!userIsPro && (
-          <div className="mt-14 relative z-10">
-            <div className="flex items-center gap-3 mb-6">
-              <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#A0AABE] whitespace-nowrap">
-                {isEs ? "¿Sin suscripción? Pago único" : "No subscription? One-time"}
-              </span>
-              <div className="h-px flex-1 bg-[#E2E8F4]" />
             </div>
-
-            <div className="grid sm:grid-cols-2 gap-5">
-              {oneTime.map((o) => (
-                <motion.div
-                  key={o.plan}
-                  whileHover={{ y: -4 }}
-                  transition={{ type: "spring", stiffness: 280, damping: 22 }}
-                  className="bg-white rounded-[18px] border border-[#E2E8F4] p-6 sm:p-7 shadow-[0_2px_16px_rgba(26,46,74,0.05)] flex flex-col"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-[15px] font-extrabold text-[#1a2e4a]">{o.name}</span>
-                    <span
-                      className="text-[10px] font-bold uppercase tracking-[0.1em] px-2.5 py-1 rounded-full"
-                      style={{ background: `${o.accent}14`, color: o.accent }}
-                    >
-                      {o.validity}
-                    </span>
-                  </div>
-
-                  <div className="flex items-baseline gap-1.5 mb-1">
-                    <span className="text-[13px] font-semibold text-[#94A3B8] self-start mt-1.5">$</span>
-                    <span className="text-[40px] font-extrabold text-[#1a2e4a] tracking-[-0.04em] leading-none">{o.price}</span>
-                    <span className="text-[13px] text-[#A0AABE] font-medium">{o.unit}</span>
-                  </div>
-
-                  <div className="h-px bg-[#F1F5F9] my-5" />
-
-                  <ul className="flex flex-col gap-2.5 mb-6">
-                    {o.perks.map((p) => (
-                      <li key={p} className="flex items-start gap-2.5">
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none" className="shrink-0 mt-0.5">
-                          <circle cx="7" cy="7" r="7" fill={`${o.accent}1A`} />
-                          <path d="M4 7l2 2 4-4" stroke={o.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                        <span className="text-[13px] text-[#475569] leading-[1.5]">{p}</span>
-                      </li>
-                    ))}
-                  </ul>
-
-                  <div className="mt-auto">
-                    <PricingButtons
-                      plan={o.plan}
-                      isEU={isEU}
-                      buttonClassName={
-                        o.plan === "sprint"
-                          ? "!bg-[#00D4FF] !text-[#071525] !font-bold !rounded-[12px] !border-0 !py-3"
-                          : "!bg-white !text-[#1a2e4a] !font-semibold !rounded-[12px] !border !border-[#1a2e4a]/20 hover:!bg-[#1a2e4a]/[0.03] !py-3"
-                      }
-                    />
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        )}
+          </motion.div>
+        </TimelineContent>
       </div>
-    </>
+    </div>
   )
 }

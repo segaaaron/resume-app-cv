@@ -103,7 +103,7 @@ export default async function FAQPage({
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-background">
+      <main id="main-content" className="min-h-screen bg-background">
         {/* Hero */}
         <section className="max-w-3xl mx-auto px-4 pt-20 pb-12 text-center">
           <h1 className="text-4xl sm:text-5xl font-bold tracking-tight mb-4">

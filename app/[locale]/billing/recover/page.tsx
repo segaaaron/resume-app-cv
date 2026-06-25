@@ -55,7 +55,7 @@ export default async function BillingRecoverPage({
   return (
     <>
       <Navbar />
-      <main className="min-h-screen bg-gradient-to-b from-[#0f1a2e] via-[#1a2e4a] to-[#0f1a2e]">
+      <main id="main-content" className="min-h-screen bg-gradient-to-b from-[#0f1a2e] via-[#1a2e4a] to-[#0f1a2e]">
         {/* Hero */}
         <section className="relative px-4 pt-20 pb-12 md:pt-28 md:pb-16">
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#00D4FF]/60 to-transparent" />

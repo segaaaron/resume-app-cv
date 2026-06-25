@@ -578,7 +578,7 @@ export default async function ProfessionTemplatePage({
   return (
     <div className="flex flex-col min-h-screen">
       <Navbar />
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         {/* Hero */}
         <section className="py-16 sm:py-24 px-4 bg-gradient-to-b from-primary/5 to-background text-center">
           <div className="max-w-3xl mx-auto">

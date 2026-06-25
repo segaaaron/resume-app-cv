@@ -153,7 +153,7 @@ export default async function GuidePage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdHowTo) }}
       />
       <Navbar />
-      <main>
+      <main id="main-content">
         <GuideHero locale={locale} />
         <GuideSteps locale={locale} />
         {features.map((f, i) => (

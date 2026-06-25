@@ -170,7 +170,7 @@ export default async function CountrySalaryPage({
     <>
       <SalarySchemas schemas={[datasetSchema, breadcrumbSchema, faqSchema]} />
       <Navbar />
-      <main className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#f7fafc] via-white to-[#f0f6fb]">
+      <main id="main-content" className="relative min-h-screen overflow-hidden bg-gradient-to-b from-[#f7fafc] via-white to-[#f0f6fb]">
         <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 h-[600px] w-[1100px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(0,212,255,0.18),_transparent_60%)]" />
 
         {/* Breadcrumb */}

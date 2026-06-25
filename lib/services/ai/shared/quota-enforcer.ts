@@ -37,6 +37,11 @@ export async function enforceAIQuota(
         .catch((err) => { logger.error("quota-enforcer: auditLog write failed", { userId, endpoint }, err instanceof Error ? err : undefined) })
       throw new AppError("daily_cap_reached", 429, { endpoint })
     }
+    // Evidence trail: a paying plan (unlimited for this endpoint) successfully used AI.
+    // Used to defend Stripe disputes/refunds — the digital service was consumed.
+    db.auditLog
+      .create({ data: { userId, action: "AI_USED", metadata: { endpoint, plan } } })
+      .catch((err) => { logger.error("quota-enforcer: AI_USED auditLog write failed", { userId, endpoint }, err instanceof Error ? err : undefined) })
     return
   }
 

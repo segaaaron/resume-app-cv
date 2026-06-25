@@ -232,7 +232,7 @@ export default async function BlogIndexPage({
     <div className="flex flex-col min-h-screen">
       <Script id="blog-index-jsonld" type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBlogIndex) }} />
       <Navbar />
-      <main className="flex-1 py-12 sm:py-20 px-4">
+      <main id="main-content" className="flex-1 py-12 sm:py-20 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="mb-12">
             <span className="inline-block text-xs font-semibold uppercase tracking-widest text-primary bg-primary/10 px-3 py-1 rounded-full mb-4">

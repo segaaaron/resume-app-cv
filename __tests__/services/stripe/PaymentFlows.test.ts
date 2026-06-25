@@ -69,6 +69,10 @@ function makeTx(overrides?: Partial<{
     },
     auditLog: {
       create: overrides?.auditLogCreate ?? vi.fn().mockResolvedValue({}),
+      count: vi.fn().mockResolvedValue(0),
+    },
+    consentLog: {
+      findFirst: vi.fn().mockResolvedValue(null),
     },
   }
 }

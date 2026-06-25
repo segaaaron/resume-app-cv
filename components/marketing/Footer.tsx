@@ -22,6 +22,7 @@ export default function Footer() {
     { label: t("privacy"), href: `/${locale}/privacy` },
     { label: t("terms"), href: `/${locale}/terms` },
     { label: t("cookies"), href: `/${locale}/cookie-policy` },
+    { label: t("accessibility"), href: `/${locale}/accessibility` },
   ]
 
   return (

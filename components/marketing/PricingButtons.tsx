@@ -21,6 +21,9 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
   const locale = useLocale()
   const router = useRouter()
   const t = useTranslations("pricing")
+  // One-time plans (BASIC/SPRINT) do NOT auto-renew → use accurate consent wording.
+  const isOneTime = plan === "basic" || plan === "sprint"
+  const consentKey = isOneTime ? "checkout_consent_onetime" : "checkout_consent"
 
   async function handleClick() {
     if (isPro) {
@@ -54,7 +57,7 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
           plan,
           locale,
           consent:     isEU && consented ? true : undefined,
-          consentText: isEU && consented ? t("checkout_consent") : undefined,
+          consentText: isEU && consented ? t(consentKey) : undefined,
         }),
       })
 
@@ -103,7 +106,7 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
             className="mt-0.5 shrink-0 accent-current w-3.5 h-3.5"
           />
           <span className={`text-[11px] leading-[1.5] ${theme === "dark" ? "text-white/60" : "opacity-75"}`}>
-            {t("checkout_consent")}
+            {t(consentKey)}
           </span>
         </label>
       )}

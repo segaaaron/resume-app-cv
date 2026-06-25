@@ -824,3 +824,28 @@
   .lg-connector { display: block !important; }
 }
 
+
+
+/* ── Accessibility: keyboard focus-visible ring (WCAG 2.4.7) ──────────
+   Additive: only affects keyboard navigation (:focus-visible), not mouse
+   users, and does not alter the editor inputs custom focus styling. */
+a:focus-visible,
+button:focus-visible,
+[role="button"]:focus-visible,
+[tabindex]:focus-visible,
+summary:focus-visible,
+select:focus-visible {
+  outline: 2px solid #00D4FF;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ── Accessibility: respect prefers-reduced-motion (WCAG 2.3.3) ─────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -180,7 +180,7 @@ export default async function TemplateDetailPage({
 
       <Navbar />
 
-      <main className="flex-1">
+      <main id="main-content" className="flex-1">
         <TemplateDetailHero
           template={template}
           locale={locale}

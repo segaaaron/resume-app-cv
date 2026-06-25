@@ -350,7 +350,23 @@ export class StripeWebhookService {
       if (!user) return { skip: false, userId: null, subscriptionId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
       await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
-      await tx.auditLog.create({ data: { userId: user.id, action: "DISPUTE_CHARGEBACK", metadata: { disputeId: dispute.id, chargeId, amount: dispute.amount, reason: dispute.reason } } })
+      // Compile usage evidence to defend the dispute: if the user already consumed
+      // the digital service (used AI or downloaded a CV), the service was performed
+      // and the EU right of withdrawal no longer applies (Directive 2011/83/EU Art. 16(m)).
+      const [pdfDownloads, aiUses, consent] = await Promise.all([
+        tx.auditLog.count({ where: { userId: user.id, action: "EXPORT_PDF" } }),
+        tx.auditLog.count({ where: { userId: user.id, action: "AI_USED" } }),
+        tx.consentLog.findFirst({ where: { userId: user.id }, orderBy: { acceptedAt: "desc" }, select: { consentVersion: true, acceptedAt: true, ipHash: true } }),
+      ])
+      await tx.auditLog.create({ data: { userId: user.id, action: "DISPUTE_CHARGEBACK", metadata: {
+        disputeId: dispute.id, chargeId, amount: dispute.amount, reason: dispute.reason,
+        evidence: {
+          serviceConsumed: pdfDownloads > 0 || aiUses > 0,
+          pdfDownloads,
+          aiUses,
+          consent: consent ? { version: consent.consentVersion, acceptedAt: consent.acceptedAt, ipHash: consent.ipHash } : null,
+        },
+      } } })
       return { skip: false, userId: user.id, subscriptionId: user.subscriptionId }
     }, TX_OPTS)
 
