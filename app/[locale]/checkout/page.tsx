@@ -1,11 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 
-export default function CheckoutRedirectPage() {
+function CheckoutRedirectInner() {
   const t = useTranslations("checkout")
   const params = useSearchParams()
   const routeParams = useParams()
@@ -50,5 +50,13 @@ export default function CheckoutRedirectPage() {
       <p className="text-lg font-semibold">{t("loading")}</p>
       <p className="text-sm text-muted-foreground">{t("redirect_hint")}</p>
     </div>
+  )
+}
+
+export default function CheckoutRedirectPage() {
+  return (
+    <Suspense fallback={null}>
+      <CheckoutRedirectInner />
+    </Suspense>
   )
 }

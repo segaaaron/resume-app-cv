@@ -4,7 +4,7 @@ import { db } from "@/lib/db"
 import { checkOrigin } from "@/lib/csrf"
 import { createLogger } from "@/lib/logger"
 import { z } from "zod"
-import bcrypt from "bcryptjs"
+import bcrypt from "@/lib/bcrypt"
 import { ResendEmailService } from "@/lib/services/email/ResendEmailService"
 import { generateManagedPassword } from "@/lib/managed-password"
 

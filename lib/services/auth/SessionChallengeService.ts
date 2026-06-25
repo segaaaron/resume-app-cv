@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs"
+import bcrypt from "@/lib/bcrypt"
 import { AppError } from "@/lib/services/auth/AppError"
 import { purgeUserCache } from "@/lib/auth"
 import type { IUserRepository } from "@/lib/interfaces/IUserRepository"

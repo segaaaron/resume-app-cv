@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { NextIntlClientProvider } from "next-intl"
-import { getMessages } from "next-intl/server"
+import { getMessages, setRequestLocale } from "next-intl/server"
 import { routing } from "@/i18n/routing"
 import { notFound } from "next/navigation"
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext"
@@ -104,6 +104,11 @@ export default async function LocaleLayout({
   if (!routing.locales.includes(locale as "es" | "en")) {
     notFound()
   }
+
+  // Enable static rendering for the whole [locale] subtree. Without this,
+  // next-intl falls back to dynamic rendering for every descendant page.
+  // Pages that genuinely need per-request data opt back in via `export const dynamic`.
+  setRequestLocale(locale)
 
   const messages = await getMessages()
 

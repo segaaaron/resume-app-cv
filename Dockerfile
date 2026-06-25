@@ -11,6 +11,9 @@ COPY prisma.config.ts ./prisma.config.ts
 # Skip Puppeteer's bundled Chrome — we use system Chromium on Alpine instead
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 RUN npm ci
+# Fail the build loudly if the native @node-rs/bcrypt prebuilt does not resolve on
+# this Alpine/musl image — turns a silent runtime auth crash into a build error.
+RUN node -e "require('@node-rs/bcrypt').hashSync('build-check',10)" && echo "native bcrypt OK"
 
 # ─── Stage 2: builder ────────────────────────────────────────────────────────
 FROM node:20.19-alpine AS builder

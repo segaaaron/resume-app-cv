@@ -8,6 +8,10 @@ import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import RecoverPortalButton from "./RecoverPortalButton"
 
+// Reads the authenticated session — must stay dynamic (the [locale] layout now
+// enables static rendering by default for the subtree).
+export const dynamic = "force-dynamic"
+
 export async function generateMetadata({
   params,
 }: {

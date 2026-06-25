@@ -84,7 +84,7 @@ describe("SessionChallengeService.issueChallenge", () => {
     expect(result).toEqual({ sent: true })
     const updateCall = vi.mocked(mockUsers.updateSessionChallenge).mock.calls[0]
     expect(updateCall[0]).toBe("u1")
-    expect(updateCall[1].sessionChallengeCode).toMatch(/^\$2b\$/)
+    expect(updateCall[1].sessionChallengeCode).toMatch(/^\$2[aby]\$/)
     expect(updateCall[1].sessionChallengeAttempts).toBe(0)
     expect(mockEmail.sendSessionChallenge).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/))
   })

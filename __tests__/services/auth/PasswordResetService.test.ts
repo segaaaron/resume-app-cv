@@ -154,7 +154,7 @@ describe("PasswordResetService.confirmReset", () => {
     const result = await makeService().confirmReset(validInput)
 
     expect(result).toEqual({ ok: true })
-    expect(mockUsers.updatePassword).toHaveBeenCalledWith("u1", expect.stringMatching(/^\$2b\$/))
+    expect(mockUsers.updatePassword).toHaveBeenCalledWith("u1", expect.stringMatching(/^\$2[aby]\$/))
     expect(mockResets.markUsed).toHaveBeenCalledWith("a@b.com")
     expect(vi.mocked(db.user.update)).toHaveBeenCalledWith({
       where: { id: "u1" },

@@ -1,4 +1,4 @@
-import bcrypt from "bcryptjs"
+import bcrypt from "@/lib/bcrypt"
 import { nanoid } from "nanoid"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IUserRepository } from "@/lib/interfaces/IUserRepository"

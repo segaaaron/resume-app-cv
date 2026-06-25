@@ -68,7 +68,9 @@ export default function SessionProvider({
   session,
 }: {
   children: React.ReactNode
-  session: Session | null
+  // Optional: when omitted, NextAuth fetches the session client-side. This keeps
+  // the root layout static-render-friendly (no server-side `auth()` cookie read).
+  session?: Session | null
 }) {
   return (
     <NextAuthSessionProvider session={session} refetchOnWindowFocus>

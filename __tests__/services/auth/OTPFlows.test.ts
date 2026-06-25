@@ -193,7 +193,7 @@ describe("A. SessionChallengeService — issueChallenge", () => {
     expect(result).toEqual({ sent: true })
     const [userId, update] = vi.mocked(mockUsers.updateSessionChallenge).mock.calls[0]
     expect(userId).toBe("u1")
-    expect(update.sessionChallengeCode).toMatch(/^\$2b\$/)
+    expect(update.sessionChallengeCode).toMatch(/^\$2[aby]\$/)
     expect(update.sessionChallengeAttempts).toBe(0)
     expect(update.sessionChallengeExp).toBeInstanceOf(Date)
     expect(update.sessionChallengeExp!.getTime()).toBeGreaterThan(Date.now())
@@ -539,8 +539,8 @@ describe("B. RegistrationService — requestOtp", () => {
     const upsertArg = vi.mocked(mockPending.upsert).mock.calls[0][0]
     expect(upsertArg.email).toBe(REGISTER_INPUT.email)
     expect(upsertArg.name).toBe(REGISTER_INPUT.name)
-    expect(upsertArg.passwordHash).toMatch(/^\$2b\$/)  // bcrypt hash
-    expect(upsertArg.otpHash).toMatch(/^\$2b\$/)       // bcrypt hash
+    expect(upsertArg.passwordHash).toMatch(/^\$2[aby]\$/)  // bcrypt hash
+    expect(upsertArg.otpHash).toMatch(/^\$2[aby]\$/)       // bcrypt hash
     expect(upsertArg.otpExp).toBeInstanceOf(Date)
     expect(upsertArg.otpExp.getTime()).toBeGreaterThan(Date.now())
     expect(upsertArg.marketingConsent).toBe(true)
@@ -825,7 +825,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
     await makePasswordResetService().requestReset("1.2.3.4", "a@b.com")
     const [, otpHash] = vi.mocked(mockResets.upsert).mock.calls[0]
-    expect(otpHash).toMatch(/^\$2b\$/)
+    expect(otpHash).toMatch(/^\$2[aby]\$/)
   })
 
   it("C08 OTP expiry is 10 minutes from now", async () => {
@@ -970,7 +970,7 @@ describe("C. PasswordResetService — confirmReset", () => {
 
     const result = await makePasswordResetService().confirmReset(validInput)
     expect(result).toEqual({ ok: true })
-    expect(mockUsers.updatePassword).toHaveBeenCalledWith("u1", expect.stringMatching(/^\$2b\$/))
+    expect(mockUsers.updatePassword).toHaveBeenCalledWith("u1", expect.stringMatching(/^\$2[aby]\$/))
     expect(mockResets.markUsed).toHaveBeenCalledWith("a@b.com")
     const { purgeUserCache } = await import("@/lib/auth")
     expect(purgeUserCache).toHaveBeenCalledWith("u1")
