@@ -6,7 +6,7 @@ import { ChevronDown, Download, FileDown, FileText, Loader2, CheckCircle2, Lock 
 import { toast } from "sonner"
 
 export interface DownloadOption {
-  format: "pdf" | "docx"
+  format: "pdf"
   label: string
   sublabel: string
   isLoading: boolean
@@ -19,7 +19,6 @@ export interface DownloadMenuProps {
   size?: "sm" | "default"
   triggerLabel?: string
   generatingPdfLabel?: string
-  generatingWordLabel?: string
   successLabel?: (filename: string) => string
   phaseLabels?: {
     preparing: string
@@ -66,7 +65,6 @@ export default function DownloadMenu({
   size = "sm",
   triggerLabel = "Descargar",
   generatingPdfLabel = "Generando PDF...",
-  generatingWordLabel = "Generando Word...",
   successLabel = (f) => `${f} descargado`,
   phaseLabels = DEFAULT_PHASES,
   disabled = false,
@@ -74,12 +72,11 @@ export default function DownloadMenu({
   onLocked,
 }: DownloadMenuProps) {
   const [open, setOpen] = useState(false)
-  const [recentSuccess, setRecentSuccess] = useState<"pdf" | "docx" | null>(null)
+  const [recentSuccess, setRecentSuccess] = useState<"pdf" | null>(null)
   const ref = useRef<HTMLDivElement>(null)
   const prevLoading = useRef<Record<string, boolean>>({})
 
   const anyLoading = options.some((o) => o.isLoading)
-  const loadingFormat = options.find((o) => o.isLoading)?.format ?? null
 
   useEffect(() => {
     options.forEach((o) => {
@@ -106,11 +103,7 @@ export default function DownloadMenu({
     return () => document.removeEventListener("mousedown", close)
   }, [open, anyLoading])
 
-  const triggerText = anyLoading
-    ? loadingFormat === "pdf"
-      ? generatingPdfLabel
-      : generatingWordLabel
-    : triggerLabel
+  const triggerText = anyLoading ? generatingPdfLabel : triggerLabel
 
   return (
     <div className="relative" ref={ref}>

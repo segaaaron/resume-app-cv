@@ -29,6 +29,7 @@ export function useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEnds
 
   // Premium (PRO) templates are unlocked for SPRINT/PRO/LIMITED (and admin).
   // BASIC/UNSUBSCRIBED can preview but selecting a PRO template opens the upgrade modal.
+  void subscriptionStatus // no longer used for gating (kept in Options for caller compatibility)
   const hasAccess =
     isSuperAdmin(role) ||
     canUsePremiumTemplates(effectivePlan({ plan, subscriptionEndsAt: subscriptionEndsAt ? new Date(subscriptionEndsAt) : null }))
