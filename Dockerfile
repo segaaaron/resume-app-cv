@@ -53,6 +53,9 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+# libuv threadpool — bcrypt (@node-rs) + fs/dns/crypto share it. Default is 4;
+# raise it so concurrent logins (bcrypt) run in parallel instead of queueing.
+ENV UV_THREADPOOL_SIZE=16
 # Point Puppeteer to Alpine's system Chromium (avoids glibc vs musl mismatch)
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser

@@ -12,7 +12,13 @@ export type { AIQuotaCheck } from "@/lib/rate-limit"
 let _openai: OpenAI | null = null
 export function getOpenAI(): OpenAI {
   if (!_openai) {
-    _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+    _openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+      // Bound hung requests and let the SDK back off on 429/5xx (exponential)
+      // instead of the caller hammering the provider during a surge.
+      timeout: Math.max(5_000, Number(process.env.OPENAI_TIMEOUT_MS ?? 60_000)),
+      maxRetries: 3,
+    })
     // Cost guard: gpt-4o costs 17x gpt-4o-mini. A silent env change must
     // leave a loud trace on every boot, while still allowing a deliberate upgrade.
     if (AI_MODEL !== EXPECTED_AI_MODEL) {

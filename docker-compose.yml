@@ -21,10 +21,10 @@ services:
       dockerfile: Dockerfile
     environment:
       PDF_SERVICE_SECRET: ${PDF_SERVICE_SECRET}
-      MAX_CONCURRENT_PAGES: "3"
+      MAX_CONCURRENT_PAGES: "6"
       PORT: "3001"
       NODE_ENV: production
-    mem_limit: 1g
+    mem_limit: 2g
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -sf http://localhost:3001/health || exit 1"]

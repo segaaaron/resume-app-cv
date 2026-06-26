@@ -6,7 +6,9 @@
 type QueueEntry = { cancelled: boolean; acquire: () => void }
 
 let activePdfRequests = 0
-const PDF_CONCURRENCY_LIMIT = 4
+// Aligns with the PDF microservice MAX_CONCURRENT_PAGES (6) plus a small queue
+// headroom. Tunable via env so it can track the service's capacity without a redeploy.
+const PDF_CONCURRENCY_LIMIT = Math.max(1, Number(process.env.PDF_CONCURRENCY_LIMIT ?? 8))
 const pdfQueue: QueueEntry[] = []
 
 function acquirePdfSlot(): Promise<void> {
