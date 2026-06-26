@@ -20,4 +20,5 @@ export async function compare(data: string, hash: string): Promise<boolean> {
   }
 }
 
-export default { hash, compare }
+const bcrypt = { hash, compare }
+export default bcrypt
