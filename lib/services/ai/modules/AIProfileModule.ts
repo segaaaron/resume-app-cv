@@ -109,7 +109,8 @@ Respond ONLY with valid JSON (no markdown). Only include fields that actually ch
 Rules:
 - ALWAYS use the exact ids from the section listing above. Never invent an id.
 - Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
-- Do not invent data (dates, companies, metrics) the candidate didn't mention.`
+- Do not invent data (dates, companies, metrics) the candidate didn't mention.
+- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven".`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO inventes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
 2. NUNCA uses placeholders como [X%] o [N usuarios] en el output final — si el usuario no proporcionó una métrica, omítela.
@@ -157,7 +158,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
 Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Nunca inventes un id.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
-- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó.`
+- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó.
+- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados".`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,

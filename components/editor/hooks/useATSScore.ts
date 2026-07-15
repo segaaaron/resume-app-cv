@@ -13,14 +13,23 @@ import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
 
+export interface ATSSubScores {
+  hardSkills: number | null
+  softSkills: number | null
+  title: number | null
+  sections: number | null
+}
+
 export interface ATSResult {
   score: number
   label: string
   summary: string
   strengths: string[]
   gaps: string[]
+  matchedKeywords?: string[]
   missingKeywords: string[]
   suggestions: string[]
+  subScores?: ATSSubScores
 }
 
 export interface ReviewItem {

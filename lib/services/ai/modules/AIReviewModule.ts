@@ -16,6 +16,7 @@ import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
+  ATSExtractionSchema,
   ReviewItemSchema,
   ReviewResponseSchema,
   type ATSScoreInput,
@@ -23,6 +24,7 @@ import {
   type ReviewCVInput,
   type ReviewResult,
 } from "../shared/ai-types"
+import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
 
 export class AIReviewModule {
   constructor(
@@ -35,6 +37,7 @@ export class AIReviewModule {
 
     const { jobDescription, sectionData, language: rawLanguage } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
+    const en = language === "en"
 
     const validation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
     if (!validation.valid) throw new AppError("invalid_input", 400)
@@ -42,96 +45,82 @@ export class AIReviewModule {
     // Truncate to 6000 chars — covers 95%+ of real job descriptions without quality loss
     const jobDescriptionTruncated = jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)
 
-    const resumeText = buildResumeContext(sectionData ?? {}, language)
+    const data = sectionData ?? {}
+    const resumeText = buildResumeContext(data, language)
     if (!resumeText.trim()) throw new AppError("not_enough_resume_data", 400)
     const resumeTextValidation = validateAIInput(resumeText, AI_INPUT_LIMITS.resumeText)
     if (!resumeTextValidation.valid) throw new AppError("invalid_input", 400)
 
-    const prompt = language === "en"
-      ? `Analyze the compatibility between this resume and the job description.
-
-=== CANDIDATE RESUME ===
-${resumeText}
+    // ── LLM call #1: EXTRACT requirements from the JD (no scoring). The score is
+    // computed deterministically in code below so it is reproducible and the
+    // "missing keywords" are verified against the actual CV text. The model only
+    // extracts keyword lists + writes a short summary and actionable suggestions.
+    const prompt = en
+      ? `Extract the hiring requirements from this job description. Do NOT score or rate anything — only extract and advise.
 
 === JOB DESCRIPTION ===
 ${jobDescriptionTruncated}
 
-Evaluate and return results in JSON with this exact format:
+=== CANDIDATE RESUME (context for suggestions only) ===
+${resumeText}
+
+Return JSON with this exact shape:
 {
-  "score": <number from 0 to 100>,
-  "label": "<Excellent|Good|Fair|Low>",
-  "summary": "<1-2 sentence summary of overall compatibility>",
-  "strengths": ["<strength 1>", "<strength 2>", "<strength 3>"],
-  "gaps": ["<gap 1>", "<gap 2>", "<gap 3>"],
-  "missingKeywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],
-  "suggestions": ["<concrete suggestion 1>", "<concrete suggestion 2>", "<concrete suggestion 3>"]
+  "hardSkills": ["<technical skill / tool / technology the job requires>", ...],
+  "softSkills": ["<soft skill the job requires>", ...],
+  "jobTitle": "<the role title from the job description>",
+  "mustHaves": ["<hard requirement: years of experience, degree, certification, license>", ...],
+  "summary": "<1-2 sentence qualitative summary of how the resume fits — do NOT state a numeric score>",
+  "suggestions": ["<concrete action to improve fit>", "<action 2>", "<action 3>"]
 }
 
-Evaluation rules:
-- score 80-100 = Excellent, 60-79 = Good, 40-59 = Fair, 0-39 = Low
-- strengths: specific resume strengths that match the job (not generic)
-- gaps: specific mismatches between what the job requires and what the resume shows
-- missingKeywords: job keywords NOT found in the resume — order from most to least critical (max 8)
-- suggestions: EXACTLY 3 concrete actions. Each in this format:
-  "[IMPERATIVE VERB] [what to do exactly] in [specific CV section]: [concrete example of how to do it]"
-  Example: "ADD the keyword 'agile project management' to your Experience section at [most recent employer]: rewrite the team leadership bullet to mention Scrum/Kanban if you used them"
-  Prioritize the 3 actions with the highest score impact.
-- Respond ONLY with the JSON, no markdown, no explanations`
-      : `Analiza la compatibilidad entre el CV y la descripción del puesto de trabajo.
-
-=== CV DEL CANDIDATO ===
-${resumeText}
+Rules:
+- hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
+- Extract ONLY what the job description actually asks for. Do not invent requirements.
+- suggestions: EXACTLY 3, imperative, each naming the CV section to change. Example: "ADD 'Kubernetes' to your Skills section if you have used it".
+- If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- Respond ONLY with the JSON, no markdown.`
+      : `Extrae los requisitos de contratación de esta descripción de puesto. NO puntúes ni califiques nada — solo extrae y aconseja.
 
 === DESCRIPCIÓN DEL PUESTO ===
 ${jobDescriptionTruncated}
 
-Evalúa y devuelve los resultados en JSON con este formato exacto:
+=== CV DEL CANDIDATO (contexto solo para sugerencias) ===
+${resumeText}
+
+Devuelve JSON con esta forma exacta:
 {
-  "score": <número del 0 al 100>,
-  "label": "<Excelente|Bueno|Regular|Bajo>",
-  "summary": "<resumen de 1-2 oraciones de la compatibilidad general>",
-  "strengths": ["<fortaleza 1>", "<fortaleza 2>", "<fortaleza 3>"],
-  "gaps": ["<brecha 1>", "<brecha 2>", "<brecha 3>"],
-  "missingKeywords": ["<keyword 1>", "<keyword 2>", "<keyword 3>", "<keyword 4>", "<keyword 5>"],
-  "suggestions": ["<sugerencia concreta 1>", "<sugerencia concreta 2>", "<sugerencia concreta 3>"]
+  "hardSkills": ["<habilidad técnica / herramienta / tecnología que pide el puesto>", ...],
+  "softSkills": ["<habilidad blanda que pide el puesto>", ...],
+  "jobTitle": "<el título del puesto según la descripción>",
+  "mustHaves": ["<requisito duro: años de experiencia, título, certificación, licencia>", ...],
+  "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV — NO indiques un número de score>",
+  "suggestions": ["<acción concreta para mejorar el encaje>", "<acción 2>", "<acción 3>"]
 }
 
-Reglas de evaluación:
-- score 80-100 = Excelente, 60-79 = Bueno, 40-59 = Regular, 0-39 = Bajo
-- strengths: fortalezas concretas del CV que coinciden con el puesto (no genéricas)
-- gaps: brechas específicas entre lo que pide el puesto y lo que muestra el CV
-- missingKeywords: palabras clave del puesto que NO aparecen en el CV — ordena de más a menos crítica (máximo 8)
-- suggestions: EXACTAMENTE 3 acciones concretas. Cada una con este formato:
-  "[VERBO EN IMPERATIVO] [qué hacer exactamente] en [sección específica del CV]: [ejemplo o detalle concreto de cómo hacerlo]"
-  Ejemplo: "AÑADE la keyword 'gestión de proyectos ágiles' en tu sección de Experiencia en [empresa más reciente]: reescribe el bullet de liderazgo de equipo para incluir Scrum/Kanban si lo usaste"
-  Prioriza las 3 acciones de mayor impacto en el score.
-- Responde ÚNICAMENTE con el JSON, sin markdown ni explicaciones`
+Reglas:
+- hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
+- Extrae SOLO lo que la descripción realmente pide. No inventes requisitos.
+- suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar. Ejemplo: "AÑADE 'Kubernetes' a tu sección de Habilidades si lo has usado".
+- Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 800,
+      max_tokens: 700,
       temperature: AI_TEMPERATURE_PRECISE,
       response_format: { type: "json_object" },
       messages: [
         {
           role: "system",
           content:
-            "Eres un asistente especializado EXCLUSIVAMENTE en análisis de compatibilidad entre currículums vitae (CVs) y descripciones de puestos de trabajo (job descriptions). " +
-            "Solo debes analizar contenido relacionado con empleo, habilidades profesionales, experiencia laboral y requisitos de puestos. " +
-            "Si el contenido recibido no corresponde a un CV o a una descripción de empleo real, responde únicamente con este JSON: " +
-            "{\"score\": 0, \"label\": \"off_topic\", \"summary\": \"\", \"strengths\": [], \"gaps\": [], \"missingKeywords\": [], \"suggestions\": []} sin texto adicional. " +
+            "Eres un extractor experto de requisitos de vacantes para análisis de compatibilidad ATS. " +
+            "Solo procesas descripciones de puestos de trabajo reales. NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. " +
             langInstruction,
         },
         { role: "user", content: prompt },
       ],
     })
-
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<ATSScoreResult>(raw)
-
-    if (typeof parsed.score !== "number" || parsed.label === "off_topic") {
-      throw new AppError("off_topic", 422)
-    }
 
     const atsUsage = response.usage
     logAIUsage(userId, "ats-score", {
@@ -141,7 +130,55 @@ Reglas de evaluación:
       completionTokens: atsUsage?.completion_tokens ?? 0,
       costUsd: computeCostUsd(AI_MODEL, atsUsage?.prompt_tokens ?? 0, atsUsage?.completion_tokens ?? 0),
     })
-    return parsed
+
+    const raw = response.choices[0]?.message?.content ?? ""
+    const parsedRaw = parseAIJson<unknown>(raw)
+    const parsed = ATSExtractionSchema.safeParse(parsedRaw)
+    if (!parsed.success) throw new AppError("invalid_response_format", 500)
+    const extraction = parsed.data
+
+    // Off-topic guard: explicit label, or the model extracted nothing usable.
+    const nothingExtracted =
+      extraction.hardSkills.length === 0 &&
+      extraction.softSkills.length === 0 &&
+      extraction.mustHaves.length === 0 &&
+      !extraction.jobTitle.trim()
+    if (extraction.label === "off_topic" || nothingExtracted) {
+      throw new AppError("off_topic", 422)
+    }
+
+    // ── Deterministic scoring in code ──────────────────────────────────────────
+    const cvTitles = buildCVTitles(data)
+    const sections = buildSectionPresence(data)
+    const match = computeATSMatch(
+      {
+        hardSkills: extraction.hardSkills,
+        softSkills: extraction.softSkills,
+        jobTitle: extraction.jobTitle,
+        mustHaves: extraction.mustHaves,
+      },
+      resumeText,
+      cvTitles,
+      sections,
+    )
+
+    const label = localizedLabel(scoreLabel(match.score), en)
+    const summary = extraction.summary.trim() || defaultSummary(match.score, en)
+
+    return {
+      score: match.score,
+      label,
+      summary,
+      // Strengths / gaps are derived from the deterministic match so they can
+      // never contradict the score: matched skills are strengths, missing hard
+      // requirements are gaps.
+      strengths: match.matchedKeywords,
+      gaps: match.missingMustHaves,
+      matchedKeywords: match.matchedKeywords,
+      missingKeywords: match.missingKeywords,
+      suggestions: extraction.suggestions,
+      subScores: match.subScores,
+    }
   }
 
   async reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewResult> {
@@ -186,7 +223,7 @@ INSTRUCTIONS:
 For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
 - field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (replace current content) or "append" (add to current content)
-- preview: the IMPROVED, ENRICHED text — more specific, more impactful than the original. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max 500 characters.
+- preview: the IMPROVED, ENRICHED text — more specific, more impactful than the original. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max 500 characters. It must read as human-written: varied sentence length, natural voice (not a press release), and none of the AI-tell words ("Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy").
 - reason: max 12 words explaining the change
 - targetId: only if the improvement applies to a specific array item (use the item id from the resume)
 
@@ -229,7 +266,7 @@ INSTRUCCIONES:
 Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (reemplazar el contenido actual) o "append" (agregar al contenido actual)
-- preview: el texto MEJORADO y ENRIQUECIDO — más específico, más impactante que el original. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo 500 caracteres.
+- preview: el texto MEJORADO y ENRIQUECIDO — más específico, más impactante que el original. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo 500 caracteres. Debe sonar escrito por una persona: frases de largo variado, voz natural (no nota de prensa), y sin palabras-IA ("Orquestó", "Apalancó", "Utilizó", "sinergia").
 - reason: máximo 12 palabras explicando el cambio
 - targetId: solo si la mejora aplica a un item específico de un array (usa el id del item del CV)
 
@@ -338,4 +375,40 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       answer: validated.data.answer,
     }
   }
+}
+
+// ── ats-score helpers (module-level, pure) ────────────────────────────────────
+
+/** Target role + past job titles, joined — feeds the title-match sub-score. */
+function buildCVTitles(data: Record<string, unknown>): string {
+  const pd = data.personalDetails as { jobTitle?: string } | undefined
+  const work = (data.workExperience as Array<{ jobTitle?: string }> | undefined) ?? []
+  return [pd?.jobTitle, ...work.map((w) => w?.jobTitle)].filter(Boolean).join(" ")
+}
+
+function buildSectionPresence(data: Record<string, unknown>): SectionPresence {
+  const nonEmptyArray = (v: unknown) => Array.isArray(v) && v.length > 0
+  return {
+    summary: typeof data.summary === "string" && data.summary.trim().length > 0,
+    work: nonEmptyArray(data.workExperience),
+    skills: nonEmptyArray(data.skills),
+    education: nonEmptyArray(data.education),
+  }
+}
+
+function localizedLabel(bucket: "excellent" | "good" | "fair" | "low", en: boolean): string {
+  const map = {
+    excellent: en ? "Excellent" : "Excelente",
+    good: en ? "Good" : "Bueno",
+    fair: en ? "Fair" : "Regular",
+    low: en ? "Low" : "Bajo",
+  }
+  return map[bucket]
+}
+
+function defaultSummary(score: number, en: boolean): string {
+  if (score >= 80) return en ? "Strong match with the role's requirements." : "Fuerte coincidencia con los requisitos del puesto."
+  if (score >= 60) return en ? "Good match — a few targeted additions will strengthen it." : "Buena coincidencia — algunos ajustes puntuales la reforzarán."
+  if (score >= 40) return en ? "Partial match — several key requirements are missing." : "Coincidencia parcial — faltan varios requisitos clave."
+  return en ? "Low match — the resume is missing most of the role's requirements." : "Baja coincidencia — al CV le faltan la mayoría de los requisitos del puesto."
 }

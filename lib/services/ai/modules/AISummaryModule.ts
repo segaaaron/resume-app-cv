@@ -65,10 +65,11 @@ Version 2 — SPECIALIST: Emphasis on technical or functional expertise specific
 Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their next team. Combines past achievement + differential skill + future value. Tone: dynamic, forward-looking, impact-oriented. 3 sentences.
 
 ABSOLUTE RULES:
-• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player".
+• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player", "Detail-oriented", "Hard-working", "Results-driven", "Go-getter", "Self-starter".
 • No personal pronouns (I, My, I am). Third person or impersonal form.
 • If no metrics in profile: use [X years], [N projects], [X%], [N teams] as placeholders. NEVER invent real figures.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
+• Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
 
 Respond ONLY with valid JSON (no markdown, no explanations):
 {"versions": ["version1", "version2", "version3"]}`
@@ -102,6 +103,7 @@ REGLAS ABSOLUTAS:
 • Sin pronombres personales (Yo, Mi, Soy). Tercera persona o forma impersonal.
 • Si no hay métricas en el perfil: usa [X años], [N proyectos], [X%], [N equipos] como placeholders. NUNCA inventes cifras reales.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
+• Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
@@ -204,12 +206,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 1. ONLY rewrite using information already present in the original summary, candidate instruction, or resume context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not stated by the user.
 2. Preserve real metrics from the original. If none exist, use ONLY the documented placeholders [X years], [N projects], [X%], [$Z]. Never replace placeholders with invented figures.
 3. If you cannot improve a version without inventing content, return a conservative rewording that stays anchored to the source.
+4. HUMAN VOICE (avoid AI-detection): vary sentence length and structure; natural, conversational tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Anchor to concrete specifics from the source, not vague adjectives.
 
 `
     const criticalES = `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información ya presente en el resumen original, la instrucción del candidato o el contexto del CV. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no aportadas por el usuario.
 2. Conserva métricas reales del original. Si no las hay, usa ÚNICAMENTE los placeholders documentados [X años], [N proyectos], [X%], [$Z]. Nunca sustituyas placeholders por cifras inventadas.
 3. Si no puedes mejorar una versión sin inventar contenido, devuelve una reescritura conservadora anclada al source.
+4. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases; tono natural y conversacional, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla a datos concretos del source, no a adjetivos vagos.
 
 `
 

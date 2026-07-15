@@ -108,6 +108,22 @@ describe("AIService", () => {
       expect(result.bullets).toEqual([])
     })
 
+    it("returns already_optimized when the only change is an injected placeholder/number", async () => {
+      // Reported bug: suggestions look near-identical to the original, differing
+      // only by an inserted [X%] placeholder or a changed figure. That is not a
+      // real rewrite → must report already_optimized instead of a no-op modal.
+      const original = "• Managed the support queue\n• Trained new hires"
+      const aiClient = makeMockAIClient(JSON.stringify({
+        bullets: ["• Managed the support queue [X%]", "• Trained new hires [X%]"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: original }, "PRO")
+
+      expect(result.status).toBe("already_optimized")
+      expect(result.bullets).toEqual([])
+    })
+
     it("PRO over daily cap → throws 429 daily_cap_reached with ai-daily key", async () => {
       const { checkAndIncrementRateLimit } = vi.mocked(await import("@/lib/ai-client"))
       checkAndIncrementRateLimit.mockResolvedValueOnce(false)
@@ -156,27 +172,77 @@ describe("AIService", () => {
   // ── atsScore ───────────────────────────────────────────────────────────────
 
   describe("atsScore", () => {
-    const validATSResponse = {
-      score: 82,
-      label: "Excelente",
-      summary: "Excellent match.",
-      strengths: ["React experience"],
-      gaps: ["Missing Docker"],
-      missingKeywords: ["Docker"],
-      suggestions: ["Add Docker to skills"],
+    // The service now extracts JD requirements via the LLM, then scores
+    // DETERMINISTICALLY in code. buildResumeContext is mocked to
+    // "Nombre: Juan Garcia\nPuesto objetivo: Developer", so "Developer" is
+    // present in the CV text and "Kubernetes" is not.
+    const validExtraction = {
+      hardSkills: ["Developer", "Kubernetes"],
+      softSkills: [],
+      jobTitle: "Developer",
+      seniority: "",
+      mustHaves: [],
+      summary: "Solid fit for the role.",
+      suggestions: ["Add Kubernetes to your Skills section if you have used it"],
     }
 
-    it("returns parsed ATS score on happy path", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify(validATSResponse))
+    const richSectionData = {
+      personalDetails: { jobTitle: "Developer" },
+      summary: "Experienced developer",
+      workExperience: [{ jobTitle: "Developer" }],
+      skills: [{ name: "Developer" }],
+      education: [{ degree: "BS" }],
+    }
+
+    it("computes a deterministic score and verified keyword sets on happy path", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify(validExtraction))
       const service = new AIService(aiClient, logger)
 
       const result = await service.atsScore("user-1", {
-        jobDescription: "We need a React developer with Docker experience for our team.",
-        sectionData: {},
+        jobDescription: "We need a Developer with Kubernetes experience for our team.",
+        sectionData: richSectionData,
       }, "PRO")
 
-      expect(result.score).toBe(82)
-      expect(result.label).toBe("Excelente")
+      expect(typeof result.score).toBe("number")
+      expect(result.score).toBeGreaterThan(0)
+      // "Developer" is in the CV, "Kubernetes" is not → verified set-diff.
+      expect(result.matchedKeywords).toContain("Developer")
+      expect(result.missingKeywords).toContain("Kubernetes")
+      expect(result.missingKeywords).not.toContain("Developer")
+      // hard-skill coverage = 1 of 2 matched.
+      expect(result.subScores.hardSkills).toBe(50)
+      expect(result.label).toBeTruthy()
+    })
+
+    it("is reproducible — identical inputs yield an identical score", async () => {
+      const service1 = new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+      const service2 = new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+      const input = { jobDescription: "Developer with Kubernetes.", sectionData: richSectionData }
+
+      const a = await service1.atsScore("user-1", input, "PRO")
+      const b = await service2.atsScore("user-1", input, "PRO")
+
+      expect(a.score).toBe(b.score)
+      expect(a.missingKeywords).toEqual(b.missingKeywords)
+    })
+
+    it("truncates (does NOT 500) when the model returns more skills than the cap", async () => {
+      // Regression guard: an over-eager extraction must never fail validation.
+      const many = Array.from({ length: 18 }, (_, i) => `Skill${i + 1}`)
+      const aiClient = makeMockAIClient(JSON.stringify({
+        ...validExtraction,
+        hardSkills: many,
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.atsScore("user-1", {
+        jobDescription: "A job needing many skills.",
+        sectionData: richSectionData,
+      }, "PRO")
+
+      expect(typeof result.score).toBe("number")
+      // Processed set is capped at 12 hard skills → matched + missing ≤ 12.
+      expect(result.matchedKeywords.length + result.missingKeywords.length).toBeLessThanOrEqual(12)
     })
 
     it("throws AppError 403 feature_pro_only when endpoint blocked for plan", async () => {
@@ -191,19 +257,31 @@ describe("AIService", () => {
       ).rejects.toMatchObject({ code: "feature_pro_only", status: 403 })
     })
 
-    it("throws AppError 422 when AI returns off_topic label", async () => {
+    it("throws AppError 422 when the model flags off_topic", async () => {
       const aiClient = makeMockAIClient(JSON.stringify({
-        score: 0, label: "off_topic", summary: "", strengths: [], gaps: [], missingKeywords: [], suggestions: [],
+        hardSkills: [], softSkills: [], jobTitle: "", seniority: "", mustHaves: [],
+        summary: "", suggestions: [], label: "off_topic",
       }))
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.atsScore("user-1", { jobDescription: "What is the capital of France?" }, "PRO")
+        service.atsScore("user-1", { jobDescription: "What is the capital of France?", sectionData: richSectionData }, "PRO")
+      ).rejects.toMatchObject({ code: "off_topic", status: 422 })
+    })
+
+    it("throws AppError 422 when the model extracts no usable requirements", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        hardSkills: [], softSkills: [], jobTitle: "", seniority: "", mustHaves: [], summary: "", suggestions: [],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      await expect(
+        service.atsScore("user-1", { jobDescription: "lorem ipsum dolor sit amet", sectionData: richSectionData }, "PRO")
       ).rejects.toMatchObject({ code: "off_topic", status: 422 })
     })
 
     it("truncates jobDescription to 6000 chars before sending to AI", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify(validATSResponse))
+      const aiClient = makeMockAIClient(JSON.stringify(validExtraction))
       const service = new AIService(aiClient, logger)
 
       // Use a unique suffix marker past 6000 chars to verify truncation
@@ -211,7 +289,7 @@ describe("AIService", () => {
       const suffix = "UNIQUE_OVERFLOW_MARKER_SHOULD_NOT_APPEAR"
       const longDescription = base + suffix
 
-      await service.atsScore("user-1", { jobDescription: longDescription, sectionData: {} }, "PRO")
+      await service.atsScore("user-1", { jobDescription: longDescription, sectionData: richSectionData }, "PRO")
 
       const calledWith = (aiClient.chat as ReturnType<typeof vi.fn>).mock.calls[0][0]
       const userMessage = calledWith.messages.find((m: { role: string }) => m.role === "user")

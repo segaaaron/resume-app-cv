@@ -31,11 +31,16 @@ export class AISkillsModule {
       if (!v.valid) throw new AppError("invalid_input", 400)
     }
 
+    const en = language === "en"
+
     const existingList = existingSkills.length > 0
-      ? `The candidate already has these skills: ${existingSkills.join(", ")}. Do not repeat them.`
+      ? en
+        ? `The candidate already has these skills: ${existingSkills.join(", ")}. Do not repeat them.`
+        : `El candidato ya tiene estas habilidades: ${existingSkills.join(", ")}. No las repitas.`
       : ""
 
-    const prompt = `Suggest the most relevant and high-value skills for a "${jobTitle}"${industry ? ` in the ${industry} industry` : ""} to include in a professional CV/resume.
+    const prompt = en
+      ? `Suggest the most relevant and high-value skills for a "${jobTitle}"${industry ? ` in the ${industry} industry` : ""} to include in a professional CV/resume.
 ${existingList}
 
 Return a JSON object with this exact structure:
@@ -55,6 +60,27 @@ Rules:
 - Assign realistic levels for a mid-level professional in this role (avoid all "expert" — be honest)
 - Only return the JSON object, no other text
 - If the job title is not a real profession or is off-topic, return { "skills": [] }`
+      : `Sugiere las habilidades más relevantes y de mayor valor para un "${jobTitle}"${industry ? ` en la industria de ${industry}` : ""} para incluir en un CV profesional.
+${existingList}
+
+Devuelve un objeto JSON con esta estructura exacta:
+{
+  "skills": [
+    { "name": "nombre de la habilidad", "level": "beginner|intermediate|advanced|expert" },
+    ...
+  ]
+}
+
+Reglas:
+- Devuelve exactamente 8-10 habilidades
+- ORDENA por relevancia: la habilidad más crítica/demandada para este puesto específico PRIMERO
+- Usa nombres de habilidad ESPECÍFICOS y precisos (no genéricos): prefiere "React.js" sobre "React", "Python (Análisis de Datos)" sobre "Python", "Google Analytics 4" sobre "Analytics", "Scrum / Agile" sobre "Agile"
+- Distribución: 60% habilidades técnicas/duras específicas del puesto, 40% habilidades blandas/transversales
+- Habilidades duras primero en la lista, blandas al final
+- Asigna niveles realistas para un profesional de nivel medio en este puesto (evita poner todo en "expert" — sé honesto)
+- El campo "level" SIEMPRE en inglés (beginner/intermediate/advanced/expert); los nombres de habilidad en español
+- Devuelve solo el objeto JSON, sin ningún otro texto
+- Si el título del puesto no es una profesión real o está fuera de tema, devuelve { "skills": [] }`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,

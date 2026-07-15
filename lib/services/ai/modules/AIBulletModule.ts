@@ -48,7 +48,7 @@ ${text}
 
 TRANSFORMATION RULES:
 1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Measurable result.
-2. Verb first, always. PROHIBITED: "Responsible for", "In charge of", "Assisted with", personal pronouns (I, my).
+2. Verb first, always. PROHIBITED openers/clichés: "Responsible for", "In charge of", "Assisted with", "Helped with", "Worked on", "Duties included", and empty buzzwords ("team player", "detail-oriented", "hard-working", "results-driven", "go-getter"). No personal pronouns (I, my).
 3. Impact order: highest business-impact bullet goes FIRST. Last bullet can be scope/reach.
 4. Metrics: if not in the original, use PLACEHOLDERS: [X%], [N users], [$Z], [N months]. NEVER invent real figures.
 5. Choose verbs based on role context:
@@ -58,6 +58,7 @@ TRANSFORMATION RULES:
    - Sales/Business/Marketing: Grew, Closed, Negotiated, Expanded, Positioned, Captured, Generated
 6. Bullet count: return EXACTLY one improved bullet per original bullet line, in the SAME order — never merge, drop, or reorder originals. Only exception: if the original is a single paragraph without bullet structure, split it into 3-5 bullets.
 7. ATS: naturally incorporate 1-2 industry/role keywords within bullets.
+8. HUMAN VOICE (avoid AI-detection): vary sentence length and structure across bullets — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each bullet to a concrete detail already in the source (tool, product, team size, timeframe) when available — never invent one.
 
 Respond ONLY with valid JSON (no markdown):
 {"bullets": ["• bullet1", "• bullet2", ...]}`
@@ -78,7 +79,7 @@ ${text}
 
 REGLAS DE TRANSFORMACIÓN:
 1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado medible.
-2. Verbo primero, siempre. PROHIBIDO: "Responsable de", "Encargado de", "Apoyé en", pronombres (yo, mi, mis).
+2. Verbo primero, siempre. PROHIBIDO aperturas/clichés: "Responsable de", "Encargado de", "Apoyé en", "Ayudé con", "Trabajé en", "Mis funciones incluían", y muletillas vacías ("trabajo en equipo", "orientado al detalle", "proactivo", "orientado a resultados"). Sin pronombres (yo, mi, mis).
 3. Orden de impacto: el bullet con mayor impacto de negocio va PRIMERO. El último puede ser de alcance/scope.
 4. Métricas: si no existen en el original, usa PLACEHOLDERS: [X%], [N usuarios], [$Z], [N meses]. NUNCA inventes cifras reales.
 5. Elige verbos según el contexto del puesto:
@@ -88,6 +89,7 @@ REGLAS DE TRANSFORMACIÓN:
    - Ventas/Negocio/Marketing: Crecí, Cerré, Negocié, Expandí, Posicioné, Capturé, Generé
 6. Cantidad: devuelve EXACTAMENTE un bullet mejorado por cada línea/bullet original, en el MISMO orden — nunca fusiones, elimines ni reordenes los originales. Única excepción: si el original es un solo párrafo sin estructura de bullets, divídelo en 3-5 bullets.
 7. ATS: incorpora 1-2 keywords del sector/puesto de forma natural dentro de los bullets.
+8. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases entre bullets — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada bullet a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo inventes.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"bullets": ["• bullet1", "• bullet2", ...]}`
@@ -178,8 +180,22 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // bullet unchanged when it cannot improve it without inventing data. If
     // EVERY bullet came back unchanged, showing the suggestions modal would be
     // a no-op for the user — report "already_optimized" instead.
+    //
+    // The comparison also strips volatile tokens (bracket placeholders like
+    // [X%]/[N usuarios]/[$Z] and bare numbers/percentages) BEFORE comparing:
+    // when the only difference between the "improved" bullet and the original
+    // is an inserted placeholder or a changed figure, it is not a real rewrite —
+    // the user would just see near-identical suggestions. Treat that as
+    // "already_optimized" too.
+    const stripVolatile = (s: string) =>
+      s
+        .replace(/\[[^\]]*\]/g, " ")           // [X%], [N usuarios], [$Z], [N meses]
+        .replace(/\d+(?:[.,]\d+)?\s*%?/g, " ")  // bare numbers and percentages
     const normalizeForCompare = (s: string) =>
-      s.toLowerCase().replace(/^[•\-*\s]+/, "").replace(/\s+/g, " ").replace(/[.;]+$/, "").trim()
+      stripVolatile(s.toLowerCase().replace(/^[•\-*\s]+/, ""))
+        .replace(/\s+/g, " ")
+        .replace(/[.;]+$/, "")
+        .trim()
     const originalLines = text.split("\n").map(normalizeForCompare).filter(Boolean)
     const allUnchanged = cleanBullets.every((b, i) =>
       !b.trim() || normalizeForCompare(b) === (originalLines[i] ?? "")

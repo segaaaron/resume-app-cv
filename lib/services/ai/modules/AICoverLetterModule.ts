@@ -88,6 +88,7 @@ Rules:
 - Avoid clichés: "passionate", "team player", "hard worker", "I believe", "I am excited to..."
 - Each paragraph must be 3–5 sentences, substantive and specific
 - The letter must feel written by a human, not AI
+- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never invent one.
 
 Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using \\n\\n>"}`
       : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
@@ -116,6 +117,7 @@ Reglas:
 - Evita clichés: "apasionado", "trabajo en equipo", "me motiva", "creo firmemente", "estoy emocionado de..."
 - Cada párrafo debe tener 3–5 oraciones, sustanciales y específicas
 - La carta debe sonar escrita por un humano, no por IA
+- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo inventes.
 
 Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo usando \\n\\n>"}`
 

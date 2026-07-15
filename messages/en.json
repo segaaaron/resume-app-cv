@@ -873,6 +873,7 @@
       "section_applications": "Applications",
       "section_rewards": "Rewards",
       "section_system": "System",
+      "section_language": "Language",
       "new_badge": "New"
     },
     "shell": {
@@ -1498,9 +1499,13 @@
       "error": "Error analyzing ATS compatibility",
       "short_description": "Paste the job description (minimum 20 characters)",
       "strengths": "Strengths",
-      "gaps": "Gaps",
+      "gaps": "Missing requirements",
       "missing_keywords": "Missing keywords",
       "suggestions": "Suggestions",
+      "bar_hard_skills": "Hard skills",
+      "bar_soft_skills": "Soft skills",
+      "bar_title_match": "Title match",
+      "bar_sections": "CV sections",
       "clear": "Clear result",
       "toast_empty_input": "Enter a question or paste the job description",
       "toast_update_languages": "Update your languages in the corresponding editor section",

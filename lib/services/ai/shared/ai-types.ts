@@ -21,15 +21,50 @@ export const ImproveBulletResponseSchema = z.object({
   status: z.enum(["improved", "already_optimized"]).optional(),
 })
 
+// Per-category coverage sub-scores (0-100), computed deterministically in code.
+// `null` = the category was not applicable (the JD listed no keywords of that
+// kind), so the UI hides that bar instead of showing a misleading 0%.
+export interface ATSSubScores {
+  hardSkills: number | null
+  softSkills: number | null
+  title: number | null
+  sections: number | null
+}
+
 export interface ATSScoreResult {
   score: number
   label: string
   summary: string
   strengths: string[]
   gaps: string[]
+  matchedKeywords: string[]
   missingKeywords: string[]
   suggestions: string[]
+  subScores: ATSSubScores
 }
+
+// LLM call #1 for ats-score: extract the requirements from the job description
+// (NO scoring — the score is computed deterministically in code) plus a short
+// qualitative summary and actionable suggestions. Validated before use.
+// Arrays are TRUNCATED (not hard-capped) so an over-eager model that returns
+// more items than requested never fails validation → no spurious 500. The
+// actual output size is guided softly by the prompt ("~12 hard skills") + the
+// max_tokens ceiling; this cap only bounds how many we PROCESS. `.catch([])`
+// keeps a malformed array from bringing down the whole response.
+const cappedStringArray = (limit: number) =>
+  z.array(z.string()).catch([]).transform((a) => a.slice(0, limit))
+
+export const ATSExtractionSchema = z.object({
+  hardSkills: cappedStringArray(30),
+  softSkills: cappedStringArray(20),
+  jobTitle: z.string().catch(""),
+  mustHaves: cappedStringArray(20),
+  summary: z.string().catch(""),
+  suggestions: cappedStringArray(3),
+  label: z.string().optional(), // only used to detect the off_topic guard
+})
+
+export type ATSExtraction = z.infer<typeof ATSExtractionSchema>
 
 export interface CoverLetterResult {
   body: string

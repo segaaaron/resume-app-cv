@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useTranslations, useLocale } from "next-intl"
 import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
+import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
@@ -194,6 +195,15 @@ export default function DashboardNav({
           />
           <span className="flex-1">{t("settings")}</span>
         </Link>
+
+        {/* Language switcher — drawer only (desktop uses topbar switcher) */}
+        <div className="lg:hidden">
+          <NavSeparator />
+          <SectionLabel label={t("section_language")} />
+          <div className="px-[11px] py-[6px]">
+            <LocaleSwitcher />
+          </div>
+        </div>
       </nav>
 
       {/* Footer */}

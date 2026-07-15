@@ -873,6 +873,7 @@
       "section_applications": "Candidaturas",
       "section_rewards": "Recompensas",
       "section_system": "Sistema",
+      "section_language": "Idioma",
       "new_badge": "Nuevo"
     },
     "shell": {
@@ -1498,9 +1499,13 @@
       "error": "Error al analizar compatibilidad ATS",
       "short_description": "Pega la descripción del puesto (mínimo 20 caracteres)",
       "strengths": "Fortalezas",
-      "gaps": "Brechas",
+      "gaps": "Requisitos faltantes",
       "missing_keywords": "Keywords faltantes",
       "suggestions": "Sugerencias",
+      "bar_hard_skills": "Habilidades técnicas",
+      "bar_soft_skills": "Habilidades blandas",
+      "bar_title_match": "Coincidencia de puesto",
+      "bar_sections": "Secciones del CV",
       "clear": "Limpiar resultado",
       "toast_empty_input": "Escribe una pregunta o pega la descripción del puesto",
       "toast_update_languages": "Actualiza tus idiomas en la sección correspondiente del editor",

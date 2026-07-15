@@ -378,23 +378,26 @@ export default function ATSScorePanel() {
               <p className="text-[11px] text-slate-500 text-center leading-relaxed max-w-[240px]">{atsResult.summary}</p>
             </div>
 
-            {/* Analysis bars */}
-            <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 backdrop-blur-sm p-4">
-              <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("title")}</p>
-              <ScoreBar label={t("strengths")} pct={atsResult.score} />
-              {atsResult.missingKeywords && (
-                <ScoreBar
-                  label={t("missing_keywords")}
-                  pct={Math.max(0, 100 - Math.min(100, (atsResult.missingKeywords?.length ?? 0) * 10))}
-                />
-              )}
-              {atsResult.gaps && (
-                <ScoreBar
-                  label={t("gaps")}
-                  pct={Math.max(0, 100 - Math.min(100, (atsResult.gaps?.length ?? 0) * 15))}
-                />
-              )}
-            </div>
+            {/* Analysis bars — real per-category coverage sub-scores computed
+                server-side (not derived from list lengths). Categories the job
+                did not specify are omitted. */}
+            {atsResult.subScores && (
+              <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 backdrop-blur-sm p-4">
+                <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("title")}</p>
+                {atsResult.subScores.hardSkills !== null && atsResult.subScores.hardSkills !== undefined && (
+                  <ScoreBar label={t("bar_hard_skills")} pct={atsResult.subScores.hardSkills} />
+                )}
+                {atsResult.subScores.softSkills !== null && atsResult.subScores.softSkills !== undefined && (
+                  <ScoreBar label={t("bar_soft_skills")} pct={atsResult.subScores.softSkills} />
+                )}
+                {atsResult.subScores.title !== null && atsResult.subScores.title !== undefined && (
+                  <ScoreBar label={t("bar_title_match")} pct={atsResult.subScores.title} />
+                )}
+                {atsResult.subScores.sections !== null && atsResult.subScores.sections !== undefined && (
+                  <ScoreBar label={t("bar_sections")} pct={atsResult.subScores.sections} />
+                )}
+              </div>
+            )}
 
             {atsResult.strengths?.length > 0 && (
               <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3.5">

@@ -50,7 +50,7 @@ export class AITailorModule {
 You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
 
 JOB DESCRIPTION:
-${jobDescription.slice(0, 4000)}
+${jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)}
 
 CANDIDATE CV:
 ${resumeContext}
@@ -80,6 +80,7 @@ Rules:
 - experiences: include ALL jobs from the work experience list, even those with no changes
 - changedBullets: ONLY include bullets that need improvement. If a bullet already has a strong action verb, metric/placeholder, and is relevant to this job → OMIT it (empty array = all bullets are good)
 - For each changed bullet: use • prefix, CAR method, keep placeholder [X%] if no real metrics exist
+- Human voice (avoid AI-detection): vary sentence length/structure across bullets, natural not press-release tone. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source
 - NEVER add new bullets that don't exist in the original — only replace existing ones by index
 - missingSkills: skills required by job not present in CV (max 5)
 - keywordsToAdd: ATS keywords from JD missing in CV (max 8)
@@ -93,7 +94,7 @@ Rules:
 Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
 
 OFERTA DE TRABAJO:
-${jobDescription.slice(0, 4000)}
+${jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)}
 
 CV DEL CANDIDATO:
 ${resumeContext}
@@ -123,6 +124,7 @@ Reglas:
 - experiences: incluir TODOS los puestos de la lista de experiencia, incluso los que no tienen cambios
 - changedBullets: SOLO incluir bullets que necesitan mejora. Si un bullet ya tiene verbo de acción fuerte, métrica/placeholder y es relevante → OMITIRLO (array vacío = todos los bullets están bien)
 - Para cada bullet cambiado: usar prefijo •, método CAR, mantener placeholder [X%] si no hay métricas reales
+- Voz humana (evita detección de IA): varía el largo/estructura de las frases entre bullets, tono natural no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantén cada reescritura anclada a un dato concreto ya presente en el source
 - NUNCA agregar bullets nuevos que no existen en el original — solo reemplazar existentes por índice
 - missingSkills: habilidades requeridas por la oferta no presentes en el CV (máximo 5)
 - keywordsToAdd: keywords ATS de la oferta no presentes en el CV (máximo 8)
