@@ -14,6 +14,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { isTrivialEdit } from "../shared/text-similarity"
 import {
   AI_INPUT_LIMITS,
   type CoverLetterResult,
@@ -322,6 +323,20 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     if (cleanVersions.length === 0) {
       return { versions: [body.trim()], status: "already_optimized" }
     }
-    return { versions: cleanVersions }
+
+    // Echo detection — improveSummary has had this since forever, this endpoint
+    // never did. Three near-copies of the user's own letter are not three
+    // improvements; say so instead of dressing them up as choices. The three
+    // versions themselves are by design (formal / balanced / dynamic), so only
+    // drop them when NONE is a real rewrite.
+    const rewritten = cleanVersions.filter((v) => !isTrivialEdit(body, v))
+    if (rewritten.length === 0) {
+      this.logger.warn("[AIService.improveCoverLetter] all versions echoed the original", {
+        versions: cleanVersions.length,
+      })
+      return { versions: [body.trim()], status: "already_optimized" }
+    }
+
+    return { versions: rewritten }
   }
 }

@@ -13,6 +13,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination, stripVersionLabel } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { assessSummary, profileStatesMetrics } from "../shared/summary-quality"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,
@@ -194,8 +195,6 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
   }
 
   async improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {
-    await enforceAIQuota(userId, "improve-summary", plan)
-
     const { summary, userDescription, sectionData, language: rawLanguage } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
@@ -212,6 +211,28 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       const validation = validateAIInput(userDescription!, AI_INPUT_LIMITS.userDescription)
       if (!validation.valid) throw new AppError("invalid_input", 400)
     }
+
+    // Decide in code whether there is anything to improve, before spending a
+    // call. The prompt's STEP 0 asks the model this same question and the model
+    // never says yes — measured 0/5 on a summary meeting every criterion it
+    // lists. This endpoint returns 3 versions or nothing, and "nothing" reads to
+    // the model like failing the task, so it always writes three. The criteria
+    // are mechanical; a regex answers them exactly, for free, every time.
+    // Only when the user is polishing an existing summary — a userDescription
+    // means they are asking for a rewrite from new input, which is not a
+    // quality question.
+    if (hasSummary && !hasDescription) {
+      const quality = assessSummary(summary!, profileStatesMetrics(sectionData))
+      if (quality.alreadyGood) {
+        // Deliberately before enforceAIQuota: no model was called, so this must
+        // not burn one of an UNSUBSCRIBED user's two uses, and must not write an
+        // AI_USED audit entry — that record exists to prove a paid service was
+        // delivered, and here none was.
+        return { versions: [summary!.trim()], status: "already_optimized" }
+      }
+    }
+
+    await enforceAIQuota(userId, "improve-summary", plan)
 
     const resumeContext = sectionData ? buildResumeContext(sectionData, language) : ""
 
