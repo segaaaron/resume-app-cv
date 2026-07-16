@@ -130,7 +130,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
             "Eres un Consultor de Carrera de Élite especializado en escritura de resúmenes profesionales que consiguen entrevistas en empresas top. " +
             "Tu método: analizar el perfil completo del candidato, identificar su nivel real de seniority, extraer sus diferenciadores únicos y construir resúmenes que posicionan al candidato como la opción ideal para su sector. " +
             "Cada resumen debe sonar personal y auténtico — escrito por el candidato, no generado por IA. " +
-            "Usas la fórmula: [Título] con [logro clave] especializado en [área], que ha [verbo de logro] [resultado] mediante [diferenciador]. " +
+            // Aquí vivía una fórmula-plantilla llena de corchetes ("[Título] con
+            // [logro clave]...") dos líneas antes de prohibir los corchetes. El
+            // modelo recibía el patrón y la prohibición a la vez, y hacían falta
+            // 24 repeticiones de NUNCA para suprimir una contradicción que
+            // bastaba con borrar. La fórmula además imponía un esqueleto único,
+            // chocando con "varía la estructura entre las 3 versiones".
             "SOLO respondes con perfiles profesionales reales. NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica, escribes sin número. " +
             "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. " +
             langInstruction,
@@ -227,7 +232,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 
     const prompt = language === "en"
       ? hasSummary
-        ? criticalEN + `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) strong action verb or role title at start, (b) at least one real metric from the profile, (c) no clichés ("passionate", "team player", "looking for"), (d) 60-120 words, (e) no personal pronouns. If ALL criteria are met → return {"status": "already_optimized", "versions": []} immediately.
+        ? criticalEN + `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) a strong action verb or role title at the start, (b) the profile's metrics, IF the profile states any — a summary with no numbers still passes this check when the profile gives none, (c) no clichés ("passionate", "team player", "looking for"), (d) no personal pronouns. If ALL applicable criteria are met → return {"status": "already_optimized", "versions": []} immediately. A summary that is already good is a correct and expected outcome.
 
 TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
 
@@ -279,7 +284,7 @@ RULES:
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
       : hasSummary
-        ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) al menos una métrica real del perfil, (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) 60-120 palabras, (e) sin pronombres personales. Si TODOS los criterios se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente.
+        ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) las métricas del perfil, SI el perfil declara alguna — un resumen sin números pasa igual este check cuando el perfil no da ninguna, (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) sin pronombres personales. Si TODOS los criterios aplicables se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente. Que el resumen ya esté bien es una respuesta correcta y esperada.
 
 TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
 

@@ -90,9 +90,9 @@ Return a JSON object:
 }
 
 Rules:
-- summary: rewrite if it lacks job keywords or impact metrics. Return null if it's already strong.
+- summary: rewrite if it lacks job keywords. Do NOT rewrite it just because it has no numbers — the CV may state none, and that is fine. Return null if it's already strong.
 - experiences: include ALL jobs from the work experience list, even those with no changes
-- changedBullets: ONLY include bullets that need improvement. If a bullet already has a strong action verb, a real metric, and is relevant to this job → OMIT it (empty array = all bullets are good)
+- changedBullets: ONLY include bullets that need improvement. If a bullet already has a strong action verb and is relevant to this job → OMIT it. An empty array means every bullet is already good, which is a correct and expected answer — never pad it with cosmetic rewords.
 - For each changed bullet: use • prefix, CAR method. If the bullet would need a figure the CV does not state, omit the bullet rather than invent one or leave a bracket
 - Human voice (avoid AI-detection): vary sentence length/structure across bullets, natural not press-release tone. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source
 - NEVER add new bullets that don't exist in the original — only replace existing ones by index
@@ -132,9 +132,9 @@ Devuelve un objeto JSON:
 }
 
 Reglas:
-- summary: reescribir si le faltan keywords de la oferta o métricas de impacto. Devolver null si ya está bien.
+- summary: reescribir si le faltan keywords de la oferta. NO lo reescribas solo porque no tenga cifras — puede que el CV no declare ninguna, y eso está bien. Devolver null si ya está bien.
 - experiences: incluir TODOS los puestos de la lista de experiencia, incluso los que no tienen cambios
-- changedBullets: SOLO incluir bullets que necesitan mejora. Si un bullet ya tiene verbo de acción fuerte, métrica real y es relevante → OMITIRLO (array vacío = todos los bullets están bien)
+- changedBullets: SOLO incluir bullets que necesitan mejora. Si un bullet ya tiene verbo de acción fuerte y es relevante → OMITIRLO. Un array vacío significa que todos los bullets ya están bien, y es una respuesta correcta y esperada — nunca lo rellenes con reescrituras cosméticas.
 - Para cada bullet cambiado: usar prefijo •, método CAR. Si el bullet necesitaría una cifra que el CV no declara, omite el bullet en vez de inventarla o dejar un corchete
 - Voz humana (evita detección de IA): varía el largo/estructura de las frases entre bullets, tono natural no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantén cada reescritura anclada a un dato concreto ya presente en el source
 - NUNCA agregar bullets nuevos que no existen en el original — solo reemplazar existentes por índice
@@ -149,7 +149,7 @@ Reglas:
       messages: [
         {
           role: "system",
-          content: `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summary": null, "experiences": [], "missingSkills": [] }. A bullet is already good if it has: (1) strong action verb at start, (2) a real metric stated in the source, (3) relevant context for this specific job. Only mark as unchanged if it genuinely meets all three. You never invent figures and never write bracket placeholders — a bullet needing a figure the CV lacks is omitted. ${langInstruction}`,
+          content: `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summary": null, "experiences": [], "missingSkills": [] }. A bullet is already good if it has: (1) a strong action verb at the start, (2) the metric the source states, IF the source states one — a bullet the CV gives no figure for is still "already good" once it has a strong verb and relevant context, and asking for a number the CV never mentioned would only force you to invent one, (3) relevant context for this specific job. You never invent figures and never write bracket placeholders. Leaving a bullet untouched is a correct, expected outcome — omitting it from changedBullets is how you say so. ${langInstruction}`,
         },
         { role: "user", content: prompt },
       ],

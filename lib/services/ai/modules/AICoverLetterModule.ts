@@ -215,13 +215,14 @@ GOLDEN RULES (apply all):
    - Version 1: Formal and executive
    - Version 2: Balanced and direct
    - Version 3: Dynamic and impact-oriented
-6. Maximum 4 paragraphs per version. Maximum 200 words per version. Dense in value, no filler.
+6. Maximum 4 paragraphs per version, up to 350 words. Dense in value, no filler. (This app's own generator writes 4 paragraphs of 3-5 sentences — roughly 300-400 words — so a 200-word cap would force you to delete nearly half of a letter it produced.)
+7. If the letter is already strong — concrete, specific, free of clichés, and aligned to the role — return {"status": "already_optimized", "versions": []}. That is a correct and expected answer. Never pad the response with three cosmetic rewordings of a letter that did not need them.
 
 ON NUMBERS — read this last and follow it exactly:
 The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the letter or context above will be rejected and the candidate will get nothing back. Write the strongest letter you can using only what is there.
 
 Respond ONLY with valid JSON (no markdown, no explanations):
-{"versions": ["version1", "version2", "version3"]}`
+{"status": "improved", "versions": ["version1", "version2", "version3"]}`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.
 2. Conserva métricas reales del original. Si no las hay, escribe sin números — NUNCA inventes una cifra y NUNCA dejes un corchete tipo [X%]. La carta se envía tal cual; un corchete sin rellenar se lee como algo sin terminar.
@@ -243,13 +244,14 @@ REGLAS DE ORO (aplica todas):
    - Versión 1: Formal y ejecutiva
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
-6. Máximo 4 párrafos por versión. Cada versión máximo 200 palabras. Denso en valor, sin relleno.
+6. Máximo 4 párrafos por versión, hasta 350 palabras. Denso en valor, sin relleno. (El generador de esta misma app escribe 4 párrafos de 3-5 frases — unas 300-400 palabras — así que un tope de 200 te obligaría a borrar casi la mitad de una carta que ella misma produjo.)
+7. Si la carta ya está fuerte — concreta, específica, sin clichés y alineada al puesto — devuelve {"status": "already_optimized", "versions": []}. Es una respuesta correcta y esperada. Nunca rellenes con tres reescrituras cosméticas de una carta que no las necesitaba.
 
 SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
 La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común. Una carta con cero números, construida sobre datos concretos que el candidato sí declaró (el producto, el stack, el equipo, el rol), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en la carta o el contexto de arriba será rechazada y el candidato no recibirá nada. Escribe la carta más fuerte que puedas usando solo lo que hay.
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
-{"versions": ["version1", "version2", "version3"]}`
+{"status": "improved", "versions": ["version1", "version2", "version3"]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
