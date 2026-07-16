@@ -9,6 +9,7 @@ import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
+import { assessDescription } from "../shared/bullet-quality"
 import {
   AI_INPUT_LIMITS,
   BulletImprovementSchema,
@@ -41,6 +42,18 @@ export class AIBulletModule {
     const originalBullets = parseBullets(text)
     const indexedBullets = renderBulletsForPrompt(originalBullets, { indent: "  " })
 
+    // Which bullets state no figure is a regex, not a judgement call. Tell the
+    // model the answer instead of making it guess — it only has to phrase the
+    // question for the ones that need one.
+    const quality = assessDescription(text)
+    const missingList = quality.missingMetricIndices.join(", ")
+    const metricHintEN = quality.missingMetricIndices.length
+      ? `\nBullets with no figure of their own: [${missingList}]. These are the only ones you may ask a metricQuestion about. Every other bullet already states its number — never ask for one it already has.`
+      : `\nEvery bullet already states a figure. Do NOT return metric_missing.`
+    const metricHintES = quality.missingMetricIndices.length
+      ? `\nBullets sin cifra propia: [${missingList}]. Son los únicos por los que puedes preguntar en metricQuestions. Todos los demás ya declaran su número — nunca pidas uno que ya está.`
+      : `\nTodos los bullets ya declaran una cifra. NO devuelvas metric_missing.`
+
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information present in the original bullets and the context above. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, dates, or any metric not explicitly provided.
@@ -53,6 +66,7 @@ ${context ? `Position context: ${context}` : ""}
 
 Original bullets (each addressed by its index):
 ${indexedBullets}
+${metricHintEN}
 
 TRANSFORMATION RULES:
 1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Result stated in the source.
@@ -86,6 +100,7 @@ ${context ? `Contexto del puesto: ${context}` : ""}
 
 Bullets originales (cada uno con su índice):
 ${indexedBullets}
+${metricHintES}
 
 REGLAS DE TRANSFORMACIÓN:
 1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado presente en el source.
@@ -190,7 +205,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     // The model asked for a figure the CV lacks. Surface the question in the UI —
     // never write a bracket placeholder into the user's CV.
-    if (parsed.status === "metric_missing") {
+    // The model may only PHRASE the questions, never decide whether a figure is
+    // missing — that is a regex, and the regex is right every time. Honour the
+    // status only when the bullets genuinely carry no number: a model claiming
+    // metric_missing about an already-quantified description would nag the user
+    // for a figure they already gave.
+    if (parsed.status === "metric_missing" && quality.missingMetricIndices.length > 0) {
       const metricQuestions = Array.isArray(parsed.metricQuestions)
         ? (parsed.metricQuestions as unknown[])
             .filter((q): q is string => typeof q === "string" && q.trim().length > 0)
@@ -199,6 +219,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       if (metricQuestions.length > 0) {
         return { status: "metric_missing", improvements, metricQuestions }
       }
+    }
+
+    if (parsed.status === "metric_missing" && quality.missingMetricIndices.length === 0) {
+      this.logger.warn("[AIService.improveBullet] model claimed metric_missing on a quantified description", {
+        bullets: quality.bullets.length,
+      })
     }
 
     // Nothing survived — or the model itself declined. Both mean the same thing
