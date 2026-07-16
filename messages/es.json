@@ -43,7 +43,7 @@
     },
     "blog_ats": {
       "title": "¿Qué es ATS y por qué rechaza tu CV? — READY CV",
-      "description": "El 75% de los CVs son rechazados antes de llegar a un recruiter. Aprende qué es un sistema ATS, cómo funciona y qué debes cambiar para pasar el filtro."
+      "description": "La mayoría de los ATS no rechazan tu CV solos — lo hacen recruiters, a mano y rápido. Aprende qué hace de verdad un ATS y qué se filtra realmente."
     },
     "blog_bullets": {
       "title": "Cómo escribir bullets de CV que consiguen entrevistas — READY CV",
@@ -67,7 +67,7 @@
     },
     "blog_pass_ats": {
       "title": "Cómo Pasar el ATS en 2026: Tácticas Probadas | ReadyCVV",
-      "description": "Más del 75% de los CVs son rechazados por ATS antes de llegar a un humano. Aprende las tácticas de formato, palabras clave y estructura que funcionan."
+      "description": "Lo que un ATS filtra de verdad es más estrecho de lo que te han contado. Aprende las decisiones de formato, keywords y estructura que sí importan."
     },
     "blog_marketing_cv": {
       "title": "CV para Marketing 2026: Formato, Métricas y Ejemplos | ReadyCVV",
@@ -135,11 +135,11 @@
     },
     "blog_tailor_resume": {
       "title": "How to Tailor Your Resume for Each Job (Step-by-Step Guide 2026) | ReadyCVV",
-      "description": "Tailored resumes get 40% more interviews. The 6-step process to adapt your resume per job in 15-30 minutes, with a worked example showing 3 versions from one base."
+      "description": "El proceso de 6 pasos para adaptar tu CV por oferta en 15-30 minutos, con ejemplo trabajado de 3 versiones desde una base."
     },
     "blog_adaptar_cv": {
       "title": "Cómo Adaptar tu CV a Cada Oferta de Trabajo (Guía Paso a Paso 2026) | ReadyCVV",
-      "description": "Los CVs adaptados obtienen 40% más entrevistas. El proceso de 6 pasos para adaptar tu CV por oferta en 15-30 minutos, con ejemplo trabajado de 3 versiones desde una base."
+      "description": "El proceso de 6 pasos para adaptar tu CV por oferta en 15-30 minutos, con ejemplo trabajado de 3 versiones desde una base."
     },
     "blog_cv_sin_experiencia": {
       "title": "Cómo Hacer un CV Sin Experiencia (Guía Completa 2026 + 8 Ejemplos) | ReadyCVV",
@@ -274,7 +274,7 @@
     "q_ats2": "¿Cómo funciona el análisis ATS?",
     "a_ats2": "Pegas el texto de la oferta de empleo y ReadyCVV compara tu CV contra ella: detecta keywords presentes y faltantes, analiza la compatibilidad de habilidades, experiencia y educación, y te da un porcentaje de compatibilidad con recomendaciones específicas.",
     "q_ats3": "¿Un ATS Score alto garantiza el trabajo?",
-    "a_ats3": "No garantiza el trabajo, pero sí garantiza que tu CV llegue a ojos humanos. El 75% de los CVs son rechazados por filtros ATS antes de que nadie los lea. Un score alto elimina esa barrera.",
+    "a_ats3": "No. Nada garantiza un trabajo, y cualquier herramienta que te diga lo contrario te está vendiendo algo. Lo que sí hace el score es concreto: te muestra qué requisitos de la oferta tu CV todavía no menciona, para que decidas qué añadir antes de postular. Es una herramienta de foco, no una puerta mágica.",
     "q_ats4": "¿Las plantillas de ReadyCVV son compatibles con ATS?",
     "a_ats4": "Sí. Todas las plantillas están diseñadas con formatos limpios y estructuras semánticas que los sistemas ATS pueden parsear correctamente. Evitamos tablas complejas, columnas múltiples sin orden lógico y elementos gráficos que confunden a los robots.",
     "q_tpl1": "¿Cuántas plantillas hay disponibles?",
@@ -618,14 +618,14 @@
     "review_desc": "Pregúntale cualquier cosa a READY CV sobre tu CV — ¿Mi resumen es suficientemente sólido? ¿Qué falta para un rol de PM? — y obtén respuestas accionables."
   },
   "ats_section": {
-    "title": "Descubre por qué el 75% de los CVs son rechazados antes de llegar a Recursos Humanos",
-    "subtitle": "La mayoría de empresas usan sistemas ATS para filtrar candidatos automáticamente. Si tu CV no coincide con las keywords de la oferta, nunca llega a un humano — sin importar lo cualificado que estés.",
+    "title": "Los recruiters dejan de leer cuando ya tienen suficientes candidatos",
+    "subtitle": "Una sola vacante de software puede recibir más de 2.000 candidaturas en días, y la mayoría de los recruiters las revisan por orden de llegada — y paran cuando ya tienen buenos perfiles. Cuando abren el tuyo, tiene segundos para demostrar que encaja con la oferta.",
     "step1": "Aplicas",
-    "step2": "El ATS escanea keywords",
-    "step3": "Solo los que coinciden llegan",
+    "step2": "Un recruiter busca encaje",
+    "step3": "Deciden los segundos",
     "solution_title": "READY CV te dice exactamente dónde estás antes de aplicar",
     "solution_desc": "Pega el texto de la oferta. Obtén un score de 0 a 100. Ve qué keywords te faltan. Corrígelas en el editor. Aplica con confianza.",
-    "payoff": "Deja de adivinar. Empieza a conseguir entrevistas.",
+    "payoff": "Deja de adivinar. Demuestra el encaje.",
     "cta": "Probar ATS Score — función Pro"
   },
   "comparison_table": {
@@ -2227,10 +2227,10 @@
     "entry_line1": "Tu próximo trabajo",
     "entry_line2": "empieza aquí.",
     "entry_scroll": "Desplázate para descubrir",
-    "problem_stat": "75%",
-    "problem_line1": "de los CVs nunca llegan",
-    "problem_line2": "a ojos humanos.",
-    "problem_body": "Los filtran algoritmos ATS antes de que alguien los vea. ReadyCVV cambia eso.",
+    "problem_stat": "52%",
+    "problem_line1": "de los recruiters revisan por",
+    "problem_line2": "orden de llegada.",
+    "problem_body": "Y paran cuando ya tienen buenos candidatos. Una sola vacante puede recibir más de 2.000 candidaturas en días. ReadyCVV te lleva antes, y encajando.",
     "reveal_brand": "ReadyCVV",
     "reveal_tagline": "los lee antes que los lean.",
     "reveal_stats_ai": "7 herramientas IA",
@@ -2290,7 +2290,7 @@
     "collection_desc": "Guías prácticas para optimizar tu CV, pasar filtros ATS y conseguir más entrevistas.",
     "que-es-ats-y-por-que-rechaza-tu-cv": {
       "title": "¿Qué es ATS y por qué rechaza tu CV?",
-      "desc": "El 75% de los CVs son rechazados antes de llegar a un recruiter. Aprende qué es un sistema ATS, cómo funciona y qué cambiar para pasar el filtro.",
+      "desc": "La mayoría de los ATS no rechazan tu CV solos — lo hacen recruiters, a mano y rápido. Aprende qué hace de verdad un ATS y qué se filtra realmente.",
       "tag": "ATS"
     },
     "como-escribir-bullets-de-cv": {
@@ -2320,7 +2320,7 @@
     },
     "como-pasar-el-ats": {
       "title": "Cómo pasar el ATS en 2026: tácticas probadas para tu CV",
-      "desc": "El 75% de los CVs son rechazados por el ATS antes de llegar a un humano. Aprende las tácticas de formato, palabras clave y estructura que funcionan.",
+      "desc": "Lo que un ATS filtra de verdad es más estrecho de lo que te han contado. Aprende las decisiones de formato, keywords y estructura que sí importan.",
       "tag": "ATS"
     },
     "cv-para-marketing": {
@@ -2339,7 +2339,7 @@
     "title": "¿Qué es ATS y por qué rechaza tu CV?",
     "intro": "Dedicaste horas a perfeccionar tu CV. Aplicaste a decenas de ofertas. Y sin embargo — silencio absoluto. Antes de culpar a tu experiencia o tu redacción, considera esto: el problema puede no ser tu CV. Puede ser que ninguna máquina lo haya leído siquiera.",
     "s1_h": "¿Qué es un ATS (Applicant Tracking System)?",
-    "s1_b": "Un Applicant Tracking System (ATS) es un software que las empresas usan para gestionar el volumen de candidaturas que reciben. Antes de que ningún humano lea tu CV, el ATS lo escanea buscando keywords, experiencia y estructura, y lo puntúa frente a la descripción del puesto. Los candidatos que no alcanzan cierto umbral son filtrados automáticamente.\n\nSegún estimaciones del sector, más del 75% de los CVs son rechazados por un ATS antes de llegar a un recruiter.",
+    "s1_b": "Un Applicant Tracking System (ATS) es el software que usan las empresas para gestionar la avalancha de candidaturas que reciben. Parsea tu CV a un perfil estructurado, lo guarda, y le da al recruiter herramientas para buscar y filtrar en ese montón.\n\nLo que en general NO hace es rechazarte por su cuenta. El cofundador de Greenhouse ha dicho que su plataforma «no depende de juicios generados por computadora: se requiere intervención humana para avanzar, rechazar o contratar a un candidato». La revisión con IA de Ashby «nunca rankea ni da puntuaciones numéricas». Taleo sí puntúa, pero las respuestas de su cuestionario de prescreening, no tu CV. Workday con HiredScore es la excepción real: califica candidatos de A a D.\n\nLos rechazos automáticos existen, pero se disparan por preguntas de elegibilidad — permiso de trabajo, licencias, ubicación — no por cómo redactaste. En 2025 Enhancv entrevistó a 25 recruiters de EE. UU. que usan más de 10 ATS distintos: el 92% dijo que los rechazos son manuales o solo por esos filtros de elegibilidad, nunca por formato ni por keywords faltantes.\n\n¿Qué entierra entonces una candidatura? El volumen y el tiempo. Una vacante de software recibe miles de candidaturas en días, y el 52% de esos recruiters las revisa por orden de llegada y para cuando ya tiene buenos candidatos.",
     "s2_h": "¿Cómo funciona el ATS exactamente?",
     "s2_b": "El ATS parsea tu CV en datos estructurados: nombre, contacto, historial laboral, educación, habilidades. Luego compara tu contenido con la oferta de empleo, buscando coincidencias en:\n\n• Keywords del título del puesto\n• Habilidades requeridas (técnicas y soft)\n• Años de experiencia\n• Nivel y área de estudios\n• Terminología específica del sector\n\nSi usas palabras distintas a las de la oferta — aunque sean sinónimos — el sistema puede no reconocerlas como coincidencias.",
     "s3_h": "5 razones por las que tu CV falla en ATS",
@@ -2433,7 +2433,7 @@
     "s3_h": "Paso 3: Mejora tus bullets con IA",
     "s3_b": "La mayoría de los bullets de CV son descripciones de tareas: 'Responsable de gestionar las cuentas de redes sociales.' La IA puede transformarlos en declaraciones de impacto: 'Aumenté el engagement de Instagram en un 340% en 6 meses mediante una cadencia de contenido diaria y un programa de partnerships con influencers.'\n\nPara cada entrada de experiencia laboral en ReadyCVV, haz clic en el botón de mejora en cualquier bullet. La IA lo reescribe con verbos más fuertes, impacto cuantificado y el formato: [Verbo de acción] + [qué hiciste] + [resultado/escala]. Puedes generar múltiples versiones y elegir la mejor.\n\nNota: si la IA agrega un número que no puedes verificar (como 'mejora del 40%'), cámbialo por algo preciso. Las métricas fabricadas crean problemas legales y éticos.",
     "s4_h": "Paso 4: Revisa tu ATS Score",
-    "s4_b": "Escribir un excelente CV y que sea rechazado por un ATS es una de las experiencias más frustrantes en la búsqueda de empleo. El ATS Score de ReadyCVV evita esto.\n\nPega la descripción completa del trabajo en el panel ATS Score. La IA analiza tu CV contra ella y te da una puntuación en: cobertura de palabras clave, match de habilidades, alineación de experiencia y estructura. Luego da sugerencias específicas: 'Agrega la palabra clave X de la oferta a tu sección de habilidades' o 'A tu sección de experiencia le falta el término Y que aparece 4 veces en la oferta.'\n\nHaz esto para cada trabajo al que apliques. Un CV adaptado a una oferta específica supera significativamente a un CV genérico — las investigaciones muestran consistentemente tasas de llamada 40-60% más altas para aplicaciones personalizadas.",
+    "s4_b": "Escribir un excelente CV y que sea rechazado por un ATS es una de las experiencias más frustrantes en la búsqueda de empleo. El ATS Score de ReadyCVV evita esto.\n\nPega la descripción completa del trabajo en el panel ATS Score. La IA analiza tu CV contra ella y te da una puntuación en: cobertura de palabras clave, match de habilidades, alineación de experiencia y estructura. Luego da sugerencias específicas: 'Agrega la palabra clave X de la oferta a tu sección de habilidades' o 'A tu sección de experiencia le falta el término Y que aparece 4 veces en la oferta.'\n\nHaz esto para cada trabajo al que apliques. Un CV adaptado a la oferta le ahorra al recruiter el trabajo de deducir si encajas — y ese es todo el tiempo que le vas a tener.",
     "s5_h": "Paso 5: Genera tu carta de presentación con IA",
     "s5_b": "Una carta de presentación escrita desde cero toma 45-90 minutos. El generador de cartas IA de ReadyCVV genera un primer borrador personalizado en menos de un minuto.\n\nPega la descripción del trabajo y especifica tu tono (formal, conversacional, técnico). La IA escribe una carta de 3 párrafos: una apertura que engancha con tu logro más relevante, un cuerpo que conecta tu experiencia con las necesidades específicas de la empresa, y un cierre que solicita la entrevista con confianza.\n\nEdítala. Agrega un detalle personal sobre la empresa (un producto que uses, una declaración de misión en la que creas, una noticia reciente). Ese toque personal es lo que la IA no puede agregar — pero también es lo que separa una buena carta de una excelente.",
     "s6_h": "Lo que la IA aún no puede hacer",
@@ -2458,7 +2458,7 @@
     "s4_h": "Proyectos: tu prueba de habilidades",
     "s4_b": "Para desarrolladores junior, los proyectos personales son tu mayor diferenciador. Para desarrolladores senior, los proyectos paralelos significativos o las contribuciones open source agregan credibilidad.\n\nPara cada proyecto incluye:\n• Qué hace (1 oración)\n• El stack que usaste\n• Un desafío técnico interesante que resolviste\n• Link de GitHub o URL en vivo\n\nNo incluyas proyectos de tutorial (app de tareas, app del clima, base de datos de películas). Incluye proyectos que resuelven un problema real, tienen usuarios reales, o demuestran una decisión técnica interesante.",
     "s5_h": "Usar ATS Score para superar el filtrado automatizado",
-    "s5_b": "Más del 75% de los CVs de desarrolladores son filtrados por ATS antes de llegar a un humano. La solución es el matching de palabras clave — pero no spam de palabras clave al azar.\n\nEl ATS Score de ReadyCVV te permite pegar una oferta de trabajo y obtener un análisis específico de match: qué palabras clave de la oferta faltan en tu CV, qué habilidades destacar más prominentemente, y qué mejoras de estructura subirían tu puntuación.\n\nUn desarrollador frontend que aplica a un rol de React debería ver React, TypeScript, Redux, librerías de testing y optimización de rendimiento mencionados. Un rol backend quiere ver diseño de API, experiencia con bases de datos y palabras clave de diseño de sistemas. Diferentes roles, diferentes mapas de palabras clave — ATS Score te ayuda a personalizar cada aplicación.",
+    "s5_b": "Meter keywords no va a hacer que un bot te quiera — la mayoría de los ATS ni siquiera puntúan tu CV. Hace algo más útil: te obliga a responder, antes de postular, si tu CV dice de verdad lo que esta vacante está pidiendo.\n\nLa función ATS Score de ReadyCVV te deja pegar una descripción de puesto y obtener un análisis específico: qué requisitos de la oferta faltan en tu CV, qué habilidades destacar más, y qué mejoras de estructura ayudarían.\n\nUn desarrollador frontend que postula a un puesto de React debería mencionar React, TypeScript, Redux, librerías de testing y optimización de rendimiento. Uno de backend quiere ver diseño de APIs, experiencia con bases de datos y diseño de sistemas. Distintos roles, distintos mapas — ATS Score te enseña el hueco de cada candidatura.",
     "s6_h": "Errores comunes en CVs de desarrolladores",
     "s6_b": "1. Listar tecnologías que apenas conoces — lleva a pantallas técnicas fallidas\n2. Sin link de GitHub — la omisión más común de desarrolladores junior\n3. Responsabilidades vagas sin ninguna cuantificación\n4. Usar una plantilla creativa que el ATS no puede parsear — los PDFs bonitos con columnas o cajas de texto a menudo fallan el parseo ATS\n5. Listar 'competente en' sin contexto — ¿competente comparado con qué?\n6. Educación al inicio para desarrolladores con experiencia — muévela al final después de 2+ años\n7. Resumen genérico ('desarrollador apasionado con experiencia en múltiples tecnologías') — no dice nada, nadie lo recuerda",
     "r1_slug": "como-pasar-el-ats",
@@ -2473,7 +2473,7 @@
   "blog_pass_ats": {
     "tag": "ATS",
     "title": "Cómo Pasar el ATS en 2026: Tácticas Probadas para tu CV",
-    "intro": "Más del 75% de los CVs son rechazados por los Sistemas de Seguimiento de Candidatos antes de que un humano los lea. La buena noticia: los sistemas ATS no son inteligentes. Siguen reglas. Una vez que entiendes esas reglas, superar el filtro se convierte en un problema con solución — no en una lotería.",
+    "intro": "Probablemente hayas leído que la mayoría de los CVs son rechazados automáticamente por un ATS antes de que los vea un humano. Esa afirmación se rastrea hasta el marketing de un único vendor allá por 2012 — una empresa que cerró en 2013 y que nunca publicó un estudio, ni un dataset, ni un método. La cifra deriva entre 70%, 75% y 88% según quién la repita, y eso es justamente la señal.\n\nLo que sí es real es más estrecho, y más útil de saber. Los fallos de parseo son reales: un CV que llega al recruiter como un bloque ilegible no ayuda a nadie. Los knockouts por elegibilidad son reales. Y la aritmética del volumen es real — una vacante recibe miles de candidaturas y los recruiters paran de leer cuando ya tienen suficientes. Todos esos son problemas que se pueden resolver.",
     "howto_name": "Cómo pasar el ATS en 2026",
     "howto_desc": "Tácticas probadas para superar los sistemas de selección automatizada de CVs",
     "s1_h": "Entiende qué hace realmente el ATS",
