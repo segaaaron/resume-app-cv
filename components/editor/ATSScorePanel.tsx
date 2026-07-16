@@ -11,6 +11,7 @@ import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
+import { parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
@@ -180,13 +181,28 @@ export default function ATSScorePanel() {
       } else if (field === "workExperience.description" || field === "workExperience.jobTitle") {
         const subField = field === "workExperience.description" ? "description" : "jobTitle"
         const items = [...((sectionData.workExperience ?? []) as WorkExperienceItem[])]
-        const idx = targetId ? items.findIndex((i) => i.id === targetId) : 0
-        if (idx !== -1) {
+        // No targetId means we don't know which job this is for. Falling back to
+        // item [0] silently rewrote whichever job happened to be first.
+        const idx = targetId ? items.findIndex((i) => i.id === targetId) : -1
+        if (idx === -1) {
+          toast.error(t("toast_change_error"))
+          setModal(null)
+          return
+        }
+        {
           const updated = { ...items[idx] }
-          if (type === "append") {
-            updated[subField] = [updated[subField], preview].filter(Boolean).join(" ")
+          if (subField === "description") {
+            // Bullets are newline-separated lines; appending with a space welded
+            // the whole existing block onto the new text as one run-on line.
+            updated.description = serializeBullets(
+              type === "append"
+                ? [...parseBullets(updated.description), ...parseBullets(preview)]
+                : parseBullets(preview),
+            )
+          } else if (type === "append") {
+            updated.jobTitle = [updated.jobTitle, preview].filter(Boolean).join(" ")
           } else {
-            updated[subField] = preview
+            updated.jobTitle = preview
           }
           items[idx] = updated
           updateSectionData("workExperience", items)

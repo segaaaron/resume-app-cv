@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { AIService } from "@/lib/services/ai/AIService"
-import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient, ChatCompletion } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
