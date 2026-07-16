@@ -13,7 +13,7 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2, type TailorExperienceResult } from "../shared/ai-types"
+import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2 } from "../shared/ai-types"
 
 export class AITailorModule {
   constructor(

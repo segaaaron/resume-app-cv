@@ -128,7 +128,6 @@ export const METRIC_PLACEHOLDER_REGEX =
  */
 export function detectHallucination(text: string, sourceContext: string): boolean {
   if (!text) return false
-  const textLower = text.toLowerCase()
   const sourceLower = sourceContext.toLowerCase()
 
   // 1. Metric placeholders are never allowed in production-ready output.
@@ -163,6 +162,70 @@ const VERSION_LABEL_REGEX =
 export function stripVersionLabel(text: string): string {
   if (!text) return text
   return text.replace(VERSION_LABEL_REGEX, "").trimStart()
+}
+
+/** Words too common to prove anything about grounding. */
+const STOPWORDS = new Set([
+  "the", "a", "an", "of", "at", "in", "for", "and", "as", "to", "with",
+  "el", "la", "los", "las", "un", "una", "de", "del", "en", "para", "y", "como",
+])
+
+/**
+ * Shorthands people type and the canonical words a CV uses for them. Explicit,
+ * because prefix matching cannot tell these apart: "dev" must ground
+ * "developer" but not "devops", and both are three-letter prefixes. Mirrors the
+ * ALIAS_GROUPS approach in ats-matcher.ts — short and curated on purpose.
+ */
+const WORD_ALIASES: readonly string[][] = [
+  ["dev", "developer", "development"],
+  ["eng", "engineer", "engineering"],
+  ["ing", "ingeniero", "ingeniera", "ingeniería", "ingenieria"],
+  ["mgr", "manager"],
+  ["sr", "senior"],
+  ["jr", "junior"],
+  ["admin", "administrator", "administrador", "administradora"],
+  ["arch", "architect", "arquitecto", "arquitecta"],
+  ["desarrollador", "desarrolladora", "desarrollo"],
+  ["analyst", "analista"],
+  ["designer", "diseñador", "diseñadora"],
+  ["qa", "tester"],
+]
+
+const ALIAS_LOOKUP: Map<string, number> = (() => {
+  const m = new Map<string, number>()
+  WORD_ALIASES.forEach((group, i) => group.forEach((w) => m.set(w, i)))
+  return m
+})()
+
+function wordsMatch(a: string, b: string): boolean {
+  if (a === b) return true
+  const ga = ALIAS_LOOKUP.get(a)
+  return ga !== undefined && ga === ALIAS_LOOKUP.get(b)
+}
+
+const WORD_SPLIT = /[^\p{L}\p{N}.+#]+/u
+
+/**
+ * True when `value` is derivable from `source`: an exact substring, or every
+ * significant word matching a source word directly or through WORD_ALIASES.
+ *
+ * A plain `source.includes(value)` demands a verbatim echo, which binned the
+ * model for doing the right thing — the user writes "I worked at Google as a
+ * backend dev", the model canonicalises to "Backend Developer", which is the
+ * form a CV needs, and the whole entry was dropped. This still rejects a role
+ * or employer the user never mentioned, which is what the check is for.
+ */
+export function isGroundedIn(value: string, source: string): boolean {
+  const v = value.toLowerCase().trim()
+  if (!v) return false
+  const s = source.toLowerCase()
+  if (s.includes(v)) return true
+
+  const sourceWords = s.split(WORD_SPLIT).filter(Boolean)
+  const valueWords = v.split(WORD_SPLIT).filter((w) => w && !STOPWORDS.has(w))
+  if (!valueWords.length) return false
+
+  return valueWords.every((word) => sourceWords.some((sw) => wordsMatch(sw, word)))
 }
 
 // Cover-letter prompts ask for the body only — the app renders the candidate's

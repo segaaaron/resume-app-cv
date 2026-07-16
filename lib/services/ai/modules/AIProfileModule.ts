@@ -10,7 +10,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -226,10 +226,13 @@ Reglas:
     let droppedNewWork = 0
     const cleanNewWork = (data.workExperienceNew ?? [])
       .filter((entry) => {
-        const employer = (entry.employer ?? "").toLowerCase().trim()
-        const role = (entry.jobTitle ?? "").toLowerCase().trim()
-        const employerGrounded = !!employer && promptLower.includes(employer)
-        const roleGrounded = !!role && promptLower.includes(role)
+        const employer = (entry.employer ?? "").trim()
+        const role = (entry.jobTitle ?? "").trim()
+        // Grounded, not echoed. Demanding a verbatim substring dropped the model
+        // for doing the right thing: "backend dev" in the user's text becomes
+        // "Backend Developer" on a CV, and that entry was binned.
+        const employerGrounded = !!employer && isGroundedIn(employer, promptLower)
+        const roleGrounded = !!role && isGroundedIn(role, promptLower)
         // Require BOTH employer and jobTitle to be derivable from the prompt.
         if (!employerGrounded || !roleGrounded) {
           droppedNewWork++
