@@ -9,10 +9,9 @@ import {
   Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock, Info,
 } from "lucide-react"
 import { toast } from "sonner"
-import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
-import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
-import { parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
+import type { ResumeSections, WorkExperienceItem } from "@/types/resume"
+import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { useCVReview } from "./hooks/useCVReview"
 import type { ReviewItem } from "./hooks/useCVReview"
 
@@ -210,59 +209,25 @@ export default function CVReviewPanel() {
     const { field, type, preview, targetId } = suggestion
 
     try {
-      if (field === "summary") {
-        const current = (sectionData.summary as string) ?? ""
-        updateSectionData("summary", type === "append" ? [current, preview].filter(Boolean).join(" ") : preview)
-      } else if (field === "personalDetails.jobTitle") {
-        const pd = (sectionData.personalDetails ?? {}) as PersonalDetails
-        updateSectionData("personalDetails", { ...pd, jobTitle: preview })
-      } else if (field === "skills") {
-        const existing = (sectionData.skills ?? []) as SkillItem[]
-        const newNames = preview.split(",").map((s) => s.trim()).filter(Boolean)
-        const toAdd = newNames.filter((n) => !existing.some((e) => e.name.toLowerCase() === n.toLowerCase()))
-        updateSectionData("skills", [...existing, ...toAdd.map((n): SkillItem => ({ id: nanoid(), name: n, level: "intermediate" }))])
-      } else if (field === "workExperience.description" || field === "workExperience.jobTitle") {
-        const subField = field === "workExperience.description" ? "description" : "jobTitle"
-        const items = [...((sectionData.workExperience ?? []) as WorkExperienceItem[])]
-        // No targetId means we don't know which job this is for. Falling back to
-        // item [0] silently rewrote whichever job happened to be first — refuse
-        // instead of guessing with the user's data.
-        const idx = targetId ? items.findIndex((i) => i.id === targetId) : -1
-        if (idx === -1) {
-          toast.error(tAts("toast_change_error"))
-          setModal(null)
-          return
-        }
-        {
-          const updated = { ...items[idx] }
-          if (subField === "description") {
-            // Bullets are newline-separated lines. Appending with a space welded
-            // the entire existing bullet block onto the new text as one run-on
-            // line; go through the shared contract so N bullets stay N bullets.
-            updated.description = serializeBullets(
-              type === "append"
-                ? [...parseBullets(updated.description), ...parseBullets(preview)]
-                : parseBullets(preview),
-            )
-          } else if (type === "append") {
-            updated.jobTitle = [updated.jobTitle, preview].filter(Boolean).join(" ")
-          } else {
-            updated.jobTitle = preview
-          }
-          items[idx] = updated
-          updateSectionData("workExperience", items)
-        }
-      } else if (field === "languages") {
-        toast.info(tAts("toast_update_languages"))
-        setAppliedItems((prev) => new Set(prev).add(itemKey))
+      const result = applySuggestion(
+        { field, type, preview, targetId },
+        sectionData as unknown as ResumeSections,
+      )
+
+      if (result.status === "unplaceable") {
+        toast.error(tAts("toast_change_error"))
         setModal(null)
         return
-      } else if (field === "certifications") {
-        toast.info(tAts("toast_update_certifications"))
+      }
+
+      if (result.status === "manual") {
+        toast.info(tAts(result.field === "languages" ? "toast_update_languages" : "toast_update_certifications"))
         setAppliedItems((prev) => new Set(prev).add(itemKey))
         setModal(null)
         return
       }
+
+      updateSectionData(result.section, result.value)
 
       const location = getApplyLocation(field, targetId)
       setAppliedItems((prev) => new Set(prev).add(itemKey))

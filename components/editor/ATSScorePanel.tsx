@@ -9,9 +9,9 @@ import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
-import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
+import type { ResumeSections, SkillItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
-import { parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
+import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
@@ -164,56 +164,25 @@ export default function ATSScorePanel() {
     const { field, type, preview, targetId } = suggestion
 
     try {
-      if (field === "summary") {
-        const current = (sectionData.summary as string) ?? ""
-        updateSectionData("summary", type === "append" ? [current, preview].filter(Boolean).join(" ") : preview)
+      const result = applySuggestion(
+        { field, type, preview, targetId },
+        sectionData as unknown as ResumeSections,
+      )
 
-      } else if (field === "personalDetails.jobTitle") {
-        const pd = (sectionData.personalDetails ?? {}) as PersonalDetails
-        updateSectionData("personalDetails", { ...pd, jobTitle: preview })
+      if (result.status === "unplaceable") {
+        toast.error(t("toast_change_error"))
+        setModal(null)
+        return
+      }
 
-      } else if (field === "skills") {
-        const existing = (sectionData.skills ?? []) as SkillItem[]
-        const newNames = preview.split(",").map((s) => s.trim()).filter(Boolean)
-        const toAdd = newNames.filter((n) => !existing.some((e) => e.name.toLowerCase() === n.toLowerCase()))
-        updateSectionData("skills", [...existing, ...toAdd.map((n): SkillItem => ({ id: nanoid(), name: n, level: "intermediate" }))])
-
-      } else if (field === "workExperience.description" || field === "workExperience.jobTitle") {
-        const subField = field === "workExperience.description" ? "description" : "jobTitle"
-        const items = [...((sectionData.workExperience ?? []) as WorkExperienceItem[])]
-        // No targetId means we don't know which job this is for. Falling back to
-        // item [0] silently rewrote whichever job happened to be first.
-        const idx = targetId ? items.findIndex((i) => i.id === targetId) : -1
-        if (idx === -1) {
-          toast.error(t("toast_change_error"))
-          setModal(null)
-          return
-        }
-        {
-          const updated = { ...items[idx] }
-          if (subField === "description") {
-            // Bullets are newline-separated lines; appending with a space welded
-            // the whole existing block onto the new text as one run-on line.
-            updated.description = serializeBullets(
-              type === "append"
-                ? [...parseBullets(updated.description), ...parseBullets(preview)]
-                : parseBullets(preview),
-            )
-          } else if (type === "append") {
-            updated.jobTitle = [updated.jobTitle, preview].filter(Boolean).join(" ")
-          } else {
-            updated.jobTitle = preview
-          }
-          items[idx] = updated
-          updateSectionData("workExperience", items)
-        }
-
-      } else if (field === "languages" || field === "certifications") {
-        toast.info(t(field === "languages" ? "toast_update_languages" : "toast_update_certifications"))
+      if (result.status === "manual") {
+        toast.info(t(result.field === "languages" ? "toast_update_languages" : "toast_update_certifications"))
         setAppliedItems((prev) => new Set(prev).add(itemKey))
         setModal(null)
         return
       }
+
+      updateSectionData(result.section, result.value)
 
       setAppliedItems((prev) => new Set(prev).add(itemKey))
       toast.success(t("toast_change_applied"))
