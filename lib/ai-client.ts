@@ -64,8 +64,22 @@ export function logAIUsage(
   })
 }
 
+export interface BuildResumeContextOptions {
+  /**
+   * Omit the work experience block. For callers that render their own, fuller
+   * view of the same jobs (tailor-cv), including both puts two different texts
+   * for the same job and bullet index in one prompt — and the model follows
+   * whichever came last, which was the more truncated one.
+   */
+  includeWorkExperience?: boolean
+}
+
 // Extract plain-text summary of CV data for use in AI prompts
-export function buildResumeContext(sectionData: Record<string, unknown>, language = "es"): string {
+export function buildResumeContext(
+  sectionData: Record<string, unknown>,
+  language = "es",
+  options: BuildResumeContextOptions = {},
+): string {
   const en = language === "en"
   const {
     personalDetails,
@@ -98,8 +112,12 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
 
   if (summary) lines.push(`${en ? "Professional Summary" : "Resumen profesional"}: ${summary}`)
 
-  if (workExperience?.length) {
+  if (workExperience?.length && options.includeWorkExperience !== false) {
     lines.push(en ? "Work Experience:" : "Experiencia laboral:")
+    // Per-job budget alone is not a cap: 10 jobs x 1400 would blow past
+    // AI_INPUT_LIMITS.resumeContext (12000) and hand the user a 400. Spend from
+    // one shared pool so the ceiling holds no matter how long the CV is.
+    let workBudget = 8000
     workExperience.slice(0, 10).forEach((j) => {
       const present = en ? "Present" : "Presente"
       const at = en ? "at" : "en"
@@ -111,11 +129,22 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
       lines.push(`  - ${jobId}${j.jobTitle ?? ""} ${at} ${j.employer ?? ""} (${period})`)
       // Render bullets as indexed lines, never as one blob: a model shown a
       // paragraph returns a paragraph, which is how review-cv used to collapse
-      // an 8-bullet description into a single one. Same 500-char budget as the
-      // old slice, but spent on whole bullets instead of a mid-word cut.
+      // an 8-bullet description into a single one.
+      //
+      // The budget is 1400, not the old 500. review-cv is asked to return one
+      // line per original bullet and its suggestion is dropped if it returns
+      // fewer — but at 500 chars a normal 5-bullet job only ever showed 4, so
+      // the model could not comply and every such job silently lost its
+      // suggestion. 1400 fits ~10 typical bullets; jobs are capped at 10, and
+      // AI_INPUT_LIMITS.resumeContext (12000) still guards the ceiling.
       const bullets = parseBullets(j.description ?? "")
-      if (bullets.length) {
-        lines.push(renderBulletsForPrompt(bullets, { indent: "    ", maxTotalLength: 500 }))
+      if (bullets.length && workBudget > 0) {
+        const rendered = renderBulletsForPrompt(bullets, {
+          indent: "    ",
+          maxTotalLength: Math.min(1400, workBudget),
+        })
+        lines.push(rendered)
+        workBudget -= rendered.length
       }
     })
   }

@@ -30,18 +30,30 @@ export class AITailorModule {
     const jdValidation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
     if (!jdValidation.valid) throw new AppError(jdValidation.error ?? "invalid_input", 400)
 
-    const resumeContext = buildResumeContext(sectionData, language)
+    // WORK EXPERIENCE DETAILS below is this prompt's source of truth for jobs —
+    // full bullets, indexed. Letting buildResumeContext also emit its own,
+    // 500-char-truncated copy of the same jobs would give the model two texts
+    // for the same (ID, index).
+    const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
     const ctxValidation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!ctxValidation.valid) throw new AppError("invalid_input", 400)
 
+    // FULL bullets, never elided. The model replaces a bullet wholesale by index,
+    // so anything it cannot see, it destroys: at the old 80-char cap it read
+    // "…cutting d…" and rewrote away the "40 minutes to under 6" it never saw.
+    // If you must bound this, bound the number of bullets — never their text.
     const work = (sectionData.workExperience ?? []) as { id?: string; jobTitle?: string; employer?: string; description?: string }[]
     const workList = work.slice(0, 4).map((j) => {
       const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
-        maxLength: 80,
         emptyLabel: "  (sin bullets)",
       })
       return `ID:${j.id ?? "?"} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}:\n${bulletLines}`
     }).join("\n\n")
+
+    // What the model is allowed to have known. resumeContext no longer carries
+    // the jobs, so the bullets must come from workList — otherwise every faithful
+    // rewrite reads as invented content and detectHallucination bins it.
+    const groundingSource = `${resumeContext}\n${workList}`
 
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
@@ -166,7 +178,7 @@ Reglas:
     // only items present in the JD survive (the model is supposed to extract
     // them — never invent).
     const jdLower = jobDescription.toLowerCase()
-    const resumeLower = resumeContext.toLowerCase()
+    const resumeLower = groundingSource.toLowerCase()
     let droppedBullets = 0
 
     const sanitizedExperiences = (raw.experiences ?? []).map((e) => {
@@ -179,7 +191,7 @@ Reglas:
         .filter((b) => {
           // Placeholders are banned outright now, so they count as hallucinations:
           // a "[X%]" reaching the CV is exactly the bracket the prompt forbids.
-          if (detectHallucination(b.text, resumeContext)) {
+          if (detectHallucination(b.text, groundingSource)) {
             droppedBullets++
             return false
           }
