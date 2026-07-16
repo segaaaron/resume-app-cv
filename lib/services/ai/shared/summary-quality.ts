@@ -11,6 +11,7 @@
 //
 // Every criterion in that gate is checkable in code, so it belongs here: no
 // token spent, instant, and the same summary always gets the same verdict.
+import { ANY_METRIC_REGEX } from "./ai-helpers"
 
 /** Openers that carry no impact. Mirrors the prompt's banned list. */
 const CLICHES: readonly string[] = [
@@ -42,10 +43,6 @@ const IMPACT_VERBS: readonly string[] = [
   "redujo", "incrementó", "lanzó", "mentoró", "arquitectó", "automatizó",
   "migró", "desplegó", "refactorizó",
 ]
-
-/** Numbers that read as an achievement metric, not a year or a phone number. */
-const METRIC_REGEX =
-  /\b\d+(?:[.,]\d+)?\s*(?:%|percent|x\b|k\b|m\b|users?|usuarios?|clients?|clientes?|people|personas|engineers?|ingenieros?|teams?|equipos?|projects?|proyectos?|years?|años?|months?|meses?|minutes?|minutos?|hours?|horas?|releases?|versions?|versiones?)/i
 
 export interface SummaryQuality {
   /** True when nothing here is worth an AI rewrite. */
@@ -82,7 +79,7 @@ export function assessSummary(summary: string, profileHasMetrics: boolean): Summ
   if (PRONOUN_REGEX.test(text)) issues.push("pronouns")
 
   // Only a fault when the CV actually has a figure to carry over.
-  if (profileHasMetrics && !METRIC_REGEX.test(text)) issues.push("missing_metric")
+  if (profileHasMetrics && !ANY_METRIC_REGEX.test(text)) issues.push("missing_metric")
 
   return { alreadyGood: issues.length === 0, issues }
 }
@@ -91,5 +88,5 @@ export function assessSummary(summary: string, profileHasMetrics: boolean): Summ
 export function profileStatesMetrics(sectionData: Record<string, unknown> | undefined): boolean {
   if (!sectionData) return false
   const work = (sectionData.workExperience ?? []) as { description?: string }[]
-  return work.some((j) => METRIC_REGEX.test(j.description ?? ""))
+  return work.some((j) => ANY_METRIC_REGEX.test(j.description ?? ""))
 }

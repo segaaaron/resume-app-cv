@@ -88,12 +88,35 @@ export const TECH_BUZZWORDS: readonly string[] = [
 ]
 
 /**
- * Detects metric tokens (percentages, "K/M" magnitudes, reduction/increase
- * phrases). Used to identify metrics in the AI output that aren't present in
- * the source.
+ * Metric tokens that count as INVENTED when they appear in AI output but not in
+ * the source. Deliberately NARROW: every token here that the model writes and
+ * the source lacks costs the user their whole suggestion, so a false positive
+ * is expensive. Only units that are unambiguously performance claims.
+ *
+ * Not the same list as ANY_METRIC_REGEX, and that is on purpose — see there.
  */
 export const METRIC_REGEX =
   /(\d+(?:[.,]\d+)?)\s*(%|percent|x\b|users?|usuarios?|requests?|peticiones?|reduction|reducci[oó]n|increase|aumento|decrease|improvement|mejora)/gi
+
+/**
+ * Any figure that quantifies something — used to ask "does this text contain a
+ * real number at all?", never to accuse the model of inventing one.
+ *
+ * Deliberately BROAD, and deliberately broader than METRIC_REGEX. The two
+ * answer opposite questions and want opposite errors:
+ *
+ *   METRIC_REGEX      "is this invented?"  → a false positive DROPS the user's
+ *                                            suggestion, so it stays narrow.
+ *   ANY_METRIC_REGEX  "does this quantify?" → a false negative just means we
+ *                                            nag about a metric that is there,
+ *                                            so it stays inclusive.
+ *
+ * They used to be two unrelated regexes in two files that happened to disagree
+ * about whether "5 engineers" was a metric. One list, one place, and the
+ * difference is now a decision instead of an accident.
+ */
+export const ANY_METRIC_REGEX =
+  /\b\d+(?:[.,]\d+)?\s*(?:%|percent|x\b|k\b|m\b|users?|usuarios?|clients?|clientes?|people|personas|engineers?|ingenieros?|teams?|equipos?|projects?|proyectos?|years?|a[ñn]os?|months?|meses?|minutes?|minutos?|hours?|horas?|releases?|versions?|versiones?|countries?|pa[ií]ses?|accounts?|cuentas?|tickets?|deals?|leads?)/i
 
 /**
  * Matches a METRIC placeholder: a bracket standing in for a figure the source
