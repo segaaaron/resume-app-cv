@@ -9,16 +9,39 @@ export interface VersionsResult {
   status?: "improved" | "already_optimized"
 }
 
+// One improved bullet, addressed by its position in the ORIGINAL description.
+// Presence is a decision, not a slot: a bullet the model cannot improve without
+// inventing facts simply has no entry. Forcing one output per input is what made
+// the model echo its input back with a placeholder bolted on — it had no way to
+// decline. Mirrors TailorBulletChange, which got this right from the start.
+export const BulletImprovementSchema = z.object({
+  index: z.number().int().min(0),
+  text: z.string().min(1),
+})
+
+export type BulletImprovement = z.infer<typeof BulletImprovementSchema>
+
+/**
+ * improve-bullet outcome.
+ *  - improved         → at least one bullet has a real rewrite
+ *  - already_optimized → nothing to improve; the UI shows the green pill
+ *  - metric_missing   → the only thing holding the bullets back is a number the
+ *                       CV does not contain. Ask the user in the UI; never write
+ *                       a [X%] placeholder into their CV.
+ */
 export interface BulletResult {
-  bullets: string[]
-  status?: "improved" | "already_optimized"
+  improvements: BulletImprovement[]
+  status: "improved" | "already_optimized" | "metric_missing"
+  /** Questions to surface for status "metric_missing". Empty otherwise. */
+  metricQuestions?: string[]
 }
 
 // Shared API↔UI contract for /api/ai/improve-bullet — the client must parse
 // the response with this schema instead of trusting the shape blindly.
 export const ImproveBulletResponseSchema = z.object({
-  bullets: z.array(z.string()),
-  status: z.enum(["improved", "already_optimized"]).optional(),
+  improvements: z.array(BulletImprovementSchema),
+  status: z.enum(["improved", "already_optimized", "metric_missing"]),
+  metricQuestions: z.array(z.string()).max(3).optional(),
 })
 
 // Per-category coverage sub-scores (0-100), computed deterministically in code.
@@ -241,7 +264,10 @@ export interface TailorCVResultV2 {
   summary: string | null            // null = resumen ya está bien
   experiences: TailorExperienceResult[]
   missingSkills: string[]
-  keywordsToAdd: string[]
+  // No keywordsToAdd: it duplicated ats-score's missingKeywords, which is
+  // computed deterministically and verified against the CV (ats-matcher.ts),
+  // where this one was a raw substring match on the JD. With both panels now
+  // sharing one job description they rendered as two near-identical chip rows.
 }
 
 // ─── Central input character limits ────────────────────────────────────────────

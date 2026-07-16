@@ -1,6 +1,7 @@
 // lib/services/ai/shared/ai-helpers.ts
 // Shared helpers used across multiple AI modules.
 import { AppError } from "@/lib/services/auth/AppError"
+import { parseBullets, renderBulletsForPrompt } from "./bullets"
 
 /** Safe JSON parser — throws AppError("parse_error", 500) on failure. */
 export function parseAIJson<T>(raw: string): T {
@@ -9,6 +10,16 @@ export function parseAIJson<T>(raw: string): T {
   } catch {
     throw new AppError("parse_error", 500)
   }
+}
+
+export interface BuildSectionContextOptions {
+  /**
+   * Render `description` as indexed bullet lines via the shared bullets
+   * contract. Opt-in: only work experience stores bullets — education,
+   * projects and volunteer descriptions are prose, and indexing prose would
+   * invent a structure the data doesn't have.
+   */
+  bullets?: boolean
 }
 
 /** Builds a labeled list of section items for prompts (with stable ids). */
@@ -25,13 +36,23 @@ export function buildSectionContext(
     degree?: string
     description?: string
   }[],
+  options: BuildSectionContextOptions = {},
 ): string {
   if (!items.length) return ""
   return `\n${label}:\n` + items.map((item, i) => {
     const name = item.employer ?? item.organization ?? item.name ?? item.title ?? item.degree ?? item.role ?? item.jobTitle ?? ""
-    const desc = item.description ? `\n    Descripción actual: ${item.description.slice(0, 500)}` : ""
+    const desc = buildItemDescription(item.description, options.bullets === true)
     return `  [${i + 1}] id="${item.id}" | ${name}${desc}`
   }).join("\n")
+}
+
+function buildItemDescription(description: string | undefined, asBullets: boolean): string {
+  if (!description) return ""
+  if (!asBullets) return `\n    Descripción actual: ${description.slice(0, 500)}`
+  const bullets = parseBullets(description)
+  if (!bullets.length) return ""
+  const rendered = renderBulletsForPrompt(bullets, { indent: "      ", maxTotalLength: 500 })
+  return `\n    Descripción actual (bullets):\n${rendered}`
 }
 
 /** Minimal HTML escape for AI output rendered as HTML. */
@@ -74,16 +95,18 @@ export const TECH_BUZZWORDS: readonly string[] = [
 export const METRIC_REGEX =
   /(\d+(?:[.,]\d+)?)\s*(%|percent|x\b|users?|usuarios?|requests?|peticiones?|reduction|reducci[oó]n|increase|aumento|decrease|improvement|mejora)/gi
 
-export interface DetectHallucinationOptions {
-  /**
-   * When true, bracket placeholders like [X%], [N users], [X years] are
-   * permitted (some modules explicitly instruct the model to use them when
-   * real metrics are missing — e.g. improve-bullet, improve-summary,
-   * improve-cover-letter). Default false (review-cv behaviour: previews must
-   * be production-ready text with no placeholders).
-   */
-  allowPlaceholders?: boolean
-}
+/**
+ * Matches a METRIC placeholder: a bracket standing in for a figure the source
+ * never provided — [X%], [N users], [$Z], [N meses], [number of clients].
+ *
+ * Anchored to the START of the bracket, because that is what distinguishes a
+ * metric stand-in from ordinary bracketed prose. The previous version accepted
+ * the bare letters "x" or "n" ANYWHERE inside the brackets, so "[Your Name]"
+ * and "[Company]" both matched on their incidental "n" — which silently binned
+ * every cover letter the model signed off with "Sincerely, [Your Name]".
+ */
+export const METRIC_PLACEHOLDER_REGEX =
+  /\[\s*(?:x\b|n\b|z\b|\$|\d|number\b|métrica\b|metric\b|porcentaje\b|percent\b|cifra\b)/i
 
 /**
  * Fail-safe hallucination detector. Returns true if `text` looks like it
@@ -92,31 +115,27 @@ export interface DetectHallucinationOptions {
  * surface invented data to the user.
  *
  * Detection layers:
- *   1. Placeholder patterns like [X%], [N users], [métrica] — only when
- *      `allowPlaceholders` is false.
+ *   1. Metric placeholders like [X%], [N users], [métrica].
  *   2. Metric tokens present in text but absent from source.
  *   3. Tech buzzwords from TECH_BUZZWORDS present in text but absent from source.
+ *
+ * There is deliberately no opt-out for layer 1. Modules used to pass
+ * `allowPlaceholders: true` and instruct the model to emit "[X%]" whenever a
+ * real metric was missing — which shipped unfilled brackets into CVs and cover
+ * letters, and gave the model a way to "improve" a bullet by bolting a fake
+ * metric onto an otherwise unchanged sentence. When a figure is missing the
+ * answer is to write without it, or to ask the user — never to bracket it.
  */
-export function detectHallucination(
-  text: string,
-  sourceContext: string,
-  options: DetectHallucinationOptions = {},
-): boolean {
+export function detectHallucination(text: string, sourceContext: string): boolean {
   if (!text) return false
   const textLower = text.toLowerCase()
   const sourceLower = sourceContext.toLowerCase()
 
-  // 1. Placeholders never allowed in production-ready output (unless caller opts in).
-  if (!options.allowPlaceholders) {
-    if (/\[[^\]]*(?:x|n|number|métrica|metric|porcentaje|percent|usuarios?|users?)[^\]]*\]/i.test(text)) {
-      return true
-    }
-  }
+  // 1. Metric placeholders are never allowed in production-ready output.
+  if (METRIC_PLACEHOLDER_REGEX.test(text)) return true
 
   // 2. Metric tokens present in text but absent from the source.
-  //    Skip tokens that are inside bracket placeholders when those are allowed.
-  const cleanText = options.allowPlaceholders ? text.replace(/\[[^\]]+\]/g, " ") : text
-  const textMetrics = cleanText.match(METRIC_REGEX) ?? []
+  const textMetrics = text.match(METRIC_REGEX) ?? []
   for (const metric of textMetrics) {
     if (!sourceLower.includes(metric.toLowerCase())) return true
   }
@@ -144,4 +163,27 @@ const VERSION_LABEL_REGEX =
 export function stripVersionLabel(text: string): string {
   if (!text) return text
   return text.replace(VERSION_LABEL_REGEX, "").trimStart()
+}
+
+// Cover-letter prompts ask for the body only — the app renders the candidate's
+// real name beneath it. Models sign off anyway (~1 in 8), usually as
+// "Sincerely,\n[Your Name]", which leaves an unfilled bracket in a letter the
+// user sends to a recruiter. The prompt is the first line of defence; this is
+// the deterministic one.
+const SIGN_OFF_REGEX =
+  /\n+\s*(?:sincerely|regards|best regards|kind regards|warm regards|yours (?:sincerely|truly|faithfully)|thank you|atentamente|saludos(?: cordiales)?|cordialmente|un saludo)\s*,?\s*(?:\n+.{0,60})?\s*$/i
+
+/** Trailing "[Your Name]" / "[Tu Nombre]" line, with or without a sign-off above it. */
+const NAME_PLACEHOLDER_LINE_REGEX = /\n+\s*\[[^\]\n]{0,40}\]\s*$/
+
+/**
+ * Removes a trailing signature block from a cover-letter body: the sign-off
+ * line, and any bracketed name line under it. Only the tail is touched — real
+ * prose is never rewritten.
+ */
+export function stripSignOff(text: string): string {
+  if (!text) return text
+  let out = text.replace(NAME_PLACEHOLDER_LINE_REGEX, "")
+  out = out.replace(SIGN_OFF_REGEX, "")
+  return out.trimEnd()
 }

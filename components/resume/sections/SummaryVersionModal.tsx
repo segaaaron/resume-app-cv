@@ -132,14 +132,9 @@ export default function SummaryVersionModal({ open, versions, onClose, onSelect 
             )
           })}
 
-          {/* Disclaimer */}
-          <div className="flex items-start gap-2 px-3.5 py-3 rounded-xl"
-            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-            <span className="text-amber-500 shrink-0 text-[12px] mt-px">⚠</span>
-            <p className="text-[10.5px] leading-relaxed" style={{ color: "rgba(180,120,0,0.9)" }}>
-              {t("metrics_disclaimer")}
-            </p>
-          </div>
+          {/* No placeholder disclaimer: these versions no longer contain [X%]
+              brackets, so asking the user to go replace them would be asking
+              them to fix a problem we stopped creating. */}
         </div>
 
         {/* Footer close */}

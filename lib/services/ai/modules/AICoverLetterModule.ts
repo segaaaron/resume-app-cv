@@ -12,7 +12,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel } from "../shared/ai-helpers"
+import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -83,8 +83,9 @@ Write 4 strong paragraphs:
 Rules:
 - Write ONLY the body (no salutation, no date, no signature block)
 - Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
+- Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
 - Do NOT invent facts, metrics, or experiences not present in the candidate profile
-- Use [X%] only if the candidate mentions achievements without specific numbers
+- NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
 - Avoid clichés: "passionate", "team player", "hard worker", "I believe", "I am excited to..."
 - Each paragraph must be 3–5 sentences, substantive and specific
 - The letter must feel written by a human, not AI
@@ -112,8 +113,9 @@ Escribe 4 párrafos sólidos:
 Reglas:
 - Escribe SOLO el cuerpo (sin saludo, sin fecha, sin bloque de firma)
 - NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
+- NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
 - NO inventes datos, métricas ni experiencias que no estén en el perfil del candidato
-- Usa [X%] solo si el candidato menciona logros sin cifras concretas
+- NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
 - Evita clichés: "apasionado", "trabajo en equipo", "me motiva", "creo firmemente", "estoy emocionado de..."
 - Cada párrafo debe tener 3–5 oraciones, sustanciales y específicas
 - La carta debe sonar escrita por un humano, no por IA
@@ -147,7 +149,10 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       throw new AppError("off_topic", 422)
     }
 
-    const html = parsed.body
+    // Same defence as improveCoverLetter: the prompt asks for body only, but a
+    // trailing "Sincerely,\n[Your Name]" slips through and the app renders the
+    // candidate's real name underneath anyway.
+    const html = stripSignOff(parsed.body)
       .split(/\n\n+/)
       .map((p: string) => `<p>${p.split(/\n/).map(escapeHtml).join("<br>").trim()}</p>`)
       .join("")
@@ -191,7 +196,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information already present in the current letter and the context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the source.
-2. Preserve real metrics from the original. If none exist, use ONLY the documented placeholders [X%], [N projects], [$Z]. Never replace placeholders with invented figures.
+2. Preserve real metrics from the original. If none exist, write without numbers — NEVER invent a figure and NEVER leave a bracket like [X%]. The letter is sent as-is; an unfilled bracket reads as unfinished.
 3. If a version would require fabricating content to be impactful, prefer a shorter, conservative rewrite anchored to the source.
 
 TASK: Improve this cover letter body and generate 3 optimized versions.
@@ -204,18 +209,22 @@ GOLDEN RULES (apply all):
 1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA.
 2. Eliminate clichés ("I am a proactive person", "I am passionate about teamwork"). Replace with concrete achievements.
 3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
-4. If the original has metrics, preserve them. If not, use explicit placeholders [X%], [N projects], [$Z]. NEVER invent real figures.
+3b. Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text.
+4. If the original has metrics, preserve them. If not, write without numbers. NEVER invent figures and NEVER leave brackets.
 5. Each version must have a distinct tone:
    - Version 1: Formal and executive
    - Version 2: Balanced and direct
    - Version 3: Dynamic and impact-oriented
 6. Maximum 4 paragraphs per version. Maximum 200 words per version. Dense in value, no filler.
 
+ON NUMBERS — read this last and follow it exactly:
+The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the letter or context above will be rejected and the candidate will get nothing back. Write the strongest letter you can using only what is there.
+
 Respond ONLY with valid JSON (no markdown, no explanations):
 {"versions": ["version1", "version2", "version3"]}`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.
-2. Conserva métricas reales del original. Si no las hay, usa ÚNICAMENTE los placeholders documentados [X%], [N proyectos], [$Z]. Nunca sustituyas placeholders por cifras inventadas.
+2. Conserva métricas reales del original. Si no las hay, escribe sin números — NUNCA inventes una cifra y NUNCA dejes un corchete tipo [X%]. La carta se envía tal cual; un corchete sin rellenar se lee como algo sin terminar.
 3. Si una versión requiere fabricar contenido para ser impactante, prefiere una reescritura más corta y conservadora anclada al source.
 
 TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones optimizadas.
@@ -228,12 +237,16 @@ REGLAS DE ORO (aplica todas):
 1. Mantén la estructura en 3-4 párrafos: interés → logros relevantes → valor aportado → cierre.
 2. Elimina clichés ("soy una persona proactiva", "me apasiona el trabajo en equipo"). Sustituye por logros concretos.
 3. Verbos de impacto: Lideré, Desarrollé, Optimicé, Implementé, Incrementé. NUNCA uses "Responsable de".
-4. Si hay métricas en el texto original, consérvales. Si no las hay, usa placeholders explícitos [X%], [N proyectos], [$Z]. NUNCA inventes cifras reales.
+3b. NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto.
+4. Si hay métricas en el texto original, consérvalas. Si no las hay, escribe sin números. NUNCA inventes cifras y NUNCA dejes corchetes.
 5. Cada versión debe tener un tono distinto:
    - Versión 1: Formal y ejecutiva
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
 6. Máximo 4 párrafos por versión. Cada versión máximo 200 palabras. Denso en valor, sin relleno.
+
+SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
+La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común. Una carta con cero números, construida sobre datos concretos que el candidato sí declaró (el producto, el stack, el equipo, el rol), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en la carta o el contexto de arriba será rechazada y el candidato no recibirá nada. Escribe la carta más fuerte que puedas usando solo lo que hay.
 
 Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
@@ -252,7 +265,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
             "Eres un Consultor de Carrera de Élite especializado en redacción de cartas de presentación de alto impacto para procesos de selección. " +
             "Tu especialidad es transformar cartas genéricas en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
             "SOLO trabajas con cartas de presentación laborales. " +
-            "Cuando no hay métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X%], [N proyectos]) — NUNCA inventas cifras reales. " +
+            "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
             "Si el contenido no es una carta de presentación laboral, responde únicamente con: {\"versions\": []} sin texto adicional. " +
             langInstruction,
         },
@@ -273,10 +286,13 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
       .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
       .map(stripVersionLabel)
+      // The prompt asks for no sign-off; models add one anyway ~1 in 8, usually
+      // "Sincerely,\n[Your Name]" — an unfilled bracket in a letter the user sends.
+      .map(stripSignOff)
       .filter((v) => v.trim().length > 0)
     let droppedVersions = 0
     const cleanVersions = rawVersions.filter((v) => {
-      if (detectHallucination(v, source, { allowPlaceholders: true })) {
+      if (detectHallucination(v, source)) {
         droppedVersions++
         return false
       }

@@ -41,7 +41,7 @@ export class AISummaryModule {
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY use information present in the CANDIDATE PROFILE below. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the profile.
-2. When a real metric is missing, use ONLY the documented placeholders [X years], [N projects], [X%], [N teams]. Never replace placeholders with invented figures.
+2. NEVER write a placeholder. No [X years], [N projects], [X%], [N teams], or anything in brackets standing in for a figure. This text is written straight into the candidate's CV and goes to recruiters as-is; a bracket left in it reads as an unfinished resume. When the profile states no figure, write the sentence WITHOUT a number — a specific, concrete claim with no metric beats a bracket.
 3. If a version would require fabricating content to be impactful, prefer a shorter, more conservative version anchored to the actual profile.
 
 TASK: Analyze this professional profile and generate 3 high-impact resume summaries, each with a different positioning.
@@ -53,7 +53,7 @@ PHASE 1 — INTERNAL DIAGNOSIS (do not include in response, use to guide writing
 • Seniority level: detect from experience and responsibilities (Junior <2yr / Mid 2-5yr / Senior 5-10yr / Lead/Director 10yr+)
 • Primary sector and industry
 • 2-3 unique differentiators: what this candidate has that others in their role don't
-• Most impactful achievement (with figure if exists, placeholder if not)
+• Most impactful achievement (include the figure only if the profile states one; otherwise describe the achievement without a number)
 • Key ATS keywords for the sector to include naturally
 
 PHASE 2 — GENERATE 3 VERSIONS (include in JSON response):
@@ -67,15 +67,19 @@ Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their n
 ABSOLUTE RULES:
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player", "Detail-oriented", "Hard-working", "Results-driven", "Go-getter", "Self-starter".
 • No personal pronouns (I, My, I am). Third person or impersonal form.
-• If no metrics in profile: use [X years], [N projects], [X%], [N teams] as placeholders. NEVER invent real figures.
+• If no metrics in profile: write without numbers. NEVER invent figures and NEVER leave a bracket like [X%] — an unfilled bracket in a CV reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
 • Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
+
+
+ON NUMBERS — read this last and follow it exactly:
+The profile above may state no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the profile will be rejected and the candidate will get nothing back. Write the strongest summary you can using only what is there.
 
 Respond ONLY with valid JSON (no markdown, no explanations):
 {"versions": ["version1", "version2", "version3"]}`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO usa información presente en el PERFIL DEL CANDIDATO de abajo. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el perfil.
-2. Cuando falte una métrica real, usa ÚNICAMENTE los placeholders documentados [X años], [N proyectos], [X%], [N equipos]. Nunca los sustituyas por cifras inventadas.
+2. NUNCA escribas un placeholder. Ni [X años], ni [N proyectos], ni [X%], ni [N equipos], ni nada entre corchetes que sustituya a una cifra. Este texto se escribe directo en el CV del candidato y llega al recruiter tal cual; un corchete olvidado ahí se lee como un CV a medio hacer. Si el perfil no declara la cifra, escribe la frase SIN número — una afirmación concreta sin métrica vale más que un corchete.
 3. Si una versión requiere fabricar contenido para ser impactante, prefiere una versión más corta y conservadora, anclada al perfil real.
 
 TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impacto, cada uno con posicionamiento diferente.
@@ -87,7 +91,7 @@ FASE 1 — DIAGNÓSTICO INTERNO (no incluir en respuesta, solo usar para informa
 • Nivel de seniority: detecta según años de experiencia y responsabilidades (Junior <2 años / Mid 2-5 / Senior 5-10 / Lead/Director 10+)
 • Sector e industria principal del candidato
 • 2-3 diferenciadores únicos: qué tiene este candidato que otros en su rol no tienen
-• Logro más impactante del perfil (con cifra si existe, con placeholder si no)
+• Logro más impactante del perfil (incluye la cifra solo si el perfil la declara; si no, describe el logro sin número)
 • Keywords ATS clave del sector para incluir de forma natural
 
 FASE 2 — GENERA 3 VERSIONES (incluir en respuesta JSON):
@@ -101,9 +105,13 @@ Versión 3 — PROPUESTA DE VALOR: Enfoca en lo que el candidato aporta a su pr�
 REGLAS ABSOLUTAS:
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA: "Responsable de", "Apasionado por", "Con experiencia en", "Busca", "Está interesado en".
 • Sin pronombres personales (Yo, Mi, Soy). Tercera persona o forma impersonal.
-• Si no hay métricas en el perfil: usa [X años], [N proyectos], [X%], [N equipos] como placeholders. NUNCA inventes cifras reales.
+• Si no hay métricas en el perfil: escribe sin números. NUNCA inventes cifras y NUNCA dejes un corchete tipo [X%] — un corchete sin rellenar en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
 • Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
+
+
+SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
+El perfil de arriba puede no declarar ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en el perfil será rechazada y el candidato no recibirá nada. Escribe el resumen más fuerte que puedas usando solo lo que hay.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
@@ -123,7 +131,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
             "Tu método: analizar el perfil completo del candidato, identificar su nivel real de seniority, extraer sus diferenciadores únicos y construir resúmenes que posicionan al candidato como la opción ideal para su sector. " +
             "Cada resumen debe sonar personal y auténtico — escrito por el candidato, no generado por IA. " +
             "Usas la fórmula: [Título] con [logro clave] especializado en [área], que ha [verbo de logro] [resultado] mediante [diferenciador]. " +
-            "SOLO respondes con perfiles profesionales reales. Cuando no hay métricas, usas placeholders explícitos entre corchetes ([X años], [X%]). NUNCA inventas cifras. " +
+            "SOLO respondes con perfiles profesionales reales. NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica, escribes sin número. " +
             "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. " +
             langInstruction,
         },
@@ -148,7 +156,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       .filter((v) => v.trim().length > 0)
     let droppedVersions = 0
     const cleanVersions = rawVersions.filter((v) => {
-      if (detectHallucination(v, resumeContext, { allowPlaceholders: true })) {
+      if (detectHallucination(v, resumeContext)) {
         droppedVersions++
         return false
       }
@@ -204,14 +212,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 
     const criticalEN = `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information already present in the original summary, candidate instruction, or resume context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not stated by the user.
-2. Preserve real metrics from the original. If none exist, use ONLY the documented placeholders [X years], [N projects], [X%], [$Z]. Never replace placeholders with invented figures.
+2. Preserve real metrics from the original. If none exist, write without numbers — NEVER invent a figure and NEVER leave a bracket like [X%] or [N projects]. This text goes into the candidate's CV as-is; an unfilled bracket reads as an unfinished resume.
 3. If you cannot improve a version without inventing content, return a conservative rewording that stays anchored to the source.
 4. HUMAN VOICE (avoid AI-detection): vary sentence length and structure; natural, conversational tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Anchor to concrete specifics from the source, not vague adjectives.
 
 `
     const criticalES = `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información ya presente en el resumen original, la instrucción del candidato o el contexto del CV. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no aportadas por el usuario.
-2. Conserva métricas reales del original. Si no las hay, usa ÚNICAMENTE los placeholders documentados [X años], [N proyectos], [X%], [$Z]. Nunca sustituyas placeholders por cifras inventadas.
+2. Conserva métricas reales del original. Si no las hay, escribe sin números — NUNCA inventes una cifra y NUNCA dejes un corchete tipo [X%] o [N proyectos]. Este texto entra en el CV del candidato tal cual; un corchete sin rellenar se lee como un CV sin terminar.
 3. Si no puedes mejorar una versión sin inventar contenido, devuelve una reescritura conservadora anclada al source.
 4. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases; tono natural y conversacional, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla a datos concretos del source, no a adjetivos vagos.
 
@@ -219,7 +227,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 
     const prompt = language === "en"
       ? hasSummary
-        ? criticalEN + `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) strong action verb or role title at start, (b) at least one metric or explicit placeholder [X%], (c) no clichés ("passionate", "team player", "looking for"), (d) 60-120 words, (e) no personal pronouns. If ALL criteria are met → return {"status": "already_optimized", "versions": []} immediately.
+        ? criticalEN + `STEP 0 — QUALITY CHECK: Evaluate if this summary already has: (a) strong action verb or role title at start, (b) at least one real metric from the profile, (c) no clichés ("passionate", "team player", "looking for"), (d) 60-120 words, (e) no personal pronouns. If ALL criteria are met → return {"status": "already_optimized", "versions": []} immediately.
 
 TASK: Analyze the current summary and identify its weaknesses. Generate 3 improved versions, each with a different positioning.
 
@@ -231,7 +239,7 @@ Current summary to improve:
 
 DIAGNOSIS (use internally to guide writing):
 • Detect: clichés, weak phrases, passive voice, low-impact verbs
-• Identify: hidden achievements that can be amplified with metrics or placeholders
+• Identify: hidden achievements that can be amplified using only figures the profile already states
 • Extract: candidate's real differentiator in their sector
 
 GENERATE 3 IMPROVED VERSIONS:
@@ -243,7 +251,7 @@ Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional exper
 Version 3 — VALUE PROPOSITION (3 sentences): Combines most impactful past achievement + differential skill + value the candidate will bring to the next company. Dynamic and forward-looking tone.
 
 ABSOLUTE RULES:
-• Preserve real metrics from the original. If none: use [X years], [N projects], [X%], [$Z]. NEVER invent figures.
+• Preserve real metrics from the original. If none: write without numbers. NEVER invent figures, NEVER leave brackets.
 • PROHIBITED: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player".
 • No personal pronouns (I, My, I am). Third person or impersonal.
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
@@ -264,14 +272,14 @@ Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional stack
 Version 3 — VALUE PROPOSITION (3 sentences): Focuses on what the candidate brings to their next team. Combines skills + vision of future value.
 
 RULES:
-• If the candidate didn't specify metrics: use [X years], [N projects], [X%] as placeholders. NEVER invent figures.
+• If the candidate didn't specify metrics: write without numbers. NEVER invent figures, NEVER leave brackets.
 • No personal pronouns. No clichés. Impact verbs first.
 • Each version must sound authentic — personal, not generic.
 
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
       : hasSummary
-        ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) al menos una métrica o placeholder explícito [X%], (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) 60-120 palabras, (e) sin pronombres personales. Si TODOS los criterios se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente.
+        ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) al menos una métrica real del perfil, (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) 60-120 palabras, (e) sin pronombres personales. Si TODOS los criterios se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente.
 
 TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versiones mejoradas, cada una con posicionamiento diferente.
 
@@ -283,7 +291,7 @@ Resumen actual a mejorar:
 
 DIAGNÓSTICO (usa internamente para guiar las versiones):
 • Detecta: clichés, frases débiles, voz pasiva, verbos sin impacto
-• Identifica: logros ocultos que pueden amplificarse con métricas o placeholders
+• Identifica: logros ocultos que pueden amplificarse usando solo cifras que el perfil ya declara
 • Extrae: diferenciador real del candidato en su sector
 
 GENERA 3 VERSIONES MEJORADAS:
@@ -295,7 +303,7 @@ Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en expertise técnico/func
 Versión 3 — PROPUESTA DE VALOR (3 oraciones): Combina logro más impactante del pasado + habilidad diferencial + valor que aportará a la próxima empresa. Tono dinámico y propositivo.
 
 REGLAS ABSOLUTAS:
-• Conserva métricas reales del original. Si no hay: usa [X años], [N proyectos], [X%], [$Z]. NUNCA inventes cifras.
+• Conserva métricas reales del original. Si no hay: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
 • PROHIBIDO: "Responsable de", "Apasionado por", "Busco nuevos retos", "Con experiencia en", "Equipo de trabajo".
 • Sin pronombres personales (Yo, Mi, Soy). Tercera persona o impersonal.
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
@@ -316,7 +324,7 @@ Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en stack técnico/funciona
 Versión 3 — PROPUESTA DE VALOR (3 oraciones): Enfoca en qué aporta el candidato a su próximo equipo. Combina habilidades + visión de valor futuro.
 
 REGLAS:
-• Si el candidato no especificó métricas: usa [X años], [N proyectos], [X%] como placeholders. NUNCA inventes cifras.
+• Si el candidato no especificó métricas: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
 • Sin pronombres personales. Sin clichés. Verbos de impacto al inicio.
 • Cada versión debe sonar auténtica — personal, no genérica.
 
@@ -337,7 +345,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             "Eres un Consultor de Carrera de Élite especializado en redacción de resúmenes profesionales de alto impacto para CVs. " +
             "Transformas resúmenes genéricos en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
             "SOLO trabajas con resúmenes profesionales de CV y perfiles laborales reales. " +
-            "Cuando no hay métricas, usas SIEMPRE placeholders explícitos entre corchetes ([X años], [N proyectos]) — NUNCA inventas cifras reales. " +
+            "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
             "Si el contenido no tiene relación con un perfil profesional, responde únicamente con: {\"versions\": []} sin texto adicional. " +
             langInstruction,
         },
@@ -374,7 +382,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       .filter((v) => v.trim().length > 0)
     let droppedVersions = 0
     const cleanVersions = rawVersions.filter((v) => {
-      if (detectHallucination(v, improveSource, { allowPlaceholders: true })) {
+      if (detectHallucination(v, improveSource)) {
         droppedVersions++
         return false
       }

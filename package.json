@@ -44,6 +44,7 @@
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
     "dotenv": "^16.6.1",
+    "fastest-levenshtein": "^1.0.16",
     "framer-motion": "^12.39.0",
     "geoip-lite": "^1.4.10",
     "html2canvas": "^1.4.1",

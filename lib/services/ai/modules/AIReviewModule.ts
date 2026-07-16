@@ -13,6 +13,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseBullets } from "../shared/bullets"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -223,9 +224,16 @@ INSTRUCTIONS:
 For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
 - field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (replace current content) or "append" (add to current content)
-- preview: the IMPROVED, ENRICHED text — more specific, more impactful than the original. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max 500 characters. It must read as human-written: varied sentence length, natural voice (not a press release), and none of the AI-tell words ("Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy").
+- preview: the IMPROVED, ENRICHED text — more specific, more impactful than the original. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max 1200 characters. It must read as human-written: natural voice (not a press release), and none of the AI-tell words ("Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy").
 - reason: max 12 words explaining the change
-- targetId: only if the improvement applies to a specific array item (use the item id from the resume)
+- targetId: REQUIRED whenever field starts with "workExperience." — use the item's exact id (shown as ID:xxx in the resume above). Without it the suggestion is discarded, because we would not know which job to apply it to.
+
+preview FORMAT FOR "workExperience.description" (critical):
+The description is a LIST OF BULLETS, one per line. Your preview MUST stay a list of bullets:
+- One bullet per line, separated by real newlines (\\n). NEVER merge the bullets into a paragraph.
+- Return the SAME number of bullets the original has, in the same order. If the original has 4 bullets, your preview has 4 lines.
+- Prefix each line with "• ".
+- FORBIDDEN to drop a metric, figure, technology or concrete detail already in the original. Rewriting is NOT summarizing: if the original says "cut crashes by 20%", your version still says 20%.
 
 For STRENGTHS: do NOT include suggestion. Strengths confirm what is already working well — never suggest replacing or rewriting them.
 
@@ -244,7 +252,8 @@ Respond ONLY with valid JSON (no markdown):
     { "text": "<strength — no suggestion>" }
   ],
   "improvements": [
-    { "text": "<improvement>", "suggestion": { "field": "...", "type": "replace", "preview": "<enriched text, more specific than the original>", "reason": "<max 12 words>" } },
+    { "text": "<improvement>", "suggestion": { "field": "workExperience.description", "type": "replace", "preview": "• <rewritten bullet 1>\\n• <rewritten bullet 2>", "reason": "<max 12 words>", "targetId": "<the job's ID:xxx>" } },
+    { "text": "<improvement>", "suggestion": { "field": "summary", "type": "replace", "preview": "<enriched text>", "reason": "<max 12 words>" } },
     { "text": "<improvement without automatable action>" }
   ],
   "answer": "<direct answer to candidate's question, or empty string if general review>"
@@ -266,9 +275,16 @@ INSTRUCCIONES:
 Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (reemplazar el contenido actual) o "append" (agregar al contenido actual)
-- preview: el texto MEJORADO y ENRIQUECIDO — más específico, más impactante que el original. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo 500 caracteres. Debe sonar escrito por una persona: frases de largo variado, voz natural (no nota de prensa), y sin palabras-IA ("Orquestó", "Apalancó", "Utilizó", "sinergia").
+- preview: el texto MEJORADO y ENRIQUECIDO — más específico, más impactante que el original. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo 1200 caracteres. Debe sonar escrito por una persona: voz natural (no nota de prensa), sin palabras-IA ("Orquestó", "Apalancó", "Utilizó", "sinergia").
 - reason: máximo 12 palabras explicando el cambio
-- targetId: solo si la mejora aplica a un item específico de un array (usa el id del item del CV)
+- targetId: OBLIGATORIO cuando field empieza por "workExperience." — usa el id exacto del item (lo ves como ID:xxx en el CV de arriba). Sin él la sugerencia se descarta, porque no sabríamos a qué trabajo aplicarla.
+
+FORMATO DE preview PARA "workExperience.description" (crítico):
+La descripción es una LISTA DE BULLETS, un bullet por línea. Tu preview DEBE seguir siendo una lista de bullets:
+- Un bullet por línea, separados por saltos de línea reales (\\n). NUNCA fusiones los bullets en un párrafo.
+- Devuelve el MISMO número de bullets que tiene el original, en el mismo orden. Si el original tiene 4 bullets, tu preview tiene 4 líneas.
+- Prefija cada línea con "• ".
+- PROHIBIDO eliminar una métrica, cifra, tecnología o dato concreto que ya esté en el original. Reescribir NO es resumir: si el original dice "reduje los crashes un 20%", tu versión sigue diciendo el 20%.
 
 Para STRENGTHS: NO incluyas suggestion. Las fortalezas confirman lo que ya funciona bien — nunca sugieras reemplazar ni reescribir el contenido existente.
 
@@ -287,7 +303,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     { "text": "<fortaleza — sin suggestion>" }
   ],
   "improvements": [
-    { "text": "<mejora>", "suggestion": { "field": "...", "type": "replace", "preview": "<texto enriquecido, más específico que el original>", "reason": "<max 12 palabras>" } },
+    { "text": "<mejora>", "suggestion": { "field": "workExperience.description", "type": "replace", "preview": "• <bullet 1 reescrito>\\n• <bullet 2 reescrito>", "reason": "<max 12 palabras>", "targetId": "<el ID:xxx del trabajo>" } },
+    { "text": "<mejora>", "suggestion": { "field": "summary", "type": "replace", "preview": "<texto enriquecido>", "reason": "<max 12 palabras>" } },
     { "text": "<mejora sin acción automatizable>" }
   ],
   "answer": "<respuesta directa a la pregunta del candidato, o cadena vacía si fue revisión general>"
@@ -321,21 +338,52 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       throw new AppError("off_topic", 422)
     }
 
+    // Strips markdown emphasis but NOT "•" or newlines: those carry the bullet
+    // structure, and flattening them is how a multi-bullet description used to
+    // come back as one paragraph.
     const sanitizePreview = (text: string) =>
-      text.replace(/[*_`#>]/g, "").replace(/\n{3,}/g, "\n\n").trim()
+      text.replace(/[_`#>]/g, "").replace(/^\s*\*\s+/gm, "• ").replace(/\n{3,}/g, "\n\n").trim()
 
     const sanitizeItem = (item: z.infer<typeof ReviewItemSchema>) => {
       if (!item.suggestion) return { ...item, suggestion: undefined }
       const cleanedPreview = sanitizePreview(item.suggestion.preview)
+      const { field, targetId } = item.suggestion
+
+      // A workExperience suggestion with no targetId cannot be placed. The client
+      // used to fall back to item [0], silently overwriting whichever job happened
+      // to be first — so drop it and keep the advisory text instead.
+      if (field.startsWith("workExperience.") && !targetId) {
+        this.logger.warn("[AIService.reviewCV] dropped suggestion with no targetId", { field })
+        return { ...item, suggestion: undefined }
+      }
+
       // Fail-safe: if preview seems to have invented data not present in the
       // resume context, drop the suggestion and keep only the advisory text.
       if (detectHallucination(cleanedPreview, resumeContext)) {
         this.logger.warn("[AIService.reviewCV] dropped hallucinated suggestion", {
-          field: item.suggestion.field,
+          field,
           previewSample: cleanedPreview.slice(0, 120),
         })
         return { ...item, suggestion: undefined }
       }
+
+      // Rewriting is not summarizing: a description preview that comes back with
+      // fewer bullets than the original is destroying the user's content.
+      if (field === "workExperience.description" && targetId) {
+        const job = (sectionData.workExperience as { id?: string; description?: string }[] | undefined)
+          ?.find((j) => j.id === targetId)
+        if (job) {
+          const before = parseBullets(job.description ?? "").length
+          const after = parseBullets(cleanedPreview).length
+          if (before > 1 && after < before) {
+            this.logger.warn("[AIService.reviewCV] dropped suggestion that collapses bullets", {
+              targetId, before, after,
+            })
+            return { ...item, suggestion: undefined }
+          }
+        }
+      }
+
       return {
         ...item,
         suggestion: { ...item.suggestion, preview: cleanedPreview },

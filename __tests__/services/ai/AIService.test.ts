@@ -85,49 +85,145 @@ describe("AIService", () => {
   // ── improveBullet ──────────────────────────────────────────────────────────
 
   describe("improveBullet", () => {
-    it("returns bullets on happy path", async () => {
-      const aiClient = makeMockAIClient(JSON.stringify({ bullets: ["• bullet1", "• bullet2", "• bullet3"] }))
+    it("returns indexed improvements on happy path", async () => {
+      // Rewrites must stay anchored to facts in the source — inventing a figure
+      // here would (correctly) get the suggestion dropped as a hallucination.
+      const aiClient = makeMockAIClient(JSON.stringify({
+        status: "improved",
+        improvements: [
+          { index: 0, text: "• Led the team that delivered every project on schedule" },
+          { index: 1, text: "• Drove the release pipeline forward while mentoring the wider group" },
+        ],
+      }))
       const service = new AIService(aiClient, logger)
 
-      const result = await service.improveBullet("user-1", { text: "Managed a team and delivered projects on time" }, "PRO")
+      const result = await service.improveBullet(
+        "user-1",
+        { text: "• Managed a team and delivered projects on time\n• Helped with the release pipeline and mentoring" },
+        "PRO",
+      )
 
-      expect(result.bullets).toEqual(["• bullet1", "• bullet2", "• bullet3"])
+      expect(result.status).toBe("improved")
+      expect(result.improvements).toHaveLength(2)
+      expect(result.improvements[0].index).toBe(0)
       expect(aiClient.chat).toHaveBeenCalledOnce()
     })
 
-    it("returns already_optimized when the AI echoes every original bullet unchanged", async () => {
-      const original = "• Led a team of 5 engineers\n• Reduced costs by [X%]"
+    // The whole point of the contract: the model returns ONLY what it changed,
+    // and an untouched bullet simply has no entry. It is not padded with an echo.
+    it("keeps sparse suggestions addressed to the right original bullet", async () => {
+      const original = "• Alpha work\n• Beta work\n• Gamma work\n• Delta work"
       const aiClient = makeMockAIClient(JSON.stringify({
-        bullets: ["• Led a team of 5 engineers", "• Reduced costs by [X%]."],
+        status: "improved",
+        improvements: [{ index: 3, text: "• Rebuilt the Delta reporting flow end to end" }],
       }))
       const service = new AIService(aiClient, logger)
 
       const result = await service.improveBullet("user-1", { text: original }, "PRO")
 
-      expect(result.status).toBe("already_optimized")
-      expect(result.bullets).toEqual([])
+      expect(result.improvements).toHaveLength(1)
+      expect(result.improvements[0].index).toBe(3)
     })
 
-    it("returns already_optimized when the only change is an injected placeholder/number", async () => {
-      // Reported bug: suggestions look near-identical to the original, differing
-      // only by an inserted [X%] placeholder or a changed figure. That is not a
-      // real rewrite → must report already_optimized instead of a no-op modal.
-      const original = "• Managed the support queue\n• Trained new hires"
+    it("returns already_optimized when the AI echoes the original back", async () => {
+      const original = "• Led a team of 5 engineers\n• Reduced onboarding time"
       const aiClient = makeMockAIClient(JSON.stringify({
-        bullets: ["• Managed the support queue [X%]", "• Trained new hires [X%]"],
+        status: "improved",
+        improvements: [
+          { index: 0, text: "• Led a team of 5 engineers" },
+          { index: 1, text: "• Reduced onboarding time." },
+        ],
       }))
       const service = new AIService(aiClient, logger)
 
       const result = await service.improveBullet("user-1", { text: original }, "PRO")
 
       expect(result.status).toBe("already_optimized")
-      expect(result.bullets).toEqual([])
+      expect(result.improvements).toEqual([])
+    })
+
+    // The reported bug: the model bolts "[N users]" onto the original and calls
+    // it an improvement. Placeholders are banned outright now, so the suggestion
+    // is dropped as a hallucination and never reaches the user's CV.
+    it("drops a suggestion whose only addition is a bracket placeholder", async () => {
+      const original = "• Managed the support queue\n• Trained new hires"
+      const aiClient = makeMockAIClient(JSON.stringify({
+        status: "improved",
+        improvements: [
+          { index: 0, text: "• Managed the support queue for [N users]" },
+          { index: 1, text: "• Trained new hires, cutting ramp-up by [X%]" },
+        ],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: original }, "PRO")
+
+      expect(result.status).toBe("already_optimized")
+      expect(result.improvements).toEqual([])
+    })
+
+    it("surfaces metric_missing questions instead of writing a placeholder", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        status: "metric_missing",
+        improvements: [],
+        metricQuestions: ["How many users did the module serve?", "Over what period?"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: "• Refactored the home module" }, "PRO")
+
+      expect(result.status).toBe("metric_missing")
+      expect(result.metricQuestions).toEqual([
+        "How many users did the module serve?",
+        "Over what period?",
+      ])
+    })
+
+    it("maps an off_topic response to 422", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({ status: "off_topic", improvements: [] }))
+      const service = new AIService(aiClient, logger)
+
+      await expect(
+        service.improveBullet("user-1", { text: "my favourite pizza recipe with cheese" }, "PRO")
+      ).rejects.toMatchObject({ code: "off_topic", status: 422 })
+    })
+
+    // Two suggestions for one bullet would render as two rows carrying the same
+    // bullet number, inflate the count, and make apply-all pick the last one.
+    it("keeps only the first suggestion when the model repeats an index", async () => {
+      const original = "• Alpha work here\n• Beta work here\n• Gamma work here"
+      const aiClient = makeMockAIClient(JSON.stringify({
+        status: "improved",
+        improvements: [
+          { index: 1, text: "• Rebuilt the Beta intake flow end to end" },
+          { index: 1, text: "• Something else entirely about Beta work" },
+        ],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: original }, "PRO")
+
+      expect(result.improvements).toHaveLength(1)
+      expect(result.improvements[0].text).toContain("end to end")
+    })
+
+    it("ignores an improvement addressed to a bullet that does not exist", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        status: "improved",
+        improvements: [{ index: 9, text: "• Suggestion for a bullet the user never wrote" }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.improveBullet("user-1", { text: "• Only one bullet here" }, "PRO")
+
+      expect(result.status).toBe("already_optimized")
+      expect(result.improvements).toEqual([])
     })
 
     it("PRO over daily cap → throws 429 daily_cap_reached with ai-daily key", async () => {
       const { checkAndIncrementRateLimit } = vi.mocked(await import("@/lib/ai-client"))
       checkAndIncrementRateLimit.mockResolvedValueOnce(false)
-      const aiClient = makeMockAIClient(JSON.stringify({ bullets: ["• x"] }))
+      const aiClient = makeMockAIClient(JSON.stringify({ status: "improved", improvements: [{ index: 0, text: "• x" }] }))
       const service = new AIService(aiClient, logger)
 
       await expect(
@@ -137,14 +233,18 @@ describe("AIService", () => {
       expect(aiClient.chat).not.toHaveBeenCalled()
     })
 
-    it("slices to 15 bullets maximum", async () => {
-      const sixteenBullets = Array.from({ length: 16 }, (_, i) => `• Bullet ${i + 1}`)
-      const aiClient = makeMockAIClient(JSON.stringify({ bullets: sixteenBullets }))
+    it("processes at most 15 improvements", async () => {
+      const original = Array.from({ length: 16 }, (_, i) => `• Original bullet number ${i + 1} describing routine duties`).join("\n")
+      const improvements = Array.from({ length: 16 }, (_, i) => ({
+        index: i,
+        text: `• Delivered measurable impact on workstream ${i + 1} across the quarter`,
+      }))
+      const aiClient = makeMockAIClient(JSON.stringify({ status: "improved", improvements }))
       const service = new AIService(aiClient, logger)
 
-      const result = await service.improveBullet("user-1", { text: "Rich description with many responsibilities" }, "PRO")
+      const result = await service.improveBullet("user-1", { text: original }, "PRO")
 
-      expect(result.bullets).toHaveLength(15)
+      expect(result.improvements).toHaveLength(15)
     })
 
     it("throws AppError 429 free_quota_exhausted when AI quota exhausted", async () => {
@@ -159,13 +259,18 @@ describe("AIService", () => {
       ).rejects.toMatchObject({ code: "free_quota_exhausted", status: 429 })
     })
 
-    it("throws AppError 422 when AI returns off-topic empty bullets", async () => {
+    // Superseded by "maps an off_topic response to 422". Under the old contract
+    // an empty array was the off-topic signal, which is exactly why the model
+    // could never decline a bullet: silence meant "off topic", so it always had
+    // to say something. Empty now means "nothing worth changing", and off-topic
+    // has its own explicit status.
+    it("treats a malformed response with no improvements array as a format error", async () => {
       const aiClient = makeMockAIClient(JSON.stringify({ bullets: [] }))
       const service = new AIService(aiClient, logger)
 
       await expect(
         service.improveBullet("user-1", { text: "tell me a joke" }, "PRO")
-      ).rejects.toMatchObject({ code: "off_topic", status: 422 })
+      ).rejects.toMatchObject({ code: "invalid_response_format", status: 500 })
     })
   })
 

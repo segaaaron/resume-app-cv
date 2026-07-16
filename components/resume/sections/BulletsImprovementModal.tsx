@@ -6,6 +6,8 @@ import { Dialog, DialogContent } from "@/components/ui/dialog"
 import { ArrowDown, Check, Wand2, Sparkles } from "lucide-react"
 
 export interface BulletPair {
+  /** Position of this bullet in the ORIGINAL description, 0-based. */
+  index: number
   original: string
   improved: string
 }
@@ -15,6 +17,9 @@ interface Props {
   onClose: () => void
   jobTitle: string
   pairs: BulletPair[]
+  /** How many bullets the description has in total — pairs may cover only some. */
+  total: number
+  /** Receives the bullet's index in the original description, not its row here. */
   onApplyBullet: (index: number) => void
   onApplyAll: () => void
   /** Called when every bullet has been individually applied */
@@ -26,15 +31,18 @@ export default function BulletsImprovementModal({
   onClose,
   jobTitle,
   pairs,
+  total,
   onApplyBullet,
   onApplyAll,
   onAllApplied,
 }: Props) {
   const t = useTranslations("editor.ai")
+  // Keyed by row position in `pairs`, which is what the UI tracks. The bullet's
+  // real index travels separately to onApplyBullet.
   const [applied, setApplied] = useState<Set<number>>(new Set())
 
   function handleApplyOne(i: number) {
-    onApplyBullet(i)
+    onApplyBullet(pairs[i].index)
     setApplied((prev) => {
       const next = new Set(prev).add(i)
       // QA-003: fire onAllApplied when last bullet is individually applied
@@ -98,11 +106,13 @@ export default function BulletsImprovementModal({
                     color: "#fff",
                   }}
                 >
-                  {applied.has(i) ? <Check className="w-2.5 h-2.5" /> : i + 1}
+                  {applied.has(i) ? <Check className="w-2.5 h-2.5" /> : pair.index + 1}
                 </span>
                 <span className="text-[10px] font-bold uppercase tracking-widest"
                   style={{ color: applied.has(i) ? "#10B981" : "#94A3B8" }}>
-                  {applied.has(i) ? t("bullet_applied") : t("bullet_label", { n: i + 1 })}
+                  {/* The bullet's real position, never the row's: suggestions are
+                      sparse now, so row 1 can be bullet 4. */}
+                  {applied.has(i) ? t("bullet_applied") : t("bullet_label_of", { n: pair.index + 1, total })}
                 </span>
               </div>
 
@@ -163,14 +173,14 @@ export default function BulletsImprovementModal({
             </div>
           ))}
 
-          {/* Disclaimer */}
-          <div className="flex items-start gap-2 px-3 py-2.5 rounded-xl"
-            style={{ background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.2)" }}>
-            <span className="text-amber-400 shrink-0 text-[11px] mt-px">⚠</span>
-            <p className="text-[10.5px] leading-relaxed" style={{ color: "rgba(180,120,0,0.9)" }}>
-              {t("metrics_disclaimer")}
+          {/* No placeholder disclaimer: the model no longer emits [X%] into
+              bullets, so telling the user to go clean brackets out would be
+              telling them to fix a problem we stopped creating. */}
+          {pairs.length < total && (
+            <p className="text-[10.5px] leading-relaxed text-center text-[#94A3B8] pt-1">
+              {t("bullets_untouched", { count: total - pairs.length })}
             </p>
-          </div>
+          )}
         </div>
 
         {/* Footer actions */}

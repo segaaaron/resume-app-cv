@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import {
   Plus, Trash2, ChevronDown, ChevronRight, Loader2,
   Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText, Wand2, ChevronLeft,
+  TrendingUp, HelpCircle,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
@@ -24,6 +25,7 @@ import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
+import { formatBullet, parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
@@ -101,7 +103,8 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
   const [improving, setImproving] = useState(false)
   const [improved, setImproved] = useState(false)
   const [alreadyOptimized, setAlreadyOptimized] = useState(false)
-  const [bulletModal, setBulletModal] = useState<{ pairs: BulletPair[]; working: string[] } | null>(null)
+  const [metricPrompt, setMetricPrompt] = useState<string[] | null>(null)
+  const [bulletModal, setBulletModal] = useState<{ pairs: BulletPair[]; working: string[]; total: number } | null>(null)
   const lastKeyRef = useRef("")
 
   useEffect(() => {
@@ -156,35 +159,35 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
       const contract = ImproveBulletResponseSchema.safeParse(data)
       if (!contract.success) { toast.error(ai("error_bullet")); return }
 
-      if (contract.data.status === "already_optimized") {
-        lastKeyRef.current = key
-        setCooldownUntil(Date.now() + 120_000)
+      lastKeyRef.current = key
+      setCooldownUntil(Date.now() + 120_000)
+
+      const { status, improvements, metricQuestions } = contract.data
+
+      if (status === "already_optimized" || improvements.length === 0) {
+        // The AI is now allowed to return nothing, and nothing is a real answer.
+        if (status === "metric_missing" && metricQuestions?.length) {
+          setMetricPrompt(metricQuestions)
+          return
+        }
         setAlreadyOptimized(true)
         return
       }
 
-      const bullets = contract.data.bullets
-      if (bullets.length === 0) { toast.error(ai("error_bullet")); return }
-      // Normalize comparison as fallback for compatibility
-      const normalize = (s: string) => s.trim().replace(/\s+/g, " ")
-      if (normalize(bullets.join("\n")) === normalize(job.description)) {
-        lastKeyRef.current = key
-        setCooldownUntil(Date.now() + 120_000)
-        setAlreadyOptimized(true)
-        return
-      }
-      const origLines = job.description.split("\n").map((l) => l.trim()).filter((l) => l.length > 0)
-      // working must cover EVERY original line: the AI may return fewer bullets
-      // than it received, and applying suggestions must never delete the rest.
-      const count = Math.max(origLines.length, bullets.length)
-      const working: string[] = Array.from({ length: count }, (_, i) => origLines[i] ?? "")
-      const pairs: BulletPair[] = bullets.map((b, i) => {
-        const original = origLines[i] ?? ""
-        return { original, improved: b.trim() ? b : original }
-      })
-      setBulletModal({ pairs, working })
-      lastKeyRef.current = key
-      setCooldownUntil(Date.now() + 120_000)
+      // Marked, because the AI's bullets are marked: both sides of the diff
+      // modal must look alike.
+      const origLines = parseBullets(job.description).map(formatBullet)
+      // Pairs come from the suggestions, NOT from the original list: a bullet the
+      // AI left alone has nothing to decide and must not appear as a no-op row.
+      // `working` still covers EVERY original line so applying never deletes one.
+      const working = [...origLines]
+      const pairs: BulletPair[] = improvements
+        .filter((s) => origLines[s.index] !== undefined)
+        .map((s) => ({ index: s.index, original: origLines[s.index], improved: s.text }))
+
+      if (pairs.length === 0) { setAlreadyOptimized(true); return }
+      setBulletModal({ pairs, working, total: origLines.length })
+      if (status === "metric_missing" && metricQuestions?.length) setMetricPrompt(metricQuestions)
     } catch {
       toast.error(ai("error_bullet"))
     } finally {
@@ -192,20 +195,25 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     }
   }
 
+  /** `index` is the bullet's position in the original description, not a row. */
   function applyOneBullet(index: number) {
     if (!bulletModal) return
+    const pair = bulletModal.pairs.find((p) => p.index === index)
+    if (!pair) return
     const newWorking = [...bulletModal.working]
-    newWorking[index] = bulletModal.pairs[index].improved
-    onUpdate("description", newWorking.filter(Boolean).join("\n"))
+    newWorking[index] = pair.improved
+    onUpdate("description", serializeBullets(newWorking))
     setBulletModal({ ...bulletModal, working: newWorking })
   }
 
   function applyAllBullets() {
     if (!bulletModal) return
     const previous = job.description
-    // Merge over working so original bullets without an AI suggestion survive.
-    const merged = bulletModal.working.map((w, i) => bulletModal.pairs[i]?.improved ?? w)
-    onUpdate("description", merged.filter(Boolean).join("\n"))
+    // Overlay suggestions onto the originals by index: bullets the AI left alone
+    // must survive untouched.
+    const merged = [...bulletModal.working]
+    for (const pair of bulletModal.pairs) merged[pair.index] = pair.improved
+    onUpdate("description", serializeBullets(merged))
     setBulletModal(null)
     setImproved(true)
     toast.success(ai("bullets_all_applied"), {
@@ -329,6 +337,59 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
                 }}
               />
             </div>
+
+            {/* The AI wanted a figure the CV doesn't have. It asks instead of
+                inventing one — and the answer goes in the textarea above, never
+                as a [X%] bracket in the user's CV. */}
+            {metricPrompt && (
+              <div
+                className="mt-2 rounded-xl overflow-hidden"
+                style={{
+                  background: "linear-gradient(135deg, rgba(255,251,240,0.95) 0%, rgba(254,243,220,0.7) 100%)",
+                  border: "1px solid rgba(212,165,116,0.35)",
+                  boxShadow: "0 2px 12px rgba(212,165,116,0.12)",
+                }}
+              >
+                <div className="flex items-start gap-2.5 px-3 pt-2.5">
+                  <div
+                    className="flex items-center justify-center w-6 h-6 rounded-lg shrink-0 mt-px"
+                    style={{
+                      background: "linear-gradient(135deg, #D4A574 0%, #B8874F 100%)",
+                      boxShadow: "0 2px 6px rgba(212,165,116,0.35)",
+                    }}
+                  >
+                    <TrendingUp className="w-3 h-3 text-white" strokeWidth={2.5} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[11.5px] font-bold text-[#1a2e4a] leading-tight">
+                      {ai("metric_missing_title")}
+                    </p>
+                    <p className="text-[10.5px] text-[#7A6A55] leading-relaxed mt-0.5">
+                      {ai("metric_missing_desc")}
+                    </p>
+                  </div>
+                </div>
+
+                <ul className="px-3 pt-2 pb-1 space-y-1">
+                  {metricPrompt.map((q) => (
+                    <li key={q} className="flex items-start gap-2">
+                      <HelpCircle className="w-3 h-3 shrink-0 mt-[3px] text-[#B8874F]" strokeWidth={2.2} />
+                      <span className="text-[11px] text-[#5C4A33] leading-relaxed">{q}</span>
+                    </li>
+                  ))}
+                </ul>
+
+                <div className="flex justify-end px-3 pb-2">
+                  <button
+                    type="button"
+                    onClick={() => setMetricPrompt(null)}
+                    className="min-h-[32px] px-3 text-[10.5px] font-semibold text-[#8A7355] rounded-lg transition-colors duration-150 hover:bg-[rgba(212,165,116,0.12)] hover:text-[#5C4A33]"
+                  >
+                    {ai("metric_missing_dismiss")}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -339,6 +400,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
           onClose={() => setBulletModal(null)}
           jobTitle={job.jobTitle}
           pairs={bulletModal.pairs}
+          total={bulletModal.total}
           onApplyBullet={applyOneBullet}
           onApplyAll={applyAllBullets}
           onAllApplied={() => { setImproved(true); setBulletModal(null); toast.success(ai("bullets_all_applied")) }}

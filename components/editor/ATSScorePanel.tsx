@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
@@ -11,10 +11,11 @@ import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, PersonalDetails, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
+import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 
-function ScoreRing({ score }: { score: number }) {
+function ScoreRing({ score, label }: { score: number; label: string }) {
   const r = 70
   const c = 2 * Math.PI * r
   const offset = c - (score / 100) * c
@@ -24,7 +25,7 @@ function ScoreRing({ score }: { score: number }) {
         <svg width="160" height="160" viewBox="0 0 160 160">
           <defs>
             <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#00E5FF' }} />
+              <stop offset="0%" style={{ stopColor: '#00D4FF' }} />
               <stop offset="100%" style={{ stopColor: '#10B981' }} />
             </linearGradient>
           </defs>
@@ -35,16 +36,18 @@ function ScoreRing({ score }: { score: number }) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <div className="text-4xl font-black text-[#1a2e4a] leading-none">{score}</div>
-          <div className="text-[10px] font-bold text-cyan-500 uppercase tracking-widest mt-1">Score</div>
+          <div className="text-[10px] font-bold text-dash-cyan uppercase tracking-widest mt-1">{label}</div>
         </div>
       </div>
     </div>
   )
 }
 
+// One cyan across the panel (#00D4FF, the --dash-cyan token). The ring and bars
+// used to run on #00E5FF, a third shade that existed nowhere else in the app.
 function getBarStyle(pct: number): { color: string; gradient: string } {
-  if (pct >= 80) return { color: '#10B981', gradient: 'linear-gradient(90deg, #10B981, #00E5FF)' }
-  if (pct >= 60) return { color: '#00E5FF', gradient: 'linear-gradient(90deg, #00E5FF, #00D4FF)' }
+  if (pct >= 80) return { color: '#10B981', gradient: 'linear-gradient(90deg, #10B981, #00D4FF)' }
+  if (pct >= 60) return { color: '#00D4FF', gradient: 'linear-gradient(90deg, #00D4FF, #00A8CC)' }
   return { color: '#F59E0B', gradient: 'linear-gradient(90deg, #F59E0B, #FCD34D)' }
 }
 
@@ -133,22 +136,7 @@ export default function ATSScorePanel() {
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
-  const [now, setNow] = useState(Date.now())
-
-  useEffect(() => {
-    if (cooldownUntil <= Date.now()) return
-    const id = setInterval(() => {
-      setNow(Date.now())
-      if (Date.now() >= cooldownUntil) clearInterval(id)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [cooldownUntil])
-
-  const inCooldown = now < cooldownUntil
-  const cooldownRemaining = inCooldown ? Math.ceil((cooldownUntil - now) / 1000) : 0
-  const cooldownLabel = cooldownRemaining >= 60
-    ? `${Math.floor(cooldownRemaining / 60)}:${String(cooldownRemaining % 60).padStart(2, "0")}`
-    : `${cooldownRemaining}s`
+  const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
 
   const inputIsQuestion = isQuestion(input)
 
@@ -292,14 +280,14 @@ export default function ATSScorePanel() {
       <div className="flex flex-col gap-3 pb-4">
         {/* Section header */}
         <div className="flex items-center gap-2.5 mb-1">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-400 to-blue-600 shadow-lg shadow-cyan-200">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-dash-cyan to-[#0077B6] shadow-lg shadow-dash-cyan/30">
             <Target className="h-4 w-4 text-white" />
           </div>
           <div className="flex-1">
             <span className="text-sm font-bold text-slate-800">{t("title")}</span>
           </div>
-          <span className="text-[9px] font-black tracking-widest uppercase bg-gradient-to-r from-cyan-400 to-blue-500 text-white px-2.5 py-1 rounded-full shadow-sm">
-            PRO
+          <span className="text-[9px] font-black tracking-widest uppercase bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white px-2.5 py-1 rounded-full shadow-sm">
+            {t("pro_badge")}
           </span>
         </div>
         <p className="text-[11px] text-slate-500 leading-relaxed mb-3">{t("panel_description")}</p>
@@ -359,7 +347,7 @@ export default function ATSScorePanel() {
 
         {/* Analyze button */}
         <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < 15 || !cvReady}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 text-white text-xs font-bold shadow-lg shadow-cyan-200 hover:shadow-cyan-300 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white text-xs font-bold shadow-lg shadow-dash-cyan/30 hover:shadow-dash-cyan/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inCooldown ? <Clock className="h-3.5 w-3.5" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
           {loading ? t("analyzing") : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
         </button>
@@ -373,7 +361,7 @@ export default function ATSScorePanel() {
           <div className="space-y-3 pt-1">
             {/* Score section */}
             <div className="flex flex-col items-center gap-1 py-2">
-              <ScoreRing score={atsResult.score} />
+              <ScoreRing score={atsResult.score} label={t("score_label")} />
               <p className="text-sm font-bold text-slate-800">{atsResult.label}</p>
               <p className="text-[11px] text-slate-500 text-center leading-relaxed max-w-[240px]">{atsResult.summary}</p>
             </div>
@@ -471,6 +459,10 @@ export default function ATSScorePanel() {
                 </ul>
               </div>
             )}
+
+            {/* Step 2. The score measures; this rewrites. Chained off the same
+                job description rather than asking for it a second time. */}
+            <TailorCVPanel jobDescription={input} />
           </div>
         )}
 
@@ -531,9 +523,6 @@ export default function ATSScorePanel() {
             )}
           </div>
         )}
-
-        <TailorCVPanel />
-
       </div>
 
       {/* Diff modal — rendered outside panel to avoid z-index issues */}

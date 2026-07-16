@@ -14,6 +14,7 @@ import {
 import { detectTabularWork, parseTabularWork, detectRowDatedWork, parseRowDatedWork } from "./resume-parser/tabular-work"
 import { parseLanguageLines, KNOWN_LANGUAGES, LANG_LEVEL_MAP } from "./resume-parser/languages"
 import { parseSkillLines } from "./resume-parser/skills"
+import { parseBullets, serializeBullets } from "./services/ai/shared/bullets"
 
 // Topes del parser — protegen contra inputs patológicos sin recortar CVs
 // reales. Si un CV legítimo choca con un tope, el caller debe avisar al
@@ -555,7 +556,7 @@ function parseWorkBlock(block: string[], id: string) {
     }
   }
 
-  job.description = descLines.slice(0, PARSE_LIMITS.bulletsPerJob).map(d => `• ${d}`).join("\n")
+  job.description = serializeBullets(descLines.slice(0, PARSE_LIMITS.bulletsPerJob))
   return job
 }
 
@@ -963,8 +964,7 @@ export function parseResumeText(rawText: string): ParsedResume {
       if (rescuedBullets.length === 0) continue
       // Append to the last job parsed (the one being actively written when section split)
       const lastJob = result.workExperience[result.workExperience.length - 1]
-      const existing = lastJob.description ? lastJob.description.split("\n").filter(Boolean) : []
-      lastJob.description = [...existing, ...rescuedBullets.map(b => `• ${b}`)].join("\n")
+      lastJob.description = serializeBullets([...parseBullets(lastJob.description ?? ""), ...rescuedBullets])
     }
   }
 

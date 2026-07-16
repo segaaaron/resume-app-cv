@@ -1,6 +1,7 @@
 import OpenAI from "openai"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
+import { parseBullets, renderBulletsForPrompt } from "@/lib/services/ai/shared/bullets"
 
 const logger = createLogger("ai-client")
 
@@ -77,7 +78,7 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
     projects,
   } = sectionData as {
     personalDetails?: { firstName?: string; lastName?: string; jobTitle?: string; email?: string; phone?: string; location?: string }
-    workExperience?: Array<{ jobTitle?: string; employer?: string; startDate?: string; endDate?: string; description?: string }>
+    workExperience?: Array<{ id?: string; jobTitle?: string; employer?: string; startDate?: string; endDate?: string; description?: string }>
     education?: Array<{ degree?: string; institution?: string; school?: string; startDate?: string; endDate?: string }>
     skills?: Array<{ name?: string; level?: string }>
     summary?: string
@@ -103,8 +104,19 @@ export function buildResumeContext(sectionData: Record<string, unknown>, languag
       const present = en ? "Present" : "Presente"
       const at = en ? "at" : "en"
       const period = [j.startDate, j.endDate ?? present].filter(Boolean).join(" - ")
-      lines.push(`  - ${j.jobTitle ?? ""} ${at} ${j.employer ?? ""} (${period})`)
-      if (j.description) lines.push(`    ${j.description.slice(0, 500)}`)
+      // The id must be in the prompt: review-cv is asked to return a targetId
+      // naming the job a suggestion applies to, and without the id here it
+      // cannot — the suggestion then gets dropped for being unplaceable.
+      const jobId = j.id ? `ID:${j.id} | ` : ""
+      lines.push(`  - ${jobId}${j.jobTitle ?? ""} ${at} ${j.employer ?? ""} (${period})`)
+      // Render bullets as indexed lines, never as one blob: a model shown a
+      // paragraph returns a paragraph, which is how review-cv used to collapse
+      // an 8-bullet description into a single one. Same 500-char budget as the
+      // old slice, but spent on whole bullets instead of a mid-word cut.
+      const bullets = parseBullets(j.description ?? "")
+      if (bullets.length) {
+        lines.push(renderBulletsForPrompt(bullets, { indent: "    ", maxTotalLength: 500 }))
+      }
     })
   }
 

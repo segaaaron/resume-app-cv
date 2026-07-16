@@ -24,6 +24,7 @@
  */
 
 import { clean, ROLE_KEYWORDS, INSTITUTION_RE, expandYear } from "./patterns"
+import { serializeBullets } from "../services/ai/shared/bullets"
 
 export interface TabularJob {
   id: string
@@ -88,7 +89,7 @@ export function parseRowDatedWork(lines: string[], maxJobs: number, maxBullets: 
   const flush = () => {
     flushBullet()
     if (cur) {
-      cur.description = bullets.slice(0, maxBullets).map(b => `• ${b}`).join("\n")
+      cur.description = serializeBullets(bullets.slice(0, maxBullets))
       jobs.push(cur)
     }
     cur = null
@@ -187,7 +188,7 @@ function finalize(draft: EntryDraft, id: string, maxBullets: number): TabularJob
     startDate: expandYear(draft.startYear),
     endDate: draft.current ? "" : expandYear(draft.endYear),
     currentlyWorking: draft.current,
-    description: draft.bullets.slice(0, maxBullets).map(b => `• ${b}`).join("\n"),
+    description: serializeBullets(draft.bullets.slice(0, maxBullets)),
   }
 }
 

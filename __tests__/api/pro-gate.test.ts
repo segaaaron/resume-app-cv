@@ -22,7 +22,10 @@ vi.mock("@/lib/ai-client", async (importOriginal) => {
       chat: {
         completions: {
           create: vi.fn().mockResolvedValue({
-            choices: [{ message: { content: '{"bullets":["• v1","• v2","• v3"]}' } }],
+            // These tests assert the plan gate's status codes, not the bullet
+            // contract — "nothing to improve" is the shape least likely to be
+            // filtered downstream and still yields a 200.
+            choices: [{ message: { content: '{"status":"already_optimized","improvements":[]}' } }],
           }),
         },
       },
