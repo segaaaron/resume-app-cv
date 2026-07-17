@@ -11,6 +11,7 @@
  */
 
 import { ATS_SKILLS, allSkillForms, findSkill } from "./skills-dictionary";
+import { expandTerm, normalizeTerm, termPresent } from "./vocabulary";
 
 export type Locale = "en" | "es";
 
@@ -113,11 +114,19 @@ function extractTopKeywords(jd: string): string[] {
     (t) => !STOPWORDS.has(t) && !/^\d+$/.test(t) && t.length > 2,
   );
 
-  // frequency map (singularized to merge plural variants)
+  // Frequency map keyed by the CANONICAL form, and — critically — storing a
+  // real word as the label. This used to key on singularize(raw), which blindly
+  // strips "es"/"s": "sales" became "sal" and "kubernetes" became "kubernet",
+  // and those keys are what we return and render to the user. Canonicalising
+  // through the shared vocabulary merges plurals and aliases properly, and the
+  // label stays a word a human can read.
   const freq = new Map<string, number>();
+  const label = new Map<string, string>();
   for (const raw of tokens) {
-    const w = singularize(raw);
-    freq.set(w, (freq.get(w) ?? 0) + 1);
+    const canonical = canonicalForm(raw);
+    freq.set(canonical, (freq.get(canonical) ?? 0) + 1);
+    // Keep the first real spelling seen, never the stemmed stub.
+    if (!label.has(canonical)) label.set(canonical, raw);
   }
 
   // boost known skills (any term in the dictionary present in JD bumps weight)
@@ -140,19 +149,30 @@ function extractTopKeywords(jd: string): string[] {
   return Array.from(freq.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 30)
-    .map(([w]) => w);
+    .map(([w]) => label.get(w) ?? w);
 }
 
+/**
+ * Canonical key for a token: the dictionary's own term when it knows one (so
+ * "aws" and "amazon web services" collapse together), otherwise a conservative
+ * plural strip. Never used as a user-facing label — see `label` above.
+ */
+function canonicalForm(token: string): string {
+  const expanded = expandTerm(token);
+  // expandTerm returns the whole equivalence set; take a stable member so every
+  // variant maps to the same key regardless of which one appeared first.
+  if (expanded.length > 1) return [...expanded].sort()[0];
+  return singularize(normalizeTerm(token));
+}
+
+/**
+ * Presence check, delegated to the shared vocabulary so the free tool and the
+ * paid ats-score agree. It used to be a local regex with plural tolerance only,
+ * which meant "k8s" in a CV never matched a JD asking for "Kubernetes" — the
+ * alias was already in skills-dictionary.ts, one import away.
+ */
 function containsKeyword(resumeNorm: string, keyword: string): boolean {
-  const kw = normalize(keyword);
-  if (kw.includes(" ") || kw.includes(".") || kw.includes("#") || kw.includes("+")) {
-    const escaped = kw.replace(/[.+#]/g, (m) => `\\${m}`);
-    return new RegExp(`\\b${escaped}\\b`).test(resumeNorm);
-  }
-  // singular/plural tolerant
-  const sing = singularize(kw);
-  const re = new RegExp(`\\b${sing}(s|es|ies)?\\b`);
-  return re.test(resumeNorm);
+  return termPresent(keyword, resumeNorm);
 }
 
 /* ---------------------- Sub-scorers ---------------------- */

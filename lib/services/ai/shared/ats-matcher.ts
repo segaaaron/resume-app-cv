@@ -7,6 +7,15 @@
 // the ATS score trustworthy and reproducible (unlike an LLM-guessed number).
 
 import type { ATSSubScores } from "./ai-types"
+import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
+
+// The vocabulary is shared with the free /tools/ats-checker. This module used
+// to carry its own 13-group alias table while a curated 244-term dictionary sat
+// one directory away, unread — so "5 years on AWS" did not match "Amazon Web
+// Services" and "liderazgo de equipos" did not match "Leadership". The aliases
+// that fixed both were already written.
+export const normalize = normalizeTerm
+export const keywordPresent = termPresent
 
 export interface ATSKeywords {
   hardSkills: string[]
@@ -36,25 +45,6 @@ export interface ATSMatchResult {
 // a JD that lists no soft skills never penalizes the candidate for it.
 const WEIGHTS = { hardSkills: 0.45, mustHaves: 0.2, title: 0.15, softSkills: 0.1, sections: 0.1 }
 
-// Small curated alias set: each group's terms are treated as equivalent when
-// matching. Kept intentionally short — normalization handles most variance; this
-// only covers high-frequency abbreviations that normalization alone would miss.
-const ALIAS_GROUPS: string[][] = [
-  ["javascript", "js"],
-  ["typescript", "ts"],
-  ["node.js", "nodejs", "node"],
-  ["react.js", "reactjs", "react"],
-  ["postgresql", "postgres"],
-  ["kubernetes", "k8s"],
-  ["continuous integration", "ci/cd", "cicd"],
-  ["project manager", "project management", "pm"],
-  ["user experience", "ux"],
-  ["user interface", "ui"],
-  ["machine learning", "ml"],
-  ["artificial intelligence", "ai"],
-  ["search engine optimization", "seo"],
-]
-
 const STOPWORDS = new Set([
   "the", "and", "for", "with", "los", "las", "una", "uno", "del", "por", "con",
   "de", "la", "el", "en", "y", "a", "of", "to", "in", "on", "at",
@@ -64,39 +54,7 @@ const STOPWORDS = new Set([
  * Normalize text for comparison: lowercase, strip accents, drop punctuation
  * (keeping technical characters like + # . / -), collapse whitespace.
  */
-export function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9+#./\s-]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-}
 
-function escapeRegExp(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
-}
-
-function expandAliases(normKeyword: string): string[] {
-  for (const group of ALIAS_GROUPS) {
-    if (group.includes(normKeyword)) return group
-  }
-  return [normKeyword]
-}
-
-/**
- * True if `keyword` (or any of its aliases) appears in the already-normalized
- * haystack as a whole token/phrase (not as a substring of a larger word).
- */
-export function keywordPresent(keyword: string, haystackNorm: string): boolean {
-  const variants = expandAliases(normalize(keyword))
-  return variants.some((v) => {
-    if (!v) return false
-    const re = new RegExp(`(^|[^a-z0-9])${escapeRegExp(v)}([^a-z0-9]|$)`)
-    return re.test(haystackNorm)
-  })
-}
 
 interface Coverage {
   matched: string[]
