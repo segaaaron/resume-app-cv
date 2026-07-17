@@ -225,29 +225,55 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       })
     }
 
-    // The candidate has figures and not one version used them. Measured at 3 in
-    // 5 runs even with the numbers handed to the model in the prompt — telling
-    // it harder does not work, the same wall improve-summary hit. So detect it
-    // in code and ask once more, with the failure named. One extra call, only
-    // when it actually failed.
-    if (profileHasMetrics && ranked.length > 0 && !ranked.some((v) => ANY_METRIC_REGEX.test(v))) {
-      this.logger.warn("[AIService.generateSummary] no version used the candidate's figures — retrying once")
-      const retry = await this.retryWithMetrics(prompt, metrics, langInstruction, language)
+    // One gate for both failures.
+    //
+    // Prompt wording cannot close this. GUARD (arXiv 2410.06716) proves a
+    // constraint cannot be GUARANTEED by autoregressive generation — strict
+    // satisfaction needs inference-time filtering, full stop. And the TACL
+    // survey on self-correction found "no prior work shows successful
+    // self-correction with feedback from prompted LLMs", but that it "works
+    // well in tasks that can use reliable external feedback". assessSummary and
+    // ANY_METRIC_REGEX are exactly that: deterministic external verifiers. That
+    // is why naming the failure and retrying took metrics from 2/5 to 5/5 while
+    // telling the model harder did nothing.
+    //
+    // Gated on BOTH checks on purpose: retrying for a cliché alone could bring
+    // back a clean version that dropped the figures, trading one failure for
+    // the other.
+    const best = ranked[0]
+    const missingMetrics = profileHasMetrics && ranked.length > 0 && !ranked.some((v) => ANY_METRIC_REGEX.test(v))
+    const hasCliche = best ? assessSummary(best, profileHasMetrics).issues.includes("cliche") : false
+
+    if (ranked.length > 0 && (missingMetrics || hasCliche)) {
+      this.logger.warn("[AIService.generateSummary] retrying once", { missingMetrics, hasCliche })
+      const retry = await this.retryForQuality(prompt, metrics, best ?? "", { missingMetrics, hasCliche }, langInstruction, language)
+
       if (retry.length > 0) {
         const retryRanked = [...retry].sort(
-          (a, b) => assessSummary(a, true).issues.length - assessSummary(b, true).issues.length,
+          (a, b) => assessSummary(a, profileHasMetrics).issues.length - assessSummary(b, profileHasMetrics).issues.length,
         )
-        // Only take it if it actually fixed the thing we retried for.
-        if (retryRanked.some((v) => ANY_METRIC_REGEX.test(v))) {
-          const usage2 = response.usage
+        const retryHasMetrics = !profileHasMetrics || retryRanked.some((v) => ANY_METRIC_REGEX.test(v))
+        const retryTopClean = retryRanked[0]
+          ? !assessSummary(retryRanked[0], profileHasMetrics).issues.includes("cliche")
+          : false
+
+        // Take it only if it is better on the axis we retried for and no worse
+        // on the other. A retry that swaps one problem for another is not a fix.
+        const fixedMetrics = missingMetrics ? retryHasMetrics : true
+        const fixedCliche = hasCliche ? retryTopClean : true
+        const brokeNothing = retryHasMetrics && (!hasCliche || retryTopClean)
+
+        if (fixedMetrics && fixedCliche && brokeNothing) {
+          const retryUsage = response.usage
           logAIUsage(userId, "generate-summary", {
             model: AI_MODEL, plan,
-            promptTokens: usage2?.prompt_tokens ?? 0,
-            completionTokens: usage2?.completion_tokens ?? 0,
-            costUsd: computeCostUsd(AI_MODEL, usage2?.prompt_tokens ?? 0, usage2?.completion_tokens ?? 0),
+            promptTokens: retryUsage?.prompt_tokens ?? 0,
+            completionTokens: retryUsage?.completion_tokens ?? 0,
+            costUsd: computeCostUsd(AI_MODEL, retryUsage?.prompt_tokens ?? 0, retryUsage?.completion_tokens ?? 0),
           })
           return { versions: retryRanked }
         }
+        this.logger.warn("[AIService.generateSummary] retry did not improve — keeping the first result")
       }
     }
 
@@ -270,19 +296,46 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
   }
 
   /**
-   * One more attempt, naming the exact failure. Separate from the main prompt
-   * because a generic "try again" changes nothing — the model has to be told
-   * what it did wrong, and told last.
+   * One more attempt, naming the exact failure.
+   *
+   * A generic "try again" changes nothing — the model has to be told what it
+   * did wrong, and told last. And it must write a FRESH draft: paraphrasing a
+   * cliché preserves its shape ("Passionate about" becomes "Enthusiastic
+   * about"), which moves the problem instead of solving it.
+   *
+   * The rejected text is deliberately NOT quoted back. Naming a forbidden
+   * phrase primes it — the one mechanistic study on this (arXiv 2601.08070)
+   * reports the forbidden word appearing in 87.5% of violations when named,
+   * though it is single-author and unreplicated, so treat it as a reason to be
+   * careful rather than a proven law.
    */
-  private async retryWithMetrics(
+  private async retryForQuality(
     basePrompt: string,
     metrics: string[],
+    _rejected: string,
+    failure: { missingMetrics: boolean; hasCliche: boolean },
     langInstruction: string,
     language: "es" | "en",
   ): Promise<string[]> {
-    const correction = language === "en"
-      ? `\n\nYOUR LAST ATTEMPT FAILED. Not one version contained a number, and this candidate has these:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nWrite the summaries again. Every version must quote at least one of those figures verbatim — "20%", "40 minutes to under 6", "5 engineers". Not "significantly", not "substantially": the digit itself. That figure is the strongest thing this person has and leaving it out wastes it.`
-      : `\n\nTU INTENTO ANTERIOR FALLÓ. Ni una versión llevaba un número, y este candidato tiene estos:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nEscribe los resúmenes otra vez. Cada versión debe citar al menos una de esas cifras literalmente — "20%", "40 minutos a 6", "5 ingenieros". No "significativamente", no "notablemente": el dígito. Esa cifra es lo más fuerte que tiene esta persona y omitirla la desperdicia.`
+    const parts: string[] = []
+
+    if (language === "en") {
+      parts.push("YOUR LAST ATTEMPT FAILED. Write all three summaries again from scratch — do NOT paraphrase what you wrote before, start fresh.")
+      if (failure.missingMetrics) {
+        parts.push(`Not one version contained a number, and this candidate has these:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nEvery version must quote at least one of those figures verbatim — "20%", "40 minutes to under 6", "5 engineers". Not "significantly", not "substantially": the digit itself. That figure is the strongest thing this person has and leaving it out wastes it.`)
+      }
+      if (failure.hasCliche) {
+        parts.push("Your writing leaned on filler that says nothing about this person — the kind of phrase that fits any candidate in any role. Replace every one of them with a concrete detail from the profile: the tool, the sector, the actual result. If a sentence would still make sense on someone else's CV, it does not belong on this one.")
+      }
+    } else {
+      parts.push("TU INTENTO ANTERIOR FALLÓ. Escribe los tres resúmenes otra vez desde cero — NO parafrasees lo anterior, empieza de nuevo.")
+      if (failure.missingMetrics) {
+        parts.push(`Ni una versión llevaba un número, y este candidato tiene estos:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nCada versión debe citar al menos una de esas cifras literalmente — "20%", "40 minutos a 6", "5 ingenieros". No "significativamente", no "notablemente": el dígito. Esa cifra es lo más fuerte que tiene esta persona y omitirla la desperdicia.`)
+      }
+      if (failure.hasCliche) {
+        parts.push("Tu redacción se apoyó en relleno que no dice nada de esta persona — de esas frases que le encajan a cualquier candidato en cualquier puesto. Sustituye cada una por un dato concreto del perfil: la herramienta, el sector, el resultado real. Si una frase seguiría teniendo sentido en el CV de otro, no pertenece a este.")
+      }
+    }
 
     try {
       const res = await this.aiClient.chat({
@@ -292,7 +345,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
-          { role: "user", content: basePrompt + correction },
+          { role: "user", content: `${basePrompt}\n\n${parts.join("\n\n")}` },
         ],
       })
       const parsed = parseAIJson<{ versions?: unknown }>(res.choices[0]?.message?.content ?? "")
