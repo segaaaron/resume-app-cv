@@ -124,7 +124,7 @@ export default async function CVEnInglesPostPage({
     {
       slug: "como-pasar-el-ats",
       title: "Cómo Pasar el Filtro ATS en 2026",
-      desc: "Más del 75% de los CVs son rechazados antes de llegar a un humano. Las tácticas que sí funcionan.",
+      desc: "Lo que un ATS filtra de verdad es más estrecho de lo que te han contado. Las tácticas que sí funcionan.",
       tag: "ATS",
       readingTime: 7,
     },
@@ -386,7 +386,7 @@ export default async function CVEnInglesPostPage({
 
               <h2 id="ats">ATS y CV en inglés: lo que cambia</h2>
               <p>
-                Más del 75% de los resumes recibidos por empresas Fortune 500 pasan por un sistema ATS antes de que un humano los abra. Para un CV en inglés esto añade dos retos extra al hispanohablante:
+                Casi cualquier empresa grande usa un ATS para gestionar la avalancha de candidaturas — pero quien decide sigue siendo una persona. Para un CV en inglés esto añade dos retos extra al hispanohablante:
               </p>
 
               <div className="not-prose grid sm:grid-cols-2 gap-4 my-8">

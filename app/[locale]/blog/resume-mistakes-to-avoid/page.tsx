@@ -91,7 +91,7 @@ export default async function ResumeMistakesPage({
   const faqs = [
     {
       q: "What percentage of resumes get rejected at the ATS stage?",
-      a: "Industry estimates put automatic rejection between 50% and 75% of all submitted resumes, depending on company and role. The vast majority fail on the fixable mistakes in this guide — not on candidate quality.",
+      a: "Far lower than the figures you have seen quoted, and those figures have no study behind them. In 2025 Enhancv interviewed 25 US recruiters across more than 10 different ATS: 92% said rejections are manual or triggered only by eligibility filters such as work authorisation — never by formatting or missing keywords. Automatic rejection on resume content is the exception, not the rule. What does bury an application is volume: one role can draw thousands, and most recruiters review in the order they arrive and stop once they have strong candidates.",
     },
     {
       q: "If I fix every mistake on this list, am I guaranteed an interview?",

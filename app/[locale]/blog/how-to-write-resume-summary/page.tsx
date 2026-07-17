@@ -130,7 +130,7 @@ export default async function ResumeSummaryPostPage({
     {
       slug: "como-pasar-el-ats",
       title: "How to Pass ATS Screening in 2026 (Proven Tactics)",
-      desc: "Over 75% of resumes are rejected before a human reads them. The format and keyword tactics that actually pass.",
+      desc: "What an ATS actually filters is narrower than you've been told. The format and keyword decisions that genuinely matter.",
       tag: "ATS",
       readingTime: 7,
     },
@@ -394,7 +394,7 @@ export default async function ResumeSummaryPostPage({
 
               <h2 id="ats-summary">How to make your summary ATS-friendly</h2>
               <p>
-                Roughly 75% of resumes get filtered by an Applicant Tracking System before a human sees them. Your summary is the densest, highest-value patch of keywords in your entire resume — get this section right and your ATS score jumps measurably. The rules:
+                A recruiter opening your CV reads the summary first and decides in seconds whether to keep going. It is the densest, highest-value patch of your entire resume — get this section right and your ATS score jumps measurably. The rules:
               </p>
 
               <div className="not-prose grid sm:grid-cols-2 gap-4 my-8">

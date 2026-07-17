@@ -91,7 +91,7 @@ export default async function ErroresCvPage({
   const faqs = [
     {
       q: "¿Qué porcentaje de CVs son rechazados en la etapa del ATS?",
-      a: "Estimaciones de la industria ubican el rechazo automático entre 50% y 75% de todos los CVs enviados, dependiendo de la empresa y el rol. La gran mayoría falla en los errores corregibles de esta guía — no en la calidad del candidato.",
+      a: "Muchos menos de los que has visto citar, y esas cifras no tienen ningún estudio detrás. En 2025 Enhancv entrevistó a 25 recruiters de EE. UU. que usan más de 10 ATS distintos: el 92% dijo que los rechazos son manuales o solo por filtros de elegibilidad como el permiso de trabajo — nunca por formato ni por keywords faltantes. El rechazo automático por el contenido del CV es la excepción, no la regla. Lo que sí entierra una candidatura es el volumen: una vacante puede recibir miles, y la mayoría de los recruiters las revisan por orden de llegada y paran cuando ya tienen buenos perfiles.",
     },
     {
       q: "Si corrijo todos los errores de esta lista, ¿tengo garantizada la entrevista?",
