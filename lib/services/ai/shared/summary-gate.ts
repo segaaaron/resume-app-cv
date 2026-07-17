@@ -161,8 +161,17 @@ export async function gateSummaryVersions(
   // that: deterministic external verifiers. That is why naming the failure and
   // retrying took metrics from 2/5 to 5/5 while telling the model harder in the
   // prompt did nothing.
+  // Both checks judge the version the user actually reads.
+  //
+  // They used to disagree: the cliché check looked at the best version, the
+  // metric check asked whether ANY version carried a figure. So a run where the
+  // best had no number but the third did counted as fine and never retried —
+  // and that is not rare, because a version missing its figure scores one issue
+  // (missing_metric), exactly like a version that has the figure but opens
+  // weakly. The tie holds, the sort is stable, the model's own order wins, and
+  // the user reads the one without the number. Measured: 3 of 10 runs.
   const best = ranked[0]
-  const missingMetrics = profileHasMetrics && !ranked.some((v) => ANY_METRIC_REGEX.test(v.text))
+  const missingMetrics = profileHasMetrics && !ANY_METRIC_REGEX.test(best.text)
   const hasCliche = assessSummary(best.text, profileHasMetrics).issues.includes("cliche")
   if (!missingMetrics && !hasCliche) return { versions: ranked, retryUsage: null }
 
@@ -182,10 +191,17 @@ export async function gateSummaryVersions(
   // Take it only if it fixed what we retried for and broke nothing else. A retry
   // that trades a cliché for dropped figures is not a fix, and gating on both
   // axes is what protects the metric rate the retry was built to raise.
-  const retryHasMetrics = !profileHasMetrics || retryRanked.some((v) => ANY_METRIC_REGEX.test(v.text))
+  //
+  // "Broke nothing" is judged per axis, and only on the axes that were sound to
+  // begin with. Demanding a cliché-free retry even when the first attempt had no
+  // cliché problem reads stricter but is worse: it throws away a retry that
+  // recovered the figures and keeps the original, which had none — trading the
+  // candidate's strongest asset for a phrasing nit. Measured, that alone took
+  // V1-with-a-figure from 8/8 down to 7/8 and 4/6.
+  const retryHasMetrics = !profileHasMetrics || ANY_METRIC_REGEX.test(retryRanked[0].text)
   const retryTopClean = !assessSummary(retryRanked[0].text, profileHasMetrics).issues.includes("cliche")
   const fixedWhatFailed = (!missingMetrics || retryHasMetrics) && (!hasCliche || retryTopClean)
-  const brokeNothing = retryHasMetrics && retryTopClean
+  const brokeNothing = retryHasMetrics && (!hasCliche || retryTopClean)
 
   if (!fixedWhatFailed || !brokeNothing) {
     logger.warn(`[${endpoint}] retry did not improve — keeping the first result`)
@@ -230,7 +246,7 @@ async function retryForQuality(
   if (language === "en") {
     parts.push("YOUR LAST ATTEMPT FAILED. Write all three summaries again from scratch — do NOT paraphrase what you wrote before, start fresh.")
     if (failure.missingMetrics) {
-      parts.push(`Not one version contained a number, and this candidate has these:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nEvery version must quote at least one of those figures verbatim — "20%", "40 minutes to under 6", "5 engineers". Not "significantly", not "substantially": the digit itself. That figure is the strongest thing this person has and leaving it out wastes it.`)
+      parts.push(`Your strongest version contained no number at all, and this candidate has these:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nEvery version must quote at least one of those figures verbatim — "20%", "40 minutes to under 6", "5 engineers". Not "significantly", not "substantially": the digit itself. That figure is the strongest thing this person has and leaving it out wastes it.`)
     }
     if (failure.hasCliche) {
       parts.push("Your writing leaned on filler that says nothing about this person — the kind of phrase that fits any candidate in any role. Replace every one of them with a concrete detail from the profile: the tool, the sector, the actual result. If a sentence would still make sense on someone else's CV, it does not belong on this one.")
@@ -238,7 +254,7 @@ async function retryForQuality(
   } else {
     parts.push("TU INTENTO ANTERIOR FALLÓ. Escribe los tres resúmenes otra vez desde cero — NO parafrasees lo anterior, empieza de nuevo.")
     if (failure.missingMetrics) {
-      parts.push(`Ni una versión llevaba un número, y este candidato tiene estos:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nCada versión debe citar al menos una de esas cifras literalmente — "20%", "40 minutos a 6", "5 ingenieros". No "significativamente", no "notablemente": el dígito. Esa cifra es lo más fuerte que tiene esta persona y omitirla la desperdicia.`)
+      parts.push(`Tu mejor versión no llevaba ningún número, y este candidato tiene estos:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nCada versión debe citar al menos una de esas cifras literalmente — "20%", "40 minutos a 6", "5 ingenieros". No "significativamente", no "notablemente": el dígito. Esa cifra es lo más fuerte que tiene esta persona y omitirla la desperdicia.`)
     }
     if (failure.hasCliche) {
       parts.push("Tu redacción se apoyó en relleno que no dice nada de esta persona — de esas frases que le encajan a cualquier candidato en cualquier puesto. Sustituye cada una por un dato concreto del perfil: la herramienta, el sector, el resultado real. Si una frase seguiría teniendo sentido en el CV de otro, no pertenece a este.")

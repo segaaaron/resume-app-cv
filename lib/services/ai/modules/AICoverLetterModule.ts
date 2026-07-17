@@ -23,6 +23,45 @@ import {
   type VersionsResult,
 } from "../shared/ai-types"
 
+/**
+ * The letter body is HTML, both on the way out and on the way in.
+ *
+ * The editor stores what TipTap emits (`editor.getHTML()`) and the templates
+ * render it with dangerouslySetInnerHTML, styling `[&>p]` for the paragraph
+ * gaps. The model, though, only ever speaks plain text with blank lines between
+ * paragraphs — the prompts literally ask for "paragraph breaks using \n\n".
+ *
+ * generate-cover-letter did this conversion inline and improve-cover-letter did
+ * not, which stayed invisible only because nothing ever called improve. Wiring
+ * it up surfaced both halves at once: the model was handed raw `<p>` tags, and
+ * its plain-text answer went straight into a field rendered as HTML, where the
+ * blank lines collapse and the whole letter lands as one block. Worse, the echo
+ * filter compared an HTML original against plain-text rewrites, so nothing ever
+ * looked like an echo and already_optimized could not fire at all.
+ */
+function plainToHtml(text: string): string {
+  return text
+    .split(/\n\n+/)
+    .map((p) => `<p>${p.split(/\n/).map(escapeHtml).join("<br>").trim()}</p>`)
+    .join("")
+}
+
+/** HTML back to the plain text the model reads and the echo filter compares. */
+function htmlToPlain(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|li|h[1-6])>/gi, "\n\n")
+    .replace(/<[^>]+>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
 export class AICoverLetterModule {
   constructor(
     private readonly aiClient: IAIClient,
@@ -153,10 +192,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // Same defence as improveCoverLetter: the prompt asks for body only, but a
     // trailing "Sincerely,\n[Your Name]" slips through and the app renders the
     // candidate's real name underneath anyway.
-    const html = stripSignOff(parsed.body)
-      .split(/\n\n+/)
-      .map((p: string) => `<p>${p.split(/\n/).map(escapeHtml).join("<br>").trim()}</p>`)
-      .join("")
+    const html = plainToHtml(stripSignOff(parsed.body))
 
     const genUsage = response.usage
     logAIUsage(userId, "generate-cover-letter", {
@@ -182,6 +218,16 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     if (jobTitle) { const v = validateAIInput(jobTitle, AI_INPUT_LIMITS.jobTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (recipientTitle) { const v = validateAIInput(recipientTitle, AI_INPUT_LIMITS.recipientTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
 
+    // What the editor stores is HTML. Everything below — the prompt, the
+    // grounding source, the echo comparison — is about the words, so it works
+    // on the plain text. Handing the model `<p>` tags asks it to reason about
+    // markup it was never told to produce, and comparing an HTML original to a
+    // plain-text rewrite makes every version look brand new to isTrivialEdit,
+    // which is the one check standing between the user and three cosmetic
+    // rewordings sold as improvements.
+    const plainBody = htmlToPlain(body)
+    if (!plainBody) throw new AppError("missing_content", 400)
+
     const context = language === "en"
       ? [
           company ? `Company: ${company}` : "",
@@ -204,10 +250,10 @@ TASK: Improve this cover letter body and generate 3 optimized versions.
 
 ${context ? `Context: ${context}` : ""}
 Current letter:
-${body}
+${plainBody}
 
 GOLDEN RULES (apply all):
-1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA.
+1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA. Separate every paragraph with a blank line (\\n\\n) — the app renders each as its own paragraph, so a letter returned as one block loses the structure the recruiter skims.
 2. Eliminate clichés ("I am a proactive person", "I am passionate about teamwork"). Replace with concrete achievements.
 3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
 3b. Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text.
@@ -222,8 +268,7 @@ GOLDEN RULES (apply all):
 ON NUMBERS — read this last and follow it exactly:
 The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the letter or context above will be rejected and the candidate will get nothing back. Write the strongest letter you can using only what is there.
 
-Respond ONLY with valid JSON (no markdown, no explanations):
-{"status": "improved", "versions": ["version1", "version2", "version3"]}`
+Respond ONLY with valid JSON, shaped: a "status" key set to "improved", and a "versions" key holding an array of exactly three strings. Each string is one entire rewritten letter — every paragraph of it, separated by \\n\\n. Write all three in full. Nothing else in the response.`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.
 2. Conserva métricas reales del original. Si no las hay, escribe sin números — NUNCA inventes una cifra y NUNCA dejes un corchete tipo [X%]. La carta se envía tal cual; un corchete sin rellenar se lee como algo sin terminar.
@@ -233,10 +278,10 @@ TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones
 
 ${context ? `Contexto: ${context}` : ""}
 Carta actual:
-${body}
+${plainBody}
 
 REGLAS DE ORO (aplica todas):
-1. Mantén la estructura en 3-4 párrafos: interés → logros relevantes → valor aportado → cierre.
+1. Mantén la estructura en 3-4 párrafos: interés → logros relevantes → valor aportado → cierre. Separa cada párrafo con una línea en blanco (\\n\\n) — la app renderiza cada uno como párrafo propio, así que una carta devuelta en bloque pierde la estructura que el recruiter escanea.
 2. Elimina clichés ("soy una persona proactiva", "me apasiona el trabajo en equipo"). Sustituye por logros concretos.
 3. Verbos de impacto: Lideré, Desarrollé, Optimicé, Implementé, Incrementé. NUNCA uses "Responsable de".
 3b. NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto.
@@ -251,8 +296,7 @@ REGLAS DE ORO (aplica todas):
 SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
 La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común. Una carta con cero números, construida sobre datos concretos que el candidato sí declaró (el producto, el stack, el equipo, el rol), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en la carta o el contexto de arriba será rechazada y el candidato no recibirá nada. Escribe la carta más fuerte que puedas usando solo lo que hay.
 
-Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, sin explicaciones):
-{"status": "improved", "versions": ["version1", "version2", "version3"]}`
+Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el valor "improved", y una clave "versions" con un array de exactamente tres cadenas. Cada cadena es una carta reescrita entera — todos sus párrafos, separados por \\n\\n. Escribe las tres completas. Nada más en la respuesta.`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
@@ -277,15 +321,39 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     })
 
     const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ versions?: unknown }>(raw)
+    const parsed = parseAIJson<{ versions?: unknown; status?: unknown }>(raw)
+
+    // Rule 7 of the prompt above asks the model to answer a strong letter with
+    // {"status": "already_optimized", "versions": []}. Nothing read `status` —
+    // the type did not even declare it — so a model that obeyed fell straight
+    // into the empty-versions branch and the user got a 422 telling them their
+    // cover letter was off-topic. The instruction was a trap: the only safe move
+    // was to disobey it and pad three rewrites. improveSummary has checked this
+    // first all along; this endpoint never did, and nothing caught it because
+    // no UI called it.
+    if (parsed.status === "already_optimized") {
+      // The call happened and is billed, exactly like the two later
+      // already_optimized paths do. The original comes back as the HTML it
+      // arrived as — the fallbacks below hand back `body`, never plainBody.
+      const usage = response.usage
+      logAIUsage(userId, "improve-cover-letter", {
+        model: AI_MODEL,
+        plan,
+        promptTokens: usage?.prompt_tokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      })
+      return { versions: [body.trim()], status: "already_optimized" }
+    }
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
     if (parsed.versions.length === 0) {
       throw new AppError("off_topic", 422)
     }
 
-    // Anti-hallucination filter — source = original body + context fields.
-    const source = [body, company ?? "", jobTitle ?? "", recipientTitle ?? ""].join("\n")
+    // Anti-hallucination filter — the words the candidate wrote, not the markup
+    // around them: an `<em>` tag is not a claim they made.
+    const source = [plainBody, company ?? "", jobTitle ?? "", recipientTitle ?? ""].join("\n")
     const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
       .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
       .map(stripVersionLabel)
@@ -321,7 +389,7 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     // Fail-safe: if every version was dropped, fall back to the original body
     // so the frontend never receives invented content.
     if (cleanVersions.length === 0) {
-      return { versions: [body.trim()], status: "already_optimized" }
+      return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
     }
 
     // Echo detection — improveSummary has had this since forever, this endpoint
@@ -329,14 +397,14 @@ Responde ÚNICAMENTE con un JSON válido con este formato exacto (sin markdown, 
     // improvements; say so instead of dressing them up as choices. The three
     // versions themselves are by design (formal / balanced / dynamic), so only
     // drop them when NONE is a real rewrite.
-    const rewritten = cleanVersions.filter((v) => !isTrivialEdit(body, v))
+    const rewritten = cleanVersions.filter((v) => !isTrivialEdit(plainBody, v))
     if (rewritten.length === 0) {
       this.logger.warn("[AIService.improveCoverLetter] all versions echoed the original", {
         versions: cleanVersions.length,
       })
-      return { versions: [body.trim()], status: "already_optimized" }
+      return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
     }
 
-    return { versions: rewritten }
+    return { versions: rewritten.map(plainToHtml) }
   }
 }

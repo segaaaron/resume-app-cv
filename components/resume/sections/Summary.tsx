@@ -102,6 +102,24 @@ export default function SummarySection() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await onSuccess()
+
+      // The server returns versions:[] + already_optimized when every version was
+      // dropped, and its own comment says "so the frontend can show its own
+      // empty-state". It never did: showVersions([]) leaves the modal closed, so
+      // the click ended in nothing — no modal, no toast — while still burning a
+      // use and a 2-minute cooldown.
+      //
+      // Not the "already optimized" copy improve uses: on Generate the user has
+      // no summary, so telling them theirs is already good would be a lie. What
+      // actually happened is that every version was discarded for claiming
+      // things the CV does not state, and more detail is what fixes it.
+      if (data.status === "already_optimized" || (data.versions as string[]).length === 0) {
+        lastKeyRef.current = key
+        setCooldownUntil(Date.now() + 120_000)
+        toast.info(ai("generate_summary_no_result"))
+        return
+      }
+
       showVersions(data.versions as string[], data.types as string[] | undefined)
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)

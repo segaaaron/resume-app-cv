@@ -13,6 +13,7 @@ import { compressImage } from "@/lib/compressImage"
 import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronUp, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations, useLocale } from "next-intl"
+import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
 import UpgradeModal from "@/components/editor/UpgradeModal"
 import UnsavedChangesModal from "@/components/editor/UnsavedChangesModal"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
@@ -204,6 +205,8 @@ export default function CoverLetterEditor({
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
   const [aiUserPrompt, setAiUserPrompt] = useState("")
   const [aiGenerated, setAiGenerated] = useState(false)
+  const [improvingAI, setImprovingAI] = useState(false)
+  const [letterVersions, setLetterVersions] = useState<SummaryVersion[]>([])
   const bodyHasContent = (content.body?.replace(/<[^>]+>/g, "").trim() ?? "").length > 0
 
 
@@ -280,6 +283,66 @@ export default function CoverLetterEditor({
       toast.error(t("ai_error"))
     } finally {
       setGenerating(false)
+    }
+  }
+
+  // The letter could be created and never improved. improve-cover-letter has
+  // been built the whole time — route, prompts in both languages, quota, plan
+  // limits, echo detection — and nothing ever called it, so the flow dead-ended
+  // at Generate while Summary and bullets both got a second pass.
+  async function handleImproveAI() {
+    if (generating || improvingAI) return
+    const body = content.body?.trim() ?? ""
+    // The endpoint's own floor (route schema: body.min(20)) — checked here so a
+    // short letter gets an explanation instead of a 422.
+    if (body.length < 20) { toast.error(t("ai_improve_empty")); return }
+    setImprovingAI(true)
+    preCheck("improve-cover-letter")
+    try {
+      const res = await apiFetch("/api/ai/improve-cover-letter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // No jobTitle: the endpoint renders it as "Role:", meaning the role
+        // being applied for, and this editor has no such field. The nearest
+        // thing, candidateJobTitle, is the candidate's CURRENT title — passing
+        // it would tell the AI to aim the letter at the job they already have.
+        body: JSON.stringify({
+          body,
+          company: content.company || undefined,
+          recipientTitle: content.recipientTitle || undefined,
+          language: locale,
+        }),
+      })
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? t("ai_rate_limit") : t("ai_pro_only")),
+          dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
+      if (res.status === 422) { toast.error(t("ai_off_topic")); return }
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error)
+      await aiOnSuccess()
+
+      // The module answers already_optimized two ways: the model declining, and
+      // the echo filter finding that none of the three was a real rewrite. Both
+      // mean the same thing to the user, and both arrive with the original body
+      // as the only version — which must never be offered as an "improvement".
+      const versions = (data.versions ?? []) as string[]
+      if (data.status === "already_optimized" || versions.length === 0) {
+        toast.info(t("ai_already_optimized"))
+        return
+      }
+      const tones: SummaryVersion["type"][] = ["formal", "balanced", "dynamic"]
+      setLetterVersions(versions.map((text, i) => ({ type: tones[i] ?? "balanced", text })))
+    } catch {
+      toast.error(t("ai_error"))
+    } finally {
+      setImprovingAI(false)
     }
   }
 
@@ -944,11 +1007,23 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
                     {/* Generate */}
                     {!aiGenerated && (
-                      <button onClick={handleGenerateAI} disabled={generating || aiUserPrompt.trim().length < 10}
+                      <button onClick={handleGenerateAI} disabled={generating || improvingAI || aiUserPrompt.trim().length < 10}
                         className="w-full inline-flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-[13px] font-bold text-[#0B1B3D] py-[11px] px-[14px] rounded-[10px]"
                         style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", boxShadow: "0 6px 18px rgba(0,212,255,0.3)" }}>
                         {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                         {generating ? t("ai_generating") : t("ai_generate")}
+                      </button>
+                    )}
+
+                    {/* Improve — the second pass Summary and bullets always had.
+                        Shown whenever there is a letter, however it got written:
+                        generated here, pasted, or typed by hand. */}
+                    {(content.body?.trim().length ?? 0) >= 20 && (
+                      <button onClick={handleImproveAI} disabled={generating || improvingAI}
+                        className="w-full inline-flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-[13px] font-bold text-white py-[11px] px-[14px] rounded-[10px] mt-2"
+                        style={{ background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)", boxShadow: "0 6px 18px rgba(124,58,237,0.3)" }}>
+                        {improvingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                        {improvingAI ? t("ai_generating") : t("ai_improve")}
                       </button>
                     )}
                   </div>
@@ -1039,6 +1114,12 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
         }
       `}</style>
 
+      <SummaryVersionModal
+        open={letterVersions.length > 0}
+        versions={letterVersions}
+        onClose={() => setLetterVersions([])}
+        onSelect={(text) => { updateContent("body", text); toast.success(t("ai_success")) }}
+      />
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
       <UnsavedChangesModal
         open={showExitModal}

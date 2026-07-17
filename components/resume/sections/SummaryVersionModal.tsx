@@ -2,10 +2,22 @@
 
 import { useTranslations } from "next-intl"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Check, Zap, TrendingUp, Code2, Star } from "lucide-react"
+import { Check, Zap, TrendingUp, Code2, Star, Landmark, Scale, Rocket } from "lucide-react"
+
+/**
+ * The three summary positionings, and the three cover-letter tones.
+ *
+ * One modal serves both: improve-cover-letter returns three versions exactly
+ * like improve-summary does, and everything here except the badge and its two
+ * labels is identical. Adding the tones is additive — the summary types and
+ * their config are untouched.
+ */
+export type VersionType =
+  | "executive" | "specialist" | "value_prop"
+  | "formal" | "balanced" | "dynamic"
 
 export interface SummaryVersion {
-  type: "executive" | "specialist" | "value_prop"
+  type: VersionType
   text: string
 }
 
@@ -44,7 +56,35 @@ const TYPE_CONFIG = {
     borderColor: "rgba(168,85,247,0.25)",
     cardBg: "rgba(168,85,247,0.03)",
   },
-}
+  // Cover letter tones — same three-card layout, letter's own vocabulary.
+  formal: {
+    icon: Landmark,
+    badgeGradient: "linear-gradient(135deg, #1a2e4a 0%, #0f1d30 100%)",
+    badgeTextColor: "#fff",
+    accentColor: "#1a2e4a",
+    glowColor: "rgba(26,46,74,0.12)",
+    borderColor: "rgba(26,46,74,0.20)",
+    cardBg: "rgba(26,46,74,0.03)",
+  },
+  balanced: {
+    icon: Scale,
+    badgeGradient: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)",
+    badgeTextColor: "#0a1a35",
+    accentColor: "#0891B2",
+    glowColor: "rgba(0,212,255,0.10)",
+    borderColor: "rgba(0,212,255,0.25)",
+    cardBg: "rgba(0,212,255,0.03)",
+  },
+  dynamic: {
+    icon: Rocket,
+    badgeGradient: "linear-gradient(135deg, #F59E0B 0%, #D97706 100%)",
+    badgeTextColor: "#0a1a35",
+    accentColor: "#D97706",
+    glowColor: "rgba(245,158,11,0.12)",
+    borderColor: "rgba(245,158,11,0.25)",
+    cardBg: "rgba(245,158,11,0.04)",
+  },
+} as const satisfies Record<VersionType, unknown>
 
 export default function SummaryVersionModal({ open, versions, onClose, onSelect }: Props) {
   const t = useTranslations("editor.ai")

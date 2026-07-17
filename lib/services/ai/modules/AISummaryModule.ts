@@ -14,7 +14,7 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
+import { assessSummary, clicheBanList, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,
@@ -90,7 +90,7 @@ Version 2 — SPECIALIST: Emphasis on technical or functional expertise specific
 Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their next team. Combines past achievement + differential skill + future value. Tone: dynamic, forward-looking, impact-oriented. 3 sentences.
 
 ABSOLUTE RULES:
-• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player", "Detail-oriented", "Hard-working", "Results-driven", "Go-getter", "Self-starter".
+• Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: ${clicheBanList("en")}. Every one of them is checked and rejected — a version carrying any is thrown away.
 • No personal pronouns (I, My, I am). Third person or impersonal form.
 • If no metrics in profile: write without numbers. NEVER invent figures and NEVER leave a bracket like [X%] — an unfilled bracket in a CV reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
@@ -99,8 +99,8 @@ ABSOLUTE RULES:
 
 ${numbersRuleEN}
 
-Respond ONLY with valid JSON (no markdown, no explanations):
-{"versions": ["version1", "version2", "version3"]}`
+Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
+{"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO usa información presente en el PERFIL DEL CANDIDATO de abajo. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el perfil.
 2. NUNCA escribas un placeholder. Ni [X años], ni [N proyectos], ni [X%], ni [N equipos], ni nada entre corchetes que sustituya a una cifra. Este texto se escribe directo en el CV del candidato y llega al recruiter tal cual; un corchete olvidado ahí se lee como un CV a medio hacer. Si el perfil no declara la cifra, escribe la frase SIN número — una afirmación concreta sin métrica vale más que un corchete.
@@ -128,7 +128,7 @@ Versión 2 — ESPECIALISTA: Énfasis en expertise técnico o funcional específ
 Versión 3 — PROPUESTA DE VALOR: Enfoca en lo que el candidato aporta a su próximo equipo. Combina logro pasado + habilidad diferencial + valor futuro. Tono: dinámico, propositivo, orientado al impacto. 3 oraciones.
 
 REGLAS ABSOLUTAS:
-• Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA: "Responsable de", "Apasionado por", "Con experiencia en", "Busca", "Está interesado en".
+• Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA estas frases, se comprueban y se rechazan: ${clicheBanList("es")}.
 • Sin pronombres personales (Yo, Mi, Soy). Tercera persona o forma impersonal.
 • Si no hay métricas en el perfil: escribe sin números. NUNCA inventes cifras y NUNCA dejes un corchete tipo [X%] — un corchete sin rellenar en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
@@ -137,8 +137,8 @@ REGLAS ABSOLUTAS:
 
 ${numbersRuleES}
 
-Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
-{"versions": ["version1", "version2", "version3"]}`
+Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
+{"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
@@ -326,14 +326,14 @@ Version 3 — VALUE PROPOSITION (3 sentences): Combines most impactful past achi
 
 ABSOLUTE RULES:
 • Preserve real metrics from the original. If none: write without numbers. NEVER invent figures, NEVER leave brackets.
-• PROHIBITED: "Responsible for", "Passionate about", "Looking for new challenges", "Experienced in", "Team player".
+• PROHIBITED — every one is checked and rejected; a version carrying any is discarded: ${clicheBanList("en")}.
 • No personal pronouns (I, My, I am). Third person or impersonal.
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
 
 ${numbersRule}
 
-Respond ONLY with valid JSON (no markdown):
-{"versions": ["version1", "version2", "version3"]}`
+Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
+{"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
         : criticalEN + `TASK: Create a high-impact professional summary from scratch based on the candidate's description. Return 3 distinct versions.
 
 Candidate description: "${userDescription!.trim()}"
@@ -350,13 +350,13 @@ Version 3 — VALUE PROPOSITION (3 sentences): Focuses on what the candidate bri
 
 RULES:
 • If the candidate didn't specify metrics: write without numbers. NEVER invent figures, NEVER leave brackets.
-• No personal pronouns. No clichés. Impact verbs first.
+• No personal pronouns. Impact verbs first. Never these, they are checked and rejected: ${clicheBanList("en")}.
 • Each version must sound authentic — personal, not generic.
 
 ${numbersRule}
 
-Respond ONLY with valid JSON (no markdown):
-{"versions": ["version1", "version2", "version3"]}`
+Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
+{"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
       : hasSummary
         ? criticalES + `PASO 0 — EVALUACIÓN DE CALIDAD: Evalúa si este resumen ya tiene: (a) verbo de acción fuerte o título de rol al inicio, (b) las métricas del perfil, SI el perfil declara alguna — un resumen sin números pasa igual este check cuando el perfil no da ninguna, (c) sin clichés ("apasionado", "trabajo en equipo", "busco"), (d) sin pronombres personales. Si TODOS los criterios aplicables se cumplen → devuelve {"status": "already_optimized", "versions": []} inmediatamente. Que el resumen ya esté bien es una respuesta correcta y esperada.
 
@@ -384,14 +384,14 @@ Versión 3 — PROPUESTA DE VALOR (3 oraciones): Combina logro más impactante d
 
 REGLAS ABSOLUTAS:
 • Conserva métricas reales del original. Si no hay: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
-• PROHIBIDO: "Responsable de", "Apasionado por", "Busco nuevos retos", "Con experiencia en", "Equipo de trabajo".
+• PROHIBIDO — estas frases se comprueban y se rechazan; una versión que lleve cualquiera se descarta: ${clicheBanList("es")}.
 • Sin pronombres personales (Yo, Mi, Soy). Tercera persona o impersonal.
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
 
 ${numbersRule}
 
-Responde ÚNICAMENTE con JSON válido (sin markdown):
-{"versions": ["version1", "version2", "version3"]}`
+Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
+{"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
         : criticalES + `TAREA: Crea un resumen profesional de alto impacto desde cero, basado en la descripción del candidato. Devuelve 3 versiones distintas.
 
 Descripción del candidato: "${userDescription!.trim()}"
@@ -408,13 +408,13 @@ Versión 3 — PROPUESTA DE VALOR (3 oraciones): Enfoca en qué aporta el candid
 
 REGLAS:
 • Si el candidato no especificó métricas: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
-• Sin pronombres personales. Sin clichés. Verbos de impacto al inicio.
+• Sin pronombres personales. Verbos de impacto al inicio. Nunca estas, se comprueban y se rechazan: ${clicheBanList("es")}.
 • Cada versión debe sonar auténtica — personal, no genérica.
 
 ${numbersRule}
 
-Responde ÚNICAMENTE con JSON válido (sin markdown):
-{"versions": ["version1", "version2", "version3"]}`
+Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
+{"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,

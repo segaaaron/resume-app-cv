@@ -1379,7 +1379,14 @@
       "version_desc_executive": "Impacto de negocio, liderazgo y resultados cuantificables",
       "version_desc_specialist": "Stack técnico, herramientas y frameworks (iOS, SwiftUI, MVVM…)",
       "version_desc_value_prop": "Logro pasado + habilidad diferencial + valor futuro que aportas",
-      "summary_already_optimized": "Tu resumen ya está optimizado. No se encontraron mejoras."
+      "summary_already_optimized": "Tu resumen ya está optimizado. No se encontraron mejoras.",
+      "generate_summary_no_result": "No pudimos generar un resumen fiable con los datos actuales. Añade más detalle a tu experiencia e inténtalo de nuevo.",
+      "version_type_formal": "Formal",
+      "version_desc_formal": "Tono ejecutivo y protocolar",
+      "version_type_balanced": "Equilibrada",
+      "version_desc_balanced": "Directa y profesional, sin rodeos",
+      "version_type_dynamic": "Dinámica",
+      "version_desc_dynamic": "Enérgica y orientada al impacto"
     },
     "template_switch": {
       "title": "Vista previa: {name}",
@@ -2007,7 +2014,10 @@
     "body_complete_clear": "Limpiar cuerpo y generar de nuevo",
     "tab_assistant": "Asistente IA",
     "mobile_edit": "Editar",
-    "mobile_preview": "Vista previa"
+    "mobile_preview": "Vista previa",
+    "ai_improve": "Mejorar con IA",
+    "ai_improve_empty": "Escribe o genera una carta antes de mejorarla",
+    "ai_already_optimized": "Tu carta ya está bien escrita. No encontramos mejoras que aportaran algo."
   },
   "public_cv": {
     "shared_via": "CV compartido via",

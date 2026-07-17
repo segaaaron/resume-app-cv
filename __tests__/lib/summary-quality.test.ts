@@ -125,4 +125,31 @@ describe("extractMetricsFromText", () => {
   it("does not treat a bare number as a metric", () => {
     expect(extractMetricsFromText("Worked at Acme in 2020 on the 3 tier stack")).toEqual([])
   })
+
+  // A CV bullet is one line; a summary is one paragraph. Splitting only on "\n"
+  // returned the whole summary as a single "figure", so the prompt block — a
+  // list of numbers — reprinted the user's entire summary instead.
+  it("reports one entry per sentence that carries a figure, not the whole paragraph", () => {
+    const r = extractMetricsFromText(
+      "Ingeniero de software con amplia trayectoria en fintech. Bajé los crashes 20% en la app principal. Me apasiona el código limpio.",
+    )
+    expect(r).toEqual(["Bajé los crashes 20% en la app principal."])
+  })
+
+  it("keeps a bullet with no sentence terminator exactly as it is", () => {
+    const line = "Redesigned the checkout funnel with the design team, lifting conversion by 12% quarter over quarter"
+    expect(extractMetricsFromText(line)).toEqual([line])
+  })
+
+  it("never splits a decimal or a currency amount", () => {
+    const line = "Grew revenue 3.5% and closed $1.2M in 12 months."
+    expect(extractMetricsFromText(line)).toEqual([line])
+  })
+
+  it("splits a two-claim bullet into its two figures", () => {
+    expect(extractMetricsFromText("Led the migration, cutting deploy time to 6 minutes. Mentored 5 engineers.")).toEqual([
+      "Led the migration, cutting deploy time to 6 minutes.",
+      "Mentored 5 engineers.",
+    ])
+  })
 })

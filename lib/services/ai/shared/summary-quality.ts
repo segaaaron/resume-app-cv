@@ -13,19 +13,53 @@
 // token spent, instant, and the same summary always gets the same verdict.
 import { ANY_METRIC_REGEX } from "./ai-helpers"
 
-/** Openers that carry no impact. Mirrors the prompt's banned list. */
-const CLICHES: readonly string[] = [
-  // en
+// Phrases that fit any candidate in any role, so they say nothing about this
+// one. This list is the ONLY definition: the prompts render their banned list
+// from it (clicheBanList) instead of restating it.
+//
+// They used to be two lists, and the comment here claimed to "mirror the
+// prompt's banned list" while quietly disagreeing with it. The detector
+// rejected "proven track record", "think outside the box" and "wear many hats";
+// the English prompt never mentioned them. The Spanish prompt was worse — it
+// banned five phrases and forbade "Equipo de trabajo", which the detector does
+// not even check, while saying nothing about "proactivo", "orientado a
+// resultados" or "don de gentes". Measured live, the clichés that reached the
+// user were exactly the ones the model had never been told about: both flagged
+// versions in 8 runs carried "proven track record". The model was not ignoring
+// the rule, it was never given it.
+const CLICHES_EN: readonly string[] = [
   "responsible for", "passionate about", "looking for new challenges",
   "experienced in", "team player", "detail-oriented", "hard-working",
-  "results-driven", "go-getter", "self-starter", "proven track record",
-  "think outside the box", "wear many hats",
-  // es
+  "results-driven", "results-oriented", "go-getter", "self-starter",
+  "proven track record", "think outside the box", "wear many hats",
+  "seasoned professional", "dynamic professional", "track record of success",
+]
+const CLICHES_ES: readonly string[] = [
   "responsable de", "apasionado por", "apasionada por", "con experiencia en",
   "busco nuevos retos", "trabajo en equipo", "orientado al detalle",
   "orientada al detalle", "proactivo", "proactiva", "orientado a resultados",
-  "orientada a resultados", "don de gentes",
+  "orientada a resultados", "don de gentes", "amplia trayectoria",
+  "trayectoria probada", "profesional dinámico", "profesional dinámica",
 ]
+
+/**
+ * Checked against both languages regardless of the CV's own: a Spanish summary
+ * that opens "Passionate about" is just as empty, and mixed-language text is
+ * common in tech CVs.
+ */
+const CLICHES: readonly string[] = [...CLICHES_EN, ...CLICHES_ES]
+
+/**
+ * The banned list as the prompt states it, straight from the detector.
+ *
+ * The point is that the model is told exactly what will be rejected — nothing
+ * more, nothing less. Adding a phrase to CLICHES now also tells the model about
+ * it, which is what stops the two from drifting apart again.
+ */
+export function clicheBanList(language: "es" | "en"): string {
+  const list = language === "en" ? CLICHES_EN : CLICHES_ES
+  return list.map((c) => `"${c.charAt(0).toUpperCase()}${c.slice(1)}"`).join(", ")
+}
 
 /** First-person pronouns — a CV summary is written impersonally. */
 const PRONOUN_REGEX =
@@ -94,6 +128,17 @@ const METRIC_SCAN =
   /\b\d+(?:[.,]\d+)?\s*(?:%|percent|x\b|k\b|m\b|users?|usuarios?|clients?|clientes?|people|personas|engineers?|ingenieros?|teams?|equipos?|projects?|proyectos?|years?|a[ñn]os?|months?|meses?|minutes?|minutos?|hours?|horas?|releases?|versions?|versiones?|countries?|pa[ií]ses?|accounts?|cuentas?|tickets?|deals?|leads?)/gi
 
 /**
+ * One sentence per claim.
+ *
+ * Splits only on a terminator followed by whitespace, so "3.5%" and "$1.2M"
+ * stay whole — a decimal point has no space after it. A line with no terminator
+ * comes back as itself, which keeps every CV bullet exactly as it was.
+ */
+function splitSentences(line: string): string[] {
+  return line.split(/(?<=[.!?])\s+/).filter((s) => s.trim().length > 0)
+}
+
+/**
  * The actual figures the CV states, with a little context around each.
  *
  * generate-summary was told "include the figure only if the profile states one"
@@ -124,14 +169,22 @@ export function extractMetricsFromText(text: string | undefined): string[] {
   const found: string[] = []
 
   for (const line of text.split("\n")) {
-    // Fresh regex per line: METRIC_SCAN is /g, and a shared lastIndex would
-    // make the scan skip lines depending on what matched before it.
-    const re = new RegExp(METRIC_SCAN.source, "gi")
-    if (!re.test(line)) continue
-    // The whole line, trimmed of its marker — the figure means nothing without
-    // the thing it measures.
-    const clean = line.replace(/^\s*[•·]+\s*|^\s*[-*]+\s+/, "").trim()
-    if (clean) found.push(clean)
+    // A CV bullet is one line, so splitting on "\n" gave one figure per entry.
+    // A summary is one paragraph: the whole thing came back as a single "figure"
+    // and the prompt block — meant to be a clean list of numbers — reprinted the
+    // user's entire summary under "THE CANDIDATE'S REAL NUMBERS", duplicating
+    // text already in the prompt and diluting the one instruction it exists to
+    // carry. Sentences are the real unit: one claim, one figure, its context.
+    for (const sentence of splitSentences(line)) {
+      // Fresh regex per sentence: METRIC_SCAN is /g, and a shared lastIndex
+      // would make the scan skip inputs depending on what matched before them.
+      const re = new RegExp(METRIC_SCAN.source, "gi")
+      if (!re.test(sentence)) continue
+      // Trimmed of its marker — the figure means nothing without the thing it
+      // measures.
+      const clean = sentence.replace(/^\s*[•·]+\s*|^\s*[-*]+\s+/, "").trim()
+      if (clean) found.push(clean)
+    }
   }
   return found.slice(0, 6)
 }

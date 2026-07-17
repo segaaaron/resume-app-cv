@@ -1379,7 +1379,14 @@
       "version_desc_executive": "Business impact, leadership and quantifiable results",
       "version_desc_specialist": "Technical stack, tools and frameworks (iOS, SwiftUI, MVVM…)",
       "version_desc_value_prop": "Past achievement + differential skill + future value you bring",
-      "summary_already_optimized": "Your summary is already well-optimized. No improvements needed."
+      "summary_already_optimized": "Your summary is already well-optimized. No improvements needed.",
+      "generate_summary_no_result": "We couldn't generate a reliable summary from the current data. Add more detail to your experience and try again.",
+      "version_type_formal": "Formal",
+      "version_desc_formal": "Executive, by-the-book tone",
+      "version_type_balanced": "Balanced",
+      "version_desc_balanced": "Direct and professional, no filler",
+      "version_type_dynamic": "Dynamic",
+      "version_desc_dynamic": "Energetic, impact-oriented"
     },
     "template_switch": {
       "title": "Preview: {name}",
@@ -2007,7 +2014,10 @@
     "body_complete_clear": "Clear body and generate again",
     "tab_assistant": "AI Assistant",
     "mobile_edit": "Edit",
-    "mobile_preview": "Preview"
+    "mobile_preview": "Preview",
+    "ai_improve": "Improve with AI",
+    "ai_improve_empty": "Write or generate a letter before improving it",
+    "ai_already_optimized": "Your letter is already well written. We found no improvement worth making."
   },
   "public_cv": {
     "shared_via": "CV shared via",
