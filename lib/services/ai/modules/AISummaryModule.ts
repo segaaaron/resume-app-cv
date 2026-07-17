@@ -13,7 +13,8 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination, stripVersionLabel } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { assessSummary, profileStatesMetrics } from "../shared/summary-quality"
+import { assessSummary, profileStatesMetrics, extractProfileMetrics } from "../shared/summary-quality"
+import { ANY_METRIC_REGEX } from "../shared/ai-helpers"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,
@@ -39,6 +40,31 @@ export class AISummaryModule {
     const validation = validateAIInput(resumeContext, AI_INPUT_LIMITS.resumeContext)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
+    // Find the candidate's real figures in code and hand them over. Told only
+    // "include the figure if the profile states one", the model went looking
+    // through prose and gave up: a CV with "cutting deploy time from 40 minutes
+    // to under 6" and "cut crash rate 20%" came back as "significantly enhanced
+    // deployment efficiency" three times over. The strongest thing on the CV is
+    // exactly what it dropped.
+    const metrics = extractProfileMetrics(sectionData)
+    const metricBlockEN = metrics.length
+      ? `\n=== THE CANDIDATE'S REAL NUMBERS ===\n${metrics.map((m) => `• ${m}`).join("\n")}`
+      : ""
+    const metricBlockES = metrics.length
+      ? `\n=== LAS CIFRAS REALES DEL CANDIDATO ===\n${metrics.map((m) => `• ${m}`).join("\n")}`
+      : ""
+
+    // The instruction goes LAST, because that is the one the model follows when
+    // instructions conflict. A static "no figures is fine" block sitting at the
+    // end would override the requirement above it — the exact shape of bug this
+    // module has already been bitten by twice.
+    const numbersRuleEN = metrics.length
+      ? `ON NUMBERS — read this last and follow it exactly:\nThe candidate's real figures are listed above. At least one of them MUST appear, as a figure, in EVERY version. "Cut crash rate 20%" is worth more to a recruiter than "significantly improved stability" — the number IS the point, and vaguing it out throws away the strongest thing this candidate has. Never round it, never invent one that is not on that list, and never leave a bracket.`
+      : `ON NUMBERS — read this last and follow it exactly:\nThis profile states no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not in the profile will be rejected and the candidate will get nothing back.`
+    const numbersRuleES = metrics.length
+      ? `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nLas cifras reales del candidato están listadas arriba. Al menos una DEBE aparecer, como cifra, en CADA versión. "Redujo los crashes un 20%" vale más para un recruiter que "mejoró significativamente la estabilidad" — el número ES el punto, y difuminarlo tira lo más fuerte que tiene este candidato. Nunca la redondees, nunca inventes una que no esté en esa lista, y nunca dejes un corchete.`
+      : `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nEste perfil no declara ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en el perfil será rechazada y el candidato no recibirá nada.`
+
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY use information present in the CANDIDATE PROFILE below. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the profile.
@@ -49,6 +75,7 @@ TASK: Analyze this professional profile and generate 3 high-impact resume summar
 
 === CANDIDATE PROFILE ===
 ${resumeContext}
+${metricBlockEN}
 
 PHASE 1 — INTERNAL DIAGNOSIS (do not include in response, use to guide writing):
 • Seniority level: detect from experience and responsibilities (Junior <2yr / Mid 2-5yr / Senior 5-10yr / Lead/Director 10yr+)
@@ -73,8 +100,7 @@ ABSOLUTE RULES:
 • Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
 
 
-ON NUMBERS — read this last and follow it exactly:
-The profile above may state no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the profile will be rejected and the candidate will get nothing back. Write the strongest summary you can using only what is there.
+${numbersRuleEN}
 
 Respond ONLY with valid JSON (no markdown, no explanations):
 {"versions": ["version1", "version2", "version3"]}`
@@ -87,6 +113,7 @@ TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impac
 
 === PERFIL DEL CANDIDATO ===
 ${resumeContext}
+${metricBlockES}
 
 FASE 1 — DIAGNÓSTICO INTERNO (no incluir en respuesta, solo usar para informar la escritura):
 • Nivel de seniority: detecta según años de experiencia y responsabilidades (Junior <2 años / Mid 2-5 / Senior 5-10 / Lead/Director 10+)
@@ -111,8 +138,7 @@ REGLAS ABSOLUTAS:
 • Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
 
 
-SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
-El perfil de arriba puede no declarar ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en el perfil será rechazada y el candidato no recibirá nada. Escribe el resumen más fuerte que puedas usando solo lo que hay.
+${numbersRuleES}
 
 Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
 {"versions": ["version1", "version2", "version3"]}`
@@ -176,6 +202,55 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       })
     }
 
+    // Rank by the same checks improve-summary already uses. The prompt bans
+    // "Passionate about" and the model wrote it anyway; the cliché list existed
+    // in summary-quality.ts and nothing checked the output against it.
+    //
+    // Ranked, not filtered: dropping a version for one cliché could leave the
+    // user with nothing, and a summary with a weak phrase still beats no
+    // summary. The clean ones surface first, which is what the user reads.
+    const profileHasMetrics = metrics.length > 0
+    const ranked = [...cleanVersions].sort((a, b) => {
+      const qa = assessSummary(a, profileHasMetrics).issues.length
+      const qb = assessSummary(b, profileHasMetrics).issues.length
+      return qa - qb
+    })
+
+    const flawed = ranked.filter((v) => !assessSummary(v, profileHasMetrics).alreadyGood)
+    if (flawed.length > 0) {
+      this.logger.warn("[AIService.generateSummary] versions with quality issues", {
+        flawed: flawed.length,
+        total: ranked.length,
+        issues: [...new Set(flawed.flatMap((v) => assessSummary(v, profileHasMetrics).issues))],
+      })
+    }
+
+    // The candidate has figures and not one version used them. Measured at 3 in
+    // 5 runs even with the numbers handed to the model in the prompt — telling
+    // it harder does not work, the same wall improve-summary hit. So detect it
+    // in code and ask once more, with the failure named. One extra call, only
+    // when it actually failed.
+    if (profileHasMetrics && ranked.length > 0 && !ranked.some((v) => ANY_METRIC_REGEX.test(v))) {
+      this.logger.warn("[AIService.generateSummary] no version used the candidate's figures — retrying once")
+      const retry = await this.retryWithMetrics(prompt, metrics, langInstruction, language)
+      if (retry.length > 0) {
+        const retryRanked = [...retry].sort(
+          (a, b) => assessSummary(a, true).issues.length - assessSummary(b, true).issues.length,
+        )
+        // Only take it if it actually fixed the thing we retried for.
+        if (retryRanked.some((v) => ANY_METRIC_REGEX.test(v))) {
+          const usage2 = response.usage
+          logAIUsage(userId, "generate-summary", {
+            model: AI_MODEL, plan,
+            promptTokens: usage2?.prompt_tokens ?? 0,
+            completionTokens: usage2?.completion_tokens ?? 0,
+            costUsd: computeCostUsd(AI_MODEL, usage2?.prompt_tokens ?? 0, usage2?.completion_tokens ?? 0),
+          })
+          return { versions: retryRanked }
+        }
+      }
+    }
+
     const usage = response.usage
     logAIUsage(userId, "generate-summary", {
       model: AI_MODEL,
@@ -188,10 +263,48 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     // No previous summary to fall back to in generate-summary. If every version
     // was dropped, return empty array with a status flag so the frontend can
     // show its own empty-state — never surface invented content.
-    if (cleanVersions.length === 0) {
+    if (ranked.length === 0) {
       return { versions: [], status: "already_optimized" }
     }
-    return { versions: cleanVersions }
+    return { versions: ranked }
+  }
+
+  /**
+   * One more attempt, naming the exact failure. Separate from the main prompt
+   * because a generic "try again" changes nothing — the model has to be told
+   * what it did wrong, and told last.
+   */
+  private async retryWithMetrics(
+    basePrompt: string,
+    metrics: string[],
+    langInstruction: string,
+    language: "es" | "en",
+  ): Promise<string[]> {
+    const correction = language === "en"
+      ? `\n\nYOUR LAST ATTEMPT FAILED. Not one version contained a number, and this candidate has these:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nWrite the summaries again. Every version must quote at least one of those figures verbatim — "20%", "40 minutes to under 6", "5 engineers". Not "significantly", not "substantially": the digit itself. That figure is the strongest thing this person has and leaving it out wastes it.`
+      : `\n\nTU INTENTO ANTERIOR FALLÓ. Ni una versión llevaba un número, y este candidato tiene estos:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nEscribe los resúmenes otra vez. Cada versión debe citar al menos una de esas cifras literalmente — "20%", "40 minutos a 6", "5 ingenieros". No "significativamente", no "notablemente": el dígito. Esa cifra es lo más fuerte que tiene esta persona y omitirla la desperdicia.`
+
+    try {
+      const res = await this.aiClient.chat({
+        model: AI_MODEL,
+        max_tokens: 600,
+        temperature: AI_TEMPERATURE_GENERATIVE,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
+          { role: "user", content: basePrompt + correction },
+        ],
+      })
+      const parsed = parseAIJson<{ versions?: unknown }>(res.choices[0]?.message?.content ?? "")
+      if (!Array.isArray(parsed.versions)) return []
+      return (parsed.versions as unknown[])
+        .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+        .map(stripVersionLabel)
+        .slice(0, 3)
+    } catch {
+      // A failed retry is not a failed request — the first result still stands.
+      return []
+    }
   }
 
   async improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {

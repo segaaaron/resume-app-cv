@@ -86,7 +86,38 @@ export function assessSummary(summary: string, profileHasMetrics: boolean): Summ
 
 /** True when the CV states any figure a summary could legitimately quote. */
 export function profileStatesMetrics(sectionData: Record<string, unknown> | undefined): boolean {
-  if (!sectionData) return false
+  return extractProfileMetrics(sectionData).length > 0
+}
+
+/** Global variant — the exported one is sticky-free and used with .test(). */
+const METRIC_SCAN =
+  /\b\d+(?:[.,]\d+)?\s*(?:%|percent|x\b|k\b|m\b|users?|usuarios?|clients?|clientes?|people|personas|engineers?|ingenieros?|teams?|equipos?|projects?|proyectos?|years?|a[ñn]os?|months?|meses?|minutes?|minutos?|hours?|horas?|releases?|versions?|versiones?|countries?|pa[ií]ses?|accounts?|cuentas?|tickets?|deals?|leads?)/gi
+
+/**
+ * The actual figures the CV states, with a little context around each.
+ *
+ * generate-summary was told "include the figure only if the profile states one"
+ * and then had to go find them itself in a wall of prose. It didn't: a CV
+ * saying "cutting deploy time from 40 minutes to under 6" and "cut crash rate
+ * 20%" produced three summaries with no number at all — it vagued the strongest
+ * thing the candidate had into "significantly enhanced efficiency". Handing the
+ * model the list is the same move that fixed metric_missing for bullets: the
+ * regex finds them, the model only writes.
+ */
+export function extractProfileMetrics(sectionData: Record<string, unknown> | undefined): string[] {
+  if (!sectionData) return []
   const work = (sectionData.workExperience ?? []) as { description?: string }[]
-  return work.some((j) => ANY_METRIC_REGEX.test(j.description ?? ""))
+  const found: string[] = []
+
+  for (const job of work) {
+    for (const line of (job.description ?? "").split("\n")) {
+      const re = new RegExp(METRIC_SCAN.source, "gi")
+      if (!re.test(line)) continue
+      // The whole bullet, trimmed of its marker — the figure means nothing
+      // without the thing it measures.
+      const clean = line.replace(/^\s*[•·]+\s*|^\s*[-*]+\s+/, "").trim()
+      if (clean) found.push(clean)
+    }
+  }
+  return found.slice(0, 6)
 }
