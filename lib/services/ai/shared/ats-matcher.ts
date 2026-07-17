@@ -37,6 +37,10 @@ export interface ATSMatchResult {
   matchedKeywords: string[]   // hard skills found in the CV
   missingKeywords: string[]   // hard skills NOT in the CV (verified set-diff)
   missingMustHaves: string[]  // requirements/qualifications NOT in the CV
+  /** Found in the work experience — the CV backs the claim up. */
+  demonstratedKeywords: string[]
+  /** Found only in a list, with nothing in the work experience behind it. */
+  listedOnlyKeywords: string[]
 }
 
 // Weighting of each category toward the overall score. Hard skills dominate
@@ -59,19 +63,45 @@ const STOPWORDS = new Set([
 interface Coverage {
   matched: string[]
   missing: string[]
+  /** Matched, and the CV backs it up somewhere in the work experience. */
+  demonstrated: string[]
+  /** Matched, but only in a list — Skills, or a bare mention with no work behind it. */
+  listedOnly: string[]
   pct: number | null // null = no keywords in this category (not applicable)
 }
 
-function coverage(keywords: string[], haystackNorm: string): Coverage {
+/**
+ * Splits matched keywords by whether the CV actually backs them up.
+ *
+ * A keyword sitting in the Skills list is a claim; the same keyword inside a
+ * work-experience bullet is evidence. Recruiters read it that way, and so does
+ * every semantic screener. Nothing is scored down for being listed-only — the
+ * distinction is reported, not penalised. Inventing a discount ("a listed skill
+ * is worth 60%") would be exactly the fabricated precision this product has
+ * been purging.
+ */
+function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string): Coverage {
   const unique = dedupe(keywords)
-  if (unique.length === 0) return { matched: [], missing: [], pct: null }
+  if (unique.length === 0) {
+    return { matched: [], missing: [], demonstrated: [], listedOnly: [], pct: null }
+  }
   const matched: string[] = []
   const missing: string[] = []
+  const demonstrated: string[] = []
+  const listedOnly: string[] = []
   for (const k of unique) {
-    if (keywordPresent(k, haystackNorm)) matched.push(k)
-    else missing.push(k)
+    if (!keywordPresent(k, haystackNorm)) { missing.push(k); continue }
+    matched.push(k)
+    if (keywordPresent(k, evidenceNorm)) demonstrated.push(k)
+    else listedOnly.push(k)
   }
-  return { matched, missing, pct: Math.round((matched.length / unique.length) * 100) }
+  return {
+    matched,
+    missing,
+    demonstrated,
+    listedOnly,
+    pct: Math.round((matched.length / unique.length) * 100),
+  }
 }
 
 function dedupe(items: string[]): string[] {
@@ -113,13 +143,20 @@ export function computeATSMatch(
   resumeText: string,
   cvTitles: string,
   sections: SectionPresence,
+  /**
+   * The work-experience text on its own. A keyword found here is demonstrated;
+   * one found only in `resumeText` is a claim in a list. Optional so existing
+   * callers keep working — when omitted, nothing is treated as demonstrated.
+   */
+  evidenceText = "",
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
+  const evidence = normalize(evidenceText)
 
-  const hard = coverage(keywords.hardSkills, hay)
-  const soft = coverage(keywords.softSkills, hay)
-  const must = coverage(keywords.mustHaves, hay)
+  const hard = coverage(keywords.hardSkills, hay, evidence)
+  const soft = coverage(keywords.softSkills, hay, evidence)
+  const must = coverage(keywords.mustHaves, hay, evidence)
   const title = titleScore(keywords.jobTitle, titlesNorm)
   const sectionsPct = sectionsScore(sections)
 
@@ -146,6 +183,12 @@ export function computeATSMatch(
     matchedKeywords: hard.matched.slice(0, 12),
     missingKeywords: hard.missing.slice(0, 8),
     missingMustHaves: must.missing.slice(0, 6),
+    // The stuffing answer. Dumping every missing keyword into Skills still
+    // moves the score — coverage only asks whether the word is there — but now
+    // all of them come back listed-only, and the user sees exactly which
+    // claims their own CV does not back up. A fact, not an invented penalty.
+    demonstratedKeywords: [...hard.demonstrated, ...soft.demonstrated].slice(0, 12),
+    listedOnlyKeywords: [...hard.listedOnly, ...soft.listedOnly].slice(0, 12),
   }
 }
 

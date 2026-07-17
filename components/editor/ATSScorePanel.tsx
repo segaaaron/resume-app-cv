@@ -387,6 +387,30 @@ export default function ATSScorePanel() {
               </div>
             )}
 
+            {/* The stuffing answer. Dumping every missing keyword into Skills still
+                moves the coverage score — the word IS in the CV — but each one
+                lands here, unbacked, where the user can see it. No invented
+                penalty: whether the work experience mentions the skill is a fact,
+                and it is exactly what a recruiter checks after reading the claim. */}
+            {(atsResult.listedOnlyKeywords?.length ?? 0) > 0 && (
+              <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/70 to-orange-50/50 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-1.5">
+                  <AlertCircle className="h-3 w-3" /> {t("listed_only")}
+                </p>
+                <p className="text-[10.5px] text-slate-600 leading-relaxed mb-2.5">{t("listed_only_hint")}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(atsResult.listedOnlyKeywords ?? []).map((kw: string) => (
+                    <span
+                      key={kw}
+                      className="flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 bg-white/70 text-amber-700 ring-1 ring-amber-200"
+                    >
+                      {kw}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {atsResult.gaps?.length > 0 && (
               <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5">
                 <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">

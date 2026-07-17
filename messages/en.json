@@ -1535,7 +1535,9 @@
       "cv_incomplete_experience": "Work experience",
       "no_changes": "CV and search haven't changed since the last analysis",
       "cooldown_wait": "Wait {seconds} before analyzing again",
-      "wait": "Wait {seconds}"
+      "wait": "Wait {seconds}",
+      "listed_only": "Claimed but not shown",
+      "listed_only_hint": "These are in your Skills, but nothing in your work experience shows you using them. A recruiter reads a skill and looks for the proof — add a bullet where you did it, or drop the skill."
     },
     "cv_review": {
       "title": "AI CV Review",

@@ -151,6 +151,7 @@ Reglas:
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)
     const sections = buildSectionPresence(data)
+    const evidenceText = buildEvidenceText(data)
     const match = computeATSMatch(
       {
         hardSkills: extraction.hardSkills,
@@ -161,6 +162,7 @@ Reglas:
       resumeText,
       cvTitles,
       sections,
+      evidenceText,
     )
 
     const label = localizedLabel(scoreLabel(match.score), en)
@@ -171,12 +173,14 @@ Reglas:
       label,
       summary,
       // Strengths / gaps are derived from the deterministic match so they can
-      // never contradict the score: matched skills are strengths, missing hard
-      // requirements are gaps.
-      strengths: match.matchedKeywords,
+      // never contradict the score. A strength is a skill the CV DEMONSTRATES:
+      // one that only appears in a list is a claim, and listing it does not make
+      // it a strength — that is what let a bare keyword dump look strong.
+      strengths: match.demonstratedKeywords,
       gaps: match.missingMustHaves,
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
+      listedOnlyKeywords: match.listedOnlyKeywords,
       suggestions: extraction.suggestions,
       subScores: match.subScores,
     }
@@ -428,6 +432,20 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 // ── ats-score helpers (module-level, pure) ────────────────────────────────────
 
 /** Target role + past job titles, joined — feeds the title-match sub-score. */
+/**
+ * The work-experience text alone — job titles, employers and bullets. This is
+ * the evidence half of the CV: a keyword here is demonstrated, the same keyword
+ * only in the Skills list is a claim.
+ */
+function buildEvidenceText(data: Record<string, unknown>): string {
+  const work = (data.workExperience as Array<{
+    jobTitle?: string; employer?: string; description?: string
+  }> | undefined) ?? []
+  return work
+    .map((w) => [w?.jobTitle, w?.employer, w?.description].filter(Boolean).join(" "))
+    .join("\n")
+}
+
 function buildCVTitles(data: Record<string, unknown>): string {
   const pd = data.personalDetails as { jobTitle?: string } | undefined
   const work = (data.workExperience as Array<{ jobTitle?: string }> | undefined) ?? []

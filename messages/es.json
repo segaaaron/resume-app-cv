@@ -1535,7 +1535,9 @@
       "cv_incomplete_experience": "Experiencia laboral",
       "no_changes": "El CV y la búsqueda no han cambiado desde el último análisis",
       "cooldown_wait": "Espera {seconds} antes de volver a analizar",
-      "wait": "Espera {seconds}"
+      "wait": "Espera {seconds}",
+      "listed_only": "Declaradas pero sin respaldo",
+      "listed_only_hint": "Están en tus Habilidades, pero nada en tu experiencia demuestra que las usaste. Un recruiter lee la habilidad y busca la prueba — añade un bullet donde la hiciste, o quítala."
     },
     "cv_review": {
       "title": "Revisión IA del CV",

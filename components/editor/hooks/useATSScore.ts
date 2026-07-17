@@ -28,6 +28,8 @@ export interface ATSResult {
   gaps: string[]
   matchedKeywords?: string[]
   missingKeywords: string[]
+  /** Matched, but with nothing in the work experience behind them. */
+  listedOnlyKeywords?: string[]
   suggestions: string[]
   subScores?: ATSSubScores
 }

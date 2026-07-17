@@ -62,6 +62,12 @@ export interface ATSScoreResult {
   gaps: string[]
   matchedKeywords: string[]
   missingKeywords: string[]
+  /**
+   * Matched, but the CV shows no work behind them — they only appear in a list.
+   * Surfaced so the user can see which of their claims are unbacked, instead of
+   * a score that rewards listing a skill exactly as much as having done it.
+   */
+  listedOnlyKeywords: string[]
   suggestions: string[]
   subScores: ATSSubScores
 }
