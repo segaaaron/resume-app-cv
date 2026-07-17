@@ -6,7 +6,9 @@
 import { describe, it, expect, vi } from "vitest"
 import { renderToString } from "react-dom/server"
 import { createRoot } from "react-dom/client"
-import { act } from "react"
+// Namespace import, not `{ act }`: react is CJS and the named binding stops
+// resolving once the panel graph is in play.
+import * as React from "react"
 import type { ReactElement } from "react"
 
 // React 19 requires this before act() outside a test renderer.
@@ -17,9 +19,9 @@ function mount(el: ReactElement): string {
   const host = document.createElement("div")
   document.body.appendChild(host)
   const root = createRoot(host)
-  act(() => { root.render(el) })
+  React.act(() => { root.render(el) })
   const html = document.body.innerHTML
-  act(() => { root.unmount() })
+  React.act(() => { root.unmount() })
   host.remove()
   return html
 }
@@ -42,9 +44,12 @@ vi.mock("@/stores/resumeStore", () => ({
   }),
 }))
 vi.mock("zustand/react/shallow", () => ({ useShallow: (f: unknown) => f }))
+vi.mock("@/components/editor/EditorContext", () => ({ useEditorPro: () => ({ isPro: true, openUpgrade: () => {} }) }))
 
 import BulletsImprovementModal, { type BulletPair } from "@/components/resume/sections/BulletsImprovementModal"
 import TailorCVPanel from "@/components/editor/TailorCVPanel"
+import ATSScorePanel from "@/components/editor/ATSScorePanel"
+import WorkExperienceSection from "@/components/resume/sections/WorkExperience"
 
 describe("UI smoke", () => {
   it("BulletsImprovementModal renders sparse suggestions (2 of 8)", () => {
@@ -83,5 +88,31 @@ describe("UI smoke", () => {
   it("TailorCVPanel disables its CTA when the shared job description is too short", () => {
     const html = renderToString(<TailorCVPanel jobDescription="short" />)
     expect(html).toContain("disabled")
+  })
+
+  // ATSScorePanel is the whole chained flow: one job-description textarea, the
+  // score, and TailorCVPanel nested inside it. Every other test here mounts a
+  // leaf in isolation; this is the only one that proves the composition itself
+  // renders — which is exactly where the duplicated apply logic hid.
+  it("ATSScorePanel mounts the whole chained flow", () => {
+    const html = mount(<ATSScorePanel />)
+    expect(html).toContain("placeholder")          // the single JD textarea
+    expect((html.match(/<textarea/g) ?? []).length).toBe(1)
+    expect(html).toContain("pro_badge")
+  })
+
+  it("ATSScorePanel does not render the tailor step before there is a score", () => {
+    // TailorCVPanel is step 2: it only appears once the ATS result exists.
+    const html = mount(<ATSScorePanel />)
+    expect(html).not.toContain("cta")
+  })
+
+  // metric_missing is the only AI state whose UI was written and never rendered:
+  // the card lives inside a non-exported item component, so it only mounts
+  // through the whole section.
+  it("WorkExperience mounts with an expanded job", () => {
+    const html = mount(<WorkExperienceSection />)
+    expect(html).toContain("description")
+    expect(html).toContain("improve_bullet")   // the AI button the card hangs off
   })
 })

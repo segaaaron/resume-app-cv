@@ -460,9 +460,14 @@ function DateField({ label, value, onChange }: { label: string; value: string; o
   }, [open])
 
   const parsed = (() => {
-    const m = value.match(/^(\d{4})-(\d{2})$/)
+    // `sections` is untyped Json in Prisma and nothing validates it on load —
+    // ResumeSectionsSchema only runs in mock-resume.ts. A record written without
+    // startDate takes the whole editor down with a white screen instead of
+    // showing an empty field.
+    const raw = value ?? ""
+    const m = raw.match(/^(\d{4})-(\d{2})$/)
     if (m) return { year: parseInt(m[1]), month: parseInt(m[2]) - 1 }
-    const y = value.match(/^(\d{4})$/)
+    const y = raw.match(/^(\d{4})$/)
     if (y) return { year: parseInt(y[1]), month: -1 }
     return { year: new Date().getFullYear(), month: -1 }
   })()
