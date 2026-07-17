@@ -44,7 +44,6 @@ export type TemplateSEO = {
   colors: { primary: string; accent: string }
   layout: TemplateLayout
   hasPhoto: boolean
-  atsScore: number
   isPro: boolean
 }
 
@@ -54,14 +53,12 @@ type CuratedEntry = Partial<Omit<TemplateSEO, "id" | "slug" | "name" | "hasPhoto
   category: TemplateCategory
   colors: { primary: string; accent: string }
   layout: TemplateLayout
-  atsScore: number
 }
 
 const CURATED: Record<string, CuratedEntry> = {
   ats: {
     category: "ats",
     layout: "single-column",
-    atsScore: 99,
     colors: { primary: "#1f2937", accent: "#1a2e4a" },
     tags: ["ats-friendly", "single-column", "minimal", "recommended"],
     bestFor: {
@@ -84,7 +81,6 @@ const CURATED: Record<string, CuratedEntry> = {
   aurora: {
     category: "creative",
     layout: "two-column",
-    atsScore: 78,
     colors: { primary: "#4c1d95", accent: "#8b5cf6" },
     tags: ["creative", "two-column", "decorative-svg", "modern"],
     bestFor: {
@@ -107,7 +103,6 @@ const CURATED: Record<string, CuratedEntry> = {
   modern: {
     category: "modern",
     layout: "single-column",
-    atsScore: 92,
     colors: { primary: "#1d1d20", accent: "#7c3aed" },
     tags: ["modern", "photo", "single-column", "ats-friendly"],
     bestFor: {
@@ -130,7 +125,6 @@ const CURATED: Record<string, CuratedEntry> = {
   classic: {
     category: "classic",
     layout: "single-column",
-    atsScore: 95,
     colors: { primary: "#2a72d7", accent: "#1a2e4a" },
     tags: ["classic", "single-column", "ats-friendly", "universal"],
     bestFor: {
@@ -153,7 +147,6 @@ const CURATED: Record<string, CuratedEntry> = {
   executive: {
     category: "executive",
     layout: "two-column",
-    atsScore: 88,
     colors: { primary: "#1e3a5f", accent: "#c4a052" },
     tags: ["executive", "premium", "two-column", "senior", "leadership"],
     bestFor: {
@@ -176,7 +169,6 @@ const CURATED: Record<string, CuratedEntry> = {
   professional: {
     category: "professional",
     layout: "single-column",
-    atsScore: 94,
     colors: { primary: "#0f172a", accent: "#0ea5e9" },
     tags: ["professional", "photo", "ats-friendly", "single-column"],
     bestFor: {
@@ -199,7 +191,6 @@ const CURATED: Record<string, CuratedEntry> = {
   minimal: {
     category: "minimal",
     layout: "two-column",
-    atsScore: 90,
     colors: { primary: "#111827", accent: "#6b7280" },
     tags: ["minimal", "two-column", "photo", "premium"],
     bestFor: {
@@ -222,7 +213,6 @@ const CURATED: Record<string, CuratedEntry> = {
   carbon: {
     category: "tech",
     layout: "sidebar-left",
-    atsScore: 80,
     colors: { primary: "#0f172a", accent: "#22d3ee" },
     tags: ["dark-mode", "tech", "two-column", "photo"],
     bestFor: {
@@ -245,7 +235,6 @@ const CURATED: Record<string, CuratedEntry> = {
   blueprint: {
     category: "tech",
     layout: "sidebar-left",
-    atsScore: 85,
     colors: { primary: "#1e3a5f", accent: "#2a72d7" },
     tags: ["tech", "engineering", "two-column", "photo"],
     bestFor: {
@@ -268,7 +257,6 @@ const CURATED: Record<string, CuratedEntry> = {
   neon: {
     category: "creative",
     layout: "single-column",
-    atsScore: 70,
     colors: { primary: "#ec4899", accent: "#000000" },
     tags: ["creative", "brutalist", "single-column", "bold"],
     bestFor: {
@@ -318,38 +306,8 @@ function inferLayout(t: TemplateInfo): TemplateLayout {
   return "two-column"
 }
 
-function inferAtsScore(t: TemplateInfo, category: TemplateCategory): number {
-  if (category === "ats") return 99
-  if (category === "creative") return Math.floor(Math.random() * 8) + 70 // 70-77 deterministic-ish below
-  if (category === "tech") return 82
-  if (category === "executive") return 86
-  if (category === "minimal") return 88
-  if (category === "modern") return 90
-  if (category === "professional") return 92
-  return 90
-}
 
-// Deterministic ATS score from id hash (no Math.random — needs to be SSR-stable)
-function stableAtsScore(t: TemplateInfo, category: TemplateCategory): number {
-  const base = inferAtsScoreBase(category)
-  // small deterministic jitter from id
-  const hash = [...t.id].reduce((acc, c) => acc + c.charCodeAt(0), 0)
-  const jitter = (hash % 7) - 3
-  return Math.max(65, Math.min(99, base + jitter))
-}
 
-function inferAtsScoreBase(category: TemplateCategory): number {
-  switch (category) {
-    case "ats": return 99
-    case "professional": return 92
-    case "classic": return 93
-    case "modern": return 89
-    case "minimal": return 87
-    case "executive": return 85
-    case "tech": return 82
-    case "creative": return 75
-  }
-}
 
 const CATEGORY_COLORS: Record<TemplateCategory, { primary: string; accent: string }> = {
   ats:          { primary: "#1f2937", accent: "#1a2e4a" },
@@ -404,7 +362,6 @@ function buildTemplateSEO(t: TemplateInfo): TemplateSEO {
   const colors = curated?.colors ?? CATEGORY_COLORS[category]
   const tags = curated?.tags ?? CATEGORY_TAGS[category]
   const bestFor = curated?.bestFor ?? CATEGORY_BEST_FOR[category]
-  const atsScore = curated?.atsScore ?? stableAtsScore(t, category)
   const name = cleanName(t.name)
 
   const description = curated?.description ?? {
@@ -447,7 +404,6 @@ function buildTemplateSEO(t: TemplateInfo): TemplateSEO {
     colors,
     layout,
     hasPhoto: t.hasPhoto,
-    atsScore,
     isPro: PRO_IDS.includes(t.id),
   }
 }

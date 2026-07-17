@@ -2677,7 +2677,9 @@
     "layout_two_column": "Two columns",
     "layout_sidebar_left": "Left sidebar",
     "layout_sidebar_right": "Right sidebar",
-    "pro_required": "Pro plan required"
+    "pro_required": "Pro plan required",
+    "text_label": "Text",
+    "text_selectable": "Selectable, not an image"
   },
   "tools": {
     "atsChecker": {

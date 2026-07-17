@@ -92,14 +92,17 @@ export default function TemplateDetailHero({
           <p className="text-lg text-cyan-100/80 leading-relaxed mb-8 max-w-xl">{desc}</p>
 
           <div className="grid grid-cols-3 gap-3 mb-8 max-w-md">
+            {/* This tile used to read "ATS SCORE 92/100". That number was
+                invented: stableAtsScore() picked a base per category and added
+                jitter from a hash of the template id, which made a made-up
+                figure look measured — sitting next to layout and photo, which
+                are real facts. Replaced with the one thing about a template
+                that genuinely affects parsing, and that we can actually state. */}
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3 backdrop-blur-sm">
               <div className="text-[10px] uppercase tracking-widest text-cyan-200/60 mb-1">
-                {t("ats_score_label")}
+                {t("text_label")}
               </div>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-extrabold text-[#00D4FF]">{template.atsScore}</span>
-                <span className="text-xs text-cyan-200/60">/100</span>
-              </div>
+              <div className="text-sm font-bold text-white leading-tight">{t("text_selectable")}</div>
             </div>
             <div className="rounded-xl bg-white/5 ring-1 ring-white/10 p-3 backdrop-blur-sm">
               <div className="text-[10px] uppercase tracking-widest text-cyan-200/60 mb-1">
