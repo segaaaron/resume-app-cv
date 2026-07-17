@@ -16,7 +16,7 @@ import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVer
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessCoverLetter } from "../shared/cover-letter-quality"
-import { hasCliche, findCliches, clicheBanList } from "../shared/cliches"
+import { hasCliche, findCliches, clicheBanList, substituteCliches } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
   type CoverLetterResult,
@@ -275,6 +275,7 @@ GOLDEN RULES (apply all):
 1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA. Separate every paragraph with a blank line (\\n\\n) — the app renders each as its own paragraph, so a letter returned as one block loses the structure the recruiter skims.
 2. Eliminate every one of these — they are checked and a version carrying any is rejected: ${clicheBanList("en")}. Replace each with a concrete achievement the letter already states.
 3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
+3a. The closing invites next steps without any adjective about the candidate's own feelings. "I would welcome the chance to walk you through the migration plan", "I would be glad to talk about how this maps to your platform work" — warmth comes from the specific thing being offered, not from naming an emotion. The banned list above removes the usual closing; this is what replaces it.
 3b. Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text.
 4. If the original has metrics, preserve them. If not, write without numbers. NEVER invent figures and NEVER leave brackets.
 5. Each version must have a distinct tone:
@@ -303,6 +304,7 @@ REGLAS DE ORO (aplica todas):
 1. Mantén la estructura en 3-4 párrafos: interés → logros relevantes → valor aportado → cierre. Separa cada párrafo con una línea en blanco (\\n\\n) — la app renderiza cada uno como párrafo propio, así que una carta devuelta en bloque pierde la estructura que el recruiter escanea.
 2. Elimina todas estas — se comprueban y una versión que lleve cualquiera se rechaza: ${clicheBanList("es")}. Sustituye cada una por un logro concreto que la carta ya declara.
 3. Verbos de impacto: Lideré, Desarrollé, Optimicé, Implementé, Incrementé. NUNCA uses "Responsable de".
+3a. El cierre invita a los siguientes pasos sin ningún adjetivo sobre lo que el candidato siente. "Me gustaría explicarles cómo planteé la migración", "Estaría encantado de comentar cómo encaja esto con su plataforma" — la cercanía viene de lo concreto que se ofrece, no de nombrar una emoción. La lista prohibida de arriba quita el cierre habitual; esto es lo que lo sustituye.
 3b. NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto.
 4. Si hay métricas en el texto original, consérvalas. Si no las hay, escribe sin números. NUNCA inventes cifras y NUNCA dejes corchetes.
 5. Cada versión debe tener un tono distinto:
@@ -363,49 +365,21 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       throw new AppError("off_topic", 422)
     }
 
-    // Anti-hallucination filter — the words the candidate wrote, not the markup
-    // around them: an `<em>` tag is not a claim they made.
+    // The source of truth for what the candidate claimed: the words they wrote,
+    // not the markup around them — an `<em>` tag is not a claim they made.
     const source = [plainBody, company ?? "", jobTitle ?? "", recipientTitle ?? ""].join("\n")
-    const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
-      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-      .map(stripVersionLabel)
-      // The prompt asks for no sign-off; models add one anyway ~1 in 8, usually
-      // "Sincerely,\n[Your Name]" — an unfilled bracket in a letter the user sends.
-      .map(stripSignOff)
-      .filter((v) => v.trim().length > 0)
-    let droppedVersions = 0
-    const cleanVersions = rawVersions.filter((v) => {
-      if (detectHallucination(v, source)) {
-        droppedVersions++
-        return false
-      }
-      return true
-    })
 
-    if (droppedVersions > 0) {
-      this.logger.warn("[AIService.improveCoverLetter] dropped hallucinated versions", {
-        droppedVersions,
-        keptVersions: cleanVersions.length,
-      })
-    }
+    // One owner for both attempts. This used to be written out inline here and
+    // again inside the retry helper, which is how the prefix substitution
+    // landed on the retry only — the first attempt, the one that answers most
+    // requests, would have kept the filler.
+    const rewritten = this.usableVersions(parsed.versions, source, plainBody)
 
-    // Fail-safe: if every version was dropped, fall back to the original body
-    // so the frontend never receives invented content.
-    if (cleanVersions.length === 0) {
-      this.logSummaryUsage(userId, plan, response.usage, undefined)
-      return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
-    }
-
-    // Echo detection — improveSummary has had this since forever, this endpoint
-    // never did. Three near-copies of the user's own letter are not three
-    // improvements; say so instead of dressing them up as choices. The three
-    // versions themselves are by design (formal / balanced / dynamic), so only
-    // drop them when NONE is a real rewrite.
-    const rewritten = cleanVersions.filter((v) => !isTrivialEdit(plainBody, v))
+    // Nothing survived: every version either invented something or just echoed
+    // the letter back. Both mean the same to the user, and both must return the
+    // original rather than dress a non-improvement up as a choice.
     if (rewritten.length === 0) {
-      this.logger.warn("[AIService.improveCoverLetter] all versions echoed the original", {
-        versions: cleanVersions.length,
-      })
+      this.logger.warn("[AIService.improveCoverLetter] no version was both grounded and a real rewrite")
       this.logSummaryUsage(userId, plan, response.usage, undefined)
       return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
     }
@@ -482,6 +456,10 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       .map(stripSignOff)
       .filter((v) => v.trim().length > 0)
       .slice(0, 3)
+      // Before any check: a stock opener in front of a real sentence is a swap,
+      // not a rewrite. Doing it here means every reader below — the cliché gate,
+      // the retry decision — sees the text the user would actually get.
+      .map(substituteCliches)
       .filter((v) => !detectHallucination(v, source))
       .filter((v) => !isTrivialEdit(plainBody, v))
   }
