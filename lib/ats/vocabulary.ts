@@ -1,16 +1,19 @@
 // lib/ats/vocabulary.ts
 // One vocabulary for every ATS keyword comparison in the product.
 //
-// There were three, none aware of the others:
-//   ats-matcher.ts   ALIAS_GROUPS — 13 groups, paid ats-score
-//   skills-dictionary.ts ATS_SKILLS — 244 curated terms with aliases, used only
-//                        by the free /tools/ats-checker
-//   ai-helpers.ts    WORD_ALIASES — 12 groups for fill-profile grounding
+// Two lists used to answer the same question without knowing about each other:
+//   ats-matcher.ts       ALIAS_GROUPS — 13 groups, paid ats-score
+//   skills-dictionary.ts ATS_SKILLS — 244 curated terms, free /tools/ats-checker
 //
 // The aliases that fix the paid matcher's worst misses (aws → amazon web
 // services, gcp → google cloud, liderazgo → leadership) were already sitting in
 // the dictionary it ignored. This joins them, so both scorers answer "is this
 // skill present?" the same way.
+//
+// WORD_ALIASES in ai-helpers.ts stays separate on purpose: it is title
+// morphology (dev→developer, sr→senior) used to decide whether the model's
+// wording is grounded in what the user typed. Different question, different
+// list — merging them would put "senior" in a skills vocabulary.
 import { ATS_SKILLS } from "./skills-dictionary"
 
 /**
