@@ -1339,6 +1339,7 @@
       "error_summary": "Error generating summary with AI",
       "error_bullet": "Error improving text with AI",
       "improve_summary": "Improve with AI",
+      "describe_profile": "Describe your profile",
       "improve_summary_hint": "Optional: describe your profile or what you want to improve. Leave empty to let AI improve your current summary.",
       "improve_summary_placeholder": "E.g. I'm an iOS developer with 7 years, specialized in SwiftUI and VIPER architecture...",
       "improve_summary_empty": "Write a summary or describe your profile so the AI can improve it",

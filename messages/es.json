@@ -1339,6 +1339,7 @@
       "error_summary": "Error al generar el resumen con IA",
       "error_bullet": "Error al mejorar el texto con IA",
       "improve_summary": "Mejorar con IA",
+      "describe_profile": "Describe tu perfil",
       "improve_summary_hint": "Opcional: describe tu perfil o indica qué quieres mejorar. Si lo dejas vacío, la IA mejora el resumen actual.",
       "improve_summary_placeholder": "Ej: Soy desarrollador iOS con 7 años, especializado en SwiftUI y arquitectura VIPER...",
       "improve_summary_empty": "Escribe un resumen o describe tu perfil para que la IA pueda mejorarlo",

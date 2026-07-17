@@ -5,7 +5,7 @@ import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { useEditorPro } from "@/components/editor/EditorContext"
-import { Sparkles, Loader2, Lock, Wand2, Check } from "lucide-react"
+import { Sparkles, Loader2, Lock, Wand2, Check, PenLine } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import SummaryVersionModal, { type SummaryVersion } from "./SummaryVersionModal"
@@ -37,6 +37,14 @@ export default function SummarySection() {
   const [improving, setImproving] = useState(false)
   const [versions, setVersions] = useState<SummaryVersion[]>([])
   const [improved, setImproved] = useState(false)
+  // The way in for someone with no CV yet. improve-summary has always had the
+  // branch for it ("create a summary from scratch, based on the candidate's
+  // description") and the copy below was written in both languages, but no
+  // input ever sent userDescription — so Generate answered an empty CV with a
+  // 400 and a dead-end toast, and improve_summary_empty promised "write a
+  // summary OR describe your profile" with nowhere to describe it.
+  const [description, setDescription] = useState("")
+  const [describing, setDescribing] = useState(false)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_summary")
   const [nowTs, setNowTs] = useState(Date.now())
   const lastKeyRef = useRef<string | null>(null)
@@ -81,13 +89,20 @@ export default function SummarySection() {
         })
         if (handled || res.status === 429 || res.status === 403) return
       }
-      if (res.status === 400) { await res.text().catch(() => {}); toast.error(ai("not_enough_data_summary")); return }
+      if (res.status === 400) {
+        // An empty CV is not an error — it is a request for material. The
+        // server stays the only owner of "is there enough to write from"; the
+        // rule is not restated here, we just react to its verdict.
+        const body = await res.json().catch(() => ({}))
+        if (body.error === "not_enough_data") { setDescribing(true); return }
+        toast.error(ai("not_enough_data_summary"))
+        return
+      }
       if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_summary")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await onSuccess()
-      const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
-      setVersions((data.versions as string[]).map((text, i) => ({ type: types[i] ?? "executive", text })))
+      showVersions(data.versions as string[], data.types as string[] | undefined)
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
     } catch {
@@ -100,12 +115,17 @@ export default function SummarySection() {
   async function handleImprove() {
     if (generating || improving) return
     const currentSummary = local
-    if (!currentSummary || currentSummary.trim().length < 10) {
+    const desc = description.trim()
+    // Either is enough. The endpoint picks its own branch: with a summary it
+    // polishes, with only a description it writes from scratch — which is the
+    // whole point of the box, and what improve_summary_empty has been
+    // promising ("write a summary OR describe your profile") all along.
+    if ((!currentSummary || currentSummary.trim().length < 10) && desc.length < 5) {
       toast.error(ai("improve_summary_empty"))
       return
     }
     if (inCooldown) { toast.info(ai("cooldown_wait", { seconds: cooldownLabel })); return }
-    const key = `imp:${currentSummary.trim()}`
+    const key = `imp:${currentSummary.trim()}:${desc}`
     if (key === lastKeyRef.current) { toast.info(ai("no_changes")); return }
     setImproving(true)
     setVersions([])
@@ -114,7 +134,12 @@ export default function SummarySection() {
       const res = await apiFetch("/api/ai/improve-summary", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ summary: currentSummary, sectionData, language: locale }),
+        body: JSON.stringify({
+          summary: currentSummary,
+          userDescription: desc || undefined,
+          sectionData,
+          language: locale,
+        }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
@@ -140,8 +165,7 @@ export default function SummarySection() {
         return
       }
 
-      const types: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
-      setVersions((data.versions as string[]).map((text, i) => ({ type: types[i] ?? "executive", text })))
+      showVersions(data.versions as string[], data.types as string[] | undefined)
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
     } catch {
@@ -149,6 +173,19 @@ export default function SummarySection() {
     } finally {
       setImproving(false)
     }
+  }
+
+  // One owner of "the API answered — show the cards". The label comes from the
+  // server now: the quality gate ranks the versions so the cleanest is read
+  // first, which means position no longer says which positioning a version was
+  // written as. `types` falls back to the old index rule for any path that
+  // returns the user's own text and has no positioning to report.
+  function showVersions(list: string[], types?: string[]) {
+    const byIndex: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
+    setVersions(list.map((text, i) => ({
+      type: (types?.[i] as SummaryVersion["type"]) ?? byIndex[i] ?? "executive",
+      text,
+    })))
   }
 
   function applyVersion(version: string) {
@@ -160,6 +197,7 @@ export default function SummarySection() {
 
   const charCount = local.length
   const hasContent = local.trim().length >= 10
+  const hasDescription = description.trim().length >= 5
 
   return (
     <div className="space-y-3">
@@ -169,7 +207,7 @@ export default function SummarySection() {
         <button
           type="button"
           onClick={isPro ? handleImprove : openUpgrade}
-          disabled={improving || inCooldown || (isPro && (!hasContent || improved))}
+          disabled={improving || inCooldown || (isPro && ((!hasContent && !hasDescription) || improved))}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
             background: improved
@@ -214,7 +252,70 @@ export default function SummarySection() {
               : <><Sparkles className="h-3 w-3" />{ai("generate_summary")}</>
           }
         </button>
+        {/* Describe your profile — the way in when there is no CV to write from */}
+        {isPro && (
+          <button
+            type="button"
+            onClick={() => setDescribing((v) => !v)}
+            aria-expanded={describing}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide transition-all duration-200"
+            style={{
+              background: describing
+                ? "linear-gradient(135deg, rgba(26,46,74,0.09) 0%, rgba(0,212,255,0.10) 100%)"
+                : "transparent",
+              color: "#1a2e4a",
+              border: `1.5px solid ${describing ? "rgba(0,212,255,0.5)" : "rgba(26,46,74,0.18)"}`,
+              boxShadow: describing ? "0 2px 8px rgba(0,212,255,0.12)" : "none",
+            }}
+          >
+            <PenLine className="h-3 w-3" style={{ opacity: 0.75 }} />
+            {ai("describe_profile")}
+          </button>
+        )}
       </div>
+
+      {describing && isPro && (
+        <div
+          className="space-y-2"
+          style={{
+            background: "linear-gradient(135deg, rgba(26,46,74,0.04) 0%, rgba(0,212,255,0.05) 100%)",
+            border: "1.5px solid rgba(0,212,255,0.22)",
+            borderRadius: 12,
+            padding: "12px 14px",
+            boxShadow: "0 2px 10px rgba(26,46,74,0.05)",
+          }}
+        >
+          <p className="text-[11px] leading-snug font-medium" style={{ color: "#5A6B84" }}>
+            {ai("improve_summary_hint")}
+          </p>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder={ai("improve_summary_placeholder")}
+            rows={3}
+            maxLength={500}
+            className="w-full resize-none text-[13px] leading-relaxed text-[#1a2e4a] placeholder:text-slate-400 outline-none transition-all duration-200"
+            style={{
+              background: "rgba(255,255,255,0.75)",
+              border: "1.5px solid rgba(0,212,255,0.2)",
+              borderRadius: 10,
+              padding: "10px 12px",
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.5)" }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)" }}
+          />
+          <div className="flex justify-end pr-0.5">
+            {/* The server caps userDescription at 500; the counter warns before
+                it, rather than letting the request come back rejected. */}
+            <span
+              className="text-[10px] font-medium tabular-nums"
+              style={{ color: description.length > 450 ? "#F59E0B" : "#94A3B8" }}
+            >
+              {description.length}/500
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Textarea — premium styled */}
       <div>

@@ -11,16 +11,28 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage, detectHallucination, stripVersionLabel } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
+import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { assessSummary, profileStatesMetrics, extractProfileMetrics } from "../shared/summary-quality"
-import { ANY_METRIC_REGEX } from "../shared/ai-helpers"
+import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,
   type ImproveSummaryInput,
+  type SummaryVersionType,
   type VersionsResult,
 } from "../shared/ai-types"
+
+/** The order the prompts ask for. sourceIndex maps back to the positioning. */
+const VERSION_TYPES: SummaryVersionType[] = ["executive", "specialist", "value_prop"]
+
+/** Ranked versions -> the wire shape, each keeping the label it was written as. */
+function toVersionsResult(versions: GatedVersion[]): VersionsResult {
+  return {
+    versions: versions.map((v) => v.text),
+    types: versions.map((v) => VERSION_TYPES[v.sourceIndex] ?? "executive"),
+  }
+}
 
 export class AISummaryModule {
   constructor(
@@ -47,23 +59,8 @@ export class AISummaryModule {
     // deployment efficiency" three times over. The strongest thing on the CV is
     // exactly what it dropped.
     const metrics = extractProfileMetrics(sectionData)
-    const metricBlockEN = metrics.length
-      ? `\n=== THE CANDIDATE'S REAL NUMBERS ===\n${metrics.map((m) => `• ${m}`).join("\n")}`
-      : ""
-    const metricBlockES = metrics.length
-      ? `\n=== LAS CIFRAS REALES DEL CANDIDATO ===\n${metrics.map((m) => `• ${m}`).join("\n")}`
-      : ""
-
-    // The instruction goes LAST, because that is the one the model follows when
-    // instructions conflict. A static "no figures is fine" block sitting at the
-    // end would override the requirement above it — the exact shape of bug this
-    // module has already been bitten by twice.
-    const numbersRuleEN = metrics.length
-      ? `ON NUMBERS — read this last and follow it exactly:\nThe candidate's real figures are listed above. At least one of them MUST appear, as a figure, in EVERY version. "Cut crash rate 20%" is worth more to a recruiter than "significantly improved stability" — the number IS the point, and vaguing it out throws away the strongest thing this candidate has. Never round it, never invent one that is not on that list, and never leave a bracket.`
-      : `ON NUMBERS — read this last and follow it exactly:\nThis profile states no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not in the profile will be rejected and the candidate will get nothing back.`
-    const numbersRuleES = metrics.length
-      ? `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nLas cifras reales del candidato están listadas arriba. Al menos una DEBE aparecer, como cifra, en CADA versión. "Redujo los crashes un 20%" vale más para un recruiter que "mejoró significativamente la estabilidad" — el número ES el punto, y difuminarlo tira lo más fuerte que tiene este candidato. Nunca la redondees, nunca inventes una que no esté en esa lista, y nunca dejes un corchete.`
-      : `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nEste perfil no declara ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en el perfil será rechazada y el candidato no recibirá nada.`
+    const { block: metricBlockEN, rule: numbersRuleEN } = buildMetricGuidance(metrics, "en")
+    const { block: metricBlockES, rule: numbersRuleES } = buildMetricGuidance(metrics, "es")
 
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
@@ -179,185 +176,53 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
       throw new AppError("off_topic", 422)
     }
 
-    // Anti-hallucination filter — source = candidate profile context. Drop any
-    // version that introduces tech or real metrics not present in the source.
-    // (Placeholders are allowed by design here.)
-    const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
-      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-      .map(stripVersionLabel)
-      .filter((v) => v.trim().length > 0)
-    let droppedVersions = 0
-    const cleanVersions = rawVersions.filter((v) => {
-      if (detectHallucination(v, resumeContext)) {
-        droppedVersions++
-        return false
-      }
-      return true
+    const gated = await gateSummaryVersions(this.aiClient, this.logger, {
+      rawVersions: parsed.versions,
+      source: resumeContext,
+      metrics,
+      basePrompt: prompt,
+      langInstruction,
+      language,
+      temperature: AI_TEMPERATURE_GENERATIVE,
+      maxTokens: 600,
+      endpoint: "generate-summary",
     })
 
-    if (droppedVersions > 0) {
-      this.logger.warn("[AIService.generateSummary] dropped hallucinated versions", {
-        droppedVersions,
-        keptVersions: cleanVersions.length,
-      })
-    }
-
-    // Rank by the same checks improve-summary already uses. The prompt bans
-    // "Passionate about" and the model wrote it anyway; the cliché list existed
-    // in summary-quality.ts and nothing checked the output against it.
-    //
-    // Ranked, not filtered: dropping a version for one cliché could leave the
-    // user with nothing, and a summary with a weak phrase still beats no
-    // summary. The clean ones surface first, which is what the user reads.
-    const profileHasMetrics = metrics.length > 0
-    const ranked = [...cleanVersions].sort((a, b) => {
-      const qa = assessSummary(a, profileHasMetrics).issues.length
-      const qb = assessSummary(b, profileHasMetrics).issues.length
-      return qa - qb
-    })
-
-    const flawed = ranked.filter((v) => !assessSummary(v, profileHasMetrics).alreadyGood)
-    if (flawed.length > 0) {
-      this.logger.warn("[AIService.generateSummary] versions with quality issues", {
-        flawed: flawed.length,
-        total: ranked.length,
-        issues: [...new Set(flawed.flatMap((v) => assessSummary(v, profileHasMetrics).issues))],
-      })
-    }
-
-    // One gate for both failures.
-    //
-    // Prompt wording cannot close this. GUARD (arXiv 2410.06716) proves a
-    // constraint cannot be GUARANTEED by autoregressive generation — strict
-    // satisfaction needs inference-time filtering, full stop. And the TACL
-    // survey on self-correction found "no prior work shows successful
-    // self-correction with feedback from prompted LLMs", but that it "works
-    // well in tasks that can use reliable external feedback". assessSummary and
-    // ANY_METRIC_REGEX are exactly that: deterministic external verifiers. That
-    // is why naming the failure and retrying took metrics from 2/5 to 5/5 while
-    // telling the model harder did nothing.
-    //
-    // Gated on BOTH checks on purpose: retrying for a cliché alone could bring
-    // back a clean version that dropped the figures, trading one failure for
-    // the other.
-    const best = ranked[0]
-    const missingMetrics = profileHasMetrics && ranked.length > 0 && !ranked.some((v) => ANY_METRIC_REGEX.test(v))
-    const hasCliche = best ? assessSummary(best, profileHasMetrics).issues.includes("cliche") : false
-
-    if (ranked.length > 0 && (missingMetrics || hasCliche)) {
-      this.logger.warn("[AIService.generateSummary] retrying once", { missingMetrics, hasCliche })
-      const retry = await this.retryForQuality(prompt, metrics, best ?? "", { missingMetrics, hasCliche }, langInstruction, language)
-
-      if (retry.length > 0) {
-        const retryRanked = [...retry].sort(
-          (a, b) => assessSummary(a, profileHasMetrics).issues.length - assessSummary(b, profileHasMetrics).issues.length,
-        )
-        const retryHasMetrics = !profileHasMetrics || retryRanked.some((v) => ANY_METRIC_REGEX.test(v))
-        const retryTopClean = retryRanked[0]
-          ? !assessSummary(retryRanked[0], profileHasMetrics).issues.includes("cliche")
-          : false
-
-        // Take it only if it is better on the axis we retried for and no worse
-        // on the other. A retry that swaps one problem for another is not a fix.
-        const fixedMetrics = missingMetrics ? retryHasMetrics : true
-        const fixedCliche = hasCliche ? retryTopClean : true
-        const brokeNothing = retryHasMetrics && (!hasCliche || retryTopClean)
-
-        if (fixedMetrics && fixedCliche && brokeNothing) {
-          const retryUsage = response.usage
-          logAIUsage(userId, "generate-summary", {
-            model: AI_MODEL, plan,
-            promptTokens: retryUsage?.prompt_tokens ?? 0,
-            completionTokens: retryUsage?.completion_tokens ?? 0,
-            costUsd: computeCostUsd(AI_MODEL, retryUsage?.prompt_tokens ?? 0, retryUsage?.completion_tokens ?? 0),
-          })
-          return { versions: retryRanked }
-        }
-        this.logger.warn("[AIService.generateSummary] retry did not improve — keeping the first result")
-      }
-    }
-
-    const usage = response.usage
-    logAIUsage(userId, "generate-summary", {
-      model: AI_MODEL,
-      plan,
-      promptTokens: usage?.prompt_tokens ?? 0,
-      completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-    })
+    this.logSummaryUsage(userId, "generate-summary", plan, response.usage, gated.retryUsage)
 
     // No previous summary to fall back to in generate-summary. If every version
     // was dropped, return empty array with a status flag so the frontend can
     // show its own empty-state — never surface invented content.
-    if (ranked.length === 0) {
+    if (gated.versions.length === 0) {
       return { versions: [], status: "already_optimized" }
     }
-    return { versions: ranked }
+    return toVersionsResult(gated.versions)
   }
 
   /**
-   * One more attempt, naming the exact failure.
+   * One endpoint, one AIUsageLog row — first attempt plus any retry.
    *
-   * A generic "try again" changes nothing — the model has to be told what it
-   * did wrong, and told last. And it must write a FRESH draft: paraphrasing a
-   * cliché preserves its shape ("Passionate about" becomes "Enthusiastic
-   * about"), which moves the problem instead of solving it.
-   *
-   * The rejected text is deliberately NOT quoted back. Naming a forbidden
-   * phrase primes it — the one mechanistic study on this (arXiv 2601.08070)
-   * reports the forbidden word appearing in 87.5% of violations when named,
-   * though it is single-author and unreplicated, so treat it as a reason to be
-   * careful rather than a proven law.
+   * Split across two call sites this was already wrong once: the retry path
+   * logged the FIRST response's usage, so every retry's tokens vanished from
+   * the ledger and cost-per-user read low. Summing in one place is what makes
+   * that unrepresentable.
    */
-  private async retryForQuality(
-    basePrompt: string,
-    metrics: string[],
-    _rejected: string,
-    failure: { missingMetrics: boolean; hasCliche: boolean },
-    langInstruction: string,
-    language: "es" | "en",
-  ): Promise<string[]> {
-    const parts: string[] = []
-
-    if (language === "en") {
-      parts.push("YOUR LAST ATTEMPT FAILED. Write all three summaries again from scratch — do NOT paraphrase what you wrote before, start fresh.")
-      if (failure.missingMetrics) {
-        parts.push(`Not one version contained a number, and this candidate has these:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nEvery version must quote at least one of those figures verbatim — "20%", "40 minutes to under 6", "5 engineers". Not "significantly", not "substantially": the digit itself. That figure is the strongest thing this person has and leaving it out wastes it.`)
-      }
-      if (failure.hasCliche) {
-        parts.push("Your writing leaned on filler that says nothing about this person — the kind of phrase that fits any candidate in any role. Replace every one of them with a concrete detail from the profile: the tool, the sector, the actual result. If a sentence would still make sense on someone else's CV, it does not belong on this one.")
-      }
-    } else {
-      parts.push("TU INTENTO ANTERIOR FALLÓ. Escribe los tres resúmenes otra vez desde cero — NO parafrasees lo anterior, empieza de nuevo.")
-      if (failure.missingMetrics) {
-        parts.push(`Ni una versión llevaba un número, y este candidato tiene estos:\n${metrics.map((m) => `• ${m}`).join("\n")}\n\nCada versión debe citar al menos una de esas cifras literalmente — "20%", "40 minutos a 6", "5 ingenieros". No "significativamente", no "notablemente": el dígito. Esa cifra es lo más fuerte que tiene esta persona y omitirla la desperdicia.`)
-      }
-      if (failure.hasCliche) {
-        parts.push("Tu redacción se apoyó en relleno que no dice nada de esta persona — de esas frases que le encajan a cualquier candidato en cualquier puesto. Sustituye cada una por un dato concreto del perfil: la herramienta, el sector, el resultado real. Si una frase seguiría teniendo sentido en el CV de otro, no pertenece a este.")
-      }
-    }
-
-    try {
-      const res = await this.aiClient.chat({
-        model: AI_MODEL,
-        max_tokens: 600,
-        temperature: AI_TEMPERATURE_GENERATIVE,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
-          { role: "user", content: `${basePrompt}\n\n${parts.join("\n\n")}` },
-        ],
-      })
-      const parsed = parseAIJson<{ versions?: unknown }>(res.choices[0]?.message?.content ?? "")
-      if (!Array.isArray(parsed.versions)) return []
-      return (parsed.versions as unknown[])
-        .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-        .map(stripVersionLabel)
-        .slice(0, 3)
-    } catch {
-      // A failed retry is not a failed request — the first result still stands.
-      return []
-    }
+  private logSummaryUsage(
+    userId: string,
+    endpoint: "generate-summary" | "improve-summary",
+    plan: string,
+    usage: { prompt_tokens?: number; completion_tokens?: number } | undefined,
+    retryUsage: SummaryGateUsage | null,
+  ): void {
+    const promptTokens = (usage?.prompt_tokens ?? 0) + (retryUsage?.promptTokens ?? 0)
+    const completionTokens = (usage?.completion_tokens ?? 0) + (retryUsage?.completionTokens ?? 0)
+    logAIUsage(userId, endpoint, {
+      model: AI_MODEL,
+      plan,
+      promptTokens,
+      completionTokens,
+      costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
+    })
   }
 
   async improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {
@@ -387,8 +252,19 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     // Only when the user is polishing an existing summary — a userDescription
     // means they are asking for a rewrite from new input, which is not a
     // quality question.
+    //
+    // The figures are the candidate's wherever they typed them: the CV, the
+    // summary in front of them, or the box they described themselves in. This
+    // used to read sectionData alone, so a user with no CV who wrote "cut churn
+    // 30%" stated a figure the check could not see.
+    const metrics = [
+      ...extractProfileMetrics(sectionData),
+      ...extractMetricsFromText(summary),
+      ...extractMetricsFromText(userDescription),
+    ]
+
     if (hasSummary && !hasDescription) {
-      const quality = assessSummary(summary!, profileStatesMetrics(sectionData))
+      const quality = assessSummary(summary!, metrics.length > 0)
       if (quality.alreadyGood) {
         // Deliberately before enforceAIQuota: no model was called, so this must
         // not burn one of an UNSUBSCRIBED user's two uses, and must not write an
@@ -401,6 +277,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown, sin explicaciones):
     await enforceAIQuota(userId, "improve-summary", plan)
 
     const resumeContext = sectionData ? buildResumeContext(sectionData, language) : ""
+    // Same treatment generate-summary gets: hand the model the figures the
+    // algorithm found instead of leaving it to hunt through prose. Measured
+    // live, without this the first attempt dropped them and the retry had to
+    // rescue it in 5 of 6 runs.
+    const { block: metricBlock, rule: numbersRule } = buildMetricGuidance(metrics, language)
 
     const criticalEN = `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information already present in the original summary, candidate instruction, or resume context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not stated by the user.
@@ -425,6 +306,7 @@ TASK: Analyze the current summary and identify its weaknesses. Generate 3 improv
 
 ${hasDescription ? `Candidate instruction: "${userDescription!.trim()}"` : ""}
 ${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
+${metricBlock}
 
 Current summary to improve:
 "${summary!.trim()}"
@@ -448,12 +330,15 @@ ABSOLUTE RULES:
 • No personal pronouns (I, My, I am). Third person or impersonal.
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
 
+${numbersRule}
+
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
         : criticalEN + `TASK: Create a high-impact professional summary from scratch based on the candidate's description. Return 3 distinct versions.
 
 Candidate description: "${userDescription!.trim()}"
 ${resumeContext ? `\nResume context:\n${resumeContext}` : ""}
+${metricBlock}
 
 GENERATE 3 VERSIONS:
 
@@ -468,6 +353,8 @@ RULES:
 • No personal pronouns. No clichés. Impact verbs first.
 • Each version must sound authentic — personal, not generic.
 
+${numbersRule}
+
 Respond ONLY with valid JSON (no markdown):
 {"versions": ["version1", "version2", "version3"]}`
       : hasSummary
@@ -477,6 +364,7 @@ TAREA: Analiza el resumen actual e identifica sus debilidades. Genera 3 versione
 
 ${hasDescription ? `Instrucción del candidato: "${userDescription!.trim()}"` : ""}
 ${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
+${metricBlock}
 
 Resumen actual a mejorar:
 "${summary!.trim()}"
@@ -500,12 +388,15 @@ REGLAS ABSOLUTAS:
 • Sin pronombres personales (Yo, Mi, Soy). Tercera persona o impersonal.
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
 
+${numbersRule}
+
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"versions": ["version1", "version2", "version3"]}`
         : criticalES + `TAREA: Crea un resumen profesional de alto impacto desde cero, basado en la descripción del candidato. Devuelve 3 versiones distintas.
 
 Descripción del candidato: "${userDescription!.trim()}"
 ${resumeContext ? `\nContexto del CV:\n${resumeContext}` : ""}
+${metricBlock}
 
 GENERA 3 VERSIONES:
 
@@ -519,6 +410,8 @@ REGLAS:
 • Si el candidato no especificó métricas: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
 • Sin pronombres personales. Sin clichés. Verbos de impacto al inicio.
 • Cada versión debe sonar auténtica — personal, no genérica.
+
+${numbersRule}
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"versions": ["version1", "version2", "version3"]}`
@@ -549,14 +442,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const parsed = parseAIJson<{ versions?: unknown; status?: unknown }>(raw)
 
     if (parsed.status === "already_optimized") {
-      const usage = response.usage
-      logAIUsage(userId, "improve-summary", {
-        model: AI_MODEL,
-        plan,
-        promptTokens: usage?.prompt_tokens ?? 0,
-        completionTokens: usage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-      })
+      this.logSummaryUsage(userId, "improve-summary", plan, response.usage, null)
       return { status: "already_optimized", versions: [] }
     }
 
@@ -565,41 +451,26 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       throw new AppError("off_topic", 422)
     }
 
-    // Anti-hallucination filter — source = original summary + resume context.
-    // Placeholders are explicitly allowed in this endpoint.
-    const improveSource = [summary ?? "", userDescription ?? "", resumeContext].join("\n")
-    const rawVersions = (parsed.versions as unknown[]).slice(0, 3)
-      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
-      .map(stripVersionLabel)
-      .filter((v) => v.trim().length > 0)
-    let droppedVersions = 0
-    const cleanVersions = rawVersions.filter((v) => {
-      if (detectHallucination(v, improveSource)) {
-        droppedVersions++
-        return false
-      }
-      return true
+    // The same gate generate-summary goes through. Source = everything the
+    // candidate stated: the summary they wrote, how they described themselves,
+    // and the CV. Anything outside it is invented.
+    const gated = await gateSummaryVersions(this.aiClient, this.logger, {
+      rawVersions: parsed.versions,
+      source: [summary ?? "", userDescription ?? "", resumeContext].join("\n"),
+      metrics,
+      basePrompt: prompt,
+      langInstruction,
+      language,
+      temperature: AI_TEMPERATURE_STRUCTURED,
+      maxTokens: 700,
+      endpoint: "improve-summary",
     })
 
-    if (droppedVersions > 0) {
-      this.logger.warn("[AIService.improveSummary] dropped hallucinated versions", {
-        droppedVersions,
-        keptVersions: cleanVersions.length,
-      })
-    }
-
-    const usage = response.usage
-    logAIUsage(userId, "improve-summary", {
-      model: AI_MODEL,
-      plan,
-      promptTokens: usage?.prompt_tokens ?? 0,
-      completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-    })
+    this.logSummaryUsage(userId, "improve-summary", plan, response.usage, gated.retryUsage)
 
     // Fail-safe: if every version was dropped, fall back to the original
     // summary unchanged when we have one. Otherwise return empty + already_optimized.
-    if (cleanVersions.length === 0) {
+    if (gated.versions.length === 0) {
       if (hasSummary && summary) {
         return { versions: [summary.trim()], status: "already_optimized" }
       }
@@ -612,10 +483,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     if (hasSummary && summary) {
       const normalizeForCompare = (s: string) => s.toLowerCase().replace(/\s+/g, " ").replace(/[.;]+$/, "").trim()
       const originalNorm = normalizeForCompare(summary)
-      if (cleanVersions.every((v) => normalizeForCompare(v) === originalNorm)) {
+      if (gated.versions.every((v) => normalizeForCompare(v.text) === originalNorm)) {
         return { versions: [], status: "already_optimized" }
       }
     }
-    return { versions: cleanVersions }
+    return toVersionsResult(gated.versions)
   }
 }

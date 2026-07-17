@@ -4,8 +4,21 @@ import { z } from "zod"
 
 // ─── Shared Result Types ───────────────────────────────────────────────────────
 
+/** Positioning of a summary version, as the prompt asks for them in order. */
+export type SummaryVersionType = "executive" | "specialist" | "value_prop"
+
 export interface VersionsResult {
   versions: string[]
+  /**
+   * The positioning of each entry in `versions`, same order.
+   *
+   * The client used to derive this from the index — versions[0] is the
+   * executive one, and so on. That held only while the array arrived in the
+   * order the prompt asked for; the quality gate ranks it, so the cleanest
+   * version comes first and the index stopped carrying the label. Optional:
+   * the fall-back paths return the user's own text, which has no positioning.
+   */
+  types?: SummaryVersionType[]
   status?: "improved" | "already_optimized"
 }
 

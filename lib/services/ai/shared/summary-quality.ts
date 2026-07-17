@@ -107,17 +107,31 @@ const METRIC_SCAN =
 export function extractProfileMetrics(sectionData: Record<string, unknown> | undefined): string[] {
   if (!sectionData) return []
   const work = (sectionData.workExperience ?? []) as { description?: string }[]
+  return extractMetricsFromText(work.map((j) => j.description ?? "").join("\n"))
+}
+
+/**
+ * The same scan over any free text the candidate wrote.
+ *
+ * improve-summary looked for figures with profileStatesMetrics(sectionData) —
+ * the CV only. So a user who has no CV yet and types "cut churn 30% across 5
+ * markets" into the box stated two figures the check could not see, and the
+ * rewrite was free to drop them. The figure is the candidate's, wherever they
+ * happened to type it.
+ */
+export function extractMetricsFromText(text: string | undefined): string[] {
+  if (!text) return []
   const found: string[] = []
 
-  for (const job of work) {
-    for (const line of (job.description ?? "").split("\n")) {
-      const re = new RegExp(METRIC_SCAN.source, "gi")
-      if (!re.test(line)) continue
-      // The whole bullet, trimmed of its marker — the figure means nothing
-      // without the thing it measures.
-      const clean = line.replace(/^\s*[•·]+\s*|^\s*[-*]+\s+/, "").trim()
-      if (clean) found.push(clean)
-    }
+  for (const line of text.split("\n")) {
+    // Fresh regex per line: METRIC_SCAN is /g, and a shared lastIndex would
+    // make the scan skip lines depending on what matched before it.
+    const re = new RegExp(METRIC_SCAN.source, "gi")
+    if (!re.test(line)) continue
+    // The whole line, trimmed of its marker — the figure means nothing without
+    // the thing it measures.
+    const clean = line.replace(/^\s*[•·]+\s*|^\s*[-*]+\s+/, "").trim()
+    if (clean) found.push(clean)
   }
   return found.slice(0, 6)
 }

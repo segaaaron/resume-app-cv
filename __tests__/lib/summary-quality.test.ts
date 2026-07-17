@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { assessSummary, profileStatesMetrics } from "@/lib/services/ai/shared/summary-quality"
+import { assessSummary, profileStatesMetrics, extractMetricsFromText } from "@/lib/services/ai/shared/summary-quality"
 
 const STRONG =
   "Senior iOS engineer who rebuilt Xiobit's billing service on a modular architecture, cutting deploy time from 40 minutes to under 6. Leads the mobile team's code review practice and ships in Swift, SwiftUI and Combine."
@@ -80,5 +80,49 @@ describe("profileStatesMetrics", () => {
   it("handles missing data", () => {
     expect(profileStatesMetrics(undefined)).toBe(false)
     expect(profileStatesMetrics({})).toBe(false)
+  })
+})
+
+// improve-summary looked for the candidate's figures with
+// profileStatesMetrics(sectionData) — the CV and nothing else. A user with no
+// CV who typed "cut churn 30% across 5 markets" stated two figures the check
+// could not see, so the rewrite was free to drop them.
+describe("extractMetricsFromText", () => {
+  it("finds a figure the candidate typed outside their CV", () => {
+    expect(extractMetricsFromText("Cut churn 30% across 5 markets")).toEqual(["Cut churn 30% across 5 markets"])
+  })
+
+  it("keeps the context around the figure, not the bare number", () => {
+    const [first] = extractMetricsFromText("• Mentored 5 engineers to promotion")
+    expect(first).toBe("Mentored 5 engineers to promotion")
+  })
+
+  // Known limit, inherited: the unit has to follow the number directly, so
+  // "5 engineers" counts and "4 junior engineers" does not. Pinned here so the
+  // gap is visible rather than folklore — widening the pattern is a change that
+  // needs measuring against real CVs first, since a false positive makes the
+  // gate demand a figure the candidate never stated.
+  it("misses a figure when a word sits between the number and its unit", () => {
+    expect(extractMetricsFromText("Mentored 4 junior engineers")).toEqual([])
+  })
+
+  it("reports nothing for text that states no figure", () => {
+    expect(extractMetricsFromText("Experienced engineer who ships quality software")).toEqual([])
+  })
+
+  it("finds figures on every line, not just the first", () => {
+    // A shared /g regex carries lastIndex between lines and skips matches
+    // depending on what matched before them.
+    const r = extractMetricsFromText("Cut deploy time to 6 minutes\nMentored 5 engineers\nRan 3 releases")
+    expect(r).toHaveLength(3)
+  })
+
+  it("reads an empty or missing input as no figures", () => {
+    expect(extractMetricsFromText("")).toEqual([])
+    expect(extractMetricsFromText(undefined)).toEqual([])
+  })
+
+  it("does not treat a bare number as a metric", () => {
+    expect(extractMetricsFromText("Worked at Acme in 2020 on the 3 tier stack")).toEqual([])
   })
 })
