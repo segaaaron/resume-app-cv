@@ -1892,7 +1892,6 @@
     "improve_off_topic": "El texto no parece una carta de presentación laboral",
     "improve_error": "Error al mejorar la carta",
     "improve_short": "Escribe al menos 20 caracteres antes de mejorar",
-    "improve_metrics_disclaimer": "Los números entre corchetes como [X%] son marcadores de posición. Sustitúyelos con tus datos reales.",
     "save": "Guardar",
     "saved": "Guardado",
     "saving": "Guardando...",

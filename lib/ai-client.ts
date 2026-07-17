@@ -38,7 +38,6 @@ export const EXPECTED_AI_MODEL = "gpt-4o-mini"
 export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4o-mini") as string
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
-export const AI_TEMPERATURE_BALANCED = 0.5 as const  // profile fill — between deterministic and creative
 export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score, suggest-skills)
 export const AI_TEMPERATURE_STRUCTURED = 0.3 as const // profile fill — faithful to user input, minimal creative drift
 export const AI_TEMPERATURE_GENERATIVE = 0.6 as const  // summary generation — needs variety across 3 versions but bounded

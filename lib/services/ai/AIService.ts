@@ -57,7 +57,6 @@ export type {
   FillProfileInput,
   SuggestSkillsInput,
   TailorCVInput,
-  TailorCVResult,
   TailorCVResultV2,
 } from "./shared/ai-types"
 

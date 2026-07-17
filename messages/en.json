@@ -1892,7 +1892,6 @@
     "improve_off_topic": "The text does not appear to be a professional cover letter",
     "improve_error": "Error improving the cover letter",
     "improve_short": "Write at least 20 characters before improving",
-    "improve_metrics_disclaimer": "Numbers in brackets like [X%] are placeholders. Replace them with your real data.",
     "save": "Save",
     "saved": "Saved",
     "saving": "Saving...",

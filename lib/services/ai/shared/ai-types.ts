@@ -240,13 +240,6 @@ export interface TailorCVInput {
   language?: string
 }
 
-export interface TailorCVResult {
-  summaryVersion: string
-  bulletSuggestions: Array<{ targetId: string; jobTitle: string; employer: string; improved: string }>
-  missingSkills: string[]
-  keywordsToAdd: string[]
-}
-
 // V2 — bullet-level granular suggestions
 export interface TailorBulletChange {
   index: number   // posición 0-based del bullet en la descripción original
