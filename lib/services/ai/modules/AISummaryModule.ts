@@ -14,7 +14,8 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { assessSummary, clicheBanList, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
+import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
+import { clicheBanList } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
   type GenerateSummaryInput,

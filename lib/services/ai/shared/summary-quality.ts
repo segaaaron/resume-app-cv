@@ -12,54 +12,7 @@
 // Every criterion in that gate is checkable in code, so it belongs here: no
 // token spent, instant, and the same summary always gets the same verdict.
 import { ANY_METRIC_REGEX } from "./ai-helpers"
-
-// Phrases that fit any candidate in any role, so they say nothing about this
-// one. This list is the ONLY definition: the prompts render their banned list
-// from it (clicheBanList) instead of restating it.
-//
-// They used to be two lists, and the comment here claimed to "mirror the
-// prompt's banned list" while quietly disagreeing with it. The detector
-// rejected "proven track record", "think outside the box" and "wear many hats";
-// the English prompt never mentioned them. The Spanish prompt was worse — it
-// banned five phrases and forbade "Equipo de trabajo", which the detector does
-// not even check, while saying nothing about "proactivo", "orientado a
-// resultados" or "don de gentes". Measured live, the clichés that reached the
-// user were exactly the ones the model had never been told about: both flagged
-// versions in 8 runs carried "proven track record". The model was not ignoring
-// the rule, it was never given it.
-const CLICHES_EN: readonly string[] = [
-  "responsible for", "passionate about", "looking for new challenges",
-  "experienced in", "team player", "detail-oriented", "hard-working",
-  "results-driven", "results-oriented", "go-getter", "self-starter",
-  "proven track record", "think outside the box", "wear many hats",
-  "seasoned professional", "dynamic professional", "track record of success",
-]
-const CLICHES_ES: readonly string[] = [
-  "responsable de", "apasionado por", "apasionada por", "con experiencia en",
-  "busco nuevos retos", "trabajo en equipo", "orientado al detalle",
-  "orientada al detalle", "proactivo", "proactiva", "orientado a resultados",
-  "orientada a resultados", "don de gentes", "amplia trayectoria",
-  "trayectoria probada", "profesional dinámico", "profesional dinámica",
-]
-
-/**
- * Checked against both languages regardless of the CV's own: a Spanish summary
- * that opens "Passionate about" is just as empty, and mixed-language text is
- * common in tech CVs.
- */
-const CLICHES: readonly string[] = [...CLICHES_EN, ...CLICHES_ES]
-
-/**
- * The banned list as the prompt states it, straight from the detector.
- *
- * The point is that the model is told exactly what will be rejected — nothing
- * more, nothing less. Adding a phrase to CLICHES now also tells the model about
- * it, which is what stops the two from drifting apart again.
- */
-export function clicheBanList(language: "es" | "en"): string {
-  const list = language === "en" ? CLICHES_EN : CLICHES_ES
-  return list.map((c) => `"${c.charAt(0).toUpperCase()}${c.slice(1)}"`).join(", ")
-}
+import { hasCliche } from "./cliches"
 
 /** First-person pronouns — a CV summary is written impersonally. */
 const PRONOUN_REGEX =
@@ -108,8 +61,7 @@ export function assessSummary(summary: string, profileHasMetrics: boolean): Summ
   if (text.split(/\s+/).filter(Boolean).length < 25) issues.push("too_short")
   if (!startsWithImpact(text)) issues.push("weak_opener")
 
-  const lower = text.toLowerCase()
-  if (CLICHES.some((c) => lower.includes(c))) issues.push("cliche")
+  if (hasCliche(text)) issues.push("cliche")
   if (PRONOUN_REGEX.test(text)) issues.push("pronouns")
 
   // Only a fault when the CV actually has a figure to carry over.

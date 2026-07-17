@@ -15,6 +15,8 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
+import { assessCoverLetter } from "../shared/cover-letter-quality"
+import { hasCliche, findCliches, clicheBanList } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
   type CoverLetterResult,
@@ -126,7 +128,7 @@ Rules:
 - Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
 - Do NOT invent facts, metrics, or experiences not present in the candidate profile
 - NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
-- Avoid clichés: "passionate", "team player", "hard worker", "I believe", "I am excited to..."
+- NEVER these phrases. Every one is checked and a letter carrying any is rejected: ${clicheBanList("en")}
 - Each paragraph must be 3–5 sentences, substantive and specific
 - The letter must feel written by a human, not AI
 - Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never invent one.
@@ -156,7 +158,7 @@ Reglas:
 - NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
 - NO inventes datos, métricas ni experiencias que no estén en el perfil del candidato
 - NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
-- Evita clichés: "apasionado", "trabajo en equipo", "me motiva", "creo firmemente", "estoy emocionado de..."
+- NUNCA estas frases. Todas se comprueban y una carta que lleve cualquiera se rechaza: ${clicheBanList("es")}
 - Cada párrafo debe tener 3–5 oraciones, sustanciales y específicas
 - La carta debe sonar escrita por un humano, no por IA
 - Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo inventes.
@@ -206,8 +208,6 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
   }
 
   async improveCoverLetter(userId: string, input: ImproveCoverLetterInput, plan: string): Promise<VersionsResult> {
-    await enforceAIQuota(userId, "improve-cover-letter", plan)
-
     const { body, company, jobTitle, recipientTitle, language: rawLanguage } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
@@ -227,6 +227,25 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // rewordings sold as improvements.
     const plainBody = htmlToPlain(body)
     if (!plainBody) throw new AppError("missing_content", 400)
+
+    // Decide in code whether there is anything to improve, before spending a
+    // call. Rule 7 of the prompt below asks the model the same question and it
+    // never says yes — measured 0/3 on a letter that was concrete, quantified
+    // and cliché-free. The endpoint is all-or-nothing, so declining reads to
+    // the model like failing the task; the summary's STEP 0 lost this same
+    // argument 0/5. The criteria are mechanical, so a regex settles them for
+    // free, every time, and the same letter always gets the same verdict.
+    //
+    // Before enforceAIQuota on purpose: no model was called, so this must not
+    // burn one of an UNSUBSCRIBED user's two uses, and must not write an
+    // AI_USED entry — that record exists to prove a paid service was delivered,
+    // and here none was.
+    const quality = assessCoverLetter(plainBody)
+    if (quality.alreadyGood) {
+      return { versions: [body.trim()], status: "already_optimized" }
+    }
+
+    await enforceAIQuota(userId, "improve-cover-letter", plan)
 
     const context = language === "en"
       ? [
@@ -254,7 +273,7 @@ ${plainBody}
 
 GOLDEN RULES (apply all):
 1. Keep the 3-4 paragraph structure: hook → relevant achievements → value proposition → closing CTA. Separate every paragraph with a blank line (\\n\\n) — the app renders each as its own paragraph, so a letter returned as one block loses the structure the recruiter skims.
-2. Eliminate clichés ("I am a proactive person", "I am passionate about teamwork"). Replace with concrete achievements.
+2. Eliminate every one of these — they are checked and a version carrying any is rejected: ${clicheBanList("en")}. Replace each with a concrete achievement the letter already states.
 3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
 3b. Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text.
 4. If the original has metrics, preserve them. If not, write without numbers. NEVER invent figures and NEVER leave brackets.
@@ -282,7 +301,7 @@ ${plainBody}
 
 REGLAS DE ORO (aplica todas):
 1. Mantén la estructura en 3-4 párrafos: interés → logros relevantes → valor aportado → cierre. Separa cada párrafo con una línea en blanco (\\n\\n) — la app renderiza cada uno como párrafo propio, así que una carta devuelta en bloque pierde la estructura que el recruiter escanea.
-2. Elimina clichés ("soy una persona proactiva", "me apasiona el trabajo en equipo"). Sustituye por logros concretos.
+2. Elimina todas estas — se comprueban y una versión que lleve cualquiera se rechaza: ${clicheBanList("es")}. Sustituye cada una por un logro concreto que la carta ya declara.
 3. Verbos de impacto: Lideré, Desarrollé, Optimicé, Implementé, Incrementé. NUNCA uses "Responsable de".
 3b. NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto.
 4. Si hay métricas en el texto original, consérvalas. Si no las hay, escribe sin números. NUNCA inventes cifras y NUNCA dejes corchetes.
@@ -335,14 +354,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // The call happened and is billed, exactly like the two later
       // already_optimized paths do. The original comes back as the HTML it
       // arrived as — the fallbacks below hand back `body`, never plainBody.
-      const usage = response.usage
-      logAIUsage(userId, "improve-cover-letter", {
-        model: AI_MODEL,
-        plan,
-        promptTokens: usage?.prompt_tokens ?? 0,
-        completionTokens: usage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-      })
+      this.logSummaryUsage(userId, plan, response.usage, undefined)
       return { versions: [body.trim()], status: "already_optimized" }
     }
 
@@ -377,18 +389,10 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       })
     }
 
-    const improveUsage = response.usage
-    logAIUsage(userId, "improve-cover-letter", {
-      model: AI_MODEL,
-      plan,
-      promptTokens: improveUsage?.prompt_tokens ?? 0,
-      completionTokens: improveUsage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, improveUsage?.prompt_tokens ?? 0, improveUsage?.completion_tokens ?? 0),
-    })
-
     // Fail-safe: if every version was dropped, fall back to the original body
     // so the frontend never receives invented content.
     if (cleanVersions.length === 0) {
+      this.logSummaryUsage(userId, plan, response.usage, undefined)
       return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
     }
 
@@ -402,9 +406,144 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       this.logger.warn("[AIService.improveCoverLetter] all versions echoed the original", {
         versions: cleanVersions.length,
       })
+      this.logSummaryUsage(userId, plan, response.usage, undefined)
       return { versions: [body.trim()], status: "already_optimized" }  // the original, still HTML
     }
 
+    // The prompt bans these phrases and the model writes them anyway. Nothing
+    // checked its output against the list, so "Improve" could hand back a
+    // letter carrying the exact cliché the user came here to lose.
+    //
+    // Not ranked the way the summary is: there, version 1 is the recommendation
+    // and the cleanest belongs on top. Here the three are alternatives the user
+    // picks between by tone — reordering them would both break the tone each
+    // card is labelled with and reshuffle the choice out from under them. So the
+    // order stands and the gate asks a different question: did any come back
+    // with filler?
+    //
+    // Prompt wording cannot close this. GUARD (arXiv 2410.06716) proves a
+    // constraint cannot be GUARANTEED by autoregressive generation — strict
+    // satisfaction needs inference-time filtering. And the TACL survey on
+    // self-correction found "no prior work shows successful self-correction with
+    // feedback from prompted LLMs", but that it "works well in tasks that can
+    // use reliable external feedback". hasCliche is exactly that.
+    const flawed = rewritten.filter(hasCliche)
+    if (flawed.length === 0) {
+      this.logSummaryUsage(userId, plan, response.usage, undefined)
+      return { versions: rewritten.map(plainToHtml) }
+    }
+
+    this.logger.warn("[AIService.improveCoverLetter] retrying once", {
+      flawed: flawed.length,
+      total: rewritten.length,
+      cliches: [...new Set(flawed.flatMap(findCliches))],
+    })
+    const retry = await this.retryLetterForQuality(prompt, langInstruction, language)
+    if (retry) {
+      const retryClean = this.usableVersions(retry.versions, source, plainBody)
+
+      // Slot by slot, not all-or-nothing. Both attempts answer in the same
+      // order — version 1 formal, 2 balanced, 3 dynamic — so slot i is the same
+      // tone in each, and the cleaner draft of that tone can simply take the
+      // place. Judging the batch as a whole threw away a retry that had fixed
+      // one version because another still carried filler, and swapping the
+      // whole set risked trading a clean tone for a flawed one. Here every slot
+      // can only improve or stay.
+      const merged = rewritten.map((first, i) => {
+        const alt = retryClean[i]
+        if (!alt) return first
+        return hasCliche(first) && !hasCliche(alt) ? alt : first
+      })
+
+      const fixed = flawed.length - merged.filter(hasCliche).length
+      if (fixed > 0) {
+        this.logger.warn("[AIService.improveCoverLetter] retry cleaned versions", { fixed, of: flawed.length })
+      } else {
+        this.logger.warn("[AIService.improveCoverLetter] retry brought nothing cleaner")
+      }
+      // Billed either way: the tokens were spent whether or not a slot moved.
+      this.logSummaryUsage(userId, plan, response.usage, retry.usage)
+      return { versions: merged.map(plainToHtml) }
+    }
+    this.logSummaryUsage(userId, plan, response.usage, undefined)
+
+    // Kept rather than dropped: a letter with one weak phrase still beats no
+    // letter, and the user can edit it. The gate lowers the odds; it does not
+    // get to leave them with nothing.
     return { versions: rewritten.map(plainToHtml) }
+  }
+
+  /** Model output → the versions that may reach the user. One owner, so the
+   *  retry goes through every check the first attempt did. */
+  private usableVersions(raw: unknown, source: string, plainBody: string): string[] {
+    return (Array.isArray(raw) ? raw : [])
+      .filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+      .map(stripVersionLabel)
+      .map(stripSignOff)
+      .filter((v) => v.trim().length > 0)
+      .slice(0, 3)
+      .filter((v) => !detectHallucination(v, source))
+      .filter((v) => !isTrivialEdit(plainBody, v))
+  }
+
+  /**
+   * One more attempt, naming the failure without naming the phrase.
+   *
+   * A generic "try again" changes nothing — the model has to be told what it did
+   * wrong, and told last. It must write fresh drafts: paraphrasing a cliché
+   * keeps its shape ("Passionate about" becomes "Enthusiastic about"), which
+   * moves the problem instead of solving it. And the offending phrase is
+   * deliberately not quoted back — naming a forbidden phrase primes it.
+   */
+  private async retryLetterForQuality(
+    basePrompt: string,
+    langInstruction: string,
+    language: "es" | "en",
+  ): Promise<{ versions: unknown; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
+    const note = language === "en"
+      ? "YOUR LAST ATTEMPT FAILED. Write all three letters again from scratch — do NOT paraphrase what you wrote before, start fresh.\n\nYour writing leaned on filler that says nothing about this person — the kind of phrase that fits any candidate in any role. Replace every one of them with a concrete detail the letter already gives: the company, the work, the actual result. If a sentence would still make sense in someone else's letter, it does not belong in this one."
+      : "TU INTENTO ANTERIOR FALLÓ. Escribe las tres cartas otra vez desde cero — NO parafrasees lo anterior, empieza de nuevo.\n\nTu redacción se apoyó en relleno que no dice nada de esta persona — de esas frases que le encajan a cualquier candidato en cualquier puesto. Sustituye cada una por un dato concreto que la carta ya da: la empresa, el trabajo, el resultado real. Si una frase seguiría teniendo sentido en la carta de otro, no pertenece a esta."
+
+    try {
+      const res = await this.aiClient.chat({
+        model: AI_MODEL,
+        max_tokens: 1000,
+        temperature: AI_TEMPERATURE_STRUCTURED,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
+          { role: "user", content: `${basePrompt}\n\n${note}` },
+        ],
+      })
+      const parsed = parseAIJson<{ versions?: unknown }>(res.choices[0]?.message?.content ?? "")
+      return { versions: parsed.versions, usage: res.usage }
+    } catch {
+      // A failed retry is not a failed request — the first result still stands.
+      return null
+    }
+  }
+
+  /**
+   * One endpoint, one AIUsageLog row — first attempt plus any retry.
+   *
+   * The summary shipped this wrong once: its retry path logged the FIRST call's
+   * usage, so every retry's tokens vanished from the ledger and cost-per-user
+   * read low. Summing in one place is what makes that unrepresentable.
+   */
+  private logSummaryUsage(
+    userId: string,
+    plan: string,
+    first: { prompt_tokens?: number; completion_tokens?: number } | undefined,
+    retry: { prompt_tokens?: number; completion_tokens?: number } | undefined,
+  ): void {
+    const promptTokens = (first?.prompt_tokens ?? 0) + (retry?.prompt_tokens ?? 0)
+    const completionTokens = (first?.completion_tokens ?? 0) + (retry?.completion_tokens ?? 0)
+    logAIUsage(userId, "improve-cover-letter", {
+      model: AI_MODEL,
+      plan,
+      promptTokens,
+      completionTokens,
+      costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
+    })
   }
 }
