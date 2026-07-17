@@ -288,7 +288,7 @@ export default async function VerbosAccionPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Combina verbos fuertes con validación ATS</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Pasa tus bullets reescritos por el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link> contra la oferta real. El checker califica estructura verbo-primero, densidad de keywords y longitud de bullet — las tres cosas que los verbos de acción están diseñados para optimizar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla parser-clean</Link> para que los verbos no se vean arruinados por problemas de maquetación.
+                    Pasa tus bullets reescritos por el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link> contra la oferta real. Te muestra qué requisitos de la oferta tu CV todavía no menciona — para que decidas qué añadir antes de postular, en vez de adivinar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla parser-clean</Link> para que los verbos no se vean arruinados por problemas de maquetación.
                   </p>
                 </div>
               </div>

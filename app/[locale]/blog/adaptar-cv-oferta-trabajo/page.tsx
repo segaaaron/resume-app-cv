@@ -153,7 +153,7 @@ export default async function AdaptarCvPage({
           <article className="min-w-0">
             <BlogProse>
               <p>
-                Enviar el mismo CV a cada rol al que postulas es el motivo individual más común por el que candidatos calificados nunca reciben respuesta. Los ATS modernos puntúan por coincidencia de keywords contra la oferta específica — un CV genérico promedia 35-50% de match, uno adaptado 70-90%. El primero nunca llega al reclutador; el segundo va al tope del listado.
+                Enviar el mismo CV a cada rol es apostar a que el recruiter haga la traducción por ti. No la va a hacer. Una sola vacante puede recibir más de 2.000 candidaturas en días, y la mayoría de los recruiters las revisan por orden de llegada y paran cuando ya tienen buenos perfiles — así que cuando abren el tuyo, tiene segundos para demostrar que encaja con ESTA oferta, no con cualquiera.
               </p>
               <p>
                 Esta guía recorre el proceso de seis pasos que usan los redactores profesionales de CV, condensado en una rutina que puedes ejecutar en 15-30 minutos por oferta. Al final tendrás un CV base más un workflow repetible para adaptarlo por rol — sin reescribir desde cero.
@@ -180,7 +180,7 @@ export default async function AdaptarCvPage({
                   </thead>
                   <tbody className="bg-white">
                     {[
-                      ["Match de keywords ATS", "35-50% (suele estar bajo umbral)", "70-90% (pasa la mayoría de filtros)"],
+                      ["Palabras que usó la oferta", "Las que tu CV dijera por casualidad", "Los términos de la oferta, donde sean ciertos"],
                       ["Resumen profesional", "Mismo párrafo para cada oferta", "Reescrito por enfoque del rol"],
                       ["Sección de habilidades", "Mismo listado siempre", "Top 8-10 priorizadas según la oferta"],
                       ["Bullets principales", "Orden fijo", "Reordenados para abrir con logros relevantes"],
@@ -214,7 +214,7 @@ export default async function AdaptarCvPage({
                 <li><strong>Faltantes y no aplicables.</strong> Déjalos fuera — nunca fabriques.</li>
               </ul>
               <p>
-                Apunta a una densidad de keywords entre 60-75% del top de la oferta. Sobre 75% empieza a leerse como relleno; bajo 60% deja puntos ATS sobre la mesa.
+                No hay un porcentaje objetivo, y quien te dé uno se lo inventó. Usa las palabras de la oferta donde describan trabajo que de verdad hiciste, y para ahí. Un recruiter detecta un CV relleno al instante, y una lista de keywords sin un logro detrás falla la única prueba que importa: la persona que lo lee.
               </p>
 
               <h2 id="paso3">Paso 3: Reescribe el resumen profesional por oferta</h2>

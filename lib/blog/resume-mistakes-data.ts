@@ -23,7 +23,7 @@ export const RESUME_MISTAKES: ResumeMistake[] = [
     rank: 2,
     title: "Generic, copy-paste resume with no customization",
     impact: "High",
-    why: "ATS systems score by keyword match against the specific JD. A generic resume scores 35-50% match; a tailored one scores 70-90%. Generic resumes lose at the parsing stage before a human ever sees them.",
+    why: "A generic CV makes the recruiter work out whether you fit. With one role drawing thousands of applications and most reviewed in the order they arrive, that work does not get done — they move to the next CV that already shows it.",
     fix: "Spend 10 minutes per application updating the summary, top 5 skills, and bullet keywords to match the JD vocabulary verbatim.",
   },
   {
@@ -44,7 +44,7 @@ export const RESUME_MISTAKES: ResumeMistake[] = [
     rank: 5,
     title: "Missing keywords from the job description",
     impact: "High",
-    why: "ATS dashboards rank candidates by keyword density against the JD. Missing the top 5-10 keywords drops you below the human-review threshold regardless of how strong your background is.",
+    why: "A recruiter scanning hundreds of applications looks for the words the posting used. If your CV describes the same work in different terms, the match is theirs to make — and at 2,000 applications for one role, they will not make it for you.",
     fix: "Pull the top recurring nouns and verbs from the JD. Embed them verbatim in your summary and at least one bullet each.",
     example: {
       before: "Worked extensively with cloud services and modern web frameworks.",

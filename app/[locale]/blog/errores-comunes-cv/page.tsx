@@ -208,7 +208,7 @@ export default async function ErroresCvPage({
 
               <h2 id="ats-killers">Errores ATS-killers específicos</h2>
               <p>
-                Más allá de los 15 errores ranqueados, tres decisiones de formato rompen consistentemente el parsing ATS — y el CV nunca llega a un humano. Audítalos explícitamente.
+                Más allá de los 15 errores ranqueados, tres decisiones de formato sí rompen el parsing de verdad: lo que el parser no puede leer, no llega al recruiter como texto. Audítalos explícitamente.
               </p>
               <div className="not-prose space-y-3 my-6">
                 {[

@@ -153,7 +153,7 @@ export default async function TailorResumePage({
           <article className="min-w-0">
             <BlogProse>
               <p>
-                Sending the same resume to every role you apply for is the single most common reason qualified candidates never hear back. Modern ATS systems score by keyword match against the specific job description — a generic resume averages 35-50% match, a tailored one 70-90%. The first never reaches the recruiter; the second goes to the top of the pile.
+                Sending the same resume to every role is a bet that the recruiter will do the translating for you. They will not. A single role can draw 2,000+ applications in days, and most recruiters review them in the order they arrive and stop once they have strong candidates — so when yours is opened, it has seconds to show it fits this posting, not resumes in general.
               </p>
               <p>
                 This guide walks the six-step tailoring process used by professional resume writers, condensed to a routine you can run in 15-30 minutes per job. By the end you will have a base resume plus a repeatable workflow for adapting it per role — without rewriting from scratch.
@@ -180,7 +180,7 @@ export default async function TailorResumePage({
                   </thead>
                   <tbody className="bg-white">
                     {[
-                      ["ATS keyword match", "35-50% (often below threshold)", "70-90% (clears most filters)"],
+                      ["Words the posting used", "Whatever your CV happened to say", "The posting's own terms, where they are true"],
                       ["Summary", "Same paragraph for every job", "Rewritten per role focus"],
                       ["Skills section", "Same list every time", "Top 8-10 prioritized to match JD"],
                       ["Top bullets", "Static order", "Reordered to lead with relevant achievements"],
@@ -216,7 +216,7 @@ export default async function TailorResumePage({
                 <li><strong>Missing and not applicable.</strong> Leave out — never fabricate.</li>
               </ul>
               <p>
-                Aim for keyword density between 60-75% of the JD top keywords. Above 75% starts to feel like stuffing; below 60% leaves ATS points on the table.
+                There is no target percentage, and anyone quoting one made it up. Use the posting's words where they describe work you actually did, and stop there. A recruiter spots a stuffed CV instantly, and a list of keywords with no achievement behind them fails the only test that matters — the human reading it.
               </p>
 
               <h2 id="step3">Step 3: Rewrite the summary per job</h2>

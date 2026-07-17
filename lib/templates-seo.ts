@@ -77,8 +77,8 @@ const CURATED: Record<string, CuratedEntry> = {
       es: "ATS Pro es la opción más segura cuando tu aplicación será evaluada por sistemas automáticos. Sin tablas, sin gráficos, sin columnas — solo texto semántico limpio que reclutadores y software de RRHH pueden leer perfectamente. Probado contra Workday, Greenhouse, Lever, Taleo e iCIMS.",
     },
     features: {
-      en: ["100% ATS-parseable", "Single column structure", "Semantic HTML headings", "No images or icons", "Optimized for keyword density", "Print-perfect at A4 and Letter"],
-      es: ["100% legible por ATS", "Estructura de una columna", "Encabezados HTML semánticos", "Sin imágenes ni iconos", "Optimizado para densidad de keywords", "Impresión perfecta en A4 y Carta"],
+      en: ["Single column structure", "Semantic HTML headings", "Selectable text, no images or icons", "Standard section headings", "Print-perfect at A4 and Letter"],
+      es: ["Estructura de una columna", "Encabezados HTML semánticos", "Texto seleccionable, sin imágenes ni iconos", "Encabezados de sección estándar", "Impresión perfecta en A4 y Carta"],
     },
   },
   aurora: {

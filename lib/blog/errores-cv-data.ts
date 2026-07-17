@@ -24,7 +24,7 @@ export const ERRORES_CV: ErrorCV[] = [
     rank: 2,
     title: "CV genérico sin personalizar para la oferta",
     impact: "Alto",
-    why: "Los ATS puntúan por coincidencia de keywords contra la oferta específica. Un CV genérico obtiene 35-50% de match; uno personalizado 70-90%. Los CVs genéricos pierden en la etapa de parsing antes de que un humano los vea.",
+    why: "Un CV genérico obliga al recruiter a deducir si encajas. Con una vacante recibiendo miles de candidaturas y la mayoría revisadas por orden de llegada, ese trabajo no se hace — pasan al siguiente CV que ya lo demuestra.",
     fix: "Dedica 10 minutos por postulación a actualizar el resumen, las top 5 habilidades y los keywords de los bullets para coincidir con el vocabulario de la oferta.",
   },
   {
@@ -45,7 +45,7 @@ export const ERRORES_CV: ErrorCV[] = [
     rank: 5,
     title: "Faltan palabras clave de la oferta",
     impact: "Alto",
-    why: "Los dashboards ATS ordenan candidatos por densidad de keywords contra la oferta. No incluir los top 5-10 keywords te baja del umbral de revisión humana sin importar lo fuerte que sea tu perfil.",
+    why: "Un recruiter que revisa cientos de candidaturas busca las palabras que usó la oferta. Si tu CV describe el mismo trabajo con otros términos, la conexión la tiene que hacer él — y con 2.000 candidaturas para una vacante, no la va a hacer por ti.",
     fix: "Extrae los sustantivos y verbos más recurrentes de la oferta. Inclúyelos textualmente en tu resumen y en al menos un bullet cada uno.",
     example: {
       antes: "Trabajé ampliamente con servicios cloud y frameworks web modernos.",

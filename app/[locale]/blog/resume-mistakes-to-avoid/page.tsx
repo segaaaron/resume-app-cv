@@ -208,7 +208,7 @@ export default async function ResumeMistakesPage({
 
               <h2 id="ats-killers">ATS-specific killers</h2>
               <p>
-                Beyond the 15 ranked mistakes, three formatting choices reliably break ATS parsing — and the resume never reaches a human. Audit for these explicitly.
+                Beyond the 15 ranked mistakes, three formatting choices do break parsing for real: what the parser cannot read never reaches the recruiter as text. Audit for these explicitly.
               </p>
               <div className="not-prose space-y-3 my-6">
                 {[
