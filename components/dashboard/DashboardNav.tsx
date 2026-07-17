@@ -16,6 +16,7 @@ import {
 import { useTranslations, useLocale } from "next-intl"
 import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
 import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
+import ImportResumeButton from "./ImportResumeButton"
 
 interface Props {
   user: { name?: string | null; email?: string | null; image?: string | null; role?: string | null }
@@ -97,6 +98,10 @@ export default function DashboardNav({
           },
         ]
       : []
+
+  // Same derivation the topbar uses, so the drawer's Import shows on exactly
+  // the same page the topbar's does.
+  const isResumesSection = (pathname.split("/dashboard/")[1]?.split("/")[0] ?? "") === "resumes"
 
   const isActive = (href: string) => {
     const segment = href.split("/dashboard/")[1]
@@ -196,7 +201,21 @@ export default function DashboardNav({
           <span className="flex-1">{t("settings")}</span>
         </Link>
 
-        {/* Language switcher — drawer only (desktop uses topbar switcher) */}
+        {/* Import a CV — topbar only shows this from sm up, so on a phone the
+            drawer is the only place it can live. */}
+        {isResumesSection && (
+          <div className="lg:hidden">
+            <NavSeparator />
+            <SectionLabel label={t("section_import")} />
+            <div className="px-[11px] py-[6px]" onClick={onDrawerClose}>
+              <ImportResumeButton disabled={!isPro} />
+            </div>
+          </div>
+        )}
+
+        {/* Import + language — drawer only (desktop has both in the topbar).
+            The topbar hides Import below 640px with `hidden sm:block`, and it
+            lived nowhere else: on a phone the feature was simply unreachable. */}
         <div className="lg:hidden">
           <NavSeparator />
           <SectionLabel label={t("section_language")} />

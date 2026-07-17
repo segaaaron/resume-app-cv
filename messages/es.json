@@ -874,7 +874,8 @@
       "section_rewards": "Recompensas",
       "section_system": "Sistema",
       "section_language": "Idioma",
-      "new_badge": "Nuevo"
+      "new_badge": "Nuevo",
+      "section_import": "Importar"
     },
     "shell": {
       "new_cv": "Nuevo CV",
