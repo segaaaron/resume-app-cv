@@ -11,6 +11,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { isTrivialEdit } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2 } from "../shared/ai-types"
@@ -180,8 +181,14 @@ Reglas:
     const jdLower = jobDescription.toLowerCase()
     const resumeLower = groundingSource.toLowerCase()
     let droppedBullets = 0
+    let droppedTrivial = 0
+
+    // Original bullets per job, so a rewrite that barely changes the original can be
+    // dropped with the same 90% threshold (isTrivialEdit) used by bullets/summary/cover.
+    const origBulletsByJob = new Map(work.map((j) => [j.id ?? "?", parseBullets(j.description ?? "")]))
 
     const sanitizedExperiences = (raw.experiences ?? []).map((e) => {
+      const origBullets = origBulletsByJob.get(e.targetId ?? "") ?? []
       const cleanedBullets = (e.changedBullets ?? [])
         .map((b) => ({
           index: typeof b.index === "number" ? b.index : 0,
@@ -193,6 +200,13 @@ Reglas:
           // a "[X%]" reaching the CV is exactly the bracket the prompt forbids.
           if (detectHallucination(b.text, groundingSource)) {
             droppedBullets++
+            return false
+          }
+          // No-op guard, unified with the other AIs: a rewrite ≥90% identical to
+          // the original bullet is not a real improvement — omit it.
+          const orig = origBullets[b.index]
+          if (orig !== undefined && isTrivialEdit(orig, b.text)) {
+            droppedTrivial++
             return false
           }
           return true
@@ -214,8 +228,8 @@ Reglas:
       })
       .slice(0, 5)
 
-    if (droppedBullets > 0) {
-      this.logger.warn("[AIService.tailorCV] dropped hallucinated bullets", { droppedBullets })
+    if (droppedBullets > 0 || droppedTrivial > 0) {
+      this.logger.warn("[AIService.tailorCV] dropped bullets", { droppedBullets, droppedTrivial })
     }
 
     return {
