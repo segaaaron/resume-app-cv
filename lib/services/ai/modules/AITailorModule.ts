@@ -228,12 +228,21 @@ Reglas:
       })
       .slice(0, 5)
 
+    // No-op guard for the summary, unified with bullets/cover: a tailored summary
+    // ≥90% identical to the current one is not a real improvement — showing an
+    // "Apply" button that overwrites the summary with a near-copy is noise, so drop it.
+    const origSummary = (typeof sectionData.summary === "string" ? sectionData.summary : "").trim()
+    const tailoredSummary = raw.summary ?? null
+    const summaryOut = tailoredSummary && origSummary && isTrivialEdit(origSummary, tailoredSummary)
+      ? null
+      : tailoredSummary
+
     if (droppedBullets > 0 || droppedTrivial > 0) {
       this.logger.warn("[AIService.tailorCV] dropped bullets", { droppedBullets, droppedTrivial })
     }
 
     return {
-      summary: raw.summary ?? null,
+      summary: summaryOut,
       experiences: sanitizedExperiences,
       missingSkills: cleanMissingSkills,
     } satisfies TailorCVResultV2
