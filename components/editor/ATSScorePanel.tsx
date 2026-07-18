@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -349,6 +349,28 @@ export default function ATSScorePanel() {
               <ScoreRing score={atsResult.score} label={t("score_label")} />
               <p className="text-sm font-bold text-slate-800">{atsResult.label}</p>
               <p className="text-[11px] text-slate-500 text-center leading-relaxed max-w-[240px]">{atsResult.summary}</p>
+
+              {/* S2 — target guidance: motivate toward the 80%+ ATS threshold */}
+              {atsResult.score >= 80 ? (
+                <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[10.5px] font-semibold text-emerald-700 ring-1 ring-emerald-200">
+                  <CheckCircle2 className="h-3 w-3 shrink-0" />
+                  {t("score_target_reached")}
+                </span>
+              ) : (
+                <span className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-[10.5px] font-semibold text-amber-700 ring-1 ring-amber-200">
+                  <TrendingUp className="h-3 w-3 shrink-0" />
+                  {t("score_target_below")}
+                </span>
+              )}
+            </div>
+
+            {/* C1 — trust seal: a CV built from structured data parses cleanly */}
+            <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 px-3 py-2">
+              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[10.5px] font-bold text-emerald-800 leading-tight">{t("parseable_badge")}</p>
+                <p className="text-[9.5px] text-emerald-600/90 leading-snug mt-0.5">{t("parseable_hint")}</p>
+              </div>
             </div>
 
             {/* Analysis bars — real per-category coverage sub-scores computed

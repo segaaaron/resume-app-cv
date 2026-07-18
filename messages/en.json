@@ -1369,6 +1369,8 @@
       "skills_add_all": "Add all skills",
       "skills_all_added": "All added",
       "version_modal_title": "Choose a version",
+      "got_it": "Got it",
+      "already_optimized_title": "Your summary is already optimized",
       "version_modal_subtitle": "Select the approach that best fits your goal",
       "version_type_executive": "Executive",
       "version_type_specialist": "Specialist",
@@ -1504,6 +1506,10 @@
     "download_success": "{filename} downloaded",
     "ats": {
       "score_label": "Score",
+      "score_target_below": "Aim for 80%+ to pass most ATS filters.",
+      "score_target_reached": "Your CV clears the recommended ATS threshold (80%+).",
+      "parseable_badge": "100% ATS-readable",
+      "parseable_hint": "Your CV is built from structured data: no columns, images, or tables that break parsing.",
       "tab": "ATS",
       "title": "ATS Score",
       "pro_badge": "Pro",
@@ -2021,7 +2027,8 @@
     "mobile_preview": "Preview",
     "ai_improve": "Improve with AI",
     "ai_improve_empty": "Write or generate a letter before improving it",
-    "ai_already_optimized": "Your letter is already well written. We found no improvement worth making."
+    "ai_already_optimized": "Your letter is already well written. We found no improvement worth making.",
+    "ai_already_optimized_title": "Your cover letter is already optimized"
   },
   "public_cv": {
     "shared_via": "CV shared via",

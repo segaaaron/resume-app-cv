@@ -207,6 +207,8 @@ export default function CoverLetterEditor({
   const [aiGenerated, setAiGenerated] = useState(false)
   const [improvingAI, setImprovingAI] = useState(false)
   const [letterVersions, setLetterVersions] = useState<SummaryVersion[]>([])
+  // "Already optimized" reuses the version modal's empty state instead of a toast.
+  const [letterEmptyNotice, setLetterEmptyNotice] = useState<{ title: string; description: string } | null>(null)
   const bodyHasContent = (content.body?.replace(/<[^>]+>/g, "").trim() ?? "").length > 0
 
 
@@ -334,10 +336,11 @@ export default function CoverLetterEditor({
       // as the only version — which must never be offered as an "improvement".
       const versions = (data.versions ?? []) as string[]
       if (data.status === "already_optimized" || versions.length === 0) {
-        toast.info(t("ai_already_optimized"))
+        setLetterEmptyNotice({ title: t("ai_already_optimized_title"), description: t("ai_already_optimized") })
         return
       }
       const tones: SummaryVersion["type"][] = ["formal", "balanced", "dynamic"]
+      setLetterEmptyNotice(null)
       setLetterVersions(versions.map((text, i) => ({ type: tones[i] ?? "balanced", text })))
     } catch {
       toast.error(t("ai_error"))
@@ -1115,9 +1118,10 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
       `}</style>
 
       <SummaryVersionModal
-        open={letterVersions.length > 0}
+        open={letterVersions.length > 0 || !!letterEmptyNotice}
         versions={letterVersions}
-        onClose={() => setLetterVersions([])}
+        emptyState={letterEmptyNotice}
+        onClose={() => { setLetterVersions([]); setLetterEmptyNotice(null) }}
         onSelect={(text) => { updateContent("body", text); toast.success(t("ai_success")) }}
       />
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />

@@ -1370,6 +1370,8 @@
       "skills_all_added": "Todas agregadas",
       "version_modal_title": "Elige una versión",
       "version_modal_subtitle": "Selecciona el enfoque que mejor se adapte a tu objetivo",
+      "got_it": "Entendido",
+      "already_optimized_title": "Tu resumen ya está optimizado",
       "version_type_executive": "Ejecutiva",
       "version_type_specialist": "Especialista",
       "version_type_value_prop": "Propuesta de Valor",
@@ -1504,6 +1506,10 @@
     "download_success": "{filename} descargado",
     "ats": {
       "score_label": "Puntaje",
+      "score_target_below": "Apunta a 80%+ para superar la mayoría de filtros ATS.",
+      "score_target_reached": "Tu CV supera el umbral ATS recomendado (80%+).",
+      "parseable_badge": "100% legible por ATS",
+      "parseable_hint": "Tu CV se construye desde datos estructurados: sin columnas, imágenes ni tablas que rompan el parseo.",
       "tab": "ATS",
       "title": "ATS Score",
       "pro_badge": "Pro",
@@ -2021,7 +2027,8 @@
     "mobile_preview": "Vista previa",
     "ai_improve": "Mejorar con IA",
     "ai_improve_empty": "Escribe o genera una carta antes de mejorarla",
-    "ai_already_optimized": "Tu carta ya está bien escrita. No encontramos mejoras que aportaran algo."
+    "ai_already_optimized": "Tu carta ya está bien escrita. No encontramos mejoras que aportaran algo.",
+    "ai_already_optimized_title": "Tu carta ya está optimizada"
   },
   "public_cv": {
     "shared_via": "CV compartido via",

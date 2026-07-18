@@ -36,6 +36,9 @@ export default function SummarySection() {
   const [generating, setGenerating] = useState(false)
   const [improving, setImproving] = useState(false)
   const [versions, setVersions] = useState<SummaryVersion[]>([])
+  // "Already optimized" now uses the same modal as the version picker instead of
+  // a fleeting toast — the "nothing to improve" answer gets a real surface.
+  const [emptyNotice, setEmptyNotice] = useState<{ title: string; description: string } | null>(null)
   const [improved, setImproved] = useState(false)
   // The way in for someone with no CV yet. improve-summary has always had the
   // branch for it ("create a summary from scratch, based on the candidate's
@@ -179,7 +182,7 @@ export default function SummarySection() {
       if (data.status === "already_optimized") {
         lastKeyRef.current = key
         setCooldownUntil(Date.now() + 120_000)
-        toast.info(ai("summary_already_optimized"))
+        setEmptyNotice({ title: ai("already_optimized_title"), description: ai("summary_already_optimized") })
         return
       }
 
@@ -199,6 +202,7 @@ export default function SummarySection() {
   // written as. `types` falls back to the old index rule for any path that
   // returns the user's own text and has no positioning to report.
   function showVersions(list: string[], types?: string[]) {
+    setEmptyNotice(null)
     const byIndex: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
     setVersions(list.map((text, i) => ({
       type: (types?.[i] as SummaryVersion["type"]) ?? byIndex[i] ?? "executive",
@@ -375,9 +379,10 @@ export default function SummarySection() {
       </div>
 
       <SummaryVersionModal
-        open={versions.length > 0}
+        open={versions.length > 0 || !!emptyNotice}
         versions={versions}
-        onClose={() => setVersions([])}
+        emptyState={emptyNotice}
+        onClose={() => { setVersions([]); setEmptyNotice(null) }}
         onSelect={applyVersion}
       />
     </div>

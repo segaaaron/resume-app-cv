@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { Check, Zap, TrendingUp, Code2, Star, Landmark, Scale, Rocket } from "lucide-react"
+import { Check, Zap, TrendingUp, Code2, Star, Landmark, Scale, Rocket, ShieldCheck } from "lucide-react"
 
 /**
  * The three summary positionings, and the three cover-letter tones.
@@ -26,6 +26,13 @@ interface Props {
   versions: SummaryVersion[]
   onClose: () => void
   onSelect: (text: string) => void
+  /**
+   * When the AI finds nothing worth changing (status "already_optimized"), the
+   * caller opens the modal with zero versions and this copy instead of firing a
+   * fleeting toast — the "you can't improve this" answer gets the same modal
+   * surface as the "here are 3 improvements" answer.
+   */
+  emptyState?: { title: string; description: string } | null
 }
 
 const TYPE_CONFIG = {
@@ -86,8 +93,12 @@ const TYPE_CONFIG = {
   },
 } as const satisfies Record<VersionType, unknown>
 
-export default function SummaryVersionModal({ open, versions, onClose, onSelect }: Props) {
+export default function SummaryVersionModal({ open, versions, onClose, onSelect, emptyState }: Props) {
   const t = useTranslations("editor.ai")
+
+  // "Already optimized" surface: no versions to choose, a calm reassurance
+  // instead of the three-card picker. Same modal, same close affordance.
+  const showEmpty = versions.length === 0 && !!emptyState
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
@@ -98,22 +109,37 @@ export default function SummaryVersionModal({ open, versions, onClose, onSelect 
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-60" />
           <div className="flex items-start gap-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-xl shrink-0 mt-0.5"
-              style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(0,168,204,0.04) 100%)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF" }}>
-              <Zap className="w-4 h-4" />
+              style={showEmpty
+                ? { background: "linear-gradient(135deg, rgba(16,185,129,0.14) 0%, rgba(13,148,136,0.05) 100%)", border: "1px solid rgba(16,185,129,0.30)", color: "#10B981" }
+                : { background: "linear-gradient(135deg, rgba(0,212,255,0.12) 0%, rgba(0,168,204,0.04) 100%)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF" }}>
+              {showEmpty ? <ShieldCheck className="w-4 h-4" /> : <Zap className="w-4 h-4" />}
             </div>
             <div className="min-w-0">
               <h2 className="text-[15px] font-bold text-[#1a2e4a] tracking-tight leading-tight">
-                {t("version_modal_title")}
+                {showEmpty ? emptyState!.title : t("version_modal_title")}
               </h2>
               <p className="text-[11px] text-[#6B7A8C] mt-0.5 leading-snug">
-                {t("version_modal_subtitle")}
+                {showEmpty ? emptyState!.description : t("version_modal_subtitle")}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Version cards */}
+        {/* Body */}
         <div className="overflow-y-auto max-h-[60vh] sm:max-h-[64vh] px-5 sm:px-7 py-4 space-y-3 bg-white">
+          {showEmpty && (
+            <div className="flex flex-col items-center text-center gap-3 py-6">
+              <div className="flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-500/25">
+                <Check className="w-6 h-6 text-white" strokeWidth={2.5} />
+              </div>
+              <p className="text-[13px] font-semibold text-[#1a2e4a] leading-snug max-w-[360px]">
+                {emptyState!.title}
+              </p>
+              <p className="text-[11.5px] text-[#6B7A8C] leading-relaxed max-w-[380px]">
+                {emptyState!.description}
+              </p>
+            </div>
+          )}
           {versions.map((version) => {
             const cfg = TYPE_CONFIG[version.type]
             const Icon = cfg.icon
@@ -184,7 +210,7 @@ export default function SummaryVersionModal({ open, versions, onClose, onSelect 
             onClick={onClose}
             className="w-full flex justify-center items-center px-3 py-3 text-[13px] font-medium rounded-xl border border-[#E2E8F0] bg-white text-[#6B7A8C] cursor-pointer transition-all duration-150 hover:border-[#CBD5E1] hover:text-[#1a2e4a] min-h-[44px]"
           >
-            {t("cancel")}
+            {showEmpty ? t("got_it") : t("cancel")}
           </button>
         </div>
       </DialogContent>
