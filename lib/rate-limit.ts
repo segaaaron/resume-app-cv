@@ -108,13 +108,6 @@ export async function recordRateLimitUsage(userId: string, endpoint: string): Pr
 }
 
 /**
- * @deprecated Use recordRateLimitUsage instead.
- */
-export async function recordRateLimitFailure(userId: string, endpoint: string): Promise<void> {
-  return recordUsage(userId, endpoint)
-}
-
-/**
  * AI quota check by plan. Plan-aware, lifetime-counted (no rolling window).
  * Atomic via a single UPDATE…WHERE count < limit; falls back to INSERT on first use.
  *

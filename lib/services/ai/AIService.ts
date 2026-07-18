@@ -13,7 +13,6 @@ import { AISummaryModule } from "./modules/AISummaryModule"
 import { AIReviewModule } from "./modules/AIReviewModule"
 import { AICoverLetterModule } from "./modules/AICoverLetterModule"
 import { AIProfileModule } from "./modules/AIProfileModule"
-import { AISkillsModule } from "./modules/AISkillsModule"
 import { AITailorModule } from "./modules/AITailorModule"
 
 import type {
@@ -30,8 +29,6 @@ import type {
   ImproveSummaryInput,
   ReviewCVInput,
   ReviewResult,
-  SuggestSkillsInput,
-  SuggestSkillsResult,
   TailorCVInput,
   TailorCVResultV2,
   VersionsResult,
@@ -44,7 +41,6 @@ export type {
   ATSScoreResult,
   CoverLetterResult,
   SkillItem,
-  SuggestSkillsResult,
   ReviewResult,
   FillProfileResult,
   ImproveBulletInput,
@@ -55,7 +51,6 @@ export type {
   ImproveCoverLetterInput,
   ReviewCVInput,
   FillProfileInput,
-  SuggestSkillsInput,
   TailorCVInput,
   TailorCVResultV2,
 } from "./shared/ai-types"
@@ -66,7 +61,6 @@ export class AIService {
   private readonly reviewModule: AIReviewModule
   private readonly coverLetterModule: AICoverLetterModule
   private readonly profileModule: AIProfileModule
-  private readonly skillsModule: AISkillsModule
   private readonly tailorModule: AITailorModule
 
   constructor(aiClient: IAIClient, logger: ILogger) {
@@ -75,7 +69,6 @@ export class AIService {
     this.reviewModule = new AIReviewModule(aiClient, logger)
     this.coverLetterModule = new AICoverLetterModule(aiClient, logger)
     this.profileModule = new AIProfileModule(aiClient, logger)
-    this.skillsModule = new AISkillsModule(aiClient, logger)
     this.tailorModule = new AITailorModule(aiClient, logger)
   }
 
@@ -111,9 +104,6 @@ export class AIService {
     return this.profileModule.fillProfile(userId, input, plan)
   }
 
-  suggestSkills(userId: string, input: SuggestSkillsInput, plan: string): Promise<SuggestSkillsResult> {
-    return this.skillsModule.suggestSkills(userId, input, plan)
-  }
 
   tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
     return this.tailorModule.tailorCV(userId, input, plan)

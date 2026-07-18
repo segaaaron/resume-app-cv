@@ -11,6 +11,8 @@ import CVReviewPanel from "./CVReviewPanel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
 import CVCompletenessWidget from "./CVCompletenessWidget"
+import EmploymentGapAdvisory from "./EmploymentGapAdvisory"
+import ProvenSkillsCard from "./ProvenSkillsCard"
 import TemplateSwitcher from "./template-switcher"
 import { LayoutTemplate, Settings2, Target, MessageSquare, Sparkles, Layers } from "lucide-react"
 
@@ -155,6 +157,8 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
         {activeTab === "content" && (
           <div className="px-5 pt-4 pb-6">
             <CVCompletenessWidget />
+            <EmploymentGapAdvisory />
+            <ProvenSkillsCard />
             <SectionDropdownProvider>
               <div>
                 {visibleSections.map((section) => (

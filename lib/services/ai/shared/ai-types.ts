@@ -117,10 +117,6 @@ export interface SkillItem {
   level: string
 }
 
-export interface SuggestSkillsResult {
-  skills: SkillItem[]
-}
-
 // ─── review-cv Zod schemas ────────────────────────────────────────────────────
 
 export const SUGGESTION_FIELDS = [
@@ -246,13 +242,6 @@ export interface FillProfileInput {
   language?: string
 }
 
-export interface SuggestSkillsInput {
-  jobTitle: string
-  industry?: string
-  existingSkills?: string[]
-  language?: string
-}
-
 export interface TailorCVInput {
   sectionData: Record<string, unknown>
   jobDescription: string
@@ -301,7 +290,6 @@ export const AI_INPUT_LIMITS = {
   recipientTitle: 100,
   industry: 100,
   question: 300,
-  skill: 100,
   bulletText: 4000,
   prompt: 500,
 } as const

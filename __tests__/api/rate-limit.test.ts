@@ -9,7 +9,7 @@ vi.mock("@/lib/db", () => ({
   },
 }))
 
-import { checkRateLimit, recordRateLimitFailure, clearRateLimitCache } from "@/lib/rate-limit"
+import { checkRateLimit, recordRateLimitUsage, clearRateLimitCache } from "@/lib/rate-limit"
 import { db } from "@/lib/db"
 
 const mockFindUnique = db.aIRateLimit.findUnique as ReturnType<typeof vi.fn>
@@ -57,10 +57,10 @@ describe("checkRateLimit (check-only — never increments)", () => {
   })
 })
 
-describe("recordRateLimitFailure (increments on failure only)", () => {
+describe("recordRateLimitUsage (increments the usage counter)", () => {
   it("calls $queryRaw with upsert SQL", async () => {
     mockQueryRaw.mockResolvedValue([])
-    await recordRateLimitFailure("user-1", "register")
+    await recordRateLimitUsage("user-1", "register")
     expect(mockQueryRaw).toHaveBeenCalledOnce()
   })
 })

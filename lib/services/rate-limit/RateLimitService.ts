@@ -1,4 +1,4 @@
-import { checkRateLimit, recordRateLimitFailure } from "@/lib/rate-limit"
+import { checkRateLimit, recordRateLimitUsage } from "@/lib/rate-limit"
 import type { IRateLimitService } from "@/lib/interfaces/IRateLimitService"
 
 export class RateLimitService implements IRateLimitService {
@@ -7,6 +7,6 @@ export class RateLimitService implements IRateLimitService {
   }
 
   async recordFailure(key: string, endpoint: string): Promise<void> {
-    return recordRateLimitFailure(key, endpoint)
+    return recordRateLimitUsage(key, endpoint)
   }
 }

@@ -5,7 +5,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import bcrypt from "@/lib/bcrypt"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
-import { checkAndIncrementRateLimit, checkRateLimit, recordRateLimitFailure } from "@/lib/rate-limit"
+import { checkAndIncrementRateLimit, checkRateLimit, recordRateLimitUsage } from "@/lib/rate-limit"
 
 const logger = createLogger("auth")
 
@@ -136,7 +136,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!user || !user.password) {
           await bcrypt.compare(credentials.password as string, DUMMY_HASH)
           // Count user-not-found against IP only (email is unknown/invalid — no per-email counter).
-          await recordRateLimitFailure(ipKey, "login-password")
+          await recordRateLimitUsage(ipKey, "login-password")
           throw new InvalidCredentialsError()
         }
         if (user.deletedAt !== null) return null

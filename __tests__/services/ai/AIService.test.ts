@@ -533,19 +533,6 @@ describe("AIService", () => {
     })
   })
 
-  // ── suggestSkills ──────────────────────────────────────────────────────────
-
-  describe("AIService.suggestSkills", () => {
-    it("happy path → returns skills array", async () => {
-      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
-      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
-      const aiClient = makeMockAIClient(JSON.stringify({ skills: [{ name: "TypeScript", level: "Advanced" }] }))
-      const service = new AIService(aiClient, logger)
-      const result = await service.suggestSkills("u1", { jobTitle: "Engineer" }, "PRO")
-      expect(result.skills[0].name).toBe("TypeScript")
-    })
-  })
-
   // ── JSON parse failure ─────────────────────────────────────────────────────
 
   describe("AIService JSON parse failure", () => {

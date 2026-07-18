@@ -1457,6 +1457,20 @@
       "education": "Education",
       "others": "Extras"
     },
+    "employment_gap": {
+      "title": "A gap a recruiter may ask about",
+      "subtitle": "Nothing to fix — just be ready to frame it",
+      "between": "{months} months between {after} and {before}",
+      "since": "{months} months since {after}",
+      "before": "{months} months before {before}",
+      "generic": "A gap of {months} months in your timeline",
+      "advice": "This is common. A short line on what you did — freelance, study, caregiving or upskilling — turns the question into a non-issue. Recruiters filter for continuity, so addressing it beats leaving it blank."
+    },
+    "proven_skills": {
+      "title": "You've already proven these",
+      "subtitle": "Skills in your experience that aren't in your Skills list yet",
+      "hint": "One tap adds it — it's backed by your own experience, so it counts as demonstrated, not just claimed."
+    },
     "tailor": {
       "title": "Tailor CV to Job",
       "subtitle": "Rewrite your summary and bullets for this same posting",
@@ -1665,12 +1679,6 @@
       "add_experience": "Add experience",
       "add_education": "Add education",
       "add_skill": "Add skill",
-      "suggest_skills": "Suggest with AI",
-      "suggest_skills_loading": "Finding skills...",
-      "suggest_skills_added": "Skills added",
-      "suggest_skills_empty": "No suggestions found for this role",
-      "suggest_skills_error": "Error fetching suggestions",
-      "suggest_skills_job_title_hint": "Fill in your job title in Personal Details to get better suggestions",
       "add_language": "Add language",
       "add_certification": "Add certification",
       "add_project": "Add project",
@@ -1762,7 +1770,6 @@
         "email": "Email",
         "delete": "Delete reference"
       },
-      "suggest_skills_rate_limit": "You've reached the hourly suggestions limit. Please try again later.",
       "toast_pro_only": "This feature requires a Pro plan"
     },
     "upgrade": {
@@ -2240,10 +2247,10 @@
     "entry_line1": "Your next job",
     "entry_line2": "starts here.",
     "entry_scroll": "Scroll to discover",
-    "problem_stat": "52%",
-    "problem_line1": "of recruiters review in the",
-    "problem_line2": "order applications arrive.",
-    "problem_body": "They stop once they have strong candidates. A single role can draw 2,000+ applications in days. ReadyCVV gets you there faster, and fitting.",
+    "problem_stat": "2,000+",
+    "problem_line1": "résumés per opening.",
+    "problem_line2": "Yours gets seconds.",
+    "problem_body": "Most are skimmed in the order they arrive, and reading stops once there are enough strong ones. ReadyCVV matches your CV to the posting before you apply — so it reads as a fit in the seconds it gets.",
     "reveal_brand": "ReadyCVV",
     "reveal_tagline": "reads them before they do.",
     "reveal_stats_ai": "7 AI tools",

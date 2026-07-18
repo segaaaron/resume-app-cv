@@ -1457,6 +1457,20 @@
       "education": "Educación",
       "others": "Extras"
     },
+    "employment_gap": {
+      "title": "Un lapso que un reclutador podría preguntar",
+      "subtitle": "No hay nada que corregir — solo prepárate para explicarlo",
+      "between": "{months} meses entre {after} y {before}",
+      "since": "{months} meses desde {after}",
+      "before": "{months} meses antes de {before}",
+      "generic": "Un lapso de {months} meses en tu trayectoria",
+      "advice": "Es común. Una línea breve de qué hiciste — freelance, estudio, cuidado familiar o formación — convierte la duda en un no-problema. Los reclutadores filtran por continuidad, así que abordarlo es mejor que dejarlo en blanco."
+    },
+    "proven_skills": {
+      "title": "Ya demostraste estas",
+      "subtitle": "Skills que aparecen en tu experiencia y aún no están en tu lista",
+      "hint": "Un toque las agrega — están respaldadas por tu propia experiencia, así que cuentan como demostradas, no solo declaradas."
+    },
     "tailor": {
       "title": "Adaptar CV a oferta",
       "subtitle": "Reescribe tu resumen y bullets para esta misma oferta",
@@ -1665,12 +1679,6 @@
       "add_experience": "Añadir experiencia",
       "add_education": "Añadir educación",
       "add_skill": "Añadir habilidad",
-      "suggest_skills": "Sugerir con IA",
-      "suggest_skills_loading": "Buscando habilidades...",
-      "suggest_skills_added": "Habilidades agregadas",
-      "suggest_skills_empty": "No se encontraron sugerencias para este rol",
-      "suggest_skills_error": "Error al obtener sugerencias",
-      "suggest_skills_job_title_hint": "Completa el cargo en Información Personal para obtener mejores sugerencias",
       "add_language": "Añadir idioma",
       "add_certification": "Añadir certificación",
       "add_project": "Añadir proyecto",
@@ -1762,7 +1770,6 @@
         "email": "Email",
         "delete": "Eliminar referencia"
       },
-      "suggest_skills_rate_limit": "Has alcanzado el límite de sugerencias por hora. Intenta de nuevo más tarde.",
       "toast_pro_only": "Esta función requiere plan Pro"
     },
     "upgrade": {
@@ -2240,10 +2247,10 @@
     "entry_line1": "Tu próximo trabajo",
     "entry_line2": "empieza aquí.",
     "entry_scroll": "Desplázate para descubrir",
-    "problem_stat": "52%",
-    "problem_line1": "de los recruiters revisan por",
-    "problem_line2": "orden de llegada.",
-    "problem_body": "Y paran cuando ya tienen buenos candidatos. Una sola vacante puede recibir más de 2.000 candidaturas en días. ReadyCVV te lleva antes, y encajando.",
+    "problem_stat": "2.000+",
+    "problem_line1": "candidaturas por vacante.",
+    "problem_line2": "La tuya tiene segundos.",
+    "problem_body": "La mayoría se revisan en el orden en que llegan, y la lectura se detiene cuando ya hay suficientes buenas. ReadyCVV ajusta tu CV a la oferta antes de que apliques — para que se lea como un match en los segundos que tiene.",
     "reveal_brand": "ReadyCVV",
     "reveal_tagline": "los lee antes que los lean.",
     "reveal_stats_ai": "7 herramientas IA",

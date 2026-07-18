@@ -17,7 +17,6 @@ export type AiEndpointName =
   | "improve-bullet"
   | "improve-summary"
   | "generate-summary"
-  | "suggest-skills"
   | "tailor-cv"
   | "generate-cover-letter"
   | "improve-cover-letter"
@@ -29,7 +28,6 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "improve-bullet",
   "improve-summary",
   "generate-summary",
-  "suggest-skills",
   "tailor-cv",
   "generate-cover-letter",
   "improve-cover-letter",
@@ -48,7 +46,6 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "improve-bullet": 30,
   "improve-summary": 20,
   "generate-summary": 20,
-  "suggest-skills": 20,
   "generate-cover-letter": 20,
   "improve-cover-letter": 20,
   "fill-profile": 10,
@@ -84,9 +81,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "fill-profile": -1,
       "improve-bullet": -1,
       "improve-summary": -1,
-      "generate-summary": -1,
-      "suggest-skills": -1,
-      "tailor-cv": -1,
+      "generate-summary": -1,      "tailor-cv": -1,
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": -1,
@@ -102,9 +97,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "fill-profile": 2,
       "improve-bullet": 2,
       "improve-summary": 2,
-      "generate-summary": 2,
-      "suggest-skills": 2,
-      "tailor-cv": 0,
+      "generate-summary": 2,      "tailor-cv": 0,
       "generate-cover-letter": 2,
       "improve-cover-letter": 2,
       "ats-score": 0,
@@ -122,9 +115,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "fill-profile": 0,
       "improve-bullet": 0,
       "improve-summary": 0,
-      "generate-summary": 0,
-      "suggest-skills": 0,
-      "tailor-cv": 0,
+      "generate-summary": 0,      "tailor-cv": 0,
       "generate-cover-letter": 0,
       "improve-cover-letter": 0,
       "ats-score": 0,
@@ -141,9 +132,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "fill-profile": -1,
       "improve-bullet": -1,
       "improve-summary": -1,
-      "generate-summary": -1,
-      "suggest-skills": -1,
-      "tailor-cv": 0,
+      "generate-summary": -1,      "tailor-cv": 0,
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": 0,
@@ -159,9 +148,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "fill-profile": -1,
       "improve-bullet": -1,
       "improve-summary": -1,
-      "generate-summary": -1,
-      "suggest-skills": -1,
-      "tailor-cv": -1,
+      "generate-summary": -1,      "tailor-cv": -1,
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": -1,
