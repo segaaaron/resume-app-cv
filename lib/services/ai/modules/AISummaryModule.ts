@@ -14,6 +14,7 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { isTrivialEdit } from "../shared/text-similarity"
 import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
 import { clicheBanList } from "../shared/cliches"
 import {
@@ -478,15 +479,16 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
       return { versions: [], status: "already_optimized" }
     }
 
-    // Echo detection: if the model skipped STEP 0 but still returned versions
-    // that match the original summary, surface "already_optimized" instead of
-    // offering no-op suggestions (same contract as improve-bullet).
+    // Echo detection unified with bullets and cover letter: drop any version that
+    // barely changes the original (≥90% similar via the same TRIVIAL_EDIT_SIMILARITY
+    // threshold). If none survive → already_optimized; otherwise return only the
+    // versions that are a real improvement — never a near-copy of the original.
     if (hasSummary && summary) {
-      const normalizeForCompare = (s: string) => s.toLowerCase().replace(/\s+/g, " ").replace(/[.;]+$/, "").trim()
-      const originalNorm = normalizeForCompare(summary)
-      if (gated.versions.every((v) => normalizeForCompare(v.text) === originalNorm)) {
+      const meaningful = gated.versions.filter((v) => !isTrivialEdit(summary, v.text))
+      if (meaningful.length === 0) {
         return { versions: [], status: "already_optimized" }
       }
+      return toVersionsResult(meaningful)
     }
     return toVersionsResult(gated.versions)
   }
