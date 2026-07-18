@@ -385,3 +385,47 @@ model AtsCheck {
   @@index([createdAt])
   @@index([sessionId])
 }
+
+enum CronRunStatus {
+  SUCCESS
+  FAILURE
+}
+
+// Execution log for scheduled jobs (Dokploy crons). One row per authenticated run.
+// Powers the admin cron-health panel: detects silent death (staleness) and failures
+// so an operator can investigate root cause. Trimmed to a 90-day window by the runner.
+model CronRun {
+  id         String        @id @default(cuid())
+  job        String // canonical key: expire-subscriptions | renewal-reminder | data-cleanup | purge-stripe-events
+  status     CronRunStatus
+  result     Json? // endpoint summary on success, { error } on failure
+  durationMs Int?
+  createdAt  DateTime      @default(now())
+
+  @@index([job, createdAt])
+  @@index([createdAt])
+}
+
+// Persisted application errors — powers the admin "Service Errors" panel.
+// One row per captured failure (only real errors: 5xx / unhandled / service failures;
+// expected AppError 4xx are NOT recorded). Grouped by `fingerprint` in the UI so
+// similar failures collapse into one issue. userId is a plain snapshot (no FK) so
+// the error history survives user deletion. Trimmed to a 30-day window by the writer.
+model ErrorLog {
+  id          String   @id @default(cuid())
+  source      String // logger namespace: controller | cron.* | pdf | ai | stripe | auth ...
+  endpoint    String? // route/operation when known
+  message     String   @db.Text
+  stack       String?  @db.Text
+  statusCode  Int?
+  userId      String? // snapshot, no relation — survives user deletion
+  userEmail   String? // snapshot for display when the user is gone
+  context     Json? // extra structured detail ("why")
+  fingerprint String // sha1(source|endpoint|normalizedMessage) for grouping
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([fingerprint, createdAt])
+  @@index([source, createdAt])
+  @@index([userId, createdAt])
+}

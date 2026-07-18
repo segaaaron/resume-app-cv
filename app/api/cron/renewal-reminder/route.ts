@@ -2,6 +2,7 @@ import { timingSafeEqual } from "crypto"
 import { NextResponse } from "next/server"
 import { cronService } from "@/lib/controllers/cron-deps"
 import { handleError } from "@/lib/controllers/shared"
+import { recordCronRun } from "@/lib/services/cron/cronRunner"
 
 export async function GET(req: Request) {
   const cronSecret = process.env.CRON_SECRET
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const result = await cronService.sendRenewalReminders()
+    const result = await recordCronRun("renewal-reminder", () => cronService.sendRenewalReminders())
     return NextResponse.json(result)
   } catch (err) {
     if (err instanceof Error && err.message === "Email not configured") {

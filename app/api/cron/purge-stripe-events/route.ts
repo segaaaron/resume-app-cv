@@ -4,6 +4,7 @@ import { cronService } from "@/lib/controllers/cron-deps"
 import { handleError } from "@/lib/controllers/shared"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
+import { recordCronRun } from "@/lib/services/cron/cronRunner"
 
 const logger = createLogger("cron.purge-stripe-events")
 
@@ -27,7 +28,7 @@ export async function GET(req: Request) {
   }
 
   try {
-    const result = await cronService.purgeStripeEvents()
+    const result = await recordCronRun("purge-stripe-events", () => cronService.purgeStripeEvents())
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

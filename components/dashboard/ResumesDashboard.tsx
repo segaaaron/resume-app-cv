@@ -340,8 +340,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
         </div>
       </div>
 
-      {/* ── Pro upsell / manage plan ── */}
-      {!isPro && <ProBanner onManagePlan={handleBillingPortal} portalLoading={portalLoading} />}
+      {/* ── Manage plan (active PRO only) — non-PRO users get UpgradeCTACard above ── */}
+      {isPro && <ProBanner onManagePlan={handleBillingPortal} portalLoading={portalLoading} />}
 
       {/* ── Stats row ── */}
       <StatsRow resumes={resumes} isPro={isPro} />

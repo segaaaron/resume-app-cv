@@ -3,6 +3,7 @@ import { timingSafeEqual } from "crypto"
 import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
 import { createLogger } from "@/lib/logger"
+import { recordCronRun } from "@/lib/services/cron/cronRunner"
 
 const logger = createLogger("cron.expire-subscriptions")
 
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
   }
 
   try {
+    const summary = await recordCronRun("expire-subscriptions", async () => {
     const now = new Date()
 
     // Parallelize all queries — independent, no shared state
@@ -80,12 +82,14 @@ export async function GET(req: Request) {
     for (const id of ids) purgeUserCache(id)
     for (const id of limitedIds) purgeUserCache(id)
 
-    return NextResponse.json({
+    return {
       downgraded: ids.length,
       canceledCount: canceled.length,
       stalePROCount: activeStale.length,
       expiredLimited: limitedIds.length,
+    }
     })
+    return NextResponse.json(summary)
   } finally {
     try {
       await db.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_KEY})`

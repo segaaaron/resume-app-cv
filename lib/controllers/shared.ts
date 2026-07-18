@@ -14,11 +14,12 @@ export async function requireAuth(req: Request): Promise<{ userId: string } | Ne
   return { userId: session.user.id }
 }
 
-export function handleError(err: unknown): NextResponse {
+export function handleError(err: unknown, ctx?: { userId?: string; route?: string }): NextResponse {
   if (err instanceof AppError) {
     return NextResponse.json({ error: err.code, ...err.extra }, { status: err.status })
   }
-  logger.error("unhandled error", {}, err)
+  // Only real (unhandled) failures reach here — captured into ErrorLog via logger.error.
+  logger.error("unhandled error", { status: 500, ...(ctx?.userId ? { userId: ctx.userId } : {}), ...(ctx?.route ? { route: ctx.route } : {}) }, err)
   return NextResponse.json({ error: "server_error" }, { status: 500 })
 }
 
