@@ -16,6 +16,22 @@ jobs:
       NEXT_PUBLIC_APP_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history so the migration guard can diff against the base
+
+      # Guard against schema/DB drift: if prisma/schema.prisma changed but no migration
+      # file was added in the same change, fail. This is exactly what would have caught
+      # the LIMITED enum drift (schema edited, no migration) before it 500'd prod.
+      # Note: the migrations are not self-contained (baselined), so a replay-based
+      # `prisma migrate diff` is not possible — this git-level guard is the reliable check.
+      - name: Migration guard (schema change needs a migration)
+        run: bash scripts/check-migration-drift.sh
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          PUSH_BEFORE: ${{ github.event.before }}
+          PUSH_AFTER: ${{ github.sha }}
 
       - uses: actions/setup-node@v4
         with:
