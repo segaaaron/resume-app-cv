@@ -160,21 +160,19 @@ describe("AIService", () => {
       expect(result.improvements).toEqual([])
     })
 
-    it("surfaces metric_missing questions instead of writing a placeholder", async () => {
+    it("improves a numberless bullet by wording instead of asking for a metric", async () => {
       const aiClient = makeMockAIClient(JSON.stringify({
-        status: "metric_missing",
-        improvements: [],
-        metricQuestions: ["How many users did the module serve?", "Over what period?"],
+        status: "improved",
+        improvements: [{ index: 0, text: "• Mentored new developers on coding standards and tooling, improving team integration" }],
       }))
       const service = new AIService(aiClient, logger)
 
-      const result = await service.improveBullet("user-1", { text: "• Refactored the home module" }, "PRO")
+      const result = await service.improveBullet("user-1", { text: "• Was responsible for mentoring new developers" }, "PRO")
 
-      expect(result.status).toBe("metric_missing")
-      expect(result.metricQuestions).toEqual([
-        "How many users did the module serve?",
-        "Over what period?",
-      ])
+      expect(result.status).toBe("improved")
+      expect(result.improvements.length).toBeGreaterThan(0)
+      // No metric interrogation exists anymore.
+      expect((result as unknown as Record<string, unknown>).metricQuestions).toBeUndefined()
     })
 
     it("maps an off_topic response to 422", async () => {

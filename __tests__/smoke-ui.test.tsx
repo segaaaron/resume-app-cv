@@ -107,8 +107,7 @@ describe("UI smoke", () => {
     expect(html).not.toContain("cta")
   })
 
-  // metric_missing is the only AI state whose UI was written and never rendered:
-  // the card lives inside a non-exported item component, so it only mounts
+  // The AI card lives inside a non-exported item component, so it only mounts
   // through the whole section.
   it("WorkExperience mounts with an expanded job", () => {
     const html = mount(<WorkExperienceSection />)

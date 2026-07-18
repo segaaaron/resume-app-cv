@@ -47,9 +47,13 @@ export class AIReviewModule {
     const jobDescriptionTruncated = jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)
 
     const data = sectionData ?? {}
-    const resumeText = buildResumeContext(data, language)
+    // A large CV must be analyzed, not rejected. Truncate it (same 12000 budget
+    // Review CV already allows) exactly like the job description is truncated below,
+    // instead of erroring with "too_long" — which surfaced as a misleading
+    // "add more info to your CV" message for a CV that was actually too long.
+    const resumeText = buildResumeContext(data, language).slice(0, AI_INPUT_LIMITS.resumeContext)
     if (!resumeText.trim()) throw new AppError("not_enough_resume_data", 400)
-    const resumeTextValidation = validateAIInput(resumeText, AI_INPUT_LIMITS.resumeText)
+    const resumeTextValidation = validateAIInput(resumeText, AI_INPUT_LIMITS.resumeContext)
     if (!resumeTextValidation.valid) throw new AppError("invalid_input", 400)
 
     // ── LLM call #1: EXTRACT requirements from the JD (no scoring). The score is

@@ -38,23 +38,20 @@ export type BulletImprovement = z.infer<typeof BulletImprovementSchema>
  * improve-bullet outcome.
  *  - improved         → at least one bullet has a real rewrite
  *  - already_optimized → nothing to improve; the UI shows the green pill
- *  - metric_missing   → the only thing holding the bullets back is a number the
- *                       CV does not contain. Ask the user in the UI; never write
- *                       a [X%] placeholder into their CV.
+ *
+ * There is no "ask the user for a number" path: a bullet without a figure is
+ * improved by wording, never by interrogating the user for a metric.
  */
 export interface BulletResult {
   improvements: BulletImprovement[]
-  status: "improved" | "already_optimized" | "metric_missing"
-  /** Questions to surface for status "metric_missing". Empty otherwise. */
-  metricQuestions?: string[]
+  status: "improved" | "already_optimized"
 }
 
 // Shared API↔UI contract for /api/ai/improve-bullet — the client must parse
 // the response with this schema instead of trusting the shape blindly.
 export const ImproveBulletResponseSchema = z.object({
   improvements: z.array(BulletImprovementSchema),
-  status: z.enum(["improved", "already_optimized", "metric_missing"]),
-  metricQuestions: z.array(z.string()).max(3).optional(),
+  status: z.enum(["improved", "already_optimized"]),
 })
 
 // Per-category coverage sub-scores (0-100), computed deterministically in code.

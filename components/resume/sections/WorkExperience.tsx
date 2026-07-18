@@ -11,7 +11,6 @@ import { Switch } from "@/components/ui/switch"
 import {
   Plus, Trash2, ChevronDown, ChevronRight, Loader2,
   Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText, Wand2, ChevronLeft,
-  TrendingUp, HelpCircle,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
@@ -103,7 +102,6 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
   const [improving, setImproving] = useState(false)
   const [improved, setImproved] = useState(false)
   const [alreadyOptimized, setAlreadyOptimized] = useState(false)
-  const [metricPrompt, setMetricPrompt] = useState<string[] | null>(null)
   const [bulletModal, setBulletModal] = useState<{ pairs: BulletPair[]; working: string[]; total: number } | null>(null)
   const lastKeyRef = useRef("")
 
@@ -162,14 +160,11 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
 
-      const { status, improvements, metricQuestions } = contract.data
+      const { status, improvements } = contract.data
 
       if (status === "already_optimized" || improvements.length === 0) {
-        // The AI is now allowed to return nothing, and nothing is a real answer.
-        if (status === "metric_missing" && metricQuestions?.length) {
-          setMetricPrompt(metricQuestions)
-          return
-        }
+        // The AI is allowed to return nothing, and nothing is a real answer:
+        // the content is already good. No metric interrogation.
         setAlreadyOptimized(true)
         return
       }
@@ -187,7 +182,6 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
 
       if (pairs.length === 0) { setAlreadyOptimized(true); return }
       setBulletModal({ pairs, working, total: origLines.length })
-      if (status === "metric_missing" && metricQuestions?.length) setMetricPrompt(metricQuestions)
     } catch {
       toast.error(ai("error_bullet"))
     } finally {
@@ -338,58 +332,6 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
               />
             </div>
 
-            {/* The AI wanted a figure the CV doesn't have. It asks instead of
-                inventing one — and the answer goes in the textarea above, never
-                as a [X%] bracket in the user's CV. */}
-            {metricPrompt && (
-              <div
-                className="mt-2 rounded-xl overflow-hidden"
-                style={{
-                  background: "linear-gradient(135deg, rgba(255,251,240,0.95) 0%, rgba(254,243,220,0.7) 100%)",
-                  border: "1px solid rgba(212,165,116,0.35)",
-                  boxShadow: "0 2px 12px rgba(212,165,116,0.12)",
-                }}
-              >
-                <div className="flex items-start gap-2.5 px-3 pt-2.5">
-                  <div
-                    className="flex items-center justify-center w-6 h-6 rounded-lg shrink-0 mt-px"
-                    style={{
-                      background: "linear-gradient(135deg, #D4A574 0%, #B8874F 100%)",
-                      boxShadow: "0 2px 6px rgba(212,165,116,0.35)",
-                    }}
-                  >
-                    <TrendingUp className="w-3 h-3 text-white" strokeWidth={2.5} />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[11.5px] font-bold text-[#1a2e4a] leading-tight">
-                      {ai("metric_missing_title")}
-                    </p>
-                    <p className="text-[10.5px] text-[#7A6A55] leading-relaxed mt-0.5">
-                      {ai("metric_missing_desc")}
-                    </p>
-                  </div>
-                </div>
-
-                <ul className="px-3 pt-2 pb-1 space-y-1">
-                  {metricPrompt.map((q) => (
-                    <li key={q} className="flex items-start gap-2">
-                      <HelpCircle className="w-3 h-3 shrink-0 mt-[3px] text-[#B8874F]" strokeWidth={2.2} />
-                      <span className="text-[11px] text-[#5C4A33] leading-relaxed">{q}</span>
-                    </li>
-                  ))}
-                </ul>
-
-                <div className="flex justify-end px-3 pb-2">
-                  <button
-                    type="button"
-                    onClick={() => setMetricPrompt(null)}
-                    className="min-h-[32px] px-3 text-[10.5px] font-semibold text-[#8A7355] rounded-lg transition-colors duration-150 hover:bg-[rgba(212,165,116,0.12)] hover:text-[#5C4A33]"
-                  >
-                    {ai("metric_missing_dismiss")}
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
         </div>
       )}

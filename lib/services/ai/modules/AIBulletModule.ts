@@ -9,7 +9,6 @@ import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
-import { assessDescription } from "../shared/bullet-quality"
 import {
   AI_INPUT_LIMITS,
   BulletImprovementSchema,
@@ -42,22 +41,10 @@ export class AIBulletModule {
     const originalBullets = parseBullets(text)
     const indexedBullets = renderBulletsForPrompt(originalBullets, { indent: "  " })
 
-    // Which bullets state no figure is a regex, not a judgement call. Tell the
-    // model the answer instead of making it guess — it only has to phrase the
-    // question for the ones that need one.
-    const quality = assessDescription(text)
-    const missingList = quality.missingMetricIndices.join(", ")
-    const metricHintEN = quality.missingMetricIndices.length
-      ? `\nBullets with no figure of their own: [${missingList}]. These are the only ones you may ask a metricQuestion about. Every other bullet already states its number — never ask for one it already has.`
-      : `\nEvery bullet already states a figure. Do NOT return metric_missing.`
-    const metricHintES = quality.missingMetricIndices.length
-      ? `\nBullets sin cifra propia: [${missingList}]. Son los únicos por los que puedes preguntar en metricQuestions. Todos los demás ya declaran su número — nunca pidas uno que ya está.`
-      : `\nTodos los bullets ya declaran una cifra. NO devuelvas metric_missing.`
-
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information present in the original bullets and the context above. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, dates, or any metric not explicitly provided.
-2. NEVER write a placeholder. No [X%], [N users], [$Z], <number>, or anything in brackets standing in for a figure. What you return is written straight into the candidate's CV, and a bracket left in it gets the CV rejected. If a bullet needs a number the source does not have, do NOT rewrite that bullet — omit it and ask for the figure via "metricQuestions" instead.
+2. NEVER write a placeholder. No [X%], [N users], [$Z], <number>, or anything in brackets standing in for a figure. What you return is written straight into the candidate's CV, and a bracket left in it gets the CV rejected. If a bullet has no number in the source, still improve its wording and impact WITHOUT a figure — stronger verb, clearer action and outcome. NEVER invent a number and NEVER ask the user for one.
 3. CAR method (Action-Context-Result) — the "Result" segment can only cite results EXPLICITLY present in the source.
 
 TASK: Improve the bullets of this work experience for an executive resume.
@@ -66,7 +53,6 @@ ${context ? `Position context: ${context}` : ""}
 
 Original bullets (each addressed by its index):
 ${indexedBullets}
-${metricHintEN}
 
 TRANSFORMATION RULES:
 1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Result stated in the source.
@@ -81,17 +67,16 @@ TRANSFORMATION RULES:
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
 
 WHAT TO RETURN — read this last and follow it exactly:
-Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve using facts already in the source. Omit every other bullet. A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure.
+Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve using facts already in the source. Omit every other bullet. A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. A bullet with no number can still be improved by wording (stronger verb, clearer action/outcome) — improve it; never demand a figure.
 - No bullet can be materially improved → {"status": "already_optimized", "improvements": []}. This is a correct and expected answer.
-- The ONLY thing blocking an improvement is a figure the source lacks → {"status": "metric_missing", "improvements": [any bullets you COULD improve], "metricQuestions": ["short question naming the figure you need"]}. Max 3 questions.
 - Otherwise → {"status": "improved", "improvements": [...]}.
 - The text is not real professional work experience → {"status": "off_topic", "improvements": []}.
 
 Respond ONLY with valid JSON (no markdown):
-{"status": "improved", "improvements": [{"index": 0, "text": "• improved bullet"}], "metricQuestions": []}`
+{"status": "improved", "improvements": [{"index": 0, "text": "• improved bullet"}]}`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información presente en los bullets originales y el contexto de arriba. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales, fechas, ni métricas no proporcionadas.
-2. NUNCA escribas un placeholder. Ni [X%], ni [N usuarios], ni [$Z], ni <número>, ni nada entre corchetes que sustituya a una cifra. Lo que devuelves se escribe directo en el CV del candidato, y un corchete olvidado ahí hace que le rechacen el CV. Si un bullet necesita una cifra que el source no tiene, NO lo reescribas — omítelo y pide el dato en "metricQuestions".
+2. NUNCA escribas un placeholder. Ni [X%], ni [N usuarios], ni [$Z], ni <número>, ni nada entre corchetes que sustituya a una cifra. Lo que devuelves se escribe directo en el CV del candidato, y un corchete olvidado ahí hace que le rechacen el CV. Si un bullet no tiene cifra en el source, igual mejóralo por redacción e impacto SIN una cifra — verbo más fuerte, acción y resultado más claros. NUNCA inventes un número y NUNCA le pidas uno al usuario.
 3. Método CAR (Acción-Contexto-Resultado) — el "Resultado" solo puede citar resultados EXPLÍCITOS en el source.
 
 TAREA: Mejora los bullets de esta experiencia laboral para un CV ejecutivo.
@@ -100,7 +85,6 @@ ${context ? `Contexto del puesto: ${context}` : ""}
 
 Bullets originales (cada uno con su índice):
 ${indexedBullets}
-${metricHintES}
 
 REGLAS DE TRANSFORMACIÓN:
 1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado presente en el source.
@@ -115,14 +99,13 @@ REGLAS DE TRANSFORMACIÓN:
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
 
 QUÉ DEVOLVER — lee esto al final y cúmplelo exactamente:
-Incluye una entrada en "improvements" SOLO para un bullet que puedas mejorar MATERIALMENTE usando datos ya presentes en el source. Omite todos los demás. Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo.
+Incluye una entrada en "improvements" SOLO para un bullet que puedas mejorar MATERIALMENTE usando datos ya presentes en el source. Omite todos los demás. Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. Un bullet sin número igual se puede mejorar por redacción (verbo más fuerte, acción/resultado más claros) — mejóralo; nunca exijas una cifra.
 - Ningún bullet se puede mejorar materialmente → {"status": "already_optimized", "improvements": []}. Es una respuesta correcta y esperada.
-- Lo ÚNICO que impide mejorar es una cifra que el source no tiene → {"status": "metric_missing", "improvements": [los bullets que SÍ pudiste mejorar], "metricQuestions": ["pregunta corta nombrando la cifra que necesitas"]}. Máximo 3 preguntas.
 - En cualquier otro caso → {"status": "improved", "improvements": [...]}.
 - El texto no es experiencia laboral profesional real → {"status": "off_topic", "improvements": []}.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
-{"status": "improved", "improvements": [{"index": 0, "text": "• bullet mejorado"}], "metricQuestions": []}`
+{"status": "improved", "improvements": [{"index": 0, "text": "• bullet mejorado"}]}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
@@ -138,7 +121,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             "Tu especialidad: transformar descripciones genéricas en bullets de alto impacto que superan filtros ATS y capturan la atención de recruiters en los primeros 6 segundos de lectura. " +
             "Usas el método CAR (Acción-Contexto-Resultado) y priorizas logros de negocio sobre responsabilidades. " +
             "SOLO procesas contenido de experiencia laboral profesional real. Si el contenido no es de experiencia laboral, responde: {\"status\": \"off_topic\", \"improvements\": []}. " +
-            "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando falta una métrica real, omites el bullet y pides el dato. " +
+            "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando falta una métrica, mejoras la redacción del bullet sin inventar ni pedir un número. " +
             "Devolver menos sugerencias de las que te piden es correcto: solo sugieres lo que mejora de verdad. " +
             langInstruction,
         },
@@ -203,33 +186,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       })
     }
 
-    // The model asked for a figure the CV lacks. Surface the question in the UI —
-    // never write a bracket placeholder into the user's CV.
-    // The model may only PHRASE the questions, never decide whether a figure is
-    // missing — that is a regex, and the regex is right every time. Honour the
-    // status only when the bullets genuinely carry no number: a model claiming
-    // metric_missing about an already-quantified description would nag the user
-    // for a figure they already gave.
-    if (parsed.status === "metric_missing" && quality.missingMetricIndices.length > 0) {
-      const metricQuestions = Array.isArray(parsed.metricQuestions)
-        ? (parsed.metricQuestions as unknown[])
-            .filter((q): q is string => typeof q === "string" && q.trim().length > 0)
-            .slice(0, 3)
-        : []
-      if (metricQuestions.length > 0) {
-        return { status: "metric_missing", improvements, metricQuestions }
-      }
-    }
-
-    if (parsed.status === "metric_missing" && quality.missingMetricIndices.length === 0) {
-      this.logger.warn("[AIService.improveBullet] model claimed metric_missing on a quantified description", {
-        bullets: quality.bullets.length,
-      })
-    }
-
     // Nothing survived — or the model itself declined. Both mean the same thing
-    // to the user, and both are legitimate answers now that it is allowed to
-    // return none.
+    // to the user: nothing to improve. No metric interrogation — a bullet without
+    // a number is improved by wording, never by nagging the user for a figure.
     if (improvements.length === 0) return { status: "already_optimized", improvements: [] }
 
     return { status: "improved", improvements }
