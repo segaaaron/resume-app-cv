@@ -28,7 +28,11 @@ export async function GET(req: Request) {
   }
 
   try {
-    const result = await recordCronRun("purge-stripe-events", () => cronService.purgeStripeEvents())
+    const result = await recordCronRun("purge-stripe-events", async () => {
+      const events = await cronService.purgeStripeEvents()
+      const webhookLogs = await cronService.purgeStripeWebhookLogs()
+      return { deleted: events.deleted, webhookLogsDeleted: webhookLogs.deleted }
+    })
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

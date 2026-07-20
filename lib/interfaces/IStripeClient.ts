@@ -11,4 +11,9 @@ export interface IStripeClient {
   listCustomers(params: Stripe.CustomerListParams): Promise<Stripe.ApiList<Stripe.Customer>>
   createCustomer(params: Stripe.CustomerCreateParams): Promise<Stripe.Customer>
   createRefund(params: Stripe.RefundCreateParams): Promise<Stripe.Refund>
+  // ── Read-only, for the admin "Stripe Health" live panel ──
+  retrieveBalance(): Promise<Stripe.Balance>
+  listCharges(params: Stripe.ChargeListParams): Promise<Stripe.ApiList<Stripe.Charge>>
+  listDisputes(params: Stripe.DisputeListParams): Promise<Stripe.ApiList<Stripe.Dispute>>
+  listSubscriptions(params: Stripe.SubscriptionListParams): Promise<Stripe.ApiList<Stripe.Subscription>>
 }

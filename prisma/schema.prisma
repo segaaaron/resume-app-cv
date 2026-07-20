@@ -267,6 +267,28 @@ model StripeEvent {
   @@index([userId, processedAt])
 }
 
+/// Durable observability log for every Stripe webhook the app receives.
+/// Separate from StripeEvent (idempotency/dedup): this records BOTH successes
+/// and failures with type/status/error/latency for the admin monitoring view.
+model StripeWebhookLog {
+  id               String        @id @default(cuid())
+  stripeEventId    String        @unique // evt_xxx — upsert increments attempts on Stripe retries
+  type             String // event.type (e.g. checkout.session.completed)
+  status           WebhookStatus
+  errorMessage     String?       @db.Text
+  errorFingerprint String? // optional link to ErrorLog.fingerprint
+  latencyMs        Int?
+  attempts         Int           @default(1)
+  objectId         String? // id of the primary object (sub/charge/session) — NOT the full payload (PII)
+  userId           String?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([type, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
 model AuditLog {
   id        String      @id @default(cuid())
   userId    String
@@ -278,6 +300,7 @@ model AuditLog {
   @@index([userId])
   @@index([userId, createdAt])
   @@index([action])
+  @@index([action, createdAt])
 }
 
 enum AuditAction {
@@ -333,6 +356,12 @@ enum SubscriptionStatus {
   CANCELED
   EXPIRED
   PAST_DUE
+}
+
+enum WebhookStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
 }
 
 enum AppStatus {

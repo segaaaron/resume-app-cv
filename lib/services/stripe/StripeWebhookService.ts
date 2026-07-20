@@ -17,6 +17,12 @@ function isDuplicate(e: unknown): boolean {
   return (e as PrismaUniqueError)?.code === "P2002"
 }
 
+function errMessage(e: unknown): string {
+  if (e instanceof AppError) return e.code
+  if (e instanceof Error) return e.message
+  return String(e)
+}
+
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
 
 /** Claim an event for idempotent processing. Returns false if already processed. */
@@ -46,6 +52,9 @@ export class StripeWebhookService {
 
     this.logger.info("StripeWebhookService.handleEvent", { type: event.type, eventId: event.id })
 
+    const start = Date.now()
+    let handled = true
+
     try {
       switch (event.type) {
         case "checkout.session.completed": await this.handleCheckoutCompleted(event); break
@@ -69,11 +78,60 @@ export class StripeWebhookService {
           this.logger.info("StripeWebhookService: trial_will_end", { subscriptionId: sub.id, customerId: sub.customer, trialEnd: sub.trial_end })
           break
         }
+        default:
+          handled = false
+          break
       }
     } catch (e) {
+      // Record the failure for the admin monitoring view BEFORE re-throwing.
+      // Best-effort + isolated: a logging failure must never mask the original error.
+      await this.recordWebhook(event, "FAILED", Date.now() - start, errMessage(e))
       if (e instanceof AppError) throw e
       this.logger.error("StripeWebhookService.handleEvent: handler error", { eventId: event.id, type: event.type }, e instanceof Error ? e : undefined)
       throw new AppError("handler_error", 500)
+    }
+
+    // Unmatched event types are received-but-no-op → SKIPPED; everything else SUCCESS.
+    await this.recordWebhook(event, handled ? "SUCCESS" : "SKIPPED", Date.now() - start)
+  }
+
+  /**
+   * Durable observability side-write for the admin "Stripe Health" panel.
+   * Independent of the idempotency claim (StripeEvent) and of any handler transaction;
+   * on Stripe retries the same stripeEventId upserts and increments `attempts`.
+   * Fully best-effort: never throws into the webhook flow.
+   */
+  private async recordWebhook(
+    event: Stripe.Event,
+    status: "SUCCESS" | "FAILED" | "SKIPPED",
+    latencyMs: number,
+    errorMessage?: string,
+  ): Promise<void> {
+    try {
+      const obj = event.data.object as { id?: unknown; metadata?: Record<string, unknown> | null }
+      const objectId = typeof obj?.id === "string" ? obj.id : null
+      const userId = typeof obj?.metadata?.userId === "string" ? obj.metadata.userId : null
+      const trimmedError = errorMessage ? errorMessage.slice(0, 2000) : null
+      await db.stripeWebhookLog.upsert({
+        where: { stripeEventId: event.id },
+        create: {
+          stripeEventId: event.id,
+          type: event.type,
+          status,
+          latencyMs,
+          objectId,
+          userId,
+          errorMessage: trimmedError,
+        },
+        update: {
+          status,
+          latencyMs,
+          errorMessage: trimmedError,
+          attempts: { increment: 1 },
+        },
+      })
+    } catch (e) {
+      this.logger.error("StripeWebhookService.recordWebhook: log write failed", { eventId: event.id, type: event.type }, e instanceof Error ? e : undefined)
     }
   }
 

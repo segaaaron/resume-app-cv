@@ -33,4 +33,16 @@ export class StripeClientAdapter implements IStripeClient {
   async createRefund(params: Stripe.RefundCreateParams): Promise<Stripe.Refund> {
     return stripe!.refunds.create(params)
   }
+  async retrieveBalance(): Promise<Stripe.Balance> {
+    return stripe!.balance.retrieve()
+  }
+  async listCharges(params: Stripe.ChargeListParams): Promise<Stripe.ApiList<Stripe.Charge>> {
+    return stripe!.charges.list(params)
+  }
+  async listDisputes(params: Stripe.DisputeListParams): Promise<Stripe.ApiList<Stripe.Dispute>> {
+    return stripe!.disputes.list(params)
+  }
+  async listSubscriptions(params: Stripe.SubscriptionListParams): Promise<Stripe.ApiList<Stripe.Subscription>> {
+    return stripe!.subscriptions.list(params)
+  }
 }

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Users as UsersIcon, ArrowRight, Activity, AlertOctagon } from "lucide-react"
+import { Users as UsersIcon, ArrowRight, Activity, AlertOctagon, CreditCard } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import AdminUsersTable from "@/components/admin/AdminUsersTable"
@@ -247,6 +247,29 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
             </div>
           </div>
           <ArrowRight className="w-4 h-4 text-[#EF4444] transition-transform duration-200 group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+
+      {/* Stripe health entry point */}
+      <div className="dash-card-in mb-7" style={{ animationDelay: "118ms" }}>
+        <Link
+          href={`/${locale}/dashboard/admin/stripe`}
+          className="group flex items-center justify-between gap-4 px-5 py-4 rounded-[12px] border border-[rgba(99,91,255,0.2)] bg-gradient-to-br from-[#eef0fb] via-white to-[#dcdcf5] shadow-[0_4px_16px_rgba(15,25,45,0.04)] hover:shadow-[0_8px_28px_rgba(99,91,255,0.16)] hover:-translate-y-px transition-all duration-200 no-underline"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#635BFF] to-[#4B45C6] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(99,91,255,0.3)]">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[14px] font-bold text-[#1a2e4a] tracking-[-0.01em]">
+                {t("stripe_entry_title")}
+              </div>
+              <div className="text-[11.5px] text-[#6B7A8C] mt-px">
+                {t("stripe_entry_subtitle")}
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[#635BFF] transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </div>
 

@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({
   db: {
     $transaction: vi.fn(),
     stripeEvent: { findUnique: vi.fn() },
+    stripeWebhookLog: { upsert: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
     auditLog: { create: vi.fn() },
   },
@@ -43,6 +44,10 @@ const mockStripeClient: IStripeClient = {
   listCustomers: vi.fn(),
   createCustomer: vi.fn(),
   createRefund: vi.fn(),
+  retrieveBalance: vi.fn(),
+  listCharges: vi.fn(),
+  listDisputes: vi.fn(),
+  listSubscriptions: vi.fn(),
 }
 
 const mockLogger: ILogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }

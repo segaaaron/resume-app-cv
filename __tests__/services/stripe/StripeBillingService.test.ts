@@ -12,6 +12,7 @@ const mockStripeClient: IStripeClient = {
   cancelSubscription: vi.fn(), updateSubscription: vi.fn(),
   createCheckoutSession: vi.fn(), createPortalSession: vi.fn(),
   listCustomers: vi.fn(), createCustomer: vi.fn(), createRefund: vi.fn(),
+  retrieveBalance: vi.fn(), listCharges: vi.fn(), listDisputes: vi.fn(), listSubscriptions: vi.fn(),
 }
 const mockLogger: ILogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 const makeService = () => new StripeBillingService(mockStripeClient, mockLogger)

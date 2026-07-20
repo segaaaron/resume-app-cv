@@ -4,7 +4,7 @@ import { StripeCheckoutService } from "@/lib/services/stripe/StripeCheckoutServi
 import { StripeBillingService } from "@/lib/services/stripe/StripeBillingService"
 import { createLogger } from "@/lib/logger"
 
-const stripeClient = new StripeClientAdapter()
+export const stripeClient = new StripeClientAdapter()
 
 export const stripeWebhookService = new StripeWebhookService(
   stripeClient,
