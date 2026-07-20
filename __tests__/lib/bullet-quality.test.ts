@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { assessDescription } from "@/lib/services/ai/shared/bullet-quality"
+import { assessDescription, assessResumeContent } from "@/lib/services/ai/shared/bullet-quality"
 
 describe("assessDescription", () => {
   it("returns an empty assessment for an empty description", () => {
@@ -70,5 +70,32 @@ describe("assessDescription", () => {
     expect(assessDescription("• Mentored 5 engineers").bullets[0].hasMetric).toBe(true)
     expect(assessDescription("• Shipped 3 releases").bullets[0].hasMetric).toBe(true)
     expect(assessDescription("• Worked across 4 countries").bullets[0].hasMetric).toBe(true)
+  })
+})
+
+describe("assessResumeContent", () => {
+  it("aggregates quantification + weak openers across all work experience", () => {
+    const sectionData = {
+      workExperience: [
+        { description: "• Increased sales 32%\n• Responsible for the team" },
+        { description: "• Led 5 engineers" },
+      ],
+    }
+    const r = assessResumeContent(sectionData)
+    expect(r.totalBullets).toBe(3)
+    expect(r.quantifiedBullets).toBe(2)          // "32%" and "5 engineers"
+    expect(r.quantificationPct).toBe(67)          // 2/3
+    expect(r.weakOpenerBullets).toBe(1)           // "Responsible for the team"
+  })
+
+  it("is NaN-free and zeroed when there is no work experience", () => {
+    const r = assessResumeContent({})
+    expect(r).toEqual({ totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0 })
+  })
+
+  it("does not throw on a malformed (non-array) workExperience", () => {
+    // sectionData is client-controlled — a non-array must degrade, not 500.
+    expect(() => assessResumeContent({ workExperience: "oops" as unknown })).not.toThrow()
+    expect(assessResumeContent({ workExperience: 42 as unknown }).totalBullets).toBe(0)
   })
 })

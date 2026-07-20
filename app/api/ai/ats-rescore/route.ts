@@ -1,11 +1,19 @@
+// POST /api/ai/ats-rescore
+// Deterministic ATS re-score — NO LLM, NO quota. Reuses the keywords a prior
+// /api/ai/ats-score already extracted, so the score moves the instant the user
+// applies a fix, without spending another AI call or hitting the cooldown.
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, handleError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
-import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 
 const schema = z.object({
-  jobDescription: z.string().min(20).max(AI_INPUT_LIMITS.jobDescription),
+  keywords: z.object({
+    hardSkills: z.array(z.string().max(120)).max(60),
+    softSkills: z.array(z.string().max(120)).max(60),
+    jobTitle: z.string().max(200),
+    mustHaves: z.array(z.string().max(200)).max(60),
+  }),
   sectionData: z.record(z.string(), z.unknown()).optional(),
   language: z.enum(["es", "en"]).optional(),
   templateId: z.string().max(64).optional(),
@@ -19,7 +27,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
 
   try {
-    const result = await aiService.atsScore(authResult.userId, parsed.data, authResult.user.plan)
+    const result = aiService.atsRescore(parsed.data)
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

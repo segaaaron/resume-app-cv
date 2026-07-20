@@ -10,6 +10,7 @@
 // only writes.
 import { ANY_METRIC_REGEX } from "./ai-helpers"
 import { parseBullets } from "./bullets"
+import type { ATSContentQuality } from "./ai-types"
 
 /** Openers that describe a duty instead of an achievement. */
 const WEAK_OPENERS: readonly string[] = [
@@ -71,5 +72,31 @@ export function assessDescription(description: string): DescriptionQuality {
     quantificationRatio: bullets.length ? withMetric / bullets.length : 0,
     missingMetricIndices: bullets.filter((b) => !b.hasMetric).map((b) => b.index),
     weakOpenerIndices: bullets.filter((b) => b.weakOpener).map((b) => b.index),
+  }
+}
+
+/**
+ * Aggregate content-quality across every work-experience description, reusing the
+ * per-description assessDescription (no new regex). Reported, never scored.
+ */
+export function assessResumeContent(sectionData: Record<string, unknown>): ATSContentQuality {
+  // sectionData is client-controlled (z.unknown), so workExperience may be anything.
+  // Guard against a non-array value that would make for..of throw a 500.
+  const raw = sectionData?.workExperience
+  const work = (Array.isArray(raw) ? raw : []) as Array<{ description?: string }>
+  let totalBullets = 0
+  let quantifiedBullets = 0
+  let weakOpenerBullets = 0
+  for (const job of work) {
+    const q = assessDescription(job?.description ?? "")
+    totalBullets += q.bullets.length
+    quantifiedBullets += q.bullets.filter((b) => b.hasMetric).length
+    weakOpenerBullets += q.weakOpenerIndices.length
+  }
+  return {
+    totalBullets,
+    quantifiedBullets,
+    quantificationPct: totalBullets ? Math.round((quantifiedBullets / totalBullets) * 100) : 0,
+    weakOpenerBullets,
   }
 }

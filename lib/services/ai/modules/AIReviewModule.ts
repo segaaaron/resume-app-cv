@@ -22,10 +22,13 @@ import {
   ReviewResponseSchema,
   type ATSScoreInput,
   type ATSScoreResult,
+  type ATSRescoreInput,
   type ReviewCVInput,
   type ReviewResult,
 } from "../shared/ai-types"
 import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
+import { getTemplateAtsSafety, templateFormatScore } from "@/lib/ats/template-ats-safety"
+import { assessResumeContent } from "../shared/bullet-quality"
 
 export class AIReviewModule {
   constructor(
@@ -36,7 +39,7 @@ export class AIReviewModule {
   async atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
     await enforceAIQuota(userId, "ats-score", plan)
 
-    const { jobDescription, sectionData, language: rawLanguage } = input
+    const { jobDescription, sectionData, language: rawLanguage, templateId } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
     const en = language === "en"
 
@@ -169,11 +172,18 @@ Reglas:
       evidenceText,
     )
 
-    const label = localizedLabel(scoreLabel(match.score), en)
-    const summary = extraction.summary.trim() || defaultSummary(match.score, en)
+    // Template parseability. A multi-column / sidebar layout can be reordered by
+    // strict ATS parsers, so it must not score identically to a clean single-column
+    // one. "caution" takes a modest, honest ding; "safe" is neutral (no inflation).
+    const templateSafety = getTemplateAtsSafety(templateId)
+    const formatScore = templateFormatScore(templateSafety)
+    const finalScore = templateSafety === "caution" ? Math.round(match.score * 0.9) : match.score
+
+    const label = localizedLabel(scoreLabel(finalScore), en)
+    const summary = extraction.summary.trim() || defaultSummary(finalScore, en)
 
     return {
-      score: match.score,
+      score: finalScore,
       label,
       summary,
       // Strengths / gaps are derived from the deterministic match so they can
@@ -186,7 +196,56 @@ Reglas:
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
       suggestions: extraction.suggestions,
-      subScores: match.subScores,
+      subScores: { ...match.subScores, format: formatScore },
+      templateSafety,
+      extractedKeywords: {
+        hardSkills: extraction.hardSkills,
+        softSkills: extraction.softSkills,
+        jobTitle: extraction.jobTitle,
+        mustHaves: extraction.mustHaves,
+      },
+      contentQuality: assessResumeContent(data),
+    }
+  }
+
+  /**
+   * Deterministic re-score — NO LLM call, NO quota. Reuses the JD keywords a prior
+   * ats-score already extracted, and re-runs the same in-code match against the
+   * (now edited) CV so the user sees the score move the instant they apply a fix.
+   * Same computeATSMatch + template factor as atsScore → identical scoring, zero drift.
+   */
+  atsRescore(input: ATSRescoreInput): ATSScoreResult {
+    const { keywords, sectionData, language: rawLanguage, templateId } = input
+    const { language } = resolveLanguage(rawLanguage)
+    const en = language === "en"
+    const data = sectionData ?? {}
+
+    const resumeText = buildResumeContext(data, language).slice(0, AI_INPUT_LIMITS.resumeContext)
+    if (!resumeText.trim()) throw new AppError("not_enough_resume_data", 400)
+
+    const cvTitles = buildCVTitles(data)
+    const sections = buildSectionPresence(data)
+    const evidenceText = buildEvidenceText(data)
+    const match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText)
+
+    const templateSafety = getTemplateAtsSafety(templateId)
+    const formatScore = templateFormatScore(templateSafety)
+    const finalScore = templateSafety === "caution" ? Math.round(match.score * 0.9) : match.score
+
+    return {
+      score: finalScore,
+      label: localizedLabel(scoreLabel(finalScore), en),
+      summary: defaultSummary(finalScore, en),
+      strengths: match.demonstratedKeywords,
+      gaps: match.missingMustHaves,
+      matchedKeywords: match.matchedKeywords,
+      missingKeywords: match.missingKeywords,
+      listedOnlyKeywords: match.listedOnlyKeywords,
+      suggestions: [],
+      subScores: { ...match.subScores, format: formatScore },
+      templateSafety,
+      extractedKeywords: keywords,
+      contentQuality: assessResumeContent(data),
     }
   }
 

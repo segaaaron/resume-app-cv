@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
@@ -132,10 +132,19 @@ export default function ATSScorePanel() {
     atsResult, reviewResult,
     offTopic,
     analyze,
+    rescore,
+    verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
   } = useATSScore()
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
+  const [delta, setDelta] = useState<number | null>(null)
+
+  // Re-score deterministically after a fix and surface the improvement.
+  async function runRescore() {
+    const d = await rescore()
+    if (d !== null && d !== 0) setDelta(d)
+  }
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
 
@@ -149,6 +158,7 @@ export default function ATSScorePanel() {
   async function handleSubmit() {
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
+    setDelta(null)
     await analyze()
   }
 
@@ -186,6 +196,7 @@ export default function ATSScorePanel() {
 
       setAppliedItems((prev) => new Set(prev).add(itemKey))
       toast.success(t("toast_change_applied"))
+      void runRescore()
     } catch {
       toast.error(t("toast_change_error"))
     } finally {
@@ -209,6 +220,7 @@ export default function ATSScorePanel() {
     ])
     setAddedKeywords((prev) => new Set(prev).add(keyword))
     toast.success(t("keyword_added", { keyword }))
+    void runRescore()
   }
 
   function addAllKeywords() {
@@ -223,6 +235,7 @@ export default function ATSScorePanel() {
     ])
     setAddedKeywords((prev) => { const next = new Set(prev); missing.forEach((kw) => next.add(kw)); return next })
     toast.success(t("keywords_added", { count: missing.length }))
+    void runRescore()
   }
 
   function ReviewItemRow({ item, itemKey, icon, iconColor }: {
@@ -347,6 +360,11 @@ export default function ATSScorePanel() {
             {/* Score section */}
             <div className="flex flex-col items-center gap-1 py-2">
               <ScoreRing score={atsResult.score} label={t("score_label")} />
+              {delta !== null && delta > 0 && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                  <TrendingUp className="h-3 w-3 shrink-0" /> {t("score_delta", { delta })}
+                </span>
+              )}
               <p className="text-sm font-bold text-slate-800">{atsResult.label}</p>
               <p className="text-[11px] text-slate-500 text-center leading-relaxed max-w-[240px]">{atsResult.summary}</p>
 
@@ -364,14 +382,33 @@ export default function ATSScorePanel() {
               )}
             </div>
 
-            {/* C1 — trust seal: a CV built from structured data parses cleanly */}
-            <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 px-3 py-2">
-              <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-[10.5px] font-bold text-emerald-800 leading-tight">{t("parseable_badge")}</p>
-                <p className="text-[9.5px] text-emerald-600/90 leading-snug mt-0.5">{t("parseable_hint")}</p>
+            {/* C1 — parseability, template-aware. A single-column template parses
+                cleanly; a multi-column one may be reordered by a strict ATS, so we
+                say so honestly instead of showing a blanket "parses cleanly" seal. */}
+            {atsResult.templateSafety === "caution" ? (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50/80 to-orange-50/50 px-3 py-2.5">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-[10.5px] font-bold text-amber-800 leading-tight">{t("template_caution_title")}</p>
+                  <p className="text-[9.5px] text-amber-700/90 leading-snug mt-0.5">{t("template_caution_desc")}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "planillas" }))}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full px-2.5 py-0.5 transition-all"
+                  >
+                    <LayoutTemplate className="h-2.5 w-2.5" /> {t("template_caution_action")}
+                  </button>
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="flex items-start gap-2 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/70 to-teal-50/40 px-3 py-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[10.5px] font-bold text-emerald-800 leading-tight">{t("parseable_badge")}</p>
+                  <p className="text-[9.5px] text-emerald-600/90 leading-snug mt-0.5">{t("parseable_hint")}</p>
+                </div>
+              </div>
+            )}
 
             {/* Analysis bars — real per-category coverage sub-scores computed
                 server-side (not derived from list lengths). Categories the job
@@ -391,6 +428,39 @@ export default function ATSScorePanel() {
                 {atsResult.subScores.sections !== null && atsResult.subScores.sections !== undefined && (
                   <ScoreBar label={t("bar_sections")} pct={atsResult.subScores.sections} />
                 )}
+              </div>
+            )}
+
+            {/* F2 — content quality (reported, not scored): reuses assessDescription.
+                A bullet without a figure is not penalized; the user is shown the
+                signal and given one click to strengthen it via improve-bullet. */}
+            {atsResult.contentQuality && atsResult.contentQuality.totalBullets > 0 && (
+              <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
+                  <TrendingUp className="h-3 w-3" /> {t("content_quality_title")}
+                </p>
+                <p className="text-[11px] text-slate-700 leading-relaxed">
+                  {t("content_quality_metrics", {
+                    pct: atsResult.contentQuality.quantificationPct,
+                    quantified: atsResult.contentQuality.quantifiedBullets,
+                    total: atsResult.contentQuality.totalBullets,
+                  })}
+                </p>
+                {atsResult.contentQuality.weakOpenerBullets > 0 && (
+                  <p className="text-[11px] text-slate-700 leading-relaxed mt-1">
+                    {t("content_quality_weak", { count: atsResult.contentQuality.weakOpenerBullets })}
+                  </p>
+                )}
+                <div className="flex items-center justify-between gap-2 mt-2">
+                  <p className="text-[10px] text-slate-500 leading-relaxed flex-1">{t("content_quality_hint")}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "content" }))}
+                    className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-100 hover:bg-violet-200 border border-violet-200 rounded-full px-2.5 py-0.5 transition-all"
+                  >
+                    <Wand2 className="h-2.5 w-2.5" /> {t("content_quality_action")}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -490,6 +560,52 @@ export default function ATSScorePanel() {
                 </ul>
               </div>
             )}
+
+            {/* F4 — verify against the REAL exported PDF. The score above reads the
+                structured data; this renders the file and reads what an ATS extracts. */}
+            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-blue-50/50 p-3.5">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-indigo-600 flex items-center gap-1.5">
+                  <FileSearch className="h-3 w-3" /> {t("verify_title")}
+                </p>
+                <button
+                  type="button"
+                  onClick={verifyReal}
+                  disabled={verifyLoading}
+                  className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border border-indigo-200 rounded-full px-2.5 py-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />}
+                  {verifyLoading ? t("verify_loading") : t("verify_button")}
+                </button>
+              </div>
+              <p className="text-[10.5px] text-slate-600 leading-relaxed">{t("verify_hint")}</p>
+
+              {verifyResult && (
+                <div className="mt-2.5 space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] text-slate-600">{t("verify_real_score")}</span>
+                    <span className="text-[15px] font-black text-[#1a2e4a]" style={{ fontFamily: "var(--mono,monospace)" }}>{verifyResult.realScore}</span>
+                    {atsResult.score - verifyResult.realScore >= 8 ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
+                        <AlertCircle className="h-2.5 w-2.5" /> {t("verify_delta_warning", { delta: atsResult.score - verifyResult.realScore })}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                        <CheckCircle2 className="h-2.5 w-2.5" /> {t("verify_delta_ok")}
+                      </span>
+                    )}
+                  </div>
+                  <details className="group">
+                    <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-800 select-none">
+                      {t("verify_extracted_label")}
+                    </summary>
+                    <pre className="mt-1.5 text-[10px] leading-relaxed text-slate-600 bg-white/70 border border-indigo-100 rounded-lg p-2.5 max-h-52 overflow-auto whitespace-pre-wrap break-words">
+                      {verifyResult.extractedText}
+                    </pre>
+                  </details>
+                </div>
+              )}
+            </div>
 
             {/* Step 2. The score measures; this rewrites. Chained off the same
                 job description rather than asking for it a second time. */}

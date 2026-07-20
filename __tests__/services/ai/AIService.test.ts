@@ -315,6 +315,27 @@ describe("AIService", () => {
       expect(result.label).toBeTruthy()
     })
 
+    it("is template-aware: a caution (multi-column) template dings the score and reports safety", async () => {
+      const jd = "We need a Developer with Kubernetes experience for our team."
+      const safe = await new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+        .atsScore("user-1", { jobDescription: jd, sectionData: richSectionData, templateId: "classic" }, "PRO")
+      const caution = await new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+        .atsScore("user-1", { jobDescription: jd, sectionData: richSectionData, templateId: "coralsidebar" }, "PRO")
+
+      expect(safe.templateSafety).toBe("safe")
+      expect(caution.templateSafety).toBe("caution")
+      expect(caution.score).toBeLessThan(safe.score)
+      expect(safe.subScores.format).toBe(100)
+      expect(caution.subScores.format).toBe(65)
+    })
+
+    it("defaults to safe when no templateId is given (no false alarm)", async () => {
+      const result = await new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+        .atsScore("user-1", { jobDescription: "We need a Developer with Kubernetes experience.", sectionData: richSectionData }, "PRO")
+      expect(result.templateSafety).toBe("safe")
+      expect(result.subScores.format).toBe(100)
+    })
+
     it("is reproducible — identical inputs yield an identical score", async () => {
       const service1 = new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
       const service2 = new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
@@ -395,6 +416,60 @@ describe("AIService", () => {
       const calledWith = (aiClient.chat as ReturnType<typeof vi.fn>).mock.calls[0][0]
       const userMessage = calledWith.messages.find((m: { role: string }) => m.role === "user")
       expect(userMessage.content).not.toContain(suffix)
+    })
+
+    it("atsScore echoes the extracted keywords for deterministic re-scoring", async () => {
+      const service = new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+      const result = await service.atsScore("user-1", {
+        jobDescription: "We need a Developer with Kubernetes experience.", sectionData: richSectionData,
+      }, "PRO")
+      expect(result.extractedKeywords.hardSkills).toEqual(expect.arrayContaining(["Developer", "Kubernetes"]))
+      expect(result.extractedKeywords.jobTitle).toBe("Developer")
+    })
+  })
+
+  // ── atsRescore (deterministic, no LLM) ───────────────────────────────────────
+  describe("atsRescore", () => {
+    const keywords = { hardSkills: ["Developer", "Kubernetes"], softSkills: [], jobTitle: "Developer", mustHaves: [] }
+    const baseSection = {
+      personalDetails: { jobTitle: "Developer" },
+      summary: "Experienced developer",
+      workExperience: [{ jobTitle: "Developer", description: "Built things" }],
+      skills: [{ name: "Developer" }],
+      education: [{ degree: "BS" }],
+    }
+
+    it("re-scores without an LLM call and reflects CV edits (the closed loop)", async () => {
+      // buildResumeContext is mocked to a constant in this file; override it so the
+      // two re-scores see a CV before/after the user adds the missing keyword.
+      const { buildResumeContext } = vi.mocked(await import("@/lib/ai-client"))
+      vi.mocked(buildResumeContext)
+        .mockReturnValueOnce("Target Role: Developer\nSkills: Developer")
+        .mockReturnValueOnce("Target Role: Developer\nSkills: Developer, Kubernetes")
+
+      const service = new AIService(makeMockAIClient("{}"), logger) // client unused by rescore
+      const before = service.atsRescore({ keywords, sectionData: baseSection, templateId: "classic" })
+      const after = service.atsRescore({ keywords, sectionData: baseSection, templateId: "classic" })
+
+      expect(before.missingKeywords).toContain("Kubernetes")
+      expect(after.missingKeywords).not.toContain("Kubernetes")
+      expect(after.score).toBeGreaterThan(before.score)
+    })
+
+    it("applies the same template-caution ding as atsScore", () => {
+      const service = new AIService(makeMockAIClient("{}"), logger)
+      const safe = service.atsRescore({ keywords, sectionData: baseSection, templateId: "classic" })
+      const caution = service.atsRescore({ keywords, sectionData: baseSection, templateId: "coralsidebar" })
+      expect(safe.templateSafety).toBe("safe")
+      expect(caution.templateSafety).toBe("caution")
+      expect(caution.score).toBeLessThan(safe.score)
+    })
+
+    it("is reproducible — same inputs, same score", () => {
+      const service = new AIService(makeMockAIClient("{}"), logger)
+      const a = service.atsRescore({ keywords, sectionData: baseSection, templateId: "classic" })
+      const b = service.atsRescore({ keywords, sectionData: baseSection, templateId: "classic" })
+      expect(a.score).toBe(b.score)
     })
   })
 

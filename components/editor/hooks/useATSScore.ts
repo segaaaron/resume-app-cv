@@ -18,6 +18,7 @@ export interface ATSSubScores {
   softSkills: number | null
   title: number | null
   sections: number | null
+  format?: number | null
 }
 
 export interface ATSResult {
@@ -32,6 +33,35 @@ export interface ATSResult {
   listedOnlyKeywords?: string[]
   suggestions: string[]
   subScores?: ATSSubScores
+  /** Template parseability tier — "caution" = multi-column, a strict ATS may reorder it. */
+  templateSafety?: "safe" | "caution"
+  /** JD keywords echoed by the server so we can re-score deterministically after a fix. */
+  extractedKeywords?: {
+    hardSkills: string[]
+    softSkills: string[]
+    jobTitle: string
+    mustHaves: string[]
+  }
+  /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
+  contentQuality?: {
+    totalBullets: number
+    quantifiedBullets: number
+    quantificationPct: number
+    weakOpenerBullets: number
+  }
+}
+
+export interface VerifyResult {
+  realScore: number
+  breakdown: {
+    keywords: { score: number }
+    format: { score: number; issues: string[] }
+    sections: { score: number; missing: string[] }
+    length: { score: number; recommendation: string }
+    contact: { score: number; hasEmail: boolean; hasPhone: boolean; hasLinkedIn: boolean }
+  }
+  extractedText: string
+  wordCount: number
 }
 
 export interface ReviewItem {
@@ -61,8 +91,8 @@ export function useATSScore() {
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
-  const { sectionData } = useResumeStore(
-    useShallow((s) => ({ sectionData: s.sectionData }))
+  const { sectionData, templateId } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, templateId: s.config?.templateId }))
   )
 
   const [input, setInput] = useState("")
@@ -126,7 +156,7 @@ export function useATSScore() {
         const res = await apiFetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobDescription: text, sectionData, language: locale }),
+          body: JSON.stringify({ jobDescription: text, sectionData, language: locale, templateId }),
         })
         if (res.status === 429 || res.status === 403) {
           const handled = await handleApiError(res, {
@@ -154,6 +184,83 @@ export function useATSScore() {
     }
   }, [input, sectionData, locale, t, aiT, loading, cooldownUntil])
 
+  // Keep the latest result reachable from rescore() without stale-closure risk.
+  const atsResultRef = useRef<ATSResult | null>(null)
+  atsResultRef.current = atsResult
+
+  /**
+   * Deterministic re-score after the user applies a fix. Reuses the keywords the
+   * first analyze already extracted → no LLM call, no quota, no cooldown. Updates
+   * the score/sub-scores/keyword sets, but PRESERVES the LLM-authored summary and
+   * suggestions so applying a fix never wipes the guidance.
+   */
+  const rescore = useCallback(async (): Promise<number | null> => {
+    const prev = atsResultRef.current
+    const keywords = prev?.extractedKeywords
+    if (!keywords) return null
+    const state = useResumeStore.getState()
+    try {
+      const res = await apiFetch("/api/ai/ats-rescore", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keywords,
+          sectionData: state.sectionData,
+          language: locale,
+          templateId: state.config?.templateId,
+        }),
+      })
+      if (!res.ok) return null
+      const data: ATSResult = await res.json()
+      setAtsResult((cur) => (cur ? { ...data, summary: cur.summary, suggestions: cur.suggestions } : data))
+      return data.score - (prev?.score ?? data.score)
+    } catch {
+      // Silent — keep the prior score rather than surfacing a re-score failure.
+      return null
+    }
+  }, [locale])
+
+  const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
+  const [verifyLoading, setVerifyLoading] = useState(false)
+
+  /**
+   * The pioneer check: render the REAL exported PDF, read what a strict ATS would
+   * extract, and score that. Reveals content a two-column template reorders/loses
+   * — the structured score can't see it because it never renders the file.
+   */
+  const verifyReal = useCallback(async () => {
+    if (verifyLoading) return
+    const state = useResumeStore.getState()
+    const text = input.trim()
+    if (!state.resumeId || text.length < 15) {
+      toast.error(t("verify_needs_jd"))
+      return
+    }
+    setVerifyLoading(true)
+    setVerifyResult(null)
+    try {
+      // Persist current edits first — the PDF is rendered from the SAVED resume,
+      // so without this the check would score a stale version.
+      await state.save({ skipThumbnail: true })
+      const res = await apiFetch("/api/ai/ats-verify-real", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resumeId: state.resumeId, jobDescription: text, locale }),
+      })
+      if (res.status === 422) {
+        const d = await res.json().catch(() => ({}))
+        toast.error(d.error === "not_extractable" ? t("verify_not_extractable") : t("verify_error"))
+        return
+      }
+      if (!res.ok) { toast.error(t("verify_error")); return }
+      setVerifyResult(await res.json())
+    } catch {
+      toast.error(t("verify_error"))
+    } finally {
+      setVerifyLoading(false)
+    }
+  }, [input, locale, t, verifyLoading])
+
   const hasResult = atsResult !== null || reviewResult !== null
 
   return {
@@ -163,6 +270,8 @@ export function useATSScore() {
     offTopic,
     hasResult,
     analyze,
+    rescore,
+    verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
   }
 }

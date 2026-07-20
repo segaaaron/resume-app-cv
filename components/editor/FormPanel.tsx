@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, type CSSProperties, type ReactNode } from "react"
+import { useState, useEffect, type CSSProperties, type ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
@@ -43,6 +43,19 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
   const visibleSections = sections.filter((s) => s.visible)
   const hiddenSections = sections.filter((s) => !s.visible)
   const [activeTab, setActiveTab] = useState<TabKey>("content")
+
+  // Allow other editor panels (e.g. the ATS "change template" nudge) to switch tabs.
+  useEffect(() => {
+    const VALID: TabKey[] = ["content", "design", "ats", "review", "ai", "planillas"]
+    const onSwitch = (e: Event) => {
+      const detail = (e as CustomEvent).detail
+      if (typeof detail === "string" && (VALID as string[]).includes(detail)) {
+        setActiveTab(detail as TabKey)
+      }
+    }
+    window.addEventListener("editor-switch-tab", onSwitch)
+    return () => window.removeEventListener("editor-switch-tab", onSwitch)
+  }, [])
 
   const tabs: TabDef[] = [
     {

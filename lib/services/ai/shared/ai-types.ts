@@ -62,6 +62,27 @@ export interface ATSSubScores {
   softSkills: number | null
   title: number | null
   sections: number | null
+  /** Template layout parseability (0-100). Optional: only the ATS-score path sets it. */
+  format?: number | null
+}
+
+/** Deterministic content-quality signals over the work experience. REPORTED, not
+ *  scored — a bullet without a figure is not automatically bad (see bullet-quality.ts).
+ *  Surfaced so the user can act (add a metric, fix a weak opener), never to penalize. */
+export interface ATSContentQuality {
+  totalBullets: number
+  quantifiedBullets: number
+  quantificationPct: number // 0-100
+  weakOpenerBullets: number
+}
+
+/** The requirement keywords the LLM extracted from the job description. Returned so
+ *  the client can re-score deterministically (no LLM) after applying a fix. */
+export interface ATSExtractedKeywords {
+  hardSkills: string[]
+  softSkills: string[]
+  jobTitle: string
+  mustHaves: string[]
 }
 
 export interface ATSScoreResult {
@@ -80,6 +101,20 @@ export interface ATSScoreResult {
   listedOnlyKeywords: string[]
   suggestions: string[]
   subScores: ATSSubScores
+  /** Parseability tier of the chosen template. "caution" = multi-column, a strict ATS may reorder it. */
+  templateSafety: "safe" | "caution"
+  /** JD keywords, echoed so the client can re-score deterministically after a fix (no LLM call). */
+  extractedKeywords: ATSExtractedKeywords
+  /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
+  contentQuality: ATSContentQuality
+}
+
+/** Input for the deterministic re-score (no LLM): reuses keywords from a prior ats-score. */
+export interface ATSRescoreInput {
+  keywords: ATSExtractedKeywords
+  sectionData?: Record<string, unknown>
+  language?: string
+  templateId?: string
 }
 
 // LLM call #1 for ats-score: extract the requirements from the job description
@@ -206,6 +241,8 @@ export interface ATSScoreInput {
   jobDescription: string
   sectionData?: Record<string, unknown>
   language?: string
+  /** The template the CV will export as — its layout affects ATS parseability. */
+  templateId?: string
 }
 
 export interface GenerateCoverLetterInput {

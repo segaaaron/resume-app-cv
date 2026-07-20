@@ -18,6 +18,7 @@ import { AITailorModule } from "./modules/AITailorModule"
 import type {
   ATSScoreInput,
   ATSScoreResult,
+  ATSRescoreInput,
   BulletResult,
   CoverLetterResult,
   FillProfileInput,
@@ -47,6 +48,7 @@ export type {
   GenerateSummaryInput,
   ImproveSummaryInput,
   ATSScoreInput,
+  ATSRescoreInput,
   GenerateCoverLetterInput,
   ImproveCoverLetterInput,
   ReviewCVInput,
@@ -86,6 +88,11 @@ export class AIService {
 
   atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
     return this.reviewModule.atsScore(userId, input, plan)
+  }
+
+  /** Deterministic re-score (no LLM, no quota) — reuses keywords from a prior atsScore. */
+  atsRescore(input: ATSRescoreInput): ATSScoreResult {
+    return this.reviewModule.atsRescore(input)
   }
 
   generateCoverLetter(userId: string, input: GenerateCoverLetterInput, plan: string): Promise<CoverLetterResult> {
