@@ -12,6 +12,7 @@ import {
   ChevronDown,
   Search,
 } from "lucide-react"
+import { relativeTime as relative } from "@/lib/format/relativeTime"
 
 type ErrorWindow = "24h" | "7d" | "30d"
 
@@ -54,16 +55,6 @@ function statusStyle(code: number | null): { bg: string; text: string } {
   if (code >= 500) return { bg: "rgba(239,68,68,0.10)", text: "#D33636" }
   if (code >= 400) return { bg: "rgba(245,158,11,0.12)", text: "#B4740B" }
   return { bg: "rgba(107,122,140,0.10)", text: "#6B7A8C" }
-}
-
-function relative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.round(diff / 60000)
-  if (min < 1) return "just now"
-  if (min < 60) return `${min}m`
-  const hr = Math.round(min / 60)
-  if (hr < 24) return `${hr}h`
-  return `${Math.round(hr / 24)}d`
 }
 
 export default function ServiceErrorsPanel({ report }: { report: ServiceErrorsReport }) {

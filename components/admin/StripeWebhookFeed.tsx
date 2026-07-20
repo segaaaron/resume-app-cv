@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { RefreshCw, ChevronDown, Webhook } from "lucide-react"
+import { relativeTime as relative } from "@/lib/format/relativeTime"
 
 type WebhookStatus = "SUCCESS" | "FAILED" | "SKIPPED"
 
@@ -23,16 +24,6 @@ const STATUS_STYLE: Record<WebhookStatus, { bg: string; text: string; dot: strin
   SUCCESS: { bg: "rgba(16,185,129,0.12)", text: "#0F9A6E", dot: "#10B981" },
   FAILED: { bg: "rgba(239,68,68,0.10)", text: "#D33636", dot: "#EF4444" },
   SKIPPED: { bg: "rgba(107,122,140,0.10)", text: "#6B7A8C", dot: "#6B7A8C" },
-}
-
-function relative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.round(diff / 60000)
-  if (min < 1) return "just now"
-  if (min < 60) return `${min}m`
-  const hr = Math.round(min / 60)
-  if (hr < 24) return `${hr}h`
-  return `${Math.round(hr / 24)}d`
 }
 
 export default function StripeWebhookFeed() {

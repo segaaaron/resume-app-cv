@@ -14,18 +14,9 @@ import {
   DollarSign,
 } from "lucide-react"
 import type { StripeOverview } from "@/lib/services/stripe/stripeAdminReport"
+import { relativeTime as relative } from "@/lib/format/relativeTime"
 
 type Win = "24h" | "7d" | "30d"
-
-function relative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.round(diff / 60000)
-  if (min < 1) return "just now"
-  if (min < 60) return `${min}m`
-  const hr = Math.round(min / 60)
-  if (hr < 24) return `${hr}h`
-  return `${Math.round(hr / 24)}d`
-}
 
 export default function StripeHealthPanel({ overview }: { overview: StripeOverview }) {
   const t = useTranslations("dashboard_admin.stripe")

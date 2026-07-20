@@ -12,6 +12,7 @@
 
 import { ATS_SKILLS, allSkillForms, findSkill } from "./skills-dictionary";
 import { expandTerm, normalizeTerm, termPresent } from "./vocabulary";
+import { foldAccentsLower } from "@/lib/text/normalize";
 
 export type Locale = "en" | "es";
 
@@ -79,13 +80,8 @@ const STOPWORDS = new Set<string>([...STOPWORDS_EN, ...STOPWORDS_ES]);
 
 /* ---------------------- Helpers ---------------------- */
 
-function normalize(text: string): string {
-  return text
-    .normalize("NFKD")
-    // remove combining marks (accents) for matching purposes only
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
-}
+// Accents + compatibility chars folded away for matching (NFKD). Shared primitive.
+const normalize = (text: string): string => foldAccentsLower(text, "NFKD");
 
 function tokenize(text: string): string[] {
   return text

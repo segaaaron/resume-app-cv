@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { RefreshCw, Receipt, ShieldAlert, Ban, RefreshCcw, UserCog, History } from "lucide-react"
+import { relativeTime as relative } from "@/lib/format/relativeTime"
 
 interface TimelineItem {
   id: string
@@ -26,16 +27,6 @@ const ACTION_STYLE: Record<string, { color: string; icon: typeof Receipt }> = {
   SUBSCRIPTION_CREATED_EXTERNAL: { color: "#0F9A6E", icon: RefreshCcw },
   PROFILE_SYNCED_FROM_STRIPE: { color: "#6B7A8C", icon: UserCog },
   ADMIN_RECONCILE_USER: { color: "#6B8AC4", icon: UserCog },
-}
-
-function relative(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.round(diff / 60000)
-  if (min < 1) return "just now"
-  if (min < 60) return `${min}m`
-  const hr = Math.round(min / 60)
-  if (hr < 24) return `${hr}h`
-  return `${Math.round(hr / 24)}d`
 }
 
 export default function StripeBillingTimeline() {

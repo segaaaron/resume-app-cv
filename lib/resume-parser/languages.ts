@@ -2,6 +2,7 @@
  * languages — Parser de idiomas. Soporta múltiples idiomas por línea
  * ("Spanish · NATIVE English · B2"), formato común en plantillas compactas.
  */
+import { foldAccentsLower } from "@/lib/text/normalize"
 
 export const LANG_LEVEL_MAP: Record<string, string> = {
   "nativo": "native", "native": "native", "materno": "native",
@@ -27,9 +28,7 @@ export const KNOWN_LANGUAGES = new Set([
   "hebreo", "hebrew", "tailandés", "thai", "vietnamita", "vietnamese",
 ])
 
-function normalizeToken(t: string): string {
-  return t.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
-}
+const normalizeToken = (t: string): string => foldAccentsLower(t)
 
 export interface ParsedLanguage {
   name: string

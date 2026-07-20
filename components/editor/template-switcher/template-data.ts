@@ -17,8 +17,6 @@ export const PRO_IDS: string[] = [
   "doctor", "fashion", "writer",
 ]
 
-export type TemplateLayout = "single-column" | "sidebar-left" | "sidebar-right"
-
 export function isProTemplate(id: string): boolean {
   return PRO_IDS.includes(id)
 }
