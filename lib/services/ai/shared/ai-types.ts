@@ -74,6 +74,9 @@ export interface ATSContentQuality {
   quantifiedBullets: number
   quantificationPct: number // 0-100
   weakOpenerBullets: number
+  /** A few real bullet texts that lack a figure — shown so the user can add a REAL
+   *  number themselves (XYZ formula). Passive: we never invent or demand the metric. */
+  metriclessBullets: string[]
 }
 
 /** The requirement keywords the LLM extracted from the job description. Returned so

@@ -324,7 +324,8 @@ describe("AIService", () => {
 
       expect(safe.templateSafety).toBe("safe")
       expect(caution.templateSafety).toBe("caution")
-      expect(caution.score).toBeLessThan(safe.score)
+      // caution takes a 5% ding (×0.95), not a hard penalty.
+      expect(caution.score).toBe(Math.round(safe.score * 0.95))
       expect(safe.subScores.format).toBe(100)
       expect(caution.subScores.format).toBe(65)
     })
@@ -462,7 +463,7 @@ describe("AIService", () => {
       const caution = service.atsRescore({ keywords, sectionData: baseSection, templateId: "coralsidebar" })
       expect(safe.templateSafety).toBe("safe")
       expect(caution.templateSafety).toBe("caution")
-      expect(caution.score).toBeLessThan(safe.score)
+      expect(caution.score).toBe(Math.round(safe.score * 0.95))
     })
 
     it("is reproducible — same inputs, same score", () => {

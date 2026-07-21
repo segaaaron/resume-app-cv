@@ -451,6 +451,19 @@ export default function ATSScorePanel() {
                     {t("content_quality_weak", { count: atsResult.contentQuality.weakOpenerBullets })}
                   </p>
                 )}
+                {atsResult.contentQuality.metriclessBullets.length > 0 && (
+                  <div className="mt-2 rounded-lg bg-white/60 border border-violet-100 p-2">
+                    <p className="text-[9.5px] font-bold uppercase tracking-wide text-violet-500 mb-1">{t("content_quality_metricless_title")}</p>
+                    <ul className="flex flex-col gap-1">
+                      {atsResult.contentQuality.metriclessBullets.map((b, i) => (
+                        <li key={i} className="text-[10.5px] text-slate-600 leading-snug flex items-start gap-1.5">
+                          <span className="text-violet-400 mt-0.5 shrink-0">•</span>
+                          <span className="line-clamp-2">{b}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
                 <div className="flex items-center justify-between gap-2 mt-2">
                   <p className="text-[10px] text-slate-500 leading-relaxed flex-1">{t("content_quality_hint")}</p>
                   <button

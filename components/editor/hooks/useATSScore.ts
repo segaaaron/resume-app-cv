@@ -48,6 +48,7 @@ export interface ATSResult {
     quantifiedBullets: number
     quantificationPct: number
     weakOpenerBullets: number
+    metriclessBullets: string[]
   }
 }
 

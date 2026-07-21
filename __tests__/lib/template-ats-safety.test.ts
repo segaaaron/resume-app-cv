@@ -4,6 +4,8 @@ import {
   getTemplateAtsSafety,
   templateFormatScore,
   templateAtsMessageKey,
+  applyTemplatePenalty,
+  CAUTION_SCORE_FACTOR,
 } from "@/lib/ats/template-ats-safety"
 
 describe("template-ats-safety", () => {
@@ -35,6 +37,14 @@ describe("template-ats-safety", () => {
   it("message key maps to the tier", () => {
     expect(templateAtsMessageKey("safe")).toBe("template_ats_safe")
     expect(templateAtsMessageKey("caution")).toBe("template_ats_caution")
+  })
+
+  it("applies a 5% ding to caution templates, leaves safe untouched", () => {
+    expect(CAUTION_SCORE_FACTOR).toBe(0.95)
+    expect(applyTemplatePenalty(100, "safe")).toBe(100)
+    expect(applyTemplatePenalty(100, "caution")).toBe(95)
+    expect(applyTemplatePenalty(88, "caution")).toBe(Math.round(88 * 0.95)) // 84
+    expect(applyTemplatePenalty(0, "caution")).toBe(0)
   })
 
   it("derives from TEMPLATES.columns — every template resolves to a valid tier", () => {

@@ -86,11 +86,13 @@ describe("assessResumeContent", () => {
     expect(r.quantifiedBullets).toBe(2)          // "32%" and "5 engineers"
     expect(r.quantificationPct).toBe(67)          // 2/3
     expect(r.weakOpenerBullets).toBe(1)           // "Responsible for the team"
+    // The one bullet without a figure is surfaced (text), so the user can add a real number.
+    expect(r.metriclessBullets).toEqual(["Responsible for the team"])
   })
 
   it("is NaN-free and zeroed when there is no work experience", () => {
     const r = assessResumeContent({})
-    expect(r).toEqual({ totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0 })
+    expect(r).toEqual({ totalBullets: 0, quantifiedBullets: 0, quantificationPct: 0, weakOpenerBullets: 0, metriclessBullets: [] })
   })
 
   it("does not throw on a malformed (non-array) workExperience", () => {

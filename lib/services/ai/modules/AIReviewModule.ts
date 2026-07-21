@@ -27,7 +27,7 @@ import {
   type ReviewResult,
 } from "../shared/ai-types"
 import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
-import { getTemplateAtsSafety, templateFormatScore } from "@/lib/ats/template-ats-safety"
+import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
 
 export class AIReviewModule {
@@ -177,7 +177,7 @@ Reglas:
     // one. "caution" takes a modest, honest ding; "safe" is neutral (no inflation).
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
-    const finalScore = templateSafety === "caution" ? Math.round(match.score * 0.9) : match.score
+    const finalScore = applyTemplatePenalty(match.score, templateSafety)
 
     const label = localizedLabel(scoreLabel(finalScore), en)
     const summary = extraction.summary.trim() || defaultSummary(finalScore, en)
@@ -230,7 +230,7 @@ Reglas:
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
-    const finalScore = templateSafety === "caution" ? Math.round(match.score * 0.9) : match.score
+    const finalScore = applyTemplatePenalty(match.score, templateSafety)
 
     return {
       score: finalScore,

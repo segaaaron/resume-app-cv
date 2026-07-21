@@ -1582,8 +1582,9 @@
       "content_quality_title": "Achievement impact",
       "content_quality_metrics": "{quantified} of {total} bullets state a metric ({pct}%).",
       "content_quality_weak": "{count} bullet(s) open with a duty phrase (\"responsible for…\").",
-      "content_quality_hint": "Metrics and strong verbs win recruiters — we never invent them.",
-      "content_quality_action": "Improve bullets"
+      "content_quality_hint": "Numbers + strong verbs win recruiters — the XYZ formula. Add your REAL figures; we never invent them.",
+      "content_quality_action": "Improve bullets",
+      "content_quality_metricless_title": "These achievements would gain a real number (XYZ formula):"
     },
     "cv_review": {
       "title": "AI CV Review",

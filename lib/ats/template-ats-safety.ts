@@ -39,6 +39,17 @@ export function templateFormatScore(safety: AtsSafety): number {
   return FORMAT_SCORE[safety]
 }
 
+// A multi-column ("caution") template can be reordered by a strict ATS, so its
+// overall score takes a modest, proportional ding — NOT a hard penalty. 5%
+// acknowledges the real (but not universal) parse risk without over-punishing
+// premium two-column designs. Single source so atsScore and atsRescore never drift.
+export const CAUTION_SCORE_FACTOR = 0.95
+
+/** Apply the template parseability ding to an overall score. "safe" is untouched. */
+export function applyTemplatePenalty(score: number, safety: AtsSafety): number {
+  return safety === "caution" ? Math.round(score * CAUTION_SCORE_FACTOR) : score
+}
+
 /** Message key the UI localizes to explain the tier. */
 export function templateAtsMessageKey(safety: AtsSafety): string {
   return safety === "caution" ? "template_ats_caution" : "template_ats_safe"
