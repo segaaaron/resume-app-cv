@@ -7,7 +7,7 @@ import Stripe from "stripe"
 // cast preserves the pin (same API behavior in prod) while satisfying the type.
 // Moving to a newer API version is a separate, deliberate billing decision.
 export const stripe = process.env.STRIPE_SECRET_KEY
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-03-25.dahlia" as Stripe.LatestApiVersion })
+  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2026-03-25.dahlia" as unknown as Stripe.StripeConfig["apiVersion"] })
   : null
 
 export function stripeEnabled(): boolean {
