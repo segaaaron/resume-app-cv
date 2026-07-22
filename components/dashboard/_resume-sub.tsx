@@ -1,6 +1,6 @@
 "use client"
 
-import { Loader2, CheckCircle2, AlertCircle } from "lucide-react"
+import { Loader2, CheckCircle2, AlertCircle, Languages } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useTranslations, useLocale } from "next-intl"
 import { logoutAction } from "@/lib/actions/logout"
@@ -180,6 +180,66 @@ export function UpgradeStatusOverlay({ upgradeState }: UpgradeStatusOverlayProps
           </>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── TranslatingOverlay ────────────────────────────────────────────────────────
+// Full-screen premium loading shown while a CV is being translated. Scrim isolates
+// the foreground; the card uses the app's navy/cyan palette. role=status +
+// aria-live announces progress; motion-reduce disables the spin for a11y.
+
+export function TranslatingOverlay() {
+  const t = useTranslations("dashboard.resumes")
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="fixed inset-0 z-[1000] flex items-center justify-center px-6"
+      style={{ background: "rgba(26,46,74,0.62)", backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)" }}
+    >
+      <div
+        className="dash-card-in flex flex-col items-center gap-5 text-center rounded-[20px] px-8 py-9 max-w-[360px] w-full border border-white/60"
+        style={{
+          background: "linear-gradient(160deg, #FFFFFF 0%, #F5F9FF 100%)",
+          boxShadow: "0 24px 70px rgba(26,46,74,0.35), 0 0 0 1px rgba(0,212,255,0.18), inset 0 1px 0 rgba(255,255,255,0.8)",
+        }}
+      >
+        {/* Animated emblem: gradient disc + orbiting ring */}
+        <div className="relative flex items-center justify-center h-16 w-16">
+          <span
+            className="absolute inset-0 rounded-full border-[2.5px] border-transparent motion-reduce:animate-none animate-spin"
+            style={{ borderTopColor: "#00D4FF", borderRightColor: "rgba(0,212,255,0.35)" }}
+          />
+          <span
+            className="flex items-center justify-center h-12 w-12 rounded-full text-white shadow-lg"
+            style={{ background: "linear-gradient(135deg, #00D4FF 0%, #0077B6 100%)", boxShadow: "0 8px 24px rgba(0,212,255,0.4)" }}
+          >
+            <Languages className="h-6 w-6" />
+          </span>
+        </div>
+
+        <div className="space-y-1.5">
+          <p className="text-[17px] font-bold tracking-[-0.01em] text-dash-navy" style={{ fontFamily: "var(--dash-serif)" }}>
+            {t("translate_overlay_title")}
+          </p>
+          <p className="text-[12.5px] leading-relaxed text-dash-muted">
+            {t("translate_overlay_desc")}
+          </p>
+        </div>
+
+        {/* Indeterminate shimmer bar */}
+        <div className="w-full h-1.5 rounded-full overflow-hidden" style={{ background: "rgba(0,212,255,0.12)" }}>
+          <div
+            className="h-full w-1/3 rounded-full motion-reduce:hidden"
+            style={{ background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", animation: "cvv-shimmer 1.3s ease-in-out infinite" }}
+          />
+        </div>
+
+        <p className="text-[10.5px] text-dash-subtle">{t("translate_overlay_hint")}</p>
+      </div>
+
+      <style>{`@keyframes cvv-shimmer { 0% { transform: translateX(-120%) } 100% { transform: translateX(400%) } }`}</style>
     </div>
   )
 }

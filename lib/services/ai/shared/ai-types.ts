@@ -74,9 +74,24 @@ export interface ATSContentQuality {
   quantifiedBullets: number
   quantificationPct: number // 0-100
   weakOpenerBullets: number
-  /** A few real bullet texts that lack a figure — shown so the user can add a REAL
-   *  number themselves (XYZ formula). Passive: we never invent or demand the metric. */
-  metriclessBullets: string[]
+  /** A few weak bullets (no figure and/or a duty opener), each LOCATED by job so
+   *  the UI can offer an inline "improve this bullet" that rewrites it honestly
+   *  (stronger verb, tighter phrasing) — never inventing a number. */
+  metriclessBullets: MetriclessBullet[]
+}
+
+/** A weak bullet, located so it can be improved in place. */
+export interface MetriclessBullet {
+  /** The bullet text (as it appears in the description). */
+  text: string
+  /** id of the work-experience entry this bullet belongs to. */
+  targetId: string
+  /** Job title of that entry, for display. */
+  jobTitle: string
+  /** 0-based position of the bullet within its description. */
+  index: number
+  /** Opens with a duty phrase ("responsible for…") — the most improvable case. */
+  weakOpener: boolean
 }
 
 /** The requirement keywords the LLM extracted from the job description. Returned so
@@ -186,6 +201,13 @@ export const ReviewResponseSchema = z.object({
 
 export type ReviewResult = z.infer<typeof ReviewResponseSchema>
 
+/** review-cv return: the LLM review PLUS a deterministic, JD-independent resume
+ *  score computed in code (see resume-score.ts). The score never depends on the
+ *  LLM, so it is reproducible and cannot be hallucinated. */
+export type ReviewCVResult = ReviewResult & {
+  resumeScore: import("./resume-score").ResumeScore
+}
+
 // ─── fill-profile Zod schemas ─────────────────────────────────────────────────
 
 export const ItemUpdateSchema = z.object({
@@ -283,6 +305,23 @@ export interface TailorCVInput {
   sectionData: Record<string, unknown>
   jobDescription: string
   language?: string
+}
+
+export interface TranslateCVInput {
+  /** Full ResumeSections object (the resume's `personalDetails` JSON column). */
+  sectionData: Record<string, unknown>
+  /** Visible section header labels (from the `sections` layout array). */
+  sectionLabels?: string[]
+  /** Language to translate INTO. */
+  targetLang: "es" | "en"
+}
+
+export interface TranslateCVResult {
+  sectionData: Record<string, unknown>
+  sectionLabels: string[]
+  targetLang: "es" | "en"
+  /** How many prose segments were actually sent to the translator. */
+  translatedCount: number
 }
 
 // V2 — bullet-level granular suggestions

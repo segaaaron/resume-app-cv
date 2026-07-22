@@ -32,10 +32,16 @@ export function getOpenAI(): OpenAI {
   return _openai
 }
 
-export const EXPECTED_AI_MODEL = "gpt-4o-mini"
+// Upgraded from gpt-4o-mini → gpt-4.1-mini for materially better instruction
+// following and prose on the CV tasks (extraction, ATS scoring, tailoring,
+// rewriting). Verified drop-in: same request shape (max_tokens, temperature,
+// response_format json_object) — no code migration, unlike gpt-5-mini which
+// requires max_completion_tokens. Cost ~2.6× per call, still cents/user/day.
+export const EXPECTED_AI_MODEL = "gpt-4.1-mini"
 
-// Shared model config
-export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4o-mini") as string
+// Shared model config. Prod can still override via the AI_MODEL env var — if an
+// AI_MODEL override is set in the deploy env, update it to gpt-4.1-mini too.
+export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4.1-mini") as string
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score)

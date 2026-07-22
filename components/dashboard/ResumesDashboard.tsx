@@ -21,7 +21,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { isActive } from "@/lib/plans"
 import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
-import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed } from "./_resume-sub"
+import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed, TranslatingOverlay } from "./_resume-sub"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 export default function ResumesDashboard({ initialResumes }: { initialResumes: ResumeCard[] }) {
@@ -50,6 +50,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const [renaming, setRenaming] = useState(false)
   const [creating, setCreating] = useState(false)
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set())
+  const [translatingIds, setTranslatingIds] = useState<Set<string>>(new Set())
   const [showPersonalUseWarning, setShowPersonalUseWarning] = useState(false)
   const [personalUseConsented, setPersonalUseConsented] = useState(false)
   const [pendingAction, setPendingAction] = useState<(() => Promise<void>) | null>(null)
@@ -247,6 +248,44 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
     }
   }
 
+  // Translate — PRO/LIMITED only (server enforces via AI quota). Auto-detects
+  // the resume's language and saves the translation as a NEW resume (copy).
+  function translateResume(id: string) {
+    if (!isPro) {
+      openUpgradeModal("pro-feature", { feature: t("translate"), endpoint: "translate-cv" })
+      return
+    }
+    requirePersonalUseConsent(() => doTranslateResume(id))
+  }
+
+  async function doTranslateResume(id: string) {
+    if (translatingIds.has(id)) return
+    setTranslatingIds((prev) => new Set(prev).add(id))
+    try {
+      const res = await apiFetch(`/api/resumes/${id}/translate`, { method: "POST" })
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string }))
+        const code = (body as { error?: string })?.error
+        if (res.status === 429 || code === "daily_cap_reached") toast.error(t("translate_daily_cap"))
+        else if (res.status === 403) toast.error(t("translate_pro_only"))
+        else if (code === "nothing_to_translate") toast.info(t("translate_empty"))
+        else toast.error(t("translate_error"))
+        return
+      }
+      const copy = await res.json()
+      setResumes((prev) => [copy, ...prev])
+      toast.success(t("translate_success"))
+    } catch {
+      toast.error(t("translate_error"))
+    } finally {
+      setTranslatingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(id)
+        return next
+      })
+    }
+  }
+
   async function downloadPdf(resume: ResumeCard) {
     // Freemium paywall: intercept on client before hitting the gated endpoint.
     // Managed users get a neutral "expired access" message — no upgrade modal.
@@ -304,6 +343,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
 
   return (
     <div>
+      {translatingIds.size > 0 && <TranslatingOverlay />}
       <UpgradeCTACard />
 
       {/* ── Page head ── */}
@@ -363,6 +403,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             onEdit={() => router.push(`/${locale}/editor/${resume.id}`)}
             onRename={() => { setRenameId(resume.id); setRenameDraft(resume.title) }}
             onDuplicate={() => duplicateResume(resume.id)}
+            onTranslate={() => translateResume(resume.id)}
             onDownload={() => downloadPdf(resume)}
             onDelete={() => setDeleteId(resume.id)}
           />

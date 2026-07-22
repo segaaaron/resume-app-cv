@@ -4,10 +4,14 @@
 
 /** Pricing per 1M tokens in USD. Update when OpenAI changes prices. */
 export const MODEL_PRICING: Record<string, { inputPer1M: number; outputPer1M: number }> = {
-  "gpt-4o-mini":   { inputPer1M: 0.15,  outputPer1M: 0.60  },
-  "gpt-4o":        { inputPer1M: 2.50,  outputPer1M: 10.00 },
-  "gpt-4-turbo":   { inputPer1M: 10.00, outputPer1M: 30.00 },
-  "gpt-3.5-turbo": { inputPer1M: 0.50,  outputPer1M: 1.50  },
+  "gpt-4o-mini":    { inputPer1M: 0.15,  outputPer1M: 0.60  },
+  "text-embedding-3-small": { inputPer1M: 0.02, outputPer1M: 0 },
+  "gpt-4.1-nano":   { inputPer1M: 0.10,  outputPer1M: 0.40  },
+  "gpt-4.1-mini":   { inputPer1M: 0.40,  outputPer1M: 1.60  },
+  "gpt-4.1":        { inputPer1M: 2.00,  outputPer1M: 8.00  },
+  "gpt-4o":         { inputPer1M: 2.50,  outputPer1M: 10.00 },
+  "gpt-4-turbo":    { inputPer1M: 10.00, outputPer1M: 30.00 },
+  "gpt-3.5-turbo":  { inputPer1M: 0.50,  outputPer1M: 1.50  },
 }
 
 let unknownModelWarned = false

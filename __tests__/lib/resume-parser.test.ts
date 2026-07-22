@@ -323,3 +323,101 @@ Fotografía, senderismo, ajedrez`
     expect(r.hobbies).toContain("Fotografía")
   })
 })
+
+describe("resume-parser: letter-spaced headings (styled 2-column templates)", () => {
+  // Regression: templates with letter-spaced sidebar headings extract the
+  // heading as single letters ("S K I L L S"). isNoiseLine used to discard it
+  // as decoration, so the whole skills section was dropped → "imported CV shows
+  // no skills". The collapsed form ("skills") must be recognized as a heading.
+  it("detects a 'S K I L L S' heading and parses its skills", () => {
+    const text = [
+      "John Doe",
+      "iOS Developer",
+      "Professional Summary",
+      "iOS engineer with 7 years of experience.",
+      "S K I L L S",
+      "Swift\t100",
+      "Objective-C\t75",
+      "Clean Architecture\t75",
+      "XCTest\t75",
+    ].join("\n")
+    const r = parseResumeText(text)
+    const names = r.skills.map((s) => s.name)
+    expect(names).toContain("Swift")
+    expect(names).toContain("Clean Architecture")
+    expect(names).toContain("XCTest")
+  })
+
+  it("does not mistake a 'Curriculum Vitæ' document title for the name; reads the sidebar name across lines", () => {
+    const cv = [
+      "Curriculum Vitæ\t2 0 2 6",
+      "CONTACT",
+      "Miguel Angel",
+      "Saravia",
+      "iOS Developer",
+      "miki@example.com",
+      "Professional Summary",
+      "Engineer with 7 years of experience.",
+    ].join("\n")
+    const r = parseResumeText(cv)
+    expect(r.personalDetails.firstName).not.toBe("Curriculum")
+    expect(`${r.personalDetails.firstName} ${r.personalDetails.lastName}`).toBe("Miguel Angel Saravia")
+    expect(r.personalDetails.jobTitle).toBe("iOS Developer")
+  })
+
+  it("parses a date-first education block (2-col sidebar: date / degree / institution)", () => {
+    const cv = [
+      "CONTACT",
+      "John Doe",
+      "john@x.com",
+      "EDUCATION",
+      "2010 — 2015",
+      "Systems engineer",
+      "Catolica University",
+      "EXPERIENCE",
+      "iOS Developer\t2015 — 2016",
+      "Acme Corp",
+      "Built iOS apps.",
+    ].join("\n")
+    const r = parseResumeText(cv)
+    expect(r.education.length).toBe(1)
+    const e = r.education[0]
+    expect(e.degree).toBe("Systems engineer")     // was the date "2010 — 2015" before
+    expect(e.institution).toBe("Catolica University")
+    expect(e.startDate).toBe("2010")
+    expect(e.endDate).toBe("2015")
+    // No phantom work entry whose "employer" is just the education date range.
+    expect(r.workExperience.some(j => /^\s*\d{4}\s*[-–—]\s*\d{4}\s*$/.test(j.employer))).toBe(false)
+  })
+
+  it("date-first education with an institution ACRONYM: fixes degree/institution swap", () => {
+    // "MIT" is not caught by INSTITUTION_RE, so the positional pass mislabels it
+    // as the degree — the sanity swap corrects it using the degree keyword.
+    const cv = [
+      "CONTACT", "x@x.com",
+      "EDUCATION",
+      "2010 — 2015",
+      "MIT",
+      "Bachelor of Science",
+      "EXPERIENCE", "Developer\t2016 — 2018", "Acme", "• Built things",
+    ].join("\n")
+    const e = parseResumeText(cv).education[0]
+    expect(e.institution).toBe("MIT")
+    expect(e.degree).toBe("Bachelor") // "of Science" split into fieldOfStudy
+    expect(e.startDate).toBe("2010")
+    expect(e.endDate).toBe("2015")
+  })
+
+  it("still discards decorative letter-spaced banners that are NOT headings", () => {
+    const text = [
+      "C U R R I C U L U M",
+      "John Doe",
+      "Skills",
+      "Python, Django",
+    ].join("\n")
+    const r = parseResumeText(text)
+    // "C U R R I C U L U M" collapses to "curriculum" — not a section → stays noise.
+    expect(r.skills.map((s) => s.name)).toContain("Python")
+    expect(r.skills.map((s) => s.name)).not.toContain("Curriculum")
+  })
+})

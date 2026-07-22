@@ -57,7 +57,10 @@ function makeCompletion(content: string): ChatCompletion {
 }
 
 function makeMockAIClient(content: string): IAIClient {
-  return { chat: vi.fn().mockResolvedValue(makeCompletion(content)) }
+  return {
+    chat: vi.fn().mockResolvedValue(makeCompletion(content)),
+    embed: vi.fn().mockResolvedValue([]),
+  }
 }
 
 function makeMockLogger(): ILogger {
@@ -604,6 +607,26 @@ describe("AIService", () => {
       const aiClient = makeMockAIClient(JSON.stringify({ summary: "", strengths: [], improvements: [], answer: "off_topic" }))
       const service = new AIService(aiClient, logger)
       await expect(service.reviewCV("u1", { sectionData: {}, question: "test" }, "PRO")).rejects.toMatchObject({ code: "off_topic" })
+    })
+
+    it("drops a no-op suggestion whose preview equals the current field value", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
+      const current = "Senior iOS engineer with seven years of experience."
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Solid resume.",
+        strengths: [],
+        improvements: [
+          // preview is IDENTICAL to the current summary → a no-op, must be dropped.
+          { text: "Rewrite the summary", suggestion: { field: "summary", type: "replace", preview: current, reason: "clearer" } },
+        ],
+        answer: "",
+      }))
+      const service = new AIService(aiClient, logger)
+      const res = await service.reviewCV("u1", { sectionData: { summary: current } }, "PRO")
+      // The advisory text stays, but the identical (already-applied) suggestion is gone.
+      expect(res.improvements[0].text).toBe("Rewrite the summary")
+      expect(res.improvements[0].suggestion).toBeUndefined()
     })
   })
 

@@ -157,7 +157,10 @@ describe("robustez: idiomas con niveles variados", () => {
     const cv = "X Y\nx@x.com\nLANGUAGES\nEnglish - C1\nGerman - B1\nFrench - A2"
     const r = parseResumeText(cv)
     expect(r.languages.length).toBe(3)
-    expect(r.languages.find(l => l.name === "English")?.level).toBe("full_professional")
+    // CEFR is preserved verbatim (was mis-mapped to "full_professional" before).
+    expect(r.languages.find(l => l.name === "English")?.level).toBe("c1")
+    expect(r.languages.find(l => l.name === "German")?.level).toBe("b1")
+    expect(r.languages.find(l => l.name === "French")?.level).toBe("a2")
   })
 
   it("texto ES", () => {

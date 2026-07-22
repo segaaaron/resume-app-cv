@@ -80,4 +80,24 @@ describe("termPresent", () => {
     expect(termPresent("Kubernetes", "ran workloads on k8s")).toBe(true)
     expect(termPresent("k8s", "ran workloads on kubernetes")).toBe(true)
   })
+
+  // Regression: the ATS used to flag these as "missing" even when the CV had
+  // them phrased differently (order, plural, or the other language).
+  it("matches REST across order/plural/phrasing", () => {
+    const cv = "built rest apis and restful services"
+    expect(termPresent("APIs REST", cv)).toBe(true)
+    expect(termPresent("REST API", cv)).toBe(true)
+    expect(termPresent("RESTful", cv)).toBe(true)
+  })
+
+  it("bridges Clean Architecture es↔en", () => {
+    expect(termPresent("Clean Architecture", "diseñé con arquitectura limpia")).toBe(true)
+    expect(termPresent("Arquitectura Limpia", "designed using clean architecture")).toBe(true)
+  })
+
+  it("matches Async/Await and XCTest variants", () => {
+    expect(termPresent("Async/Await", "used async await extensively")).toBe(true)
+    expect(termPresent("XCTest", "wrote tests with xctest")).toBe(true)
+    expect(termPresent("XCTest", "coverage via xctests")).toBe(true)
+  })
 })

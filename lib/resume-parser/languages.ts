@@ -4,15 +4,19 @@
  */
 import { foldAccentsLower } from "@/lib/text/normalize"
 
+// Output MUST be CEFR (a1|a2|b1|b2|c1|c2|native) — the values LanguageItemSchema
+// accepts. Emitting LinkedIn-style levels ("professional", "full_professional")
+// made every non-native language fall through the schema's `.catch("b1")`, so an
+// imported "English · B2" silently became B1. Word-levels map to their nearest
+// CEFR band.
 export const LANG_LEVEL_MAP: Record<string, string> = {
   "nativo": "native", "native": "native", "materno": "native",
-  "bilingüe": "native", "bilingue": "native", "bilingual": "native",
-  "fluido": "full_professional", "fluent": "full_professional",
-  "avanzado": "full_professional", "advanced": "full_professional", "c1": "full_professional", "c2": "native",
-  "profesional": "professional", "professional": "professional",
-  "intermedio": "professional", "intermediate": "professional", "b2": "professional", "b1": "limited",
-  "básico": "limited", "basico": "limited", "basic": "limited",
-  "elemental": "elementary", "elementary": "elementary", "a1": "elementary", "a2": "elementary",
+  "bilingüe": "native", "bilingue": "native", "bilingual": "native", "c2": "c2",
+  "fluido": "c1", "fluent": "c1", "avanzado": "c1", "advanced": "c1", "c1": "c1",
+  "profesional": "b2", "professional": "b2", "b2": "b2",
+  "intermedio": "b1", "intermediate": "b1", "b1": "b1",
+  "básico": "a2", "basico": "a2", "basic": "a2", "elemental": "a2", "elementary": "a2", "a2": "a2",
+  "a1": "a1",
 }
 
 export const KNOWN_LANGUAGES = new Set([
@@ -54,7 +58,7 @@ export function parseLanguageLines(lines: string[]): ParsedLanguage[] {
     for (const tok of tokens) {
       const norm = normalizeToken(tok)
       if (KNOWN_LANGUAGES.has(norm)) {
-        current = { name: tok, level: "professional" }
+        current = { name: tok, level: "b1" }
         if (!out.find(l => normalizeToken(l.name) === norm)) out.push(current)
         continue
       }

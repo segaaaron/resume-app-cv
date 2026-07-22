@@ -83,19 +83,29 @@ export function assessResumeContent(sectionData: Record<string, unknown>): ATSCo
   // sectionData is client-controlled (z.unknown), so workExperience may be anything.
   // Guard against a non-array value that would make for..of throw a 500.
   const raw = sectionData?.workExperience
-  const work = (Array.isArray(raw) ? raw : []) as Array<{ description?: string }>
+  const work = (Array.isArray(raw) ? raw : []) as Array<{ id?: string; jobTitle?: string; description?: string }>
   const METRICLESS_LIMIT = 4
   let totalBullets = 0
   let quantifiedBullets = 0
   let weakOpenerBullets = 0
-  const metriclessBullets: string[] = []
+  const metriclessBullets: ATSContentQuality["metriclessBullets"] = []
   for (const job of work) {
     const q = assessDescription(job?.description ?? "")
     totalBullets += q.bullets.length
     quantifiedBullets += q.bullets.filter((b) => b.hasMetric).length
     weakOpenerBullets += q.weakOpenerIndices.length
     for (const b of q.bullets) {
-      if (!b.hasMetric && metriclessBullets.length < METRICLESS_LIMIT) metriclessBullets.push(b.text)
+      // Surface weak bullets LOCATED: no figure OR a duty opener. Weak openers
+      // are the most improvable without inventing a number, so include them too.
+      if ((!b.hasMetric || b.weakOpener) && metriclessBullets.length < METRICLESS_LIMIT) {
+        metriclessBullets.push({
+          text: b.text,
+          targetId: job?.id ?? "",
+          jobTitle: job?.jobTitle ?? "",
+          index: b.index,
+          weakOpener: b.weakOpener,
+        })
+      }
     }
   }
   return {

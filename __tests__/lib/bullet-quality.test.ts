@@ -86,8 +86,11 @@ describe("assessResumeContent", () => {
     expect(r.quantifiedBullets).toBe(2)          // "32%" and "5 engineers"
     expect(r.quantificationPct).toBe(67)          // 2/3
     expect(r.weakOpenerBullets).toBe(1)           // "Responsible for the team"
-    // The one bullet without a figure is surfaced (text), so the user can add a real number.
-    expect(r.metriclessBullets).toEqual(["Responsible for the team"])
+    // The weak bullet is surfaced LOCATED (text + job + index) so the UI can
+    // offer an inline honest rewrite. No id/jobTitle in this fixture → "".
+    expect(r.metriclessBullets).toEqual([
+      { text: "Responsible for the team", targetId: "", jobTitle: "", index: 1, weakOpener: true },
+    ])
   })
 
   it("is NaN-free and zeroed when there is no work experience", () => {

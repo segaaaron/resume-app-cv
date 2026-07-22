@@ -316,12 +316,20 @@ export default function TailorCVPanel({ jobDescription }: Props) {
                 </div>
               )}
 
-              {/* Missing skills */}
-              {result.missingSkills.length > 0 && (
+              {/* Missing skills — filtered against the CURRENT skills list so a
+                  skill the user already added (this session, after the tailor
+                  run) drops immediately instead of lingering as "missing". */}
+              {(() => {
+                const owned = new Set(
+                  ((sectionData.skills ?? []) as SkillItem[]).map((s) => s.name.trim().toLowerCase()),
+                )
+                const visibleMissing = result.missingSkills.filter((s) => !owned.has(s.trim().toLowerCase()))
+                if (visibleMissing.length === 0) return null
+                return (
                 <div>
                   <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-2">{t("section_skills")}</p>
                   <div className="flex flex-wrap gap-1.5">
-                    {result.missingSkills.map((skill) => {
+                    {visibleMissing.map((skill) => {
                       const added = addedSkills.has(skill)
                       return (
                         <button
@@ -342,7 +350,8 @@ export default function TailorCVPanel({ jobDescription }: Props) {
                     })}
                   </div>
                 </div>
-              )}
+                )
+              })()}
 
               {/* No keywords chips here: the ATS score above already renders
                   missingKeywords for this same posting, verified against the CV.

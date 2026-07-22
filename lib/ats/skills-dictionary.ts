@@ -79,12 +79,14 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "spring", aliases: ["spring boot"], category: "backend" },
   { term: "rails", aliases: ["ruby on rails"], category: "backend" },
   { term: "laravel", category: "backend" },
-  { term: "rest", aliases: ["rest api", "restful"], category: "backend" },
+  // REST: order + plural + phrasing variants all fold to one term so a JD asking
+  // for "APIs REST" matches a CV that says "REST APIs" / "RESTful" / "API REST".
+  { term: "rest", aliases: ["rest api", "rest apis", "restful", "restful api", "restful apis", "api rest", "apis rest"], category: "backend" },
   { term: "microservices", aliases: ["microservicios"], category: "backend" },
   { term: "grpc", category: "backend" },
   { term: "websockets", category: "backend" },
 
-  // Mobile
+  // Mobile / iOS
   { term: "react native", category: "mobile" },
   { term: "flutter", category: "mobile" },
   { term: "ios", category: "mobile" },
@@ -92,6 +94,17 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "swiftui", category: "mobile" },
   { term: "jetpack compose", category: "mobile" },
   { term: "xamarin", category: "mobile" },
+  { term: "objective-c", aliases: ["objective c", "objectivec"], category: "mobile" },
+  { term: "uikit", category: "mobile" },
+  { term: "xctest", aliases: ["xc test", "xctests"], category: "mobile" },
+  { term: "core data", aliases: ["coredata"], category: "mobile" },
+  { term: "cocoa touch", category: "mobile" },
+  { term: "cocoapods", aliases: ["cocoa pods"], category: "mobile" },
+  { term: "combine", category: "mobile" },
+  { term: "mvvm", category: "mobile" },
+  { term: "viper", category: "mobile" },
+  { term: "async/await", aliases: ["async await", "async-await", "asincronía", "asincronia"], category: "mobile" },
+  { term: "clean architecture", aliases: ["arquitectura limpia"], category: "backend" },
 
   // Data / ML
   { term: "machine learning", aliases: ["ml", "aprendizaje automático"], category: "data" },

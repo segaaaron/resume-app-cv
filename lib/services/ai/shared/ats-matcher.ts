@@ -80,7 +80,7 @@ interface Coverage {
  * is worth 60%") would be exactly the fabricated precision this product has
  * been purging.
  */
-function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string): Coverage {
+function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string, semanticMatches?: Set<string>): Coverage {
   const unique = dedupe(keywords)
   if (unique.length === 0) {
     return { matched: [], missing: [], demonstrated: [], listedOnly: [], pct: null }
@@ -90,9 +90,14 @@ function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string
   const demonstrated: string[] = []
   const listedOnly: string[] = []
   for (const k of unique) {
-    if (!keywordPresent(k, haystackNorm)) { missing.push(k); continue }
+    // A keyword counts as present if the CV spells it exactly OR an embedding
+    // pass found a CV term semantically equivalent to it (see semantic-match.ts).
+    const exact = keywordPresent(k, haystackNorm)
+    if (!exact && !semanticMatches?.has(normalize(k))) { missing.push(k); continue }
     matched.push(k)
-    if (keywordPresent(k, evidenceNorm)) demonstrated.push(k)
+    // Demonstrated still requires the keyword in the work experience text —
+    // a semantic-only match is a claim (listed), not evidence of doing it.
+    if (exact && keywordPresent(k, evidenceNorm)) demonstrated.push(k)
     else listedOnly.push(k)
   }
   return {
@@ -118,13 +123,24 @@ function dedupe(items: string[]): string[] {
   return out
 }
 
-function titleScore(jdTitle: string, cvTitlesNorm: string): number | null {
+// Recency weight: a JD title token found in the candidate's CURRENT / target
+// title is full evidence; one found only in an OLD title is discounted (0.6) —
+// "iOS Developer 8 years ago" is not the same signal as "iOS Developer now",
+// and real ATS (Workday/Taleo) weight the current title heavily. When
+// `recentTitlesNorm` is omitted, behavior is unchanged (every title full credit),
+// so existing callers and any non-recency path score exactly as before.
+const RECENCY_OLD_TITLE_CREDIT = 0.6
+
+function titleScore(jdTitle: string, cvTitlesNorm: string, recentTitlesNorm?: string): number | null {
   const norm = normalize(jdTitle)
   const tokens = norm.split(" ").filter((w) => w.length > 2 && !STOPWORDS.has(w))
   if (tokens.length === 0) return null
-  const hits = tokens.filter((tk) =>
-    new RegExp(`(^|[^a-z0-9])${escapeRegExp(tk)}`).test(cvTitlesNorm),
-  ).length
+  const present = (tk: string, hay: string) => new RegExp(`(^|[^a-z0-9])${escapeRegExp(tk)}`).test(hay)
+  let hits = 0
+  for (const tk of tokens) {
+    if (recentTitlesNorm && present(tk, recentTitlesNorm)) hits += 1
+    else if (present(tk, cvTitlesNorm)) hits += recentTitlesNorm ? RECENCY_OLD_TITLE_CREDIT : 1
+  }
   return Math.round((hits / tokens.length) * 100)
 }
 
@@ -149,15 +165,29 @@ export function computeATSMatch(
    * callers keep working — when omitted, nothing is treated as demonstrated.
    */
   evidenceText = "",
+  /**
+   * Normalized keywords an embedding pass proved semantically present in the CV
+   * even though the exact matcher missed them (see semantic-match.ts). Optional
+   * so every existing caller — and the deterministic instant re-score — keep
+   * exact-only behavior unchanged.
+   */
+  semanticMatches?: Set<string>,
+  /**
+   * The candidate's current/target titles (target role + most recent job). When
+   * provided, the title sub-score credits a JD-title match in these fully and an
+   * old-title-only match partially (recency weight). Optional so the instant
+   * re-score and existing callers keep identical behavior when omitted.
+   */
+  recentTitles?: string,
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
   const evidence = normalize(evidenceText)
 
-  const hard = coverage(keywords.hardSkills, hay, evidence)
-  const soft = coverage(keywords.softSkills, hay, evidence)
-  const must = coverage(keywords.mustHaves, hay, evidence)
-  const title = titleScore(keywords.jobTitle, titlesNorm)
+  const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches)
+  const soft = coverage(keywords.softSkills, hay, evidence, semanticMatches)
+  const must = coverage(keywords.mustHaves, hay, evidence, semanticMatches)
+  const title = titleScore(keywords.jobTitle, titlesNorm, recentTitles ? normalize(recentTitles) : undefined)
   const sectionsPct = sectionsScore(sections)
 
   const parts: Array<{ pct: number; w: number }> = []

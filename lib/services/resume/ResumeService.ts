@@ -258,6 +258,51 @@ export class ResumeService {
     return copy
   }
 
+  /**
+   * Creates a NEW resume that is a translated copy of `sourceId`. The original is
+   * left untouched. Style/layout columns are copied from the source; the caller
+   * supplies the already-translated content (`personalDetails`), the layout with
+   * translated section labels (`sections`), the new title and the target language.
+   * Counts against the plan's resume limit like any other new resume.
+   */
+  async createTranslatedCopy(
+    userId: string,
+    sourceId: string,
+    translated: { personalDetails: object; sections: object[]; title: string; language: "es" | "en" },
+  ) {
+    const [original, user] = await Promise.all([
+      db.resume.findFirst({ where: { id: sourceId, userId } }),
+      db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionEndsAt: true } }),
+    ])
+
+    if (!original) throw new AppError("not_found", 404)
+
+    const limits = getLimits(user ? effectivePlan(user) : "UNSUBSCRIBED")
+
+    const copy = await db.$transaction(async (tx) => {
+      await enforceResumeLimit(tx, userId, limits.maxResumes, "translate")
+      return tx.resume.create({
+        data: {
+          userId,
+          title:           translated.title,
+          templateId:      original.templateId,
+          colorScheme:     original.colorScheme,
+          fontFamily:      original.fontFamily,
+          fontSize:        original.fontSize,
+          spacing:         original.spacing,
+          sections:        translated.sections as object[],
+          personalDetails: translated.personalDetails as object,
+          photoUrl:        original.photoUrl,
+          photoPosition:   original.photoPosition,
+          language:        translated.language,
+        },
+      })
+    })
+
+    this.logger.info("[ResumeService] translate copy", { userId, sourceId, copyId: copy.id, language: translated.language })
+    return copy
+  }
+
   // ── SHARE (toggle public) ─────────────────────────────────────────────────
 
   async toggleShare(userId: string, resumeId: string): Promise<ShareToggleResult> {

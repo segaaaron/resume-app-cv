@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useRef, useState } from "react"
-import { Pen, Copy, Trash2, Loader2 } from "lucide-react"
+import { Pen, Copy, Trash2, Loader2, Languages } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { ResumeThumbnail } from "@/components/editor/template-switcher/thumbnails"
 import { TEMPLATES } from "@/types/resume"
@@ -31,6 +31,7 @@ interface CVCardProps {
   onEdit: () => void
   onRename: () => void
   onDuplicate: () => void
+  onTranslate: () => void
   onDownload: () => void
   onDelete: () => void
 }
@@ -46,6 +47,7 @@ const CVCard = React.memo(function CVCard({
   onEdit,
   onRename,
   onDuplicate,
+  onTranslate,
   onDownload,
   onDelete,
 }: CVCardProps) {
@@ -193,6 +195,11 @@ const CVCard = React.memo(function CVCard({
                 onClick={() => { setDdOpen(false); onDuplicate() }}
                 icon={<Copy className="w-[13px] h-[13px]" />}
                 label={t("duplicate")}
+              />
+              <DDItem
+                onClick={() => { setDdOpen(false); onTranslate() }}
+                icon={<Languages className="w-[13px] h-[13px]" />}
+                label={t("translate")}
               />
               <div
                 className="my-[6px] h-px"

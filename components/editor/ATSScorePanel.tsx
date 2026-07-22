@@ -1,7 +1,9 @@
 "use client"
 
 import { useState } from "react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
+import { apiFetch } from "@/lib/apiFetch"
+import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch } from "lucide-react"
@@ -9,12 +11,12 @@ import TailorCVPanel from "./TailorCVPanel"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
-import type { ResumeSections, SkillItem } from "@/types/resume"
+import type { ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion } from "./hooks/useATSScore"
 import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
-import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
+import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 
 function ScoreRing({ score, label }: { score: number; label: string }) {
   const r = 70
@@ -147,6 +149,77 @@ export default function ATSScorePanel() {
   }
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
+  const locale = useLocale()
+
+  // Inline "improve this weak bullet" — reuses the honest improve-bullet engine
+  // (stronger verb / tighter phrasing, NEVER invents a number) and applies the
+  // rewrite to the exact bullet by index, then re-scores.
+  const [bulletFix, setBulletFix] = useState<{ targetId: string; index: number; current: string; improved: string } | null>(null)
+  const [improvingKey, setImprovingKey] = useState<string | null>(null)
+
+  async function improveMetricless(
+    b: { text: string; targetId: string; jobTitle: string; index: number },
+    key: string,
+  ) {
+    if (improvingKey) return
+    setImprovingKey(key)
+    try {
+      const res = await apiFetch("/api/ai/improve-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: b.text, jobTitle: b.jobTitle || undefined, language: locale === "en" ? "en" : "es" }),
+      })
+      if (!res.ok) {
+        toast.error(t("metricless_improve_error"))
+        return
+      }
+      const data = await res.json().catch(() => null)
+      const parsed = ImproveBulletResponseSchema.safeParse(data)
+      if (!parsed.success) { toast.error(t("metricless_improve_error")); return }
+      const first = parsed.data.improvements[0]
+      if (parsed.data.status === "already_optimized" || !first || first.text.trim() === b.text.trim()) {
+        toast.info(t("metricless_already_good"))
+        return
+      }
+      setBulletFix({ targetId: b.targetId, index: b.index, current: b.text, improved: first.text })
+    } catch {
+      toast.error(t("metricless_improve_error"))
+    } finally {
+      setImprovingKey(null)
+    }
+  }
+
+  function confirmBulletFix() {
+    if (!bulletFix) return
+    const { targetId, index, improved } = bulletFix
+    try {
+      const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+      const job = work.find((j) => j.id === targetId)
+      const bullets = parseBullets(job?.description ?? "")
+      // Stale-index guard: if the description was edited between scoring and
+      // applying, the bullet at `index` may no longer be the one we improved.
+      // Aborting is safer than overwriting the wrong line.
+      if (!job || index < 0 || index >= bullets.length || bullets[index].trim() !== bulletFix.current.trim()) {
+        toast.error(t("metricless_improve_error"))
+        return
+      }
+      // Replace the one bullet; re-mark every bullet uniformly so the stored
+      // description stays consistent (formatBullet strips then re-adds "• ").
+      const nextDescription = bullets
+        .map((line, i) => (i === index ? improved : line))
+        .map(formatBullet)
+        .join("\n")
+      const updated = work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j))
+      updateSectionData("workExperience", updated)
+      setAppliedItems((prev) => new Set(prev).add(`bullet-${targetId}-${index}`))
+      toast.success(t("toast_change_applied"))
+      void runRescore()
+    } catch {
+      toast.error(t("metricless_improve_error"))
+    } finally {
+      setBulletFix(null)
+    }
+  }
 
   const inputIsQuestion = isQuestion(input)
 
@@ -453,14 +526,39 @@ export default function ATSScorePanel() {
                 )}
                 {atsResult.contentQuality.metriclessBullets.length > 0 && (
                   <div className="mt-2 rounded-lg bg-white/60 border border-violet-100 p-2">
-                    <p className="text-[9.5px] font-bold uppercase tracking-wide text-violet-500 mb-1">{t("content_quality_metricless_title")}</p>
-                    <ul className="flex flex-col gap-1">
-                      {atsResult.contentQuality.metriclessBullets.map((b, i) => (
-                        <li key={i} className="text-[10.5px] text-slate-600 leading-snug flex items-start gap-1.5">
-                          <span className="text-violet-400 mt-0.5 shrink-0">•</span>
-                          <span className="line-clamp-2">{b}</span>
-                        </li>
-                      ))}
+                    <p className="text-[9.5px] font-bold uppercase tracking-wide text-violet-500 mb-1.5">{t("content_quality_metricless_title")}</p>
+                    <ul className="flex flex-col gap-1.5">
+                      {atsResult.contentQuality.metriclessBullets.map((b, i) => {
+                        const key = `bullet-${b.targetId}-${b.index}`
+                        const applied = appliedItems.has(key)
+                        const busy = improvingKey === key
+                        return (
+                          <li key={key} className="text-[10.5px] text-slate-600 leading-snug flex items-start gap-1.5">
+                            <span className="text-violet-400 mt-0.5 shrink-0">•</span>
+                            <div className="flex-1 min-w-0">
+                              <span className="line-clamp-2 block">{b.text}</span>
+                              {b.jobTitle && (
+                                <span className="text-[9px] text-violet-400/80">{t("metricless_in_job", { job: b.jobTitle })}</span>
+                              )}
+                            </div>
+                            {applied ? (
+                              <span className="shrink-0 flex items-center gap-1 text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
+                                <Check className="h-2.5 w-2.5" /> {t("metricless_applied")}
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => improveMetricless(b, key)}
+                                disabled={busy || !!improvingKey}
+                                className="shrink-0 flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+                                {busy ? t("metricless_improving") : t("metricless_improve")}
+                              </button>
+                            )}
+                          </li>
+                        )
+                      })}
                     </ul>
                   </div>
                 )}
@@ -629,6 +727,21 @@ export default function ATSScorePanel() {
         {/* Review Results */}
         {reviewResult && (
           <div className="space-y-3 pt-1">
+            {/* Deterministic resume score (JD-independent) — computed in code,
+                not guessed by the LLM. Shown only for a general review. */}
+            {reviewResult.resumeScore && !reviewResult.answer && (
+              <div className="flex flex-col items-center gap-1 py-1">
+                <ScoreRing score={reviewResult.resumeScore.overall} label={t("resume_score_label")} />
+                <div className="w-full rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 p-4 mt-1">
+                  <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("resume_score_title")}</p>
+                  {reviewResult.resumeScore.dimensions
+                    .filter((d) => d.score !== null)
+                    .map((d) => (
+                      <ScoreBar key={d.key} label={t(`resume_score_dim_${d.key}`)} pct={d.score as number} />
+                    ))}
+                </div>
+              </div>
+            )}
             {reviewResult.answer && (
               <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 backdrop-blur-sm p-4">
                 <p className="text-[10px] font-black tracking-widest uppercase text-blue-600 flex items-center gap-1.5 mb-2.5">
@@ -693,6 +806,22 @@ export default function ATSScorePanel() {
           onConfirm={handleConfirmApply}
           suggestion={modal.suggestion}
           currentValue={modal.currentValue}
+        />
+      )}
+
+      {/* Inline weak-bullet rewrite (improve-bullet) → diff → apply by index */}
+      {bulletFix && (
+        <SuggestionDiffModal
+          open={true}
+          onClose={() => setBulletFix(null)}
+          onConfirm={confirmBulletFix}
+          suggestion={{
+            field: "workExperience.description",
+            type: "replace",
+            preview: bulletFix.improved,
+            reason: t("content_quality_hint"),
+          }}
+          currentValue={bulletFix.current}
         />
       )}
     </>

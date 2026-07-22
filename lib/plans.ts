@@ -22,6 +22,7 @@ export type AiEndpointName =
   | "improve-cover-letter"
   | "ats-score"
   | "review-cv"
+  | "translate-cv"
 
 export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "fill-profile",
@@ -33,6 +34,7 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "improve-cover-letter",
   "ats-score",
   "review-cv",
+  "translate-cv",
 ] as const
 
 /**
@@ -52,6 +54,7 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "tailor-cv": 10,
   "ats-score": 10,
   "review-cv": 10,
+  "translate-cv": 20,
 }
 
 export const AI_DAILY_CAP_WINDOW_MS = 24 * 60 * 60 * 1000
@@ -86,6 +89,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": -1,
       "review-cv": -1,
+      "translate-cv": -1,
     },
   },
   UNSUBSCRIBED: {
@@ -102,6 +106,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": 2,
       "ats-score": 0,
       "review-cv": 0,
+      "translate-cv": 0,
     },
   },
   // BASIC: one-time, 1 calendar month. 1 CV, download it unlimited times, NO AI.
@@ -120,6 +125,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": 0,
       "ats-score": 0,
       "review-cv": 0,
+      "translate-cv": 0,
     },
   },
   // SPRINT: one-time, 7 days. Content AI + PRO templates. NO tailor-cv / ats-score / review-cv (PRO only).
@@ -137,6 +143,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": 0,
       "review-cv": 0,
+      "translate-cv": 0,
     },
   },
   PRO: {
@@ -153,6 +160,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": -1,
       "review-cv": -1,
+      "translate-cv": -1,
     },
   },
 }

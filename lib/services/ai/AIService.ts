@@ -14,6 +14,7 @@ import { AIReviewModule } from "./modules/AIReviewModule"
 import { AICoverLetterModule } from "./modules/AICoverLetterModule"
 import { AIProfileModule } from "./modules/AIProfileModule"
 import { AITailorModule } from "./modules/AITailorModule"
+import { AITranslateModule } from "./modules/AITranslateModule"
 
 import type {
   ATSScoreInput,
@@ -30,8 +31,11 @@ import type {
   ImproveSummaryInput,
   ReviewCVInput,
   ReviewResult,
+  ReviewCVResult,
   TailorCVInput,
   TailorCVResultV2,
+  TranslateCVInput,
+  TranslateCVResult,
   VersionsResult,
 } from "./shared/ai-types"
 
@@ -43,6 +47,7 @@ export type {
   CoverLetterResult,
   SkillItem,
   ReviewResult,
+  ReviewCVResult,
   FillProfileResult,
   ImproveBulletInput,
   GenerateSummaryInput,
@@ -55,6 +60,8 @@ export type {
   FillProfileInput,
   TailorCVInput,
   TailorCVResultV2,
+  TranslateCVInput,
+  TranslateCVResult,
 } from "./shared/ai-types"
 
 export class AIService {
@@ -64,6 +71,7 @@ export class AIService {
   private readonly coverLetterModule: AICoverLetterModule
   private readonly profileModule: AIProfileModule
   private readonly tailorModule: AITailorModule
+  private readonly translateModule: AITranslateModule
 
   constructor(aiClient: IAIClient, logger: ILogger) {
     this.bulletModule = new AIBulletModule(aiClient, logger)
@@ -72,6 +80,7 @@ export class AIService {
     this.coverLetterModule = new AICoverLetterModule(aiClient, logger)
     this.profileModule = new AIProfileModule(aiClient, logger)
     this.tailorModule = new AITailorModule(aiClient, logger)
+    this.translateModule = new AITranslateModule(aiClient, logger)
   }
 
   improveBullet(userId: string, input: ImproveBulletInput, plan: string): Promise<BulletResult> {
@@ -103,7 +112,7 @@ export class AIService {
     return this.coverLetterModule.improveCoverLetter(userId, input, plan)
   }
 
-  reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewResult> {
+  reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewCVResult> {
     return this.reviewModule.reviewCV(userId, input, plan)
   }
 
@@ -114,5 +123,9 @@ export class AIService {
 
   tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
     return this.tailorModule.tailorCV(userId, input, plan)
+  }
+
+  translateCV(userId: string, input: TranslateCVInput, plan: string): Promise<TranslateCVResult> {
+    return this.translateModule.translateCV(userId, input, plan)
   }
 }

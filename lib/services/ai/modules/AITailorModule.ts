@@ -223,8 +223,13 @@ Reglas:
       .filter((s): s is string => typeof s === "string" && s.trim().length > 0)
       .filter((s) => {
         const sl = s.toLowerCase().trim()
-        // Must be referenced somewhere in JD or CV — never invent skill names.
-        return jdLower.includes(sl) || resumeLower.includes(sl)
+        // A skill is "missing" only if the JOB requires it (anti-invention: the
+        // name must appear in the JD, never fabricated) AND the CV does not
+        // already contain it anywhere. The old `|| resumeLower.includes(sl)`
+        // re-admitted skills the candidate already lists, so freshly-added /
+        // pre-existing skills kept showing up as "missing" — the exact bug the
+        // user reported. Presence in the CV now EXCLUDES a skill from the list.
+        return jdLower.includes(sl) && !resumeLower.includes(sl)
       })
       .slice(0, 5)
 

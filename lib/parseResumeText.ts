@@ -131,10 +131,27 @@ function normalizeLine(line: string): string {
     .replace(/\s+/g, " ").trim()
 }
 
+// "S K I L L S" → "skills". Templates with letter-spaced sidebar headings
+// (Navy Executive, etc.) extract each heading as single letters split by
+// spaces. Only collapses a pure run of single letters — normal multi-letter
+// headings are left untouched (returns "" so callers know it did not apply).
+function collapseSpacedLetters(line: string): string {
+  const norm = line.toLowerCase().replace(/[^\p{L}\s]/gu, "").replace(/\s+/g, " ").trim()
+  const tokens = norm.split(" ").filter(Boolean)
+  if (tokens.length >= 3 && tokens.every((t) => t.length === 1)) return tokens.join("")
+  return ""
+}
+
 // Líneas de adorno de plantilla (banners estilo terminal, timestamps, latín)
 function isNoiseLine(line: string): boolean {
   if (/<[A-Z]{2,8}>/.test(line)) return true            // tags tipo <GO>, <HELP>
   if (/^\d{2}[·.:]\d{2}[·.:]\d{2}/.test(line)) return true // timestamps 06·05·26
+  // A letter-spaced line whose collapsed form is a REAL section heading
+  // ("S K I L L S" → "skills") is a heading, not decoration — keep it, or its
+  // whole section (skills, education…) gets dropped before parsing. This was
+  // the "imported CV shows no skills" bug on 2-column templates.
+  const collapsed = collapseSpacedLetters(line)
+  if (collapsed && SECTION_MAP[collapsed]) return false
   // Adorno con letras espaciadas: "C U R R I C U L U M", "I N FIDEM SCRIPSI",
   // a menudo con símbolos decorativos (★ — ●). ≥4 letras sueltas = decorativo.
   const singleChars = line.match(/(?:^|\s)\p{L}(?=\s|$)/gu)
@@ -146,6 +163,9 @@ function isSectionHeading(line: string): string | null {
   const norm = normalizeLine(line)
   // Exact match
   if (SECTION_MAP[norm]) return SECTION_MAP[norm]
+  // Letter-spaced heading from a styled template: "S K I L L S" → "skills".
+  const collapsed = collapseSpacedLetters(line)
+  if (collapsed && SECTION_MAP[collapsed]) return SECTION_MAP[collapsed]
   // Heading combinado: "Languages & Contact", "Contacto y Datos", "Skills + Tools".
   // Si AMBAS mitades son headings conocidos, gana el tipo de la primera; el
   // contenido se enruta por su parser real (idiomas→languages, email→contacto global).
@@ -574,11 +594,26 @@ function parseEduBlock(block: string[], id: string) {
     description: "",
   }
 
+  // True once the entry opened with a lone date line (2-col sidebar layout:
+  // "2010 — 2015" / "Systems engineer" / "Catolica University"). In that shape
+  // the first following text line is the DEGREE, the next is the institution.
+  let dateFirst = false
+
   for (let i = 0; i < block.length; i++) {
     const line = block[i]
     const dr = extractDateRange(line)
 
     if (i === 0) {
+      // Lone date on the first line: capture the range and let the following
+      // lines fill degree + institution, instead of assigning the date string
+      // itself as the degree (the bug on date-first sidebar templates).
+      if (dr.startDate && !stripDates(line).replace(/[^\p{L}\p{N}]/gu, "")) {
+        edu.startDate = dr.startDate
+        edu.endDate = dr.endDate
+        edu.currentlyStudying = dr.current
+        dateFirst = true
+        continue
+      }
       // Filtrar vacíos: líneas con viñeta inicial ("· Systems engineer ...")
       // producen un primer elemento vacío al separar.
       const parts = line.split(/\s*[|·\t]\s*/).map(p => p.trim()).filter(Boolean)
@@ -628,9 +663,15 @@ function parseEduBlock(block: string[], id: string) {
       const parts = line.split(/\s*[|·,\t]\s*/).map(clean).filter(p => p.length > 1)
       const p0 = parts[0] ?? ""
       if (!edu.institution) {
-        // Institution not set yet — assign this line to institution
-        edu.institution = p0
-        if (parts.length >= 2 && !edu.city && !SIDEBAR_LABEL_RE.test(parts[1] ?? "")) edu.city = parts[1]
+        // Date-first sidebar layout: the first text line after the date is the
+        // degree, not the institution (unless it clearly names an institution).
+        if (dateFirst && !edu.degree && !INSTITUTION_RE.test(p0)) {
+          edu.degree = p0
+        } else {
+          // Institution not set yet — assign this line to institution
+          edu.institution = p0
+          if (parts.length >= 2 && !edu.city && !SIDEBAR_LABEL_RE.test(parts[1] ?? "")) edu.city = parts[1]
+        }
       } else if (INSTITUTION_RE.test(p0) && parts.length === 1 && p0.length < 40 && !DEGREE_RE.test(p0)) {
         // Continuación del nombre de institución envuelto: "Catolica" + "University"
         edu.institution = `${edu.institution} ${p0}`
@@ -641,6 +682,22 @@ function parseEduBlock(block: string[], id: string) {
         edu.city = p0
       }
     }
+  }
+
+  // Sanity swap: on date-first sidebar templates the degree/institution order
+  // varies, and an institution ACRONYM ("MIT") is not caught by INSTITUTION_RE,
+  // so it can land in `degree` while the real degree ("Bachelor of Science")
+  // lands in `institution`. Fix it unambiguously: if `institution` holds a degree
+  // keyword and `degree` does not (and `institution` is not itself an institution
+  // name), the two were swapped.
+  if (
+    edu.degree && edu.institution &&
+    DEGREE_RE.test(edu.institution) && !DEGREE_RE.test(edu.degree) &&
+    !INSTITUTION_RE.test(edu.institution)
+  ) {
+    const tmp = edu.degree
+    edu.degree = edu.institution
+    edu.institution = tmp
   }
 
   // Split degree into degree + fieldOfStudy
@@ -786,9 +843,13 @@ export function parseResumeText(rawText: string): ParsedResume {
   const header = get("header")
   if (header) {
     const contactRe = /[@+]|linkedin|github|http|www\.|\.com|\.mx|\.es|\d{5,}/i
+    // Document-title lines a styled template prints at the very top ("Curriculum
+    // Vitæ 2026", "Resume", "CV"). They are NOT the candidate's name — accepting
+    // one gave firstName "Curriculum", lastName "Vitæ 2026".
+    const titleNoiseRe = /^\s*(curriculum\s*vit[aæ]e?|hoja\s+de\s+vida|r[eé]sum[eé]|resume|cv\b|profile|perfil)/i
     // Candidato a nombre: debe empezar con letra (excluye adornos "● LIVE ·...")
     const cands = header.lines.filter(l =>
-      !contactRe.test(l) && l.length > 1 && l.length < 70 && /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(l)
+      !contactRe.test(l) && !titleNoiseRe.test(l) && l.length > 1 && l.length < 70 && /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]/.test(l)
     )
     if (cands[0]) {
       const parts = clean(cands[0]).split(/\s+/)
@@ -839,8 +900,22 @@ export function parseResumeText(rawText: string): ParsedResume {
       if (!words.every(w => NAME_WORD.test(w))) continue
       result.personalDetails.firstName = words[0]
       result.personalDetails.lastName = words.slice(1).join(" ")
+      // Sidebar templates split the name across lines ("Miguel Angel" / "Saravia").
+      // If the next line is a lone surname (1-2 capitalized words, not a role,
+      // heading, contact or number), fold it into the last name and look one line
+      // further for the job title.
+      let roleIdx = i + 1
+      const cont = scanLines[i + 1]
+      if (cont && !isSectionHeading(cont) && !CONTACT_LINE_RE.test(cont) && !/\d/.test(cont) &&
+          !ROLE_KEYWORDS.test(cont) && !INSTITUTION_RE.test(cont)) {
+        const contWords = clean(cont).split(/\s+/)
+        if (contWords.length >= 1 && contWords.length <= 2 && contWords.every(w => NAME_WORD.test(w))) {
+          result.personalDetails.lastName = `${result.personalDetails.lastName} ${clean(cont)}`.trim()
+          roleIdx = i + 2
+        }
+      }
       // El cargo suele venir justo después del nombre
-      const next = scanLines[i + 1]
+      const next = scanLines[roleIdx]
       if (!result.personalDetails.jobTitle && next && next.length < 60 &&
           !isSectionHeading(next) && !CONTACT_LINE_RE.test(next) && !/\d{4}/.test(next)) {
         result.personalDetails.jobTitle = clean(next)
@@ -1054,6 +1129,18 @@ export function parseResumeText(rawText: string): ParsedResume {
         result.education.push(edu)
       }
     }
+  }
+
+  // ── Drop phantom work entries whose "employer" is only a date range ─────
+  // A 2-col extractor routes sidebar/education content into the work column, and
+  // parseWorkBlock then takes the lone date line ("2010 — 2015") as the employer.
+  // Such an entry is never a real job; left in, it both shows a bogus position
+  // AND makes the education prune below delete the matching real degree.
+  {
+    const dateOnlyEmployer = /^\s*(19|20)\d{2}\s*[-–—]\s*((19|20)\d{2}|present|actual|presente|current|now|actualidad)\s*$/i
+    const before = result.workExperience.length
+    result.workExperience = result.workExperience.filter(j => !(j.employer && dateOnlyEmployer.test(j.employer)))
+    if (result.workExperience.length < before) result.workExperience.forEach((j, i) => { j.id = `we${i + 1}` })
   }
 
   // ── Prune work entries that are actually education ─────────────────────

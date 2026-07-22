@@ -25,8 +25,11 @@ import {
   type ATSRescoreInput,
   type ReviewCVInput,
   type ReviewResult,
+  type ReviewCVResult,
 } from "../shared/ai-types"
+import { computeResumeScore } from "../shared/resume-score"
 import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
+import { findSemanticMatches } from "../shared/semantic-match"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
 
@@ -157,20 +160,39 @@ Reglas:
 
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)
+    const recentTitles = buildRecentTitles(data)
     const sections = buildSectionPresence(data)
     const evidenceText = buildEvidenceText(data)
-    const match = computeATSMatch(
-      {
-        hardSkills: extraction.hardSkills,
-        softSkills: extraction.softSkills,
-        jobTitle: extraction.jobTitle,
-        mustHaves: extraction.mustHaves,
-      },
-      resumeText,
-      cvTitles,
-      sections,
-      evidenceText,
-    )
+    const keywords = {
+      hardSkills: extraction.hardSkills,
+      softSkills: extraction.softSkills,
+      jobTitle: extraction.jobTitle,
+      mustHaves: extraction.mustHaves,
+    }
+    let match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText, undefined, recentTitles)
+
+    // ── Semantic recall pass (embeddings) ──────────────────────────────────────
+    // The exact matcher misses a required skill the CV phrases differently
+    // ("REST APIs" vs "APIs REST", "leadership" vs "liderazgo"). Embed the still-
+    // missing requirements + the candidate's own skill/title terms and re-run the
+    // match crediting the ones that are semantically equivalent. ADD-only: it can
+    // never lower the exact score, and it fails closed on any embed error.
+    // Capped so a CV with hundreds of skills can't blow up the embed batch.
+    const cvTerms = [
+      ...((data.skills as { name?: string }[] | undefined)?.map((s) => s.name ?? "") ?? []),
+      ...((data.workExperience as { jobTitle?: string }[] | undefined)?.map((w) => w.jobTitle ?? "") ?? []),
+      (data.personalDetails as { jobTitle?: string } | undefined)?.jobTitle ?? "",
+    ].filter(Boolean).slice(0, 60)
+    if (match.missingKeywords.length > 0 && cvTerms.length > 0) {
+      const semanticMatches = await findSemanticMatches(
+        match.missingKeywords,
+        cvTerms,
+        (texts) => this.aiClient.embed(texts),
+      )
+      if (semanticMatches.size > 0) {
+        match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText, semanticMatches, recentTitles)
+      }
+    }
 
     // Template parseability. A multi-column / sidebar layout can be reordered by
     // strict ATS parsers, so it must not score identically to a clean single-column
@@ -226,7 +248,8 @@ Reglas:
     const cvTitles = buildCVTitles(data)
     const sections = buildSectionPresence(data)
     const evidenceText = buildEvidenceText(data)
-    const match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText)
+    // Recency weight here too, so the instant re-score stays identical to atsScore.
+    const match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText, undefined, buildRecentTitles(data))
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
@@ -249,11 +272,15 @@ Reglas:
     }
   }
 
-  async reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewResult> {
+  async reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewCVResult> {
     await enforceAIQuota(userId, "review-cv", plan)
 
     const { sectionData, question, language: rawLanguage } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
+
+    // Deterministic resume score — computed in code, independent of the LLM and of
+    // any job description. Attached to every return path below.
+    const resumeScore = computeResumeScore(sectionData)
 
     const resumeContext = buildResumeContext(sectionData, language)
     if (!resumeContext.trim()) throw new AppError("not_enough_data", 400)
@@ -287,6 +314,13 @@ INSTRUCTIONS:
 2. Answer the question directly if it is specific.
 3. Be concrete — mention real sections or data from the resume.
 4. Tone: professional consultant, direct and constructive.
+5. SPELLING & GRAMMAR: proof-read every field. When you find a typo, misspelling or grammar error (e.g. "Objetive-C" → "Objective-C", "React Navite" → "React Native", "Web Debeloper" → "Web Developer", "more then" → "more than"), add an IMPROVEMENT whose "suggestion" corrects ONLY the error in the affected field. Rules: fix the typo, keep everything else byte-for-byte; NEVER "correct" a real technology/brand/proper name or change meaning; the preview is the full corrected field value. Correcting a typo is NOT inventing content — it is allowed and expected.
+6. REVIEW WITH A SENIOR RECRUITER'S LENS. A recruiter spends 6-11 seconds on the first pass, 80% of it on the TOP of the resume. Apply these priorities, in order:
+   a. TOP-THIRD FIRST: the current job title and the professional summary carry the most weight — a missing/weak current title or a vague summary is the #1 reason to reject on the first scan. Flag these before anything lower on the page.
+   b. SENIORITY SIGNALS: reward scope and ownership — team size led, budget owned, cross-functional leadership, systems designed. If the target is a senior/lead role and the bullets read as individual-contributor tasks, say so.
+   c. RED FLAGS a recruiter reacts to: unexplained employment gaps, a current title that does not match the target role, achievements with zero quantification, duty-listing ("responsible for…") instead of results, and inconsistent dates. Name the specific ones you see.
+   d. RELEVANCE OVER COMPLETENESS: a shorter, sharper resume beats a long one padded with weak bullets — recommend cutting or tightening, not just adding.
+   Keep every point grounded in this specific resume; do not give generic career advice.
 
 For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
 - field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
@@ -338,6 +372,13 @@ INSTRUCCIONES:
 2. Responde directamente a la pregunta si es específica.
 3. Sé concreto — menciona secciones o datos reales del CV.
 4. Tono: consultor profesional, directo y constructivo.
+5. ORTOGRAFÍA Y GRAMÁTICA: revisa cada campo. Cuando encuentres una falta, error tipográfico o gramatical (ej.: "Objetive-C" → "Objective-C", "React Navite" → "React Native", "Analystical" → "Analytical", "Debeloper" → "Developer"), agrega una MEJORA cuyo "suggestion" corrija SOLO el error en el campo afectado. Reglas: corrige la falta, deja todo lo demás idéntico; NUNCA "corrijas" una tecnología/marca/nombre propio real ni cambies el significado; el preview es el valor completo corregido del campo. Corregir una falta NO es inventar contenido — está permitido y es esperado.
+6. REVISA CON LA MIRADA DE UN RECLUTADOR SENIOR. Un reclutador dedica 6-11 segundos al primer vistazo, 80% al TERCIO SUPERIOR del CV. Aplica estas prioridades, en orden:
+   a. TERCIO SUPERIOR PRIMERO: el puesto actual y el resumen profesional pesan más — un título actual débil/ausente o un resumen vago es la razón #1 de rechazo en el primer escaneo. Señálalos antes que nada de más abajo.
+   b. SEÑALES DE SENIORITY: premia alcance y ownership — tamaño de equipo liderado, presupuesto gestionado, liderazgo cross-funcional, sistemas diseñados. Si el objetivo es un rol senior/lead y los bullets se leen como tareas de colaborador individual, dilo.
+   c. RED FLAGS que un reclutador nota: gaps de empleo sin explicar, título actual que no coincide con el rol objetivo, logros sin ninguna cuantificación, listar funciones ("responsable de…") en vez de resultados, y fechas inconsistentes. Nombra las específicas que veas.
+   d. RELEVANCIA SOBRE COMPLETITUD: un CV más corto y afilado gana a uno largo relleno de bullets débiles — recomienda recortar o apretar, no solo añadir.
+   Mantén cada punto anclado a ESTE CV específico; no des consejos genéricos de carrera.
 
 Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
@@ -379,7 +420,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 900,
+      // Raised from 900: the review now also proof-reads for spelling/grammar and
+      // returns per-error corrections, so the JSON is larger. Sized to the worst
+      // case (5 strengths + 5 improvements, each with a full-field preview).
+      max_tokens: 1300,
       // review-cv usa temperatura baja (0.3) para reducir alucinaciones en suggestions.preview.
       // No afecta a otros endpoints — cada módulo elige la suya.
       temperature: AI_TEMPERATURE_STRUCTURED,
@@ -421,6 +465,16 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // to be first — so drop it and keep the advisory text instead.
       if (field.startsWith("workExperience.") && !targetId) {
         this.logger.warn("[AIService.reviewCV] dropped suggestion with no targetId", { field })
+        return { ...item, suggestion: undefined }
+      }
+
+      // No-op guard: the model sometimes "suggests" replacing a field with text
+      // identical to what is already there (e.g. re-running the review on a CV the
+      // user already fixed). Exact-equality only — NOT a fuzzy 90% threshold —
+      // so a spelling fix, which is nearly identical by design, still survives.
+      const currentValue = getCurrentFieldValue(field, targetId, sectionData)
+      const normEq = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
+      if (currentValue && normEq(currentValue) === normEq(cleanedPreview)) {
         return { ...item, suggestion: undefined }
       }
 
@@ -479,6 +533,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           typeof s === "string" ? { text: s } : { text: (s as { text?: string }).text ?? "" }
         ),
         answer: parsed.answer ?? "",
+        resumeScore,
       }
     }
 
@@ -488,6 +543,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       strengths: validated.data.strengths.map(sanitizeItem),
       improvements: validated.data.improvements.map(sanitizeItem),
       answer: validated.data.answer,
+      resumeScore,
     }
   }
 }
@@ -513,6 +569,46 @@ function buildCVTitles(data: Record<string, unknown>): string {
   const pd = data.personalDetails as { jobTitle?: string } | undefined
   const work = (data.workExperience as Array<{ jobTitle?: string }> | undefined) ?? []
   return [pd?.jobTitle, ...work.map((w) => w?.jobTitle)].filter(Boolean).join(" ")
+}
+
+/** Current value of a suggestion's target field, so a no-op "improvement"
+ *  (preview identical to what's already there) can be dropped. */
+function getCurrentFieldValue(field: string, targetId: string | undefined, data: Record<string, unknown>): string {
+  const findItem = <T extends { id?: string }>(arr: unknown): T | undefined => {
+    const items = (arr ?? []) as T[]
+    return targetId ? items.find((i) => i.id === targetId) : items[0]
+  }
+  switch (field) {
+    case "summary":
+      return typeof data.summary === "string" ? data.summary : ""
+    case "personalDetails.jobTitle":
+      return (data.personalDetails as { jobTitle?: string } | undefined)?.jobTitle ?? ""
+    case "skills":
+      return ((data.skills ?? []) as { name?: string }[]).map((s) => s.name ?? "").join(", ")
+    case "workExperience.description":
+      return findItem<{ id?: string; description?: string }>(data.workExperience)?.description ?? ""
+    case "workExperience.jobTitle":
+      return findItem<{ id?: string; jobTitle?: string }>(data.workExperience)?.jobTitle ?? ""
+    case "languages":
+      return ((data.languages ?? []) as { name?: string }[]).map((l) => l.name ?? "").join(", ")
+    case "certifications":
+      return ((data.certifications ?? []) as { name?: string }[]).map((c) => c.name ?? "").join(", ")
+    default:
+      return ""
+  }
+}
+
+/** The candidate's CURRENT/target titles: their target role + most recent job
+ *  title (by latest year). Feeds the title sub-score's recency weight. */
+function buildRecentTitles(data: Record<string, unknown>): string {
+  const pd = data.personalDetails as { jobTitle?: string } | undefined
+  const work = (data.workExperience as Array<{ jobTitle?: string; startDate?: string; endDate?: string }> | undefined) ?? []
+  const yearOf = (w: { startDate?: string; endDate?: string }) => {
+    const years = `${w.endDate ?? ""} ${w.startDate ?? ""}`.match(/20\d{2}|19\d{2}/g)
+    return years ? Math.max(...years.map(Number)) : 0
+  }
+  const mostRecent = [...work].sort((a, b) => yearOf(b) - yearOf(a))[0]?.jobTitle
+  return [pd?.jobTitle, mostRecent].filter(Boolean).join(" ")
 }
 
 function buildSectionPresence(data: Record<string, unknown>): SectionPresence {

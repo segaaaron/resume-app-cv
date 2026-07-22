@@ -48,7 +48,7 @@ export interface ATSResult {
     quantifiedBullets: number
     quantificationPct: number
     weakOpenerBullets: number
-    metriclessBullets: string[]
+    metriclessBullets: Array<{ text: string; targetId: string; jobTitle: string; index: number; weakOpener: boolean }>
   }
 }
 
@@ -70,11 +70,24 @@ export interface ReviewItem {
   suggestion?: Suggestion
 }
 
+export interface ResumeScoreDimension {
+  key: "impact" | "actionVerbs" | "completeness" | "brevity" | "recruiterScan"
+  score: number | null
+  detail: Record<string, number>
+}
+
+export interface ResumeScore {
+  overall: number
+  dimensions: ResumeScoreDimension[]
+}
+
 export interface ReviewResult {
   summary: string
   strengths: ReviewItem[]
   improvements: ReviewItem[]
   answer: string
+  /** Deterministic, JD-independent resume score (computed server-side in code). */
+  resumeScore?: ResumeScore
 }
 
 /** Heuristic: short text or ends with ? → treat as question */
@@ -111,11 +124,12 @@ export function useATSScore() {
       toast.error(t("toast_empty_input"))
       return
     }
-    const key = `${text}:${JSON.stringify({
-      s: sectionData.summary,
-      w: sectionData.workExperience,
-      sk: sectionData.skills,
-    })}`
+    // Token-saver: skip the LLM entirely when neither the job/question text NOR
+    // ANY part of the CV changed since the last successful analyze. The key now
+    // hashes the WHOLE sectionData (the review reads every section), so editing
+    // education / languages / certifications correctly triggers a fresh review —
+    // and re-clicking with nothing changed spends zero tokens.
+    const key = `${text}:${JSON.stringify(sectionData)}`
     if (key === lastKeyRef.current) { toast.info(t("no_changes")); return }
     if (Date.now() < cooldownUntil) {
       const secs = Math.ceil((cooldownUntil - Date.now()) / 1000)

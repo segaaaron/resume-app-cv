@@ -66,6 +66,33 @@ describe("computeATSMatch", () => {
     expect(res.matchedKeywords).toEqual(["JavaScript"])
   })
 
+  it("recency weight: current title = full credit, old-title-only = partial", () => {
+    const kw = keywords({ jobTitle: "iOS Developer" })
+    const allTitles = "Barista iOS Developer" // has iOS Developer, but as an OLD role
+    // recentTitles = current role only (Barista) → iOS tokens matched only in old title → 60%.
+    const old = computeATSMatch(kw, "resume", allTitles, FULL_SECTIONS, "", undefined, "Barista")
+    expect(old.subScores.title).toBe(60)
+    // recentTitles = iOS Developer (current) → full credit.
+    const current = computeATSMatch(kw, "resume", allTitles, FULL_SECTIONS, "", undefined, "iOS Developer")
+    expect(current.subScores.title).toBe(100)
+    // No recentTitles supplied → legacy behavior, full credit (no recency applied).
+    const legacy = computeATSMatch(kw, "resume", allTitles, FULL_SECTIONS)
+    expect(legacy.subScores.title).toBe(100)
+  })
+
+  it("credits a keyword found only by the semantic pass (embeddings recall)", () => {
+    const kw = keywords({ hardSkills: ["APIs REST"] })
+    const cv = "Diseñé servicios web" // exact matcher would NOT find "apis rest" here
+    // Without semantic matches → missing.
+    expect(computeATSMatch(kw, cv, "", FULL_SECTIONS).missingKeywords).toEqual(["APIs REST"])
+    // With the semantic pass having proven it present → matched, no longer missing.
+    const withSem = computeATSMatch(kw, cv, "", FULL_SECTIONS, "", new Set(["apis rest"]))
+    expect(withSem.missingKeywords).toEqual([])
+    expect(withSem.matchedKeywords).toEqual(["APIs REST"])
+    // Semantic-only match is "listed", never "demonstrated" (no work-experience evidence).
+    expect(withSem.listedOnlyKeywords).toContain("APIs REST")
+  })
+
   it("returns null sub-score for categories the JD did not specify", () => {
     const kw = keywords({ hardSkills: ["React"] }) // no soft skills, no title
     const res = computeATSMatch(kw, "React dev", "", FULL_SECTIONS)
