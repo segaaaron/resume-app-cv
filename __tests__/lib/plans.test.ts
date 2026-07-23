@@ -12,17 +12,15 @@ const past = new Date(Date.now() - 1000 * 60 * 60) // -1h
 
 describe("plans · BASIC + SPRINT capabilities", () => {
   describe("getLimits", () => {
-    it("BASIC: can export, no import, ALL AI blocked", () => {
+    it("BASIC: can export, ALL AI blocked", () => {
       const l = getLimits("BASIC")
       expect(l.canExportPdf).toBe(true)
-      expect(l.canImport).toBe(false)
       expect(Object.values(l.aiLimitsByEndpoint).every((v) => v === 0)).toBe(true)
     })
 
     it("SPRINT: content AI unlimited, but tailor/ats/review blocked", () => {
       const l = getLimits("SPRINT")
       expect(l.canExportPdf).toBe(true)
-      expect(l.canImport).toBe(true)
       expect(l.aiLimitsByEndpoint["fill-profile"]).toBe(-1)
       expect(l.aiLimitsByEndpoint["improve-bullet"]).toBe(-1)
       expect(l.aiLimitsByEndpoint["generate-cover-letter"]).toBe(-1)

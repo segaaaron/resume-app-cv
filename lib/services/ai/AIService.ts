@@ -15,6 +15,8 @@ import { AICoverLetterModule } from "./modules/AICoverLetterModule"
 import { AIProfileModule } from "./modules/AIProfileModule"
 import { AITailorModule } from "./modules/AITailorModule"
 import { AITranslateModule } from "./modules/AITranslateModule"
+import { AIImportModule, type ImportExtractInput } from "./modules/AIImportModule"
+import type { ResumeSections } from "@/types/resume"
 
 import type {
   ATSScoreInput,
@@ -72,6 +74,7 @@ export class AIService {
   private readonly profileModule: AIProfileModule
   private readonly tailorModule: AITailorModule
   private readonly translateModule: AITranslateModule
+  private readonly importModule: AIImportModule
 
   constructor(aiClient: IAIClient, logger: ILogger) {
     this.bulletModule = new AIBulletModule(aiClient, logger)
@@ -81,6 +84,14 @@ export class AIService {
     this.profileModule = new AIProfileModule(aiClient, logger)
     this.tailorModule = new AITailorModule(aiClient, logger)
     this.translateModule = new AITranslateModule(aiClient, logger)
+    this.importModule = new AIImportModule(aiClient, logger)
+  }
+
+  /** AI-primary CV import: structured extraction from raw PDF/DOCX text.
+   *  Returns null when the text is not a resume / the model failed — the caller
+   *  then falls back to the deterministic heuristic parser (zero regression). */
+  importResume(userId: string, input: ImportExtractInput, plan: string): Promise<ResumeSections | null> {
+    return this.importModule.extractResume(userId, input, plan)
   }
 
   improveBullet(userId: string, input: ImproveBulletInput, plan: string): Promise<BulletResult> {

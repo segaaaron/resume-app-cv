@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -17,13 +18,10 @@ export default function DublinTemplate() {
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   // Small-caps section header with SVG divider line
-  const SectionHeader = ({ title }: { title: string }) => (
+  const SectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        {/* 12x12 max inline icon */}
-        <svg width="8" height="8" viewBox="0 0 8 8" aria-hidden="true">
-          <rect x="0" y="0" width="8" height="8" fill={accent} opacity="0.7" />
-        </svg>
+        <SectionIcon sectionId={id} color={accent} size={11} strokeWidth={2.25} />
         <h2 style={{
           fontSize: "9px", fontWeight: 700, letterSpacing: "0.12em",
           textTransform: "uppercase", color: "#1f2937",
@@ -69,7 +67,7 @@ export default function DublinTemplate() {
       {/* Summary */}
       {visible("summary") && summary && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("summary")} />
+          <SectionHeader id="summary" title={label("summary")} />
           <p style={{ fontSize: "9px", color: "#4b5563", lineHeight: 1.6 }}>{summary}</p>
         </div>
       )}
@@ -77,7 +75,7 @@ export default function DublinTemplate() {
       {/* Work Experience — dense */}
       {visible("workExperience") && workExperience.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("workExperience")} />
+          <SectionHeader id="workExperience" title={label("workExperience")} />
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry">
@@ -103,7 +101,7 @@ export default function DublinTemplate() {
       {/* Education */}
       {visible("education") && education.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("education")} />
+          <SectionHeader id="education" title={label("education")} />
           <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
             {education.map((edu) => (
               <div key={edu.id} className="resume-entry">
@@ -129,7 +127,7 @@ export default function DublinTemplate() {
         <div style={{ display: "flex", gap: 20, marginBottom: 12 }}>
           {visible("skills") && skills.length > 0 && (
             <div style={{ flex: 1 }}>
-              <SectionHeader title={label("skills")} />
+              <SectionHeader id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: "4px 6px" }}>
                 {skills.map((sk) => (
                   <span key={sk.id} style={{
@@ -145,7 +143,7 @@ export default function DublinTemplate() {
           )}
           {visible("languages") && languages.length > 0 && (
             <div style={{ flex: 1 }}>
-              <SectionHeader title={label("languages")} />
+              <SectionHeader id="languages" title={label("languages")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                 {languages.map((lang) => (
                   <div key={lang.id} style={{ display: "flex", justifyContent: "space-between" }}>
@@ -162,7 +160,7 @@ export default function DublinTemplate() {
       {/* Certifications */}
       {visible("certifications") && certifications.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("certifications")} />
+          <SectionHeader id="certifications" title={label("certifications")} />
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {certifications.map((cert) => (
               <div key={cert.id} className="resume-entry" style={{ display: "flex", gap: 8 }}>
@@ -180,7 +178,7 @@ export default function DublinTemplate() {
       {/* Projects */}
       {visible("projects") && projects.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("projects")} />
+          <SectionHeader id="projects" title={label("projects")} />
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {projects.map((proj) => (
               <div key={proj.id} className="resume-entry">
@@ -196,7 +194,7 @@ export default function DublinTemplate() {
       {/* Volunteer */}
       {visible("volunteer") && volunteer.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("volunteer")} />
+          <SectionHeader id="volunteer" title={label("volunteer")} />
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {volunteer.map((vol) => (
               <div key={vol.id} className="resume-entry">
@@ -212,7 +210,7 @@ export default function DublinTemplate() {
       {/* References */}
       {visible("references") && references.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <SectionHeader title={label("references")} />
+          <SectionHeader id="references" title={label("references")} />
           <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
             {references.map((ref) => (
               <div key={ref.id} style={{ minWidth: 130 }}>

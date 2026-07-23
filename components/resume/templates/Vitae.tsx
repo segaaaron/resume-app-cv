@@ -10,6 +10,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
@@ -83,7 +84,7 @@ export default function VitaeTemplate() {
         <div style={{ width: "75%", height: "1px", backgroundColor: `${accent}60`, marginBottom: "20px" }} />
 
         {/* CONTACT */}
-        <SideBlock title={config.language === "en" ? "CONTACT" : "CONTACTO"} accent={accent}>
+        <SideBlock id="personalDetails" title={config.language === "en" ? "CONTACT" : "CONTACTO"} accent={accent}>
           <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
             {pd.email    && <ContactRow icon={<Mail    size={10} />} text={pd.email}   accent={accent} />}
             {pd.phone    && <ContactRow icon={<Phone   size={10} />} text={pd.phone}   accent={accent} />}
@@ -102,7 +103,7 @@ export default function VitaeTemplate() {
 
         {/* SKILLS */}
         {visible("skills") && skills.length > 0 && (
-          <SideBlock title={label("skills").toUpperCase()} accent={accent}>
+          <SideBlock id="skills" title={label("skills").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: "7px", width: "100%" }}>
               {skills.map((sk) => (
                 <div key={sk.id}>
@@ -118,7 +119,7 @@ export default function VitaeTemplate() {
 
         {/* LANGUAGES */}
         {visible("languages") && languages.length > 0 && (
-          <SideBlock title={label("languages").toUpperCase()} accent={accent}>
+          <SideBlock id="languages" title={label("languages").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: "7px", width: "100%" }}>
               {languages.map((lang) => (
                 <div key={lang.id}>
@@ -134,7 +135,7 @@ export default function VitaeTemplate() {
 
         {/* HOBBIES */}
         {visible("hobbies") && hobbyList.length > 0 && (
-          <SideBlock title={label("hobbies").toUpperCase()} accent={accent}>
+          <SideBlock id="hobbies" title={label("hobbies").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "center" }}>
               {hobbyList.slice(0, 6).map((_, i) => {
                 const Icon = HOBBY_ICONS[i % HOBBY_ICONS.length]
@@ -155,7 +156,7 @@ export default function VitaeTemplate() {
 
         {/* CERTIFICATIONS */}
         {visible("certifications") && certifications.length > 0 && (
-          <SideBlock title={label("certifications").toUpperCase()} accent={accent}>
+          <SideBlock id="certifications" title={label("certifications").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: "6px", width: "100%" }}>
               {certifications.map((cert) => (
                 <div key={cert.id}>
@@ -197,13 +198,13 @@ export default function VitaeTemplate() {
         <div style={{ flex: 1, padding: "14px 24px 24px 24px", display: "flex", flexDirection: "column" }}>
 
           {visible("summary") && summary && (
-            <ContentSection title={config.language === "en" ? "ABOUT ME" : "SOBRE MÍ"} accent={accent}>
+            <ContentSection id="summary" title={config.language === "en" ? "ABOUT ME" : "SOBRE MÍ"} accent={accent}>
               <p style={{ fontSize: "11px", color: "#5a6a7a", lineHeight: 1.75 }}>{summary}</p>
             </ContentSection>
           )}
 
           {visible("education") && education.length > 0 && (
-            <ContentSection title={label("education").toUpperCase()} accent={accent}>
+            <ContentSection id="education" title={label("education").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -228,7 +229,7 @@ export default function VitaeTemplate() {
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <ContentSection title={label("workExperience").toUpperCase()} accent={accent}>
+            <ContentSection id="workExperience" title={label("workExperience").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -254,7 +255,7 @@ export default function VitaeTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <ContentSection title={label("projects").toUpperCase()} accent={accent}>
+            <ContentSection id="projects" title={label("projects").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -270,7 +271,7 @@ export default function VitaeTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <ContentSection title={label("volunteer").toUpperCase()} accent={accent}>
+            <ContentSection id="volunteer" title={label("volunteer").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -297,14 +298,14 @@ export default function VitaeTemplate() {
 
 /* ── Sub-components ────────────────────────────────────────────────────────── */
 
-function SideBlock({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
+function SideBlock({ id, title, accent, children }: { id: string; title: string; accent: string; children: React.ReactNode }) {
   return (
     <div style={{ width: "100%", padding: "0 22px 18px 22px" }}>
       <p className="resume-section-title" style={{
         color: accent, fontSize: "11px", fontWeight: 800,
         letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: "10px",
       }}>
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </p>
       {children}
     </div>
@@ -329,7 +330,7 @@ function ContactRow({ icon, text, accent }: { icon: React.ReactNode; text: strin
   )
 }
 
-function ContentSection({ title, accent, children }: { title: string; accent: string; children: React.ReactNode }) {
+function ContentSection({ id, title, accent, children }: { id: string; title: string; accent: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: "14px" }}>
       <div className="resume-section-title" style={{
@@ -346,7 +347,7 @@ function ContentSection({ title, accent, children }: { title: string; accent: st
           color: "#fff", fontSize: "11px", fontWeight: 800,
           letterSpacing: "0.2em", position: "relative", zIndex: 2, whiteSpace: "nowrap",
         }}>
-          {title}
+          <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
         </span>
         <div style={{
           position: "absolute", right: 0, top: 0,

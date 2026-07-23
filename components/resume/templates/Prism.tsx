@@ -7,6 +7,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import {
   Mail, Phone, MapPin, Globe, Link2, GitFork,
@@ -72,7 +73,7 @@ export default function PrismTemplate() {
         </div>
 
         {/* ── CONTACTO ── */}
-        <SideBlock title={config.language === "en" ? "CONTACT" : "CONTACT"} accent={accent}>
+        <SideBlock id="personalDetails" title={config.language === "en" ? "CONTACT" : "CONTACT"} accent={accent}>
           {pd.email    && <ContactRow icon={<Mail size={12} />} text={pd.email}   accent={accent} />}
           {pd.phone    && <ContactRow icon={<Phone size={12} />} text={pd.phone}   accent={accent} />}
           {(pd.address || pd.city || pd.country) && (
@@ -89,7 +90,7 @@ export default function PrismTemplate() {
 
         {/* ── SKILLS ── */}
         {visible("skills") && skills.length > 0 && (
-          <SideBlock title={label("skills").toUpperCase()} accent={accent}>
+          <SideBlock id="skills" title={label("skills").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
               {skills.map((sk) => (
                 <div key={sk.id}>
@@ -105,7 +106,7 @@ export default function PrismTemplate() {
 
         {/* ── LANGUAGES ── */}
         {visible("languages") && languages.length > 0 && (
-          <SideBlock title={label("languages").toUpperCase()} accent={accent}>
+          <SideBlock id="languages" title={label("languages").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 7, width: "100%" }}>
               {languages.map((lang) => (
                 <div key={lang.id}>
@@ -121,7 +122,7 @@ export default function PrismTemplate() {
 
         {/* ── CERTIFICATIONS ── */}
         {visible("certifications") && certifications.length > 0 && (
-          <SideBlock title={label("certifications").toUpperCase()} accent={accent}>
+          <SideBlock id="certifications" title={label("certifications").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 6, width: "100%" }}>
               {certifications.map((cert) => (
                 <div key={cert.id}>
@@ -141,7 +142,7 @@ export default function PrismTemplate() {
 
         {/* ── HOBBIES — iconos circulares 38×38 al final ── */}
         {visible("hobbies") && hobbyList.length > 0 && (
-          <SideBlock title={label("hobbies").toUpperCase()} accent={accent}>
+          <SideBlock id="hobbies" title={label("hobbies").toUpperCase()} accent={accent}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center" }}>
               {hobbyList.slice(0, 6).map((_, i) => {
                 const Icon = HOBBY_ICONS[i % HOBBY_ICONS.length]
@@ -245,6 +246,7 @@ export default function PrismTemplate() {
 
           {visible("summary") && summary && (
             <PrismSection
+              id="summary"
               title={config.language === "en" ? "ABOUT ME" : "SOBRE MÍ"}
               accent={accent}
             >
@@ -253,7 +255,7 @@ export default function PrismTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <PrismSection title={label("education").toUpperCase()} accent={accent}>
+            <PrismSection id="education" title={label("education").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry" style={{ display: "flex", gap: 12 }}>
@@ -281,7 +283,7 @@ export default function PrismTemplate() {
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <PrismSection title={label("workExperience").toUpperCase()} accent={accent}>
+            <PrismSection id="workExperience" title={label("workExperience").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry" style={{ display: "flex", gap: 12 }}>
@@ -312,7 +314,7 @@ export default function PrismTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <PrismSection title={label("projects").toUpperCase()} accent={accent}>
+            <PrismSection id="projects" title={label("projects").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry" style={{ display: "flex", gap: 12 }}>
@@ -340,7 +342,7 @@ export default function PrismTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <PrismSection title={label("volunteer").toUpperCase()} accent={accent}>
+            <PrismSection id="volunteer" title={label("volunteer").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry" style={{ display: "flex", gap: 12 }}>
@@ -366,7 +368,7 @@ export default function PrismTemplate() {
           )}
 
           {visible("references") && references && references.length > 0 && (
-            <PrismSection title={label("references").toUpperCase()} accent={accent}>
+            <PrismSection id="references" title={label("references").toUpperCase()} accent={accent}>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
                 {references.map((ref) => (
                   <div key={ref.id} style={{ minWidth: 130 }}>
@@ -393,8 +395,7 @@ export default function PrismTemplate() {
  * PrismSection — Banda 36px + tab teal 140px con bezier curvo.
  * SVG viewBox "0 0 140 36", path M 44,0 C 10,0 10,36 44,36 L 140,36 L 140,0 Z
  */
-function PrismSection({ title, accent, children }: {
-  title: string
+function PrismSection({ id, title, accent, children }: { id: string; title: string
   accent: string
   children: React.ReactNode
 }) {
@@ -419,7 +420,7 @@ function PrismSection({ title, accent, children }: {
           zIndex: 2,
           whiteSpace: "nowrap",
         }}>
-          {title}
+          <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
         </span>
 
         {/* Tab curvo teal — ancho 140px, viewBox 140×36 */}
@@ -440,8 +441,7 @@ function PrismSection({ title, accent, children }: {
   )
 }
 
-function SideBlock({ title, accent, children }: {
-  title: string
+function SideBlock({ id, title, accent, children }: { id: string; title: string
   accent: string
   children: React.ReactNode
 }) {
@@ -459,7 +459,7 @@ function SideBlock({ title, accent, children }: {
           textAlign: "center",
         }}
       >
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </p>
       {/* Línea decorativa bajo el título de sección del sidebar */}
       <div style={{ width: 30, height: 2, backgroundColor: accent, margin: "4px auto 10px" }} />

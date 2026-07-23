@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -76,13 +77,13 @@ export default function CoralTemplate() {
         <div className="flex-1 px-7 pt-6 pb-8">
 
           {visible("summary") && summary && (
-            <CoralSection title={label("summary")} color={color}>
+            <CoralSection id="summary" title={label("summary")} color={color}>
               <p className="text-[11.5px] text-gray-600 leading-relaxed">{summary}</p>
             </CoralSection>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <CoralSection title={label("workExperience")} color={color}>
+            <CoralSection id="workExperience" title={label("workExperience")} color={color}>
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -105,7 +106,7 @@ export default function CoralTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <CoralSection title={label("education")} color={color}>
+            <CoralSection id="education" title={label("education")} color={color}>
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -128,7 +129,7 @@ export default function CoralTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <CoralSection title={label("projects")} color={color}>
+            <CoralSection id="projects" title={label("projects")} color={color}>
               <div className="space-y-3">
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -142,7 +143,7 @@ export default function CoralTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <CoralSection title={label("volunteer")} color={color}>
+            <CoralSection id="volunteer" title={label("volunteer")} color={color}>
               <div className="space-y-3">
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -164,7 +165,7 @@ export default function CoralTemplate() {
         <div className="shrink-0 px-5 pt-6 pb-8" style={{ width: "185px", borderLeft: `2px solid ${color}20` }}>
 
           {visible("skills") && skills.length > 0 && (
-            <CoralSide title={label("skills")} color={color}>
+            <CoralSide id="skills" title={label("skills")} color={color}>
               <div className="space-y-2">
                 {skills.map((sk) => (
                   <div key={sk.id}>
@@ -185,7 +186,7 @@ export default function CoralTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <CoralSide title={label("languages")} color={color}>
+            <CoralSide id="languages" title={label("languages")} color={color}>
               <div className="space-y-2">
                 {languages.map((lang) => (
                   <div key={lang.id}>
@@ -206,7 +207,7 @@ export default function CoralTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <CoralSide title={label("certifications")} color={color}>
+            <CoralSide id="certifications" title={label("certifications")} color={color}>
               <div className="space-y-2">
                 {certifications.map((cert) => (
                   <div key={cert.id}>
@@ -221,13 +222,13 @@ export default function CoralTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <CoralSide title={label("hobbies")} color={color}>
+            <CoralSide id="hobbies" title={label("hobbies")} color={color}>
               <p className="text-[11px] text-gray-600 leading-relaxed">{hobbies}</p>
             </CoralSide>
           )}
 
           {visible("references") && references.length > 0 && (
-            <CoralSide title={label("references")} color={color}>
+            <CoralSide id="references" title={label("references")} color={color}>
               <div className="space-y-2">
                 {references.map((ref) => (
                   <div key={ref.id}>
@@ -254,22 +255,26 @@ function CoralContact({ icon, text }: { icon: React.ReactNode; text: string }) {
   )
 }
 
-function CoralSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function CoralSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5 pl-3" style={{ borderLeft: `3px solid ${color}` }}>
-      <h2 className="text-[12px] font-extrabold uppercase tracking-[0.15em] mb-2 resume-section-title" style={{ color }}>{title}</h2>
+      <h2 className="flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.15em] mb-2 resume-section-title" style={{ color }}>
+        <SectionIcon sectionId={id} color={color} size={13} strokeWidth={2.25} />
+        {title}
+      </h2>
       {children}
     </div>
   )
 }
 
-function CoralSide({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function CoralSide({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
       <h3
-        className="text-[10px] font-extrabold uppercase tracking-[0.2em] mb-2 pb-1 resume-section-title"
+        className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] mb-2 pb-1 resume-section-title"
         style={{ color, borderBottom: `2px solid ${color}` }}
       >
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
         {title}
       </h3>
       {children}

@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -46,7 +47,7 @@ export default function ModernTemplate() {
 
         {/* Contact */}
         <div>
-          <SideTitle>{L.contact}</SideTitle>
+          <SideTitle id="personalDetails">{L.contact}</SideTitle>
           <div className="space-y-2 mt-1">
             {pd.email && <ContactRow icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} />}
             {pd.phone && <ContactRow icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} />}
@@ -59,7 +60,7 @@ export default function ModernTemplate() {
         {/* Skills */}
         {visible("skills") && skills.length > 0 && (
           <div>
-            {label("skills") && <SideTitle>{label("skills")}</SideTitle>}
+            {label("skills") && <SideTitle id="skills">{label("skills")}</SideTitle>}
             <div className="space-y-2.5 mt-2">
               {skills.map((skill) => (
                 <div key={skill.id}>
@@ -81,7 +82,7 @@ export default function ModernTemplate() {
         {/* Languages */}
         {visible("languages") && languages.length > 0 && (
           <div>
-            {label("languages") && <SideTitle>{label("languages")}</SideTitle>}
+            {label("languages") && <SideTitle id="languages">{label("languages")}</SideTitle>}
             <div className="space-y-2 mt-2">
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center">
@@ -100,13 +101,13 @@ export default function ModernTemplate() {
         {pd.jobTitle && <p className="text-sm font-medium text-gray-500 mb-6">{pd.jobTitle}</p>}
 
         {visible("summary") && summary && (
-          <Section title={L.profile} color={color}>
+          <Section id="summary" title={L.profile} color={color}>
             <p className="text-xs text-gray-600 leading-relaxed">{summary}</p>
           </Section>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
-          <Section title={L.experience} color={color}>
+          <Section id="workExperience" title={L.experience} color={color}>
             <div className="space-y-4">
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry pl-3 border-l-2" style={{ borderColor: color + "70" }}>
@@ -125,7 +126,7 @@ export default function ModernTemplate() {
         )}
 
         {visible("education") && education.length > 0 && (
-          <Section title={label("education")} color={color}>
+          <Section id="education" title={label("education")} color={color}>
             <div className="space-y-3">
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry pl-3 border-l-2" style={{ borderColor: color + "40" }}>
@@ -146,9 +147,12 @@ export default function ModernTemplate() {
   )
 }
 
-function SideTitle({ children }: { children: React.ReactNode }) {
+function SideTitle({ id, children }: { id: string; children: React.ReactNode }) {
   return (
-    <h3 className="text-[10px] font-bold uppercase tracking-widest text-white/50 border-b border-white/20 pb-1 resume-section-title">{children}</h3>
+    <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-white/50 border-b border-white/20 pb-1 resume-section-title">
+      <SectionIcon sectionId={id} color="rgba(255,255,255,0.5)" size={11} strokeWidth={2.25} />
+      {children}
+    </h3>
   )
 }
 
@@ -160,10 +164,11 @@ function ContactRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-2.5 resume-section-title">
+        <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2.25} />
         <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>{title}</h3>
         <div className="flex-1 h-px" style={{ backgroundColor: color + "30" }} />
       </div>

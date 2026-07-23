@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -72,7 +73,7 @@ export default function RisoDesignerTemplate() {
 
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <H red={red} blue={blue}>{label("workExperience")}</H>
+              <H red={red} blue={blue}><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</H>
               {workExperience.map((job) => (
                 <div key={job.id} style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `1px dashed ${blue}` }}>
                   <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10 }}>
@@ -96,7 +97,7 @@ export default function RisoDesignerTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <>
-              <H red={red} blue={blue}>{label("projects")}</H>
+              <H red={red} blue={blue}><SectionIcon sectionId="projects" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("projects")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85, fontSize: 11.5 }}>
                 {projects.map((p) => (
                   <li key={p.id}>{p.name}{p.description ? ` · ${p.description}` : ""}</li>
@@ -110,7 +111,7 @@ export default function RisoDesignerTemplate() {
         <section>
           {visible("skills") && skills.length > 0 && (
             <>
-              <H red={red} blue={blue}>{label("skills")}</H>
+              <H red={red} blue={blue}><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</H>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {skills.map((sk) => (
                   <span key={sk.id} style={{
@@ -125,7 +126,7 @@ export default function RisoDesignerTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <H red={red} blue={blue}>{label("education")}</H>
+              <H red={red} blue={blue}><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</H>
               {education.map((edu) => (
                 <div key={edu.id} style={{ marginBottom: 10, paddingBottom: 8, borderBottom: `1px dashed ${blue}` }}>
                   <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10 }}>
@@ -145,7 +146,7 @@ export default function RisoDesignerTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <H red={red} blue={blue}>{label("certifications")}</H>
+              <H red={red} blue={blue}><SectionIcon sectionId="certifications" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("certifications")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8, fontSize: 11 }}>
                 {certifications.map((cert) => (
                   <li key={cert.id}>{cert.name}{cert.issuer ? ` · ${cert.issuer}` : ""}{cert.date ? ` · ${cert.date}` : ""}</li>
@@ -156,7 +157,7 @@ export default function RisoDesignerTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <H red={red} blue={blue}>{label("languages")}</H>
+              <H red={red} blue={blue}><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</H>
               <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 10.5, lineHeight: 1.85 }}>
                 {languages.map((lang) => (
                   <div key={lang.id}>{lang.name} · {lang.level.toUpperCase()}</div>

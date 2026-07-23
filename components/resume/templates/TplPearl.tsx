@@ -16,6 +16,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -46,7 +47,7 @@ export default function TplPearlTemplate() {
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "·"
   const place = [pd.city, pd.country].filter(Boolean).join(", ")
 
-  const PeH = ({ children }: { children: React.ReactNode }) => (
+  const PeH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div
       style={{
         fontFamily: "inherit",
@@ -58,7 +59,7 @@ export default function TplPearlTemplate() {
         fontWeight: 600,
       }}
     >
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
 
@@ -192,7 +193,7 @@ export default function TplPearlTemplate() {
         <div>
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <PeH>{labelFor("workExperience")}</PeH>
+              <PeH id="workExperience">{labelFor("workExperience")}</PeH>
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 16, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
@@ -220,7 +221,7 @@ export default function TplPearlTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <>
-              <PeH>{labelFor("projects")}</PeH>
+              <PeH id="projects">{labelFor("projects")}</PeH>
               {projects.map((p) => (
                 <div key={p.id} style={{ fontFamily: "inherit", fontSize: 12, color: muted, marginBottom: 5 }}>
                   <strong style={{ color: ink }}>{p.name}</strong>
@@ -234,7 +235,7 @@ export default function TplPearlTemplate() {
         <div>
           {visible("skills") && skills.length > 0 && (
             <>
-              <PeH>{labelFor("skills")}</PeH>
+              <PeH id="skills">{labelFor("skills")}</PeH>
               <div style={{ fontFamily: "inherit", display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
                 {skills.map((s) => (
                   <span
@@ -258,7 +259,7 @@ export default function TplPearlTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <PeH>{labelFor("languages")}</PeH>
+              <PeH id="languages">{labelFor("languages")}</PeH>
               <div style={{ fontFamily: "inherit" }}>
                 {languages.map((l) => (
                   <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 5, color: muted }}>
@@ -272,7 +273,7 @@ export default function TplPearlTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <PeH>{labelFor("education")}</PeH>
+              <PeH id="education">{labelFor("education")}</PeH>
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <div style={{ fontSize: 16, color: ink }}>
@@ -291,7 +292,7 @@ export default function TplPearlTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <PeH>{labelFor("certifications")}</PeH>
+              <PeH id="certifications">{labelFor("certifications")}</PeH>
               <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 4, fontSize: 12, color: muted }}>
                 {certifications.map((c) => (
                   <div key={c.id}>{c.name}</div>

@@ -8,6 +8,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -43,7 +44,7 @@ export default function CascadeTemplate() {
     </p>
   )
 
-  const TimelineHeader = ({ title }: { title: string }) => (
+  const TimelineHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
       <div style={{
         width: "28px", height: "28px", borderRadius: "50%",
@@ -51,9 +52,7 @@ export default function CascadeTemplate() {
         flexShrink: 0,
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
       }}>
-        <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-          <circle cx="5" cy="5" r="3" fill="#fff" />
-        </svg>
+        <SectionIcon sectionId={id} color="#fff" size={14} strokeWidth={2.5} />
       </div>
       <h2 style={{
         fontSize: "9px", fontWeight: 800, letterSpacing: "0.15em",
@@ -207,14 +206,14 @@ export default function CascadeTemplate() {
       <div style={{ flex: 1, padding: "32px 28px", display: "flex", flexDirection: "column" }}>
         {visible("summary") && summary && (
           <div style={{ marginBottom: 20 }}>
-            <TimelineHeader title={label("summary")} />
+            <TimelineHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.75, paddingLeft: 38 }}>{summary}</p>
           </div>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <TimelineHeader title={label("workExperience")} />
+            <TimelineHeader id="workExperience" title={label("workExperience")} />
             <div style={{ paddingLeft: 10 }}>
               {workExperience.map((job) => (
                 <TimelineEntry key={job.id}>
@@ -239,7 +238,7 @@ export default function CascadeTemplate() {
 
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <TimelineHeader title={label("education")} />
+            <TimelineHeader id="education" title={label("education")} />
             <div style={{ paddingLeft: 10 }}>
               {education.map((edu) => (
                 <TimelineEntry key={edu.id}>
@@ -262,7 +261,7 @@ export default function CascadeTemplate() {
 
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <TimelineHeader title={label("projects")} />
+            <TimelineHeader id="projects" title={label("projects")} />
             <div style={{ paddingLeft: 10 }}>
               {projects.map((proj) => (
                 <TimelineEntry key={proj.id}>
@@ -277,7 +276,7 @@ export default function CascadeTemplate() {
 
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <TimelineHeader title={label("volunteer")} />
+            <TimelineHeader id="volunteer" title={label("volunteer")} />
             <div style={{ paddingLeft: 10 }}>
               {volunteer.map((vol) => (
                 <TimelineEntry key={vol.id}>
@@ -292,7 +291,7 @@ export default function CascadeTemplate() {
 
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <TimelineHeader title={label("references")} />
+            <TimelineHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, paddingLeft: 38 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

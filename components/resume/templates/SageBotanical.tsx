@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -72,14 +73,14 @@ export default function SageBotanicalTemplate() {
         <section>
           {visible("summary") && summary && (
             <>
-              <SH accentColor={accent}>{label("summary")}</SH>
+              <SH accentColor={accent}><SectionIcon sectionId="summary" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("summary")}</SH>
               <p style={{ margin: "0 0 28px" }}>{summary}</p>
             </>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <SH accentColor={accent} style={{ marginTop: 28 }}>{label("workExperience")}</SH>
+              <SH accentColor={accent} style={{ marginTop: 28 }}><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</SH>
               {workExperience.map((job) => (
                 <div key={job.id} style={{ marginBottom: 16, paddingLeft: 16, borderLeft: `2px solid ${accent}`, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
                   <div style={{ fontFamily: "ui-monospace, monospace", fontSize: 9.5, color: accent, letterSpacing: "0.15em" }}>
@@ -101,7 +102,7 @@ export default function SageBotanicalTemplate() {
           {/* Skills */}
           {visible("skills") && skills.length > 0 && (
             <>
-              <SH accentColor={accent}>{label("skills")}</SH>
+              <SH accentColor={accent}><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</SH>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 28 }}>
                 {skills.map((sk) => (
                   <span key={sk.id} style={{ background: "transparent", border: `1px solid ${dark}`, padding: "5px 10px", borderRadius: 100, fontSize: 10.5 }}>
@@ -115,7 +116,7 @@ export default function SageBotanicalTemplate() {
           {/* Education */}
           {visible("education") && education.length > 0 && (
             <>
-              <SH accentColor={accent} style={{ marginTop: 28 }}>{label("education")}</SH>
+              <SH accentColor={accent} style={{ marginTop: 28 }}><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</SH>
               {education.map((edu) => (
                 <p key={edu.id} style={{ margin: "0 0 10px" }}>
                   <b>{edu.degree}{edu.fieldOfStudy ? ` ${edu.fieldOfStudy}` : ""}</b>
@@ -128,7 +129,7 @@ export default function SageBotanicalTemplate() {
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
             <>
-              <SH accentColor={accent} style={{ marginTop: 28 }}>{label("languages")}</SH>
+              <SH accentColor={accent} style={{ marginTop: 28 }}><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</SH>
               <p style={{ margin: 0 }}>
                 {languages.map((lang, i) => (
                   <span key={lang.id}>{i > 0 ? " · " : ""}{lang.name} · {lang.level.toUpperCase()}</span>
@@ -140,7 +141,7 @@ export default function SageBotanicalTemplate() {
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <SH accentColor={accent} style={{ marginTop: 28 }}>{label("certifications")}</SH>
+              <SH accentColor={accent} style={{ marginTop: 28 }}><SectionIcon sectionId="certifications" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("certifications")}</SH>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85 }}>
                 {certifications.map((cert) => (
                   <li key={cert.id}>{cert.name}{cert.issuer ? ` · ${cert.issuer}` : ""}{cert.date ? ` · ${cert.date}` : ""}</li>
@@ -152,7 +153,7 @@ export default function SageBotanicalTemplate() {
           {/* Projects */}
           {visible("projects") && projects.length > 0 && (
             <>
-              <SH accentColor={accent} style={{ marginTop: 28 }}>{label("projects")}</SH>
+              <SH accentColor={accent} style={{ marginTop: 28 }}><SectionIcon sectionId="projects" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("projects")}</SH>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85 }}>
                 {projects.map((proj) => (
                   <li key={proj.id}>{proj.name}{proj.role ? ` · ${proj.role}` : ""}</li>

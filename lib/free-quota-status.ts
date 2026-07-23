@@ -6,6 +6,7 @@
 import { db } from "@/lib/db"
 import {
   AI_ENDPOINT_NAMES,
+  getImportQuota,
   getLimits,
   type AiEndpointName,
 } from "@/lib/plans"
@@ -84,7 +85,7 @@ export async function getQuotaStatusPayload(userId: string, plan: string): Promi
       resumes: describe(resumesUsed, limits.maxResumes),
       coverLetters: describe(coverLettersUsed, limits.maxCoverLetters),
       canExportPdf: limits.canExportPdf,
-      canImport: limits.canImport,
+      canImport: getImportQuota(plan).limit > 0,
     },
   }
 }

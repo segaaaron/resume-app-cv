@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -66,7 +67,7 @@ export default function BauhausTemplate() {
             {/* Main */}
             <div className="flex-1">
               {visible("workExperience") && workExperience.length > 0 && (
-                <BauhausSection title={L.experience} color={color}>
+                <BauhausSection id="workExperience" title={L.experience} color={color}>
                   {workExperience.map((job) => (
                     <div key={job.id} className="resume-entry mb-4">
                       <div className="flex items-start gap-2.5">
@@ -90,7 +91,7 @@ export default function BauhausTemplate() {
               )}
 
               {visible("education") && education.length > 0 && (
-                <BauhausSection title={label("education")} color={color}>
+                <BauhausSection id="education" title={label("education")} color={color}>
                   {education.map((edu) => (
                     <div key={edu.id} className="resume-entry mb-3 flex items-start gap-2.5">
                       <div className="w-2.5 h-2.5 mt-1 shrink-0 border-2" style={{ borderColor: color }} />
@@ -109,7 +110,7 @@ export default function BauhausTemplate() {
               )}
 
               {visible("projects") && projects.length > 0 && (
-                <BauhausSection title={label("projects")} color={color}>
+                <BauhausSection id="projects" title={label("projects")} color={color}>
                   {projects.map((proj) => (
                     <div key={proj.id} className="mb-3 flex items-start gap-2.5">
                       <div className="w-2.5 h-2.5 mt-1 shrink-0" style={{ backgroundColor: color }} />
@@ -127,7 +128,7 @@ export default function BauhausTemplate() {
             {/* Side */}
             <div className="w-40 shrink-0">
               {visible("skills") && skills.length > 0 && (
-                <BauhausSection title={L.skills} color={color}>
+                <BauhausSection id="skills" title={L.skills} color={color}>
                   <div className="space-y-2">
                     {skills.map((skill) => (
                       <div key={skill.id} className="flex items-center gap-2">
@@ -140,7 +141,7 @@ export default function BauhausTemplate() {
               )}
 
               {visible("languages") && languages.length > 0 && (
-                <BauhausSection title={label("languages")} color={color}>
+                <BauhausSection id="languages" title={label("languages")} color={color}>
                   {languages.map((lang) => (
                     <div key={lang.id} className="mb-2">
                       <p className="text-xs font-black uppercase tracking-wide text-gray-800">{lang.name}</p>
@@ -151,7 +152,7 @@ export default function BauhausTemplate() {
               )}
 
               {visible("certifications") && certifications.length > 0 && (
-                <BauhausSection title={L.certifications} color={color}>
+                <BauhausSection id="certifications" title={L.certifications} color={color}>
                   {certifications.map((cert) => (
                     <div key={cert.id} className="mb-2.5">
                       <p className="text-xs font-black uppercase text-gray-800">{cert.name}</p>
@@ -168,11 +169,11 @@ export default function BauhausTemplate() {
   )
 }
 
-function BauhausSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function BauhausSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <div className="flex items-center gap-2.5 mb-3 resume-section-title">
-        <div className="w-5 h-0.5" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-2 mb-3 resume-section-title">
+        <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2.5} />
         <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-gray-700">{title}</h3>
       </div>
       {children}

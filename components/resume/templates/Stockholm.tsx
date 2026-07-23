@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -22,7 +23,7 @@ export default function StockholmTemplate() {
   const skyBlue = accent
   const sidebarBg = "#F3F4F6"
 
-  const SideSectionTitle = ({ title }: { title: string }) => (
+  const SideSectionTitle = ({ id, title }: { id: string; title: string }) => (
     <p style={{
       fontSize: "8px", fontWeight: 700, letterSpacing: "0.18em",
       textTransform: "uppercase", color: skyBlue,
@@ -30,15 +31,15 @@ export default function StockholmTemplate() {
       borderBottom: `1.5px solid ${skyBlue}`,
       paddingBottom: 4,
     }}>
-      {title}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
     </p>
   )
 
-  const MainSectionHeader = ({ title }: { title: string }) => (
+  const MainSectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
       <div style={{ width: 8, height: 8, borderRadius: "50%", backgroundColor: skyBlue, flexShrink: 0 }} />
       <h2 style={{ fontWeight: 700, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#1f2937" }}>
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </h2>
       <div style={{ flex: 1, height: "1px", backgroundColor: "#e5e7eb" }} />
     </div>
@@ -87,7 +88,7 @@ export default function StockholmTemplate() {
 
         {/* Contact */}
         <div style={{ marginBottom: 18 }}>
-          <SideSectionTitle title="Contacto" />
+          <SideSectionTitle id="personalDetails" title="Contacto" />
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {pd.email    && <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}><Mail size={9} color={skyBlue} /><span style={{ fontSize: "8.5px", color: "#4b5563", wordBreak: "break-all" }}>{pd.email}</span></div>}
             {pd.phone    && <div style={{ display: "flex", alignItems: "flex-start", gap: 6 }}><Phone size={9} color={skyBlue} /><span style={{ fontSize: "8.5px", color: "#4b5563" }}>{pd.phone}</span></div>}
@@ -101,7 +102,7 @@ export default function StockholmTemplate() {
         {/* Skills with labeled progress bars */}
         {visible("skills") && skills.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SideSectionTitle title={label("skills")} />
+            <SideSectionTitle id="skills" title={label("skills")} />
             {skills.map((sk) => (
               <ProgressBar key={sk.id} pct={SKILL_PCT[sk.level] ?? 55} label={sk.name} />
             ))}
@@ -111,7 +112,7 @@ export default function StockholmTemplate() {
         {/* Languages with progress bars */}
         {visible("languages") && languages.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SideSectionTitle title={label("languages")} />
+            <SideSectionTitle id="languages" title={label("languages")} />
             {languages.map((lang) => (
               <ProgressBar key={lang.id} pct={LANG_PCT[lang.level] ?? 55} label={lang.name} />
             ))}
@@ -121,7 +122,7 @@ export default function StockholmTemplate() {
         {/* Certifications */}
         {visible("certifications") && certifications.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SideSectionTitle title={label("certifications")} />
+            <SideSectionTitle id="certifications" title={label("certifications")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {certifications.map((cert) => (
                 <div key={cert.id}>
@@ -152,7 +153,7 @@ export default function StockholmTemplate() {
         {/* Summary */}
         {visible("summary") && summary && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("summary")} />
+            <MainSectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.7 }}>{summary}</p>
           </div>
         )}
@@ -160,7 +161,7 @@ export default function StockholmTemplate() {
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("workExperience")} />
+            <MainSectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -186,7 +187,7 @@ export default function StockholmTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("education")} />
+            <MainSectionHeader id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry">
@@ -211,7 +212,7 @@ export default function StockholmTemplate() {
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("projects")} />
+            <MainSectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -227,7 +228,7 @@ export default function StockholmTemplate() {
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("volunteer")} />
+            <MainSectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -243,7 +244,7 @@ export default function StockholmTemplate() {
         {/* References */}
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("references")} />
+            <MainSectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

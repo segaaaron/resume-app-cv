@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -112,13 +113,13 @@ export default function SidebarTemplate() {
       {/* Main content */}
       <div className="flex-1 px-8 pt-9 pb-8">
         {visible("summary") && summary && (
-          <SidebarSection title={label("summary")} color={color}>
+          <SidebarSection id="summary" title={label("summary")} color={color}>
             <p className="text-xs text-gray-600 leading-relaxed">{summary}</p>
           </SidebarSection>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
-          <SidebarSection title={L.experience} color={color}>
+          <SidebarSection id="workExperience" title={L.experience} color={color}>
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry mb-4">
                 <div className="flex justify-between items-baseline gap-2">
@@ -137,7 +138,7 @@ export default function SidebarTemplate() {
         )}
 
         {visible("education") && education.length > 0 && (
-          <SidebarSection title={label("education")} color={color}>
+          <SidebarSection id="education" title={label("education")} color={color}>
             {education.map((edu) => (
               <div key={edu.id} className="resume-entry mb-3">
                 <div className="flex justify-between items-baseline gap-2">
@@ -153,7 +154,7 @@ export default function SidebarTemplate() {
         )}
 
         {visible("projects") && projects.length > 0 && (
-          <SidebarSection title={label("projects")} color={color}>
+          <SidebarSection id="projects" title={label("projects")} color={color}>
             {projects.map((proj) => (
               <div key={proj.id} className="mb-3">
                 <h4 className="font-semibold text-[13px] text-gray-900">{proj.name}</h4>
@@ -182,12 +183,12 @@ function SideContact({ icon, text }: { icon: React.ReactNode; text: string }) {
   )
 }
 
-function SidebarSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function SidebarSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
       <div className="flex items-center gap-2 mb-3 resume-section-title">
         <div className="w-3 h-0.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500">{title}</h3>
+        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em] text-gray-500"><SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}</h3>
         <div className="flex-1 h-px bg-gray-200" />
       </div>
       {children}

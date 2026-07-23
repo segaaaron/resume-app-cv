@@ -16,6 +16,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -46,7 +47,7 @@ export default function TplSaharaTemplate() {
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "·"
   const place = [pd.city, pd.country].filter(Boolean).join(", ")
 
-  const SaH = ({ children }: { children: React.ReactNode }) => (
+  const SaH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div
       style={{
         display: "flex",
@@ -61,7 +62,7 @@ export default function TplSaharaTemplate() {
         margin: "26px 0 16px",
       }}
     >
-      <span>{children}</span>
+      <span><SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}</span>
       <span style={{ flex: 1, height: 1, background: rule, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
@@ -126,7 +127,7 @@ export default function TplSaharaTemplate() {
 
         {visible("workExperience") && workExperience.length > 0 && (
           <>
-            <SaH>{labelFor("workExperience")}</SaH>
+            <SaH id="workExperience">{labelFor("workExperience")}</SaH>
             {workExperience.map((e) => (
               <div
                 key={e.id}
@@ -158,7 +159,7 @@ export default function TplSaharaTemplate() {
 
         {visible("projects") && projects.length > 0 && (
           <>
-            <SaH>{labelFor("projects")}</SaH>
+            <SaH id="projects">{labelFor("projects")}</SaH>
             {projects.map((p) => (
               <div key={p.id} style={{ fontFamily: "inherit", fontSize: 12.5, color: muted, marginBottom: 5 }}>
                 <strong style={{ color: ink }}>{p.name}</strong>

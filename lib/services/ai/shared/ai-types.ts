@@ -125,6 +125,10 @@ export interface ATSScoreResult {
   extractedKeywords: ATSExtractedKeywords
   /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
   contentQuality: ATSContentQuality
+  /** True when the requirements were INFERRED from a role title (no real posting)
+   *  → the UI must label the score as approximate. Absent/false = scored against a
+   *  real job description. */
+  inferredFromRole?: boolean
 }
 
 /** Input for the deterministic re-score (no LLM): reuses keywords from a prior ats-score. */
@@ -263,7 +267,12 @@ export interface ImproveSummaryInput {
 }
 
 export interface ATSScoreInput {
-  jobDescription: string
+  jobDescription?: string
+  /** Low-friction mode: the target role only (e.g. "Senior iOS Developer"). The
+   *  AI infers the STANDARD requirements for that role and the same deterministic
+   *  engine scores against them. Less precise than a real posting — flagged as
+   *  `inferredFromRole` in the result so the UI can say so. */
+  roleTitle?: string
   sectionData?: Record<string, unknown>
   language?: string
   /** The template the CV will export as — its layout affects ATS parseability. */

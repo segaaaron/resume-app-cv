@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
 
@@ -52,13 +53,13 @@ export default function CasualTemplate() {
         {/* Main */}
         <div className="flex-1">
           {visible("summary") && summary && (
-            <Section title={L.aboutMe} color={color}>
+            <Section id="summary" title={L.aboutMe} color={color}>
               <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </Section>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <Section title={L.experience} color={color}>
+            <Section id="workExperience" title={L.experience} color={color}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry mb-4 p-3.5 rounded-xl border" style={{ backgroundColor: color + "06", borderColor: color + "20" }}>
                   <div className="flex justify-between items-start gap-2">
@@ -80,7 +81,7 @@ export default function CasualTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <Section title={label("education")} color={color}>
+            <Section id="education" title={label("education")} color={color}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry mb-3 p-3.5 rounded-xl border" style={{ backgroundColor: color + "06", borderColor: color + "20" }}>
                   <div className="flex justify-between items-start gap-2">
@@ -99,7 +100,7 @@ export default function CasualTemplate() {
         {/* Side */}
         <div className="w-44 shrink-0">
           {visible("skills") && skills.length > 0 && (
-            <Section title={L.skills} color={color}>
+            <Section id="skills" title={L.skills} color={color}>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((skill) => (
                   <span
@@ -115,7 +116,7 @@ export default function CasualTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <Section title={label("languages")} color={color}>
+            <Section id="languages" title={label("languages")} color={color}>
               <div className="space-y-2">
                 {languages.map((lang) => (
                   <div key={lang.id} className="text-xs">
@@ -128,7 +129,7 @@ export default function CasualTemplate() {
           )}
 
           {(pd.website || pd.linkedin) && (
-            <Section title="Links" color={color}>
+            <Section id="links" title="Links" color={color}>
               <div className="space-y-1">
                 {pd.website && <p className="text-[10px] flex items-center gap-1 text-gray-600 break-all"><Globe className="h-3 w-3 shrink-0" style={{ color }} />{pd.website}</p>}
                 {pd.linkedin && <p className="text-[10px] flex items-center gap-1 text-gray-600 break-all"><Link2 className="h-3 w-3 shrink-0" style={{ color }} />{pd.linkedin}</p>}
@@ -137,7 +138,7 @@ export default function CasualTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <Section title={L.interests} color={color}>
+            <Section id="hobbies" title={L.interests} color={color}>
               <p className="text-[10px] text-gray-600 leading-relaxed">{hobbies}</p>
             </Section>
           )}
@@ -147,10 +148,13 @@ export default function CasualTemplate() {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[10px] font-black uppercase tracking-widest mb-2.5 resume-section-title" style={{ color }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest mb-2.5 resume-section-title" style={{ color }}>
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.5} />
+        {title}
+      </h3>
       {children}
     </div>
   )

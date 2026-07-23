@@ -8,6 +8,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -30,26 +31,26 @@ export default function OnyxTemplate() {
   const surface = "#1e1e1e"
   const border = "#2a2a2a"
 
-  const SideLabel = ({ title }: { title: string }) => (
+  const SideLabel = ({ id, title }: { id: string; title: string }) => (
     <div style={{ marginBottom: 10 }}>
       <p style={{
         fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.22em",
         textTransform: "uppercase", color: accent, marginBottom: 5,
       }}>
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </p>
       <div style={{ height: "0.5px", backgroundColor: border }} />
     </div>
   )
 
-  const MainLabel = ({ title }: { title: string }) => (
+  const MainLabel = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
       <div style={{ width: "3px", height: "16px", backgroundColor: accent, borderRadius: 2, flexShrink: 0 }} />
       <h2 style={{
         fontSize: "9px", fontWeight: 800, letterSpacing: "0.15em",
         textTransform: "uppercase", color: "#fff",
       }}>
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </h2>
       <div style={{ flex: 1, height: "0.5px", backgroundColor: border }} />
     </div>
@@ -107,14 +108,14 @@ export default function OnyxTemplate() {
         <div style={{ flex: 1, padding: "24px 28px", display: "flex", flexDirection: "column" }}>
           {visible("summary") && summary && (
             <div style={{ marginBottom: 20 }}>
-              <MainLabel title={label("summary")} />
+              <MainLabel id="summary" title={label("summary")} />
               <p style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.65)", lineHeight: 1.75 }}>{summary}</p>
             </div>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <MainLabel title={label("workExperience")} />
+              <MainLabel id="workExperience" title={label("workExperience")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry" style={{
@@ -145,7 +146,7 @@ export default function OnyxTemplate() {
 
           {visible("education") && education.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <MainLabel title={label("education")} />
+              <MainLabel id="education" title={label("education")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry" style={{
@@ -174,7 +175,7 @@ export default function OnyxTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <MainLabel title={label("projects")} />
+              <MainLabel id="projects" title={label("projects")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry" style={{
@@ -193,7 +194,7 @@ export default function OnyxTemplate() {
 
           {visible("volunteer") && volunteer.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <MainLabel title={label("volunteer")} />
+              <MainLabel id="volunteer" title={label("volunteer")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -208,7 +209,7 @@ export default function OnyxTemplate() {
 
           {visible("references") && references.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <MainLabel title={label("references")} />
+              <MainLabel id="references" title={label("references")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                 {references.map((ref) => (
                   <div key={ref.id} style={{ minWidth: 140 }}>
@@ -232,7 +233,7 @@ export default function OnyxTemplate() {
         }}>
           {visible("skills") && skills.length > 0 && (
             <div>
-              <SideLabel title={label("skills")} />
+              <SideLabel id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                 {skills.map((sk) => {
                   const pct = SKILL_W[sk.level] ?? 55
@@ -255,7 +256,7 @@ export default function OnyxTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <div>
-              <SideLabel title={label("languages")} />
+              <SideLabel id="languages" title={label("languages")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                 {languages.map((lang) => {
                   const pct = LANG_W[lang.level] ?? 55
@@ -281,7 +282,7 @@ export default function OnyxTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <div>
-              <SideLabel title={label("certifications")} />
+              <SideLabel id="certifications" title={label("certifications")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id} style={{

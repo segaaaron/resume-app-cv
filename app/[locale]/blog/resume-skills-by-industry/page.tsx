@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -370,7 +371,7 @@ export default async function ResumeSkillsPage({
     },
     {
       slug: "cv-vs-resume-differences",
-      title: "CV vs Resume: Complete Comparison 2026",
+      title: "US Resume vs International Resume 2026",
       desc: "When to use each, country-by-country expectations, and the 7 differences that matter most.",
       tag: "Resume Basics",
       readingTime: 8,
@@ -580,7 +581,7 @@ export default async function ResumeSkillsPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Run the keyword match before you apply</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Paste your resume and the job description into <Link href={`/${locale}/tools/ats-checker`}>ReadyCV&apos;s ATS Checker</Link>. It returns your current match score, the exact missing keywords from the posting, and the three highest-impact skill edits. Average lift after one rewrite: +22 points.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your resume against the job description: your match score, the exact missing keywords from the posting, and the three highest-impact skill edits. Average lift after one rewrite: +22 points.
                   </p>
                 </div>
               </div>
@@ -615,6 +616,8 @@ export default async function ResumeSkillsPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Build a skills section that passes ATS and impresses recruiters."

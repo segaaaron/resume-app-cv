@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -155,7 +156,7 @@ export default function LumiereTemplate() {
         {/* Main column */}
         <div style={{ flex: 1, padding: "0 28px 32px 44px" }}>
           {visible("summary") && summary && (
-            <LumiereSection title={label("summary")} color={color}>
+            <LumiereSection id="summary" title={label("summary")} color={color}>
               <p style={{ fontSize: "10.5px", color: "#606060", lineHeight: 1.82, fontStyle: "italic", textAlign: "center" }}>
                 &ldquo;{summary}&rdquo;
               </p>
@@ -163,7 +164,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <LumiereSection title={label("workExperience")} color={color}>
+            <LumiereSection id="workExperience" title={label("workExperience")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -194,7 +195,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <LumiereSection title={label("education")} color={color}>
+            <LumiereSection id="education" title={label("education")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -219,7 +220,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <LumiereSection title={label("projects")} color={color}>
+            <LumiereSection id="projects" title={label("projects")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -235,7 +236,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <LumiereSection title={label("volunteer")} color={color}>
+            <LumiereSection id="volunteer" title={label("volunteer")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -259,7 +260,7 @@ export default function LumiereTemplate() {
         {/* Sidebar */}
         <div style={{ width: "186px", flexShrink: 0, padding: "0 32px 32px 14px", borderLeft: `0.5px solid ${color}28` }}>
           {visible("skills") && skills.length > 0 && (
-            <LumiereSide title={label("skills")} color={color}>
+            <LumiereSide id="skills" title={label("skills")} color={color}>
               {skills.map((sk) => (
                 <div key={sk.id} style={{ marginBottom: 8 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 3 }}>
@@ -283,7 +284,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <LumiereSide title={label("languages")} color={color}>
+            <LumiereSide id="languages" title={label("languages")} color={color}>
               {languages.map((lang) => (
                 <div key={lang.id} style={{ marginBottom: 9 }}>
                   <span style={{ fontSize: "10px", color: "#444", letterSpacing: "0.02em" }}>{lang.name}</span>
@@ -297,7 +298,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <LumiereSide title={label("certifications")} color={color}>
+            <LumiereSide id="certifications" title={label("certifications")} color={color}>
               {certifications.map((cert) => (
                 <div key={cert.id} style={{ marginBottom: 9 }}>
                   <p style={{ fontSize: "10px", fontWeight: 600, color: "#333", lineHeight: 1.4 }}>{cert.name}</p>
@@ -312,7 +313,7 @@ export default function LumiereTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <LumiereSide title={label("hobbies")} color={color}>
+            <LumiereSide id="hobbies" title={label("hobbies")} color={color}>
               <p style={{ fontSize: "10px", color: "#666", lineHeight: 1.72, fontStyle: "italic" }}>{hobbies}</p>
             </LumiereSide>
           )}
@@ -324,14 +325,15 @@ export default function LumiereTemplate() {
 
 /* ── Sub-components ─────────────────────────────────────────────────────────── */
 
-function LumiereSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function LumiereSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 18 }}>
-      {/* Centered section title with symmetric diamond ornaments */}
+      {/* Centered section title with symmetric diamond ornaments + icon */}
       <div className="resume-section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
         <div style={{ flex: 1, height: 0.5, backgroundColor: color, opacity: 0.28 }} />
         <DiamondOrnament color={color} />
-        <span style={{ fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.38em", textTransform: "uppercase", color }}>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.38em", textTransform: "uppercase", color }}>
+          <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
           {title}
         </span>
         <DiamondOrnament color={color} />
@@ -342,11 +344,12 @@ function LumiereSection({ title, color, children }: { title: string; color: stri
   )
 }
 
-function LumiereSide({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function LumiereSide({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 18 }}>
       <div className="resume-section-title" style={{ marginBottom: 10 }}>
-        <p style={{ fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", color, marginBottom: 6 }}>
+        <p style={{ display: "flex", alignItems: "center", gap: 5, fontSize: "8.5px", fontWeight: 700, letterSpacing: "0.32em", textTransform: "uppercase", color, marginBottom: 6 }}>
+          <SectionIcon sectionId={id} color={color} size={10} strokeWidth={2.25} />
           {title}
         </p>
         {/* Small Art Deco divider */}

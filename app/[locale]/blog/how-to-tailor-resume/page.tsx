@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -180,7 +181,7 @@ export default async function TailorResumePage({
                   </thead>
                   <tbody className="bg-white">
                     {[
-                      ["Words the posting used", "Whatever your CV happened to say", "The posting's own terms, where they are true"],
+                      ["Words the posting used", "Whatever your resume happened to say", "The posting's own terms, where they are true"],
                       ["Summary", "Same paragraph for every job", "Rewritten per role focus"],
                       ["Skills section", "Same list every time", "Top 8-10 prioritized to match JD"],
                       ["Top bullets", "Static order", "Reordered to lead with relevant achievements"],
@@ -216,7 +217,7 @@ export default async function TailorResumePage({
                 <li><strong>Missing and not applicable.</strong> Leave out — never fabricate.</li>
               </ul>
               <p>
-                There is no target percentage, and anyone quoting one made it up. Use the posting's words where they describe work you actually did, and stop there. A recruiter spots a stuffed CV instantly, and a list of keywords with no achievement behind them fails the only test that matters — the human reading it.
+                There is no target percentage, and anyone quoting one made it up. Use the posting's words where they describe work you actually did, and stop there. A recruiter spots a stuffed resume instantly, and a list of keywords with no achievement behind them fails the only test that matters — the human reading it.
               </p>
 
               <h2 id="step3">Step 3: Rewrite the summary per job</h2>
@@ -306,7 +307,7 @@ export default async function TailorResumePage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Cut tailoring time in half with the right tools</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Run your draft through the <Link href={`/${locale}/tools/ats-checker`}>ReadyCV ATS Checker</Link> to surface missing keywords and density gaps in seconds. ReadyCV PRO&apos;s <strong>tailor-cv</strong> feature reads the JD, suggests skill reordering and bullet rewrites, and produces a tailored version on top of any of the <Link href={`/${locale}/templates`}>111+ ATS-verified templates</Link> — all in under three minutes per job.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> surfaces missing keywords and density gaps against the job. ReadyCV PRO&apos;s <strong>tailor-cv</strong> feature reads the JD, suggests skill reordering and bullet rewrites, and produces a tailored version on top of any of the <Link href={`/${locale}/templates`}>111+ ATS-verified templates</Link> — all in under three minutes per job.
                   </p>
                 </div>
               </div>
@@ -354,6 +355,8 @@ export default async function TailorResumePage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Tailor your resume in 3 minutes, not 30."

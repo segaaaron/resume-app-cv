@@ -33,10 +33,13 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   output: "standalone",
   compress: true,
+  // Hide the on-screen dev indicator (the "N" badge). It's dev-only, but the
+  // screenshot service was capturing it into template thumbnails.
+  devIndicators: false,
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  serverExternalPackages: ["pdf-parse", "mammoth", "pdf-lib", "geoip-lite"],
+  serverExternalPackages: ["pdf-parse", "mammoth", "geoip-lite"],
   outputFileTracingIncludes: {
     "/**/*": ["./node_modules/geoip-lite/data/**/*.dat"],
   },

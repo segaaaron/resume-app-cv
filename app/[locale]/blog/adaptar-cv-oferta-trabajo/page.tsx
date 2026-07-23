@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -304,7 +305,7 @@ export default async function AdaptarCvPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Reduce el tiempo de adaptación a la mitad con las herramientas correctas</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Pasa tu borrador por el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link> para detectar keywords faltantes y gaps de densidad en segundos. La función <strong>tailor-cv</strong> de ReadyCV PRO lee la oferta, sugiere reorden de habilidades y reescritura de bullets, y produce una versión adaptada sobre cualquiera de las <Link href={`/${locale}/templates`}>111+ plantillas ATS-verificadas</Link> — todo en menos de tres minutos por oferta.
+                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> ves qué keywords te faltan y dónde hay gaps de densidad frente a la oferta. La función <strong>tailor-cv</strong> de ReadyCV PRO lee la oferta, sugiere reorden de habilidades y reescritura de bullets, y produce una versión adaptada sobre cualquiera de las <Link href={`/${locale}/templates`}>111+ plantillas ATS-verificadas</Link> — todo en menos de tres minutos por oferta.
                   </p>
                 </div>
               </div>
@@ -352,6 +353,8 @@ export default async function AdaptarCvPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Adapta tu CV en 3 minutos, no en 30."

@@ -1,6 +1,10 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Typography plugin — powers `prose` / `prose-*` used by the blog article body.
+   In Tailwind v4 plugins load via @plugin; without it every prose-* class is a
+   no-op (that is why blog posts rendered as unstyled plain text). */
+@plugin "@tailwindcss/typography";
 
 @custom-variant dark (&:is(.dark *));
 

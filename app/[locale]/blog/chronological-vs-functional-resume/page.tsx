@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -244,7 +245,7 @@ export default async function ChronoVsFunctionalPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Run a format check before submitting</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Validate your draft against the role description with <Link href={`/${locale}/tools/ats-checker`}>ReadyCV&apos;s ATS Checker</Link>. It catches missing date fields, structural parsing issues, and keyword gaps — the three reasons functional resumes commonly fall out of the pipeline. Start from a parser-clean <Link href={`/${locale}/templates`}>ATS-verified template</Link> to skip the rework.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your draft against the role description: it catches missing date fields, structural parsing issues, and keyword gaps — the three reasons functional resumes commonly fall out of the pipeline. Start from a parser-clean <Link href={`/${locale}/templates`}>ATS-verified template</Link> to skip the rework.
                   </p>
                 </div>
               </div>
@@ -313,6 +314,8 @@ export default async function ChronoVsFunctionalPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Pick the right format and let ReadyCV PRO handle the rest."

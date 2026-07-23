@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 export default function FoldTemplate() {
@@ -59,7 +60,7 @@ export default function FoldTemplate() {
         {/* Main */}
         <div className="flex-1">
           {visible("workExperience") && workExperience.length > 0 && (
-            <FoldBlock title="Experiencia" color={color} rgb={rgb}>
+            <FoldBlock id="workExperience" title="Experiencia" color={color} rgb={rgb}>
               {workExperience.map((job, i) => (
                 <div key={job.id} className={`resume-entry ${i < workExperience.length - 1 ? "mb-4 pb-4 border-b border-gray-100" : ""}`}>
                   <div className="flex justify-between items-baseline gap-2">
@@ -78,7 +79,7 @@ export default function FoldTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <FoldBlock title={label("education")} color={color} rgb={rgb}>
+            <FoldBlock id="education" title={label("education")} color={color} rgb={rgb}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry mb-3">
                   <div className="flex justify-between items-baseline gap-2">
@@ -94,7 +95,7 @@ export default function FoldTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <FoldBlock title={label("projects")} color={color} rgb={rgb}>
+            <FoldBlock id="projects" title={label("projects")} color={color} rgb={rgb}>
               {projects.map((proj) => (
                 <div key={proj.id} className="mb-3">
                   <h4 className="font-semibold text-[13px] text-gray-900">{proj.name}</h4>
@@ -106,7 +107,7 @@ export default function FoldTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <FoldBlock title={label("volunteer")} color={color} rgb={rgb}>
+            <FoldBlock id="volunteer" title={label("volunteer")} color={color} rgb={rgb}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="mb-2">
                   <h4 className="font-semibold text-[13px] text-gray-900">{vol.role}</h4>
@@ -121,7 +122,7 @@ export default function FoldTemplate() {
         {/* Side */}
         <div className="w-48 shrink-0 border-l border-gray-100">
           {visible("skills") && skills.length > 0 && (
-            <FoldBlock title={label("skills")} color={color} rgb={rgb}>
+            <FoldBlock id="skills" title={label("skills")} color={color} rgb={rgb}>
               <div className="space-y-2">
                 {skills.map((skill) => (
                   <div key={skill.id}>
@@ -139,7 +140,7 @@ export default function FoldTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <FoldBlock title={label("languages")} color={color} rgb={rgb}>
+            <FoldBlock id="languages" title={label("languages")} color={color} rgb={rgb}>
               {languages.map((lang) => (
                 <div key={lang.id} className="mb-2">
                   <p className="text-xs font-semibold text-gray-800">{lang.name}</p>
@@ -150,7 +151,7 @@ export default function FoldTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <FoldBlock title={label("certifications")} color={color} rgb={rgb}>
+            <FoldBlock id="certifications" title={label("certifications")} color={color} rgb={rgb}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="mb-2.5">
                   <p className="text-xs font-semibold text-gray-800">{cert.name}</p>
@@ -161,7 +162,7 @@ export default function FoldTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <FoldBlock title="Intereses" color={color} rgb={rgb}>
+            <FoldBlock id="hobbies" title="Intereses" color={color} rgb={rgb}>
               <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
             </FoldBlock>
           )}
@@ -171,11 +172,14 @@ export default function FoldTemplate() {
   )
 }
 
-function FoldBlock({ title, color, rgb, children }: { title: string; color: string; rgb: string; children: React.ReactNode }) {
+function FoldBlock({ id, title, color, rgb, children }: { id: string; title: string; color: string; rgb: string; children: React.ReactNode }) {
   return (
     <div>
       <div className="px-6 py-2 resume-section-title" style={{ backgroundColor: `rgba(${rgb}, 0.07)` }}>
-        <h3 className="text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color }}>{title}</h3>
+        <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.3em]" style={{ color }}>
+          <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
+          {title}
+        </h3>
       </div>
       <div className="px-6 py-4">
         {children}

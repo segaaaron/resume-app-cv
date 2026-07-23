@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -113,13 +114,13 @@ export default function AuroraTemplate() {
         {/* Main column */}
         <div style={{ flex: 1, padding: "0 22px 32px 32px" }}>
           {visible("summary") && summary && (
-            <AuroraSection title={label("summary")} color={color}>
+            <AuroraSection id="summary" title={label("summary")} color={color}>
               <p style={{ fontSize: "10.5px", color: "#555", lineHeight: 1.78 }}>{summary}</p>
             </AuroraSection>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <AuroraSection title={label("workExperience")} color={color}>
+            <AuroraSection id="workExperience" title={label("workExperience")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 {workExperience.map((job, idx) => (
                   <div key={job.id} className="resume-entry" style={{ position: "relative", paddingLeft: 16 }}>
@@ -157,7 +158,7 @@ export default function AuroraTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <AuroraSection title={label("education")} color={color}>
+            <AuroraSection id="education" title={label("education")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry" style={{ paddingLeft: 16, position: "relative" }}>
@@ -186,7 +187,7 @@ export default function AuroraTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <AuroraSection title={label("projects")} color={color}>
+            <AuroraSection id="projects" title={label("projects")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry" style={{ paddingLeft: 16, position: "relative" }}>
@@ -206,7 +207,7 @@ export default function AuroraTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <AuroraSection title={label("volunteer")} color={color}>
+            <AuroraSection id="volunteer" title={label("volunteer")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry" style={{ paddingLeft: 16, position: "relative" }}>
@@ -237,7 +238,7 @@ export default function AuroraTemplate() {
           borderLeft: `1.5px solid ${color}22`,
         }}>
           {visible("skills") && skills.length > 0 && (
-            <AuroraSide title={label("skills")} color={color}>
+            <AuroraSide id="skills" title={label("skills")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {skills.map((sk) => (
                   <div key={sk.id}>
@@ -259,7 +260,7 @@ export default function AuroraTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <AuroraSide title={label("languages")} color={color}>
+            <AuroraSide id="languages" title={label("languages")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {languages.map((lang) => (
                   <div key={lang.id}>
@@ -281,7 +282,7 @@ export default function AuroraTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <AuroraSide title={label("certifications")} color={color}>
+            <AuroraSide id="certifications" title={label("certifications")} color={color}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id} style={{ paddingLeft: 8, borderLeft: `2px solid ${color}` }}>
@@ -298,7 +299,7 @@ export default function AuroraTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <AuroraSide title={label("hobbies")} color={color}>
+            <AuroraSide id="hobbies" title={label("hobbies")} color={color}>
               <p style={{ fontSize: "10px", color: "#555", lineHeight: 1.7 }}>{hobbies}</p>
             </AuroraSide>
           )}
@@ -310,15 +311,12 @@ export default function AuroraTemplate() {
 
 /* ── Sub-components ─────────────────────────────────────────────────────────── */
 
-function AuroraSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function AuroraSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      {/* Section title with SVG double-arc accent */}
+      {/* Section title with the section icon */}
       <div className="resume-section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-        <svg width="20" height="14" viewBox="0 0 20 14" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0,12 Q10,0 20,12" stroke={color} strokeWidth="2.5" strokeLinecap="round" />
-          <path d="M3,12 Q10,3 17,12" stroke={color} strokeWidth="1" strokeLinecap="round" opacity="0.35" />
-        </svg>
+        <SectionIcon sectionId={id} color={color} size={14} strokeWidth={2.25} />
         <span style={{
           fontSize: "9.5px", fontWeight: 900, letterSpacing: "0.26em",
           textTransform: "uppercase", color,
@@ -332,13 +330,15 @@ function AuroraSection({ title, color, children }: { title: string; color: strin
   )
 }
 
-function AuroraSide({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function AuroraSide({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <p className="resume-section-title" style={{
+        display: "flex", alignItems: "center", gap: 5,
         fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.25em",
         textTransform: "uppercase", color, marginBottom: 10,
       }}>
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
         {title}
       </p>
       {children}

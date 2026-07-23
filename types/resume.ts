@@ -15,6 +15,13 @@ export const PersonalDetailsSchema = z.object({
   website: z.string().default(""),
   linkedin: z.string().default(""),
   github: z.string().default(""),
+  // Additional social/portfolio links beyond the three first-class fields
+  // (Twitter/X, Instagram, Behance, Dribbble, portfolio, YouTube, Stack Overflow…).
+  // Kept as an open {network,url} list so a new network never needs a schema change.
+  socials: z.array(z.object({
+    network: z.string().default(""),
+    url: z.string().default(""),
+  })).default([]),
   yearsOfExperience: z.string().default(""),
 })
 
@@ -341,6 +348,9 @@ export interface TemplateInfo {
   columns: "single" | "double"
   hasPhoto: boolean
 }
+
+/** Default template applied when a CV is created or imported without an explicit pick. */
+export const DEFAULT_TEMPLATE_ID = "elegant"
 
 export const TEMPLATES: TemplateInfo[] = [
   { id: "classic", name: "Clásico", description: "Simple y adecuado para cualquier industria", columns: "single", hasPhoto: false },

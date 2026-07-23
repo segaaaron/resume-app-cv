@@ -125,6 +125,7 @@ export default async function GuidePage({
       mockup: <ATSScoreMockup locale={locale} />,
       reverse: true,
       alt: true,
+      pro: true,
     },
     {
       badge: tf("cover_letter.badge"),
@@ -141,6 +142,7 @@ export default async function GuidePage({
       mockup: <CVReviewMockup locale={locale} />,
       reverse: true,
       alt: true,
+      pro: true,
     },
   ]
 
@@ -157,7 +159,7 @@ export default async function GuidePage({
         <GuideHero locale={locale} />
         <GuideSteps locale={locale} />
         {features.map((f, i) => (
-          <GuideFeatureBlock key={i} {...f} />
+          <GuideFeatureBlock key={i} {...f} locale={locale} />
         ))}
         <GuideStats locale={locale} />
         <GuideCTA locale={locale} />

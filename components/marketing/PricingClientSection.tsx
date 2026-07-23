@@ -52,7 +52,7 @@ export default function PricingClientSection({
   isEs,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
-  const [billing, setBilling] = useState<"annual" | "monthly">("annual")
+  const [billing, setBilling] = useState<"annual" | "monthly">("monthly")
 
   const t = (es: string, en: string) => (isEs ? es : en)
 
@@ -85,8 +85,6 @@ export default function PricingClientSection({
     </li>
   )
 
-  const proPrice = billing === "annual" ? "144" : "15"
-  const proSuffix = billing === "annual" ? t("/año", "/yr") : t("/mes", "/mo")
   const proPlan = billing === "annual" ? "annual" : "monthly"
 
   return (
@@ -152,12 +150,14 @@ export default function PricingClientSection({
         {/* ───────── BASIC ───────── */}
         <TimelineContent animationNum={2} timelineRef={sectionRef} customVariants={revealVariants} className="h-full">
           <motion.div
-            whileHover={{ y: -6 }}
+            whileHover={{ y: -8 }}
             transition={{ type: "spring", stiffness: 280, damping: 22 }}
-            className="group flex h-full flex-col rounded-3xl border border-slate-200 bg-white p-7 shadow-[0_2px_18px_rgba(26,46,74,0.05)] transition-colors hover:border-slate-300"
+            className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-slate-200/80 bg-gradient-to-b from-white to-slate-50/70 p-7 shadow-[0_14px_36px_-14px_rgba(26,46,74,0.20),0_4px_10px_-6px_rgba(26,46,74,0.10)] transition-shadow duration-300 hover:shadow-[0_30px_60px_-20px_rgba(26,46,74,0.32)]"
           >
-            <div className="mb-5 flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-[#1a2e4a]">
+            <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-slate-300 via-slate-200 to-transparent" />
+
+            <div className="relative mb-5 flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-[#1a2e4a] shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_2px_6px_-2px_rgba(26,46,74,0.2)]">
                 <FileText className="h-5 w-5" />
               </span>
               <div>
@@ -165,17 +165,20 @@ export default function PricingClientSection({
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("Acceso 1 mes", "1-month access")}</p>
               </div>
             </div>
-            <div className="mb-1 flex items-baseline gap-1">
+            <div className="relative mb-1 flex items-baseline gap-1">
               <span className="self-start mt-1 text-sm font-semibold text-slate-400">$</span>
               <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">2.99</span>
               <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
             </div>
-            <p className="mb-5 text-[13px] text-slate-400">{t("Un solo pago · sin renovación", "One payment · no renewal")}</p>
-            <div className="mb-5 h-px bg-slate-100" />
-            <ul className="mb-7 flex flex-col gap-3">
+            <p className="relative mb-5 text-[13px] text-slate-400">{t("Un solo pago · sin renovación", "One payment · no renewal")}</p>
+            <div className="relative mb-5 h-px bg-slate-100" />
+            <ul className="relative mb-6 flex flex-col gap-3">
               {basicPerks.map((p) => <CheckRow key={p} text={p} accent="#1a2e4a" />)}
             </ul>
-            <div className="mt-auto">
+            <div className="relative mb-6 flex flex-1 items-center rounded-2xl border border-dashed border-slate-200 bg-slate-50/60 px-4 py-3">
+              <p className="text-[12px] leading-snug text-slate-500">{t("¿Necesitas IA, ATS y plantillas PRO? Está todo en el plan Pro.", "Need AI, ATS and PRO templates? It's all in the Pro plan.")}</p>
+            </div>
+            <div className="relative mt-auto">
               <PricingButtons
                 plan="basic"
                 isEU={isEU}
@@ -189,12 +192,14 @@ export default function PricingClientSection({
         {/* ───────── JOB SPRINT ───────── */}
         <TimelineContent animationNum={3} timelineRef={sectionRef} customVariants={revealVariants} className="h-full">
           <motion.div
-            whileHover={{ y: -6 }}
+            whileHover={{ y: -8 }}
             transition={{ type: "spring", stiffness: 280, damping: 22 }}
-            className="group flex h-full flex-col rounded-3xl border border-[#00D4FF]/25 bg-white p-7 shadow-[0_2px_18px_rgba(0,212,255,0.08)] transition-colors hover:border-[#00D4FF]/45"
+            className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-[#00D4FF]/30 bg-gradient-to-b from-white to-[#00D4FF]/[0.05] p-7 shadow-[0_14px_36px_-14px_rgba(0,150,200,0.20),0_4px_10px_-6px_rgba(0,150,200,0.12)] transition-shadow duration-300 hover:shadow-[0_30px_60px_-20px_rgba(0,180,220,0.42)]"
           >
-            <div className="mb-5 flex items-center gap-3">
-              <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#00D4FF]/10 text-[#00B4DB]">
+            <span aria-hidden className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#00D4FF] via-[#00D4FF]/60 to-transparent" />
+
+            <div className="relative mb-5 flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#00D4FF]/12 text-[#00B4DB] shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),0_2px_8px_-2px_rgba(0,180,220,0.35)]">
                 <Zap className="h-5 w-5" />
               </span>
               <div>
@@ -202,17 +207,20 @@ export default function PricingClientSection({
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-[#00B4DB]">{t("Acceso 7 días", "7-day access")}</p>
               </div>
             </div>
-            <div className="mb-1 flex items-baseline gap-1">
+            <div className="relative mb-1 flex items-baseline gap-1">
               <span className="self-start mt-1 text-sm font-semibold text-slate-400">$</span>
               <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">7.99</span>
               <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
             </div>
-            <p className="mb-5 text-[13px] text-slate-400">{t("Sprint de 7 días para postular", "7-day sprint to apply")}</p>
-            <div className="mb-5 h-px bg-slate-100" />
-            <ul className="mb-7 flex flex-col gap-3">
+            <p className="relative mb-5 text-[13px] text-slate-400">{t("Sprint de 7 días para postular", "7-day sprint to apply")}</p>
+            <div className="relative mb-5 h-px bg-slate-100" />
+            <ul className="relative mb-6 flex flex-col gap-3">
               {sprintPerks.map((p) => <CheckRow key={p} text={p} accent="#00B4DB" />)}
             </ul>
-            <div className="mt-auto">
+            <div className="relative mb-6 flex flex-1 items-center rounded-2xl border border-dashed border-[#00D4FF]/30 bg-[#00D4FF]/[0.04] px-4 py-3">
+              <p className="text-[12px] leading-snug text-slate-500">{t("¿Buscas ATS Score y Revisión IA? Los desbloqueas en el plan Pro.", "Want ATS Score and AI Review? Unlock them in the Pro plan.")}</p>
+            </div>
+            <div className="relative mt-auto">
               <PricingButtons
                 plan="sprint"
                 isEU={isEU}
@@ -226,14 +234,14 @@ export default function PricingClientSection({
         {/* ───────── PRO (featured) ───────── */}
         <TimelineContent animationNum={4} timelineRef={sectionRef} customVariants={revealVariants} className="h-full">
           <motion.div
-            whileHover={{ y: -6 }}
+            whileHover={{ y: -8 }}
             transition={{ type: "spring", stiffness: 280, damping: 22 }}
-            className="relative h-full lg:scale-[1.03]"
+            className="group relative h-full lg:scale-[1.03]"
           >
             {/* glow */}
-            <div className="pointer-events-none absolute -inset-1 rounded-[28px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,212,255,0.35),transparent_70%)] blur-xl" />
+            <div className="pointer-events-none absolute -inset-1.5 rounded-[30px] bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,212,255,0.45),transparent_70%)] blur-2xl transition-opacity duration-300 group-hover:opacity-90" />
             {/* gradient ring */}
-            <div className="relative h-full rounded-[26px] bg-gradient-to-b from-[#00D4FF] via-[#0099CC] to-[#1a2e4a] p-[1.5px] shadow-[0_12px_40px_rgba(0,150,200,0.25)]">
+            <div className="relative h-full rounded-[26px] bg-gradient-to-b from-[#00D4FF] via-[#0099CC] to-[#1a2e4a] p-[1.5px] shadow-[0_24px_60px_-18px_rgba(0,150,200,0.5),0_8px_20px_-10px_rgba(26,46,74,0.3)]">
               <div className="flex h-full flex-col rounded-[24px] bg-white p-7">
                 {/* badge */}
                 <span className="absolute -top-3 left-1/2 -translate-x-1/2 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#00D4FF] to-[#0066FF] px-3.5 py-1 text-[10px] font-bold uppercase tracking-[0.1em] text-white shadow-lg">
@@ -251,55 +259,63 @@ export default function PricingClientSection({
                   </div>
                 </div>
 
-                {/* billing toggle */}
-                <div className="mb-5 inline-flex w-full rounded-xl bg-slate-100 p-1">
-                  {(["annual", "monthly"] as const).map((opt) => {
-                    const active = billing === opt
-                    return (
-                      <button
-                        key={opt}
-                        type="button"
-                        onClick={() => setBilling(opt)}
-                        className="relative flex-1 rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-colors"
-                        aria-pressed={active}
-                      >
-                        {active && (
-                          <motion.span
-                            layoutId="billing-pill"
-                            className="absolute inset-0 rounded-lg bg-white shadow-sm"
-                            transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                          />
-                        )}
-                        <span className={`relative z-10 ${active ? "text-[#1a2e4a]" : "text-slate-400"}`}>
-                          {opt === "annual" ? annualLabel : monthlyLabel}
-                          {opt === "annual" && (
-                            <span className="ml-1 rounded bg-[#00D4FF]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#00B4DB]">
-                              {annualBadge}
-                            </span>
-                          )}
-                        </span>
-                      </button>
-                    )
-                  })}
+                {/* Billing options — both prices always visible, monthly separated */}
+                <div className="mb-5 flex flex-col gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setBilling("annual")}
+                    aria-pressed={billing === "annual"}
+                    className={`relative flex items-center justify-between rounded-2xl border px-4 py-3 pr-9 text-left transition-all ${
+                      billing === "annual"
+                        ? "border-[#00D4FF] bg-[#00D4FF]/[0.06] shadow-[0_6px_18px_-8px_rgba(0,212,255,0.5)]"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <span aria-hidden className={`absolute right-3 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full border-2 ${billing === "annual" ? "border-[#00D4FF]" : "border-slate-300"}`}>
+                      {billing === "annual" && <span className="h-1.5 w-1.5 rounded-full bg-[#00D4FF]" />}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-bold text-[#1a2e4a]">{annualLabel}</span>
+                        <span className="rounded bg-[#00D4FF]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#00B4DB]">{annualBadge}</span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] font-semibold text-[#00B4DB]">{annualEquiv}</p>
+                    </div>
+                    <div className="flex shrink-0 items-baseline gap-0.5">
+                      <span className="text-xs font-semibold text-slate-400">$</span>
+                      <span className="text-[26px] font-extrabold tabular-nums tracking-[-0.03em] text-[#1a2e4a]">144</span>
+                      <span className="text-[11px] font-medium text-slate-400">{t("/año", "/yr")}</span>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBilling("monthly")}
+                    aria-pressed={billing === "monthly"}
+                    className={`relative flex items-center justify-between rounded-2xl border px-4 py-3 pr-9 text-left transition-all ${
+                      billing === "monthly"
+                        ? "border-[#00D4FF] bg-[#00D4FF]/[0.06] shadow-[0_6px_18px_-8px_rgba(0,212,255,0.5)]"
+                        : "border-slate-200 bg-white hover:border-slate-300"
+                    }`}
+                  >
+                    <span aria-hidden className={`absolute right-3 top-1/2 flex h-4 w-4 -translate-y-1/2 items-center justify-center rounded-full border-2 ${billing === "monthly" ? "border-[#00D4FF]" : "border-slate-300"}`}>
+                      {billing === "monthly" && <span className="h-1.5 w-1.5 rounded-full bg-[#00D4FF]" />}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[13px] font-bold text-[#1a2e4a]">{monthlyLabel}</span>
+                        <span className="rounded bg-[#00D4FF]/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#00B4DB]">{t("Más popular", "Most popular")}</span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-slate-400">{t("Facturado cada mes", "Billed monthly")}</p>
+                    </div>
+                    <div className="flex shrink-0 items-baseline gap-0.5">
+                      <span className="text-xs font-semibold text-slate-400">$</span>
+                      <span className="text-[26px] font-extrabold tabular-nums tracking-[-0.03em] text-[#1a2e4a]">15</span>
+                      <span className="text-[11px] font-medium text-slate-400">{t("/mes", "/mo")}</span>
+                    </div>
+                  </button>
                 </div>
 
-                {/* price */}
-                <div className="mb-1 flex items-baseline gap-1">
-                  <span className="self-start mt-1 text-sm font-semibold text-[#00B4DB]">$</span>
-                  <motion.span
-                    key={proPrice}
-                    initial={{ opacity: 0, y: 6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.25 }}
-                    className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]"
-                  >
-                    {proPrice}
-                  </motion.span>
-                  <span className="text-sm font-medium text-slate-400">{proSuffix}</span>
-                </div>
-                <p className="mb-5 h-[18px] text-[13px] font-semibold text-[#00B4DB]">
-                  {billing === "annual" ? annualEquiv : " "}
-                </p>
 
                 <div className="mb-5 h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 

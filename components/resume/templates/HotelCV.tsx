@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -122,7 +123,7 @@ export default function HotelCVTemplate() {
 
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <H>{label("workExperience")}</H>
+              <H><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</H>
               {workExperience.map((job) => {
                 const startYear = job.startDate?.match(/\d{4}/)?.[0] ?? ""
                 const endYear = job.currentlyWorking ? present : (job.endDate?.match(/\d{4}/)?.[0] ?? "")
@@ -143,7 +144,7 @@ export default function HotelCVTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <H>{label("certifications")}</H>
+              <H><SectionIcon sectionId="certifications" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("certifications")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 11.5, lineHeight: 1.8 }}>
                 {certifications.map((cert) => (
                   <li key={cert.id}>
@@ -161,7 +162,7 @@ export default function HotelCVTemplate() {
         <section>
           {visible("skills") && skills.length > 0 && (
             <>
-              <H>{label("skills")}</H>
+              <H><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85 }}>
                 {skills.map((sk) => (
                   <li key={sk.id}>{sk.name}</li>
@@ -172,7 +173,7 @@ export default function HotelCVTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <H>{label("education")}</H>
+              <H><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</H>
               <p style={{ margin: 0, lineHeight: 1.7 }}>
                 {education.map((edu, i) => {
                   const year = edu.endDate?.match(/\d{4}/)?.[0] ?? edu.startDate?.match(/\d{4}/)?.[0] ?? ""
@@ -192,7 +193,7 @@ export default function HotelCVTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <H>{label("languages")}</H>
+              <H><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</H>
               <p style={{ margin: 0 }}>
                 {languages.map((lang, i) => (
                   <span key={lang.id}>
@@ -206,7 +207,7 @@ export default function HotelCVTemplate() {
 
           {visible("projects") && projects && projects.length > 0 && (
             <>
-              <H>{label("projects")}</H>
+              <H><SectionIcon sectionId="projects" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("projects")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85 }}>
                 {projects.map((proj) => (
                   <li key={proj.id}>

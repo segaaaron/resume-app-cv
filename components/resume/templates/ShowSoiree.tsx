@@ -10,6 +10,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif'
@@ -78,10 +79,10 @@ export default function ShowSoireeTemplate() {
   if (pd.website) contacts.push([<Globe key="g" />, pd.website])
   if (place) contacts.push([<Pin key="i" />, place])
 
-  const SoH = ({ children }: { children: React.ReactNode }) => (
+  const SoH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0 13px" }}>
       <span style={{ fontSize: 11, letterSpacing: "0.26em", textTransform: "uppercase", color: accent, fontWeight: 600 }}>
-        {children}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
       </span>
       <span style={{ flex: 1, height: 1, background: `${accent}33` }} />
     </div>
@@ -134,7 +135,7 @@ export default function ShowSoireeTemplate() {
 
         {visible("workExperience") && workExperience.length > 0 && (
           <>
-            <SoH>{labelFor("workExperience")}</SoH>
+            <SoH id="workExperience">{labelFor("workExperience")}</SoH>
             {workExperience.map((e) => (
               <div key={e.id} className="resume-entry" style={{ marginBottom: 13, breakInside: "avoid" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
@@ -161,7 +162,7 @@ export default function ShowSoireeTemplate() {
 
         {visible("education") && education.length > 0 && (
           <>
-            <SoH>{labelFor("education")}</SoH>
+            <SoH id="education">{labelFor("education")}</SoH>
             {education.map((ed) => (
               <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                 <div style={{ fontSize: 14, color: "#fff" }}>

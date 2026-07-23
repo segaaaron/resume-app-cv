@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -67,18 +68,18 @@ export default async function CVvsResumePage({
 
   const tBlog = await getTranslations("blog")
 
-  const TITLE = "CV vs Resume: Complete Comparison 2026 (When to Use Each)"
+  const TITLE = "US Resume vs International Resume: Which to Send in 2026 (By Country)"
   const SUBTITLE =
-    "CV and resume are not interchangeable. Using the wrong one for the wrong country is the silent reason countless qualified candidates never hear back. Here is the exact difference, when to use each, and what to send country by country."
+    "A short US resume and a long-form international resume are not interchangeable. Using the wrong one for the wrong country is the silent reason countless qualified candidates never hear back. Here is the exact difference, when to use each, and what to send country by country."
   const TAG = "Resume Basics"
 
   const toc = [
     { id: "quick-answer", label: "Quick answer (the 30-second version)" },
     { id: "what-is-resume", label: "What is a resume?" },
-    { id: "what-is-cv", label: "What is a CV (Curriculum Vitae)?" },
+    { id: "what-is-cv", label: "What is a long-form / academic resume?" },
     { id: "key-differences", label: "7 key differences (side by side)" },
     { id: "when-resume", label: "When to use a resume" },
-    { id: "when-cv", label: "When to use a CV" },
+    { id: "when-cv", label: "When to use a long-form resume" },
     { id: "by-country", label: "Country-by-country: which to send" },
     { id: "sections", label: "Typical sections of each format" },
     { id: "common-mistakes", label: "Common confusion points" },
@@ -87,28 +88,28 @@ export default async function CVvsResumePage({
 
   const faqs = [
     {
-      q: "If I am applying from outside the US to a US job, do I send a CV or a resume?",
-      a: "A resume. Adapt to the country of the employer, not your country of origin. Same rule applies the other way: a US candidate applying to an academic position in Europe should send a CV.",
+      q: "If I am applying from outside the US to a US job, do I send a short resume or a long-form one?",
+      a: "A short 1-2 page resume. Adapt to the country of the employer, not your country of origin. The rule works the other way too: a US candidate applying to an academic position in Europe should send a long-form academic resume.",
     },
     {
-      q: "Can I just rename my CV file to 'resume' and send the same document?",
-      a: "No. The naming convention is the smallest difference between the two — length, content depth, and structure are completely different. Sending a 4-page European CV to a US recruiter renamed as 'resume.pdf' is one of the fastest ways to get auto-rejected.",
+      q: "Can I just rename my long-form resume file and send the same document to a US role?",
+      a: "No. The file name is the smallest difference between the two — length, content depth, and structure are completely different. Sending a 4-page European long-form resume to a US recruiter renamed as 'resume.pdf' is one of the fastest ways to get auto-rejected.",
     },
     {
-      q: "What about LinkedIn — does it serve as a CV or a resume?",
-      a: "Neither. LinkedIn is a complementary profile, not a substitute. Recruiters expect a tailored resume or CV attachment in addition to your LinkedIn URL. Treat LinkedIn as your perpetual public profile and your CV/resume as the targeted document for a specific role.",
+      q: "What about LinkedIn — does it replace a resume?",
+      a: "Neither the short nor the long-form kind. LinkedIn is a complementary profile, not a substitute. Recruiters expect a tailored resume attachment in addition to your LinkedIn URL. Treat LinkedIn as your perpetual public profile and your resume as the targeted document for a specific role.",
     },
     {
-      q: "Are CVs always longer than resumes?",
-      a: "Generally yes. A standard resume is 1-2 pages; an academic CV can be 5, 10, or 20+ pages because it lists every publication, conference, grant and teaching role. But a UK 'CV' (used for any job) is typically 2 pages — closer in length to a US resume than to an academic CV.",
+      q: "Is a long-form resume always longer than a US resume?",
+      a: "Generally yes. A standard US resume is 1-2 pages; an academic long-form resume can be 5, 10, or 20+ pages because it lists every publication, conference, grant and teaching role. But a UK application resume (used for any job) is typically 2 pages — closer in length to a US resume than to an academic one.",
     },
     {
-      q: "Should I send both a CV and a resume to be safe?",
-      a: "No — it signals you do not know the conventions of the role's market. Pick the right document for the country and audience. If you are uncertain, the application portal itself usually tells you: a field labeled 'Upload CV' in the UK means a 2-page document; the same field in the US is sometimes mislabeled and they actually want a resume.",
+      q: "Should I send both the short and long-form versions to be safe?",
+      a: "No — it signals you do not know the conventions of the role's market. Pick the right document for the country and audience. If you are uncertain, the application portal itself usually tells you: a field labeled 'Upload resume' in the UK expects a 2-page document; the same field in the US expects a tight 1-2 page one.",
     },
     {
-      q: "Does the ATS treat CVs and resumes differently?",
-      a: "The ATS treats them identically — both as plain documents to be parsed for keywords. The difference is in the human reviewer who reads after the ATS shortlists. A US recruiter expecting a 1-page resume will deprioritize a 4-page CV, even if the ATS scored both equally. Format to the audience after the ATS gate.",
+      q: "Does the ATS treat long-form and short resumes differently?",
+      a: "The ATS treats them identically — both as plain documents to be parsed for keywords. The difference is in the human reviewer who reads after the ATS shortlists. A US recruiter expecting a 1-page resume will deprioritize a 4-page long-form one, even if the ATS scored both equally. Format to the audience after the ATS gate.",
     },
   ]
 
@@ -147,7 +148,7 @@ export default async function CVvsResumePage({
         dateModified={DATE_MODIFIED}
         faqs={faqs}
         breadcrumbBlogLabel={tBlog("browse")}
-        keywords={["cv vs resume", "difference cv resume", "curriculum vitae vs resume", "when to use cv", "resume or cv"]}
+        keywords={["us resume vs international resume", "resume format by country", "resume length by country", "short vs long-form resume", "international resume format"]}
       />
 
       <BlogHero
@@ -167,7 +168,7 @@ export default async function CVvsResumePage({
           <article className="min-w-0">
             <BlogProse>
               <p>
-                &quot;CV&quot; and &quot;resume&quot; are often treated as synonyms — but in the global job market they are two genuinely different documents with different lengths, audiences and conventions. Get them confused and you are sending a 4-page academic dossier to a US recruiter who expected a 1-page summary, or worse, you are mailing a 1-page American resume to a European academic committee that expected your full bibliography.
+                The word &quot;resume&quot; means very different things depending on where you apply. In the US it is a tight 1-2 page pitch tailored to one job; in the UK, Europe and academia it is a long-form document — sometimes 20+ pages — that records your entire career. Same person, same role, two genuinely different documents with different lengths, audiences and conventions. Get them confused and you are sending a 4-page academic dossier to a US recruiter who expected a 1-page summary, or worse, mailing a 1-page American resume to a European academic committee that expected your full bibliography.
               </p>
               <p>
                 This guide covers the real differences (not just the surface label), the seven things that actually change between the two formats, when to use each, and a country-by-country breakdown so you never have to guess which document to send.
@@ -184,8 +185,8 @@ export default async function CVvsResumePage({
                   <thead>
                     <tr className="bg-[#1a2e4a] text-white">
                       <th className="px-4 py-3 text-left font-semibold"></th>
-                      <th className="px-4 py-3 text-left font-semibold">Resume</th>
-                      <th className="px-4 py-3 text-left font-semibold">CV (Curriculum Vitae)</th>
+                      <th className="px-4 py-3 text-left font-semibold">US resume (short)</th>
+                      <th className="px-4 py-3 text-left font-semibold">International / academic resume (long-form)</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white">
@@ -216,19 +217,19 @@ export default async function CVvsResumePage({
                 Resumes dominate in the United States and Canada, and have become the de facto global standard for any corporate, tech, or private-sector role. They are aggressively tailored per application: keywords swapped, bullets reordered, skills section adjusted to match the posting.
               </p>
 
-              <h2 id="what-is-cv">What is a CV (Curriculum Vitae)?</h2>
+              <h2 id="what-is-cv">What is a long-form (international / academic) resume?</h2>
               <p>
-                A Curriculum Vitae — Latin for &quot;course of life&quot; — is a comprehensive record of your full academic and professional career. In an academic CV, that means every publication, every grant, every conference, every teaching role, every committee. There is no length cap because completeness is the point.
+                A long-form resume — the format used in academia and much of the world outside the US — is a comprehensive record of your full academic and professional career. In an academic version, that means every publication, every grant, every conference, every teaching role, every committee. There is no length cap because completeness is the point.
               </p>
               <p>
-                Confusingly, in the UK, Ireland, Australia, and most of Europe, &quot;CV&quot; is the everyday term used for what Americans would call a &quot;resume&quot; — a 2-page job application document. Same word, different document. This is the single biggest source of confusion in international job applications.
+                Confusingly, in the UK, Ireland, Australia, and most of Europe, this long-form document is simply the everyday application document — closer to a 2-page US resume than to a 20-page academic one. Same word, different length. This is the single biggest source of confusion in international job applications.
               </p>
 
               <div className="not-prose my-6 grid sm:grid-cols-2 gap-4">
                 <div className="rounded-2xl border border-[#00D4FF]/20 bg-[#00D4FF]/5 p-5">
                   <p className="text-xs font-semibold uppercase tracking-widest text-[#00D4FF] mb-2 flex items-center gap-2">
                     <FileText className="h-3.5 w-3.5" />
-                    Academic CV
+                    Academic Resume
                   </p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
                     5-20+ pages. Comprehensive list of publications, grants, conferences, teaching, service. Used for tenure-track jobs, postdocs, research positions, medical residencies.
@@ -237,10 +238,10 @@ export default async function CVvsResumePage({
                 <div className="rounded-2xl border border-[#1a2e4a]/10 bg-white p-5">
                   <p className="text-xs font-semibold uppercase tracking-widest text-[#1a2e4a]/70 mb-2 flex items-center gap-2">
                     <FileText className="h-3.5 w-3.5 text-[#1a2e4a]" />
-                    European/UK CV
+                    European/UK Resume
                   </p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    2 pages. Functionally equivalent to a US resume — tailored per job application, structured around experience and skills. The word &quot;CV&quot; is used generically for any application document.
+                    2 pages. Functionally equivalent to a US resume — tailored per job application, structured around experience and skills. The word &quot;Resume&quot; is used generically for any application document.
                   </p>
                 </div>
               </div>
@@ -253,7 +254,7 @@ export default async function CVvsResumePage({
                     <tr className="bg-[#1a2e4a] text-white">
                       <th className="px-4 py-3 text-left font-semibold">Dimension</th>
                       <th className="px-4 py-3 text-left font-semibold">Resume (US)</th>
-                      <th className="px-4 py-3 text-left font-semibold">CV (academic / international)</th>
+                      <th className="px-4 py-3 text-left font-semibold">Resume (academic / international)</th>
                     </tr>
                   </thead>
                   <tbody className="bg-white">
@@ -284,13 +285,13 @@ export default async function CVvsResumePage({
                 <li><strong>Roles where you need to position for one specific job</strong> and need the freedom to omit anything not relevant.</li>
               </ul>
 
-              <h2 id="when-cv">When to use a CV</h2>
+              <h2 id="when-cv">When to use a long-form / international resume</h2>
               <ul>
-                <li><strong>Any job application in the UK, Ireland, or most of continental Europe</strong> — here &quot;CV&quot; just means &quot;application document,&quot; 2 pages.</li>
+                <li><strong>Any job application in the UK, Ireland, or most of continental Europe</strong> — here the resume is simply the &quot;application document,&quot; usually 2 pages.</li>
                 <li><strong>Academic positions globally</strong>: tenure-track faculty, postdocs, lectureships, research scientist roles.</li>
-                <li><strong>Medical residencies, fellowships, and physician applications</strong> — these expect a full academic-style CV with publications, presentations, certifications.</li>
-                <li><strong>Federal government and international organization roles</strong> (UN, World Bank, EU institutions) — they often require comprehensive CVs and sometimes their own structured forms.</li>
-                <li><strong>Grant applications and research funding</strong>: NIH biosketch, ERC CV, NSF biosketches are all CV-format documents.</li>
+                <li><strong>Medical residencies, fellowships, and physician applications</strong> — these expect a full academic-style long-form resume with publications, presentations, certifications.</li>
+                <li><strong>Federal government and international organization roles</strong> (UN, World Bank, EU institutions) — they often require comprehensive long-form resumes and sometimes their own structured forms.</li>
+                <li><strong>Grant applications and research funding</strong>: NIH biosketch, ERC academic profile, NSF biosketches are all long-form academic documents.</li>
               </ul>
 
               <h2 id="by-country">Country-by-country: which to send</h2>
@@ -308,16 +309,16 @@ export default async function CVvsResumePage({
                     {[
                       ["USA", "Resume (1-2 pages)", "No photo. No personal data. Tailored per role."],
                       ["Canada", "Resume (1-2 pages)", "Same as US. Bilingual EN/FR for Quebec roles."],
-                      ["United Kingdom", "CV (2 pages)", "No photo. 'CV' = resume in everyday usage."],
-                      ["Ireland", "CV (2 pages)", "Same UK conventions. No photo, no DOB."],
-                      ["Germany", "Lebenslauf / CV", "Photo expected (passport-style). DOB common. 2-3 pages."],
-                      ["France", "CV (1-2 pages)", "Photo optional, increasingly omitted. Concise."],
-                      ["Spain", "CV (1-2 pages)", "Photo common. DOB common. Less tailored than US resume."],
-                      ["Mexico", "CV (1-2 pages)", "Photo common. Personal data often expected."],
-                      ["Argentina / Chile / Colombia", "CV (1-2 pages)", "Photo and personal data conventional."],
-                      ["Australia / New Zealand", "Resume or CV (interchangeable, 2 pages)", "No photo. Standard professional format."],
-                      ["Japan", "Rirekisho (rigid form) + CV", "Standardized form with photo + Western-style CV."],
-                      ["UAE / Saudi Arabia", "CV (2-3 pages)", "Photo common, personal data expected. Bilingual EN/AR for local roles."],
+                      ["United Kingdom", "Resume (2 pages)", "No photo. The everyday 2-page application document."],
+                      ["Ireland", "Resume (2 pages)", "Same UK conventions. No photo, no DOB."],
+                      ["Germany", "Lebenslauf (local term)", "Photo expected (passport-style). DOB common. 2-3 pages."],
+                      ["France", "Resume (1-2 pages)", "Photo optional, increasingly omitted. Concise."],
+                      ["Spain", "Resume (1-2 pages)", "Photo common. DOB common. Less tailored than US resume."],
+                      ["Mexico", "Resume (1-2 pages)", "Photo common. Personal data often expected."],
+                      ["Argentina / Chile / Colombia", "Resume (1-2 pages)", "Photo and personal data conventional."],
+                      ["Australia / New Zealand", "Resume (2 pages)", "No photo. Standard professional format."],
+                      ["Japan", "Rirekisho (rigid form) + resume", "Standardized form with photo + Western-style resume."],
+                      ["UAE / Saudi Arabia", "Resume (2-3 pages)", "Photo common, personal data expected. Bilingual EN/AR for local roles."],
                     ].map(([country, doc, notes], i) => (
                       <tr key={i} className={i % 2 === 1 ? "bg-[#00D4FF]/5 border-b border-[#1a2e4a]/10" : "border-b border-[#1a2e4a]/10"}>
                         <td className="px-4 py-3 font-semibold text-[#1a2e4a]">{country}</td>
@@ -351,7 +352,7 @@ export default async function CVvsResumePage({
                 <div className="rounded-2xl border border-[#1a2e4a]/10 bg-white p-5">
                   <p className="font-semibold text-[#1a2e4a] mb-3 flex items-center gap-2">
                     <Globe2 className="h-4 w-4 text-[#00D4FF]" />
-                    Academic CV
+                    Academic Resume
                   </p>
                   <ol className="space-y-1.5 text-sm text-[#1a2e4a]/85 list-decimal pl-5">
                     <li>Contact header</li>
@@ -372,11 +373,11 @@ export default async function CVvsResumePage({
 
               <div className="not-prose space-y-3 my-8">
                 {[
-                  { icon: XCircle, title: "Sending a 4-page CV to a US recruiter", text: "The single fastest way to get auto-rejected for a US private-sector role. Length signals lack of awareness of the market." },
-                  { icon: XCircle, title: "Sending a 1-page resume for an academic position", text: "Equally damaging the other way. A 1-page resume signals you have nothing to put on a CV — devastating in an academic search." },
+                  { icon: XCircle, title: "Sending a 4-page long-form resume to a US recruiter", text: "The single fastest way to get auto-rejected for a US private-sector role. Length signals lack of awareness of the market." },
+                  { icon: XCircle, title: "Sending a 1-page resume for an academic position", text: "Equally damaging the other way. A 1-page resume signals you have nothing to put on a long-form academic one — devastating in an academic search." },
                   { icon: XCircle, title: "Putting a photo on a US resume", text: "Some ATS systems reject files with embedded images. US recruiters trained against bias actively discard photos. Eliminate." },
                   { icon: XCircle, title: "Listing every job you have ever had on a US resume", text: "If a role is more than 10-15 years old or not relevant, cut it. Resumes are about positioning, not history." },
-                  { icon: XCircle, title: "Confusing 'CV' on a UK posting for an academic CV", text: "When a UK job listing says 'send your CV,' they want a 2-page document. Not a 10-page academic dossier." },
+                  { icon: XCircle, title: "Confusing a UK 'resume' request for an academic long-form one", text: "When a UK job listing says 'send your resume,' they want a 2-page document. Not a 10-page academic dossier." },
                 ].map(({ icon: Icon, title, text }, i) => (
                   <div key={i} className="flex gap-4 rounded-2xl border border-rose-100 bg-rose-50/40 p-4 sm:p-5">
                     <Icon className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
@@ -393,7 +394,7 @@ export default async function CVvsResumePage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Not sure which to send? Default to resume + ATS Checker</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    For any private-sector role outside of academia, the safe default in 2026 is a 1-2 page resume tailored to the posting. Then validate with <Link href={`/${locale}/tools/ats-checker`}>ReadyCV&apos;s ATS Checker</Link> to confirm your keyword match. Browse <Link href={`/${locale}/templates`}>ATS-verified templates</Link> to start from a format that works.
+                    For any private-sector role outside of academia, the safe default in 2026 is a 1-2 page resume tailored to the posting. Then see how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads it to confirm your keyword match. Browse <Link href={`/${locale}/templates`}>ATS-verified templates</Link> to start from a format that works.
                   </p>
                 </div>
               </div>
@@ -401,8 +402,8 @@ export default async function CVvsResumePage({
               <div className="not-prose grid sm:grid-cols-3 gap-4 my-8">
                 {[
                   { icon: CheckCircle2, title: "Adapt to the country", text: "Country of the employer, not your country of origin." },
-                  { icon: CheckCircle2, title: "Match the field's convention", text: "Academia = CV. Industry = resume. Even cross-border." },
-                  { icon: CheckCircle2, title: "Keep both versions ready", text: "If you apply across markets, maintain a resume and a CV in parallel." },
+                  { icon: CheckCircle2, title: "Match the field's convention", text: "Academia = Resume. Industry = resume. Even cross-border." },
+                  { icon: CheckCircle2, title: "Keep both versions ready", text: "If you apply across markets, maintain a short US resume and a long-form one in parallel." },
                 ].map(({ icon: Icon, title, text }, i) => (
                   <div key={i} className="rounded-2xl border border-emerald-100 bg-emerald-50/30 p-5">
                     <Icon className="h-5 w-5 mb-3 text-emerald-600" />
@@ -413,7 +414,7 @@ export default async function CVvsResumePage({
               </div>
 
               <p>
-                The CV-vs-resume distinction is not pedantic — it is one of the highest-impact, lowest-effort optimizations you can make to your job search. Spend the five minutes to verify what the target market expects, send the right format, and you immediately move ahead of the substantial number of candidates who never checked.
+                The short-vs-long-form resume distinction is not pedantic — it is one of the highest-impact, lowest-effort optimizations you can make to your job search. Spend the five minutes to verify what the target market expects, send the right format, and you immediately move ahead of the substantial number of candidates who never checked.
               </p>
             </BlogProse>
 
@@ -422,10 +423,12 @@ export default async function CVvsResumePage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="data" />
+
               <BlogCTA
                 locale={locale}
-                title="Build the right document for the right market — resume or CV."
-                description="ReadyCV PRO includes 111+ ATS-verified templates covering both resume (US) and CV (UK/Europe) formats, with AI suggestions tailored to your target country. Start in under two minutes."
+                title="Build the right document for the right market — short or long-form resume."
+                description="ReadyCV PRO includes 111+ ATS-verified templates covering both short US and long-form international resume formats, with AI suggestions tailored to your target country. Start in under two minutes."
                 buttonLabel="Start with ReadyCV PRO"
                 hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
               />

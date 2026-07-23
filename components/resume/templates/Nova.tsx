@@ -8,6 +8,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -25,13 +26,14 @@ export default function NovaTemplate() {
   let sectionIdx = 0
   const nextIdx = () => { sectionIdx++; return String(sectionIdx).padStart(2, "0") }
 
-  const SectionHeader = ({ title }: { title: string }) => {
+  const SectionHeader = ({ id, title }: { id: string; title: string }) => {
     const num = nextIdx()
     return (
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
         <span style={{ fontSize: "22px", fontWeight: 900, color: accent, lineHeight: 1, letterSpacing: "-0.03em", opacity: 0.18 }}>
           {num}
         </span>
+        <SectionIcon sectionId={id} color={accent} size={13} strokeWidth={2.25} />
         <h2 style={{
           fontSize: "9px", fontWeight: 800, letterSpacing: "0.2em",
           textTransform: "uppercase", color: "#111827",
@@ -109,14 +111,14 @@ export default function NovaTemplate() {
       <div style={{ padding: "24px 36px 32px" }}>
         {visible("summary") && summary && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("summary")} />
+            <SectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.75 }}>{summary}</p>
           </div>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("workExperience")} />
+            <SectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry" style={{ display: "flex", gap: 16 }}>
@@ -145,7 +147,7 @@ export default function NovaTemplate() {
 
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("education")} />
+            <SectionHeader id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry" style={{ display: "flex", gap: 16 }}>
@@ -171,7 +173,7 @@ export default function NovaTemplate() {
         {/* Skills row */}
         {visible("skills") && skills.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("skills")} />
+            <SectionHeader id="skills" title={label("skills")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "10px 24px" }}>
               {skills.map((sk) => {
                 const dots = SKILL_W[sk.level] ?? 2
@@ -199,7 +201,7 @@ export default function NovaTemplate() {
           <div style={{ display: "flex", gap: 28, marginBottom: 20 }}>
             {visible("languages") && languages.length > 0 && (
               <div style={{ flex: 1 }}>
-                <SectionHeader title={label("languages")} />
+                <SectionHeader id="languages" title={label("languages")} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {languages.map((lang) => (
                     <div key={lang.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -218,7 +220,7 @@ export default function NovaTemplate() {
             )}
             {visible("certifications") && certifications.length > 0 && (
               <div style={{ flex: 1 }}>
-                <SectionHeader title={label("certifications")} />
+                <SectionHeader id="certifications" title={label("certifications")} />
                 <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                   {certifications.map((cert) => (
                     <div key={cert.id}>
@@ -234,7 +236,7 @@ export default function NovaTemplate() {
 
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("projects")} />
+            <SectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -249,7 +251,7 @@ export default function NovaTemplate() {
 
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("volunteer")} />
+            <SectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -264,7 +266,7 @@ export default function NovaTemplate() {
 
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("references")} />
+            <SectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

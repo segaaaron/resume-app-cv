@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -373,7 +374,7 @@ export default async function ObjetivoProfesionalPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Tip pro — valida con el ATS Checker</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Pega tu objetivo (junto con el resto de tu CV) y la oferta de trabajo en el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link>. Te dice qué keywords del posting están faltando, tu match actual y las 3 ediciones de mayor impacto. La mayoría sube su score 20+ puntos en menos de 10 minutos.
+                    Mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> lee tu objetivo (junto con el resto de tu CV) contra la oferta: te dice qué keywords del posting faltan, tu match actual y las 3 ediciones de mayor impacto. La mayoría sube su score 20+ puntos en menos de 10 minutos.
                   </p>
                 </div>
               </div>
@@ -388,6 +389,8 @@ export default async function ObjetivoProfesionalPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="data" />
+
               <BlogCTA
                 locale={locale}
                 title="Crea tu CV con un objetivo profesional que sí te lleve a entrevista."

@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -82,7 +83,7 @@ export default function StripeTemplate() {
         <div className="shrink-0 px-6 pt-6 pb-8" style={{ width: "195px", borderRight: "1px solid #f0f0f0" }}>
 
           {visible("skills") && skills.length > 0 && (
-            <SideSection title={label("skills")} color={color}>
+            <SideSection id="skills" title={label("skills")} color={color}>
               <div className="space-y-2.5">
                 {skills.map((sk) => (
                   <div key={sk.id}>
@@ -97,7 +98,7 @@ export default function StripeTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <SideSection title={label("languages")} color={color}>
+            <SideSection id="languages" title={label("languages")} color={color}>
               <div className="space-y-2">
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between gap-2">
@@ -110,7 +111,7 @@ export default function StripeTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <SideSection title={label("certifications")} color={color}>
+            <SideSection id="certifications" title={label("certifications")} color={color}>
               <div className="space-y-2">
                 {certifications.map((cert) => (
                   <div key={cert.id}>
@@ -125,13 +126,13 @@ export default function StripeTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <SideSection title={label("hobbies")} color={color}>
+            <SideSection id="hobbies" title={label("hobbies")} color={color}>
               <p className="text-[11px] text-gray-600 leading-relaxed">{hobbies}</p>
             </SideSection>
           )}
 
           {visible("references") && references.length > 0 && (
-            <SideSection title={label("references")} color={color}>
+            <SideSection id="references" title={label("references")} color={color}>
               <div className="space-y-2">
                 {references.map((ref) => (
                   <div key={ref.id}>
@@ -149,13 +150,13 @@ export default function StripeTemplate() {
         <div className="flex-1 px-7 pt-6 pb-8">
 
           {visible("summary") && summary && (
-            <MainSection title={label("summary")} color={color}>
+            <MainSection id="summary" title={label("summary")} color={color}>
               <p className="text-[11.5px] text-gray-600 leading-relaxed">{summary}</p>
             </MainSection>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <MainSection title={label("workExperience")} color={color}>
+            <MainSection id="workExperience" title={label("workExperience")} color={color}>
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry pl-3" style={{ borderLeft: `2px solid ${color}20` }}>
@@ -178,7 +179,7 @@ export default function StripeTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <MainSection title={label("education")} color={color}>
+            <MainSection id="education" title={label("education")} color={color}>
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry pl-3" style={{ borderLeft: `2px solid ${color}20` }}>
@@ -203,7 +204,7 @@ export default function StripeTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <MainSection title={label("projects")} color={color}>
+            <MainSection id="projects" title={label("projects")} color={color}>
               <div className="space-y-3">
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry pl-3" style={{ borderLeft: `2px solid ${color}20` }}>
@@ -217,7 +218,7 @@ export default function StripeTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <MainSection title={label("volunteer")} color={color}>
+            <MainSection id="volunteer" title={label("volunteer")} color={color}>
               <div className="space-y-3">
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -249,20 +250,24 @@ function HeaderContact({ icon, text }: { icon: React.ReactNode; text: string }) 
   )
 }
 
-function SideSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function SideSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[10px] font-extrabold uppercase tracking-[0.2em] mb-2 resume-section-title" style={{ color }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-[10px] font-extrabold uppercase tracking-[0.2em] mb-2 resume-section-title" style={{ color }}>
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
+        {title}
+      </h3>
       <div className="mb-2 h-px" style={{ backgroundColor: color + "30" }} />
       {children}
     </div>
   )
 }
 
-function MainSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function MainSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-2.5 resume-section-title">
+        <SectionIcon sectionId={id} color={color} size={13} strokeWidth={2.25} />
         <h2 className="text-[12px] font-extrabold uppercase tracking-[0.15em]" style={{ color }}>{title}</h2>
         <div className="flex-1 h-px bg-gray-100" />
       </div>

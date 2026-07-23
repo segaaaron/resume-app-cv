@@ -128,8 +128,8 @@ const jsonLdWebApp = {
     "AI cover letter generator",
     "Job application Kanban tracker",
     "PDF export",
-    "Shareable public CV with custom URL",
-    "AI CV review with applied suggestions",
+    "Shareable public Resume with custom URL",
+    "AI Resume review with applied suggestions",
     "Resume version history",
   ],
   inLanguage: ["es", "en"],
@@ -158,7 +158,7 @@ const jsonLdFaq = {
       name: "How does the AI work in ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV uses GPT-4o-mini to power 7 AI tools: bullet point improvement, professional summary generation, ATS compatibility scoring, cover letter generation, CV review with actionable suggestions, skills suggestion, and AI profile filling from a free-text description.",
+        text: "ReadyCVV uses OpenAI GPT-4.1 to power 7 AI tools: bullet point improvement, professional summary generation, ATS compatibility scoring, cover letter generation, Resume review with actionable suggestions, skills suggestion, and AI profile filling from a free-text description.",
       },
     },
     {

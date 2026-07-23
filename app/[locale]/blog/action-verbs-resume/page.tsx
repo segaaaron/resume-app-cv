@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 import {
@@ -288,7 +289,7 @@ export default async function ActionVerbsPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Pair strong verbs with ATS validation</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Run your rewritten bullets through the <Link href={`/${locale}/tools/ats-checker`}>ReadyCV ATS Checker</Link> against the actual JD. It shows you which of the posting's requirements your CV does not mention yet — so you can decide what to add before you apply, instead of guessing. Start from a <Link href={`/${locale}/templates`}>parser-clean template</Link> so the verbs are not undone by layout problems.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your rewritten bullets against the actual JD: it shows which of the posting's requirements your resume does not mention yet — so you can decide what to add before you apply, instead of guessing. Start from a <Link href={`/${locale}/templates`}>parser-clean template</Link> so the verbs are not undone by layout problems.
                   </p>
                 </div>
               </div>
@@ -317,6 +318,8 @@ export default async function ActionVerbsPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Let AI pick the right verb for every bullet."

@@ -2,8 +2,11 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { checkOrigin } from "@/lib/csrf"
-import { buildSections, ResumeSectionsSchema } from "@/types/resume"
-import { getLimits, isSuperAdmin, effectivePlan } from "@/lib/plans"
+import { buildSections, ResumeSectionsSchema, type ResumeSections, DEFAULT_TEMPLATE_ID } from "@/types/resume"
+import { getImportQuota, isSuperAdmin, effectivePlan } from "@/lib/plans"
+import { checkAndIncrementRateLimit } from "@/lib/rate-limit"
+import { aiService } from "@/lib/controllers/ai-deps"
+import { createLogger } from "@/lib/logger"
 import mammoth from "mammoth"
 import { parseResumeText, detectLanguage, PARSE_LIMITS } from "@/lib/parseResumeText"
 import { extractPdfText } from "@/lib/resume-parser/extract-pdf"
@@ -27,9 +30,6 @@ export async function POST(req: Request) {
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, role: true, subscriptionEndsAt: true } })
   if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!isSuperAdmin(dbUser.role) && !getLimits(effectivePlan(dbUser)).canImport) {
-    return NextResponse.json({ error: "Upgrade your plan to import resumes" }, { status: 403 })
-  }
 
   const formData = await req.formData()
   const file = formData.get("file") as File | null
@@ -55,6 +55,24 @@ export async function POST(req: Request) {
   const isZip  = header[0] === 0x50 && header[1] === 0x4b
   if (!isPdf && !isZip) {
     return NextResponse.json({ error: "Formato no soportado. Usa PDF o DOCX." }, { status: 400 })
+  }
+
+  // ── Anti-abuse import quota (per plan, rolling window) ────────────────────
+  // Checked AFTER cheap validations so a wrong-format upload never burns a slot,
+  // and BEFORE the expensive extraction + LLM call so an exhausted user pays no
+  // compute. Every plan can import (free = conversion hook); the window bounds it.
+  if (!isSuperAdmin(dbUser.role)) {
+    const quota = getImportQuota(effectivePlan(dbUser))
+    const allowed = await checkAndIncrementRateLimit(session.user.id, "import-cv", quota.limit, quota.windowMs)
+    if (!allowed) {
+      return NextResponse.json(
+        {
+          error: "import_quota_reached",
+          message: "Alcanzaste tu límite de importaciones para este período. Inténtalo más tarde o mejora tu plan.",
+        },
+        { status: 429 },
+      )
+    }
   }
 
   // ── 1. Extract raw text ──────────────────────────────────────────────────
@@ -90,13 +108,33 @@ export async function POST(req: Request) {
 
   // ── 2. Detect language ───────────────────────────────────────────────────
   const lang = detectLanguage(rawText.slice(0, 14000))
-
-  // ── 3. Parse with heuristic extractor ───────────────────────────────────
   const truncated = rawText.length > PARSE_LIMITS.rawTextChars
-  const extracted = parseResumeText(rawText.slice(0, PARSE_LIMITS.rawTextChars))
 
-  // ── 4. Validate and fill defaults ────────────────────────────────────────
-  const sectionData = ResumeSectionsSchema.parse(extracted)
+  // ── 3. Extract structured data — AI-primary, deterministic fallback ───────
+  // The grounded LLM extractor reads the layout-reconstructed text and returns
+  // validated ResumeSections. It NEVER invents (every entity is verified against
+  // the source). If it returns null (not a resume, model/parse error) we fall
+  // back to the heuristic parser — so import always works, zero regression.
+  let sectionData: ResumeSections | null = null
+  try {
+    // Bound the AI step to 25s (tighter than the SDK's 60s×retries) so a slow
+    // provider falls back to the deterministic parser fast instead of hanging
+    // the upload — consistent with the 10s timeouts on the extraction steps above.
+    sectionData = await withTimeout(
+      aiService.importResume(session.user.id, { rawText, language: lang }, effectivePlan(dbUser)),
+      25_000,
+    )
+  } catch (err) {
+    createLogger("import").warn("[import] AI extraction failed, falling back", {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+
+  // ── 4. Fallback + validate/fill defaults ─────────────────────────────────
+  if (!sectionData) {
+    const extracted = parseResumeText(rawText.slice(0, PARSE_LIMITS.rawTextChars))
+    sectionData = ResumeSectionsSchema.parse(extracted)
+  }
 
   // ── 5. Build sections with correct language labels ────────────────────────
   const hasData: Record<string, boolean> = {
@@ -125,6 +163,7 @@ export async function POST(req: Request) {
       sections: sections as object[],
       personalDetails: sectionData as object,
       language: lang,
+      templateId: DEFAULT_TEMPLATE_ID,
     },
   })
 

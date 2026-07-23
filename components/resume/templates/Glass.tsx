@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -57,14 +58,14 @@ export default function GlassTemplate() {
         <div className="flex-1 space-y-4">
           {visible("summary") && summary && (
             <GlassCard color={color}>
-              <GlassTitle title={L.profile} color={color} />
+              <GlassTitle id="summary" title={L.profile} color={color} />
               <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </GlassCard>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title={L.experience} color={color} />
+              <GlassTitle id="workExperience" title={L.experience} color={color} />
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry pl-3 border-l-2" style={{ borderColor: color + "70" }}>
@@ -84,7 +85,7 @@ export default function GlassTemplate() {
 
           {visible("education") && education.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title={label("education")} color={color} />
+              <GlassTitle id="education" title={label("education")} color={color} />
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry pl-3 border-l-2" style={{ borderColor: `${color}45` }}>
@@ -106,7 +107,7 @@ export default function GlassTemplate() {
         <div className="w-44 shrink-0 space-y-4">
           {visible("skills") && skills.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title={L.skills} color={color} />
+              <GlassTitle id="skills" title={L.skills} color={color} />
               <div className="space-y-2">
                 {skills.map((skill) => (
                   <div key={skill.id}>
@@ -125,7 +126,7 @@ export default function GlassTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title={label("languages")} color={color} />
+              <GlassTitle id="languages" title={label("languages")} color={color} />
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center text-xs mb-1.5">
                   <span className="font-semibold text-gray-800">{lang.name}</span>
@@ -137,7 +138,7 @@ export default function GlassTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <GlassCard color={color}>
-              <GlassTitle title={label("certifications")} color={color} />
+              <GlassTitle id="certifications" title={label("certifications")} color={color} />
               {certifications.map((cert) => (
                 <div key={cert.id} className="mb-2">
                   <p className="text-xs font-semibold text-gray-800">{cert.name}</p>
@@ -149,7 +150,7 @@ export default function GlassTemplate() {
 
           {visible("hobbies") && hobbies && (
             <GlassCard color={color}>
-              <GlassTitle title={L.interests} color={color} />
+              <GlassTitle id="hobbies" title={L.interests} color={color} />
               <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
             </GlassCard>
           )}
@@ -170,8 +171,11 @@ function GlassCard({ color, children }: { color: string; children: React.ReactNo
   )
 }
 
-function GlassTitle({ title, color }: { title: string; color: string }) {
+function GlassTitle({ id, title, color }: { id: string; title: string; color: string }) {
   return (
-    <h3 className="text-[10px] font-black uppercase tracking-widest mb-2.5 resume-section-title" style={{ color }}>{title}</h3>
+    <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest mb-2.5 resume-section-title" style={{ color }}>
+      <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2.5} />
+      {title}
+    </h3>
   )
 }

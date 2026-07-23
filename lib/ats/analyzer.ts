@@ -11,7 +11,8 @@
  */
 
 import { ATS_SKILLS, allSkillForms, findSkill } from "./skills-dictionary";
-import { expandTerm, normalizeTerm, termPresent } from "./vocabulary";
+import { expandTerm, normalizeTerm } from "./vocabulary";
+import { partitionByPresence } from "./core/matching";
 import { foldAccentsLower } from "@/lib/text/normalize";
 
 export type Locale = "en" | "es";
@@ -161,27 +162,15 @@ function canonicalForm(token: string): string {
   return singularize(normalizeTerm(token));
 }
 
-/**
- * Presence check, delegated to the shared vocabulary so the free tool and the
- * paid ats-score agree. It used to be a local regex with plural tolerance only,
- * which meant "k8s" in a CV never matched a JD asking for "Kubernetes" — the
- * alias was already in skills-dictionary.ts, one import away.
- */
-function containsKeyword(resumeNorm: string, keyword: string): boolean {
-  return termPresent(keyword, resumeNorm);
-}
-
 /* ---------------------- Sub-scorers ---------------------- */
 
 function scoreKeywords(resumeText: string, jobDescription: string, locale: Locale) {
   const topKeywords = extractTopKeywords(jobDescription);
   const resumeNorm = normalize(resumeText);
-  const matched: string[] = [];
-  const missing: string[] = [];
-  for (const kw of topKeywords) {
-    if (containsKeyword(resumeNorm, kw)) matched.push(kw);
-    else missing.push(kw);
-  }
+  // Same presence loop the PRO ATS score runs, delegated to the shared vocabulary
+  // so the free tool and the paid ats-score agree ("k8s" in a CV matches a JD
+  // asking for "Kubernetes"). See lib/ats/core/matching.ts.
+  const { matched, missing } = partitionByPresence(topKeywords, resumeNorm);
   const score = topKeywords.length
     ? Math.round((matched.length / topKeywords.length) * 100)
     : 0;

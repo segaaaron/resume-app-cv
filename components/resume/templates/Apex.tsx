@@ -7,6 +7,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -24,8 +25,9 @@ export default function ApexTemplate() {
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
-  const PillHeader = ({ title }: { title: string }) => (
+  const PillHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+      <SectionIcon sectionId={id} color={accent} size={13} strokeWidth={2.25} />
       <div style={{
         backgroundColor: accent, color: "#fff",
         fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.18em",
@@ -103,14 +105,14 @@ export default function ApexTemplate() {
         <div style={{ flex: 1, minWidth: 0 }}>
           {visible("summary") && summary && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("summary")} />
+              <PillHeader id="summary" title={label("summary")} />
               <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.75 }}>{summary}</p>
             </div>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("workExperience")} />
+              <PillHeader id="workExperience" title={label("workExperience")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -135,7 +137,7 @@ export default function ApexTemplate() {
 
           {visible("education") && education.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("education")} />
+              <PillHeader id="education" title={label("education")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -159,7 +161,7 @@ export default function ApexTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("projects")} />
+              <PillHeader id="projects" title={label("projects")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -174,7 +176,7 @@ export default function ApexTemplate() {
 
           {visible("volunteer") && volunteer.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("volunteer")} />
+              <PillHeader id="volunteer" title={label("volunteer")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -189,7 +191,7 @@ export default function ApexTemplate() {
 
           {visible("references") && references.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("references")} />
+              <PillHeader id="references" title={label("references")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
                 {references.map((ref) => (
                   <div key={ref.id} style={{ minWidth: 140 }}>
@@ -208,7 +210,7 @@ export default function ApexTemplate() {
         <div style={{ width: "30%", flexShrink: 0 }}>
           {visible("skills") && skills.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("skills")} />
+              <PillHeader id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {skills.map((sk) => {
                   const pct = SKILL_W[sk.level] ?? 55
@@ -233,7 +235,7 @@ export default function ApexTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("languages")} />
+              <PillHeader id="languages" title={label("languages")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {languages.map((lang) => {
                   const pct = LANG_W[lang.level] ?? 55
@@ -259,7 +261,7 @@ export default function ApexTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <PillHeader title={label("certifications")} />
+              <PillHeader id="certifications" title={label("certifications")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id} style={{

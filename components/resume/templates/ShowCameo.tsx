@@ -10,6 +10,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'Georgia, "Cormorant Garamond", "Times New Roman", serif'
@@ -52,10 +53,10 @@ export default function ShowCameoTemplate() {
     </svg>
   )
 
-  const H = ({ children }: { children: React.ReactNode }) => (
+  const H = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "14px 0 9px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: accent, fontWeight: 600 }}>
-        {children}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
       </span>
       <span style={{ flex: 1, height: 1, background: `${accent}33` }} />
     </div>
@@ -118,7 +119,7 @@ export default function ShowCameoTemplate() {
         <div>
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <H>{labelFor("workExperience")}</H>
+              <H id="workExperience">{labelFor("workExperience")}</H>
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 12, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
@@ -145,7 +146,7 @@ export default function ShowCameoTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <H>{labelFor("education")}</H>
+              <H id="education">{labelFor("education")}</H>
               {education.map((ed) => (
                 <div key={ed.id} style={{ marginBottom: 8 }}>
                   <div style={{ fontSize: 16 }}>
@@ -164,7 +165,7 @@ export default function ShowCameoTemplate() {
         <div>
           {visible("skills") && skills.length > 0 && (
             <>
-              <H>{labelFor("skills")}</H>
+              <H id="skills">{labelFor("skills")}</H>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
                 {skills.map((s) => (
                   <span key={s.id} style={{ fontFamily: "inherit", fontSize: 10, color: accent, border: `1px solid ${accent}55`, padding: "4px 11px", borderRadius: 20, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -177,7 +178,7 @@ export default function ShowCameoTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <H>{labelFor("languages")}</H>
+              <H id="languages">{labelFor("languages")}</H>
               {languages.map((l) => (
                 <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontFamily: "inherit", fontSize: 11, color: "#5a4f55", padding: "4px 0", borderBottom: `1px solid ${accent}22` }}>
                   <span>{l.name}</span>
@@ -189,7 +190,7 @@ export default function ShowCameoTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <H>{labelFor("certifications")}</H>
+              <H id="certifications">{labelFor("certifications")}</H>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {certifications.map((c) => (
                   <span key={c.id} style={{ fontFamily: "inherit", fontSize: 10, color: accent, border: `1px solid ${accent}55`, padding: "4px 11px", borderRadius: 20, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -200,7 +201,7 @@ export default function ShowCameoTemplate() {
             </>
           )}
 
-          <H>{config.language === "en" ? "Contact" : "Contacto"}</H>
+          <H id="personalDetails">{config.language === "en" ? "Contact" : "Contacto"}</H>
           <div style={{ fontFamily: "inherit", fontSize: 10.5, color: "#5a4f55", lineHeight: 1.9 }}>
             {pd.email}
             {pd.website ? <>{pd.email ? " · " : ""}{pd.website}</> : null}

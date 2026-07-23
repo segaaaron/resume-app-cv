@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 import {
@@ -288,7 +289,7 @@ export default async function VerbosAccionPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Combina verbos fuertes con validación ATS</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Pasa tus bullets reescritos por el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link> contra la oferta real. Te muestra qué requisitos de la oferta tu CV todavía no menciona — para que decidas qué añadir antes de postular, en vez de adivinar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla parser-clean</Link> para que los verbos no se vean arruinados por problemas de maquetación.
+                    Mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> lee tus bullets reescritos contra la oferta real: te muestra qué requisitos tu CV todavía no menciona — para que decidas qué añadir antes de postular, en vez de adivinar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla parser-clean</Link> para que los verbos no se vean arruinados por problemas de maquetación.
                   </p>
                 </div>
               </div>
@@ -317,6 +318,8 @@ export default async function VerbosAccionPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Deja que la IA elija el verbo correcto en cada bullet."

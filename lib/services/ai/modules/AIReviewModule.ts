@@ -42,15 +42,25 @@ export class AIReviewModule {
   async atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
     await enforceAIQuota(userId, "ats-score", plan)
 
-    const { jobDescription, sectionData, language: rawLanguage, templateId } = input
+    const { jobDescription, roleTitle, sectionData, language: rawLanguage, templateId } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
     const en = language === "en"
 
-    const validation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
-    if (!validation.valid) throw new AppError("invalid_input", 400)
+    // Two entry points into the SAME deterministic engine:
+    //  · a real job description (precise), or
+    //  · just the target role (low friction) — the AI infers the standard
+    //    requirements for that role. Flagged so the UI marks it approximate.
+    const useRole = !!roleTitle?.trim() && (!jobDescription || jobDescription.trim().length < 20)
+    if (useRole) {
+      const rt = roleTitle!.trim()
+      if (rt.length < 3 || rt.length > 120) throw new AppError("invalid_input", 400)
+    } else {
+      const validation = validateAIInput(jobDescription ?? "", AI_INPUT_LIMITS.jobDescription)
+      if (!validation.valid) throw new AppError("invalid_input", 400)
+    }
 
     // Truncate to 6000 chars — covers 95%+ of real job descriptions without quality loss
-    const jobDescriptionTruncated = jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)
+    const jobDescriptionTruncated = (jobDescription ?? "").slice(0, AI_INPUT_LIMITS.jobDescription)
 
     const data = sectionData ?? {}
     // A large CV must be analyzed, not rejected. Truncate it (same 12000 budget
@@ -66,7 +76,7 @@ export class AIReviewModule {
     // computed deterministically in code below so it is reproducible and the
     // "missing keywords" are verified against the actual CV text. The model only
     // extracts keyword lists + writes a short summary and actionable suggestions.
-    const prompt = en
+    const jdPrompt = en
       ? `Extract the hiring requirements from this job description. Do NOT score or rate anything — only extract and advise.
 
 === JOB DESCRIPTION ===
@@ -116,6 +126,61 @@ Reglas:
 - Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
+    // Role-only mode: infer the STANDARD requirements for the target role (no
+    // real posting). Same JSON shape → same deterministic engine. Honest about
+    // scope: standard expectations only, never invented company-specific asks.
+    const rolePrompt = en
+      ? `Infer the STANDARD hiring requirements for the target role below — the hard skills, soft skills, must-haves and canonical job title a typical posting for this role would list. Base it ONLY on common, well-established expectations for this role. Do NOT invent niche, company-specific or unusual requirements. If the role is too vague or is not a real job role, return off_topic.
+
+=== TARGET ROLE ===
+${roleTitle ?? ""}
+
+=== CANDIDATE RESUME (context for suggestions only) ===
+${resumeText}
+
+Return JSON with this exact shape:
+{
+  "hardSkills": ["<technical skill / tool / technology the role standardly requires>", ...],
+  "softSkills": ["<soft skill the role standardly requires>", ...],
+  "jobTitle": "<canonical title for this role>",
+  "mustHaves": ["<standard hard requirement: typical years, degree, certification, license>", ...],
+  "summary": "<1-2 sentence qualitative summary of how the resume fits this role — do NOT state a numeric score>",
+  "suggestions": ["<concrete action to improve fit>", "<action 2>", "<action 3>"]
+}
+
+Rules:
+- Only STANDARD requirements for this role. Max ~12 hard skills.
+- Do NOT invent niche/company-specific requirements — only what a typical posting for this role lists.
+- suggestions: EXACTLY 3, imperative, each naming the CV section to change.
+- If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- Respond ONLY with the JSON, no markdown.`
+      : `Infiere los requisitos ESTÁNDAR de contratación para el rol objetivo de abajo — las habilidades técnicas, blandas, requisitos duros y el título canónico que una oferta típica de este rol listaría. Básate SOLO en expectativas comunes y bien establecidas de este rol. NO inventes requisitos de nicho, específicos de una empresa ni inusuales. Si el rol es demasiado vago o no es un rol real, devuelve off_topic.
+
+=== ROL OBJETIVO ===
+${roleTitle ?? ""}
+
+=== CV DEL CANDIDATO (contexto solo para sugerencias) ===
+${resumeText}
+
+Devuelve JSON con esta forma exacta:
+{
+  "hardSkills": ["<habilidad técnica / herramienta / tecnología que el rol pide estándarmente>", ...],
+  "softSkills": ["<habilidad blanda que el rol pide estándarmente>", ...],
+  "jobTitle": "<título canónico de este rol>",
+  "mustHaves": ["<requisito duro estándar: años típicos, título, certificación, licencia>", ...],
+  "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV con este rol — NO indiques un número de score>",
+  "suggestions": ["<acción concreta para mejorar el encaje>", "<acción 2>", "<acción 3>"]
+}
+
+Reglas:
+- Solo requisitos ESTÁNDAR de este rol. Máx ~12 hard skills.
+- NO inventes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
+- suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar.
+- Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- Responde ÚNICAMENTE con el JSON, sin markdown.`
+
+    const prompt = useRole ? rolePrompt : jdPrompt
+
     const response = await this.aiClient.chat({
       model: AI_MODEL,
       max_tokens: 700,
@@ -125,8 +190,14 @@ Reglas:
         {
           role: "system",
           content:
-            "Eres un extractor experto de requisitos de vacantes para análisis de compatibilidad ATS. " +
-            "Solo procesas descripciones de puestos de trabajo reales. NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. " +
+            (useRole
+              ? // Role mode: we feed a job TITLE, not a posting. The system prompt
+                // must license inferring standard requirements — otherwise the
+                // "only real job descriptions" rule would off_topic a valid title.
+                "Eres un experto en los requisitos ESTÁNDAR de roles profesionales para análisis de compatibilidad ATS. " +
+                "Dado un título de puesto, infieres los requisitos típicos y bien establecidos de ese rol (sin inventar requisitos de nicho ni específicos de una empresa). NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. "
+              : "Eres un extractor experto de requisitos de vacantes para análisis de compatibilidad ATS. " +
+                "Solo procesas descripciones de puestos de trabajo reales. NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ") +
             langInstruction,
         },
         { role: "user", content: prompt },
@@ -227,6 +298,7 @@ Reglas:
         mustHaves: extraction.mustHaves,
       },
       contentQuality: assessResumeContent(data),
+      inferredFromRole: useRole,
     }
   }
 

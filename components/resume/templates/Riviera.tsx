@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -54,7 +55,7 @@ export default function RivieraTemplate() {
         <div className="flex-1 px-5 pt-5 pb-6 flex flex-col gap-5">
 
           {/* Contact */}
-          <SideBlock title={L.contact} color={color}>
+          <SideBlock id="personalDetails" title={L.contact} color={color}>
             <div className="space-y-2">
               {pd.email && <ContactRow icon={<Mail className="h-3 w-3 shrink-0" />} text={pd.email} color={color} />}
               {pd.phone && <ContactRow icon={<Phone className="h-3 w-3 shrink-0" />} text={pd.phone} color={color} />}
@@ -69,7 +70,7 @@ export default function RivieraTemplate() {
 
           {/* Skills */}
           {visible("skills") && skills.length > 0 && (
-            <SideBlock title={label("skills")} color={color}>
+            <SideBlock id="skills" title={label("skills")} color={color}>
               <div className="space-y-2.5">
                 {skills.map((sk) => (
                   <div key={sk.id}>
@@ -85,7 +86,7 @@ export default function RivieraTemplate() {
 
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
-            <SideBlock title={label("languages")} color={color}>
+            <SideBlock id="languages" title={label("languages")} color={color}>
               <div className="space-y-2.5">
                 {languages.map((lang) => (
                   <div key={lang.id}>
@@ -101,14 +102,14 @@ export default function RivieraTemplate() {
 
           {/* Hobbies */}
           {visible("hobbies") && hobbies && (
-            <SideBlock title={label("hobbies")} color={color}>
+            <SideBlock id="hobbies" title={label("hobbies")} color={color}>
               <p className="text-[10.5px] text-white/65 leading-relaxed">{hobbies}</p>
             </SideBlock>
           )}
 
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
-            <SideBlock title={label("certifications")} color={color}>
+            <SideBlock id="certifications" title={label("certifications")} color={color}>
               <div className="space-y-2">
                 {certifications.map((cert) => (
                   <div key={cert.id}>
@@ -149,13 +150,13 @@ export default function RivieraTemplate() {
         <div className="flex-1 px-7 pt-6 pb-6 flex flex-col gap-0">
 
           {visible("summary") && summary && (
-            <MainSection title={label("summary")} color={color}>
+            <MainSection id="summary" title={label("summary")} color={color}>
               <p className="text-[11.5px] text-gray-600 leading-relaxed">{summary}</p>
             </MainSection>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <MainSection title={label("workExperience")} color={color}>
+            <MainSection id="workExperience" title={label("workExperience")} color={color}>
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -178,7 +179,7 @@ export default function RivieraTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <MainSection title={label("education")} color={color}>
+            <MainSection id="education" title={label("education")} color={color}>
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -203,7 +204,7 @@ export default function RivieraTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <MainSection title={label("projects")} color={color}>
+            <MainSection id="projects" title={label("projects")} color={color}>
               <div className="space-y-3">
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -219,7 +220,7 @@ export default function RivieraTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <MainSection title={label("volunteer")} color={color}>
+            <MainSection id="volunteer" title={label("volunteer")} color={color}>
               <div className="space-y-3">
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -241,14 +242,14 @@ export default function RivieraTemplate() {
   )
 }
 
-function SideBlock({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function SideBlock({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div>
       <h3
         className="text-[9.5px] font-extrabold uppercase tracking-[0.2em] pb-1 mb-2"
         style={{ color, borderBottom: `1px solid rgba(255,255,255,0.12)` }}
       >
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </h3>
       {children}
     </div>
@@ -264,12 +265,12 @@ function ContactRow({ icon, text, color }: { icon: React.ReactNode; text: string
   )
 }
 
-function MainSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function MainSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
       <div className="flex items-center gap-2 mb-2 resume-section-title">
         <div className="w-4 h-0.5 shrink-0" style={{ backgroundColor: color }} />
-        <h2 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-gray-700">{title}</h2>
+        <h2 className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-gray-700"><SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}</h2>
         <div className="flex-1 h-px bg-gray-100" />
       </div>
       {children}

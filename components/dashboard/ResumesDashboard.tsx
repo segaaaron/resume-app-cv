@@ -273,8 +273,14 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
         return
       }
       const copy = await res.json()
-      setResumes((prev) => [copy, ...prev])
-      toast.success(t("translate_success"))
+      if (copy.alreadyTranslated) {
+        // Server dedup: translation already existed (stale UI / race) — inform,
+        // don't add a duplicate to the list.
+        toast.info(t("translate_already"))
+      } else {
+        setResumes((prev) => [copy, ...prev])
+        toast.success(t("translate_success"))
+      }
     } catch {
       toast.error(t("translate_error"))
     } finally {
@@ -406,6 +412,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
             onTranslate={() => translateResume(resume.id)}
             onDownload={() => downloadPdf(resume)}
             onDelete={() => setDeleteId(resume.id)}
+            hasTranslation={resumes.some((r) => r.translatedFromId === resume.id)}
           />
         ))}
         <NewCVCard creating={creating} index={resumes.length} onClick={createResume} />

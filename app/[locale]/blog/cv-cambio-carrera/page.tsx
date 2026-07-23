@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -307,7 +308,7 @@ export default async function CVCambioCarreraPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Valida tu CV contra ofertas de la nueva industria</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Antes de postular, pasa tu CV reformulado por el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link> con ofertas reales del sector destino. Si el match es bajo, el problema no es tu experiencia — es que los keywords del nuevo sector no aparecen aún. Empieza desde una <Link href={`/${locale}/templates`}>plantilla combinada ATS-verificada</Link> diseñada para cambios de carrera.
+                    Antes de postular, mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> lee tu CV reformulado contra ofertas reales del sector destino. Si el match es bajo, el problema no es tu experiencia — es que los keywords del nuevo sector no aparecen aún. Empieza desde una <Link href={`/${locale}/templates`}>plantilla combinada ATS-verificada</Link> diseñada para cambios de carrera.
                   </p>
                 </div>
               </div>
@@ -364,6 +365,8 @@ export default async function CVCambioCarreraPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="data" />
+
               <BlogCTA
                 locale={locale}
                 title="Construye tu CV de cambio de carrera con estrategia."

@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -409,7 +410,7 @@ export default async function CVEnInglesPostPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Tip pro — verifica tu match antes de aplicar</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Pega tu resume en inglés y la job description en el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCVV</Link>. Te dice qué keywords del posting están faltando, tu match score actual y las 3 ediciones de mayor impacto. La mayoría de candidatos sube su score 20+ puntos con 10 minutos de ajustes en el summary y las skills.
+                    Mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCVV PRO</Link> lee tu resume en inglés contra la job description: te dice qué keywords del posting faltan, tu match score actual y las 3 ediciones de mayor impacto. La mayoría de candidatos sube su score 20+ puntos con 10 minutos de ajustes en el summary y las skills.
                   </p>
                 </div>
               </div>
@@ -424,6 +425,8 @@ export default async function CVEnInglesPostPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Crea tu CV en inglés con el formato que sí funciona en el mercado anglosajón."

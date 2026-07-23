@@ -1,11 +1,11 @@
 {
   "metadata": {
     "home": {
-      "title": "ReadyCVV — Constructor de CV con IA | 164+ Plantillas ATS",
-      "description": "Crea tu CV profesional con inteligencia artificial en minutos. Más de 164 plantillas, ATS Score, generador de carta de presentación IA y seguimiento de candidaturas. Desde $15/mes.",
-      "og_title": "ReadyCVV — Constructor de CV con IA | 164+ Plantillas ATS",
-      "og_description": "Crea tu CV con IA en minutos. 164+ plantillas profesionales, análisis ATS, carta de presentación automática y tracker de candidaturas. Plan Pro desde $15/mes.",
-      "og_image_alt": "ReadyCVV — Constructor de CV con IA"
+      "title": "ReadyCVV — Crear CV y Currículum con IA | 164+ Plantillas ATS",
+      "description": "Crea tu CV o currículum profesional con inteligencia artificial en minutos. Más de 164 plantillas, ATS Score, generador de carta de presentación IA y seguimiento de candidaturas. Desde $15/mes.",
+      "og_title": "ReadyCVV — Crear CV y Currículum con IA | 164+ Plantillas ATS",
+      "og_description": "Crea tu CV o currículum con IA en minutos. 164+ plantillas profesionales, análisis ATS, carta de presentación automática y tracker de candidaturas. Plan Pro desde $15/mes.",
+      "og_image_alt": "ReadyCVV — Crear CV y currículum con IA"
     },
     "templates": {
       "title": "Plantillas de CV con IA — 164+ Diseños ATS | ReadyCVV",
@@ -358,6 +358,7 @@
     "premium_badge": "Premium",
     "all_templates": "Todas las plantillas",
     "use_template": "Usar plantilla",
+    "ats_safe": "Compatible con ATS — una columna, parsea limpio",
     "cta_title": "¿Listo para destacar?",
     "cta_subtitle": "Crea tu CV profesional en minutos con plantillas premium.",
     "cta_button": "Empezar",
@@ -1268,7 +1269,8 @@
       "hidden_sections": "Secciones ocultas",
       "ats_tab": "ATS",
       "review_tab": "Revisión IA",
-      "ai_tab": "IA"
+      "ai_tab": "IA",
+      "templates_tab": "Planillas"
     },
     "section": {
       "hide": "Ocultar sección",
@@ -1525,6 +1527,13 @@
       "pro_badge": "Pro",
       "description": "La mayoría de empresas filtran CVs automáticamente antes de que un humano los vea. Pega la descripción del puesto y te diremos exactamente qué tan compatible es tu CV — y cómo mejorarlo para pasar ese filtro.",
       "placeholder": "Pega aquí el texto completo de la vacante (título del puesto, responsabilidades, requisitos, habilidades)...",
+      "placeholder_role": "Ej: Ingeniero Frontend Senior",
+      "mode_jd": "Vacante",
+      "mode_role": "Título del puesto",
+      "mode_role_hint": "¿No tienes la vacante a mano? Escribe solo el título del puesto y evaluamos contra los requisitos estándar de ese rol — aproximado, no una oferta específica.",
+      "inferred_role_title": "Evaluado contra requisitos estándar del puesto",
+      "inferred_role_desc": "Este score se basa en los requisitos típicos de este rol, no en una oferta concreta. Pega la descripción real de la vacante para un match exacto.",
+      "inferred_role_action": "Pegar vacante",
       "hint": "Copia y pega el texto de la oferta de empleo tal como aparece en LinkedIn, Indeed u otro portal.",
       "analyze": "Analizar compatibilidad",
       "analyzing": "Analizando...",
@@ -2404,8 +2413,15 @@
     "cta": {
       "h2": "¿Listo para conseguir el trabajo?",
       "subtitle": "Únete a miles de profesionales que ya usan ReadyCVV para destacar.",
-      "button": "Empezar ahora",
+      "button": "Ver planes",
+      "button_secondary": "Empezar gratis",
       "note": "Plan Pro desde $15/mes · Cancela cuando quieras"
+    },
+    "upsell": {
+      "pro_badge": "Pro",
+      "pro_note": "Exclusivo de planes PRO y LIMITED — desbloquea el análisis completo y uso ilimitado.",
+      "free_note": "Pruébalo gratis con un límite · ilimitado con un plan.",
+      "cta": "Ver planes"
     }
   },
   "cinematic": {
@@ -2821,7 +2837,7 @@
     "breadcrumb_home": "Inicio",
     "breadcrumb_templates": "Plantillas",
     "badge_ats": "Compatible ATS",
-    "badge_free_download": "Descarga gratis",
+    "badge_free_download": "Exporta a PDF",
     "badge_no_watermark": "Sin marca de agua",
     "badge_edit_online": "Edición online",
     "ats_score_label": "Puntaje ATS",
@@ -2870,15 +2886,15 @@
   "tools": {
     "atsChecker": {
       "meta": {
-        "title": "Verificador ATS Gratis — Puntaje instantáneo de tu CV",
-        "description": "Compara tu CV con cualquier oferta y obtén un puntaje ATS al instante. Gratis, sin registro, en 30 segundos. Detecta keywords faltantes y mejoras rápidas."
+        "title": "Análisis ATS de tu CV con IA — Cómo funciona | ReadyCVV",
+        "description": "Descubre cómo ReadyCVV puntúa tu CV contra una oferta: match semántico de keywords, requisitos faltantes y verificación contra tu PDF real. Incluido en los planes PRO y LIMITED."
       },
       "hero": {
-        "badge": "100 % gratis · Sin registro · Al instante",
-        "title": "Verificador ATS <accent>Gratis</accent>",
-        "subtitle": "Obtén tu puntaje ATS en 30 segundos. Descubre las palabras clave que te faltan, los errores de formato que detectan los filtros y exactamente qué corregir — antes de postular.",
-        "feat1": "Sin crear cuenta",
-        "feat2": "Resultados en 30 segundos",
+        "badge": "Análisis ATS con IA · Incluido en PRO y LIMITED",
+        "title": "Análisis ATS de tu <accent>CV</accent>",
+        "subtitle": "Así puntúa ReadyCVV tu CV contra una oferta de empleo: palabras clave, requisitos faltantes y qué corregir — todo dentro del editor. Mira cómo funciona abajo.",
+        "feat1": "Match semántico de keywords",
+        "feat2": "Verifica contra tu PDF real",
         "feat3": "Bilingüe: ES + EN"
       },
       "form": {
@@ -2953,30 +2969,60 @@
           "generic": "Algo salió mal. Inténtalo de nuevo."
         }
       },
-      "trust": "Utilizado por personas que buscan trabajo en 40+ países — más de 10 000 CVs analizados.",
+      "trust": "Análisis ATS determinista, explicado por categoría y bilingüe (ES/EN) — el mismo motor que usas dentro del editor.",
       "crossLinkSalary": "Calcula tu salario potencial →",
+      "primaryCta": "Crear mi CV y obtener mi score",
+      "secondaryCta": "Ver planes y precios",
+      "showcase": {
+        "scoreCaption": "Compatibilidad ATS global — el score determinista que obtienes dentro del editor",
+        "matched": "Keywords encontradas",
+        "missing": "Keywords faltantes",
+        "demonstratedNote": "Respaldadas por experiencia real en el CV — no solo listadas en una barra de habilidades.",
+        "templateNote": "Plantilla ATS-safe",
+        "afterFix": "+{n} tras aplicar los fixes",
+        "subScores": {
+          "hardSkills": "Habilidades técnicas",
+          "mustHaves": "Requisitos clave",
+          "title": "Match del puesto",
+          "sections": "Secciones"
+        }
+      },
+      "examples": {
+        "badge": "Cómo funciona",
+        "heading": "El mismo motor, evaluado para cualquier área",
+        "subtitle": "Dos perfiles reales de distintas tecnologías — esto es exactamente lo que ves dentro del editor tras pegar una oferta.",
+        "disclaimer": "Datos de ejemplo ilustrativos. Tu score real se calcula desde tu propio CV y la oferta de empleo.",
+        "frontend": {
+          "window": "ATS Match Score — Ingeniero Frontend Senior",
+          "role": "Motor determinista · match semántico de keywords · ponderado por recencia"
+        },
+        "data": {
+          "window": "ATS Match Score — Analista de Datos",
+          "role": "Motor determinista · match semántico de keywords · ponderado por recencia"
+        }
+      },
       "how": {
         "title": "Cómo funciona",
         "subtitle": "Tres pasos. Recomendaciones reales. Sin paja.",
-        "s1Title": "Sube tu CV",
-        "s1Body": "Extraemos el texto de tu PDF — no guardamos el archivo original.",
+        "s1Title": "Añade tu CV",
+        "s1Body": "Importa o crea tu CV dentro de ReadyCVV — tus datos, en tu cuenta.",
         "s2Title": "Pega la oferta",
         "s2Body": "Nuestro motor identifica las keywords que buscan los filtros de los reclutadores.",
         "s3Title": "Recibe puntaje y correcciones",
-        "s3Body": "Ves tu puntaje, las brechas y los ajustes exactos en segundos."
+        "s3Body": "Ves tu puntaje, las brechas y los ajustes exactos, y los aplicas con un clic."
       },
       "faq": {
         "title": "Verificador ATS — Preguntas frecuentes",
-        "q1": "¿De verdad es gratis?",
-        "a1": "Sí. Puedes hacer un análisis, ver tu puntaje general y un adelanto de los problemas sin pagar ni crear cuenta. El reporte completo se desbloquea con tu email para enviarte una copia.",
+        "q1": "¿El Análisis ATS está incluido en mi plan?",
+        "a1": "El Análisis ATS forma parte de los planes PRO y LIMITED. Pegas una oferta y obtienes tu puntaje, las keywords faltantes y sugerencias accionables dentro del editor.",
         "q2": "¿Cómo funciona?",
-        "a2": "Procesamos tu PDF, extraemos el texto y lo comparamos contra las keywords, la estructura y las señales de contacto que buscan la mayoría de los ATS (Workday, Greenhouse, Lever, Taleo). El puntaje es determinístico y se explica por categoría.",
-        "q3": "¿Guardáis mi CV?",
-        "a3": "No. Procesamos el archivo en memoria y solo guardamos una referencia con hash y los puntajes para analítica interna. El PDF se descarta inmediatamente tras el análisis.",
+        "a2": "Dentro del editor pegas una oferta; ReadyCVV compara tu CV contra las keywords, la estructura y las señales que buscan la mayoría de los ATS (Workday, Greenhouse, Lever, Taleo). El puntaje es determinístico y se explica por categoría.",
+        "q3": "¿Están seguros mis datos?",
+        "a3": "Sí. Tu CV vive en tu cuenta de ReadyCVV; el análisis corre sobre tus propios datos y no los compartimos con terceros.",
         "q4": "¿Un puntaje perfecto garantiza una entrevista?",
         "a4": "No. Un puntaje alto significa que los filtros automáticos te van a mostrar más fácil a un humano. La decisión final la toma una persona en base a relevancia y narrativa.",
         "q5": "¿Cuál es la diferencia vs ReadyCVV PRO?",
-        "a5": "Este verificador gratis diagnostica tu CV actual. ReadyCVV PRO lo corrige — bullets escritos con IA, keywords automáticas por puesto, 164 plantillas y optimización ATS integrada mientras escribes."
+        "a5": "Esta página muestra cómo funciona el Análisis ATS. En los planes PRO y LIMITED lo usas de verdad: bullets escritos con IA, keywords automáticas por puesto, 164 plantillas y optimización ATS integrada mientras escribes."
       },
       "proCta": {
         "title": "¿Quieres ayuda para corregir todo esto?",
@@ -3234,8 +3280,8 @@
     }
   },
   "footerTools": {
-    "title": "Herramientas gratis",
-    "atsChecker": "Verificador ATS",
+    "title": "Herramientas",
+    "atsChecker": "Análisis ATS",
     "salaryCalculator": "Calculadora de Salario"
   },
   "emails": {

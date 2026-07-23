@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function MetroTemplate() {
@@ -57,13 +58,13 @@ export default function MetroTemplate() {
         {/* Main */}
         <div className="flex-1 px-8 pt-6 pb-8 border-r border-gray-200">
           {visible("summary") && summary && (
-            <Section title="Resumen" color={color}>
+            <Section id="summary" title="Resumen" color={color}>
               <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </Section>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <Section title="Experiencia" color={color}>
+            <Section id="workExperience" title="Experiencia" color={color}>
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -84,7 +85,7 @@ export default function MetroTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <Section title={label("education")} color={color}>
+            <Section id="education" title={label("education")} color={color}>
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -105,7 +106,7 @@ export default function MetroTemplate() {
         {/* Side */}
         <div className="w-52 shrink-0 px-6 pt-6 pb-8">
           {visible("languages") && languages.length > 0 && (
-            <Section title={label("languages")} color={color}>
+            <Section id="languages" title={label("languages")} color={color}>
               <div className="space-y-2">
                 {languages.map((lang) => (
                   <div key={lang.id}>
@@ -118,7 +119,7 @@ export default function MetroTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <Section title={label("certifications")} color={color}>
+            <Section id="certifications" title={label("certifications")} color={color}>
               <div className="space-y-2.5">
                 {certifications.map((cert) => (
                   <div key={cert.id} className="p-2.5 bg-gray-50 rounded-lg border border-gray-100">
@@ -135,10 +136,13 @@ export default function MetroTemplate() {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[10px] font-black uppercase tracking-widest mb-2.5 pb-1 border-b-2 resume-section-title" style={{ color, borderColor: color }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-widest mb-2.5 pb-1 border-b-2 resume-section-title" style={{ color, borderColor: color }}>
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.5} />
+        {title}
+      </h3>
       {children}
     </div>
   )

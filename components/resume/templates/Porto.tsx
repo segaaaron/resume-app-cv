@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -18,9 +19,9 @@ export default function PortoTemplate() {
 
   const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ") || "Your Name"
 
-  const SectionHeader = ({ title }: { title: string }) => (
+  const SectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-      <div style={{ width: 6, height: 6, backgroundColor: accent, transform: "rotate(45deg)" }} />
+      <SectionIcon sectionId={id} color={accent} size={12} strokeWidth={2.25} />
       <h2 style={{ fontWeight: 700, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#1f2937" }}>
         {title}
       </h2>
@@ -113,7 +114,7 @@ export default function PortoTemplate() {
         {/* Summary */}
         {visible("summary") && summary && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("summary")} />
+            <SectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.7 }}>{summary}</p>
           </div>
         )}
@@ -121,7 +122,7 @@ export default function PortoTemplate() {
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("workExperience")} />
+            <SectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -149,7 +150,7 @@ export default function PortoTemplate() {
           {/* Education */}
           {visible("education") && education.length > 0 && (
             <div style={{ flex: 1 }}>
-              <SectionHeader title={label("education")} />
+              <SectionHeader id="education" title={label("education")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -171,7 +172,7 @@ export default function PortoTemplate() {
           {/* Skills */}
           {visible("skills") && skills.length > 0 && (
             <div style={{ flex: 1 }}>
-              <SectionHeader title={label("skills")} />
+              <SectionHeader id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: "5px 8px" }}>
                 {skills.map((sk) => (
                   <span key={sk.id} style={{
@@ -190,7 +191,7 @@ export default function PortoTemplate() {
         {/* Languages */}
         {visible("languages") && languages.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("languages")} />
+            <SectionHeader id="languages" title={label("languages")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px" }}>
               {languages.map((lang) => (
                 <span key={lang.id} style={{ fontSize: "9px", color: "#374151" }}>
@@ -204,7 +205,7 @@ export default function PortoTemplate() {
         {/* Certifications */}
         {visible("certifications") && certifications.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("certifications")} />
+            <SectionHeader id="certifications" title={label("certifications")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="resume-entry">
@@ -219,7 +220,7 @@ export default function PortoTemplate() {
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("projects")} />
+            <SectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -235,7 +236,7 @@ export default function PortoTemplate() {
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("volunteer")} />
+            <SectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -251,7 +252,7 @@ export default function PortoTemplate() {
         {/* References */}
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <SectionHeader title={label("references")} />
+            <SectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

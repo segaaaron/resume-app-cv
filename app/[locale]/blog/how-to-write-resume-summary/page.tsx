@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -280,7 +281,7 @@ export default async function ResumeSummaryPostPage({
 
               <h3>Step 4 — Cut, then sharpen (2 min)</h3>
               <p>
-                Read it aloud. If a sentence has the words &quot;passionate,&quot; &quot;driven,&quot; &quot;detail-oriented,&quot; or &quot;dynamic,&quot; delete them. They add zero information. Replace with the evidence that earned you those traits in the first place. Then run your draft through the <Link href={`/${locale}/tools/ats-checker`}>ATS Checker</Link> to confirm the keyword match.
+                Read it aloud. If a sentence has the words &quot;passionate,&quot; &quot;driven,&quot; &quot;detail-oriented,&quot; or &quot;dynamic,&quot; delete them. They add zero information. Replace with the evidence that earned you those traits in the first place. Then see how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your draft to confirm the keyword match.
               </p>
 
               <h2 id="examples">50 resume summary examples by role</h2>
@@ -394,7 +395,7 @@ export default async function ResumeSummaryPostPage({
 
               <h2 id="ats-summary">How to make your summary ATS-friendly</h2>
               <p>
-                A recruiter opening your CV reads the summary first and decides in seconds whether to keep going. It is the densest, highest-value patch of your entire resume — get this section right and your ATS score jumps measurably. The rules:
+                A recruiter opening your resume reads the summary first and decides in seconds whether to keep going. It is the densest, highest-value patch of your entire resume — get this section right and your ATS score jumps measurably. The rules:
               </p>
 
               <div className="not-prose grid sm:grid-cols-2 gap-4 my-8">
@@ -419,7 +420,7 @@ export default async function ResumeSummaryPostPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Pro tip — Test before you send</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Paste your summary into <Link href={`/${locale}/tools/ats-checker`}>ReadyCVV&apos;s ATS Checker</Link> alongside the job description. It tells you which keywords from the posting are missing, your current match score and the three highest-impact edits. Most candidates lift their score 20+ points with a 5-minute summary rewrite.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCVV PRO&apos;s ATS score</Link> reads your summary against the job description: it tells you which keywords from the posting are missing, your match score and the three highest-impact edits. Most candidates lift their score 20+ points with a 5-minute summary rewrite.
                   </p>
                 </div>
               </div>
@@ -434,6 +435,8 @@ export default async function ResumeSummaryPostPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="data" />
+
               <BlogCTA
                 locale={locale}
                 title="Build a resume with a summary that gets you the interview."

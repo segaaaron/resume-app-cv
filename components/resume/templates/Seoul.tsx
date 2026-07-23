@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -36,9 +37,9 @@ export default function SeoulTemplate() {
     </svg>
   )
 
-  const MainSectionHeader = ({ title }: { title: string }) => (
+  const MainSectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-      <DiamondDivider />
+      <SectionIcon sectionId={id} color="#1f2937" size={12} strokeWidth={2.25} />
       <h2 style={{ fontWeight: 700, fontSize: "10px", letterSpacing: "0.12em", textTransform: "uppercase", color: "#1f2937" }}>
         {title}
       </h2>
@@ -171,7 +172,7 @@ export default function SeoulTemplate() {
         {/* Summary */}
         {visible("summary") && summary && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("summary")} />
+            <MainSectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.7 }}>{summary}</p>
           </div>
         )}
@@ -179,7 +180,7 @@ export default function SeoulTemplate() {
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("workExperience")} />
+            <MainSectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -205,7 +206,7 @@ export default function SeoulTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("education")} />
+            <MainSectionHeader id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry">
@@ -229,7 +230,7 @@ export default function SeoulTemplate() {
         {/* Certifications */}
         {visible("certifications") && certifications.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("certifications")} />
+            <MainSectionHeader id="certifications" title={label("certifications")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="resume-entry">
@@ -244,7 +245,7 @@ export default function SeoulTemplate() {
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("projects")} />
+            <MainSectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -260,7 +261,7 @@ export default function SeoulTemplate() {
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("volunteer")} />
+            <MainSectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -276,7 +277,7 @@ export default function SeoulTemplate() {
         {/* References */}
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 18 }}>
-            <MainSectionHeader title={label("references")} />
+            <MainSectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

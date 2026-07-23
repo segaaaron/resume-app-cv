@@ -140,6 +140,10 @@ model Resume {
   photoPosition   Int             @default(15)
   thumbnailUrl    String?         @db.Text
   language        String          @default("es")
+  // Source CV this one was translated FROM (null for originals). Makes translation
+  // idempotent: a CV has at most one translation per target language, so repeat
+  // "translate" clicks return the existing copy instead of spending another LLM call.
+  translatedFromId String?
   isPublic        Boolean         @default(false)
   publicSlug      String?         @unique
   versions        ResumeVersion[]
@@ -149,6 +153,12 @@ model Resume {
 
   @@index([userId])
   @@index([userId, updatedAt(sort: Desc)])
+  // UNIQUE (not just index): DB-level guarantee of idempotency — a source CV can
+  // have at most ONE translation per language. Two concurrent "translate" clicks
+  // can never create duplicates; the second insert fails and the route returns
+  // the existing copy. (Postgres treats NULLs as distinct, so originals — where
+  // translatedFromId is NULL — are unaffected.)
+  @@unique([translatedFromId, language])
 }
 
 model ResumeVersion {

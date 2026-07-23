@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
@@ -63,7 +64,7 @@ export default function NauticalTemplate() {
         </div>
 
         <div style={{ padding: "0 18px 24px" }}>
-          <SideSection title="Contacto">
+          <SideSection id="personalDetails" title="Contacto">
             <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 9.5 }}>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={9} />{phone}</span>
               <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={9} />{email}</span>
@@ -73,7 +74,7 @@ export default function NauticalTemplate() {
           </SideSection>
 
           {visible("languages") && (
-            <SideSection title="Idiomas">
+            <SideSection id="languages" title="Idiomas">
               {langs.map((l) => (
                 <div key={l.id} style={{ marginBottom: 7 }}>
                   <span style={{ fontSize: 9.5 }}>{l.name}</span>
@@ -86,7 +87,7 @@ export default function NauticalTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <div style={{ marginTop: 18 }}><SideSection title={config.language === "en" ? "Certifications" : "Certificaciones"}>
+            <div style={{ marginTop: 18 }}><SideSection id="certifications" title={config.language === "en" ? "Certifications" : "Certificaciones"}>
               {certifications.map((c) => (
                 <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <p style={{ fontSize: 9.5, fontWeight: 700, lineHeight: 1.25 }}>{c.name}</p>
@@ -98,7 +99,7 @@ export default function NauticalTemplate() {
           )}
 
           {visible("hobbies") && (
-            <SideSection title="Info adicional">
+            <SideSection id="hobbies" title="Info adicional">
               <p style={{ fontSize: 9.5, lineHeight: 1.7, opacity: 0.85 }}>{hobbies || "Lectura, Voluntariado, Natación"}</p>
             </SideSection>
           )}
@@ -112,13 +113,13 @@ export default function NauticalTemplate() {
         <p style={{ fontSize: 11, color: accent, fontWeight: 600, letterSpacing: "0.08em", marginBottom: 14 }}>{title}</p>
 
         {visible("summary") && (
-          <MainSection title="Resumen profesional" color={accent}>
+          <MainSection id="summary" title="Resumen profesional" color={accent}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </MainSection>
         )}
 
         {visible("education") && (
-          <MainSection title="Formación" color={accent}>
+          <MainSection id="education" title="Formación" color={accent}>
             {edus.map((edu) => (
               <div key={edu.id} className="resume-entry" style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#1a1a1a" }}>{edu.degree}{edu.fieldOfStudy ? ` · ${edu.fieldOfStudy}` : ""}</p>
@@ -130,7 +131,7 @@ export default function NauticalTemplate() {
         )}
 
         {visible("workExperience") && (
-          <MainSection title="Historial laboral" color={accent}>
+          <MainSection id="workExperience" title="Historial laboral" color={accent}>
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 10 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -145,7 +146,7 @@ export default function NauticalTemplate() {
         )}
 
         {visible("skills") && (
-          <MainSection title="Aptitudes" color={accent}>
+          <MainSection id="skills" title="Aptitudes" color={accent}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {sks.map((sk) => (
                 <span key={sk.id} style={{ fontSize: 9.5, padding: "3px 10px", borderRadius: 99, backgroundColor: accent + "15", color: sidebar, fontWeight: 500 }}>{sk.name}</span>
@@ -158,19 +159,23 @@ export default function NauticalTemplate() {
   )
 }
 
-function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SideSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 8, opacity: 0.7 }}>{title}</p>
+      <p style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", marginBottom: 8, opacity: 0.7 }}>
+        <SectionIcon sectionId={id} size={10} strokeWidth={2.25} />
+        {title}
+      </p>
       {children}
     </div>
   )
 }
 
-function MainSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function MainSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+        <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2.25} />
         <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color }}>{title}</span>
         <div style={{ flex: 1, height: 1, backgroundColor: color + "33" }} />
       </div>

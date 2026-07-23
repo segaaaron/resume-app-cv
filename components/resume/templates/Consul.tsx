@@ -7,6 +7,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -120,7 +121,7 @@ export default function ConsulTemplate() {
 
         {/* ── Skills ── */}
         {visible("skills") && skills.length > 0 && (
-          <SideSection title={label("skills").toUpperCase()}>
+          <SideSection id="skills" title={label("skills").toUpperCase()}>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {skills.map((sk) => (
                 <div key={sk.id}>
@@ -136,7 +137,7 @@ export default function ConsulTemplate() {
 
         {/* ── Languages ── */}
         {visible("languages") && languages.length > 0 && (
-          <SideSection title={label("languages").toUpperCase()}>
+          <SideSection id="languages" title={label("languages").toUpperCase()}>
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {languages.map((lang) => (
                 <div key={lang.id}>
@@ -190,7 +191,7 @@ export default function ConsulTemplate() {
 
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
-          <MainSection title={label("workExperience")} accent={accent}>
+          <MainSection id="workExperience" title={label("workExperience")} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -215,7 +216,7 @@ export default function ConsulTemplate() {
 
         {/* Education */}
         {visible("education") && education.length > 0 && (
-          <MainSection title={label("education")} accent={accent}>
+          <MainSection id="education" title={label("education")} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry">
@@ -241,7 +242,7 @@ export default function ConsulTemplate() {
 
         {/* Certifications */}
         {visible("certifications") && certifications.length > 0 && (
-          <MainSection title={label("certifications")} accent={accent}>
+          <MainSection id="certifications" title={label("certifications")} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="resume-entry" style={{ display: "flex", gap: 6 }}>
@@ -260,7 +261,7 @@ export default function ConsulTemplate() {
 
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
-          <MainSection title={label("projects")} accent={accent}>
+          <MainSection id="projects" title={label("projects")} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -280,7 +281,7 @@ export default function ConsulTemplate() {
 
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
-          <MainSection title={label("volunteer")} accent={accent}>
+          <MainSection id="volunteer" title={label("volunteer")} accent={accent}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -302,7 +303,7 @@ export default function ConsulTemplate() {
 
         {/* References */}
         {visible("references") && references.length > 0 && (
-          <MainSection title={label("references")} accent={accent}>
+          <MainSection id="references" title={label("references")} accent={accent}>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>
@@ -324,13 +325,16 @@ export default function ConsulTemplate() {
    SUB-COMPONENTS
 ══════════════════════════════════════════════════════════════════════════════ */
 
-function MainSection({ title, accent, children }: {
-  title: string; accent: string; children: React.ReactNode
+function MainSection({ id, title, accent, children }: {
+  id: string; title: string; accent: string; children: React.ReactNode
 }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ marginBottom: 8 }}>
-        <h2 style={{ fontWeight: 800, fontSize: "13px", color: "#111827", marginBottom: 5 }}>{title}</h2>
+        <h2 style={{ display: "flex", alignItems: "center", gap: 6, fontWeight: 800, fontSize: "13px", color: "#111827", marginBottom: 5 }}>
+          <SectionIcon sectionId={id} color={accent} size={13} strokeWidth={2.25} />
+          {title}
+        </h2>
         <div style={{ height: "1.5px", backgroundColor: "#d1d5db", width: "100%" }} />
       </div>
       {children}
@@ -338,14 +342,16 @@ function MainSection({ title, accent, children }: {
   )
 }
 
-function SideSection({ title, children }: { title: string; children: React.ReactNode }) {
+function SideSection({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
   return (
     <div style={{ padding: "0 18px 16px 18px" }}>
       <p style={{
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
         color: "#fff", fontWeight: 800, fontSize: "10px",
         letterSpacing: "0.15em", marginBottom: 8, textAlign: "center",
         borderBottom: "1px solid rgba(255,255,255,0.3)", paddingBottom: 4,
       }}>
+        <SectionIcon sectionId={id} color="rgba(255,255,255,0.8)" size={11} strokeWidth={2.25} />
         {title}
       </p>
       {children}

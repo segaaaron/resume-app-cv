@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -74,7 +75,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <SparkSection title={L.experience} color={color}>
+            <SparkSection id="workExperience" title={L.experience} color={color}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry mb-4 relative pl-4">
                   <div className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -94,7 +95,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <SparkSection title={label("education")} color={color}>
+            <SparkSection id="education" title={label("education")} color={color}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry mb-3 relative pl-4">
                   <div className="absolute left-0 top-1.5 w-1.5 h-1.5 border-2 rounded-full" style={{ borderColor: color }} />
@@ -111,7 +112,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <SparkSection title={label("projects")} color={color}>
+            <SparkSection id="projects" title={label("projects")} color={color}>
               {projects.map((proj) => (
                 <div key={proj.id} className="mb-3 relative pl-4">
                   <div className="absolute left-0 top-1.5 w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
@@ -127,7 +128,7 @@ export default function SparkTemplate() {
         {/* Side */}
         <div className="w-48 shrink-0 px-5 pt-6 pb-8 bg-gray-50 border-l border-gray-100">
           {visible("skills") && skills.length > 0 && (
-            <SparkSection title={L.skills} color={color}>
+            <SparkSection id="skills" title={L.skills} color={color}>
               <div className="flex flex-wrap gap-1.5">
                 {skills.map((skill) => (
                   <span
@@ -143,7 +144,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <SparkSection title={label("languages")} color={color}>
+            <SparkSection id="languages" title={label("languages")} color={color}>
               {languages.map((lang) => (
                 <div key={lang.id} className="mb-2">
                   <div className="flex justify-between text-xs">
@@ -161,7 +162,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <SparkSection title={label("certifications")} color={color}>
+            <SparkSection id="certifications" title={label("certifications")} color={color}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="mb-2.5">
                   <p className="text-xs font-bold text-gray-800">{cert.name}</p>
@@ -172,7 +173,7 @@ export default function SparkTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <SparkSection title={L.interests} color={color}>
+            <SparkSection id="hobbies" title={L.interests} color={color}>
               <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
             </SparkSection>
           )}
@@ -182,10 +183,11 @@ export default function SparkTemplate() {
   )
 }
 
-function SparkSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function SparkSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <div className="flex items-center gap-2 mb-2.5">
+      <div className="flex items-center gap-1.5 mb-2.5">
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.5} />
         <h3 className="text-[9px] font-black uppercase tracking-[0.3em]" style={{ color }}>{title}</h3>
         <div className="flex-1 h-px bg-gray-200" />
       </div>

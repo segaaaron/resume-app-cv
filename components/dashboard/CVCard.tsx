@@ -19,6 +19,7 @@ export interface ResumeCard {
   thumbnailUrl: string | null
   updatedAt: Date
   createdAt: Date
+  translatedFromId: string | null
 }
 
 interface CVCardProps {
@@ -34,6 +35,8 @@ interface CVCardProps {
   onTranslate: () => void
   onDownload: () => void
   onDelete: () => void
+  /** This CV already has a translation → the translate action is disabled. */
+  hasTranslation?: boolean
 }
 
 
@@ -50,6 +53,7 @@ const CVCard = React.memo(function CVCard({
   onTranslate,
   onDownload,
   onDelete,
+  hasTranslation = false,
 }: CVCardProps) {
   const t = useTranslations("dashboard.resumes")
   const [ddOpen, setDdOpen] = useState(false)
@@ -199,7 +203,8 @@ const CVCard = React.memo(function CVCard({
               <DDItem
                 onClick={() => { setDdOpen(false); onTranslate() }}
                 icon={<Languages className="w-[13px] h-[13px]" />}
-                label={t("translate")}
+                label={hasTranslation ? t("translate_done") : t("translate")}
+                disabled={hasTranslation}
               />
               <div
                 className="my-[6px] h-px"

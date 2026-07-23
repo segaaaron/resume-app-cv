@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function LuxuriousTemplate() {
@@ -47,7 +48,7 @@ export default function LuxuriousTemplate() {
       {/* Body on white */}
       <div className="bg-white px-10 pt-8 pb-10">
         {visible("summary") && summary && (
-          <Section title="Perfil" color={color}>
+          <Section id="summary" title="Perfil" color={color}>
             <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
           </Section>
         )}
@@ -55,7 +56,7 @@ export default function LuxuriousTemplate() {
         <div className="grid grid-cols-3 gap-7">
           <div className="col-span-2 space-y-5">
             {visible("workExperience") && workExperience.length > 0 && (
-              <Section title="Experiencia Profesional" color={color}>
+              <Section id="workExperience" title="Experiencia Profesional" color={color}>
                 <div className="space-y-4">
                   {workExperience.map((job) => (
                     <div key={job.id} className="resume-entry relative pl-4 border-l-2" style={{ borderColor: color }}>
@@ -76,7 +77,7 @@ export default function LuxuriousTemplate() {
             )}
 
             {visible("education") && education.length > 0 && (
-              <Section title="Formación Académica" color={color}>
+              <Section id="education" title="Formación Académica" color={color}>
                 <div className="space-y-3">
                   {education.map((edu) => (
                     <div key={edu.id} className="resume-entry pl-4 border-l-2" style={{ borderColor: color + "40" }}>
@@ -96,7 +97,7 @@ export default function LuxuriousTemplate() {
 
           <div className="space-y-4">
             {visible("skills") && skills.length > 0 && (
-              <Section title="Competencias" color={color}>
+              <Section id="skills" title="Competencias" color={color}>
                 <div className="space-y-2">
                   {skills.map((skill) => (
                     <div key={skill.id}>
@@ -117,7 +118,7 @@ export default function LuxuriousTemplate() {
             )}
 
             {visible("languages") && languages.length > 0 && (
-              <Section title={label("languages")} color={color}>
+              <Section id="languages" title={label("languages")} color={color}>
                 <div className="space-y-1.5">
                   {languages.map((lang) => (
                     <div key={lang.id} className="flex justify-between items-center text-xs">
@@ -130,7 +131,7 @@ export default function LuxuriousTemplate() {
             )}
 
             {visible("certifications") && certifications.length > 0 && (
-              <Section title={label("certifications")} color={color}>
+              <Section id="certifications" title={label("certifications")} color={color}>
                 <div className="space-y-2">
                   {certifications.map((cert) => (
                     <div key={cert.id}>
@@ -143,7 +144,7 @@ export default function LuxuriousTemplate() {
             )}
 
             {visible("hobbies") && hobbies && (
-              <Section title="Intereses" color={color}>
+              <Section id="hobbies" title="Intereses" color={color}>
                 <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
               </Section>
             )}
@@ -154,10 +155,13 @@ export default function LuxuriousTemplate() {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[10px] font-bold uppercase tracking-widest mb-2.5 pb-1 border-b resume-section-title" style={{ color, borderColor: color + "30" }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mb-2.5 pb-1 border-b resume-section-title" style={{ color, borderColor: color + "30" }}>
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
+        {title}
+      </h3>
       {children}
     </div>
   )

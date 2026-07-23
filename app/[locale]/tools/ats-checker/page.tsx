@@ -1,10 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { getTranslations, setRequestLocale } from "next-intl/server"
-import { CheckCircle2, Zap, Upload, Sparkles, FileText, Shield } from "lucide-react"
+import { CheckCircle2, Zap, ClipboardPaste, Sparkles, Gauge, Shield } from "lucide-react"
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
-import AtsCheckerForm from "@/components/tools/ats-checker/AtsCheckerForm"
+import AtsFeatureShowcase from "@/components/tools/ats-checker/AtsFeatureShowcase"
 import AtsFaq from "@/components/tools/ats-checker/AtsFaq"
 
 const BASE_URL = "https://readycvv.com"
@@ -21,11 +21,11 @@ export async function generateMetadata({
     description: t("description"),
     keywords: [
       "ats resume checker",
-      "free ats checker",
+      "ats match score",
       "resume ats score",
-      "ats scan tool",
-      "verificador ats gratis",
+      "ats keyword match",
       "puntaje ats cv",
+      "match ats cv",
       "analizador de cv ats",
     ],
     alternates: {
@@ -75,7 +75,7 @@ export default async function AtsCheckerPage({
     applicationCategory: "BusinessApplication",
     operatingSystem: "Any",
     url: `${BASE_URL}/${locale}/tools/ats-checker`,
-    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    offers: { "@type": "Offer", price: "15", priceCurrency: "USD" },
     publisher: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
   }
   const faqLd = {
@@ -98,9 +98,47 @@ export default async function AtsCheckerPage({
   }
 
   const steps = [
-    { icon: Upload, title: t("how.s1Title"), body: t("how.s1Body") },
-    { icon: FileText, title: t("how.s2Title"), body: t("how.s2Body") },
+    { icon: ClipboardPaste, title: t("how.s1Title"), body: t("how.s1Body") },
+    { icon: Gauge, title: t("how.s2Title"), body: t("how.s2Body") },
     { icon: Sparkles, title: t("how.s3Title"), body: t("how.s3Body") },
+  ]
+
+  const showcaseLabels = {
+    scoreCaption: t("showcase.scoreCaption"),
+    matched: t("showcase.matched"),
+    missing: t("showcase.missing"),
+    demonstratedNote: t("showcase.demonstratedNote"),
+    templateNote: t("showcase.templateNote"),
+    afterFix: t("showcase.afterFix"),
+    subScores: {
+      hardSkills: t("showcase.subScores.hardSkills"),
+      mustHaves: t("showcase.subScores.mustHaves"),
+      title: t("showcase.subScores.title"),
+      sections: t("showcase.subScores.sections"),
+    },
+  }
+
+  // Two worked examples across different tech stacks, so a visitor from any field
+  // sees how the same deterministic engine scores their own resume. Sample data.
+  const examples = [
+    {
+      window: t("examples.frontend.window"),
+      role: t("examples.frontend.role"),
+      score: 87,
+      deltaAfter: 8,
+      subScores: { hardSkills: 92, mustHaves: 80, title: 100, sections: 100 },
+      matched: ["React", "TypeScript", "Node.js", "REST APIs", "CI/CD"],
+      missing: ["GraphQL", "AWS"],
+    },
+    {
+      window: t("examples.data.window"),
+      role: t("examples.data.role"),
+      score: 71,
+      deltaAfter: 19,
+      subScores: { hardSkills: 74, mustHaves: 60, title: 80, sections: 100 },
+      matched: ["Python", "SQL", "Tableau", "Pandas"],
+      missing: ["dbt", "Snowflake", "A/B testing"],
+    },
   ]
 
   return (
@@ -137,9 +175,40 @@ export default async function AtsCheckerPage({
           </div>
         </section>
 
-        {/* Tool form */}
-        <section className="relative mx-auto max-w-3xl px-6 pb-16">
-          <AtsCheckerForm />
+        {/* How the ATS works in ReadyCVV — two worked examples across tech stacks */}
+        <section className="relative mx-auto max-w-4xl px-6 pb-10">
+          <div className="text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-[#00D4FF]/30 bg-white/80 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-[#1a2e4a] shadow-sm backdrop-blur">
+              <Gauge className="h-3.5 w-3.5 text-[#00D4FF]" />
+              {t("examples.badge")}
+            </span>
+            <h2 className="mt-5 text-3xl font-extrabold tracking-tight text-[#1a2e4a] md:text-4xl">{t("examples.heading")}</h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm text-[#1a2e4a]/65 md:text-base">{t("examples.subtitle")}</p>
+          </div>
+
+          <div className="mt-12 space-y-12">
+            {examples.map((ex) => (
+              <AtsFeatureShowcase key={ex.window} labels={showcaseLabels} example={ex} />
+            ))}
+          </div>
+
+          <p className="mx-auto mt-6 max-w-lg text-center text-xs italic text-[#1a2e4a]/45">{t("examples.disclaimer")}</p>
+
+          <div className="mt-10 flex flex-col items-center gap-3">
+            <Link
+              href={`/${locale}/register`}
+              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#00D4FF] to-[#4F8BFF] px-8 py-3.5 text-sm font-bold text-[#0f1a2e] shadow-[0_15px_40px_-10px_rgba(0,212,255,0.55)] transition-all hover:scale-[1.02]"
+            >
+              <Zap className="h-4 w-4" />
+              {t("primaryCta")}
+            </Link>
+            <Link
+              href={`/${locale}/pricing`}
+              className="text-xs font-semibold text-[#1a2e4a]/60 underline-offset-4 transition-colors hover:text-[#1a2e4a] hover:underline"
+            >
+              {t("secondaryCta")}
+            </Link>
+          </div>
         </section>
 
         {/* Trust strip */}

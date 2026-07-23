@@ -7,6 +7,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -138,7 +139,7 @@ export default function HelixTemplate() {
 
           {/* CONTACT */}
           <div style={{ width: "100%", padding: "0 18px", marginBottom: 18 }}>
-            <HelixSideTitle title={L.contact} color={color} />
+            <HelixSideTitle id="personalDetails" title={L.contact} color={color} />
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {pd.email    && <SideContact icon={<Mail size={9} />} text={pd.email} color={color} />}
               {pd.phone    && <SideContact icon={<Phone size={9} />} text={pd.phone} color={color} />}
@@ -154,7 +155,7 @@ export default function HelixTemplate() {
           {/* SKILLS with ring progress */}
           {visible("skills") && skills.length > 0 && (
             <div style={{ width: "100%", padding: "0 18px", marginBottom: 18 }}>
-              <HelixSideTitle title={label("skills")} color={color} />
+              <HelixSideTitle id="skills" title={label("skills")} color={color} />
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {skills.map((sk) => (
                   <div key={sk.id} style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -171,7 +172,7 @@ export default function HelixTemplate() {
           {/* LANGUAGES */}
           {visible("languages") && languages.length > 0 && (
             <div style={{ width: "100%", padding: "0 18px", marginBottom: 18 }}>
-              <HelixSideTitle title={label("languages")} color={color} />
+              <HelixSideTitle id="languages" title={label("languages")} color={color} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {languages.map((lang) => (
                   <div key={lang.id}>
@@ -188,7 +189,7 @@ export default function HelixTemplate() {
           {/* CERTIFICATIONS */}
           {visible("certifications") && certifications.length > 0 && (
             <div style={{ width: "100%", padding: "0 18px" }}>
-              <HelixSideTitle title={label("certifications")} color={color} />
+              <HelixSideTitle id="certifications" title={label("certifications")} color={color} />
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id} style={{ paddingLeft: 8, borderLeft: `2px solid ${color}55` }}>
@@ -206,7 +207,7 @@ export default function HelixTemplate() {
 
           {visible("hobbies") && hobbies && (
             <div style={{ width: "100%", padding: "0 18px", marginTop: 18 }}>
-              <HelixSideTitle title={label("hobbies")} color={color} />
+              <HelixSideTitle id="hobbies" title={label("hobbies")} color={color} />
               <p style={{ fontSize: "10px", color: "rgba(255,255,255,0.55)", lineHeight: 1.7 }}>{hobbies}</p>
             </div>
           )}
@@ -241,13 +242,13 @@ export default function HelixTemplate() {
         </div>
 
         {visible("summary") && summary && (
-          <HelixSection title={label("summary")} color={color}>
+          <HelixSection id="summary" title={label("summary")} color={color}>
             <p style={{ fontSize: "10.5px", color: "#555", lineHeight: 1.75 }}>{summary}</p>
           </HelixSection>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
-          <HelixSection title={label("workExperience")} color={color}>
+          <HelixSection id="workExperience" title={label("workExperience")} color={color}>
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {workExperience.map((job, idx) => (
                 <div key={job.id} className="resume-entry" style={{ position: "relative", paddingLeft: 20 }}>
@@ -285,7 +286,7 @@ export default function HelixTemplate() {
         )}
 
         {visible("education") && education.length > 0 && (
-          <HelixSection title={label("education")} color={color}>
+          <HelixSection id="education" title={label("education")} color={color}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry" style={{ paddingLeft: 20, position: "relative" }}>
@@ -315,7 +316,7 @@ export default function HelixTemplate() {
         )}
 
         {visible("projects") && projects.length > 0 && (
-          <HelixSection title={label("projects")} color={color}>
+          <HelixSection id="projects" title={label("projects")} color={color}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry" style={{ paddingLeft: 20, position: "relative" }}>
@@ -337,7 +338,7 @@ export default function HelixTemplate() {
         )}
 
         {visible("volunteer") && volunteer.length > 0 && (
-          <HelixSection title={label("volunteer")} color={color}>
+          <HelixSection id="volunteer" title={label("volunteer")} color={color}>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry" style={{ paddingLeft: 20, position: "relative" }}>
@@ -366,14 +367,14 @@ export default function HelixTemplate() {
 
 /* ── Sub-components ─────────────────────────────────────────────────────────── */
 
-function HelixSideTitle({ title, color }: { title: string; color: string }) {
+function HelixSideTitle({ id, title, color }: { id: string; title: string; color: string }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
       <svg width="10" height="10" viewBox="0 0 10 10">
         <polygon points="5,0 10,5 5,10 0,5" fill={color} />
       </svg>
       <span style={{ fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color }}>
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </span>
     </div>
   )
@@ -390,7 +391,7 @@ function SideContact({ icon, text, color }: { icon: React.ReactNode; text: strin
   )
 }
 
-function HelixSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function HelixSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div className="resume-section-title" style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
@@ -400,7 +401,7 @@ function HelixSection({ title, color, children }: { title: string; color: string
           <polygon points="8,3 13,8 8,13 3,8" fill={color} />
         </svg>
         <span style={{ fontSize: "9.5px", fontWeight: 900, letterSpacing: "0.26em", textTransform: "uppercase", color }}>
-          {title}
+          <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
         </span>
         <div style={{ flex: 1, height: 1, backgroundColor: `${color}2a` }} />
       </div>

@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -116,7 +117,7 @@ export default async function ResumeLengthPage({
 
   const relatedItems = [
     { slug: "chronological-vs-functional-resume", title: "Chronological vs Functional Resume", desc: "Which format wins in 2026, ATS compatibility per format and real candidate examples.", tag: "Resume Formats", readingTime: 10 },
-    { slug: "cv-vs-resume-differences", title: "CV vs Resume: Complete Comparison", desc: "The 7 key differences and a country-by-country guide so you never send the wrong document.", tag: "Resume Basics", readingTime: 9 },
+    { slug: "cv-vs-resume-differences", title: "US Resume vs International Resume", desc: "The 7 key differences and a country-by-country guide so you never send the wrong document.", tag: "Resume Basics", readingTime: 9 },
     { slug: "resume-skills-by-industry", title: "Resume Skills: 200+ Skills by Industry", desc: "200+ skills organized by industry and ATS-validated.", tag: "Resume Skills", readingTime: 11 },
   ]
 
@@ -175,7 +176,7 @@ export default async function ResumeLengthPage({
                       ["3-10 years experience", "1-2 pages", "1 page if early career, 2 once you have meaningful senior work"],
                       ["10-20 years experience", "2 pages", "Required to do justice to your career arc"],
                       ["20+ years executive", "2 pages (rarely 3)", "Compress earliest 10 years into &apos;earlier career&apos; line"],
-                      ["Academic / medical CV", "5-20+ pages", "Different document — see CV vs Resume guide"],
+                      ["Academic / medical Resume", "5-20+ pages", "Different document — see Resume vs Resume guide"],
                     ].map(([k, p, r], i) => (
                       <tr key={i} className={i % 2 === 1 ? "bg-[#00D4FF]/5 border-b border-[#1a2e4a]/10" : "border-b border-[#1a2e4a]/10"}>
                         <td className="px-4 py-3 font-semibold text-[#1a2e4a]">{k}</td>
@@ -213,7 +214,7 @@ export default async function ResumeLengthPage({
 
               <h2 id="when-three">When 3+ pages is acceptable</h2>
               <p>
-                Three pages or more is reserved for academic CVs, medical CVs (for physicians, residency applications), government federal resumes (USAJOBS allows long-form), and certain consultancy &quot;practice profiles.&quot; In ordinary private-sector applications, 3 pages is a length problem — cut.
+                Three pages or more is reserved for academic Resumes, medical Resumes (for physicians, residency applications), government federal resumes (USAJOBS allows long-form), and certain consultancy &quot;practice profiles.&quot; In ordinary private-sector applications, 3 pages is a length problem — cut.
               </p>
 
               <h2 id="by-country">Length expectations by country</h2>
@@ -255,7 +256,7 @@ export default async function ResumeLengthPage({
                 <li><strong>Marketing / Sales:</strong> 1-2 pages; portfolio or campaign deck links allowed.</li>
                 <li><strong>Engineering (mechanical, civil, EE):</strong> 2 pages standard; license and certification list justifies space.</li>
                 <li><strong>Healthcare (clinical):</strong> 2-3 pages — licenses, certifications, clinical rotations require detail.</li>
-                <li><strong>Academia / Research:</strong> CV format, 5-20+ pages.</li>
+                <li><strong>Academia / Research:</strong> Resume format, 5-20+ pages.</li>
               </ul>
 
               <h2 id="cut-to-one">8 tactics to cut a resume to 1 page</h2>
@@ -321,7 +322,7 @@ export default async function ResumeLengthPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Validate length and ATS parsing together</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Use <Link href={`/${locale}/tools/ats-checker`}>ReadyCV&apos;s ATS Checker</Link> to confirm both length and parser cleanliness on the same draft. Start with a <Link href={`/${locale}/templates`}>length-optimized template</Link> built to land at exactly 1 or 2 pages without manual tuning.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your draft for both length and parser cleanliness. Start with a <Link href={`/${locale}/templates`}>length-optimized template</Link> built to land at exactly 1 or 2 pages without manual tuning.
                   </p>
                 </div>
               </div>
@@ -369,6 +370,8 @@ export default async function ResumeLengthPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Hit the right length on the first draft."

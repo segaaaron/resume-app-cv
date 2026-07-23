@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function CircularTemplate() {
@@ -52,7 +53,7 @@ export default function CircularTemplate() {
       {/* Body */}
       <div className="px-10 pt-6 pb-10">
         {visible("summary") && summary && (
-          <Section title="Perfil" color={color}>
+          <Section id="summary" title="Perfil" color={color}>
             <p className="text-xs text-gray-600 leading-relaxed">{summary}</p>
           </Section>
         )}
@@ -60,7 +61,7 @@ export default function CircularTemplate() {
         <div className="grid grid-cols-3 gap-6">
           <div className="col-span-2 space-y-5">
             {visible("workExperience") && workExperience.length > 0 && (
-              <Section title="Experiencia" color={color}>
+              <Section id="workExperience" title="Experiencia" color={color}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry mb-4 pl-3 border-l-2" style={{ borderColor: color + "50" }}>
                     <div className="flex justify-between items-baseline gap-2">
@@ -79,7 +80,7 @@ export default function CircularTemplate() {
             )}
 
             {visible("education") && education.length > 0 && (
-              <Section title={label("education")} color={color}>
+              <Section id="education" title={label("education")} color={color}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry mb-3 pl-3 border-l-2" style={{ borderColor: color + "35" }}>
                     <div className="flex justify-between items-baseline gap-2">
@@ -97,7 +98,7 @@ export default function CircularTemplate() {
 
           <div className="space-y-5">
             {visible("skills") && skills.length > 0 && (
-              <Section title={label("skills")} color={color}>
+              <Section id="skills" title={label("skills")} color={color}>
                 <div className="space-y-2">
                   {skills.map((skill) => (
                     <div key={skill.id}>
@@ -118,7 +119,7 @@ export default function CircularTemplate() {
             )}
 
             {visible("languages") && languages.length > 0 && (
-              <Section title={label("languages")} color={color}>
+              <Section id="languages" title={label("languages")} color={color}>
                 <div className="space-y-1.5">
                   {languages.map((lang) => (
                     <div key={lang.id} className="flex justify-between items-center text-xs">
@@ -131,7 +132,7 @@ export default function CircularTemplate() {
             )}
 
             {visible("certifications") && certifications.length > 0 && (
-              <Section title={label("certifications")} color={color}>
+              <Section id="certifications" title={label("certifications")} color={color}>
                 <div className="space-y-2">
                   {certifications.map((cert) => (
                     <div key={cert.id}>
@@ -149,10 +150,13 @@ export default function CircularTemplate() {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-4">
       <div className="flex items-center gap-2 mb-2.5 resume-section-title">
+        <span className="flex items-center justify-center rounded-md shrink-0" style={{ width: 18, height: 18, backgroundColor: color + "14" }}>
+          <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
+        </span>
         <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>{title}</h3>
         <div className="flex-1 h-px" style={{ backgroundColor: color + "30" }} />
       </div>

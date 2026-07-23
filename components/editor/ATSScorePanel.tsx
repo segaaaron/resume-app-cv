@@ -130,6 +130,7 @@ export default function ATSScorePanel() {
   )
   const {
     input, setInput,
+    mode, setMode,
     loading,
     atsResult, reviewResult,
     offTopic,
@@ -221,7 +222,8 @@ export default function ATSScorePanel() {
     }
   }
 
-  const inputIsQuestion = isQuestion(input)
+  const roleMode = mode === "role"
+  const inputIsQuestion = !roleMode && isQuestion(input)
 
   const summary = (sectionData.summary as string) ?? ""
   const workExp = (sectionData.workExperience as unknown[]) ?? []
@@ -388,17 +390,53 @@ export default function ATSScorePanel() {
           </div>
         )}
 
+        {/* Mode toggle — paste full posting (precise) vs role title only (fast).
+            Premium segmented control: inset track (gradient + ring + inner shadow),
+            active pill fills with the brand cyan gradient + colored glow + lift,
+            matching the Analyze button's language instead of a flat gray pill. */}
+        <div className="grid grid-cols-2 gap-1.5 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50/80 p-1 ring-1 ring-slate-200/70 shadow-[inset_0_1px_3px_rgba(15,23,42,0.06)]">
+          {([
+            { id: "jd" as const, label: t("mode_jd"), icon: <MessageSquare className="h-3 w-3" /> },
+            { id: "role" as const, label: t("mode_role"), icon: <Tag className="h-3 w-3" /> },
+          ]).map((m) => {
+            const active = mode === m.id
+            return (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMode(m.id)}
+                disabled={!cvReady}
+                aria-pressed={active}
+                className={`relative flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-bold tracking-wide transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed ${
+                  active
+                    ? "bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white shadow-md shadow-dash-cyan/30 scale-[1.02]"
+                    : "text-slate-500 hover:text-slate-700 hover:bg-white/60 active:scale-[0.98]"
+                }`}
+              >
+                <span className={active ? "drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]" : ""}>{m.icon}</span>
+                {m.label}
+              </button>
+            )
+          })}
+        </div>
+        {roleMode && (
+          <p className="text-[10px] text-slate-400 flex items-start gap-1.5 leading-relaxed -mt-1">
+            <AlertCircle className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />
+            {t("mode_role_hint")}
+          </p>
+        )}
+
         {/* Textarea */}
         <div className="relative">
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder={t("placeholder")}
+            placeholder={roleMode ? t("placeholder_role") : t("placeholder")}
             disabled={!cvReady}
-            maxLength={AI_INPUT_LIMITS.jobDescription}
-            className="w-full min-h-[110px] resize-none rounded-2xl border border-cyan-100 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            maxLength={roleMode ? 120 : AI_INPUT_LIMITS.jobDescription}
+            className={`w-full resize-none rounded-2xl border border-cyan-100 bg-white/80 backdrop-blur-sm px-4 py-3 text-xs text-slate-700 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-300 focus:border-transparent shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${roleMode ? "min-h-[52px]" : "min-h-[110px]"}`}
           />
-          {input.trim().length > 0 && (
+          {!roleMode && input.trim().length > 0 && (
             <span className={`absolute bottom-2.5 right-3 text-[9px] px-2 py-0.5 rounded-full font-bold ${
               inputIsQuestion
                 ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200"
@@ -417,7 +455,7 @@ export default function ATSScorePanel() {
         )}
 
         {/* Analyze button */}
-        <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < 15 || !cvReady}
+        <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < (roleMode ? 3 : 15) || !cvReady}
           className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white text-xs font-bold shadow-lg shadow-dash-cyan/30 hover:shadow-dash-cyan/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
           {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inCooldown ? <Clock className="h-3.5 w-3.5" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
           {loading ? t("analyzing") : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
@@ -430,6 +468,24 @@ export default function ATSScorePanel() {
         {/* ATS Results */}
         {atsResult && (
           <div className="space-y-3 pt-1">
+            {/* Honesty banner: a role-title score infers STANDARD requirements —
+                approximate. Paste the real posting for an exact read. */}
+            {atsResult.inferredFromRole && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50/80 to-orange-50/50 px-3 py-2.5">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="text-[10.5px] font-bold text-amber-800 leading-tight">{t("inferred_role_title")}</p>
+                  <p className="text-[9.5px] text-amber-700/90 leading-snug mt-0.5">{t("inferred_role_desc")}</p>
+                  <button
+                    type="button"
+                    onClick={() => setMode("jd")}
+                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full px-2.5 py-0.5 transition-all"
+                  >
+                    <MessageSquare className="h-2.5 w-2.5" /> {t("inferred_role_action")}
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Score section */}
             <div className="flex flex-col items-center gap-1 py-2">
               <ScoreRing score={atsResult.score} label={t("score_label")} />

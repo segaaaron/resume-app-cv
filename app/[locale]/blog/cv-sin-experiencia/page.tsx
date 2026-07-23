@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 import {
@@ -325,7 +326,7 @@ export default async function CVSinExperienciaPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Antes de postular: valida contra el ATS</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Los CVs sin experiencia son los que más fallan en el ATS por falta de keywords del puesto. Usa el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link> para validar match con cada oferta antes de enviar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla ATS-verificada</Link> diseñada para perfiles junior y sin experiencia formal.
+                    Los CVs sin experiencia son los que más fallan en el ATS por falta de keywords del puesto. Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> validas tu match con cada oferta antes de enviar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla ATS-verificada</Link> diseñada para perfiles junior y sin experiencia formal.
                   </p>
                 </div>
               </div>
@@ -379,6 +380,8 @@ export default async function CVSinExperienciaPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="data" />
+
               <BlogCTA
                 locale={locale}
                 title="Tu primer CV profesional, sin experiencia y con impacto."

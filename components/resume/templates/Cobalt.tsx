@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -130,13 +131,13 @@ export default function CobaltTemplate() {
         <p style={{ fontSize: 12, color: accent, fontWeight: 600, marginBottom: 14 }}>{title}</p>
 
         {visible("summary") && (
-          <MainSection title={L.aboutMe} color={accent}>
+          <MainSection id="summary" title={L.aboutMe} color={accent}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </MainSection>
         )}
 
         {visible("workExperience") && (
-          <MainSection title={L.experience} color={accent}>
+          <MainSection id="workExperience" title={L.experience} color={accent}>
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -151,7 +152,7 @@ export default function CobaltTemplate() {
         )}
 
         {visible("education") && (
-          <MainSection title={L.education} color={accent}>
+          <MainSection id="education" title={L.education} color={accent}>
             {edus.map((edu) => (
               <div key={edu.id} className="resume-entry" style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 11, fontWeight: 700, color: "#1a1a1a" }}>{edu.degree}</p>
@@ -170,11 +171,11 @@ function SideHead({ text, color }: { text: string; color: string }) {
   return <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color, marginBottom: 8 }}>{text}</p>
 }
 
-function MainSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function MainSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color }}>{title}</span>
+        <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color }}><SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}</span>
         <div style={{ flex: 1, height: 1, backgroundColor: color + "33" }} />
       </div>
       {children}

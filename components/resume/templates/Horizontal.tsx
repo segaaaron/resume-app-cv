@@ -3,6 +3,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { Mail, Phone, MapPin, Globe, Link2 } from "lucide-react"
 
 export default function HorizontalTemplate() {
@@ -57,13 +58,13 @@ export default function HorizontalTemplate() {
         {/* Main */}
         <div className="flex-1">
           {visible("summary") && summary && (
-            <Section title="Sobre mí" color={color}>
+            <Section id="summary" title="Sobre mí" color={color}>
               <p className="text-xs text-gray-700 leading-relaxed">{summary}</p>
             </Section>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <Section title="Experiencia" color={color}>
+            <Section id="workExperience" title="Experiencia" color={color}>
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -84,7 +85,7 @@ export default function HorizontalTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <Section title={label("projects")} color={color}>
+            <Section id="projects" title={label("projects")} color={color}>
               <div className="space-y-3">
                 {projects.map((proj) => (
                   <div key={proj.id}>
@@ -101,7 +102,7 @@ export default function HorizontalTemplate() {
         {/* Side */}
         <div className="w-48 shrink-0">
           {visible("education") && education.length > 0 && (
-            <Section title={label("education")} color={color}>
+            <Section id="education" title={label("education")} color={color}>
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -115,7 +116,7 @@ export default function HorizontalTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <Section title={label("languages")} color={color}>
+            <Section id="languages" title={label("languages")} color={color}>
               <div className="space-y-1.5">
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex justify-between items-center text-xs">
@@ -128,7 +129,7 @@ export default function HorizontalTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <Section title={label("certifications")} color={color}>
+            <Section id="certifications" title={label("certifications")} color={color}>
               <div className="space-y-2">
                 {certifications.map((cert) => (
                   <div key={cert.id}>
@@ -145,10 +146,13 @@ export default function HorizontalTemplate() {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[10px] font-bold uppercase tracking-widest mb-2.5 pb-1 border-b resume-section-title" style={{ color, borderColor: color + "40" }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest mb-2.5 pb-1 border-b resume-section-title" style={{ color, borderColor: color + "40" }}>
+        <SectionIcon sectionId={id} color={color} size={11} strokeWidth={2.25} />
+        {title}
+      </h3>
       {children}
     </div>
   )

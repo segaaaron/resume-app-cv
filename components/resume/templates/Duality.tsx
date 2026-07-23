@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -54,13 +55,13 @@ export default function DualityTemplate() {
         <p style={{ fontSize: 12, color: cyan, fontWeight: 600, marginBottom: 16 }}>{title}</p>
 
         {visible("summary") && (
-          <LeftSection title={L.aboutMe} color={cyan}>
+          <LeftSection id="summary" title={L.aboutMe} color={cyan}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75 }}>{sum}</p>
           </LeftSection>
         )}
 
         {visible("workExperience") && (
-          <LeftSection title={L.experience} color={cyan}>
+          <LeftSection id="workExperience" title={L.experience} color={cyan}>
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -75,7 +76,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("skills") && (
-          <LeftSection title={L.skills} color={cyan}>
+          <LeftSection id="skills" title={L.skills} color={cyan}>
             {sks.map((sk) => (
               <div key={sk.id} style={{ marginBottom: 7 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
@@ -91,7 +92,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("hobbies") && (
-          <LeftSection title={L.hobbies} color={cyan}>
+          <LeftSection id="hobbies" title={L.hobbies} color={cyan}>
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.7 }}>{hobbies || "Photography, Cycling, Travel"}</p>
           </LeftSection>
         )}
@@ -111,7 +112,7 @@ export default function DualityTemplate() {
             })()}
         </div>
 
-        <RightSection title={L.contact} color={cyan}>
+        <RightSection id="personalDetails" title={L.contact} color={cyan}>
           <div style={{ display: "flex", flexDirection: "column", gap: 7, fontSize: 9.5 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={cyan} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={cyan} />{email}</span>
@@ -121,7 +122,7 @@ export default function DualityTemplate() {
         </RightSection>
 
         {visible("education") && (
-          <RightSection title={L.education} color={cyan}>
+          <RightSection id="education" title={L.education} color={cyan}>
             {edus.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 10, fontWeight: 700 }}>{edu.degree}</p>
@@ -133,7 +134,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("languages") && (
-          <RightSection title={L.languages} color={cyan}>
+          <RightSection id="languages" title={L.languages} color={cyan}>
             {langs.map((l) => (
               <p key={l.id} style={{ fontSize: 9.5, marginBottom: 4, opacity: 0.85 }}>{l.name}</p>
             ))}
@@ -141,7 +142,7 @@ export default function DualityTemplate() {
         )}
 
         {visible("certifications") && certifications.length > 0 && (
-          <div style={{ marginTop: 18 }}><RightSection title={L.certifications} color={cyan}>
+          <div style={{ marginTop: 18 }}><RightSection id="certifications" title={L.certifications} color={cyan}>
             {certifications.map((c) => (
               <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
                 <p style={{ fontSize: 10, fontWeight: 700 }}>{c.name}</p>
@@ -156,19 +157,19 @@ export default function DualityTemplate() {
   )
 }
 
-function LeftSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function LeftSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color, marginBottom: 8 }}>{title}</p>
+      <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color, marginBottom: 8 }}><SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}</p>
       {children}
     </div>
   )
 }
 
-function RightSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function RightSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: 16 }}>
-      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color, marginBottom: 8 }}>{title}</p>
+      <p style={{ fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color, marginBottom: 8 }}><SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}</p>
       {children}
     </div>
   )

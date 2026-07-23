@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -22,7 +23,7 @@ export default function TokyoTemplate() {
   const dark = "#0D0D0D"
   const sideW = "32%"
 
-  const SideLabel = ({ title }: { title: string }) => (
+  const SideLabel = ({ id, title }: { id: string; title: string }) => (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
         {/* Small filled circle */}
@@ -33,14 +34,14 @@ export default function TokyoTemplate() {
           fontSize: "7.5px", fontWeight: 800, letterSpacing: "0.2em",
           textTransform: "uppercase", color: "rgba(255,255,255,0.5)",
         }}>
-          {title}
+          <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
         </p>
       </div>
       <div style={{ height: "0.5px", backgroundColor: "rgba(255,255,255,0.1)" }} />
     </div>
   )
 
-  const MainLabel = ({ title }: { title: string }) => (
+  const MainLabel = ({ id, title }: { id: string; title: string }) => (
     <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 10 }}>
       {/* Horizontal rule left */}
       <div style={{ width: "18px", height: "2px", backgroundColor: accent, flexShrink: 0 }} />
@@ -48,7 +49,7 @@ export default function TokyoTemplate() {
         fontSize: "8.5px", fontWeight: 800, letterSpacing: "0.18em",
         textTransform: "uppercase", color: dark, whiteSpace: "nowrap",
       }}>
-        {title}
+        <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </h2>
       <div style={{ flex: 1, height: "0.5px", backgroundColor: "#e5e7eb" }} />
     </div>
@@ -104,7 +105,7 @@ export default function TokyoTemplate() {
         {/* Contact */}
         <div style={{ padding: "0 18px 18px", display: "flex", flexDirection: "column", gap: 14 }}>
           <div>
-            <SideLabel title="Contacto" />
+            <SideLabel id="personalDetails" title="Contacto" />
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {pd.email    && <div style={{ display: "flex", gap: 7, alignItems: "flex-start" }}><Mail size={8} color={accent} style={{ flexShrink: 0, marginTop: 1 }} /><span style={{ fontSize: "8px", color: "rgba(255,255,255,0.7)", wordBreak: "break-all", lineHeight: 1.4 }}>{pd.email}</span></div>}
               {pd.phone    && <div style={{ display: "flex", gap: 7, alignItems: "center" }}><Phone size={8} color={accent} /><span style={{ fontSize: "8px", color: "rgba(255,255,255,0.7)" }}>{pd.phone}</span></div>}
@@ -118,7 +119,7 @@ export default function TokyoTemplate() {
           {/* Skills */}
           {visible("skills") && skills.length > 0 && (
             <div>
-              <SideLabel title={label("skills")} />
+              <SideLabel id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                 {skills.map((sk) => {
                   const pct = SKILL_W[sk.level] ?? 55
@@ -146,7 +147,7 @@ export default function TokyoTemplate() {
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
             <div>
-              <SideLabel title={label("languages")} />
+              <SideLabel id="languages" title={label("languages")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
                 {languages.map((lang) => {
                   const pct = LANG_W[lang.level] ?? 55
@@ -173,7 +174,7 @@ export default function TokyoTemplate() {
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
             <div>
-              <SideLabel title={label("certifications")} />
+              <SideLabel id="certifications" title={label("certifications")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id}>
@@ -191,14 +192,14 @@ export default function TokyoTemplate() {
       <div style={{ flex: 1, padding: "32px 28px", display: "flex", flexDirection: "column" }}>
         {visible("summary") && summary && (
           <div style={{ marginBottom: 20 }}>
-            <MainLabel title={label("summary")} />
+            <MainLabel id="summary" title={label("summary")} />
             <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.75 }}>{summary}</p>
           </div>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainLabel title={label("workExperience")} />
+            <MainLabel id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry" style={{ paddingLeft: "10px", borderLeft: `2px solid ${accent}` }}>
@@ -223,7 +224,7 @@ export default function TokyoTemplate() {
 
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainLabel title={label("education")} />
+            <MainLabel id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry" style={{ paddingLeft: "10px", borderLeft: `2px solid #e5e7eb` }}>
@@ -246,7 +247,7 @@ export default function TokyoTemplate() {
 
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainLabel title={label("projects")} />
+            <MainLabel id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry" style={{ paddingLeft: "10px", borderLeft: `2px solid ${accent}` }}>
@@ -261,7 +262,7 @@ export default function TokyoTemplate() {
 
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainLabel title={label("volunteer")} />
+            <MainLabel id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry" style={{ paddingLeft: "10px", borderLeft: `2px solid #e5e7eb` }}>
@@ -276,7 +277,7 @@ export default function TokyoTemplate() {
 
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainLabel title={label("references")} />
+            <MainLabel id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

@@ -8,6 +8,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -23,18 +24,15 @@ export default function MosaicTemplate() {
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
-  const TileHeader = ({ title }: { title: string }) => (
+  const TileHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-      {/* Filled square tile */}
+      {/* Filled square tile with the section icon */}
       <div style={{
         width: "16px", height: "16px", backgroundColor: accent, flexShrink: 0,
+        display: "flex", alignItems: "center", justifyContent: "center",
         WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
       }}>
-        {/* inner cross SVG for decorative fill */}
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-          <line x1="8" y1="3" x2="8" y2="13" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
-          <line x1="3" y1="8" x2="13" y2="8" stroke="rgba(255,255,255,0.4)" strokeWidth="1" />
-        </svg>
+        <SectionIcon sectionId={id} color="#fff" size={10} strokeWidth={2.5} />
       </div>
       <h2 style={{
         fontSize: "9px", fontWeight: 800, letterSpacing: "0.16em",
@@ -102,14 +100,14 @@ export default function MosaicTemplate() {
         <div style={{ flex: 1, padding: "24px 28px 28px 32px" }}>
           {visible("summary") && summary && (
             <div style={{ marginBottom: 20 }}>
-              <TileHeader title={label("summary")} />
+              <TileHeader id="summary" title={label("summary")} />
               <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.75 }}>{summary}</p>
             </div>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <TileHeader title={label("workExperience")} />
+              <TileHeader id="workExperience" title={label("workExperience")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {workExperience.map((job, i) => (
                   <div key={job.id} className="resume-entry">
@@ -135,7 +133,7 @@ export default function MosaicTemplate() {
 
           {visible("education") && education.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <TileHeader title={label("education")} />
+              <TileHeader id="education" title={label("education")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -158,7 +156,7 @@ export default function MosaicTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <TileHeader title={label("projects")} />
+              <TileHeader id="projects" title={label("projects")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -173,7 +171,7 @@ export default function MosaicTemplate() {
 
           {visible("volunteer") && volunteer.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <TileHeader title={label("volunteer")} />
+              <TileHeader id="volunteer" title={label("volunteer")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -188,7 +186,7 @@ export default function MosaicTemplate() {
 
           {visible("references") && references.length > 0 && (
             <div style={{ marginBottom: 20 }}>
-              <TileHeader title={label("references")} />
+              <TileHeader id="references" title={label("references")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                 {references.map((ref) => (
                   <div key={ref.id} style={{ minWidth: 140 }}>
@@ -215,7 +213,7 @@ export default function MosaicTemplate() {
           {/* Skills as chips */}
           {visible("skills") && skills.length > 0 && (
             <div>
-              <TileHeader title={label("skills")} />
+              <TileHeader id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 6px" }}>
                 {skills.map((sk) => (
                   <span key={sk.id} style={{
@@ -235,7 +233,7 @@ export default function MosaicTemplate() {
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
             <div>
-              <TileHeader title={label("languages")} />
+              <TileHeader id="languages" title={label("languages")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
                 {languages.map((lang) => (
                   <div key={lang.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -256,7 +254,7 @@ export default function MosaicTemplate() {
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
             <div>
-              <TileHeader title={label("certifications")} />
+              <TileHeader id="certifications" title={label("certifications")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id} style={{

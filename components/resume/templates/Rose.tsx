@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -50,8 +51,9 @@ export default function RoseTemplate() {
   const L = getResumeLabels(config.language)
   const present = L.present
 
-  const SectionHead = ({ text }: { text: string }) => (
+  const SectionHead = ({ id, text }: { id: string; text: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, marginTop: 14 }}>
+      <SectionIcon sectionId={id} color={accent} size={12} strokeWidth={2.25} />
       <span style={{ fontSize: 10, fontWeight: 800, letterSpacing: "0.15em", textTransform: "uppercase", color: accent }}>{text}</span>
       <div style={{ flex: 1, height: 1, backgroundColor: accent + "55" }} />
     </div>
@@ -73,7 +75,7 @@ export default function RoseTemplate() {
         <PhotoPlaceholder />
         {visible("summary") && <p style={{ fontSize: 10, color: "#555", lineHeight: 1.7, marginBottom: 10 }}>{sum}</p>}
 
-        <SectionHead text={L.contact} />
+        <SectionHead id="personalDetails" text={L.contact} />
         <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 10, color: dark }}>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Phone size={10} color={accent} />{phone}</span>
           <span style={{ display: "flex", alignItems: "center", gap: 6 }}><Mail size={10} color={accent} />{email}</span>
@@ -85,7 +87,7 @@ export default function RoseTemplate() {
 
         {visible("education") && (
           <>
-            <SectionHead text={L.education} />
+            <SectionHead id="education" text={L.education} />
             {edus.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 8 }}>
                 <p style={{ fontSize: 10, fontWeight: 700, color: dark }}>{edu.degree}</p>
@@ -98,7 +100,7 @@ export default function RoseTemplate() {
 
         {visible("skills") && (
           <>
-            <SectionHead text={L.skills} />
+            <SectionHead id="skills" text={L.skills} />
             {sks.map((sk) => (
               <div key={sk.id} style={{ marginBottom: 6 }}>
                 <span style={{ fontSize: 9.5, color: dark }}>{sk.name}</span>
@@ -112,7 +114,7 @@ export default function RoseTemplate() {
 
         {visible("languages") && (
           <>
-            <SectionHead text={L.languages} />
+            <SectionHead id="languages" text={L.languages} />
             {langs.map((l) => (
               <div key={l.id} style={{ marginBottom: 6 }}>
                 <span style={{ fontSize: 9.5, color: dark }}>{l.name}</span>
@@ -126,7 +128,7 @@ export default function RoseTemplate() {
 
         {visible("certifications") && certifications.length > 0 && (
           <div style={{ marginTop: 18 }}>
-            <SectionHead text={L.certifications} />
+            <SectionHead id="certifications" text={L.certifications} />
             {certifications.map((c) => (
               <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
                 <p style={{ fontSize: 10, fontWeight: 700, color: dark, lineHeight: 1.25 }}>{c.name}</p>
@@ -146,7 +148,7 @@ export default function RoseTemplate() {
 
         {visible("workExperience") && (
           <>
-            <SectionHead text={L.experience} />
+            <SectionHead id="workExperience" text={L.experience} />
             {jobs.map((job) => (
               <div key={job.id} className="resume-entry" style={{ marginBottom: 12, paddingLeft: 12, borderLeft: `2px solid ${accent}44` }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -162,7 +164,7 @@ export default function RoseTemplate() {
 
         {visible("hobbies") && (
           <>
-            <SectionHead text={L.hobbies} />
+            <SectionHead id="hobbies" text={L.hobbies} />
             <p style={{ fontSize: 10, color: "#555", lineHeight: 1.7 }}>{hob}</p>
           </>
         )}

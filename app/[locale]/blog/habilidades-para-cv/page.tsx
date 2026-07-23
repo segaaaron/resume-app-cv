@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 
@@ -575,7 +576,7 @@ export default async function HabilidadesParaCVPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Verifica el match de keywords antes de aplicar</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Pega tu CV y la oferta en el <Link href={`/${locale}/tools/ats-checker`}>ATS Checker de ReadyCV</Link>. Devuelve tu match score actual, las keywords exactas que faltan de la oferta y las 3 ediciones de mayor impacto. Subida media tras una reescritura: +22 puntos.
+                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> ves tu match score contra la oferta, las keywords exactas que faltan y las 3 ediciones de mayor impacto — dentro del editor. Subida media tras una reescritura: +22 puntos.
                   </p>
                 </div>
               </div>
@@ -610,6 +611,8 @@ export default async function HabilidadesParaCVPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="frontend" />
+
               <BlogCTA
                 locale={locale}
                 title="Crea una sección de habilidades que pase el ATS y convenza al reclutador."

@@ -33,6 +33,8 @@ export interface ATSResult {
   listedOnlyKeywords?: string[]
   suggestions: string[]
   subScores?: ATSSubScores
+  /** True when the target came from a role TITLE (standard requirements inferred), not a pasted posting. Result is approximate. */
+  inferredFromRole?: boolean
   /** Template parseability tier — "caution" = multi-column, a strict ATS may reorder it. */
   templateSafety?: "safe" | "caution"
   /** JD keywords echoed by the server so we can re-score deterministically after a fix. */
@@ -110,6 +112,9 @@ export function useATSScore() {
   )
 
   const [input, setInput] = useState("")
+  // "jd" = paste full posting (precise). "role" = just a job title → the engine
+  // infers the STANDARD requirements for that role (low-friction, approximate).
+  const [mode, setMode] = useState<"jd" | "role">("jd")
   const [loading, setLoading] = useState(false)
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
@@ -120,7 +125,8 @@ export function useATSScore() {
   const analyze = useCallback(async () => {
     if (loading) return
     const text = input.trim()
-    if (text.length < 5) {
+    const roleMode = mode === "role"
+    if (text.length < (roleMode ? 3 : 5)) {
       toast.error(t("toast_empty_input"))
       return
     }
@@ -129,7 +135,7 @@ export function useATSScore() {
     // hashes the WHOLE sectionData (the review reads every section), so editing
     // education / languages / certifications correctly triggers a fresh review —
     // and re-clicking with nothing changed spends zero tokens.
-    const key = `${text}:${JSON.stringify(sectionData)}`
+    const key = `${mode}:${text}:${JSON.stringify(sectionData)}`
     if (key === lastKeyRef.current) { toast.info(t("no_changes")); return }
     if (Date.now() < cooldownUntil) {
       const secs = Math.ceil((cooldownUntil - Date.now()) / 1000)
@@ -143,7 +149,7 @@ export function useATSScore() {
     setOffTopic(false)
 
     try {
-      if (isQuestion(text)) {
+      if (!roleMode && isQuestion(text)) {
         preCheck("review-cv")
         const res = await apiFetch("/api/ai/review-cv", {
           method: "POST",
@@ -171,7 +177,11 @@ export function useATSScore() {
         const res = await apiFetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ jobDescription: text, sectionData, language: locale, templateId }),
+          body: JSON.stringify(
+            roleMode
+              ? { roleTitle: text, sectionData, language: locale, templateId }
+              : { jobDescription: text, sectionData, language: locale, templateId }
+          ),
         })
         if (res.status === 429 || res.status === 403) {
           const handled = await handleApiError(res, {
@@ -197,7 +207,7 @@ export function useATSScore() {
     } finally {
       setLoading(false)
     }
-  }, [input, sectionData, locale, t, aiT, loading, cooldownUntil])
+  }, [input, mode, sectionData, locale, t, aiT, loading, cooldownUntil])
 
   // Keep the latest result reachable from rescore() without stale-closure risk.
   const atsResultRef = useRef<ATSResult | null>(null)
@@ -280,6 +290,7 @@ export function useATSScore() {
 
   return {
     input, setInput,
+    mode, setMode,
     loading,
     atsResult, reviewResult,
     offTopic,

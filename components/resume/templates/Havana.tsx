@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -19,20 +20,22 @@ export default function HavanaTemplate() {
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
-  const SideSection = ({ title }: { title: string }) => (
-    <p style={{
+  const SideSection = ({ id, title }: { id: string; title: string }) => (
+    <div style={{
+      display: "flex", alignItems: "center", gap: 5,
       color: "rgba(255,255,255,0.6)", fontSize: "7.5px",
       letterSpacing: "0.18em", textTransform: "uppercase",
       marginBottom: 8, fontWeight: 700,
       borderBottom: "1px solid rgba(255,255,255,0.2)", paddingBottom: 4,
     }}>
+      <SectionIcon sectionId={id} color="rgba(255,255,255,0.7)" size={10} strokeWidth={2.25} />
       {title}
-    </p>
+    </div>
   )
 
-  const MainSectionHeader = ({ title }: { title: string }) => (
+  const MainSectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
-      <div style={{ width: 6, height: 6, backgroundColor: accent, borderRadius: "50%", flexShrink: 0 }} />
+      <SectionIcon sectionId={id} color={accent} size={12} strokeWidth={2.25} />
       <h2 style={{ fontWeight: 700, fontSize: "10px", letterSpacing: "0.1em", textTransform: "uppercase", color: "#1f2937" }}>
         {title}
       </h2>
@@ -90,7 +93,7 @@ export default function HavanaTemplate() {
 
           {/* Contact */}
           <div style={{ marginBottom: 16 }}>
-            <SideSection title="Contacto" />
+            <SideSection id="personalDetails" title="Contacto" />
             <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
               {pd.email    && <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}><Mail size={9} color="rgba(255,255,255,0.75)" /><span style={{ fontSize: "8.5px", color: "rgba(255,255,255,0.85)", wordBreak: "break-all", lineHeight: 1.4 }}>{pd.email}</span></div>}
               {pd.phone    && <div style={{ display: "flex", alignItems: "flex-start", gap: 7 }}><Phone size={9} color="rgba(255,255,255,0.75)" /><span style={{ fontSize: "8.5px", color: "rgba(255,255,255,0.85)" }}>{pd.phone}</span></div>}
@@ -104,7 +107,7 @@ export default function HavanaTemplate() {
           {/* Skills */}
           {visible("skills") && skills.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <SideSection title={label("skills")} />
+              <SideSection id="skills" title={label("skills")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {skills.map((sk) => (
                   <div key={sk.id}>
@@ -121,7 +124,7 @@ export default function HavanaTemplate() {
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
             <div>
-              <SideSection title={label("languages")} />
+              <SideSection id="languages" title={label("languages")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {languages.map((lang) => (
                   <div key={lang.id}>
@@ -141,7 +144,7 @@ export default function HavanaTemplate() {
           {/* Summary */}
           {visible("summary") && summary && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("summary")} />
+              <MainSectionHeader id="summary" title={label("summary")} />
               <p style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.7 }}>{summary}</p>
             </div>
           )}
@@ -149,7 +152,7 @@ export default function HavanaTemplate() {
           {/* Work Experience */}
           {visible("workExperience") && workExperience.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("workExperience")} />
+              <MainSectionHeader id="workExperience" title={label("workExperience")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -175,7 +178,7 @@ export default function HavanaTemplate() {
           {/* Education */}
           {visible("education") && education.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("education")} />
+              <MainSectionHeader id="education" title={label("education")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -199,7 +202,7 @@ export default function HavanaTemplate() {
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("certifications")} />
+              <MainSectionHeader id="certifications" title={label("certifications")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                 {certifications.map((cert) => (
                   <div key={cert.id} className="resume-entry">
@@ -214,7 +217,7 @@ export default function HavanaTemplate() {
           {/* Projects */}
           {visible("projects") && projects.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("projects")} />
+              <MainSectionHeader id="projects" title={label("projects")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -230,7 +233,7 @@ export default function HavanaTemplate() {
           {/* Volunteer */}
           {visible("volunteer") && volunteer.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("volunteer")} />
+              <MainSectionHeader id="volunteer" title={label("volunteer")} />
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -246,7 +249,7 @@ export default function HavanaTemplate() {
           {/* References */}
           {visible("references") && references.length > 0 && (
             <div style={{ marginBottom: 18 }}>
-              <MainSectionHeader title={label("references")} />
+              <MainSectionHeader id="references" title={label("references")} />
               <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
                 {references.map((ref) => (
                   <div key={ref.id} style={{ minWidth: 140 }}>

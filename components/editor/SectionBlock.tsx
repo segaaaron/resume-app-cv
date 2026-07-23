@@ -71,7 +71,9 @@ const SectionAccordionContext = createContext<SectionAccordionContextValue>({
 })
 
 export function SectionDropdownProvider({ children }: { children: ReactNode }) {
-  const pd = useResumeStore.getState().sectionData.personalDetails as Record<string, string> | undefined
+  const pd = useResumeStore.getState().sectionData.personalDetails as
+    | { firstName?: string; lastName?: string; email?: string; jobTitle?: string }
+    | undefined
   const hasData = pd && (pd.firstName || pd.lastName || pd.email || pd.jobTitle)
   const [expandedId, setExpandedId] = useState<string | null>(hasData ? null : "personalDetails")
   const accordionValue = useMemo(() => ({ expandedId, setExpandedId }), [expandedId])

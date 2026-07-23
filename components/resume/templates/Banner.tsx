@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -48,12 +49,12 @@ export default function BannerTemplate() {
   const present = L.present
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
 
-  const BannerHead = ({ text }: { text: string }) => (
+  const BannerHead = ({ id, text }: { id: string; text: string }) => (
     <div style={{ position: "relative", marginBottom: 10, marginTop: 14 }}>
       <svg width="140" height="24" viewBox="0 0 140 24">
         <path d="M0,2 Q0,0 2,0 L128,0 L140,12 L128,24 L2,24 Q0,24 0,22 Z" fill={navy} />
       </svg>
-      <span style={{ position: "absolute", top: 5, left: 12, fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "#fff" }}>{text}</span>
+      <span style={{ position: "absolute", top: 5, left: 12, display: "flex", alignItems: "center", gap: 4, fontSize: 9, fontWeight: 800, letterSpacing: "0.2em", textTransform: "uppercase", color: "#fff" }}><SectionIcon sectionId={id} color="#fff" size={9} strokeWidth={2.5} />{text}</span>
     </div>
   )
 
@@ -83,7 +84,7 @@ export default function BannerTemplate() {
       {/* About me - full width */}
       {visible("summary") && (
         <>
-          <BannerHead text={L.aboutMe} />
+          <BannerHead id="summary" text={L.aboutMe} />
           <p style={{ fontSize: 10, color: "#555", lineHeight: 1.75, marginBottom: 10 }}>{sum}</p>
         </>
       )}
@@ -92,7 +93,7 @@ export default function BannerTemplate() {
       <div style={{ display: "flex", gap: 24 }}>
         {/* Left */}
         <div style={{ width: "32%", flexShrink: 0 }}>
-          <BannerHead text={L.contact} />
+          <BannerHead id="personalDetails" text={L.contact} />
           <div style={{ display: "flex", flexDirection: "column", gap: 6, fontSize: 9.5, color: "#444", marginBottom: 10 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Phone size={9} color={accent} />{phone}</span>
             <span style={{ display: "flex", alignItems: "center", gap: 5 }}><Mail size={9} color={accent} />{email}</span>
@@ -104,7 +105,7 @@ export default function BannerTemplate() {
 
           {visible("skills") && (
             <>
-              <BannerHead text={L.skills} />
+              <BannerHead id="skills" text={L.skills} />
               {sks.map((sk) => (
                 <div key={sk.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
                   <span style={{ fontSize: 9.5, color: "#444" }}>{sk.name}</span>
@@ -116,14 +117,14 @@ export default function BannerTemplate() {
 
           {visible("hobbies") && (
             <>
-              <BannerHead text={L.hobbies} />
+              <BannerHead id="hobbies" text={L.hobbies} />
               <p style={{ fontSize: 9.5, color: "#555", lineHeight: 1.7 }}>{hobbies || "Fotografía, Senderismo, Cocina"}</p>
             </>
           )}
 
           {visible("languages") && (
             <>
-              <BannerHead text={L.languages} />
+              <BannerHead id="languages" text={L.languages} />
               {langs.map((l) => (
                 <p key={l.id} style={{ fontSize: 9.5, color: "#444", marginBottom: 3 }}>{l.name}</p>
               ))}
@@ -132,7 +133,7 @@ export default function BannerTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <div style={{ marginTop: 18 }}>
-              <BannerHead text={L.certifications} />
+              <BannerHead id="certifications" text={L.certifications} />
               {certifications.map((c) => (
                 <div key={c.id} style={{ marginBottom: 6, breakInside: "avoid" }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: "#1a1a1a", lineHeight: 1.25 }}>{c.name}</p>
@@ -148,7 +149,7 @@ export default function BannerTemplate() {
         <div style={{ flex: 1 }}>
           {visible("education") && (
             <>
-              <BannerHead text={L.education} />
+              <BannerHead id="education" text={L.education} />
               {edus.map((edu) => (
                 <div key={edu.id} className="resume-entry" style={{ display: "flex", gap: 12, marginBottom: 10 }}>
                   <span style={{ fontSize: 9, color: accent, fontWeight: 700, flexShrink: 0, width: 60 }}>{edu.startDate}{edu.endDate ? `–${edu.endDate}` : ""}</span>
@@ -163,7 +164,7 @@ export default function BannerTemplate() {
 
           {visible("workExperience") && (
             <>
-              <BannerHead text={L.experience} />
+              <BannerHead id="workExperience" text={L.experience} />
               {jobs.map((job) => (
                 <div key={job.id} className="resume-entry" style={{ display: "flex", gap: 12, marginBottom: 12 }}>
                   <span style={{ fontSize: 9, color: accent, fontWeight: 700, flexShrink: 0, width: 60 }}>{job.startDate}{job.currentlyWorking ? `–${present}` : job.endDate ? `–${job.endDate}` : ""}</span>

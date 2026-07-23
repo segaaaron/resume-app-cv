@@ -1,6 +1,7 @@
 import { ReactNode } from "react"
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
+import ReadingProgress from "./ReadingProgress"
 
 type Props = {
   children: ReactNode
@@ -14,6 +15,7 @@ type Props = {
 export default function BlogArticle({ children }: Props) {
   return (
     <div className="flex flex-col min-h-screen bg-white">
+      <ReadingProgress />
       <Navbar />
       <main className="flex-1">{children}</main>
       <Footer />

@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -90,7 +91,7 @@ export default function PsychologistTemplate() {
           {/* Work Experience */}
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <H olive={olive}>{label("workExperience")}</H>
+              <H olive={olive}><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</H>
               {workExperience.map((job) => (
                 <div key={job.id} style={{ display: "grid", gridTemplateColumns: "84px 1fr", padding: "9px 0", borderBottom: `1px dotted ${olive}`, gap: 12 }}>
                   <div style={{ fontStyle: "italic", color: terracotta, fontSize: 11.5 }}>
@@ -112,7 +113,7 @@ export default function PsychologistTemplate() {
           {/* Skills */}
           {visible("skills") && skills.length > 0 && (
             <>
-              <H olive={olive}>{label("skills")}</H>
+              <H olive={olive}><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85 }}>
                 {skills.map((sk) => (
                   <li key={sk.id}>{sk.name}</li>
@@ -127,7 +128,7 @@ export default function PsychologistTemplate() {
           {/* Education */}
           {visible("education") && education.length > 0 && (
             <>
-              <H olive={olive}>{label("education")}</H>
+              <H olive={olive}><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</H>
               <p style={{ margin: 0, lineHeight: 1.7 }}>
                 {education.map((edu, i) => (
                   <span key={edu.id}>
@@ -145,7 +146,7 @@ export default function PsychologistTemplate() {
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <H olive={olive}>{label("certifications")}</H>
+              <H olive={olive}><SectionIcon sectionId="certifications" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("certifications")}</H>
               <p style={{ margin: 0, lineHeight: 1.7 }}>
                 {certifications.map((cert, i) => (
                   <span key={cert.id}>
@@ -162,7 +163,7 @@ export default function PsychologistTemplate() {
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
             <>
-              <H olive={olive}>{label("languages")}</H>
+              <H olive={olive}><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</H>
               <ul style={{ margin: 0, paddingLeft: 18, lineHeight: 1.85 }}>
                 {languages.map((lang) => (
                   <li key={lang.id}>{lang.name}{lang.level ? ` · ${lang.level.toUpperCase()}` : ""}</li>

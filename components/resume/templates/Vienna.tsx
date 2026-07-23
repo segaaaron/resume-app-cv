@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -30,11 +31,12 @@ export default function ViennaTemplate() {
     </div>
   )
 
-  const SectionHeader = ({ title }: { title: string }) => (
+  const SectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{
       display: "flex", alignItems: "center", gap: 8, marginBottom: 10,
       borderLeft: `4px solid ${accent}`, paddingLeft: 10,
     }}>
+      <SectionIcon sectionId={id} color={accent} size={12} strokeWidth={2.25} />
       <h2 style={{
         fontWeight: 700, fontSize: "10px", letterSpacing: "0.12em",
         textTransform: "uppercase", color: "#1f2937",
@@ -106,7 +108,7 @@ export default function ViennaTemplate() {
         {/* Summary */}
         {visible("summary") && summary && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("summary")} />
+            <SectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "10px", color: "#4b5563", lineHeight: 1.7, paddingLeft: 14 }}>{summary}</p>
           </div>
         )}
@@ -114,7 +116,7 @@ export default function ViennaTemplate() {
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("workExperience")} />
+            <SectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingLeft: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -140,7 +142,7 @@ export default function ViennaTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("education")} />
+            <SectionHeader id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 14 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry">
@@ -164,7 +166,7 @@ export default function ViennaTemplate() {
         {/* Skills */}
         {visible("skills") && skills.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("skills")} />
+            <SectionHeader id="skills" title={label("skills")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 10px", paddingLeft: 14 }}>
               {skills.map((sk) => (
                 <span key={sk.id} style={{
@@ -182,7 +184,7 @@ export default function ViennaTemplate() {
         {/* Languages */}
         {visible("languages") && languages.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("languages")} />
+            <SectionHeader id="languages" title={label("languages")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px", paddingLeft: 14 }}>
               {languages.map((lang) => (
                 <span key={lang.id} style={{ fontSize: "9px", color: "#374151" }}>
@@ -196,7 +198,7 @@ export default function ViennaTemplate() {
         {/* Certifications */}
         {visible("certifications") && certifications.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("certifications")} />
+            <SectionHeader id="certifications" title={label("certifications")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6, paddingLeft: 14 }}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="resume-entry">
@@ -211,7 +213,7 @@ export default function ViennaTemplate() {
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("projects")} />
+            <SectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 14 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -227,7 +229,7 @@ export default function ViennaTemplate() {
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("volunteer")} />
+            <SectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingLeft: 14 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -243,7 +245,7 @@ export default function ViennaTemplate() {
         {/* References */}
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("references")} />
+            <SectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16, paddingLeft: 14 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

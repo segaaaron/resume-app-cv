@@ -4,6 +4,7 @@ import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
+import { SectionIcon } from "@/lib/resume/section-icons"
 
 export default function ClassicTemplate() {
   const { config, sections } = useResumeStore(
@@ -69,14 +70,14 @@ export default function ClassicTemplate() {
 
       {/* Summary */}
       {visible("summary") && summary && (
-        <Section title={label("summary")} color={color}>
+        <Section id="summary" title={label("summary")} color={color}>
           <p className="text-sm text-gray-700 leading-relaxed">{summary}</p>
         </Section>
       )}
 
       {/* Work Experience */}
       {visible("workExperience") && workExperience.length > 0 && (
-        <Section title={label("workExperience")} color={color}>
+        <Section id="workExperience" title={label("workExperience")} color={color}>
           <div className="space-y-4">
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry">
@@ -98,7 +99,7 @@ export default function ClassicTemplate() {
 
       {/* Education */}
       {visible("education") && education.length > 0 && (
-        <Section title={label("education")} color={color}>
+        <Section id="education" title={label("education")} color={color}>
           <div className="space-y-4">
             {education.map((edu) => (
               <div key={edu.id} className="resume-entry">
@@ -120,7 +121,7 @@ export default function ClassicTemplate() {
 
       {/* Skills */}
       {visible("skills") && skills.length > 0 && (
-        <Section title={label("skills")} color={color}>
+        <Section id="skills" title={label("skills")} color={color}>
           <div className="flex flex-wrap gap-2">
             {skills.map((skill) => (
               <span
@@ -137,7 +138,7 @@ export default function ClassicTemplate() {
 
       {/* Languages */}
       {visible("languages") && languages.length > 0 && (
-        <Section title={label("languages")} color={color}>
+        <Section id="languages" title={label("languages")} color={color}>
           <div className="grid grid-cols-2 gap-x-6 gap-y-1.5">
             {languages.map((lang) => (
               <div key={lang.id} className="flex justify-between items-center text-xs">
@@ -151,7 +152,7 @@ export default function ClassicTemplate() {
 
       {/* Certifications */}
       {visible("certifications") && certifications.length > 0 && (
-        <Section title={label("certifications")} color={color}>
+        <Section id="certifications" title={label("certifications")} color={color}>
           <div className="space-y-1.5">
             {certifications.map((cert) => (
               <div key={cert.id} className="flex justify-between items-baseline text-xs">
@@ -165,7 +166,7 @@ export default function ClassicTemplate() {
 
       {/* Hobbies */}
       {visible("hobbies") && hobbies && (
-        <Section title={label("hobbies")} color={color}>
+        <Section id="hobbies" title={label("hobbies")} color={color}>
           <p className="text-xs text-gray-600 leading-relaxed">{hobbies}</p>
         </Section>
       )}
@@ -173,11 +174,13 @@ export default function ClassicTemplate() {
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <div className="flex items-center gap-3 mb-3 resume-section-title">
-        <div className="w-1 h-4 rounded-full shrink-0" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-2 mb-3 resume-section-title">
+        <span className="flex items-center justify-center rounded-md shrink-0" style={{ width: 20, height: 20, backgroundColor: color + "14" }}>
+          <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2.25} />
+        </span>
         <h3 className="text-[10px] font-bold uppercase tracking-widest" style={{ color }}>{title}</h3>
         <div className="flex-1 h-px" style={{ backgroundColor: color + "25" }} />
       </div>

@@ -56,16 +56,27 @@ export default async function GuideCTA({ locale }: { locale: string }) {
             {t("subtitle")}
           </p>
 
-          <Link href={`/${locale}/register`}
-            className="inline-flex items-center gap-2 font-extrabold text-[15px] px-9 py-3.5 rounded-[14px] no-underline"
-            style={{
-              background: "linear-gradient(135deg, #00D4FF 0%, #0099CC 100%)",
-              color: "#071525",
-              boxShadow: "0 0 28px rgba(0,212,255,0.35), 0 4px 12px rgba(0,0,0,0.3)",
-            }}
-          >
-            {t("button")} →
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <Link href={`/${locale}/pricing`}
+              className="inline-flex items-center gap-2 font-extrabold text-[15px] px-9 py-3.5 rounded-[14px] no-underline transition-transform duration-200 hover:-translate-y-0.5"
+              style={{
+                background: "linear-gradient(135deg, #00D4FF 0%, #0099CC 100%)",
+                color: "#071525",
+                boxShadow: "0 0 28px rgba(0,212,255,0.35), 0 4px 12px rgba(0,0,0,0.3)",
+              }}
+            >
+              {t("button")} →
+            </Link>
+            <Link href={`/${locale}/register`}
+              className="inline-flex items-center gap-2 font-bold text-[14px] px-7 py-3.5 rounded-[14px] no-underline text-white transition-colors duration-200"
+              style={{
+                background: "rgba(255,255,255,0.06)",
+                border: "1px solid rgba(0,212,255,0.28)",
+              }}
+            >
+              {t("button_secondary")}
+            </Link>
+          </div>
 
           <p className="text-xs mt-4" style={{ color: "rgba(255,255,255,0.3)" }}>
             {t("note")}

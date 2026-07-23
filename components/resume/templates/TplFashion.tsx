@@ -14,6 +14,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -63,9 +64,9 @@ export default function TplFashionTemplate() {
   if (place) contacts.push([<Pin key="i" />, place])
   if (pd.website) contacts.push([<Globe key="g" />, pd.website])
 
-  const FaH = ({ children }: { children: React.ReactNode }) => (
+  const FaH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.25em", textTransform: "uppercase", color: blush, margin: "18px 0 12px", fontWeight: 600 }}>
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
 
@@ -128,7 +129,7 @@ export default function TplFashionTemplate() {
         <div>
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <FaH>{labelFor("workExperience")}</FaH>
+              <FaH id="workExperience">{labelFor("workExperience")}</FaH>
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 16, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
@@ -157,7 +158,7 @@ export default function TplFashionTemplate() {
         <div style={{ fontFamily: "inherit" }}>
           {visible("skills") && skills.length > 0 && (
             <>
-              <FaH>{labelFor("skills")}</FaH>
+              <FaH id="skills">{labelFor("skills")}</FaH>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
                 {skills.map((s) => (
                   <span key={s.id} style={{ fontSize: 11, color: blush, border: `1px solid ${blush}55`, padding: "4px 11px", borderRadius: 20 }}>
@@ -170,7 +171,7 @@ export default function TplFashionTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <>
-              <FaH>{labelFor("projects")}</FaH>
+              <FaH id="projects">{labelFor("projects")}</FaH>
               {projects.map((p) => (
                 <div key={p.id} style={{ fontSize: 12, color: "#4a3e42", marginBottom: 3, display: "flex", gap: 8 }}>
                   <span style={{ color: blush }}>✧</span>
@@ -182,7 +183,7 @@ export default function TplFashionTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <FaH>{labelFor("education")}</FaH>
+              <FaH id="education">{labelFor("education")}</FaH>
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <div style={{ fontSize: 13, fontWeight: 600, color: ink }}>
@@ -199,7 +200,7 @@ export default function TplFashionTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <FaH>{labelFor("certifications")}</FaH>
+              <FaH id="certifications">{labelFor("certifications")}</FaH>
               {certifications.map((c) => (
                 <div key={c.id} style={{ fontSize: 12, color: "#4a3e42", marginBottom: 3, display: "flex", gap: 8 }}>
                   <span style={{ color: blush }}>✧</span>{c.name}
@@ -210,7 +211,7 @@ export default function TplFashionTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <FaH>{labelFor("languages")}</FaH>
+              <FaH id="languages">{labelFor("languages")}</FaH>
               {languages.map((l) => (
                 <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 3, color: "#4a3e42" }}>
                   <span style={{ fontWeight: 600 }}>{l.name}</span>

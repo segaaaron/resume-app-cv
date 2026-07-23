@@ -10,6 +10,7 @@ import BlogTableOfContents from "@/components/blog/BlogTableOfContents"
 import BlogProse from "@/components/blog/BlogProse"
 import BlogFAQ from "@/components/blog/BlogFAQ"
 import BlogCTA from "@/components/blog/BlogCTA"
+import BlogAtsPreview from "@/components/blog/BlogAtsPreview"
 import BlogRelatedPosts from "@/components/blog/BlogRelatedPosts"
 import BlogSchemas from "@/components/blog/BlogSchemas"
 import { RESUME_MISTAKES, SELF_AUDIT_CHECKLIST } from "@/lib/blog/resume-mistakes-data"
@@ -248,7 +249,7 @@ export default async function ResumeMistakesPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Run the audit automatically</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    The <Link href={`/${locale}/tools/ats-checker`}>ReadyCV ATS Checker</Link> automates 8 of the 12 audit items: PDF cleanliness, keyword match, verb-first structure, bullet metrics, length, and parser-safe layout. Start from an <Link href={`/${locale}/templates`}>ATS-verified template</Link> and the format-related mistakes never appear in the first place.
+                    <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> automates 8 of the 12 audit items: PDF cleanliness, keyword match, verb-first structure, bullet metrics, length, and parser-safe layout. Start from an <Link href={`/${locale}/templates`}>ATS-verified template</Link> and the format-related mistakes never appear in the first place.
                   </p>
                 </div>
               </div>
@@ -263,6 +264,8 @@ export default async function ResumeMistakesPage({
             </div>
 
             <div className="mt-16">
+              <BlogAtsPreview locale={locale} variant="data" />
+
               <BlogCTA
                 locale={locale}
                 title="Build a resume that avoids all 15 mistakes by design."

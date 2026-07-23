@@ -371,6 +371,46 @@ describe("AIService", () => {
       expect(result.matchedKeywords.length + result.missingKeywords.length).toBeLessThanOrEqual(12)
     })
 
+    it("role-only mode: scores from a job TITLE and flags the result as inferred", async () => {
+      // No jobDescription — just roleTitle. The LLM infers standard requirements,
+      // the deterministic engine scores them, and the result is flagged approximate.
+      const aiClient = makeMockAIClient(JSON.stringify(validExtraction))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.atsScore("user-1", {
+        roleTitle: "Backend Developer",
+        sectionData: richSectionData,
+      }, "PRO")
+
+      expect(result.inferredFromRole).toBe(true)
+      expect(typeof result.score).toBe("number")
+      expect(result.matchedKeywords).toContain("Developer")
+      expect(result.missingKeywords).toContain("Kubernetes")
+      // The role title reached the LLM prompt.
+      const sent = JSON.stringify(vi.mocked(aiClient.chat).mock.calls[0]?.[0])
+      expect(sent).toContain("Backend Developer")
+    })
+
+    it("a real job description takes precedence over roleTitle and is NOT flagged inferred", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify(validExtraction))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.atsScore("user-1", {
+        jobDescription: "We need a Developer with Kubernetes experience for our team.",
+        roleTitle: "Backend Developer",
+        sectionData: richSectionData,
+      }, "PRO")
+
+      expect(result.inferredFromRole).toBe(false)
+    })
+
+    it("rejects a role title that is too short", async () => {
+      const service = new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)
+      await expect(
+        service.atsScore("user-1", { roleTitle: "x", sectionData: richSectionData }, "PRO")
+      ).rejects.toMatchObject({ status: 400 })
+    })
+
     it("throws AppError 403 feature_pro_only when endpoint blocked for plan", async () => {
       const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
       vi.mocked(checkAndIncrementAIQuota).mockResolvedValueOnce({ allowed: false, reason: "blocked" })

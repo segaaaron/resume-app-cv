@@ -6,6 +6,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 export default function NeonTemplate() {
@@ -41,13 +42,13 @@ export default function NeonTemplate() {
       </div>
 
       {visible("summary") && summary && (
-        <NeonBlock title="// SOBRE_MÍ" color={color}>
+        <NeonBlock id="summary" title="// SOBRE_MÍ" color={color}>
           <p className="text-xs text-gray-800 leading-relaxed">{summary}</p>
         </NeonBlock>
       )}
 
       {visible("workExperience") && workExperience.length > 0 && (
-        <NeonBlock title="// EXPERIENCIA" color={color}>
+        <NeonBlock id="workExperience" title="// EXPERIENCIA" color={color}>
           <div className="space-y-4">
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry border-l-4 border-black pl-4">
@@ -69,7 +70,7 @@ export default function NeonTemplate() {
       )}
 
       {visible("education") && education.length > 0 && (
-        <NeonBlock title="// EDUCACIÓN" color={color}>
+        <NeonBlock id="education" title="// EDUCACIÓN" color={color}>
           <div className="space-y-3">
             {education.map((edu) => (
               <div key={edu.id} className="resume-entry border-l-4 pl-4" style={{ borderColor: color }}>
@@ -88,7 +89,7 @@ export default function NeonTemplate() {
 
       <div className="grid grid-cols-2 gap-4">
         {visible("skills") && skills.length > 0 && (
-          <NeonBlock title="// SKILLS" color={color}>
+          <NeonBlock id="skills" title="// SKILLS" color={color}>
             <div className="flex flex-wrap gap-1.5">
               {skills.map((skill) => (
                 <span
@@ -107,7 +108,7 @@ export default function NeonTemplate() {
         )}
 
         {visible("languages") && languages.length > 0 && (
-          <NeonBlock title="// IDIOMAS" color={color}>
+          <NeonBlock id="languages" title="// IDIOMAS" color={color}>
             {languages.map((lang) => (
               <div key={lang.id} className="flex justify-between text-xs mb-1.5 border-b border-dashed border-gray-200 pb-1">
                 <span className="font-black uppercase text-gray-900">{lang.name}</span>
@@ -119,7 +120,7 @@ export default function NeonTemplate() {
       </div>
 
       {visible("projects") && projects.length > 0 && (
-        <NeonBlock title="// PROYECTOS" color={color}>
+        <NeonBlock id="projects" title="// PROYECTOS" color={color}>
           <div className="grid grid-cols-2 gap-3">
             {projects.map((proj) => (
               <div
@@ -137,7 +138,7 @@ export default function NeonTemplate() {
       )}
 
       {visible("certifications") && certifications.length > 0 && (
-        <NeonBlock title="// CERTIFICACIONES" color={color}>
+        <NeonBlock id="certifications" title="// CERTIFICACIONES" color={color}>
           <div className="flex flex-wrap gap-2">
             {certifications.map((cert) => (
               <div key={cert.id} className="border-2 border-black px-3 py-2">
@@ -150,7 +151,7 @@ export default function NeonTemplate() {
       )}
 
       {visible("hobbies") && hobbies && (
-        <NeonBlock title="// INTERESES" color={color}>
+        <NeonBlock id="hobbies" title="// INTERESES" color={color}>
           <p className="text-xs text-gray-700 font-mono">{hobbies}</p>
         </NeonBlock>
       )}
@@ -158,10 +159,13 @@ export default function NeonTemplate() {
   )
 }
 
-function NeonBlock({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function NeonBlock({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-xs font-black mb-2.5 font-mono resume-section-title" style={{ color }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-xs font-black mb-2.5 font-mono resume-section-title" style={{ color }}>
+        <SectionIcon sectionId={id} color={color} size={13} strokeWidth={2.5} />
+        {title}
+      </h3>
       {children}
     </div>
   )

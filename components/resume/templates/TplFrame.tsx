@@ -10,6 +10,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Geist", "Inter", system-ui, -apple-system, sans-serif'
@@ -62,9 +63,9 @@ export default function TplFrameTemplate() {
   if (pd.email) contacts.push([<Mail key="m" />, pd.email])
   if (place) contacts.push([<Pin key="i" />, place])
 
-  const FrH = ({ children }: { children: React.ReactNode }) => (
+  const FrH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ fontSize: 12.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.1em", color: accent, margin: "0 0 10px", paddingBottom: 5, borderBottom: `2px solid ${accentSoft}`, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
 
@@ -125,14 +126,14 @@ export default function TplFrameTemplate() {
           <div>
             {visible("summary") && summary && (
               <>
-                <FrH>{labelFor("summary")}</FrH>
+                <FrH id="summary">{labelFor("summary")}</FrH>
                 <p style={{ fontSize: 11.5, lineHeight: 1.55, color: "#4a585e", margin: "0 0 16px" }}>{summary}</p>
               </>
             )}
 
             {contacts.length > 0 && (
               <>
-                <FrH>{config.language === "en" ? "Contact" : "Contacto"}</FrH>
+                <FrH id="personalDetails">{config.language === "en" ? "Contact" : "Contacto"}</FrH>
                 <div style={{ display: "flex", flexDirection: "column", gap: 8, fontSize: 11.5, color: "#4a585e", marginBottom: 16 }}>
                   {contacts.map(([I, t], i) => (
                     <span key={i} style={{ display: "flex", alignItems: "center", gap: 9 }}>
@@ -148,7 +149,7 @@ export default function TplFrameTemplate() {
 
             {visible("skills") && skills.length > 0 && (
               <>
-                <FrH>{labelFor("skills")}</FrH>
+                <FrH id="skills">{labelFor("skills")}</FrH>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 16 }}>
                   {skills.map((s) => (
                     <span key={s.id} style={{ fontSize: 10.5, background: accentSoft, color: accent, padding: "3px 9px", borderRadius: 6, fontWeight: 600, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -161,7 +162,7 @@ export default function TplFrameTemplate() {
 
             {visible("languages") && languages.length > 0 && (
               <>
-                <FrH>{labelFor("languages")}</FrH>
+                <FrH id="languages">{labelFor("languages")}</FrH>
                 {languages.map((l) => (
                   <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#4a585e", marginBottom: 4 }}>
                     <span>{l.name}</span>
@@ -182,7 +183,7 @@ export default function TplFrameTemplate() {
           <div>
             {visible("workExperience") && workExperience.length > 0 && (
               <>
-                <FrH>{labelFor("workExperience")}</FrH>
+                <FrH id="workExperience">{labelFor("workExperience")}</FrH>
                 {workExperience.map((e) => (
                   <div key={e.id} className="resume-entry" style={{ marginBottom: 13, paddingLeft: 16, borderLeft: "2px solid #d6ebe8", position: "relative", breakInside: "avoid" }}>
                     <span style={{ position: "absolute", left: -5, top: 4, width: 8, height: 8, borderRadius: "50%", background: accent, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
@@ -210,7 +211,7 @@ export default function TplFrameTemplate() {
 
             {visible("education") && education.length > 0 && (
               <>
-                <FrH>{labelFor("education")}</FrH>
+                <FrH id="education">{labelFor("education")}</FrH>
                 {education.map((ed) => (
                   <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                     <div style={{ fontWeight: 700, fontSize: 12.5 }}>
@@ -227,7 +228,7 @@ export default function TplFrameTemplate() {
 
             {visible("certifications") && certifications.length > 0 && (
               <>
-                <FrH>{labelFor("certifications")}</FrH>
+                <FrH id="certifications">{labelFor("certifications")}</FrH>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                   {certifications.map((c) => (
                     <span key={c.id} style={{ fontSize: 10.5, border: `1px solid ${accent}`, color: accent, padding: "3px 9px", borderRadius: 6, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>

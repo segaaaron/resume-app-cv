@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -38,12 +39,10 @@ export default function KyotoTemplate() {
     </div>
   )
 
-  const MainSectionHeader = ({ title }: { title: string }) => (
+  const MainSectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <svg width="14" height="8" viewBox="0 0 14 8" aria-hidden="true">
-          <path d="M2,6 Q7,1 12,5" stroke={accent} strokeWidth="2" fill="none" strokeLinecap="round" />
-        </svg>
+        <SectionIcon sectionId={id} color={accent} size={12} strokeWidth={2.25} />
         <h2 style={{ fontSize: "10px", fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: charcoal }}>
           {title}
         </h2>
@@ -152,7 +151,7 @@ export default function KyotoTemplate() {
         {/* Summary */}
         {visible("summary") && summary && (
           <div style={{ marginBottom: 20 }}>
-            <MainSectionHeader title={label("summary")} />
+            <MainSectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "9.5px", color: "#4b5563", lineHeight: 1.75, fontWeight: 300 }}>{summary}</p>
           </div>
         )}
@@ -160,7 +159,7 @@ export default function KyotoTemplate() {
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainSectionHeader title={label("workExperience")} />
+            <MainSectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -186,7 +185,7 @@ export default function KyotoTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainSectionHeader title={label("education")} />
+            <MainSectionHeader id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry">
@@ -211,7 +210,7 @@ export default function KyotoTemplate() {
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainSectionHeader title={label("projects")} />
+            <MainSectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -227,7 +226,7 @@ export default function KyotoTemplate() {
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainSectionHeader title={label("volunteer")} />
+            <MainSectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -243,7 +242,7 @@ export default function KyotoTemplate() {
         {/* References */}
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <MainSectionHeader title={label("references")} />
+            <MainSectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -19,8 +20,9 @@ export default function GenevanoirTemplate() {
   const nearBlack = "#121212"
   const darkBadgeBg = "#222222"
 
-  const SectionHeader = ({ title }: { title: string }) => (
+  const SectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+      <SectionIcon sectionId={id} color={accent} size={13} strokeWidth={2.25} />
       {/* Dark pill badge with accent border */}
       <div style={{
         backgroundColor: darkBadgeBg,
@@ -76,7 +78,7 @@ export default function GenevanoirTemplate() {
         {/* Summary */}
         {visible("summary") && summary && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("summary")} />
+            <SectionHeader id="summary" title={label("summary")} />
             <p style={{ fontSize: "10px", color: "#374151", lineHeight: 1.7 }}>{summary}</p>
           </div>
         )}
@@ -84,7 +86,7 @@ export default function GenevanoirTemplate() {
         {/* Work Experience */}
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("workExperience")} />
+            <SectionHeader id="workExperience" title={label("workExperience")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry">
@@ -110,7 +112,7 @@ export default function GenevanoirTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("education")} />
+            <SectionHeader id="education" title={label("education")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {education.map((edu) => (
                 <div key={edu.id} className="resume-entry">
@@ -134,7 +136,7 @@ export default function GenevanoirTemplate() {
         {/* Skills */}
         {visible("skills") && skills.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("skills")} />
+            <SectionHeader id="skills" title={label("skills")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 8px" }}>
               {skills.map((sk) => (
                 <span key={sk.id} style={{
@@ -153,7 +155,7 @@ export default function GenevanoirTemplate() {
         {/* Languages */}
         {visible("languages") && languages.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("languages")} />
+            <SectionHeader id="languages" title={label("languages")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: "6px 20px" }}>
               {languages.map((lang) => (
                 <span key={lang.id} style={{ fontSize: "9px", color: "#374151" }}>
@@ -167,7 +169,7 @@ export default function GenevanoirTemplate() {
         {/* Certifications */}
         {visible("certifications") && certifications.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("certifications")} />
+            <SectionHeader id="certifications" title={label("certifications")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               {certifications.map((cert) => (
                 <div key={cert.id} className="resume-entry" style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
@@ -185,7 +187,7 @@ export default function GenevanoirTemplate() {
         {/* Projects */}
         {visible("projects") && projects.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("projects")} />
+            <SectionHeader id="projects" title={label("projects")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {projects.map((proj) => (
                 <div key={proj.id} className="resume-entry">
@@ -201,7 +203,7 @@ export default function GenevanoirTemplate() {
         {/* Volunteer */}
         {visible("volunteer") && volunteer.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("volunteer")} />
+            <SectionHeader id="volunteer" title={label("volunteer")} />
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
               {volunteer.map((vol) => (
                 <div key={vol.id} className="resume-entry">
@@ -217,7 +219,7 @@ export default function GenevanoirTemplate() {
         {/* References */}
         {visible("references") && references.length > 0 && (
           <div style={{ marginBottom: 20 }}>
-            <SectionHeader title={label("references")} />
+            <SectionHeader id="references" title={label("references")} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
               {references.map((ref) => (
                 <div key={ref.id} style={{ minWidth: 140 }}>

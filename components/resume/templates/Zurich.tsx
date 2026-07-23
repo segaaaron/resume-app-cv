@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -34,7 +35,8 @@ export default function ZurichTemplate() {
           {num}
         </div>
         {/* Section header */}
-        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 8, marginBottom: 10, paddingTop: 6 }}>
+        <div style={{ position: "relative", display: "flex", alignItems: "center", gap: 7, marginBottom: 10, paddingTop: 6 }}>
+          <SectionIcon sectionId={id} color="#1f2937" size={13} strokeWidth={2.25} />
           <h2 style={{
             fontWeight: 800, fontSize: "10px", letterSpacing: "0.16em",
             textTransform: "uppercase", color: "#1f2937",

@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -34,7 +35,8 @@ export default function CopenhagenTemplate() {
         border: `1px solid ${border}`,
         padding: "16px 20px", marginBottom: 12,
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 10 }}>
+          <SectionIcon sectionId={id} color="#374151" size={12} strokeWidth={2.25} />
           <h2 style={{
             fontWeight: 700, fontSize: "9.5px", letterSpacing: "0.12em",
             textTransform: "uppercase", color: "#374151",

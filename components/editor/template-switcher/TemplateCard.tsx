@@ -1,14 +1,12 @@
 "use client"
 
 import { memo, useEffect, useRef, useState } from "react"
-import dynamic from "next/dynamic"
-import { Lock, Check } from "lucide-react"
+import { Lock, Check, ShieldCheck } from "lucide-react"
 import { TEMPLATES, TemplateId } from "@/types/resume"
-
-const ResumeThumbnail = dynamic(
-  () => import("./thumbnails").then((m) => ({ default: m.ResumeThumbnail })),
-  { ssr: false, loading: () => <div className="w-full h-full bg-slate-100 animate-pulse rounded-lg" /> }
-)
+import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
+// Real, scaled template render (same component the public gallery uses) so the
+// card matches EXACTLY what the user gets on selection — not a hand-drawn *Thumb.
+import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
 
 interface TemplateCardProps {
   template: (typeof TEMPLATES)[number]
@@ -27,14 +25,15 @@ export const TemplateCard = memo(function TemplateCard({
 }: TemplateCardProps) {
   const [hover, setHover] = useState(false)
   const [visible, setVisible] = useState(false)
-  // On-demand WebP fallback: the <img> hits /api/thumbnails/[id] which renders
-  // the SVG component server-side, rasterises with sharp, and returns a WebP
-  // cached for a year (browser + CDN). If the route 5xx's for any reason, we
-  // fall back to the live in-process SVG <ResumeThumbnail>.
+  // Cached WebP (real template) is the fast path; if the screenshot service is
+  // unavailable the <img> errors and we render the live real template instead.
   const [imgFailed, setImgFailed] = useState(false)
   const cardRef = useRef<HTMLDivElement>(null)
   const active = isSelected && !locked
   const interactive = !locked
+  // Single-column templates parse cleanly in every ATS → flag them so the user
+  // knows at a glance which designs are ATS-safe.
+  const atsSafe = getTemplateAtsSafety(template.id) === "safe"
 
   // Lazy-mount the heavy ResumeThumbnail only once the card scrolls near the viewport.
   // Once visible, we disconnect the observer so the thumbnail stays mounted (no flicker on re-scroll).
@@ -98,8 +97,9 @@ export const TemplateCard = memo(function TemplateCard({
             ? "1.5px solid rgba(0,212,255,0.55)"
             : "1px solid #d8e3f0",
           boxShadow: active ? activeShadow : hover && interactive ? hoverShadow : baseShadow,
-          // Minimal inner padding — let the document breathe inside the frame
-          padding: 25,
+          // Tight frame — the preview fills the card so the design is clearly
+          // visible; a thin, even inset (not a big empty margin) keeps it elegant.
+          padding: 6,
           transition:
             "transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease, border-color 180ms ease, background 180ms ease",
           transform: hover && interactive && !active ? "translateY(-2px) scale(1.012)" : "translateY(0) scale(1)",
@@ -107,6 +107,35 @@ export const TemplateCard = memo(function TemplateCard({
           willChange: "transform, box-shadow",
         }}
       >
+        {/* ATS-safe badge — top-left, so it never collides with the selected
+            check (top-right). Only on single-column, clean-parse designs. */}
+        {atsSafe && (
+          <div
+            title="Compatible con ATS"
+            style={{
+              position: "absolute",
+              top: 6,
+              left: 6,
+              zIndex: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
+              padding: "2px 6px",
+              borderRadius: 999,
+              background: "linear-gradient(135deg, #10B981 0%, #00A8CC 100%)",
+              boxShadow: "0 2px 6px rgba(16,185,129,0.4)",
+              color: "#fff",
+              fontSize: 8,
+              fontWeight: 800,
+              letterSpacing: "0.06em",
+              lineHeight: 1,
+            }}
+          >
+            <ShieldCheck style={{ width: 9, height: 9, strokeWidth: 2.5 }} />
+            ATS
+          </div>
+        )}
+
         {/* Selected check badge */}
         {active && (
           <div
@@ -130,9 +159,11 @@ export const TemplateCard = memo(function TemplateCard({
           </div>
         )}
 
-        {/* Document surface — drop shadow to lift the SVG off the frame */}
+        {/* Document surface — the REAL template, scaled, so the card matches the
+            selection exactly (MockTemplatePreview self-lazies + self-scales). */}
         <div
           style={{
+            position: "relative",
             width: "100%",
             height: "100%",
             borderRadius: 8,
@@ -144,15 +175,16 @@ export const TemplateCard = memo(function TemplateCard({
         >
           {visible ? (
             imgFailed ? (
-              <ResumeThumbnail id={template.id} color={locked ? "#9ca3af" : colorScheme} />
+              <MockTemplatePreview templateId={template.id} />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`/api/thumbnails/${template.id}?color=${encodeURIComponent(locked ? "#9ca3af" : colorScheme)}`}
+                src={`/api/thumbnails/${template.id}`}
                 alt=""
                 className="w-full h-full object-cover object-top"
                 onError={() => setImgFailed(true)}
                 draggable={false}
+                loading="lazy"
               />
             )
           ) : (

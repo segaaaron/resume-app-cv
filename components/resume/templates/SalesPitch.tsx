@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -134,7 +135,7 @@ export default function SalesPitchTemplate() {
 
             {visible("workExperience") && workExperience.length > 0 && (
               <>
-                <H>{label("workExperience")}</H>
+                <H><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</H>
                 {workExperience.map((job) => {
                   const startY = job.startDate?.match(/\d{4}/)?.[0] ?? ""
                   const endY = job.currentlyWorking ? present : (job.endDate?.match(/\d{4}/)?.[0] ?? "")
@@ -156,7 +157,7 @@ export default function SalesPitchTemplate() {
           <section>
             {visible("skills") && skills.length > 0 && (
               <>
-                <H>{label("skills")}</H>
+                <H><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</H>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                   {skills.map((sk) => (
                     <span key={sk.id} style={{
@@ -173,7 +174,7 @@ export default function SalesPitchTemplate() {
 
             {visible("languages") && languages.length > 0 && (
               <>
-                <H>{label("languages")}</H>
+                <H><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</H>
                 <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, lineHeight: 1.85 }}>
                   {languages.map((l) => (
                     <li key={l.id}>{l.name} · {l.level}</li>
@@ -184,7 +185,7 @@ export default function SalesPitchTemplate() {
 
             {visible("education") && education.length > 0 && (
               <>
-                <H>{label("education")}</H>
+                <H><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</H>
                 <p style={{ margin: 0, fontSize: 11.5 }}>
                   {education.map((edu) => (
                     [edu.degree, edu.fieldOfStudy, edu.institution, edu.endDate?.match(/\d{4}/)?.[0]].filter(Boolean).join(" · ")
@@ -195,7 +196,7 @@ export default function SalesPitchTemplate() {
 
             {visible("certifications") && certifications.length > 0 && (
               <>
-                <H>{label("certifications")}</H>
+                <H><SectionIcon sectionId="certifications" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("certifications")}</H>
                 <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11.5, lineHeight: 1.85 }}>
                   {certifications.map((cert) => (
                     <li key={cert.id}>{cert.name}{cert.issuer ? ` · ${cert.issuer}` : ""}</li>

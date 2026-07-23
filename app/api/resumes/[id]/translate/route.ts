@@ -43,6 +43,16 @@ export async function POST(req: Request, { params }: Params) {
     const sourceLang = detectLanguage([...proseTexts, ...sectionLabels])
     const targetLang: "es" | "en" = sourceLang === "es" ? "en" : "es"
 
+    // Idempotency: a CV is translated ONCE per target language. If a translation
+    // already exists, return it instead of spending another LLM call / daily-cap
+    // slot — the UI disables the action, this is the server-side guarantee.
+    const existing = await db.resume.findFirst({
+      where: { translatedFromId: id, language: targetLang, userId: authResult.userId },
+    })
+    if (existing) {
+      return NextResponse.json({ ...existing, alreadyTranslated: true }, { status: 200 })
+    }
+
     const result = await aiService.translateCV(
       authResult.userId,
       { sectionData: resume.personalDetails as Record<string, unknown>, sectionLabels, targetLang },
@@ -58,12 +68,26 @@ export async function POST(req: Request, { params }: Params) {
     const baseTitle = resume.title.replace(/\s*\((ES|EN)\)\s*$/i, "").trim() || resume.title
     const newTitle = `${baseTitle} (${targetLang.toUpperCase()})`
 
-    const copy = await resumeService.createTranslatedCopy(authResult.userId, id, {
-      personalDetails: result.sectionData as object,
-      sections: translatedSections as unknown as object[],
-      title: newTitle,
-      language: targetLang,
-    })
+    let copy
+    try {
+      copy = await resumeService.createTranslatedCopy(authResult.userId, id, {
+        personalDetails: result.sectionData as object,
+        sections: translatedSections as unknown as object[],
+        title: newTitle,
+        language: targetLang,
+      })
+    } catch (e) {
+      // Concurrent request won the race and created the translation first: the
+      // unique (translatedFromId, language) index rejected this insert. Resolve
+      // idempotently — return the copy that now exists.
+      if ((e as { code?: string })?.code === "P2002") {
+        const raced = await db.resume.findFirst({
+          where: { translatedFromId: id, language: targetLang, userId: authResult.userId },
+        })
+        if (raced) return NextResponse.json({ ...raced, alreadyTranslated: true }, { status: 200 })
+      }
+      throw e
+    }
 
     return NextResponse.json(copy, { status: 201 })
   } catch (err) {

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef, useEffect } from "react"
 import { useTranslations } from "next-intl"
 import { TEMPLATES } from "@/types/resume"
 import { cn } from "@/lib/utils"
@@ -35,8 +35,18 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
     cancelSwitch,
   } = useTemplateSwitcher({ plan, subscriptionStatus, subscriptionEndsAt, role, onAfterSwitch })
 
-  const [activeTab, setActiveTab] = useState<"regular" | "pro">("regular")
+  // Open on the tab that holds the CV's current template, so the selected design
+  // is visible immediately (not always "regular").
+  const [activeTab, setActiveTab] = useState<"regular" | "pro">(
+    () => (PRO_IDS.includes(config.templateId) ? "pro" : "regular")
+  )
   const activeTemplates = activeTab === "regular" ? regularTemplates : proTemplates
+
+  // On open, jump straight to the selected template instead of the top of the list.
+  const selectedRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    selectedRef.current?.scrollIntoView({ block: "center", behavior: "auto" })
+  }, [activeTab])
 
   return (
     <>
@@ -95,16 +105,20 @@ export default function TemplateSwitcher({ plan, subscriptionStatus, subscriptio
         {/* Grid */}
         <div className="flex-1 overflow-y-auto scrollbar-hide px-2 pb-4">
           <div className="grid grid-cols-2 gap-3">
-            {activeTemplates.map((tmpl) => (
-              <TemplateCard
-                key={tmpl.id}
-                template={tmpl}
-                locked={activeTab === "pro" && !hasAccess}
-                isSelected={tmpl.id === config.templateId}
-                colorScheme={config.colorScheme}
-                onSelect={handleSelectTemplate}
-              />
-            ))}
+            {activeTemplates.map((tmpl) => {
+              const selected = tmpl.id === config.templateId
+              return (
+                <div key={tmpl.id} ref={selected ? selectedRef : undefined} className="scroll-mt-2">
+                  <TemplateCard
+                    template={tmpl}
+                    locked={activeTab === "pro" && !hasAccess}
+                    isSelected={selected}
+                    colorScheme={config.colorScheme}
+                    onSelect={handleSelectTemplate}
+                  />
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>

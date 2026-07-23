@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -48,14 +49,14 @@ export default function CoralSidebarTemplate() {
 
         {visible("summary") && summary && (
           <section style={{ marginTop: 30 }}>
-            <SH ink={ink}>{label("summary")}</SH>
+            <SH ink={ink}><SectionIcon sectionId="summary" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("summary")}</SH>
             <p style={{ margin: 0, fontSize: 12, lineHeight: 1.7 }}>{summary}</p>
           </section>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
           <section style={{ marginTop: 24 }}>
-            <SH ink={ink}>{label("workExperience")}</SH>
+            <SH ink={ink}><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</SH>
             {workExperience.map((job) => (
               <div key={job.id} style={{ display: "grid", gridTemplateColumns: "90px 1fr", gap: 14, padding: "12px 0", borderBottom: `1px solid ${sand}` }}>
                 <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, color: coral, paddingTop: 2 }}>
@@ -76,7 +77,7 @@ export default function CoralSidebarTemplate() {
 
         {visible("projects") && projects.length > 0 && (
           <section style={{ marginTop: 24 }}>
-            <SH ink={ink}>{label("projects")}</SH>
+            <SH ink={ink}><SectionIcon sectionId="projects" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("projects")}</SH>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11 }}>
               {projects.map((proj) => (
                 <div key={proj.id} style={{ background: sand, padding: "8px 12px", borderRadius: 8, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -90,7 +91,7 @@ export default function CoralSidebarTemplate() {
 
         {visible("certifications") && certifications.length > 0 && (
           <section style={{ marginTop: 24 }}>
-            <SH ink={ink}>{label("certifications")}</SH>
+            <SH ink={ink}><SectionIcon sectionId="certifications" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("certifications")}</SH>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, fontSize: 11 }}>
               {certifications.map((cert) => (
                 <div key={cert.id} style={{ background: sand, padding: "8px 12px", borderRadius: 8, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -123,7 +124,7 @@ export default function CoralSidebarTemplate() {
         {/* Skills */}
         {visible("skills") && skills.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}>{label("skills")}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="skills" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("skills")}</div>
             <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
             <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
               {skills.map((sk) => (
@@ -136,7 +137,7 @@ export default function CoralSidebarTemplate() {
         {/* Education */}
         {visible("education") && education.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}>{label("education")}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="education" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("education")}</div>
             <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
             {education.map((edu) => (
               <div key={edu.id} style={{ marginBottom: 10 }}>
@@ -150,7 +151,7 @@ export default function CoralSidebarTemplate() {
         {/* Languages */}
         {visible("languages") && languages.length > 0 && (
           <div>
-            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}>{label("languages")}</div>
+            <div style={{ fontSize: 10.5, letterSpacing: "0.22em", textTransform: "uppercase", opacity: 0.8 }}><SectionIcon sectionId="languages" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("languages")}</div>
             <div style={{ height: 1, background: cream, opacity: 0.4, margin: "6px 0 10px" }} />
             <div style={{ fontSize: 11.5, lineHeight: 1.85 }}>
               {languages.map((lang) => (

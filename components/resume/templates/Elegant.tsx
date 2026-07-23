@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 export default function ElegantTemplate() {
@@ -47,13 +48,13 @@ export default function ElegantTemplate() {
       </div>
 
       {visible("summary") && summary && (
-        <Section title="Perfil" color={color}>
+        <Section id="summary" title="Perfil" color={color}>
           <p className="text-xs text-gray-600 leading-relaxed text-center italic max-w-xl mx-auto">{summary}</p>
         </Section>
       )}
 
       {visible("workExperience") && workExperience.length > 0 && (
-        <Section title="Experiencia" color={color}>
+        <Section id="workExperience" title="Experiencia" color={color}>
           <div className="space-y-5">
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry flex gap-6">
@@ -77,7 +78,7 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
       )}
 
       {visible("education") && education.length > 0 && (
-        <Section title={label("education")} color={color}>
+        <Section id="education" title={label("education")} color={color}>
           <div className="space-y-4">
             {education.map((edu) => (
               <div key={edu.id} className="resume-entry flex gap-6">
@@ -98,7 +99,7 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
 
       <div className="grid grid-cols-2 gap-8 mt-2">
         {visible("skills") && skills.length > 0 && (
-          <Section title={label("skills")} color={color}>
+          <Section id="skills" title={label("skills")} color={color}>
             <div className="flex flex-wrap gap-1.5">
               {skills.map((skill) => (
                 <span key={skill.id} className="text-[10px] font-medium px-2.5 py-1 border" style={{ borderColor: color + "50", color }}>
@@ -109,7 +110,7 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
           </Section>
         )}
         {visible("languages") && languages.length > 0 && (
-          <Section title={label("languages")} color={color}>
+          <Section id="languages" title={label("languages")} color={color}>
             <div className="space-y-1.5">
               {languages.map((lang) => (
                 <div key={lang.id} className="flex justify-between items-center text-xs">
@@ -123,7 +124,7 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
       </div>
 
       {visible("certifications") && certifications.length > 0 && (
-        <Section title={label("certifications")} color={color}>
+        <Section id="certifications" title={label("certifications")} color={color}>
           <div className="space-y-1.5">
             {certifications.map((cert) => (
               <div key={cert.id} className="flex justify-between items-baseline text-xs">
@@ -136,7 +137,7 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
       )}
 
       {visible("hobbies") && hobbies && (
-        <Section title="Intereses" color={color}>
+        <Section id="hobbies" title="Intereses" color={color}>
           <p className="text-xs text-gray-600 italic leading-relaxed">{hobbies}</p>
         </Section>
       )}
@@ -144,11 +145,11 @@ ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
   )
 }
 
-function Section({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function Section({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-7">
-      <div className="flex items-center gap-3 mb-4 resume-section-title">
-        <div className="w-6 h-px" style={{ backgroundColor: color }} />
+      <div className="flex items-center gap-2.5 mb-4 resume-section-title">
+        <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2} />
         <h3 className="text-[10px] font-bold uppercase tracking-[0.35em] text-gray-500">{title}</h3>
         <div className="flex-1 h-px bg-gray-100" />
       </div>

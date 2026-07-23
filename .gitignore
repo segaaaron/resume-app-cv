@@ -96,3 +96,5 @@ ruvector.db
 .swarm/
 .claude-flow/
 memory/security_audit.md
+
+.thumbnail-cache/

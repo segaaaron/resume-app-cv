@@ -8,6 +8,7 @@
  */
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
@@ -86,13 +87,13 @@ export default function VogueTemplate() {
         <div className="flex-1 px-10 pt-6 pb-8">
 
           {visible("summary") && summary && (
-            <VogueSection title={label("summary")} color={color}>
+            <VogueSection id="summary" title={label("summary")} color={color}>
               <p className="text-[11.5px] text-gray-600 leading-relaxed italic">{summary}</p>
             </VogueSection>
           )}
 
           {visible("workExperience") && workExperience.length > 0 && (
-            <VogueSection title={label("workExperience")} color={color}>
+            <VogueSection id="workExperience" title={label("workExperience")} color={color}>
               <div className="space-y-4">
                 {workExperience.map((job) => (
                   <div key={job.id} className="resume-entry">
@@ -115,7 +116,7 @@ export default function VogueTemplate() {
           )}
 
           {visible("education") && education.length > 0 && (
-            <VogueSection title={label("education")} color={color}>
+            <VogueSection id="education" title={label("education")} color={color}>
               <div className="space-y-3">
                 {education.map((edu) => (
                   <div key={edu.id} className="resume-entry">
@@ -138,7 +139,7 @@ export default function VogueTemplate() {
           )}
 
           {visible("projects") && projects.length > 0 && (
-            <VogueSection title={label("projects")} color={color}>
+            <VogueSection id="projects" title={label("projects")} color={color}>
               <div className="space-y-3">
                 {projects.map((proj) => (
                   <div key={proj.id} className="resume-entry">
@@ -152,7 +153,7 @@ export default function VogueTemplate() {
           )}
 
           {visible("volunteer") && volunteer.length > 0 && (
-            <VogueSection title={label("volunteer")} color={color}>
+            <VogueSection id="volunteer" title={label("volunteer")} color={color}>
               <div className="space-y-3">
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
@@ -174,7 +175,7 @@ export default function VogueTemplate() {
         <div className="shrink-0 px-6 pt-6 pb-8" style={{ width: "175px", borderLeft: "1px solid #eee" }}>
 
           {visible("skills") && skills.length > 0 && (
-            <VogueSide title={label("skills")} color={color}>
+            <VogueSide id="skills" title={label("skills")} color={color}>
               <div className="space-y-1.5">
                 {skills.map((sk) => (
                   <div key={sk.id} className="flex items-center justify-between gap-1">
@@ -187,7 +188,7 @@ export default function VogueTemplate() {
           )}
 
           {visible("languages") && languages.length > 0 && (
-            <VogueSide title={label("languages")} color={color}>
+            <VogueSide id="languages" title={label("languages")} color={color}>
               <div className="space-y-1.5">
                 {languages.map((lang) => (
                   <div key={lang.id} className="flex items-center justify-between gap-1">
@@ -200,7 +201,7 @@ export default function VogueTemplate() {
           )}
 
           {visible("certifications") && certifications.length > 0 && (
-            <VogueSide title={label("certifications")} color={color}>
+            <VogueSide id="certifications" title={label("certifications")} color={color}>
               <div className="space-y-2">
                 {certifications.map((cert) => (
                   <div key={cert.id}>
@@ -215,7 +216,7 @@ export default function VogueTemplate() {
           )}
 
           {visible("hobbies") && hobbies && (
-            <VogueSide title={label("hobbies")} color={color}>
+            <VogueSide id="hobbies" title={label("hobbies")} color={color}>
               <p className="text-[11px] text-gray-600 leading-relaxed">{hobbies}</p>
             </VogueSide>
           )}
@@ -234,10 +235,11 @@ function MetaItem({ icon, text, color }: { icon: React.ReactNode; text: string; 
   )
 }
 
-function VogueSection({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function VogueSection({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <div className="flex items-center gap-3 mb-2.5 resume-section-title">
+      <div className="flex items-center gap-2 mb-2.5 resume-section-title">
+        <SectionIcon sectionId={id} color={color} size={12} strokeWidth={2.25} />
         <h2 className="text-[10px] font-extrabold uppercase tracking-[0.35em] whitespace-nowrap" style={{ color }}>{title}</h2>
         <div className="flex-1 h-px" style={{ backgroundColor: color + "40" }} />
       </div>
@@ -246,10 +248,13 @@ function VogueSection({ title, color, children }: { title: string; color: string
   )
 }
 
-function VogueSide({ title, color, children }: { title: string; color: string; children: React.ReactNode }) {
+function VogueSide({ id, title, color, children }: { id: string; title: string; color: string; children: React.ReactNode }) {
   return (
     <div className="mb-5">
-      <h3 className="text-[9.5px] font-extrabold uppercase tracking-[0.3em] mb-1.5 pb-1 resume-section-title" style={{ color, borderBottom: `1px solid ${color}30` }}>{title}</h3>
+      <h3 className="flex items-center gap-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.3em] mb-1.5 pb-1 resume-section-title" style={{ color, borderBottom: `1px solid ${color}30` }}>
+        <SectionIcon sectionId={id} color={color} size={10} strokeWidth={2.25} />
+        {title}
+      </h3>
       {children}
     </div>
   )

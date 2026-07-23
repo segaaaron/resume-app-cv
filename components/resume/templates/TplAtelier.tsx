@@ -16,6 +16,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -45,9 +46,9 @@ export default function TplAtelierTemplate() {
   const lastLine = pd.lastName || "Name"
   const place = [pd.city, pd.country].filter(Boolean).join(", ")
 
-  const AtH = ({ children }: { children: React.ReactNode }) => (
+  const AtH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.28em", textTransform: "uppercase", color: accent, margin: "20px 0 12px", fontWeight: 600 }}>
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
 
@@ -102,7 +103,7 @@ export default function TplAtelierTemplate() {
         <div>
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <AtH>{labelFor("workExperience")}</AtH>
+              <AtH id="workExperience">{labelFor("workExperience")}</AtH>
               {workExperience.map((e, i) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 18, breakInside: "avoid" }}>
                   <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
@@ -140,14 +141,14 @@ export default function TplAtelierTemplate() {
         <div>
           {visible("summary") && summary && (
             <>
-              <AtH>{labelFor("summary")}</AtH>
+              <AtH id="summary">{labelFor("summary")}</AtH>
               <p style={{ fontSize: 13, lineHeight: 1.6, color: muted, marginTop: 0 }}>{summary}</p>
             </>
           )}
 
           {visible("skills") && skills.length > 0 && (
             <>
-              <AtH>{labelFor("skills")}</AtH>
+              <AtH id="skills">{labelFor("skills")}</AtH>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {skills.map((s) => (
                   <span
@@ -171,7 +172,7 @@ export default function TplAtelierTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <AtH>{labelFor("education")}</AtH>
+              <AtH id="education">{labelFor("education")}</AtH>
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <div style={{ fontWeight: 600, fontSize: 13.5, color: ink }}>
@@ -191,7 +192,7 @@ export default function TplAtelierTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <AtH>{labelFor("languages")}</AtH>
+              <AtH id="languages">{labelFor("languages")}</AtH>
               {languages.map((l) => (
                 <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: muted }}>
                   <span style={{ fontWeight: 600 }}>{l.name}</span>
@@ -203,7 +204,7 @@ export default function TplAtelierTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <AtH>{labelFor("certifications")}</AtH>
+              <AtH id="certifications">{labelFor("certifications")}</AtH>
               {certifications.map((c) => (
                 <div key={c.id} style={{ fontSize: 12, color: muted, marginBottom: 4 }}>
                   {c.name}
@@ -214,7 +215,7 @@ export default function TplAtelierTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <>
-              <AtH>{labelFor("projects")}</AtH>
+              <AtH id="projects">{labelFor("projects")}</AtH>
               {projects.map((p) => (
                 <div key={p.id} style={{ fontSize: 13.5, color: muted, fontStyle: "italic", fontFamily: "inherit", marginBottom: 4 }}>
                   {p.name}

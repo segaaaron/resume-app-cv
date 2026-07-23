@@ -9,7 +9,8 @@ import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { isSuperAdmin, effectivePlan, canUsePremiumTemplates } from "@/lib/plans"
-import { Lock, Sparkles, Crown, ArrowRight, Check, Zap } from "lucide-react"
+import { Lock, Sparkles, Crown, ArrowRight, Check, Zap, ShieldCheck } from "lucide-react"
+import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
 import { PRO_IDS } from "@/components/editor/template-switcher"
 import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
 
@@ -236,7 +237,18 @@ export default async function TemplatesPage({
                 {visual.tag}
               </span>
             )}
-            {template.columns === "double" && (
+            {/* ATS-safe marker — single-column layouts parse cleanly in every ATS.
+                Derived from the canonical getTemplateAtsSafety (not columns alone,
+                so the dedicated "ats" template is always flagged). */}
+            {getTemplateAtsSafety(template.id) === "safe" ? (
+              <span
+                title={t("ats_safe")}
+                className="flex items-center gap-1 text-[9px] font-black uppercase tracking-wide px-1.5 py-0.5 rounded text-white leading-none shadow-sm"
+                style={{ background: "linear-gradient(135deg, #10B981 0%, #00A8CC 100%)" }}
+              >
+                <ShieldCheck className="h-2.5 w-2.5" /> ATS
+              </span>
+            ) : (
               <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-black/60 text-white leading-none">
                 2 col
               </span>
@@ -363,7 +375,7 @@ export default async function TemplatesPage({
                   <p className="text-cyan-100/75 mt-2">
                     {isEs
                       ? "Layouts únicos y tipografías premium que hacen que tu CV destaque entre cientos."
-                      : "Unique layouts and premium type that make your CV stand out from hundreds."}
+                      : "Unique layouts and premium type that make your Resume stand out from hundreds."}
                   </p>
                   <ul className="flex flex-wrap gap-x-5 gap-y-2 mt-4">
                     {(isEs

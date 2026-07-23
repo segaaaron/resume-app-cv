@@ -10,6 +10,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Geist", "Inter", system-ui, -apple-system, sans-serif'
@@ -42,9 +43,9 @@ export default function ShowPlumeTemplate() {
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase() || "·"
   const place = [pd.city, pd.country].filter(Boolean).join(", ")
 
-  const PlH = ({ children }: { children: React.ReactNode }) => (
+  const PlH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", textTransform: "uppercase", color: accent, margin: "16px 0 11px", fontWeight: 600 }}>
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
 
@@ -109,7 +110,7 @@ export default function ShowPlumeTemplate() {
         <div>
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <PlH>{labelFor("workExperience")}</PlH>
+              <PlH id="workExperience">{labelFor("workExperience")}</PlH>
               {workExperience.map((e, i) => (
                 <div key={e.id} className="resume-entry" style={{ display: "flex", gap: 14, marginBottom: 14, breakInside: "avoid" }}>
                   <span style={{ fontFamily: SERIF, fontSize: 24, fontStyle: "italic", color: accent }}>
@@ -143,7 +144,7 @@ export default function ShowPlumeTemplate() {
         <div style={{ fontFamily: "inherit" }}>
           {visible("skills") && skills.length > 0 && (
             <>
-              <PlH>{labelFor("skills")}</PlH>
+              <PlH id="skills">{labelFor("skills")}</PlH>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 14 }}>
                 {skills.map((s) => (
                   <span key={s.id} style={{ fontSize: 10, background: ink, color: paper, padding: "4px 10px", borderRadius: 2, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -156,7 +157,7 @@ export default function ShowPlumeTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <PlH>{labelFor("education")}</PlH>
+              <PlH id="education">{labelFor("education")}</PlH>
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <div style={{ fontFamily: "inherit", fontSize: 15 }}>
@@ -173,7 +174,7 @@ export default function ShowPlumeTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <PlH>{labelFor("certifications")}</PlH>
+              <PlH id="certifications">{labelFor("certifications")}</PlH>
               {certifications.map((c) => (
                 <div key={c.id} style={{ fontFamily: "inherit", fontSize: 15, fontStyle: "italic", color: "#4a4234", marginBottom: 4 }}>
                   {c.name}
@@ -184,7 +185,7 @@ export default function ShowPlumeTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <>
-              <PlH>{labelFor("projects")}</PlH>
+              <PlH id="projects">{labelFor("projects")}</PlH>
               {projects.map((p) => (
                 <div key={p.id} style={{ fontFamily: "inherit", fontSize: 15, fontStyle: "italic", color: "#4a4234", marginBottom: 4 }}>
                   {p.name}{p.role ? ` — ${p.role}` : ""}
@@ -195,7 +196,7 @@ export default function ShowPlumeTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <PlH>{labelFor("languages")}</PlH>
+              <PlH id="languages">{labelFor("languages")}</PlH>
               {languages.map((l) => (
                 <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#5a5142", padding: "3px 0" }}>
                   <span>{l.name}</span>
@@ -205,7 +206,7 @@ export default function ShowPlumeTemplate() {
             </>
           )}
 
-          <PlH>{config.language === "en" ? "Contact" : "Contacto"}</PlH>
+          <PlH id="personalDetails">{config.language === "en" ? "Contact" : "Contacto"}</PlH>
           <div style={{ fontSize: 10.5, color: "#5a5142", lineHeight: 1.9 }}>
             {pd.email}
             {pd.email && <br />}

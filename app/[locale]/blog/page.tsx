@@ -5,7 +5,8 @@ import Script from "next/script"
 import type { Metadata } from "next"
 import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, FileText, Sparkles, Target, Crosshair, Globe, ListChecks, AlertTriangle, PenLine, Mail, Megaphone, Code2, Scale, Sprout, ScanLine, Bot, GitCompare, List, GraduationCap, Route, Ruler, Columns3 } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
 export async function generateMetadata({
   params,
@@ -39,6 +40,35 @@ export async function generateMetadata({
       images: ["https://readycvv.com/og-image.png"],
     },
   }
+}
+
+// Each post gets a cover panel whose icon + color relate to THAT post's topic,
+// keyed on the stable English slug so no two categories collapse into the same
+// visual. A gradient + a topic-relevant icon reads as an image without shipping
+// a raster asset. Order matters: most specific slugs first. Falls back to brand.
+function coverFor(slug: string): { from: string; to: string; Icon: LucideIcon } {
+  const s = slug.toLowerCase()
+  if (/summary|resumen/.test(s)) return { from: "#d97706", to: "#7c2d12", Icon: PenLine }        // resume summary
+  if (/ingles|english|internacional/.test(s)) return { from: "#0d9488", to: "#0f2f3a", Icon: Globe } // international CV
+  if (/skill|habilidad/.test(s)) return { from: "#7c3aed", to: "#1e1b4b", Icon: ListChecks }     // skills
+  if (/recien|graduad|graduate/.test(s)) return { from: "#059669", to: "#052e2b", Icon: GraduationCap } // new grad
+  if (/cambio-carrera|career-change/.test(s)) return { from: "#ea580c", to: "#7c2d12", Icon: Route }    // career switch
+  if (/sin-experiencia|no-experience/.test(s)) return { from: "#16a34a", to: "#14532d", Icon: Sprout }  // no experience
+  if (/verbo|action-verb/.test(s)) return { from: "#4f46e5", to: "#1e1b4b", Icon: Sparkles }     // action verbs
+  if (/mistake|error/.test(s)) return { from: "#e11d48", to: "#4c0519", Icon: AlertTriangle }    // mistakes
+  if (/tailor|adaptar/.test(s)) return { from: "#0891b2", to: "#0e2a47", Icon: Crosshair }       // tailor to job
+  if (/length|longitud/.test(s)) return { from: "#2563eb", to: "#0e2a47", Icon: Ruler }          // resume length
+  if (/chronological|functional/.test(s)) return { from: "#6366f1", to: "#1e1b4b", Icon: Columns3 } // formats
+  if (/vs-resume|differences/.test(s)) return { from: "#475569", to: "#0f172a", Icon: GitCompare }   // CV vs resume
+  if (/objetivo/.test(s)) return { from: "#f59e0b", to: "#7c2d12", Icon: Target }                 // career objective
+  if (/ats/.test(s)) return { from: "#0891b2", to: "#0e2a47", Icon: ScanLine }                    // ATS
+  if (/bullet/.test(s)) return { from: "#1d4ed8", to: "#0e2a47", Icon: List }                     // bullet points
+  if (/con-ia|ai-cv|ai-resume/.test(s)) return { from: "#7c3aed", to: "#1e1b4b", Icon: Bot }      // AI CV
+  if (/gratuitos|-pago|free-vs|constructores|builder/.test(s)) return { from: "#334155", to: "#0f172a", Icon: Scale } // free vs paid
+  if (/carta|cover-letter|presentacion/.test(s)) return { from: "#db2777", to: "#500724", Icon: Mail } // cover letter
+  if (/desarrollador|developer|software/.test(s)) return { from: "#0e7490", to: "#0e2a47", Icon: Code2 } // dev CV
+  if (/marketing/.test(s)) return { from: "#1d4ed8", to: "#0e2a47", Icon: Megaphone }             // marketing CV
+  return { from: "#00D4FF", to: "#1a2e4a", Icon: FileText }
 }
 
 export default async function BlogIndexPage({
@@ -247,33 +277,61 @@ export default async function BlogIndexPage({
           </div>
 
           <div className="space-y-6">
-            {articles.map((article) => (
-              <Link
-                key={article.slug}
-                href={`/${locale}/blog/${article.slug}`}
-                className="group block bg-white border border-border rounded-2xl p-6 hover:shadow-md hover:border-primary/30 transition-all"
-              >
-                <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="text-xs font-semibold bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                        {article.tag}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        {article.readingTime} {tBlog("reading_time")}
-                      </span>
-                    </div>
-                    <h2 className="text-lg font-semibold mb-2 group-hover:text-primary transition-colors">
+            {articles.map((article) => {
+              const cover = coverFor(article.slug)
+              const CoverIcon = cover.Icon
+              return (
+                <Link
+                  key={article.slug}
+                  href={`/${locale}/blog/${article.slug}`}
+                  className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#1a2e4a]/8 bg-white shadow-[0_18px_40px_-16px_rgba(26,46,74,0.35),0_6px_12px_-6px_rgba(26,46,74,0.16)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_38px_70px_-20px_rgba(0,212,255,0.45),0_14px_28px_-12px_rgba(26,46,74,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D4FF] focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:flex-row"
+                >
+                  {/* Cover visual — gradient panel + big category icon (the "image") */}
+                  <div
+                    className="relative flex min-h-[150px] shrink-0 items-center justify-center overflow-hidden p-6 sm:w-56"
+                    style={{ backgroundImage: `linear-gradient(135deg, ${cover.from}, ${cover.to})` }}
+                  >
+                    {/* dotted texture */}
+                    <div
+                      aria-hidden
+                      className="absolute inset-0 opacity-[0.18]"
+                      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "16px 16px" }}
+                    />
+                    {/* gloss + concentric rings for depth */}
+                    <div aria-hidden className="absolute -left-8 -top-10 h-32 w-32 rounded-full bg-white/25 blur-2xl" />
+                    <div aria-hidden className="absolute -bottom-12 -right-12 h-40 w-40 rounded-full border border-white/20" />
+                    <div aria-hidden className="absolute -bottom-5 -right-5 h-24 w-24 rounded-full border border-white/10" />
+                    <CoverIcon
+                      aria-hidden
+                      strokeWidth={1.5}
+                      className="relative h-16 w-16 text-white drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
+                    />
+                    <span className="absolute left-3 top-3 inline-flex items-center rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+                      {article.readingTime} {tBlog("reading_time")}
+                    </span>
+                  </div>
+
+                  {/* Content */}
+                  <div className="relative flex flex-1 flex-col p-6">
+                    <span className="mb-2.5 inline-flex w-fit items-center rounded-full border border-[#00D4FF]/25 bg-gradient-to-r from-[#1a2e4a]/[0.06] to-[#00D4FF]/[0.10] px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-[#1a2e4a]">
+                      {article.tag}
+                    </span>
+                    <h2 className="text-xl font-bold leading-snug text-[#1a2e4a] transition-colors group-hover:text-[#0f6f8f]">
                       {article.title}
                     </h2>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="mt-2 flex-1 text-sm leading-relaxed text-[#1a2e4a]/60">
                       {article.desc}
                     </p>
+                    <span
+                      aria-hidden
+                      className="mt-5 flex h-9 w-9 items-center justify-center self-end rounded-full border border-[#1a2e4a]/10 bg-white text-[#1a2e4a]/50 shadow-sm transition-all duration-300 group-hover:border-transparent group-hover:bg-gradient-to-br group-hover:from-[#00D4FF] group-hover:to-[#4F8BFF] group-hover:text-[#0f1a2e] group-hover:shadow-[0_8px_20px_-6px_rgba(0,212,255,0.6)]"
+                    >
+                      <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5" />
+                    </span>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary shrink-0 mt-1 transition-colors" />
-                </div>
-              </Link>
-            ))}
+                </Link>
+              )
+            })}
           </div>
         </div>
       </main>

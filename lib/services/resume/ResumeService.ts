@@ -5,7 +5,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 
 const moduleLogger = createLogger("resume-service")
 import { AppError } from "@/lib/services/auth/AppError"
-import { DEFAULT_SECTIONS, ResumeSectionsSchema } from "@/types/resume"
+import { DEFAULT_SECTIONS, ResumeSectionsSchema, DEFAULT_TEMPLATE_ID } from "@/types/resume"
 import { getLimits, isActive, effectivePlan } from "@/lib/plans"
 import { nanoid } from "nanoid"
 import { z } from "zod"
@@ -175,7 +175,7 @@ export class ResumeService {
           title: "Mi CV",
           sections: DEFAULT_SECTIONS as object[],
           personalDetails: defaultData as object,
-          ...(templateId ? { templateId } : {}),
+          templateId: templateId ?? DEFAULT_TEMPLATE_ID,
         },
       })
     })
@@ -295,6 +295,7 @@ export class ResumeService {
           photoUrl:        original.photoUrl,
           photoPosition:   original.photoPosition,
           language:        translated.language,
+          translatedFromId: sourceId,
         },
       })
     })

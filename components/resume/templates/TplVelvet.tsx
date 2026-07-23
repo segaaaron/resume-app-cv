@@ -15,6 +15,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -47,9 +48,9 @@ export default function TplVelvetTemplate() {
   if (pd.website) contacts.push(["⌘", pd.website])
   if (place) contacts.push(["⌖", place])
 
-  const VeH = ({ children }: { children: React.ReactNode }) => (
+  const VeH = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ fontSize: 13.5, fontWeight: 800, color: accent, textTransform: "uppercase", letterSpacing: "0.08em", margin: "20px 0 12px" }}>
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{children}
     </div>
   )
 
@@ -156,7 +157,7 @@ export default function TplVelvetTemplate() {
 
           {visible("workExperience") && workExperience.length > 0 && (
             <>
-              <VeH>{labelFor("workExperience")}</VeH>
+              <VeH id="workExperience">{labelFor("workExperience")}</VeH>
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 16, position: "relative", paddingLeft: 20, breakInside: "avoid" }}>
                   <span
@@ -198,7 +199,7 @@ export default function TplVelvetTemplate() {
 
           {visible("projects") && projects.length > 0 && (
             <>
-              <VeH>{labelFor("projects")}</VeH>
+              <VeH id="projects">{labelFor("projects")}</VeH>
               {projects.map((p) => (
                 <div key={p.id} style={{ fontSize: 12.5, color: muted, marginBottom: 6 }}>
                   <strong style={{ color: ink }}>{p.name}</strong>
@@ -212,7 +213,7 @@ export default function TplVelvetTemplate() {
         <div>
           {visible("skills") && skills.length > 0 && (
             <>
-              <VeH>{labelFor("skills")}</VeH>
+              <VeH id="skills">{labelFor("skills")}</VeH>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 4 }}>
                 {skills.map((s) => (
                   <span
@@ -237,7 +238,7 @@ export default function TplVelvetTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <>
-              <VeH>{labelFor("languages")}</VeH>
+              <VeH id="languages">{labelFor("languages")}</VeH>
               {languages.map((l) => (
                 <div key={l.id} style={{ marginBottom: 9 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4 }}>
@@ -251,7 +252,7 @@ export default function TplVelvetTemplate() {
 
           {visible("education") && education.length > 0 && (
             <>
-              <VeH>{labelFor("education")}</VeH>
+              <VeH id="education">{labelFor("education")}</VeH>
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <div style={{ fontWeight: 700, fontSize: 13, color: ink }}>
@@ -270,7 +271,7 @@ export default function TplVelvetTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <>
-              <VeH>{labelFor("certifications")}</VeH>
+              <VeH id="certifications">{labelFor("certifications")}</VeH>
               {certifications.map((c) => (
                 <div key={c.id} style={{ fontSize: 12, color: muted, marginBottom: 4 }}>
                   {c.name}

@@ -85,7 +85,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
     },
     {
       key: "planillas",
-      label: "Planillas",
+      label: t("form.templates_tab") || "Templates",
       icon: <Layers className="h-[18px] w-[18px]" strokeWidth={1.8} />,
     },
   ]

@@ -8,6 +8,7 @@
 
 import type { ATSSubScores } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
+import { dedupe, partitionByPresence } from "@/lib/ats/core/matching"
 
 // The vocabulary is shared with the free /tools/ats-checker. This module used
 // to carry its own 13-group alias table while a curated 244-term dictionary sat
@@ -85,18 +86,15 @@ function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string
   if (unique.length === 0) {
     return { matched: [], missing: [], demonstrated: [], listedOnly: [], pct: null }
   }
-  const matched: string[] = []
-  const missing: string[] = []
+  // Presence (exact OR semantic) is the shared ATS-core primitive — the same
+  // loop the free tool runs. See lib/ats/core/matching.ts.
+  const { matched, missing } = partitionByPresence(unique, haystackNorm, semanticMatches)
   const demonstrated: string[] = []
   const listedOnly: string[] = []
-  for (const k of unique) {
-    // A keyword counts as present if the CV spells it exactly OR an embedding
-    // pass found a CV term semantically equivalent to it (see semantic-match.ts).
-    const exact = keywordPresent(k, haystackNorm)
-    if (!exact && !semanticMatches?.has(normalize(k))) { missing.push(k); continue }
-    matched.push(k)
+  for (const k of matched) {
     // Demonstrated still requires the keyword in the work experience text —
     // a semantic-only match is a claim (listed), not evidence of doing it.
+    const exact = keywordPresent(k, haystackNorm)
     if (exact && keywordPresent(k, evidenceNorm)) demonstrated.push(k)
     else listedOnly.push(k)
   }
@@ -107,20 +105,6 @@ function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string
     listedOnly,
     pct: Math.round((matched.length / unique.length) * 100),
   }
-}
-
-function dedupe(items: string[]): string[] {
-  const seen = new Set<string>()
-  const out: string[] = []
-  for (const raw of items) {
-    const item = raw.trim()
-    if (!item) continue
-    const key = normalize(item)
-    if (!key || seen.has(key)) continue
-    seen.add(key)
-    out.push(item)
-  }
-  return out
 }
 
 // Recency weight: a JD title token found in the candidate's CURRENT / target

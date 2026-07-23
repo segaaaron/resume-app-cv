@@ -54,7 +54,9 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "tailor-cv": 10,
   "ats-score": 10,
   "review-cv": 10,
-  "translate-cv": 20,
+  // 3/day: translation is idempotent (a CV is translated once and the copy is
+  // reused); this cap only bites the re-do case (user deleted the copy).
+  "translate-cv": 3,
 }
 
 export const AI_DAILY_CAP_WINDOW_MS = 24 * 60 * 60 * 1000
@@ -65,7 +67,6 @@ export type PlanLimits = {
   /** -1 = unlimited */
   maxCoverLetters: number
   canExportPdf: boolean
-  canImport: boolean
   /** Lifetime quota per AI endpoint. 0 = blocked. -1 = unlimited. */
   aiLimitsByEndpoint: Record<AiEndpointName, number>
 }
@@ -79,7 +80,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxResumes: -1,
     maxCoverLetters: -1,
     canExportPdf: true,
-    canImport: true,
     aiLimitsByEndpoint: {
       "fill-profile": -1,
       "improve-bullet": -1,
@@ -96,7 +96,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxResumes: 1,
     maxCoverLetters: 1,
     canExportPdf: false,
-    canImport: false,
     aiLimitsByEndpoint: {
       "fill-profile": 2,
       "improve-bullet": 2,
@@ -115,7 +114,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxResumes: 1,
     maxCoverLetters: 1,
     canExportPdf: true,
-    canImport: false,
     aiLimitsByEndpoint: {
       "fill-profile": 0,
       "improve-bullet": 0,
@@ -133,7 +131,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxResumes: -1,
     maxCoverLetters: -1,
     canExportPdf: true,
-    canImport: true,
     aiLimitsByEndpoint: {
       "fill-profile": -1,
       "improve-bullet": -1,
@@ -150,7 +147,6 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxResumes: -1,
     maxCoverLetters: -1,
     canExportPdf: true,
-    canImport: true,
     aiLimitsByEndpoint: {
       "fill-profile": -1,
       "improve-bullet": -1,
@@ -165,6 +161,24 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   },
 }
 
+
+// Anti-abuse import quota per plan — the SINGLE source of truth for whether a
+// plan can import and how often. Import is open to EVERY plan (a free import is a
+// conversion hook: bring your CV → see it in a template → hit the download gate →
+// upgrade), bounded per rolling window so a client loop / abusive user can't rack
+// up unbounded LLM cost. superadmin bypasses. Window is rolling (first import
+// starts the clock).
+const IMPORT_WEEK_WINDOW_MS = 7 * AI_DAILY_CAP_WINDOW_MS
+
+export function getImportQuota(plan: string): { limit: number; windowMs: number } {
+  switch (plan) {
+    case "PRO":     return { limit: 5,  windowMs: AI_DAILY_CAP_WINDOW_MS }   // 5/day
+    case "LIMITED": return { limit: 10, windowMs: AI_DAILY_CAP_WINDOW_MS }   // 10/day (managed)
+    case "SPRINT":  return { limit: 3,  windowMs: IMPORT_WEEK_WINDOW_MS }    // 3/week (7-day plan)
+    case "BASIC":   return { limit: 3,  windowMs: AI_DAILY_CAP_WINDOW_MS }   // 3/day
+    default:        return { limit: 1,  windowMs: AI_DAILY_CAP_WINDOW_MS }   // UNSUBSCRIBED: 1/day
+  }
+}
 
 export function isActive(
   plan: Plan | string,

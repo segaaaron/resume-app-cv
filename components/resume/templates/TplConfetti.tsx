@@ -10,6 +10,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif'
@@ -68,9 +69,9 @@ export default function TplConfettiTemplate() {
   if (place) contacts.push([<Pin key="i" />, place])
   if (pd.website) contacts.push([<Globe key="g" />, pd.website])
 
-  const Tab = ({ children }: { children: React.ReactNode }) => (
+  const Tab = ({ id, children }: { id: string; children: React.ReactNode }) => (
     <div style={{ display: "inline-block", background: "#2a1d34", color: "#fff", padding: "3px 12px", borderRadius: 20, fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 9, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-      {children}
+      <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5, color: "#fff" }} />{children}
     </div>
   )
 
@@ -132,7 +133,7 @@ export default function TplConfettiTemplate() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         {visible("workExperience") && workExperience.length > 0 && (
           <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, padding: "14px 16px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-            <Tab>{labelFor("workExperience")}</Tab>
+            <Tab id="workExperience">{labelFor("workExperience")}</Tab>
             {workExperience.map((e) => (
               <div key={e.id} className="resume-entry" style={{ marginBottom: 11, breakInside: "avoid" }}>
                 <div style={{ fontWeight: 700, fontSize: 13, color: "#2a1d34" }}>{e.jobTitle}</div>
@@ -155,7 +156,7 @@ export default function TplConfettiTemplate() {
         <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {visible("education") && education.length > 0 && (
             <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, padding: "14px 16px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              <Tab>{labelFor("education")}</Tab>
+              <Tab id="education">{labelFor("education")}</Tab>
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
                   <div style={{ fontWeight: 700, fontSize: 12.5, color: "#2a1d34" }}>
@@ -173,7 +174,7 @@ export default function TplConfettiTemplate() {
 
           {visible("skills") && skills.length > 0 && (
             <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, padding: "14px 16px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              <Tab>{labelFor("skills")}</Tab>
+              <Tab id="skills">{labelFor("skills")}</Tab>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {skills.map((s) => (
                   <span key={s.id} style={{ fontSize: 10.5, background: "linear-gradient(90deg,#f7849b,#b06ae0)", color: "#fff", padding: "3px 10px", borderRadius: 20, fontWeight: 600, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
@@ -186,7 +187,7 @@ export default function TplConfettiTemplate() {
 
           {visible("languages") && languages.length > 0 && (
             <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, padding: "14px 16px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              <Tab>{labelFor("languages")}</Tab>
+              <Tab id="languages">{labelFor("languages")}</Tab>
               {languages.map((l) => (
                 <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#4a3a52", padding: "3px 0" }}>
                   <span>{l.name}</span>
@@ -198,7 +199,7 @@ export default function TplConfettiTemplate() {
 
           {visible("certifications") && certifications.length > 0 && (
             <div style={{ background: "rgba(255,255,255,0.7)", borderRadius: 16, padding: "14px 16px", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
-              <Tab>{labelFor("certifications")}</Tab>
+              <Tab id="certifications">{labelFor("certifications")}</Tab>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
                 {certifications.map((c) => (
                   <span key={c.id} style={{ fontSize: 10.5, background: "#2a1d34", color: "#fff", padding: "3px 10px", borderRadius: 20, fontWeight: 600, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
