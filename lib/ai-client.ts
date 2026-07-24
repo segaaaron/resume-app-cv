@@ -20,8 +20,8 @@ export function getOpenAI(): OpenAI {
       timeout: Math.max(5_000, Number(process.env.OPENAI_TIMEOUT_MS ?? 60_000)),
       maxRetries: 3,
     })
-    // Cost guard: gpt-4o costs 17x gpt-4o-mini. A silent env change must
-    // leave a loud trace on every boot, while still allowing a deliberate upgrade.
+    // Cost guard: a silent env change must leave a loud trace on every boot,
+    // while still allowing a deliberate upgrade.
     if (AI_MODEL !== EXPECTED_AI_MODEL) {
       logger.warn(
         `AI_MODEL="${AI_MODEL}" difiere del esperado "${EXPECTED_AI_MODEL}" — verifica que el cambio sea intencional (impacto directo de costo por llamada)`,
@@ -32,16 +32,26 @@ export function getOpenAI(): OpenAI {
   return _openai
 }
 
-// Upgraded from gpt-4o-mini → gpt-4.1-mini for materially better instruction
-// following and prose on the CV tasks (extraction, ATS scoring, tailoring,
-// rewriting). Verified drop-in: same request shape (max_tokens, temperature,
-// response_format json_object) — no code migration, unlike gpt-5-mini which
-// requires max_completion_tokens. Cost ~2.6× per call, still cents/user/day.
-export const EXPECTED_AI_MODEL = "gpt-4.1-mini"
+// Baseline model for structured / high-volume tasks (profile fill, CV import,
+// ATS keyword extraction, tailoring, review, translation). Upgraded
+// gpt-4.1-mini → gpt-5.4-nano: newer generation with materially higher
+// intelligence + prose scores AND a LOWER price ($0.20/$1.25 vs $0.40/$1.60,
+// verified on the official OpenAI pricing page). gpt-5.4 is a REASONING model:
+// it requires max_completion_tokens and rejects temperature/top_p. That param
+// divergence is handled centrally in OpenAIClientAdapter — callers keep sending
+// max_tokens/temperature and the adapter normalizes per model, so no module had
+// to change its request shape.
+export const EXPECTED_AI_MODEL = "gpt-5.4-nano"
 
-// Shared model config. Prod can still override via the AI_MODEL env var — if an
-// AI_MODEL override is set in the deploy env, update it to gpt-4.1-mini too.
-export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-4.1-mini") as string
+// Shared model config. Prod can still override via the AI_MODEL env var — an
+// override to a non-GPT-5 model stays valid because the adapter only normalizes
+// params for the GPT-5 family and passes older models through untouched.
+export const AI_MODEL = (process.env.AI_MODEL ?? "gpt-5.4-nano") as string
+
+// Prose-quality model for user-facing generated text (summaries, bullet
+// rewrites, cover letters). gpt-5.4-mini trades a higher price ($0.75/$4.50) for
+// stronger fluency where the output IS the deliverable. Overridable per deploy.
+export const AI_MODEL_PROSE = (process.env.AI_MODEL_PROSE ?? "gpt-5.4-mini") as string
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score)

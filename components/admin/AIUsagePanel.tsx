@@ -13,10 +13,49 @@ interface AIUsageRow {
   lastUsedAt: string | null
 }
 
+interface AIBreakdownRow {
+  calls: number
+  promptTokens: number
+  completionTokens: number
+  costUsd: number
+}
+interface AIEndpointRow extends AIBreakdownRow {
+  endpoint: string
+}
+interface AIModelRow extends AIBreakdownRow {
+  model: string
+}
+
 interface AIUsageResponse {
-  totals: { calls: number; costUsd: number; activeUsers: number }
+  totals: {
+    calls: number
+    costUsd: number
+    activeUsers: number
+    promptTokens?: number
+    completionTokens?: number
+  }
+  byEndpoint?: AIEndpointRow[]
+  byModel?: AIModelRow[]
   rows: AIUsageRow[]
   total: number
+}
+
+// Human labels for the AI endpoints (the raw keys stored in AIUsageLog.endpoint).
+const ENDPOINT_LABELS: Record<string, string> = {
+  "fill-profile": "Fill Profile",
+  "import-cv": "Import CV",
+  "improve-bullet": "Improve Bullet",
+  "generate-summary": "Generate Summary",
+  "improve-summary": "Improve Summary",
+  "generate-cover-letter": "Generate Cover Letter",
+  "improve-cover-letter": "Improve Cover Letter",
+  "tailor-cv": "Tailor CV",
+  "ats-score": "ATS Score",
+  "review-cv": "Review CV",
+  "translate-cv": "Translate CV",
+}
+function endpointLabel(key: string): string {
+  return ENDPOINT_LABELS[key] ?? key
 }
 
 const PAGE_SIZE = 50
@@ -170,6 +209,81 @@ export default function AIUsagePanel() {
               </span>
             </div>
           </div>
+
+          {/* Breakdown: per-service + per-model */}
+          {((data.byEndpoint && data.byEndpoint.length > 0) || (data.byModel && data.byModel.length > 0)) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
+              {/* By service */}
+              {data.byEndpoint && data.byEndpoint.length > 0 && (
+                <div className="bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
+                  <div className="px-4 py-3 border-b border-[#D9E1ED] bg-[#f5f8fc] flex items-center gap-[7px]">
+                    <span className="inline-block w-[12px] h-[1.5px] bg-[#00D4FF] opacity-60" />
+                    <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#1a2e4a]">
+                      Cost by Service
+                    </span>
+                  </div>
+                  <div className="p-2">
+                    {data.byEndpoint.map((r) => {
+                      const pct = data.totals.costUsd > 0 ? (r.costUsd / data.totals.costUsd) * 100 : 0
+                      return (
+                        <div key={r.endpoint} className="px-2.5 py-2 rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
+                          <div className="flex items-baseline justify-between gap-3 mb-1">
+                            <span className="text-[12.5px] font-medium text-[#1a2e4a] truncate">{endpointLabel(r.endpoint)}</span>
+                            <span className="text-[12.5px] font-semibold text-[#00A8CC] tabular-nums shrink-0" style={{ fontFamily: "var(--mono,monospace)" }}>
+                              {formatCost(r.costUsd)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-[5px] rounded-full bg-[#F0F3F8] overflow-hidden">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[#00D4FF] to-[#00A8CC]" style={{ width: `${Math.max(2, pct)}%` }} />
+                            </div>
+                            <span className="text-[10.5px] text-[#6B7A8C] tabular-nums shrink-0 w-[68px] text-right" style={{ fontFamily: "var(--mono,monospace)" }}>
+                              {r.calls.toLocaleString()} · {pct.toFixed(0)}%
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* By model */}
+              {data.byModel && data.byModel.length > 0 && (
+                <div className="bg-white border border-[#D9E1ED] rounded-[10px] overflow-hidden">
+                  <div className="px-4 py-3 border-b border-[#D9E1ED] bg-[#f5f8fc] flex items-center gap-[7px]">
+                    <span className="inline-block w-[12px] h-[1.5px] bg-[#00D4FF] opacity-60" />
+                    <span className="text-[10px] font-bold tracking-[0.1em] uppercase text-[#1a2e4a]">
+                      Cost by Model
+                    </span>
+                  </div>
+                  <div className="p-2">
+                    {data.byModel.map((r) => {
+                      const pct = data.totals.costUsd > 0 ? (r.costUsd / data.totals.costUsd) * 100 : 0
+                      return (
+                        <div key={r.model} className="px-2.5 py-2 rounded-[7px] hover:bg-[rgba(0,212,255,0.03)] transition-colors">
+                          <div className="flex items-baseline justify-between gap-3 mb-1">
+                            <span className="text-[12px] font-medium text-[#1a2e4a] truncate" style={{ fontFamily: "var(--mono,monospace)" }}>{r.model}</span>
+                            <span className="text-[12.5px] font-semibold text-[#00A8CC] tabular-nums shrink-0" style={{ fontFamily: "var(--mono,monospace)" }}>
+                              {formatCost(r.costUsd)}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 h-[5px] rounded-full bg-[#F0F3F8] overflow-hidden">
+                              <div className="h-full rounded-full bg-gradient-to-r from-[#1a2e4a] to-[#3a5a8a]" style={{ width: `${Math.max(2, pct)}%` }} />
+                            </div>
+                            <span className="text-[10.5px] text-[#6B7A8C] tabular-nums shrink-0 w-[92px] text-right" style={{ fontFamily: "var(--mono,monospace)" }}>
+                              {formatTokens(r.promptTokens + r.completionTokens)} tok · {pct.toFixed(0)}%
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Table */}
           {data.rows.length === 0 ? (

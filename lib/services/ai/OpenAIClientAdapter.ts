@@ -18,9 +18,13 @@ const limit = pLimit(AI_CONCURRENCY)
 // as chat; used only to catch semantic keyword matches the exact matcher misses.
 export const EMBEDDING_MODEL = (process.env.AI_EMBEDDING_MODEL ?? "text-embedding-3-small") as string
 
+// Re-export the pure param helpers (defined in a db-free module for testability).
+export { isReasoningModel, normalizeParamsForModel } from "./shared/model-params"
+import { normalizeParamsForModel } from "./shared/model-params"
+
 export class OpenAIClientAdapter implements IAIClient {
   async chat(params: ChatParams): Promise<ChatCompletion> {
-    return limit(() => getOpenAI().chat.completions.create(params))
+    return limit(() => getOpenAI().chat.completions.create(normalizeParamsForModel(params)))
   }
 
   async embed(texts: string[]): Promise<number[][]> {

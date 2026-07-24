@@ -2,7 +2,7 @@
 import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
-  AI_MODEL,
+  AI_MODEL_PROSE,
   AI_TEMPERATURE_CREATIVE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
@@ -166,7 +166,7 @@ Reglas:
 Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo usando \\n\\n>"}`
 
     const response = await this.aiClient.chat({
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       max_tokens: 900,
       temperature: AI_TEMPERATURE_CREATIVE,
       response_format: { type: "json_object" },
@@ -198,11 +198,11 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
 
     const genUsage = response.usage
     logAIUsage(userId, "generate-cover-letter", {
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       plan,
       promptTokens: genUsage?.prompt_tokens ?? 0,
       completionTokens: genUsage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, genUsage?.prompt_tokens ?? 0, genUsage?.completion_tokens ?? 0),
+      costUsd: computeCostUsd(AI_MODEL_PROSE, genUsage?.prompt_tokens ?? 0, genUsage?.completion_tokens ?? 0),
     })
     return { body: html }
   }
@@ -320,7 +320,7 @@ La carta de arriba puede no tener ninguna cifra. Eso está BIEN y es muy común.
 Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el valor "improved", y una clave "versions" con un array de exactamente tres cadenas. Cada cadena es una carta reescrita entera — todos sus párrafos, separados por \\n\\n. Escribe las tres completas. Nada más en la respuesta.`
 
     const response = await this.aiClient.chat({
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       max_tokens: 1000,
       // improve-cover-letter uses 0.3 — must stay close to the original body
       // and avoid inventing metrics or technologies.
@@ -484,7 +484,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
 
     try {
       const res = await this.aiClient.chat({
-        model: AI_MODEL,
+        model: AI_MODEL_PROSE,
         max_tokens: 1000,
         temperature: AI_TEMPERATURE_STRUCTURED,
         response_format: { type: "json_object" },
@@ -517,11 +517,11 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     const promptTokens = (first?.prompt_tokens ?? 0) + (retry?.prompt_tokens ?? 0)
     const completionTokens = (first?.completion_tokens ?? 0) + (retry?.completion_tokens ?? 0)
     logAIUsage(userId, "improve-cover-letter", {
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       plan,
       promptTokens,
       completionTokens,
-      costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
+      costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens),
     })
   }
 }

@@ -61,6 +61,13 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
 
 export const AI_DAILY_CAP_WINDOW_MS = 24 * 60 * 60 * 1000
 
+// UNSUBSCRIBED can download their single (basic-template) CV a bounded number of
+// times per rolling 24h. This is a deliberate freemium loosening: the hard limits
+// that drive conversion stay in place (1 CV, no PRO templates, no translate/clone,
+// AI capped), so a few free downloads/day give a taste without removing the wall.
+// PRO templates are still blocked at download for this plan (see pdf route).
+export const UNSUBSCRIBED_DAILY_PDF_CAP = 3
+
 export type PlanLimits = {
   /** -1 = unlimited */
   maxResumes: number
@@ -96,13 +103,15 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxResumes: 1,
     maxCoverLetters: 1,
     canExportPdf: false,
+    // No AI of any kind: UNSUBSCRIBED fills the CV manually. Every content
+    // endpoint is blocked (0). Upgrading unlocks AI.
     aiLimitsByEndpoint: {
-      "fill-profile": 2,
-      "improve-bullet": 2,
-      "improve-summary": 2,
-      "generate-summary": 2,      "tailor-cv": 0,
-      "generate-cover-letter": 2,
-      "improve-cover-letter": 2,
+      "fill-profile": 0,
+      "improve-bullet": 0,
+      "improve-summary": 0,
+      "generate-summary": 0,      "tailor-cv": 0,
+      "generate-cover-letter": 0,
+      "improve-cover-letter": 0,
       "ats-score": 0,
       "review-cv": 0,
       "translate-cv": 0,
@@ -176,7 +185,9 @@ export function getImportQuota(plan: string): { limit: number; windowMs: number 
     case "LIMITED": return { limit: 10, windowMs: AI_DAILY_CAP_WINDOW_MS }   // 10/day (managed)
     case "SPRINT":  return { limit: 3,  windowMs: IMPORT_WEEK_WINDOW_MS }    // 3/week (7-day plan)
     case "BASIC":   return { limit: 3,  windowMs: AI_DAILY_CAP_WINDOW_MS }   // 3/day
-    default:        return { limit: 1,  windowMs: AI_DAILY_CAP_WINDOW_MS }   // UNSUBSCRIBED: 1/day
+    // UNSUBSCRIBED: import is AI-powered (LLM parse) → blocked. Free tier builds
+    // from scratch, no AI of any kind. limit 0 = the route hard-gates to upgrade.
+    default:        return { limit: 0,  windowMs: AI_DAILY_CAP_WINDOW_MS }   // UNSUBSCRIBED: blocked
   }
 }
 

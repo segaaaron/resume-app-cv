@@ -935,6 +935,7 @@
       "translate": "Traducir CV",
       "translate_loading": "Traduciendo tu CV…",
       "translate_success": "CV traducido — copia creada",
+      "translate_already": "Este CV ya tiene una traducción — abre la copia existente.",
       "translate_error": "No se pudo traducir el CV",
       "translate_daily_cap": "Alcanzaste el límite diario de traducciones. Intenta de nuevo mañana.",
       "translate_pro_only": "La traducción de CV es exclusiva del plan PRO.",

@@ -293,22 +293,35 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   }
 
   async function downloadPdf(resume: ResumeCard) {
-    // Freemium paywall: intercept on client before hitting the gated endpoint.
-    // Managed users get a neutral "expired access" message — no upgrade modal.
-    if (!isPro && !isManaged) {
-      openUpgradeModal("download")
-      return
-    }
+    // The free tier (UNSUBSCRIBED) may download its basic-template CV a bounded
+    // number of times/day — let it attempt; the server enforces the cap and
+    // returns a paywall status we funnel to the upgrade modal. Managed-expired
+    // users get a neutral message (no upsell).
     if (downloadingIds.has(resume.id)) return
     setDownloadingIds((prev) => new Set(prev).add(resume.id))
 
-    const download = async () => {
+    const toastId = toast.loading(t("pdf_loading"))
+    try {
       const res = await apiFetch(`/api/resumes/${resume.id}/pdf?locale=${locale}`)
       if (!res.ok) {
         if (res.status === 403 && isManaged) {
-          throw new Error(t("pdf_error_managed_expired"))
+          toast.error(t("pdf_error_managed_expired"), { id: toastId })
+          return
         }
-        throw new Error(t("pdf_error"))
+        // Daily free cap reached, or a paid-only template/plan → upgrade funnel
+        // (no error toast — the modal is the message).
+        const body = await res.json().catch(() => ({} as { error?: string }))
+        const paywall =
+          (res.status === 429 && body?.error === "free_daily_download_cap") ||
+          (res.status === 403 &&
+            (body?.error === "premium_template_requires_upgrade" || body?.error === "subscription_required"))
+        if (paywall) {
+          toast.dismiss(toastId)
+          openUpgradeModal("download")
+          return
+        }
+        toast.error(t("pdf_error"), { id: toastId })
+        return
       }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
@@ -319,21 +332,16 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       a.click()
       document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(url), 1_000)
-      return `${resume.title || "resume"}.pdf`
+      toast.success(`${resume.title || "resume"}.pdf`, { id: toastId })
+    } catch {
+      toast.error(t("pdf_error"), { id: toastId })
+    } finally {
+      setDownloadingIds((prev) => {
+        const next = new Set(prev)
+        next.delete(resume.id)
+        return next
+      })
     }
-
-    toast.promise(download(), {
-      loading: t("pdf_loading"),
-      success: (filename) => filename,
-      error: (err) => err instanceof Error ? err.message : t("pdf_error"),
-      finally: () => {
-        setDownloadingIds((prev) => {
-          const next = new Set(prev)
-          next.delete(resume.id)
-          return next
-        })
-      },
-    })
   }
 
   // ── Upgrade flow overlay ────────────────────────────────────────────────────

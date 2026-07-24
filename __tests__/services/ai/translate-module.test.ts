@@ -105,13 +105,35 @@ describe("AITranslateModule.translateCV", () => {
     expect(chat).not.toHaveBeenCalled()
   })
 
-  it("keeps originals when the AI call throws (batch failure is contained)", async () => {
+  it("throws only on a TOTAL service failure so no untranslated copy is persisted", async () => {
     const chat = vi.fn().mockRejectedValue(new Error("boom"))
+    const mod = new AITranslateModule({ chat } as never, logger as never)
+
+    // Every batch (and every split-retry) fails → nothing translated → must surface
+    // as an error, NEVER silently return originals. The route relies on this to
+    // avoid creating a copy that looks translated but isn't (which would block retry).
+    await expect(
+      mod.translateCV("u1", { sectionData: baseInput(), targetLang: "en" }, "PRO"),
+    ).rejects.toThrow("translate_service_error")
+    expect(logger.warn).toHaveBeenCalled()
+  })
+
+  it("self-heals a whole-batch failure by splitting and retrying smaller", async () => {
+    // Simulate the truncation failure mode: a multi-item batch blows up, but each
+    // item translates fine on its own. Split-and-retry must recover the FULL CV.
+    const chat = vi.fn(async ({ messages }: { messages: Array<{ role: string; content: string }> }) => {
+      const items = extractItems(messages)
+      if (items.length > 1) throw new Error("output truncated / unparseable JSON")
+      return reply(items.map((it) => ({ i: it.i, v: `EN(${it.s})` })))
+    })
     const mod = new AITranslateModule({ chat } as never, logger as never)
 
     const res = await mod.translateCV("u1", { sectionData: baseInput(), targetLang: "en" }, "PRO")
     const data = res.sectionData as ReturnType<typeof ResumeSectionsSchema.parse>
-    expect(data.summary).toBe("Resumen profesional")
-    expect(logger.warn).toHaveBeenCalled()
+
+    // Every segment ended up translated despite the initial batch failure.
+    expect(data.summary).toBe("EN(Resumen profesional)")
+    expect(data.workExperience[0].jobTitle).toBe("EN(Desarrollador)")
+    expect(data.workExperience[0].description).toBe("EN(• Hice cosas)")
   })
 })

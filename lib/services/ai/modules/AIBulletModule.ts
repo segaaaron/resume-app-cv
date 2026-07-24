@@ -1,6 +1,6 @@
 // lib/services/ai/modules/AIBulletModule.ts
 import { validateAIInput } from "@/lib/ai-safety"
-import { AI_MODEL, AI_TEMPERATURE_STRUCTURED, logAIUsage } from "@/lib/ai-client"
+import { AI_MODEL_PROSE, AI_TEMPERATURE_STRUCTURED, logAIUsage } from "@/lib/ai-client"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
@@ -108,7 +108,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"status": "improved", "improvements": [{"index": 0, "text": "• bullet mejorado"}]}`
 
     const response = await this.aiClient.chat({
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       max_tokens: 1200,
       // improve-bullet uses low temperature (0.3) to reduce hallucinations.
       temperature: AI_TEMPERATURE_STRUCTURED,
@@ -131,11 +131,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const usage = response.usage
     logAIUsage(userId, "improve-bullet", {
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       plan,
       promptTokens: usage?.prompt_tokens ?? 0,
       completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
 
     const raw = response.choices[0]?.message?.content ?? ""

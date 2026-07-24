@@ -6,6 +6,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 // ─── Mock ai-client.ts utilities ──────────────────────────────────────────────
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL: "gpt-4o-mini",
+  AI_MODEL_PROSE: "gpt-4o-mini",
   AI_TEMPERATURE: 0.4,
   AI_TEMPERATURE_CREATIVE: 0.7,
   AI_TEMPERATURE_PRECISE: 0.1,

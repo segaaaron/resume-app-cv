@@ -63,6 +63,14 @@ export async function POST(req: Request) {
   // compute. Every plan can import (free = conversion hook); the window bounds it.
   if (!isSuperAdmin(dbUser.role)) {
     const quota = getImportQuota(effectivePlan(dbUser))
+    // limit 0 = the plan can't import at all (UNSUBSCRIBED): a hard plan gate, not
+    // a "come back later" quota. Surface it as upgrade-required, before any compute.
+    if (quota.limit === 0) {
+      return NextResponse.json(
+        { error: "import_requires_upgrade", message: "La importación de CV no está disponible en tu plan. Mejora tu plan para importar." },
+        { status: 403 },
+      )
+    }
     const allowed = await checkAndIncrementRateLimit(session.user.id, "import-cv", quota.limit, quota.windowMs)
     if (!allowed) {
       return NextResponse.json(

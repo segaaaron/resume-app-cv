@@ -67,6 +67,12 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
     ? "PRO"
     : effectivePlan({ plan, subscriptionEndsAt: subscriptionEndsAt ? new Date(subscriptionEndsAt) : null })
 
+  // Free tier (UNSUBSCRIBED) may download its basic-template CV a few times/day —
+  // the server enforces the daily cap and blocks PRO templates. This only flips
+  // the download button from "locked → upgrade" to a real download; it does NOT
+  // grant any other paid capability (share, PRO templates, AI all stay gated).
+  const canDownloadFree = !hasAccess && effPlan === "UNSUBSCRIBED"
+
   const [mobileView, setMobileView] = useState<MobileView>("form")
 
   const TAB_CLS = (active: boolean) =>
@@ -80,7 +86,7 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
         {!isSuperAdmin(role) && !isManaged && (
           <UpgradeBanner plan={effPlan} />
         )}
-        <EditorTopBar hasAccess={hasAccess} />
+        <EditorTopBar hasAccess={hasAccess} canDownloadFree={canDownloadFree} />
 
         {/* Main body */}
         <div className="flex flex-1 overflow-hidden h-[calc(100dvh-64px)]">

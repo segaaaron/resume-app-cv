@@ -23,10 +23,10 @@ describe("getImportQuota — per-plan anti-abuse import limits", () => {
   it("BASIC: 3 per day", () => {
     expect(getImportQuota("BASIC")).toEqual({ limit: 3, windowMs: DAY })
   })
-  it("UNSUBSCRIBED (free): 1 per day", () => {
-    expect(getImportQuota("UNSUBSCRIBED")).toEqual({ limit: 1, windowMs: DAY })
+  it("UNSUBSCRIBED (free): import blocked — no AI of any kind (limit 0)", () => {
+    expect(getImportQuota("UNSUBSCRIBED")).toEqual({ limit: 0, windowMs: DAY })
   })
-  it("unknown plan falls back to the free tier (1/day)", () => {
-    expect(getImportQuota("whatever")).toEqual({ limit: 1, windowMs: DAY })
+  it("unknown plan falls back to the free tier (blocked, 0)", () => {
+    expect(getImportQuota("whatever")).toEqual({ limit: 0, windowMs: DAY })
   })
 })

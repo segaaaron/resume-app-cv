@@ -29,6 +29,11 @@ describe("plans · BASIC + SPRINT capabilities", () => {
       expect(l.aiLimitsByEndpoint["review-cv"]).toBe(0)
     })
 
+    it("UNSUBSCRIBED: ALL AI blocked (no free AI of any kind)", () => {
+      const l = getLimits("UNSUBSCRIBED")
+      expect(Object.values(l.aiLimitsByEndpoint).every((v) => v === 0)).toBe(true)
+    })
+
     it("unknown plan falls back to UNSUBSCRIBED limits", () => {
       expect(getLimits("WHATEVER")).toBe(PLAN_LIMITS.UNSUBSCRIBED)
     })

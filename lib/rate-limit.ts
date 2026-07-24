@@ -100,6 +100,27 @@ export async function checkAndIncrementRateLimit(userId: string, endpoint: strin
 }
 
 /**
+ * Refunds one slot after a failed operation that had already consumed the quota
+ * (e.g. a PDF render that errored after the daily-download counter was bumped).
+ * Decrements count by 1, floored at 0, and ONLY within the still-active window —
+ * if the window already reset, the failed request belonged to a prior window and
+ * the fresh count must not be touched. Best-effort: never throws.
+ */
+export async function refundRateLimit(userId: string, endpoint: string): Promise<void> {
+  try {
+    await db.$executeRaw`
+      UPDATE "AIRateLimit"
+      SET "count" = GREATEST("count" - 1, 0), "updatedAt" = ${new Date()}
+      WHERE "userId" = ${userId} AND "endpoint" = ${endpoint} AND "resetAt" >= NOW()
+    `
+    rateLimitCache.delete(cacheKey(userId, endpoint))
+  } catch {
+    // A lost refund only costs the user one slot until the window resets — never
+    // fail the caller's error path over it.
+  }
+}
+
+/**
  * Increments the usage counter for this key+endpoint.
  * Also updates the in-memory cache so the next checkRateLimit call reflects the increment.
  */

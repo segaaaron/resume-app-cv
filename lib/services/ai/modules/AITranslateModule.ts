@@ -28,6 +28,17 @@ import type { TranslateCVInput, TranslateCVResult } from "../shared/ai-types"
 const MAX_SEGMENT_CHARS = 6000
 const BATCH_MAX_ITEMS = 40
 const BATCH_MAX_CHARS = 6000
+// Hard ceiling for a batch's completion, safely under gpt-4.1-mini's output limit.
+// Replaces the old fixed 4000 clamp, which could truncate a legitimately large
+// batch mid-JSON → parse error → the batch "failed". Right-sizing the request +
+// this generous ceiling is the FIRST line of defense against truncation; the
+// split-and-retry below is the second.
+const AI_MAX_OUTPUT_TOKENS = 8000
+// If a batch still fails as a whole (transient API error / unparseable reply), it
+// is split in half and each half retried. A batch this size or smaller is NOT
+// split further — a single stubborn segment is left in its original language
+// (logged) rather than failing the whole CV. Total failure is caught upstream.
+const MIN_SPLIT_ITEMS = 1
 
 type TokenTotals = { prompt: number; completion: number }
 
@@ -124,8 +135,19 @@ export class AITranslateModule {
       await this.translateOneBatch(userId, texts, batchIdx, targetLang, plan, out, totals)
     }
 
-    // Any index the model dropped or that failed keeps its original text —
-    // a partially-translated CV never loses content.
+    // Failure guard: if NOTHING translated (every batch failed even after the
+    // split-and-retry above), that is a genuine service outage — throw so the
+    // route never persists an all-original copy that looks "done" and then blocks
+    // retry forever via the dedup. A PARTIAL result (some segments kept original,
+    // e.g. the model dropped an index or an oversized field) is by design returned
+    // intact — no user content is ever lost.
+    const done = out.reduce<number>((n, v) => (typeof v === "string" ? n + 1 : n), 0)
+    if (texts.length > 0 && done === 0) {
+      throw new Error("translate_service_error")
+    }
+
+    // Any single index the model omitted from an otherwise-successful batch keeps
+    // its original text — no content is lost.
     const translated = texts.map((orig, idx) => (typeof out[idx] === "string" ? (out[idx] as string) : orig))
     return { translated, totals }
   }
@@ -145,9 +167,15 @@ export class AITranslateModule {
 
     const system = `You are a professional resume translator. Translate every string in the input "items" array into ${targetName}, preserving meaning, register and professional tone. RULES: (1) Do NOT translate proper nouns — company names, product / technology / programming-language / framework names (React, Python, AWS, XCTest, Kubernetes, SQL…), brand names, or acronyms; leave them exactly as written. (2) Keep numbers, dates, percentages, URLs and emails unchanged. (3) Preserve bullet markers (•, -), line breaks and overall formatting. (4) Do NOT add, remove, summarize or embellish — translate only, one-to-one. Return ONLY a JSON object of the form {"t":[{"i":<index>,"v":"<translated string>"}]}, with exactly one entry per input index and nothing else.`
 
-    // Translations can expand ~1.6× vs source (ES↔EN) plus JSON overhead.
+    // Size the completion to THIS batch instead of a fixed clamp. Translation can
+    // expand ~1.8× vs source (ES↔EN) and the JSON wrapper adds ~12 chars/item;
+    // undersizing truncates the reply mid-JSON → parse error. Capped by the model
+    // ceiling. (~3 chars per token.)
     const approxChars = items.reduce((a, it) => a + it.s.length, 0)
-    const maxTokens = Math.min(4000, Math.ceil((approxChars / 3) * 1.6) + 200)
+    const maxTokens = Math.min(
+      AI_MAX_OUTPUT_TOKENS,
+      Math.ceil((approxChars * 1.8) / 3) + items.length * 12 + 300,
+    )
 
     try {
       const response = await this.aiClient.chat({
@@ -174,11 +202,29 @@ export class AITranslateModule {
       totals.prompt += usage?.prompt_tokens ?? 0
       totals.completion += usage?.completion_tokens ?? 0
     } catch (err) {
-      // A failed batch leaves its segments untranslated (fallback to original)
-      // rather than failing the whole request.
-      this.logger.warn("[AIService.translateCV] batch failed, keeping originals", {
+      this.logger.warn("[AIService.translateCV] batch failed", {
         size: batchIdx.length,
         error: err instanceof Error ? err.message : String(err),
+      })
+
+      // Self-healing: a whole-batch failure is usually a truncated / unparseable
+      // reply (too much output at once) or a transient API blip. Splitting in half
+      // and retrying each side shrinks the output so it fits AND spaces out the
+      // calls — most failures recover here. The SDK already retried the network
+      // layer 3×, so this targets the response-shape failures it can't fix.
+      if (batchIdx.length > MIN_SPLIT_ITEMS) {
+        const mid = Math.ceil(batchIdx.length / 2)
+        await this.translateOneBatch(userId, texts, batchIdx.slice(0, mid), targetLang, plan, out, totals)
+        await this.translateOneBatch(userId, texts, batchIdx.slice(mid), targetLang, plan, out, totals)
+        return
+      }
+
+      // A single segment still failing after all retries is left in its original
+      // language (never lost). The upstream ratio guard decides whether enough of
+      // the CV translated to be worth persisting — a widespread outage throws there
+      // so no half-baked copy is ever saved.
+      this.logger.warn("[AIService.translateCV] segment untranslatable, keeping original", {
+        globalIndex: batchIdx[0],
       })
     }
   }

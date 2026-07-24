@@ -20,9 +20,12 @@ import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 interface Props {
   hasAccess: boolean
+  /** UNSUBSCRIBED: may download its basic-template CV a few times/day. Flips the
+   *  download button from locked→upgrade to a real download; server caps it. */
+  canDownloadFree?: boolean
 }
 
-export default function EditorTopBar({ hasAccess }: Props) {
+export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Props) {
   const router = useRouter()
   const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, triggerThumbnail, sectionData } = useResumeStore(
     useShallow((s) => ({
@@ -179,13 +182,22 @@ export default function EditorTopBar({ hasAccess }: Props) {
     if (count > 0) {
       toast.warning(t("print.placeholder_warning", { count }), { duration: 6000 })
     }
-    if (isDirty && hasAccess) await save({ skipThumbnail: true }).catch(() => {})
+    if (isDirty && (hasAccess || canDownloadFree)) await save({ skipThumbnail: true }).catch(() => {})
     setDownloadingPdf(true)
     try {
       const res = await apiFetch(`/api/resumes/${resumeId}/pdf?locale=${locale}`)
       if (!res.ok) {
         if (res.status === 403 && isManaged) {
           toast.error(t("print.error_pdf_managed_expired"))
+          return
+        }
+        // Free tier hit its daily download cap, or tried a PRO template → funnel to upgrade.
+        const body = await res.json().catch(() => ({} as { error?: string }))
+        if (
+          (res.status === 429 && body?.error === "free_daily_download_cap") ||
+          (res.status === 403 && body?.error === "premium_template_requires_upgrade")
+        ) {
+          openUpgradeModal("download")
           return
         }
         const key = res.status === 403 ? "print.error_pdf_403"
@@ -367,8 +379,9 @@ export default function EditorTopBar({ hasAccess }: Props) {
           </div>
         )}
 
-        {/* Download PDF */}
-        {hasAccess ? (
+        {/* Download PDF — real button for paid plans AND the free tier (server
+            caps free downloads/day + blocks PRO templates). Locked → upgrade otherwise. */}
+        {hasAccess || canDownloadFree ? (
           <button
             disabled={!resumeId || downloadingPdf}
             onClick={handleDownloadPdf}

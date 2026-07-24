@@ -25,9 +25,12 @@ export const TemplateCard = memo(function TemplateCard({
 }: TemplateCardProps) {
   const [hover, setHover] = useState(false)
   const [visible, setVisible] = useState(false)
-  // Cached WebP (real template) is the fast path; if the screenshot service is
-  // unavailable the <img> errors and we render the live real template instead.
-  const [imgFailed, setImgFailed] = useState(false)
+  // Thumbnail source ladder, fastest → most resilient:
+  //   0 = pre-generated static WebP in /public (CDN, instant, zero runtime cost)
+  //   1 = on-demand /api/thumbnails/[id] (only for templates not yet pre-generated)
+  //   2 = live in-process render (MockTemplatePreview) — always the real template
+  // Each <img> onError bumps the step, so a missing/failed source degrades cleanly.
+  const [imgStep, setImgStep] = useState<0 | 1 | 2>(0)
   const cardRef = useRef<HTMLDivElement>(null)
   const active = isSelected && !locked
   const interactive = !locked
@@ -174,15 +177,16 @@ export const TemplateCard = memo(function TemplateCard({
           }}
         >
           {visible ? (
-            imgFailed ? (
+            imgStep === 2 ? (
               <MockTemplatePreview templateId={template.id} />
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={`/api/thumbnails/${template.id}`}
+                key={imgStep}
+                src={imgStep === 0 ? `/thumbnails/${template.id}.webp` : `/api/thumbnails/${template.id}`}
                 alt=""
                 className="w-full h-full object-cover object-top"
-                onError={() => setImgFailed(true)}
+                onError={() => setImgStep((s) => (s + 1) as 0 | 1 | 2)}
                 draggable={false}
                 loading="lazy"
               />

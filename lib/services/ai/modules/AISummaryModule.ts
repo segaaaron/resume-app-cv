@@ -1,7 +1,7 @@
 // lib/services/ai/modules/AISummaryModule.ts
 import { validateAIInput } from "@/lib/ai-safety"
 import {
-  AI_MODEL,
+  AI_MODEL_PROSE,
   AI_TEMPERATURE_GENERATIVE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
@@ -143,7 +143,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
 {"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
 
     const response = await this.aiClient.chat({
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       max_tokens: 600,
       // generate-summary uses 0.6 to keep variety across the 3 versions while
       // staying anchored to the candidate profile.
@@ -219,11 +219,11 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     const promptTokens = (usage?.prompt_tokens ?? 0) + (retryUsage?.promptTokens ?? 0)
     const completionTokens = (usage?.completion_tokens ?? 0) + (retryUsage?.completionTokens ?? 0)
     logAIUsage(userId, endpoint, {
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       plan,
       promptTokens,
       completionTokens,
-      costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
+      costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens),
     })
   }
 
@@ -419,7 +419,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
 {"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
 
     const response = await this.aiClient.chat({
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       max_tokens: 700,
       // improve-summary uses 0.3 — must stay close to the existing summary and
       // avoid inventing metrics or technologies.

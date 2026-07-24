@@ -33,28 +33,59 @@ export async function GET(req: Request) {
       : {}
 
   try {
-    // Aggregate per-user stats using groupBy
-    const grouped = await db.aIUsageLog.groupBy({
-      by: ["userId"],
-      where: dateFilter,
-      _sum: {
-        promptTokens: true,
-        completionTokens: true,
-        costUsd: true,
-      },
-      _count: {
-        id: true,
-      },
-      _max: {
-        createdAt: true,
-      },
-    })
+    // Three aggregations over the same window: per-user (paginated table),
+    // per-service (endpoint) and per-model. Run together — independent queries.
+    const [grouped, byEndpointRaw, byModelRaw] = await Promise.all([
+      db.aIUsageLog.groupBy({
+        by: ["userId"],
+        where: dateFilter,
+        _sum: { promptTokens: true, completionTokens: true, costUsd: true },
+        _count: { id: true },
+        _max: { createdAt: true },
+      }),
+      db.aIUsageLog.groupBy({
+        by: ["endpoint"],
+        where: dateFilter,
+        _sum: { promptTokens: true, completionTokens: true, costUsd: true },
+        _count: { id: true },
+      }),
+      db.aIUsageLog.groupBy({
+        by: ["model"],
+        where: dateFilter,
+        _sum: { promptTokens: true, completionTokens: true, costUsd: true },
+        _count: { id: true },
+      }),
+    ])
 
     const totalActiveUsers = grouped.length
 
     // Compute global totals
     const totalCalls = grouped.reduce((acc, r) => acc + (r._count.id ?? 0), 0)
     const totalCostUsd = grouped.reduce((acc, r) => acc + (r._sum.costUsd ?? 0), 0)
+    const totalPromptTokens = grouped.reduce((acc, r) => acc + (r._sum.promptTokens ?? 0), 0)
+    const totalCompletionTokens = grouped.reduce((acc, r) => acc + (r._sum.completionTokens ?? 0), 0)
+
+    // Per-service breakdown, most expensive first.
+    const byEndpoint = byEndpointRaw
+      .map((r) => ({
+        endpoint: r.endpoint || "(unknown)",
+        calls: r._count.id ?? 0,
+        promptTokens: r._sum.promptTokens ?? 0,
+        completionTokens: r._sum.completionTokens ?? 0,
+        costUsd: r._sum.costUsd ?? 0,
+      }))
+      .sort((a, b) => b.costUsd - a.costUsd)
+
+    // Per-model breakdown, most expensive first.
+    const byModel = byModelRaw
+      .map((r) => ({
+        model: r.model || "(unknown)",
+        calls: r._count.id ?? 0,
+        promptTokens: r._sum.promptTokens ?? 0,
+        completionTokens: r._sum.completionTokens ?? 0,
+        costUsd: r._sum.costUsd ?? 0,
+      }))
+      .sort((a, b) => b.costUsd - a.costUsd)
 
     // Paginate
     const pageRows = grouped.slice(offset, offset + limit)
@@ -86,7 +117,11 @@ export async function GET(req: Request) {
         calls: totalCalls,
         costUsd: totalCostUsd,
         activeUsers: totalActiveUsers,
+        promptTokens: totalPromptTokens,
+        completionTokens: totalCompletionTokens,
       },
+      byEndpoint,
+      byModel,
       rows,
       total: totalActiveUsers,
     })

@@ -7,6 +7,7 @@ import { Upload, Loader2, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 interface Props {
   disabled?: boolean
@@ -16,6 +17,7 @@ export default function ImportResumeButton({ disabled }: Props) {
   const t = useTranslations("dashboard.resumes")
   const locale = useLocale()
   const router = useRouter()
+  const { open: openUpgradeModal } = useUpgradeModal()
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
@@ -41,7 +43,14 @@ export default function ImportResumeButton({ disabled }: Props) {
       const data = await res.json()
 
       if (!res.ok) {
-        toast.error(data.error ?? t("import_error"))
+        // Plan can't import (UNSUBSCRIBED) → funnel to upgrade, not a raw error.
+        if (res.status === 403 && data?.error === "import_requires_upgrade") {
+          openUpgradeModal("pro-feature", { feature: t("import_button") })
+          setFile(null)
+          return
+        }
+        // Never surface the raw error code — prefer the server message, else a friendly string.
+        toast.error(typeof data?.message === "string" ? data.message : t("import_error"))
         setFile(null)
         return
       }

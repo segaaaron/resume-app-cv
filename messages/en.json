@@ -935,6 +935,7 @@
       "translate": "Translate Resume",
       "translate_loading": "Translating your Resume…",
       "translate_success": "Resume translated — copy created",
+      "translate_already": "This Resume already has a translation — open the existing copy.",
       "translate_error": "Could not translate the Resume",
       "translate_daily_cap": "You reached the daily translation limit. Try again tomorrow.",
       "translate_pro_only": "Resume translation is a PRO-only feature.",
