@@ -5,6 +5,20 @@
 // sub-scores and a single overall score IN CODE — no LLM, no randomness. The
 // same (keywords, CV) input always yields the same score, which is what makes
 // the ATS score trustworthy and reproducible (unlike an LLM-guessed number).
+//
+// WHY THIS COEXISTS WITH lib/ats/analyzer.ts (audited 2026-07-23 — do not "unify"):
+// The two engines measure different things because they receive different inputs.
+//   - analyzer.ts  ← plain text extracted from a PDF. Nothing else is knowable, so
+//     it scores keywords/format/sections/length/contact.
+//   - this module   ← structured resume data. Layout and length are decided by the
+//     template (and layout risk is already handled by template-ats-safety.ts), so
+//     it scores what only structure exposes: must-haves, title match with recency,
+//     and listed-vs-demonstrated evidence.
+// Everything that MUST agree is already shared: term normalization and presence
+// (lib/ats/vocabulary.ts), the match primitives (lib/ats/core/matching.ts) and the
+// skills dictionary. What remains apart is deliberately apart — merging the factor
+// sets would force each engine to score inputs it cannot see. See TITLE_CONNECTORS
+// below for why the two word lists must stay separate too.
 
 import type { ATSSubScores } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
@@ -50,9 +64,27 @@ export interface ATSMatchResult {
 // a JD that lists no soft skills never penalizes the candidate for it.
 const WEIGHTS = { hardSkills: 0.45, mustHaves: 0.2, title: 0.15, softSkills: 0.1, sections: 0.1 }
 
-const STOPWORDS = new Set([
-  "the", "and", "for", "with", "los", "las", "una", "uno", "del", "por", "con",
-  "de", "la", "el", "en", "y", "a", "of", "to", "in", "on", "at",
+/**
+ * Function words that glue a JOB TITLE together — "Head OF Design", "Ingeniero DE
+ * Sistemas", "Analyst FOR Risk". Dropping them leaves the tokens that identify the
+ * role, which is all titleScore compares.
+ *
+ * Named for its job, not "STOPWORDS", on purpose: the free tool's stopword list
+ * (lib/ats/analyzer.ts) strips PROSE from a job description and therefore swallows
+ * "team", "support", "key", "lead-adjacent" verbs — words that carry the entire
+ * meaning of a title ("Team Lead", "Support Engineer"). The two lists must never be
+ * merged; sharing them would silently move every user's title sub-score. A name
+ * that states the purpose is the cheapest guard against that.
+ *
+ * Only 3+ character entries belong here: titleScore filters `length > 2` before
+ * consulting this set, so shorter words (de/la/el/of/to/in) are already gone and
+ * listing them again is dead weight.
+ */
+const TITLE_CONNECTORS = new Set([
+  // EN
+  "the", "and", "for", "with",
+  // ES
+  "los", "las", "una", "uno", "unos", "unas", "del", "por", "con", "para",
 ])
 
 /**
@@ -117,7 +149,7 @@ const RECENCY_OLD_TITLE_CREDIT = 0.6
 
 function titleScore(jdTitle: string, cvTitlesNorm: string, recentTitlesNorm?: string): number | null {
   const norm = normalize(jdTitle)
-  const tokens = norm.split(" ").filter((w) => w.length > 2 && !STOPWORDS.has(w))
+  const tokens = norm.split(" ").filter((w) => w.length > 2 && !TITLE_CONNECTORS.has(w))
   if (tokens.length === 0) return null
   const present = (tk: string, hay: string) => new RegExp(`(^|[^a-z0-9])${escapeRegExp(tk)}`).test(hay)
   let hits = 0

@@ -208,7 +208,7 @@ export default function DashboardNav({
             <NavSeparator />
             <SectionLabel label={t("section_import")} />
             <div className="px-[11px] py-[6px]" onClick={onDrawerClose}>
-              <ImportResumeButton disabled={!isPro} />
+              <ImportResumeButton locked={!isPro} />
             </div>
           </div>
         )}

@@ -3,17 +3,23 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations, useLocale } from "next-intl"
-import { Upload, Loader2, FileText } from "lucide-react"
+import { Upload, Loader2, FileText, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 interface Props {
-  disabled?: boolean
+  /**
+   * Plan does not include import. The button stays VISIBLE and CLICKABLE and opens
+   * the upgrade modal — it used to render `disabled`, which is a dead end: the user
+   * sees a feature they cannot reach and is told nothing about how to get it. A
+   * locked control that explains itself is the funnel; a greyed one is a wall.
+   */
+  locked?: boolean
 }
 
-export default function ImportResumeButton({ disabled }: Props) {
+export default function ImportResumeButton({ locked }: Props) {
   const t = useTranslations("dashboard.resumes")
   const locale = useLocale()
   const router = useRouter()
@@ -22,8 +28,19 @@ export default function ImportResumeButton({ disabled }: Props) {
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
 
+  /** Locked plans never reach the file picker — asking for a file we will refuse
+   *  wastes the user's upload and delivers the paywall as an error. Sell first. */
+  function handleClick() {
+    if (uploading) return
+    if (locked) {
+      openUpgradeModal("pro-feature", { feature: t("import_button") })
+      return
+    }
+    inputRef.current?.click()
+  }
+
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
-    if (disabled) return
+    if (locked) return
     const f = e.target.files?.[0]
     if (!f) return
     setFile(f)
@@ -81,8 +98,8 @@ export default function ImportResumeButton({ disabled }: Props) {
 
       <Button
         variant="outline"
-        onClick={() => { if (!disabled && !uploading) inputRef.current?.click() }}
-        disabled={uploading || disabled}
+        onClick={handleClick}
+        disabled={uploading}
         className="gap-2"
       >
         {uploading ? (
@@ -92,7 +109,9 @@ export default function ImportResumeButton({ disabled }: Props) {
           </>
         ) : (
           <>
-            <Upload className="h-4 w-4" />
+            {/* Lock instead of Upload when gated — the control must LOOK gated, or
+                the upgrade modal reads as a bait-and-switch. */}
+            {locked ? <Lock className="h-4 w-4 text-primary/70" /> : <Upload className="h-4 w-4" />}
             {t("import_button")}
           </>
         )}

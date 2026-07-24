@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { isReasoningModel, normalizeParamsForModel } from "@/lib/services/ai/shared/model-params"
+import { isReasoningModel, isModelUnavailableError, normalizeParamsForModel } from "@/lib/services/ai/shared/model-params"
 import type { ChatParams } from "@/lib/interfaces/IAIClient"
 
 const base = (model: string): ChatParams =>
@@ -77,5 +77,29 @@ describe("normalizeParamsForModel", () => {
   it("never sets reasoning_effort on GPT-4 models", () => {
     const out = normalizeParamsForModel(base("gpt-4.1-mini")) as unknown as Record<string, unknown>
     expect(out.reasoning_effort).toBeUndefined()
+  })
+})
+
+describe("isModelUnavailableError", () => {
+  it("flags an unknown/ungranted model id", () => {
+    expect(isModelUnavailableError({ status: 404, error: { code: "model_not_found" } })).toBe(true)
+    expect(isModelUnavailableError({ code: "model_not_found" })).toBe(true)
+    expect(isModelUnavailableError({ status: 404 })).toBe(true)
+  })
+
+  it("flags a tier/org without access to the model", () => {
+    expect(
+      isModelUnavailableError({ status: 403, error: { message: "You do not have access to model gpt-5.4-nano" } }),
+    ).toBe(true)
+    expect(isModelUnavailableError({ message: "The model `gpt-5.4-nano` does not exist" })).toBe(true)
+  })
+
+  it("does NOT flag failures a different model would not fix", () => {
+    expect(isModelUnavailableError({ status: 429, error: { code: "rate_limit_exceeded" } })).toBe(false)
+    expect(isModelUnavailableError({ status: 400, error: { code: "invalid_request_error" } })).toBe(false)
+    expect(isModelUnavailableError({ status: 500 })).toBe(false)
+    expect(isModelUnavailableError(new Error("socket hang up"))).toBe(false)
+    expect(isModelUnavailableError(null)).toBe(false)
+    expect(isModelUnavailableError(undefined)).toBe(false)
   })
 })

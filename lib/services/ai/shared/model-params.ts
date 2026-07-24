@@ -2,11 +2,46 @@
 // client/db import so they are unit-testable in isolation.
 import type { ChatParams } from "@/lib/interfaces/IAIClient"
 
-// Reasoning depth for the GPT-5 family. Set DELIBERATELY (not left to the API's
-// implicit default) so cost/latency are predictable: "low" gives a small
-// accuracy lift on extraction/ATS/rewrite for a modest reasoning-token cost.
-// Tune per deploy: "none"/"minimal" = cheapest, "medium"/"high" = more thorough.
-export const REASONING_EFFORT = (process.env.AI_REASONING_EFFORT ?? "low") as string
+// Reasoning depth for the GPT-5 family. Set DELIBERATELY (not left implicit) so
+// cost/latency are predictable.
+//
+// Default "none" — which is also OpenAI's own default for GPT-5.4 — because this
+// product's analysis does NOT live in the model: the ATS score, keyword matching
+// and quality checks are deterministic code, and the model is asked to WRITE, not
+// to deduce ("el algoritmo detecta, la IA redacta"). Reasoning tokens bill at the
+// output rate ($1.25/1M nano · $4.50/1M mini) on EVERY call, so paying for depth
+// the prompt doesn't exercise is pure margin loss.
+//
+// Honest caveat: neither "none" nor the previous "low" has been measured against
+// real output. If quality regresses, raise it per deploy without a code change —
+// "minimal"/"low" are the next steps up, "medium"/"high"/"xhigh" are thorough and
+// expensive. The cost of each setting is visible per service in the admin AI
+// dashboard, so a change can be judged on real spend.
+export const REASONING_EFFORT = (process.env.AI_REASONING_EFFORT ?? "none") as string
+
+// Last-known-good model to fall back to if the configured one is unavailable to
+// this API key (see isModelUnavailableError). Deliberately a NON-reasoning model
+// from the previous generation: it has no rollout/tier gating left to fail on.
+export const FALLBACK_MODEL = (process.env.AI_MODEL_FALLBACK ?? "gpt-4.1-mini") as string
+
+/**
+ * True when the provider rejected the request because the MODEL itself is not
+ * usable by this key — wrong/unknown id, not yet rolled out to the org, or a tier
+ * that lacks access. Distinguished from every other failure (rate limit, timeout,
+ * bad params, content filter) because only this one is fixed by switching models;
+ * retrying anything else on a different model would mask real bugs.
+ */
+export function isModelUnavailableError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false
+  const e = err as { status?: number; code?: string; error?: { code?: string; message?: string }; message?: string }
+  const code = e.code ?? e.error?.code
+  if (code === "model_not_found") return true
+  // 404 on chat/completions is always "no such model" — the path itself exists.
+  if (e.status === 404) return true
+  const message = `${e.error?.message ?? ""} ${e.message ?? ""}`.toLowerCase()
+  if (e.status === 403 && (message.includes("model") || message.includes("access"))) return true
+  return message.includes("does not exist") || message.includes("do not have access to")
+}
 
 /** True for OpenAI reasoning models (GPT-5 family, o-series) that use a different
  *  request contract than the GPT-4 family. */

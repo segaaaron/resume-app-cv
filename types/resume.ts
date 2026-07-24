@@ -551,3 +551,15 @@ export function buildSections(lang: "es" | "en" = "es"): ResumeSection[] {
 }
 
 export const DEFAULT_SECTIONS: ResumeSection[] = buildSections("es")
+
+/**
+ * How many templates actually ship. Single source of truth for every public claim
+ * about the catalogue — marketing copy, SEO metadata, JSON-LD `numberOfItems`.
+ *
+ * Hardcoded numbers drifted here before: the site advertised "164+ templates"
+ * while TEMPLATES held 128, across 57 strings in two locales plus structured data
+ * Google indexes. A number a visitor can count must be derived, never typed.
+ * The localized strings that cannot import it are covered by a test instead
+ * (__tests__/lib/template-count.test.ts).
+ */
+export const TEMPLATE_COUNT = TEMPLATES.length

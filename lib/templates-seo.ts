@@ -1,5 +1,5 @@
 /**
- * SEO metadata layer for the 164 CV templates.
+ * SEO metadata layer for the CV templates (count = TEMPLATES.length).
  *
  * Strategy:
  * 1. Source of truth = `TEMPLATES` in /types/resume.ts.

@@ -4,6 +4,7 @@ import { memo, useEffect, useRef, useState } from "react"
 import { Lock, Check, ShieldCheck } from "lucide-react"
 import { TEMPLATES, TemplateId } from "@/types/resume"
 import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
+import { hasStaticThumbnail } from "@/lib/resume/static-thumbnails"
 // Real, scaled template render (same component the public gallery uses) so the
 // card matches EXACTLY what the user gets on selection — not a hand-drawn *Thumb.
 import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
@@ -29,8 +30,13 @@ export const TemplateCard = memo(function TemplateCard({
   //   0 = pre-generated static WebP in /public (CDN, instant, zero runtime cost)
   //   1 = on-demand /api/thumbnails/[id] (only for templates not yet pre-generated)
   //   2 = live in-process render (MockTemplatePreview) — always the real template
-  // Each <img> onError bumps the step, so a missing/failed source degrades cleanly.
-  const [imgStep, setImgStep] = useState<0 | 1 | 2>(0)
+  // Each <img> onError bumps the step, so a failed source degrades cleanly. We START
+  // at the first step that CAN succeed. Probing a static file that was never generated
+  // 404s once per template (~99 console errors + 99 wasted requests per visit), and
+  // step 1 on a cold gallery is exactly the screenshot stampede the static files exist
+  // to prevent (~27 concurrent shots → 503 → step 2 anyway). So with no manifest entry
+  // we go straight to the live render: no network, no errors, always the real template.
+  const [imgStep, setImgStep] = useState<0 | 1 | 2>(hasStaticThumbnail(template.id) ? 0 : 2)
   const cardRef = useRef<HTMLDivElement>(null)
   const active = isSelected && !locked
   const interactive = !locked

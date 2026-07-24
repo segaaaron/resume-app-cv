@@ -23,6 +23,7 @@ import { TEMPLATES } from "../types/resume"
 import { callScreenshotService } from "../lib/pdf/pdf-service-client"
 
 const OUT_DIR = path.join(process.cwd(), "public", "thumbnails")
+const MANIFEST_FILE = path.join(process.cwd(), "lib", "resume", "static-thumbnails.ts")
 const CONCURRENCY = 3 // well under the microservice's 6-page limit; leaves room for real PDF traffic
 const FORCE = process.argv.includes("--force")
 
@@ -51,6 +52,50 @@ async function shootOne(id: string): Promise<Result> {
   } catch (err) {
     return { id, status: "failed", detail: err instanceof Error ? err.message : String(err) }
   }
+}
+
+/**
+ * Rewrite lib/resume/static-thumbnails.ts from what is ACTUALLY on disk.
+ *
+ * The card reads this manifest to decide whether to request the static file at all.
+ * Deriving it from the directory (not from this run's results) keeps it truthful
+ * across partial runs, `--force` re-shoots and manually deleted files.
+ */
+async function writeManifest(): Promise<number> {
+  const files = await fs.readdir(OUT_DIR)
+  const ids = files
+    .filter((f) => f.endsWith(".webp"))
+    .map((f) => f.slice(0, -".webp".length))
+    .sort()
+
+  const entries = ids.length > 0
+    ? ids.map((id) => `  ${JSON.stringify(id)},`).join("\n")
+    : "  // (empty until scripts/generate-template-thumbnails.ts runs against the PDF service)"
+
+  const source = `/**
+ * Which templates have a pre-generated static WebP in \`public/thumbnails/\`.
+ *
+ * GENERATED — do not hand-edit the array. \`scripts/generate-template-thumbnails.ts\`
+ * rewrites it from what actually landed on disk after every run.
+ *
+ * WHY this exists: \`TemplateCard\` walks a source ladder (static WebP → on-demand
+ * \`/api/thumbnails/[id]\` → live render). Without a manifest the card had to *probe*
+ * the static file and rely on \`onError\` to fall through, which fired a real 404 per
+ * template — ~99 red errors in the console on every visit to the Templates tab, plus
+ * 99 wasted round trips. The card now starts at the first step that can actually
+ * succeed, so a template with no pre-generated file never requests one.
+ */
+export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
+${entries}
+])
+
+/** True when \`public/thumbnails/<id>.webp\` is known to exist. */
+export function hasStaticThumbnail(templateId: string): boolean {
+  return STATIC_THUMBNAIL_IDS.has(templateId)
+}
+`
+  await fs.writeFile(MANIFEST_FILE, source, "utf8")
+  return ids.length
 }
 
 /** Run `tasks` with at most `limit` in flight at once. */
@@ -90,7 +135,11 @@ async function main(): Promise<void> {
     console.log(`  ${icon} ${r.id.padEnd(22)} ${r.status}${r.detail ? ` — ${r.detail}` : ""}`)
   }
 
-  console.log(`\n▶ Done: ${written.length} written · ${skipped.length} skipped · ${failed.length} failed`)
+  // Always refresh the manifest — even on a partial run, so the card only requests
+  // files that exist. Without this the WebPs are on disk but no card ever asks for them.
+  const manifestCount = await writeManifest()
+  console.log(`\n▶ Manifest: ${manifestCount} id(s) → ${path.relative(process.cwd(), MANIFEST_FILE)}`)
+  console.log(`▶ Done: ${written.length} written · ${skipped.length} skipped · ${failed.length} failed`)
   if (failed.length > 0) {
     console.error(`✖ ${failed.length} template(s) failed — cards fall back to a live render for those. Re-run to retry.`)
     process.exit(1)

@@ -28,7 +28,8 @@ import type { TranslateCVInput, TranslateCVResult } from "../shared/ai-types"
 const MAX_SEGMENT_CHARS = 6000
 const BATCH_MAX_ITEMS = 40
 const BATCH_MAX_CHARS = 6000
-// Hard ceiling for a batch's completion, safely under gpt-4.1-mini's output limit.
+// Hard ceiling for a batch's completion, safely under the output limit of every
+// model we run (kept model-agnostic so a model swap can't silently invalidate it).
 // Replaces the old fixed 4000 clamp, which could truncate a legitimately large
 // batch mid-JSON → parse error → the batch "failed". Right-sizing the request +
 // this generous ceiling is the FIRST line of defense against truncation; the

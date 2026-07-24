@@ -261,7 +261,7 @@ export default function DashboardShell({
               {segment === "resumes" && (
                 <>
                   <div className="hidden sm:block">
-                    <ImportResumeButton disabled={!isPro} />
+                    <ImportResumeButton locked={!isPro} />
                   </div>
                   <TopbarNewCVButton locale={locale} isPro={isPro} />
                 </>

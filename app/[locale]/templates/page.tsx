@@ -1,6 +1,6 @@
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
-import { TEMPLATES } from "@/types/resume"
+import { TEMPLATES, TEMPLATE_COUNT } from "@/types/resume"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import type { Metadata } from "next"
@@ -21,9 +21,9 @@ const jsonLdItemList = {
   "@context": "https://schema.org",
   "@type": "ItemList",
   name: "Professional Resume Templates — ReadyCVV",
-  description: "164+ ATS-optimized professional resume templates for every industry",
+  description: `${TEMPLATE_COUNT} ATS-optimized professional resume templates for every industry`,
   url: "https://readycvv.com/templates",
-  numberOfItems: 164,
+  numberOfItems: TEMPLATE_COUNT,
   itemListElement: [
     { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://readycvv.com/templates#featured" },
     { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://readycvv.com/templates#city" },

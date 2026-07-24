@@ -81,3 +81,37 @@ describe("computeATSMatch — listed vs demonstrated", () => {
     expect(r.listedOnlyKeywords).not.toContain("GraphQL")
   })
 })
+
+/**
+ * The title sub-score tokenizes a job title by dropping FUNCTION words only.
+ * These lock in the boundary against the recurring "just share one stopword list
+ * with the free analyzer" refactor — that list strips prose from a job
+ * description and swallows words that ARE the title.
+ */
+describe("computeATSMatch — title tokenization", () => {
+  const SECTIONS = { summary: true, work: true, skills: true, education: true }
+  const NO_KEYWORDS = { hardSkills: [], softSkills: [], mustHaves: [] }
+  const titlePct = (jdTitle: string, cvTitles: string) =>
+    computeATSMatch({ ...NO_KEYWORDS, jobTitle: jdTitle }, "", cvTitles, SECTIONS).subScores.title
+
+  it("keeps words the free analyzer treats as prose filler", () => {
+    // "team" and "support" are stopwords for the JD-prose scanner. Here they carry
+    // the whole title — dropping them would score any *Lead / any *Engineer as 100%.
+    expect(titlePct("Team Lead", "Team Lead")).toBe(100)
+    expect(titlePct("Team Lead", "Tech Lead")).toBe(50)
+    expect(titlePct("Support Engineer", "Sales Engineer")).toBe(50)
+  })
+
+  it("ignores connectors so they cannot inflate the match", () => {
+    // "of"/"de" are length-filtered; "for"/"para"/"the"/"del" come off the list.
+    expect(titlePct("Head of Design", "Design Director")).toBe(50)
+    expect(titlePct("Ingeniero de Sistemas", "Sistemas Distribuidos")).toBe(50)
+    // "for"/"the" drop out; analyst·risk·team survive → 2 of 3 matched.
+    expect(titlePct("Analyst for the Risk Team", "Risk Analyst")).toBe(67)
+    expect(titlePct("Desarrollador para Web", "Desarrollador Web")).toBe(100)
+  })
+
+  it("returns null when a title is nothing but connectors", () => {
+    expect(titlePct("the and for", "Engineer")).toBeNull()
+  })
+})
