@@ -394,9 +394,9 @@ export default async function ObjetivoProfesionalPage({
               <BlogCTA
                 locale={locale}
                 title="Crea tu CV con un objetivo profesional que sí te lleve a entrevista."
-                description="ReadyCV PRO te ofrece 111+ plantillas optimizadas para ATS, sugerencias AI de objetivo profesional adaptadas a tu rol objetivo y el ATS Checker que valida tu match en tiempo real. Empieza en menos de 2 minutos."
+                description="ReadyCV PRO te ofrece 128 plantillas optimizadas para ATS, sugerencias AI de objetivo profesional adaptadas a tu rol objetivo y el ATS Checker que valida tu match en tiempo real. Empieza en menos de 2 minutos."
                 buttonLabel="Empezar con ReadyCV PRO"
-                hint="$15/mes o $144/año · 7 herramientas AI · Cancela cuando quieras"
+                hint="$15/mes o $99/año · 7 herramientas AI · Cancela cuando quieras"
               />
             </div>
 

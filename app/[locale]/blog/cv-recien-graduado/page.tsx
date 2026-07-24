@@ -384,7 +384,7 @@ export default async function CVRecienGraduadoPage({
                 title="Tu primer CV profesional, listo en minutos."
                 description="ReadyCV PRO incluye plantillas ATS-verificadas diseñadas específicamente para perfiles junior y recién egresados, con AI que transforma tus prácticas y proyectos académicos en bullets cuantificados. Empieza en menos de dos minutos."
                 buttonLabel="Empezar con ReadyCV PRO"
-                hint="$15/mes o $144/año · 7 herramientas con IA · Cancela cuando quieras"
+                hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>
 

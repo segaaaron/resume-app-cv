@@ -22,7 +22,7 @@ export function renewalReminderHtml({
   renewalDate,
 }: RenewalReminderProps): string {
   const planName = planInterval === "annual" ? "Pro Anual" : "Pro Mensual"
-  const planPrice = planInterval === "annual" ? "$144 USD / año" : "$15 USD / mes"
+  const planPrice = planInterval === "annual" ? "$99 USD / año" : "$15 USD / mes"
   const renewalDateStr = formatDate(renewalDate)
   const firstName = userName.split(" ")[0] || userName
 
@@ -178,7 +178,7 @@ export function renewalReminderText({
   renewalDate,
 }: RenewalReminderProps): string {
   const planName = planInterval === "annual" ? "Pro Anual" : "Pro Mensual"
-  const planPrice = planInterval === "annual" ? "$144 USD / año" : "$15 USD / mes"
+  const planPrice = planInterval === "annual" ? "$99 USD / año" : "$15 USD / mes"
   const firstName = userName.split(" ")[0] || userName
 
   return `Hola ${firstName},

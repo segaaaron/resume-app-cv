@@ -307,7 +307,7 @@ export default async function TailorResumePage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Cut tailoring time in half with the right tools</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> surfaces missing keywords and density gaps against the job. ReadyCV PRO&apos;s <strong>tailor-cv</strong> feature reads the JD, suggests skill reordering and bullet rewrites, and produces a tailored version on top of any of the <Link href={`/${locale}/templates`}>111+ ATS-verified templates</Link> — all in under three minutes per job.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> surfaces missing keywords and density gaps against the job. ReadyCV PRO&apos;s <strong>tailor-cv</strong> feature reads the JD, suggests skill reordering and bullet rewrites, and produces a tailored version on top of any of the <Link href={`/${locale}/templates`}>128 ATS-verified templates</Link> — all in under three minutes per job.
                   </p>
                 </div>
               </div>
@@ -360,9 +360,9 @@ export default async function TailorResumePage({
               <BlogCTA
                 locale={locale}
                 title="Tailor your resume in 3 minutes, not 30."
-                description="ReadyCV PRO&apos;s tailor-cv feature reads the job description, reorders your skills and bullets, runs the ATS check and produces a tailored resume on any of 111+ ATS-verified templates — all in under three minutes per application."
+                description="ReadyCV PRO&apos;s tailor-cv feature reads the job description, reorders your skills and bullets, runs the ATS check and produces a tailored resume on any of 128 ATS-verified templates — all in under three minutes per application."
                 buttonLabel="Start with ReadyCV PRO"
-                hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
+                hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>
 

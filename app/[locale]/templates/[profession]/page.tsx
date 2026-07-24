@@ -583,7 +583,7 @@ export default async function ProfessionTemplatePage({
         <section className="py-16 sm:py-24 px-4 bg-gradient-to-b from-primary/5 to-background text-center">
           <div className="max-w-3xl mx-auto">
             <span className="inline-block text-xs font-semibold bg-primary/10 text-primary px-3 py-1 rounded-full mb-4">
-              {isEs ? "111+ Plantillas — ATS Compatible" : "111+ Templates — ATS Optimized"}
+              {isEs ? "128 Plantillas — ATS Compatible" : "128 Templates — ATS Optimized"}
             </span>
             <h1 className="text-3xl sm:text-5xl font-bold mb-5 leading-tight">{content.h1}</h1>
             <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">{content.description}</p>

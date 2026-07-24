@@ -323,9 +323,9 @@ export default async function ActionVerbsPage({
               <BlogCTA
                 locale={locale}
                 title="Let AI pick the right verb for every bullet."
-                description="ReadyCV PRO&apos;s AI bullet editor rewrites your experience with verb-first structure, scope-matched intensity and embedded metrics — in seconds, across 111+ ATS-verified templates."
+                description="ReadyCV PRO&apos;s AI bullet editor rewrites your experience with verb-first structure, scope-matched intensity and embedded metrics — in seconds, across 128 ATS-verified templates."
                 buttonLabel="Start with ReadyCV PRO"
-                hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
+                hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>
 

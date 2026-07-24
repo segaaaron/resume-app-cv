@@ -377,7 +377,7 @@ export default async function ResumeLengthPage({
                 title="Hit the right length on the first draft."
                 description="ReadyCV PRO templates are tuned for 1-page or 2-page layouts with automatic font/margin balancing. The AI editor trims bullets when you go over, expands when you go under — so the page count answers itself."
                 buttonLabel="Start with ReadyCV PRO"
-                hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
+                hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>
 

@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
         : "ReadyCVV — Constructor de CV con IA"
     const fallbackDescription =
       locale === "en"
-        ? "ATS-optimized resumes. 111+ premium templates."
-        : "CVs optimizados para ATS. Más de 111 plantillas premium."
+        ? "ATS-optimized resumes. 128 premium templates."
+        : "CVs optimizados para ATS. 128 plantillas premium."
 
     const title = clamp(rawTitle || fallbackTitle, 90)
     const description = clamp(rawDescription || fallbackDescription, 140)

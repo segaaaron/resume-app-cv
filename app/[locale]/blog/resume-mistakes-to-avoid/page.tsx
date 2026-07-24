@@ -271,7 +271,7 @@ export default async function ResumeMistakesPage({
                 title="Build a resume that avoids all 15 mistakes by design."
                 description="ReadyCV PRO templates are pre-validated against every mistake in this guide: ATS-clean PDFs, structured headers, achievement-led bullet templates, country-aware photo conventions and AI keyword tailoring per application."
                 buttonLabel="Start with ReadyCV PRO"
-                hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
+                hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>
 

@@ -282,7 +282,7 @@
     "q_tpl2": "¿Puedo personalizar los colores de las plantillas?",
     "a_tpl2": "Sí. Cada plantilla tiene esquemas de color predefinidos que puedes cambiar desde el editor. También puedes ajustar fuentes, tamaños y el orden de las secciones.",
     "q_plan1": "¿Cuánto cuesta el plan Pro?",
-    "a_plan1": "/mes o /año (equivale a /mes, ahorrando un 20%). No hay plan gratuito — el plan Pro incluye acceso completo a todo sin restricciones.",
+    "a_plan1": "$15/mes o $99/año (equivale a $8.25/mes, ahorrando un 45%). No hay plan gratuito — el plan Pro incluye acceso completo a todo sin restricciones.",
     "q_plan2": "¿Puedo cancelar en cualquier momento?",
     "a_plan2": "Sí. Cancelas cuando quieras desde tu perfil, sin permanencia ni penalizaciones. Mantienes el acceso hasta el final del período pagado.",
     "q_priv1": "¿ReadyCVV usa mi CV para entrenar su IA?",
@@ -321,8 +321,8 @@
     "monthly_period": "/ mes",
     "annual_label": "Anual",
     "annual_period": "/ año",
-    "annual_badge": "Ahorra 20%",
-    "annual_equiv": "$12 / mes · ahorras $36 al año",
+    "annual_badge": "Ahorra 45%",
+    "annual_equiv": "$8.25 / mes · ahorras $81 al año",
     "cancel_anytime": "Cancela cuando quieras · Tus CVs siempre son tuyos",
     "accent_label": "Precios",
     "pro_member_title": "Ya eres miembro Pro",
@@ -767,8 +767,8 @@
     "plan_monthly": "Mensual",
     "plan_monthly_price": "$15,00",
     "plan_monthly_period": "/mes",
-    "plan_annual_save": "Anual · Ahorra 20%",
-    "plan_annual_price": "$144,00",
+    "plan_annual_save": "Anual · Ahorra 45%",
+    "plan_annual_price": "$99,00",
     "plan_annual_period": "/año",
     "plan_annual_equiv": "≈ $12,00/mes",
     "s4_body1": "Los pagos se procesan a través de <b>Stripe</b>. MS Saravia Tech Stack LLC no almacena datos de tarjetas de crédito o débito. Las suscripciones se renuevan <b>automáticamente</b> al final de cada período facturado salvo que el Usuario cancele antes. Se enviará un recordatorio de renovación con al menos 48 horas de anticipación.",
@@ -1105,7 +1105,7 @@
       "free_benefit_3": "Hasta 10 CVs personales, cartas y candidaturas",
       "free_benefit_4": "Soporte prioritario",
       "per_month": "/mes",
-      "annual_discount": "· o $144/año (ahorra 20%)",
+      "annual_discount": "· o $99/año (ahorra 45%)",
       "export_section_title": "Mis datos",
       "export_desc": "Descarga una copia de toda tu información personal almacenada en READY CV (cuenta, CVs y cartas de presentación).",
       "exporting": "Exportando...",
@@ -1124,7 +1124,7 @@
       "plan_subtitle": "Suscripción y facturación",
       "plan_pro": "Plan PRO",
       "plan_free_label": "Adquiere un plan",
-      "price_annual": "$144/yr",
+      "price_annual": "$99/año",
       "price_monthly": "$15/mo",
       "status_active_badge": "Activo",
       "status_canceled_badge": "Cancelado",
@@ -1846,8 +1846,8 @@
       "monthly_per": "/ mes",
       "annual_label": "Anual",
       "annual_per": "/ año",
-      "save_badge": "Ahorra 20%",
-      "annual_detail": "$12/mes · ahorras $36",
+      "save_badge": "Ahorra 45%",
+      "annual_detail": "$8.25/mes · ahorras $81",
       "redirecting": "Redirigiendo...",
       "start_now": "Empezar ahora",
       "best_price": "Mejor precio",
@@ -2428,26 +2428,26 @@
     }
   },
   "cinematic": {
-    "entry_line1": "Tu próximo trabajo",
-    "entry_line2": "empieza aquí.",
+    "entry_line1": "Tu CV se ve perfecto.",
+    "entry_line2": "¿Pero qué lee el robot?",
     "entry_scroll": "Desplázate para descubrir",
     "problem_stat": "2.000+",
     "problem_line1": "candidaturas por vacante.",
     "problem_line2": "La tuya tiene segundos.",
-    "problem_body": "La mayoría se revisan en el orden en que llegan, y la lectura se detiene cuando ya hay suficientes buenas. ReadyCVV ajusta tu CV a la oferta antes de que apliques — para que se lea como un match en los segundos que tiene.",
+    "problem_body": "Una máquina lo lee primero, y la mayoría nunca llega a un humano. ReadyCVV puntúa tu CV contra la oferta —leyendo el archivo real que lee un ATS— para que el tuyo pase en los segundos que tiene.",
     "reveal_brand": "ReadyCVV",
     "reveal_tagline": "los lee antes que los lean.",
     "reveal_stats_ai": "7 herramientas IA",
     "reveal_stats_templates": "128 plantillas",
-    "reveal_stats_ats": "ATS Score incluido",
+    "reveal_stats_ats": "Puntúa tu PDF real",
     "feature_fill_headline": "De cero a perfil completo.",
     "feature_fill_body": "Describe tu trayectoria y la IA genera resumen, título y habilidades. En segundos.",
     "feature_bullets_headline": "De genérico a memorable.",
     "feature_bullets_body": "Cada bullet reescrito con verbos de acción, métricas y resultados. 3 versiones para elegir.",
     "feature_summary_headline": "El resumen que abre puertas.",
     "feature_summary_body": "Un párrafo de 3-4 líneas adaptado a tu sector. La IA lo regenera hasta que sea perfecto.",
-    "feature_ats_headline": "Sabe si pasarás el filtro.",
-    "feature_ats_body": "Pega la oferta y obtén tu % de compatibilidad, keywords presentes y faltantes.",
+    "feature_ats_headline": "Mirá lo que ve el robot.",
+    "feature_ats_body": "El único que puntúa el PDF real que enviás —no la vista previa del editor—. Pegá la oferta y mirá tu match, las keywords que te faltan, y exactamente lo que un ATS extrae.",
     "feature_cover_headline": "Una carta para cada oferta.",
     "feature_cover_body": "Formal, personalizada y convincente. Editable con formato rich text.",
     "feature_review_headline": "Un experto revisando tu CV.",
@@ -2860,7 +2860,7 @@
     "faq_q1": "¿Es gratuita esta plantilla?",
     "faq_a1": "Puedes previsualizar cada plantilla gratis. Para descargar, personalizar y exportar a PDF necesitas una suscripción ReadyCV Pro ($15/mes).",
     "faq_q2": "¿Esta plantilla pasa los sistemas ATS?",
-    "faq_a2": "Sí. Cada plantilla de ReadyCV está construida con HTML semántico que los parsers ATS pueden leer. Las plantillas con ATS Score 90+ han sido probadas contra Workday, Greenhouse, Lever y Taleo.",
+    "faq_a2": "Sí. Cada plantilla de ReadyCV está construida con HTML semántico que los parsers ATS pueden leer. Las plantillas de una columna siguen el orden de lectura que sistemas como Workday, Greenhouse y Taleo parsean de forma más confiable.",
     "faq_q3": "¿Puedo editar colores, fuentes y diseño?",
     "faq_a3": "Sí. En el editor de ReadyCV puedes cambiar el esquema de color, cambiar fuentes, reordenar secciones, ocultar bloques y personalizar espaciado — todo en tiempo real.",
     "faq_q4": "¿A qué formatos puedo exportar?",
@@ -3014,6 +3014,19 @@
         "s3Title": "Recibe puntaje y correcciones",
         "s3Body": "Ves tu puntaje, las brechas y los ajustes exactos, y los aplicas con un clic."
       },
+      "methodology": {
+        "title": "Por qué puedes confiar en el número",
+        "subtitle": "La mayoría te da un puntaje y espera que no preguntes cómo. Esto es exactamente lo que mide el nuestro — y lo que no.",
+        "p1Title": "Determinista, no una adivinanza",
+        "p1Body": "El mismo CV y la misma oferta siempre dan el mismo puntaje. Se calcula en código que puedes volver a correr — nunca un número que una IA inventó y no sabe explicar.",
+        "p2Title": "Leemos el PDF real",
+        "p2Body": "Renderizamos el archivo que vas a enviar, extraemos su texto como lo hace un parser, y puntuamos eso — no la vista previa del editor. Si un diseño esconde una línea de la máquina, lo descubres antes que el software del reclutador.",
+        "p3Title": "Consciente de la plantilla",
+        "p3Body": "Los diseños de una columna se parsean limpio en todas partes; los de varias columnas un parser estricto puede reordenarlos. Lo avisamos con honestidad en vez de sellar cada plantilla como 'ATS-safe'.",
+        "p4Title": "Modelado en cómo parsean los ATS reales",
+        "p4Body": "Nuestras reglas siguen cómo sistemas como Workday, Greenhouse y Taleo leen un CV de verdad — orden de lectura en una columna, peso del título actual, detección de secciones. No afirmamos una certificación que no tenemos; nos alineamos con su comportamiento de parseo documentado.",
+        "honestNote": "Lo que NO hace: inflar tu puntaje con keywords que no puedes respaldar, ni inventar métricas que nunca lograste. Reporta lo que hay — tú decides."
+      },
       "faq": {
         "title": "Verificador ATS — Preguntas frecuentes",
         "q1": "¿El Análisis ATS está incluido en mi plan?",
@@ -3094,7 +3107,7 @@
         "s3Title": "Elige tu nivel",
         "s3Body": "De entry a lead — ve p25, mediana, p75 y p90 al instante."
       },
-      "trust": "Basado en datos públicos del mercado y encuestas salariales de oficinas oficiales de estadística.",
+      "trust": "Estimaciones basadas en un modelo, ancladas al salario promedio reportado de cada país y ajustadas por profesión y nivel de experiencia.",
       "featuredCountries": {
         "title": "Explora salarios por país",
         "subtitle": "Elige un país para ver las 30 profesiones lado a lado."
@@ -3156,7 +3169,7 @@
       "home": "Inicio",
       "sources": "Fuentes",
       "lastUpdated": "Actualizado: 2026",
-      "disclaimer": "Los datos salariales se basan en datos públicos del mercado y encuestas de oficinas oficiales de estadística. Las cifras son estimaciones y pueden variar según empresa, ubicación, experiencia individual y condiciones actuales del mercado.",
+      "disclaimer": "Las cifras salariales son estimaciones basadas en un modelo, ancladas al salario promedio nacional reportado y ajustadas por profesión y nivel de experiencia. Son rangos orientativos, no ofertas, y varían según empresa, ubicación, experiencia individual y condiciones del mercado.",
       "professionsCount": "{count} profesiones cubiertas",
       "breadcrumb": {
         "tool": "Calculadora de Salario"
@@ -3185,7 +3198,7 @@
       "comparisonSubtitle": "Mediana mid-level en tecnología, salud, negocios y oficios.",
       "methodology": {
         "title": "Cómo calculamos",
-        "body": "Los salarios son estimaciones 2026 construidas con datos de oficinas oficiales de estadística, encuestas salariales públicas y datos agregados del mercado laboral. Las cifras están ancladas a los promedios reportados del país y ajustadas por profesión y nivel."
+        "body": "Los salarios son estimaciones 2026 basadas en un modelo: ancladas al salario promedio reportado de cada país y ajustadas por profesión y nivel de experiencia. Tómalas como rangos orientativos para calibrar tus expectativas, no como cifras exactas."
       },
       "faq": {
         "title": "Preguntas frecuentes",
@@ -3338,9 +3351,9 @@
     "maybeLater": "Quizá más tarde",
     "pricing": {
       "monthly": "$15/mes",
-      "yearly": "$144/año",
-      "discount": "20% OFF",
-      "yearlyHint": "Facturado anual — ahorras $36"
+      "yearly": "$99/año",
+      "discount": "45% OFF",
+      "yearlyHint": "Facturado anual — ahorras $81"
     },
     "download": {
       "title": "Suscríbete para descargar tu CV",

@@ -428,9 +428,9 @@ export default async function CVvsResumePage({
               <BlogCTA
                 locale={locale}
                 title="Build the right document for the right market — short or long-form resume."
-                description="ReadyCV PRO includes 111+ ATS-verified templates covering both short US and long-form international resume formats, with AI suggestions tailored to your target country. Start in under two minutes."
+                description="ReadyCV PRO includes 128 ATS-verified templates covering both short US and long-form international resume formats, with AI suggestions tailored to your target country. Start in under two minutes."
                 buttonLabel="Start with ReadyCV PRO"
-                hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
+                hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>
 

@@ -440,9 +440,9 @@ export default async function ResumeSummaryPostPage({
               <BlogCTA
                 locale={locale}
                 title="Build a resume with a summary that gets you the interview."
-                description="ReadyCV PRO gives you 111+ ATS-optimized templates, AI-generated summary suggestions tailored to your target role, and the ATS Checker that scores every keyword. Start in under two minutes."
+                description="ReadyCV PRO gives you 128 ATS-optimized templates, AI-generated summary suggestions tailored to your target role, and the ATS Checker that scores every keyword. Start in under two minutes."
                 buttonLabel="Start with ReadyCV PRO"
-                hint="$15/mo or $144/yr · 7 AI tools included · Cancel anytime"
+                hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>
 

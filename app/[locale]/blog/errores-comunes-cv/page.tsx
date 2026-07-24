@@ -271,7 +271,7 @@ export default async function ErroresCvPage({
                 title="Construye un CV que evite los 15 errores por diseño."
                 description="Las plantillas de ReadyCV PRO están pre-validadas contra cada error de esta guía: PDFs ATS-clean, encabezados estructurados, plantillas de bullets por logro, convenciones de foto por país y adaptación de keywords con IA por postulación."
                 buttonLabel="Empezar con ReadyCV PRO"
-                hint="$15/mes o $144/año · 7 herramientas con IA · Cancela cuando quieras"
+                hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>
 

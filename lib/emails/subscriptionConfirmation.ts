@@ -22,7 +22,7 @@ export function subscriptionConfirmationHtml({
   renewalDate,
 }: SubscriptionConfirmationProps): string {
   const planName = planInterval === "annual" ? "Pro Anual" : "Pro Mensual"
-  const planPrice = planInterval === "annual" ? "$144 USD / año" : "$15 USD / mes"
+  const planPrice = planInterval === "annual" ? "$99 USD / año" : "$15 USD / mes"
   const renewalLabel = planInterval === "annual" ? "Próxima renovación" : "Próxima renovación"
   const renewalDateStr = formatDate(renewalDate)
   const firstName = userName.split(" ")[0] || userName
@@ -198,7 +198,7 @@ export function subscriptionConfirmationText({
   renewalDate,
 }: SubscriptionConfirmationProps): string {
   const planName = planInterval === "annual" ? "Pro Anual" : "Pro Mensual"
-  const planPrice = planInterval === "annual" ? "$144 USD / año" : "$15 USD / mes"
+  const planPrice = planInterval === "annual" ? "$99 USD / año" : "$15 USD / mes"
   const firstName = userName.split(" ")[0] || userName
 
   return `¡Hola ${firstName}!

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { getTranslations, setRequestLocale } from "next-intl/server"
-import { CheckCircle2, Zap, ClipboardPaste, Sparkles, Gauge, Shield } from "lucide-react"
+import { CheckCircle2, Zap, ClipboardPaste, Sparkles, Gauge, Shield, FileSearch, LayoutTemplate, ScanSearch } from "lucide-react"
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import AtsFeatureShowcase from "@/components/tools/ats-checker/AtsFeatureShowcase"
@@ -242,6 +242,49 @@ export default async function AtsCheckerPage({
                 <span className="absolute right-5 top-5 text-3xl font-extrabold text-[#1a2e4a]/8 select-none">0{i + 1}</span>
               </div>
             ))}
+          </div>
+        </section>
+
+        {/* Methodology — honest publication of WHAT the score measures and what it
+            refuses to do. Our real differentiator (deterministic + real-PDF read)
+            stated plainly; the "real ATS" line is worded as modeled-on, never a
+            certification we don't hold. */}
+        <section className="relative mx-auto max-w-5xl px-6 pb-8">
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#1a2e4a] to-[#0f1a2e] p-8 text-white md:p-12">
+            <div aria-hidden className="pointer-events-none absolute -top-24 left-1/2 h-[380px] w-[680px] -translate-x-1/2 rounded-full bg-[radial-gradient(circle,_rgba(0,212,255,0.18),_transparent_62%)]" />
+            <div className="relative text-center">
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-[#00D4FF]/30 bg-[#00D4FF]/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-[#00D4FF]">
+                <Shield className="h-3.5 w-3.5" />
+                {t("methodology.title")}
+              </span>
+              <p className="mx-auto mt-4 max-w-2xl text-sm text-white/70 md:text-base">{t("methodology.subtitle")}</p>
+            </div>
+
+            <div className="relative mt-10 grid grid-cols-1 gap-4 md:grid-cols-2">
+              {[
+                { icon: Gauge, title: t("methodology.p1Title"), body: t("methodology.p1Body") },
+                { icon: FileSearch, title: t("methodology.p2Title"), body: t("methodology.p2Body") },
+                { icon: LayoutTemplate, title: t("methodology.p3Title"), body: t("methodology.p3Body") },
+                { icon: ScanSearch, title: t("methodology.p4Title"), body: t("methodology.p4Body") },
+              ].map((p) => (
+                <div
+                  key={p.title}
+                  className="group relative rounded-2xl border border-white/10 bg-white/[0.04] p-5 backdrop-blur transition-all hover:border-[#00D4FF]/30 hover:bg-white/[0.06]"
+                >
+                  <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#00D4FF]/20 to-[#4F8BFF]/10 text-[#00D4FF] ring-1 ring-[#00D4FF]/20">
+                    <p.icon className="h-5 w-5" />
+                  </div>
+                  <h3 className="text-base font-bold text-white">{p.title}</h3>
+                  <p className="mt-1.5 text-[13px] leading-relaxed text-white/65">{p.body}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Anti-fabrication note — the line competitors won't write. */}
+            <div className="relative mt-6 flex items-start gap-3 rounded-2xl border border-emerald-400/20 bg-emerald-400/[0.06] px-5 py-4">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" />
+              <p className="text-[13px] leading-relaxed text-emerald-50/90">{t("methodology.honestNote")}</p>
+            </div>
           </div>
         </section>
 

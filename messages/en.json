@@ -282,7 +282,7 @@
     "q_tpl2": "Can I customize template colors?",
     "a_tpl2": "Yes. Each template has predefined color schemes you can change from the editor. You can also adjust fonts, sizes, and section order.",
     "q_plan1": "How much does the Pro plan cost?",
-    "a_plan1": "$15/month or $144/year (equivalent to $12/month, saving 20%). There is no free plan — the Pro plan includes full access to everything without restrictions.",
+    "a_plan1": "$15/month or $99/year (equivalent to $8.25/month, saving 45%). There is no free plan — the Pro plan includes full access to everything without restrictions.",
     "q_plan2": "Can I cancel at any time?",
     "a_plan2": "Yes. Cancel anytime from your profile, with no commitments or penalties. You keep access until the end of your paid period.",
     "q_priv1": "Does ReadyCVV use my resume to train AI?",
@@ -321,8 +321,8 @@
     "monthly_period": "/ month",
     "annual_label": "Annual",
     "annual_period": "/ year",
-    "annual_badge": "Save 20%",
-    "annual_equiv": "$12 / month · save $36 per year",
+    "annual_badge": "Save 45%",
+    "annual_equiv": "$8.25 / month · save $81 per year",
     "cancel_anytime": "Cancel anytime · Your Resumes are always yours",
     "accent_label": "Pricing",
     "pro_member_title": "You're already a Pro member",
@@ -767,8 +767,8 @@
     "plan_monthly": "Monthly",
     "plan_monthly_price": "$15.00",
     "plan_monthly_period": "/mo",
-    "plan_annual_save": "Annual · Save 20%",
-    "plan_annual_price": "$144.00",
+    "plan_annual_save": "Annual · Save 45%",
+    "plan_annual_price": "$99.00",
     "plan_annual_period": "/yr",
     "plan_annual_equiv": "≈ $12.00/month",
     "s4_body1": "Payments are processed by <b>Stripe</b>. MS Saravia Tech Stack LLC does not store credit or debit card data. Subscriptions renew <b>automatically</b> at the end of each billing period unless cancelled beforehand. A renewal reminder will be sent at least 48 hours in advance.",
@@ -1105,7 +1105,7 @@
       "free_benefit_3": "Up to 10 personal Resumes, letters and applications",
       "free_benefit_4": "Priority support",
       "per_month": "/mo",
-      "annual_discount": "· or $144/yr (save 20%)",
+      "annual_discount": "· or $99/yr (save 45%)",
       "export_section_title": "My data",
       "export_desc": "Download a copy of all your personal information stored in READY CV (account, Resumes and cover letters).",
       "exporting": "Exporting...",
@@ -1124,7 +1124,7 @@
       "plan_subtitle": "Subscription and billing",
       "plan_pro": "PRO Plan",
       "plan_free_label": "Get a plan",
-      "price_annual": "$144/yr",
+      "price_annual": "$99/yr",
       "price_monthly": "$15/mo",
       "status_active_badge": "Active",
       "status_canceled_badge": "Canceled",
@@ -1846,8 +1846,8 @@
       "monthly_per": "/ mo",
       "annual_label": "Annual",
       "annual_per": "/ yr",
-      "save_badge": "Save 20%",
-      "annual_detail": "$12/mo · save $36",
+      "save_badge": "Save 45%",
+      "annual_detail": "$8.25/mo · save $81",
       "redirecting": "Redirecting...",
       "start_now": "Start now",
       "best_price": "Best price",
@@ -2428,26 +2428,26 @@
     }
   },
   "cinematic": {
-    "entry_line1": "Your next job",
-    "entry_line2": "starts here.",
+    "entry_line1": "Your CV looks perfect.",
+    "entry_line2": "But what does the robot read?",
     "entry_scroll": "Scroll to discover",
     "problem_stat": "2,000+",
     "problem_line1": "résumés per opening.",
     "problem_line2": "Yours gets seconds.",
-    "problem_body": "Most are skimmed in the order they arrive, and reading stops once there are enough strong ones. ReadyCVV matches your Resume to the posting before you apply — so it reads as a fit in the seconds it gets.",
+    "problem_body": "A machine reads it first, and most never reach a human. ReadyCVV scores your Resume against the posting — reading the real file an ATS reads — so yours gets through in the seconds it gets.",
     "reveal_brand": "ReadyCVV",
     "reveal_tagline": "reads them before they do.",
     "reveal_stats_ai": "7 AI tools",
     "reveal_stats_templates": "128 templates",
-    "reveal_stats_ats": "ATS Score included",
+    "reveal_stats_ats": "Scores your real PDF",
     "feature_fill_headline": "From zero to complete profile.",
     "feature_fill_body": "Describe your background and AI generates summary, title and skills. In seconds.",
     "feature_bullets_headline": "From generic to memorable.",
     "feature_bullets_body": "Every bullet rewritten with action verbs, metrics and results. 3 versions to choose from.",
     "feature_summary_headline": "The summary that opens doors.",
     "feature_summary_body": "A 3-4 line paragraph tailored to your field. AI regenerates it until perfect.",
-    "feature_ats_headline": "Know if you will pass the filter.",
-    "feature_ats_body": "Paste the job posting and get your compatibility %, present and missing keywords.",
+    "feature_ats_headline": "See what the robot sees.",
+    "feature_ats_body": "The only builder that scores the real PDF you send — not the editor preview. Paste the posting and see your match, the keywords you're missing, and exactly what an ATS extracts.",
     "feature_cover_headline": "A letter for every application.",
     "feature_cover_body": "Formal, personalized and convincing. Editable with rich text format.",
     "feature_review_headline": "An expert reviewing your resume.",
@@ -2860,7 +2860,7 @@
     "faq_q1": "Is this template free to use?",
     "faq_a1": "You can preview every template for free. To download, customize and export to PDF you need a ReadyCV Pro subscription ($15/month).",
     "faq_q2": "Will this template pass ATS systems?",
-    "faq_a2": "Yes. Every ReadyCV template is built on semantic HTML that ATS parsers can read. Templates marked ATS Score 90+ have been tested against Workday, Greenhouse, Lever and Taleo.",
+    "faq_a2": "Yes. Every ReadyCV template is built on semantic HTML that ATS parsers can read. Single-column templates follow the reading order systems like Workday, Greenhouse and Taleo parse most reliably.",
     "faq_q3": "Can I edit colors, fonts and layout?",
     "faq_a3": "Yes. In the ReadyCV editor you can change the color scheme, swap fonts, reorder sections, hide blocks and customize spacing — all in real time.",
     "faq_q4": "What file formats can I export to?",
@@ -3014,6 +3014,19 @@
         "s3Title": "Get your score and fixes",
         "s3Body": "See your score, the gaps, and the exact edits to make — and apply them in one click."
       },
+      "methodology": {
+        "title": "Why you can trust the number",
+        "subtitle": "Most builders hand you a score and hope you don't ask how. Here is exactly what ours measures — and what it doesn't.",
+        "p1Title": "Deterministic, not a guess",
+        "p1Body": "The same resume and the same job always produce the same score. It's computed in code you can re-run — never a number an AI invented and can't explain.",
+        "p2Title": "We read the real PDF",
+        "p2Body": "We render the actual file you'll send, extract its text the way a parser does, and score that — not the editor preview. If a layout hides a line from the machine, you find out before a recruiter's software does.",
+        "p3Title": "Template-aware",
+        "p3Body": "Single-column designs parse cleanly everywhere; multi-column ones can be reordered by a strict parser. We flag that honestly instead of stamping every template 'ATS-safe'.",
+        "p4Title": "Modeled on how real ATS parse",
+        "p4Body": "Our rules follow how systems like Workday, Greenhouse and Taleo actually read a resume — single-column reading order, current-title weighting, section detection. We don't claim a certification we don't have; we align with documented parsing behavior.",
+        "honestNote": "What it won't do: inflate your score with keywords you can't back up, or invent metrics you never achieved. It reports what's there — you decide."
+      },
       "faq": {
         "title": "ATS Checker — Frequently asked questions",
         "q1": "Is the ATS score included in my plan?",
@@ -3094,7 +3107,7 @@
         "s3Title": "Pick your level",
         "s3Body": "From entry to lead — see p25, median, p75 and p90 instantly."
       },
-      "trust": "Based on publicly available market data and salary surveys from official statistics offices.",
+      "trust": "Model-based estimates anchored to each country's reported average pay, adjusted by profession and experience level.",
       "featuredCountries": {
         "title": "Browse salaries by country",
         "subtitle": "Pick a country to see all 30 professions side-by-side."
@@ -3156,7 +3169,7 @@
       "home": "Home",
       "sources": "Sources",
       "lastUpdated": "Last updated: 2026",
-      "disclaimer": "Salary data is based on publicly available market data and salary surveys from official statistics offices. Figures are estimates and may vary based on company, location, individual experience and current market conditions.",
+      "disclaimer": "Salary figures are model-based estimates anchored to reported national average pay and adjusted by profession and experience level. They are ballpark ranges, not offers, and vary by company, location, individual experience and current market conditions.",
       "professionsCount": "{count} professions covered",
       "breadcrumb": {
         "tool": "Salary Calculator"
@@ -3185,7 +3198,7 @@
       "comparisonSubtitle": "Median mid-level pay across tech, healthcare, business and trades.",
       "methodology": {
         "title": "How we calculate",
-        "body": "Salaries are 2026 estimates built from official statistics offices, public salary surveys and aggregated job-market data. Figures are anchored to the country's reported averages and adjusted by profession and experience level."
+        "body": "Salaries are 2026 model-based estimates: anchored to each country's reported average pay and adjusted by profession and experience level. Treat them as ballpark ranges to orient your expectations, not exact figures."
       },
       "faq": {
         "title": "Frequently asked questions",
@@ -3338,9 +3351,9 @@
     "maybeLater": "Maybe later",
     "pricing": {
       "monthly": "$15/mo",
-      "yearly": "$144/yr",
-      "discount": "20% OFF",
-      "yearlyHint": "Billed annually — save $36"
+      "yearly": "$99/yr",
+      "discount": "45% OFF",
+      "yearlyHint": "Billed annually — save $81"
     },
     "download": {
       "title": "Subscribe to download your Resume",

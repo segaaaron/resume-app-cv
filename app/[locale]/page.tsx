@@ -117,7 +117,7 @@ const jsonLdWebApp = {
       "@type": "Offer",
       price: "144.00",
       priceCurrency: "USD",
-      description: `Pro Plan Annual (save 20%): ${TEMPLATE_COUNT} templates, 7 AI tools, ATS Score, cover letter generator`,
+      description: `Pro Plan Annual (save 45%): ${TEMPLATE_COUNT} templates, 7 AI tools, ATS Score, cover letter generator`,
       priceValidUntil: "2027-01-01",
     },
   ],
@@ -175,7 +175,7 @@ const jsonLdFaq = {
       name: "How much does ReadyCVV cost?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `ReadyCVV Pro costs $15/month or $144/year (saving 20%). This includes unlimited resumes, all ${TEMPLATE_COUNT} templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.`,
+        text: `ReadyCVV Pro costs $15/month or $99/year (saving 45%). This includes unlimited resumes, all ${TEMPLATE_COUNT} templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.`,
       },
     },
     {
@@ -199,7 +199,7 @@ const jsonLdFaq = {
       name: "¿Cuánto cuesta ReadyCVV?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `ReadyCVV Pro cuesta $15/mes o $144/año (ahorrando un 20%). Incluye CVs ilimitados, las ${TEMPLATE_COUNT} plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.`,
+        text: `ReadyCVV Pro cuesta $15/mes o $99/año (ahorrando un 45%). Incluye CVs ilimitados, las ${TEMPLATE_COUNT} plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.`,
       },
     },
   ],

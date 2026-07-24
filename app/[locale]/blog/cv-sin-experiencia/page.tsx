@@ -387,7 +387,7 @@ export default async function CVSinExperienciaPage({
                 title="Tu primer CV profesional, sin experiencia y con impacto."
                 description="ReadyCV PRO incluye plantillas ATS-verificadas diseñadas para perfiles sin experiencia y junior, con IA que transforma proyectos académicos, voluntariado y cursos online en bullets cuantificados con estructura profesional. Empieza en menos de dos minutos."
                 buttonLabel="Empezar con ReadyCV PRO"
-                hint="$15/mes o $144/año · 7 herramientas con IA · Cancela cuando quieras"
+                hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>
 

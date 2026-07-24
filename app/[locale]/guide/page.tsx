@@ -61,7 +61,7 @@ const jsonLdHowTo = {
       "@type": "HowToStep",
       position: 1,
       name: "Elige tu plantilla",
-      text: "Selecciona entre 139+ plantillas profesionales compatibles con sistemas ATS",
+      text: "Selecciona entre 128 plantillas profesionales compatibles con sistemas ATS",
     },
     {
       "@type": "HowToStep",

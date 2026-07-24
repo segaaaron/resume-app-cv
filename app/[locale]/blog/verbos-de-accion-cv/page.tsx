@@ -323,9 +323,9 @@ export default async function VerbosAccionPage({
               <BlogCTA
                 locale={locale}
                 title="Deja que la IA elija el verbo correcto en cada bullet."
-                description="El editor de bullets con IA de ReadyCV PRO reescribe tu experiencia con estructura verbo-primero, intensidad ajustada al alcance y métricas embebidas — en segundos, sobre 111+ plantillas ATS-verificadas."
+                description="El editor de bullets con IA de ReadyCV PRO reescribe tu experiencia con estructura verbo-primero, intensidad ajustada al alcance y métricas embebidas — en segundos, sobre 128 plantillas ATS-verificadas."
                 buttonLabel="Empezar con ReadyCV PRO"
-                hint="$15/mes o $144/año · 7 herramientas con IA · Cancela cuando quieras"
+                hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>
 

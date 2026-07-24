@@ -70,8 +70,8 @@ const CURATED: Record<string, CuratedEntry> = {
       es: "CV de una sola columna en texto puro, diseñado para superar cualquier ATS sin errores de parseo.",
     },
     longDescription: {
-      en: "ATS Pro is the safest choice when your application will be screened by automated systems. No tables, no graphics, no columns — just clean semantic text that recruiters and HR software can read flawlessly. Tested against Workday, Greenhouse, Lever, Taleo and iCIMS.",
-      es: "ATS Pro es la opción más segura cuando tu aplicación será evaluada por sistemas automáticos. Sin tablas, sin gráficos, sin columnas — solo texto semántico limpio que reclutadores y software de RRHH pueden leer perfectamente. Probado contra Workday, Greenhouse, Lever, Taleo e iCIMS.",
+      en: "ATS Pro is the safest choice when your application will be screened by automated systems. No tables, no graphics, no columns — just clean semantic text that recruiters and HR software can read flawlessly. Built for the single-column reading order systems like Workday, Greenhouse, Lever, Taleo and iCIMS parse most reliably.",
+      es: "ATS Pro es la opción más segura cuando tu aplicación será evaluada por sistemas automáticos. Sin tablas, sin gráficos, sin columnas — solo texto semántico limpio que reclutadores y software de RRHH pueden leer perfectamente. Construida para el orden de lectura de una columna que sistemas como Workday, Greenhouse, Lever, Taleo e iCIMS parsean de forma más confiable.",
     },
     features: {
       en: ["Single column structure", "Semantic HTML headings", "Selectable text, no images or icons", "Standard section headings", "Print-perfect at A4 and Letter"],

@@ -25,11 +25,11 @@ const BASE_URL = "https://readycvv.com"
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "ReadyCVV — AI Resume Builder | Beat ATS, 111+ Templates",
+    default: "ReadyCVV — AI Resume Builder | Beat ATS, 128 Templates",
     template: "%s | ReadyCVV",
   },
   description:
-    "Build an ATS-optimized resume with AI in minutes. 111+ professional templates, cover letter generator, job application tracker. From $15/month.",
+    "Build an ATS-optimized resume with AI in minutes. 128 professional templates, cover letter generator, job application tracker. From $15/month.",
 }
 
 export default async function RootLayout({

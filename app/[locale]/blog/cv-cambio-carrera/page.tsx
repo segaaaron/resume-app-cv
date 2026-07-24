@@ -372,7 +372,7 @@ export default async function CVCambioCarreraPage({
                 title="Construye tu CV de cambio de carrera con estrategia."
                 description="ReadyCV PRO incluye plantillas combinadas (skills arriba + cronología abajo) específicas para cambio de carrera, AI que reformula tus bullets al vocabulario del nuevo sector y validación ATS contra ofertas reales. Empieza en menos de dos minutos."
                 buttonLabel="Empezar con ReadyCV PRO"
-                hint="$15/mes o $144/año · 7 herramientas con IA · Cancela cuando quieras"
+                hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>
 

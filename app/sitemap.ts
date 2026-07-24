@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next"
 import { templatesSEO } from "@/lib/templates-seo"
 import { COUNTRIES } from "@/lib/salary/countries"
-import { PROFESSIONS } from "@/lib/salary/professions"
 
 const BASE_URL = "https://readycvv.com"
 const locales = ["es", "en"] as const
@@ -169,8 +168,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     }
   }
 
-  // Salary calculator — country & profession landing pages
-  // 6 countries × 2 locales = 12 + 6 × 30 × 2 = 360 = 372 URLs
+  // Salary calculator — country hub pages only.
+  // The country×profession LEAF pages (6 × 30 × 2 = 360) are intentionally NOT
+  // listed: they are noindexed as thin/formula-derived content (see their
+  // generateMetadata robots flag). Submitting noindexed URLs wastes crawl budget
+  // and sends a mixed signal, so only the indexable country hubs go in the sitemap.
   const SALARY_LAST = new Date("2026-06-01")
   for (const locale of locales) {
     for (const country of COUNTRIES) {
@@ -180,14 +182,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
         changeFrequency: "monthly",
         priority: 0.7,
       })
-      for (const prof of PROFESSIONS) {
-        entries.push({
-          url: `${BASE_URL}/${locale}/salary/${country.slug}/${prof.slug}`,
-          lastModified: SALARY_LAST,
-          changeFrequency: "monthly",
-          priority: 0.6,
-        })
-      }
     }
   }
 

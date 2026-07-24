@@ -117,11 +117,12 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "translate-cv": 0,
     },
   },
-  // BASIC: one-time, 1 calendar month. 1 CV, download it unlimited times, NO AI.
-  // "descarga las veces que quiera" = unlimited downloads (canExportPdf), not unlimited CVs.
+  // BASIC: one-time, 1 calendar month. Up to 5 CVs, download unlimited times, NO AI.
+  // "descarga las veces que quiera" = unlimited downloads (canExportPdf), separate from the CV cap.
+  // The 5-CV cap counts clones too — a duplicated CV is 1 CV against the limit.
   BASIC: {
-    maxResumes: 1,
-    maxCoverLetters: 1,
+    maxResumes: 5,
+    maxCoverLetters: 5,
     canExportPdf: true,
     aiLimitsByEndpoint: {
       "fill-profile": 0,

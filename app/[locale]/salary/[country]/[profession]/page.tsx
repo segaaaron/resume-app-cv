@@ -52,6 +52,14 @@ export async function generateMetadata({
   return {
     title,
     description,
+    // Thin-content guard: the ~270 country×profession leaves are formula-derived
+    // and near-identical in structure, so Google would treat them as thin/doorway
+    // pages. We keep them live (reachable via the salary calculator) but noindex
+    // them — crawl budget goes to the pages that earn rankings (blog, tools,
+    // country-level hubs, templates). `follow` still passes link equity to those
+    // hubs. Reversible in one line: flip index to true (and re-add to sitemap)
+    // for any leaf that analytics later proves has real search demand.
+    robots: { index: false, follow: true },
     alternates: {
       canonical,
       languages: {
