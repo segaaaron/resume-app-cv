@@ -16,7 +16,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
     where: { id: session.user.id },
     select: {
       id: true, name: true, email: true, image: true,
-      plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, createdAt: true,
+      plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, paymentProvider: true, createdAt: true,
       isManaged: true, managedExpiresAt: true, managedBlocked: true,
     },
   })

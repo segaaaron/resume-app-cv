@@ -30,6 +30,8 @@ interface UserData {
   subscriptionStatus: string
   subscriptionEndsAt: Date | null
   planInterval: string | null
+  /** Gateway that provisioned the active plan — decides which cancel API to call. */
+  paymentProvider?: string | null
   createdAt: Date
   isManaged?: boolean
   managedExpiresAt?: Date | null
@@ -99,6 +101,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const isPro    = user.plan === "PRO"
   const isOneTime = user.plan === "BASIC" || user.plan === "SPRINT"
   const isActive = subscriptionStatus === "ACTIVE"
+  const isPayPalPayer = user.paymentProvider === "PAYPAL"
   const endsAt   = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
   const isManaged = !!user.isManaged
 
@@ -153,7 +156,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
   async function handleCancelSubscription() {
     setCancelLoading(true)
     try {
-      const res = await apiFetch("/api/stripe/cancel", { method: "POST" })
+      // PayPal subscriptions must be canceled through PayPal's API — calling the
+      // Stripe route for a PayPal payer would fail with no_active_subscription.
+      const cancelUrl = user.paymentProvider === "PAYPAL" ? "/api/paypal/cancel" : "/api/stripe/cancel"
+      const res = await apiFetch(cancelUrl, { method: "POST" })
       const data = await res.json()
       if (res.ok && data.success) {
         setSubscriptionStatus("CANCELED")
@@ -341,9 +347,14 @@ export default function SettingsForm({ user }: { user: UserData }) {
 
           {isPro ? (
             <>
-              <BtnGhost onClick={handleBillingPortal} disabled={portalLoading} fullWidth>
-                {portalLoading ? t("opening_portal") : t("manage_billing")}
-              </BtnGhost>
+              {/* Stripe's hosted Billing Portal has no PayPal equivalent — showing
+                  this button to a PayPal payer would just 400. They manage the
+                  subscription through the cancel action below instead. */}
+              {!isPayPalPayer && (
+                <BtnGhost onClick={handleBillingPortal} disabled={portalLoading} fullWidth>
+                  {portalLoading ? t("opening_portal") : t("manage_billing")}
+                </BtnGhost>
+              )}
               <div className="text-[11px] text-dash-subtle mt-[10px] text-center">
                   {t("member_since")} {format(new Date(user.createdAt), "MMMM yyyy", { locale: dateLocale })}
                   {endsAt && isActive && (

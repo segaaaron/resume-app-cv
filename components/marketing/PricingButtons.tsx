@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations, useLocale } from "next-intl"
+import PaymentMethodSelector, { type PaymentMethod } from "@/components/marketing/PaymentMethodSelector"
 
 interface Props {
   plan: "monthly" | "annual" | "basic" | "sprint"
@@ -13,11 +14,18 @@ interface Props {
   theme?: "light" | "dark"
   buttonClassName?: string
   isEU?: boolean
+  /**
+   * Whether the PayPal gateway is configured server-side (`paypalEnabled()`).
+   * Defaults to FALSE, so the method selector stays hidden and checkout goes to
+   * Stripe exactly as before until PayPal is credentialed and sandbox-tested.
+   */
+  paypalAvailable?: boolean
 }
 
-export default function PricingButtons({ plan, isPro, theme = "light", buttonClassName, isEU = false }: Props) {
+export default function PricingButtons({ plan, isPro, theme = "light", buttonClassName, isEU = false, paypalAvailable = false }: Props) {
   const [loading, setLoading] = useState(false)
   const [consented, setConsented] = useState(false)
+  const [method, setMethod] = useState<PaymentMethod>("stripe")
   const locale = useLocale()
   const router = useRouter()
   const t = useTranslations("pricing")
@@ -50,15 +58,22 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
 
     setLoading(true)
     try {
-      const res = await apiFetch("/api/stripe/checkout", {
+      // PayPal only when the selector is actually available AND chosen; otherwise
+      // this is byte-for-byte the previous Stripe-only path.
+      const usePayPal = paypalAvailable && method === "paypal"
+      const res = await apiFetch(usePayPal ? "/api/paypal/checkout" : "/api/stripe/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          plan,
-          locale,
-          consent:     isEU && consented ? true : undefined,
-          consentText: isEU && consented ? t(consentKey) : undefined,
-        }),
+        body: JSON.stringify(
+          usePayPal
+            ? { plan, locale }
+            : {
+                plan,
+                locale,
+                consent:     isEU && consented ? true : undefined,
+                consentText: isEU && consented ? t(consentKey) : undefined,
+              },
+        ),
       })
 
       if (res.status === 401) {
@@ -97,6 +112,16 @@ export default function PricingButtons({ plan, isPro, theme = "light", buttonCla
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Absent entirely unless the gateway is configured server-side. */}
+      {paypalAvailable && (
+        <PaymentMethodSelector
+          value={method}
+          onChange={setMethod}
+          theme={theme}
+          disabled={loading}
+          labels={{ card: t("method_card"), paypal: t("method_paypal"), legend: t("method_legend") }}
+        />
+      )}
       {isEU && (
         <label className="flex items-start gap-2.5 cursor-pointer select-none">
           <input

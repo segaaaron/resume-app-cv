@@ -348,7 +348,10 @@
     "toast_payment_error": "Error al iniciar el pago",
     "breadcrumb_pricing": "Precios",
     "checkout_consent": "Solicito el inicio inmediato del servicio y acepto que, al hacerlo, renuncio a mi derecho de desistimiento de 14 días (Directiva UE 2011/83/UE). La suscripción se renueva automáticamente al final del período contratado. Puedo cancelar en cualquier momento.",
-    "checkout_consent_onetime": "Solicito el inicio inmediato del servicio y acepto que, al hacerlo, renuncio a mi derecho de desistimiento de 14 días (Directiva UE 2011/83/UE). Es una compra única por el período de acceso indicado y no se renueva automáticamente."
+    "checkout_consent_onetime": "Solicito el inicio inmediato del servicio y acepto que, al hacerlo, renuncio a mi derecho de desistimiento de 14 días (Directiva UE 2011/83/UE). Es una compra única por el período de acceso indicado y no se renueva automáticamente.",
+    "method_legend": "Método de pago",
+    "method_card": "Tarjeta",
+    "method_paypal": "PayPal"
   },
   "templates_page": {
     "badge": "128 plantillas",

@@ -8,6 +8,7 @@ import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
+import { paypalEnabled } from "@/lib/paypal"
 import { redirect } from "next/navigation"
 import { isEUUser } from "@/lib/geoip"
 import { format } from "date-fns"
@@ -120,11 +121,12 @@ export default async function PricingPage({
   let userIsPro = false
   let subscriptionEndsAt: Date | null = null
   let planInterval: string | null = null
+  let paymentProvider: string | null = null
 
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, paymentProvider: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
     })
     if (dbUser?.isManaged || dbUser?.plan === "LIMITED") {
       redirect(`/${locale}/dashboard`)
@@ -141,6 +143,7 @@ export default async function PricingPage({
       )
       subscriptionEndsAt = dbUser.subscriptionEndsAt
       planInterval = dbUser.planInterval
+      paymentProvider = dbUser.paymentProvider
     }
   }
 
@@ -196,6 +199,9 @@ export default async function PricingPage({
           planInterval={planInterval}
           isEU={isEU}
           isEs={locale === "es"}
+          paypalAvailable={paypalEnabled()}
+          proMemberManage={t("pro_member_manage")}
+          isPayPalPayer={paymentProvider === "PAYPAL"}
         />
       </main>
       <Footer />

@@ -28,6 +28,12 @@ interface Props {
   planInterval: string | null
   isEU: boolean
   isEs: boolean
+  /** paypalEnabled() server-side. False → method selector absent, Stripe-only. */
+  paypalAvailable: boolean
+  /** Label for the manage-subscription action (pricing.pro_member_manage). */
+  proMemberManage: string
+  /** Current plan was provisioned by PayPal → manage in-app (PayPal has no portal). */
+  isPayPalPayer: boolean
 }
 
 export default function PricingClientSection({
@@ -50,6 +56,9 @@ export default function PricingClientSection({
   planInterval,
   isEU,
   isEs,
+  paypalAvailable,
+  proMemberManage,
+  isPayPalPayer,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const [billing, setBilling] = useState<"annual" | "monthly">("monthly")
@@ -139,7 +148,18 @@ export default function PricingClientSection({
                 </p>
               </div>
             </div>
-            <ManageBillingButton />
+            {/* PayPal payers have no hosted portal — send them to Settings, where
+                the provider-aware cancel lives. Stripe payers get the portal. */}
+            {isPayPalPayer ? (
+              <a
+                href={`/${isEs ? "es" : "en"}/dashboard/settings`}
+                className="shrink-0 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D4FF] focus-visible:ring-offset-2"
+              >
+                {proMemberManage}
+              </a>
+            ) : (
+              <ManageBillingButton />
+            )}
           </div>
         </TimelineContent>
       )}
@@ -182,6 +202,7 @@ export default function PricingClientSection({
               <PricingButtons
                 plan="basic"
                 isEU={isEU}
+                paypalAvailable={paypalAvailable}
                 buttonClassName="!bg-white !text-[#1a2e4a] !font-semibold !rounded-[14px] !border !border-[#1a2e4a]/20 hover:!bg-[#1a2e4a]/[0.03] !py-3.5 w-full"
               />
               <p className="mt-2.5 text-center text-[11px] text-slate-300">{t("Pago único, sin renovación", "One-time, no renewal")}</p>
@@ -224,6 +245,7 @@ export default function PricingClientSection({
               <PricingButtons
                 plan="sprint"
                 isEU={isEU}
+                paypalAvailable={paypalAvailable}
                 buttonClassName="!bg-[#00D4FF] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 hover:!brightness-105 w-full"
               />
               <p className="mt-2.5 text-center text-[11px] text-slate-300">{t("Pago único, sin renovación", "One-time, no renewal")}</p>
@@ -328,6 +350,7 @@ export default function PricingClientSection({
                     plan={proPlan}
                     isPro={userIsPro}
                     isEU={isEU}
+                    paypalAvailable={paypalAvailable}
                     buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_8px_24px_rgba(0,212,255,0.35)] hover:!brightness-105 w-full"
                   />
                   <p className="mt-2.5 text-center text-[11px] text-slate-300">{cancelAnytime}</p>
