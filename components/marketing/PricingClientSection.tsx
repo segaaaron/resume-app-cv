@@ -6,6 +6,7 @@ import { BadgeCheck, Check, FileText, Zap, Crown } from "lucide-react"
 import { motion } from "framer-motion"
 import { useRef, useState } from "react"
 import PricingButtons from "@/components/marketing/PricingButtons"
+import { PRICING } from "@/lib/pricing"
 import ManageBillingButton from "@/components/marketing/ManageBillingButton"
 
 interface Props {
@@ -187,7 +188,7 @@ export default function PricingClientSection({
             </div>
             <div className="relative mb-1 flex items-baseline gap-1">
               <span className="self-start mt-1 text-sm font-semibold text-slate-400">$</span>
-              <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">2.99</span>
+              <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">{PRICING.basic}</span>
               <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
             </div>
             <p className="relative mb-5 text-[13px] text-slate-400">{t("Un solo pago · sin renovación", "One payment · no renewal")}</p>
@@ -230,7 +231,7 @@ export default function PricingClientSection({
             </div>
             <div className="relative mb-1 flex items-baseline gap-1">
               <span className="self-start mt-1 text-sm font-semibold text-slate-400">$</span>
-              <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">7.99</span>
+              <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">{PRICING.sprint}</span>
               <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
             </div>
             <p className="relative mb-5 text-[13px] text-slate-400">{t("Sprint de 7 días para postular", "7-day sprint to apply")}</p>
@@ -305,7 +306,7 @@ export default function PricingClientSection({
                     </div>
                     <div className="flex shrink-0 items-baseline gap-0.5">
                       <span className="text-xs font-semibold text-slate-400">$</span>
-                      <span className="text-[26px] font-extrabold tabular-nums tracking-[-0.03em] text-[#1a2e4a]">144</span>
+                      <span className="text-[26px] font-extrabold tabular-nums tracking-[-0.03em] text-[#1a2e4a]">{PRICING.proAnnual}</span>
                       <span className="text-[11px] font-medium text-slate-400">{t("/año", "/yr")}</span>
                     </div>
                   </button>
@@ -332,7 +333,7 @@ export default function PricingClientSection({
                     </div>
                     <div className="flex shrink-0 items-baseline gap-0.5">
                       <span className="text-xs font-semibold text-slate-400">$</span>
-                      <span className="text-[26px] font-extrabold tabular-nums tracking-[-0.03em] text-[#1a2e4a]">15</span>
+                      <span className="text-[26px] font-extrabold tabular-nums tracking-[-0.03em] text-[#1a2e4a]">{PRICING.proMonthly}</span>
                       <span className="text-[11px] font-medium text-slate-400">{t("/mes", "/mo")}</span>
                     </div>
                   </button>

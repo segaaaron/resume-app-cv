@@ -9,6 +9,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
 import { paypalEnabled } from "@/lib/paypal"
+import { PRICING, priceForSchema } from "@/lib/pricing"
 import { redirect } from "next/navigation"
 import { isEUUser } from "@/lib/geoip"
 import { format } from "date-fns"
@@ -28,11 +29,11 @@ const jsonLdSoftwareApp = {
   offers: [
     {
       "@type": "Offer",
-      price: "15.00",
+      price: priceForSchema(PRICING.proMonthly),
       priceCurrency: "USD",
       priceSpecification: {
         "@type": "UnitPriceSpecification",
-        price: "15.00",
+        price: priceForSchema(PRICING.proMonthly),
         priceCurrency: "USD",
         billingIncrement: 1,
         unitCode: "MON",
@@ -41,11 +42,11 @@ const jsonLdSoftwareApp = {
     },
     {
       "@type": "Offer",
-      price: "144.00",
+      price: priceForSchema(PRICING.proAnnual),
       priceCurrency: "USD",
       priceSpecification: {
         "@type": "UnitPriceSpecification",
-        price: "144.00",
+        price: priceForSchema(PRICING.proAnnual),
         priceCurrency: "USD",
         billingIncrement: 1,
         unitCode: "ANN",

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { PRICING, priceForSchema, PRO_ANNUAL_DISCOUNT_PCT } from "@/lib/pricing"
 import { TEMPLATE_COUNT } from "@/types/resume"
 import Script from "next/script"
 import { getTranslations, setRequestLocale } from "next-intl/server"
@@ -109,16 +110,16 @@ const jsonLdWebApp = {
   offers: [
     {
       "@type": "Offer",
-      price: "15.00",
+      price: priceForSchema(PRICING.proMonthly),
       priceCurrency: "USD",
       description: `Pro Plan: ${TEMPLATE_COUNT} templates, 7 AI tools, ATS Score, cover letter generator, application tracker`,
       priceValidUntil: "2027-01-01",
     },
     {
       "@type": "Offer",
-      price: "144.00",
+      price: priceForSchema(PRICING.proAnnual),
       priceCurrency: "USD",
-      description: `Pro Plan Annual (save 45%): ${TEMPLATE_COUNT} templates, 7 AI tools, ATS Score, cover letter generator`,
+      description: `Pro Plan Annual (save ${PRO_ANNUAL_DISCOUNT_PCT}%): ${TEMPLATE_COUNT} templates, 7 AI tools, ATS Score, cover letter generator`,
       priceValidUntil: "2027-01-01",
     },
   ],
