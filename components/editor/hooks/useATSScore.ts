@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useRef } from "react"
+import { useState, useCallback, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
@@ -244,6 +244,21 @@ export function useATSScore() {
       return null
     }
   }, [locale])
+
+  // Real-time score: once an initial analyze() has landed a result, debounce
+  // further CV edits into an automatic rescore(). rescore() is deterministic/
+  // no-LLM (reuses keywords already extracted), so this is free to run on every
+  // edit pause. Deliberately depends on `sectionData` only — rescore() writes
+  // atsResult, so including it here would refire this effect on its own output
+  // and loop forever (the exact "useEffect calling AI endpoint without a
+  // dependency guard" pattern the QA checklist flags). Read via atsResultRef
+  // instead so the gate sees the latest value without becoming a dependency.
+  useEffect(() => {
+    if (!atsResultRef.current) return
+    const timer = setTimeout(() => { rescore() }, 800)
+    return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionData])
 
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
   const [verifyLoading, setVerifyLoading] = useState(false)

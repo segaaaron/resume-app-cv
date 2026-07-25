@@ -138,6 +138,17 @@ describe("PayPalWebhookService — provisioning", () => {
     expect(txState.updateSpy).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plan: "BASIC", paymentProvider: "PAYPAL" }) }))
   })
 
+  it("subscription SALE.REFUNDED → downgrades via billing_agreement_id (confirmed against PayPal's documented Refund resource schema — distinct from resource.id, which is the refund's own id)", async () => {
+    const body = JSON.stringify({
+      id: "WH-6",
+      event_type: "PAYMENT.SALE.REFUNDED",
+      resource: { id: "RE-2", billing_agreement_id: "I-SUB1" },
+    })
+    const svc = new PayPalWebhookService(makeClient(vi.fn()), logger)
+    await svc.handleEvent(body, headers)
+    expect(txState.updateSpy).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED" }) }))
+  })
+
   it("one-time CAPTURE REFUNDED → downgrades via custom_id, not the refund's own id", async () => {
     // resource.id here is the REFUND id (RE-1), never the stored paypalOrderId
     // (CAP-1). Only custom_id correctly identifies the user.
