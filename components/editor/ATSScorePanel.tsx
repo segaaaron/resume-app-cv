@@ -136,17 +136,17 @@ export default function ATSScorePanel() {
     offTopic,
     analyze,
     rescore,
+    scoreDelta: delta,
     verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
   } = useATSScore()
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
-  const [delta, setDelta] = useState<number | null>(null)
 
-  // Re-score deterministically after a fix and surface the improvement.
+  // Re-score deterministically after a fix. The hook owns the delta badge now,
+  // so a plain edit that moves the score keeps it truthful too.
   async function runRescore() {
-    const d = await rescore()
-    if (d !== null && d !== 0) setDelta(d)
+    await rescore()
   }
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
@@ -233,7 +233,6 @@ export default function ATSScorePanel() {
   async function handleSubmit() {
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
-    setDelta(null)
     await analyze()
   }
 

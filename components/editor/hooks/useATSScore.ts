@@ -119,6 +119,8 @@ export function useATSScore() {
   const [atsResult, setAtsResult] = useState<ATSResult | null>(null)
   const [reviewResult, setReviewResult] = useState<ReviewResult | null>(null)
   const [offTopic, setOffTopic] = useState(false)
+  /** Last score movement (+/-). Owned here so both rescore paths keep it truthful. */
+  const [scoreDelta, setScoreDelta] = useState<number | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ats")
   const lastKeyRef = useRef<string | null>(null)
 
@@ -147,6 +149,7 @@ export function useATSScore() {
     setAtsResult(null)
     setReviewResult(null)
     setOffTopic(false)
+    setScoreDelta(null)
 
     try {
       if (!roleMode && isQuestion(text)) {
@@ -212,6 +215,8 @@ export function useATSScore() {
   // Keep the latest result reachable from rescore() without stale-closure risk.
   const atsResultRef = useRef<ATSResult | null>(null)
   atsResultRef.current = atsResult
+  /** sectionData already sent for scoring — dedupes manual vs debounced rescore. */
+  const lastScoredRef = useRef<unknown>(null)
 
   /**
    * Deterministic re-score after the user applies a fix. Reuses the keywords the
@@ -224,6 +229,10 @@ export function useATSScore() {
     const keywords = prev?.extractedKeywords
     if (!keywords) return null
     const state = useResumeStore.getState()
+    // Claim this exact sectionData BEFORE the request so the debounced effect
+    // below skips the edit that a manual rescore() is already handling (every
+    // apply-a-fix path writes the store and then calls rescore() directly).
+    lastScoredRef.current = state.sectionData
     try {
       const res = await apiFetch("/api/ai/ats-rescore", {
         method: "POST",
@@ -238,7 +247,13 @@ export function useATSScore() {
       if (!res.ok) return null
       const data: ATSResult = await res.json()
       setAtsResult((cur) => (cur ? { ...data, summary: cur.summary, suggestions: cur.suggestions } : data))
-      return data.score - (prev?.score ?? data.score)
+      const d = data.score - (prev?.score ?? data.score)
+      // Single owner of the delta badge: EVERY score movement updates it, whether
+      // it came from applying a fix or from a plain edit picked up by the debounce.
+      // Previously the panel owned this and only the manual path wrote it, so an
+      // edit that LOWERED the score left a stale "+N" badge under the new number.
+      setScoreDelta(d)
+      return d
     } catch {
       // Silent — keep the prior score rather than surfacing a re-score failure.
       return null
@@ -255,6 +270,9 @@ export function useATSScore() {
   // instead so the gate sees the latest value without becoming a dependency.
   useEffect(() => {
     if (!atsResultRef.current) return
+    // Skip edits a manual rescore() already claimed (apply-a-fix paths call it
+    // directly) — otherwise every applied fix fired a second, redundant request.
+    if (lastScoredRef.current === sectionData) return
     const timer = setTimeout(() => { rescore() }, 800)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -312,6 +330,7 @@ export function useATSScore() {
     hasResult,
     analyze,
     rescore,
+    scoreDelta,
     verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
   }
