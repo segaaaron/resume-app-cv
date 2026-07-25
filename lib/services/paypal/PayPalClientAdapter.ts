@@ -14,12 +14,26 @@ export interface WebhookVerifyResult {
 }
 
 /** Minimal subscription view we rely on for re-fetch/provisioning. */
+export interface PayPalLink {
+  href: string
+  rel: string
+  method?: string
+}
+
 export interface PayPalSubscription {
   id: string
   status: string // APPROVAL_PENDING | ACTIVE | SUSPENDED | CANCELLED | EXPIRED
   plan_id?: string
+  custom_id?: string
   billing_info?: { next_billing_time?: string }
+  links?: PayPalLink[]
   [key: string]: unknown
+}
+
+/** Pull the approval URL a buyer must be redirected to (rel "approve"). */
+export function approvalUrl(links: PayPalLink[] | undefined): string | null {
+  const link = links?.find((l) => l.rel === "approve" || l.rel === "payer-action")
+  return link?.href ?? null
 }
 
 export class PayPalClientAdapter {
@@ -74,11 +88,36 @@ export class PayPalClientAdapter {
     return (await res.json()) as T
   }
 
-  /** Create a recurring subscription (PRO monthly/annual). */
-  createSubscription(planId: string, custom?: string): Promise<PayPalSubscription> {
+  /** Create a Catalog product (one per app; parent of the billing plans). */
+  createProduct(body: unknown): Promise<{ id: string; name?: string }> {
+    return this.request("POST", "/v1/catalogs/products", body)
+  }
+
+  /** Create a billing plan (PRO monthly or annual) under a product. */
+  createPlan(body: unknown): Promise<{ id: string; status?: string }> {
+    return this.request("POST", "/v1/billing/plans", body)
+  }
+
+  /** List billing plans (ops/verification). */
+  listPlans(): Promise<{ plans?: Array<{ id: string; name?: string; status?: string }> }> {
+    return this.request("GET", "/v1/billing/plans?page_size=20")
+  }
+
+  /**
+   * Create a recurring subscription (PRO monthly/annual). `customId` is echoed
+   * back in every webhook (our userId → sub mapping). `returnUrl`/`cancelUrl`
+   * drive the post-approval redirect.
+   */
+  createSubscription(
+    planId: string,
+    opts: { customId?: string; returnUrl?: string; cancelUrl?: string } = {},
+  ): Promise<PayPalSubscription> {
     return this.request<PayPalSubscription>("POST", "/v1/billing/subscriptions", {
       plan_id: planId,
-      ...(custom ? { custom_id: custom } : {}),
+      ...(opts.customId ? { custom_id: opts.customId } : {}),
+      ...(opts.returnUrl || opts.cancelUrl
+        ? { application_context: { return_url: opts.returnUrl, cancel_url: opts.cancelUrl, user_action: "SUBSCRIBE_NOW" } }
+        : {}),
     })
   }
 
@@ -97,7 +136,7 @@ export class PayPalClientAdapter {
   }
 
   /** Create a one-time order (BASIC/SPRINT). */
-  createOrder(body: unknown): Promise<{ id: string; status: string }> {
+  createOrder(body: unknown): Promise<{ id: string; status: string; links?: PayPalLink[] }> {
     return this.request("POST", "/v2/checkout/orders", body)
   }
 

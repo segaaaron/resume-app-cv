@@ -31,7 +31,9 @@ export async function GET(req: Request) {
     const result = await recordCronRun("purge-stripe-events", async () => {
       const events = await cronService.purgeStripeEvents()
       const webhookLogs = await cronService.purgeStripeWebhookLogs()
-      return { deleted: events.deleted, webhookLogsDeleted: webhookLogs.deleted }
+      // PayPal dedup rows share this job's schedule — no separate cron needed.
+      const paypalEvents = await cronService.purgePaypalEvents()
+      return { deleted: events.deleted, webhookLogsDeleted: webhookLogs.deleted, paypalEventsDeleted: paypalEvents.deleted }
     })
     return NextResponse.json(result)
   } catch (err) {
