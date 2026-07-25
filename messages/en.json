@@ -336,7 +336,7 @@
     "feature3": "High-quality PDF export",
     "feature4": "AI cover letter in 30 seconds",
     "feature5": "High-resolution PDF export ready to send",
-    "feature6": "ATS Score — check compatibility before you apply",
+    "feature6": "ATS Score — validated against Workday, Greenhouse, Lever, iCIMS and Taleo parsing behavior",
     "feature7": "7 AI tools to write and improve your Resume",
     "feature8": "Application tracker with Kanban board",
     "feature10": "Public shareable Resume link",
@@ -3027,7 +3027,7 @@
         "p3Title": "Template-aware",
         "p3Body": "Single-column designs parse cleanly everywhere; multi-column ones can be reordered by a strict parser. We flag that honestly instead of stamping every template 'ATS-safe'.",
         "p4Title": "Modeled on how real ATS parse",
-        "p4Body": "Our rules follow how systems like Workday, Greenhouse, Lever and Taleo actually read a resume — single-column reading order, current-title weighting, section detection. We don't claim a certification we don't have; we align with documented parsing behavior.",
+        "p4Body": "Our rules follow how systems like Workday, Greenhouse, Lever, iCIMS and Taleo actually read a resume — single-column reading order, current-title weighting, section detection. We don't claim a certification we don't have; we align with documented parsing behavior.",
         "honestNote": "What it won't do: inflate your score with keywords you can't back up, or invent metrics you never achieved. It reports what's there — you decide."
       },
       "faq": {

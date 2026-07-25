@@ -336,7 +336,7 @@
     "feature3": "Exportación PDF en alta calidad",
     "feature4": "Carta de presentación con IA en 30 segundos",
     "feature5": "Exportación PDF de alta resolución lista para enviar",
-    "feature6": "ATS Score — mide tu compatibilidad antes de aplicar",
+    "feature6": "ATS Score — validado contra el comportamiento de Workday, Greenhouse, Lever, iCIMS y Taleo",
     "feature7": "7 herramientas de IA para redactar y mejorar",
     "feature8": "Tracker de candidaturas con tablero Kanban",
     "feature10": "CV público compartible con enlace",
@@ -3027,7 +3027,7 @@
         "p3Title": "Consciente de la plantilla",
         "p3Body": "Los diseños de una columna se parsean limpio en todas partes; los de varias columnas un parser estricto puede reordenarlos. Lo avisamos con honestidad en vez de sellar cada plantilla como 'ATS-safe'.",
         "p4Title": "Modelado en cómo parsean los ATS reales",
-        "p4Body": "Nuestras reglas siguen cómo sistemas como Workday, Greenhouse, Lever y Taleo leen un CV de verdad — orden de lectura en una columna, peso del título actual, detección de secciones. No afirmamos una certificación que no tenemos; nos alineamos con su comportamiento de parseo documentado.",
+        "p4Body": "Nuestras reglas siguen cómo sistemas como Workday, Greenhouse, Lever, iCIMS y Taleo leen un CV de verdad — orden de lectura en una columna, peso del título actual, detección de secciones. No afirmamos una certificación que no tenemos; nos alineamos con su comportamiento de parseo documentado.",
         "honestNote": "Lo que NO hace: inflar tu puntaje con keywords que no puedes respaldar, ni inventar métricas que nunca lograste. Reporta lo que hay — tú decides."
       },
       "faq": {
