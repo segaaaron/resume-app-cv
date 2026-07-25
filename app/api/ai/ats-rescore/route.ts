@@ -6,6 +6,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, handleError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
+import { canUseAdvancedAts } from "@/lib/plans"
 
 const schema = z.object({
   keywords: z.object({
@@ -22,6 +23,11 @@ const schema = z.object({
 export async function POST(req: Request) {
   const authResult = await requireUser(req, { pro: true, csrf: true })
   if (authResult instanceof NextResponse) return authResult
+  // Advanced ATS is PRO/LIMITED only. `pro: true` (isActive) also passes
+  // BASIC/SPRINT; this quota-less route must gate them out explicitly.
+  if (!canUseAdvancedAts(authResult.user.plan)) {
+    return NextResponse.json({ error: "feature_pro_only" }, { status: 403 })
+  }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })

@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
 import { requireUser, handleError } from "@/lib/controllers/shared"
+import { canUseAdvancedAts } from "@/lib/plans"
 import { db } from "@/lib/db"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
@@ -25,6 +26,11 @@ const schema = z.object({
 export async function POST(req: Request) {
   const authResult = await requireUser(req, { pro: true, csrf: true })
   if (authResult instanceof NextResponse) return authResult
+  // PRO/LIMITED only (see route header). `pro: true` (isActive) also passes
+  // BASIC/SPRINT; gate them out BEFORE the expensive PDF render below.
+  if (!canUseAdvancedAts(authResult.user.plan)) {
+    return NextResponse.json({ error: "feature_pro_only" }, { status: 403 })
+  }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })

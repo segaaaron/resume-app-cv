@@ -4,6 +4,7 @@ import {
   isActive,
   effectivePlan,
   canUsePremiumTemplates,
+  canUseAdvancedAts,
   PLAN_LIMITS,
 } from "@/lib/plans"
 
@@ -68,6 +69,27 @@ describe("plans · BASIC + SPRINT capabilities", () => {
     it("SPRINT active within window, inactive after", () => {
       expect(isActive("SPRINT", future, "ACTIVE")).toBe(true)
       expect(isActive("SPRINT", past, "ACTIVE")).toBe(false)
+    })
+  })
+
+  describe("canUseAdvancedAts (F3/F4 quota-less ATS gate)", () => {
+    it("PRO y LIMITED (pago con ATS) → true", () => {
+      expect(canUseAdvancedAts("PRO")).toBe(true)
+      expect(canUseAdvancedAts("LIMITED")).toBe(true)
+    })
+    it("BASIC y SPRINT (pago SIN ATS avanzado) → false", () => {
+      expect(canUseAdvancedAts("BASIC")).toBe(false)
+      expect(canUseAdvancedAts("SPRINT")).toBe(false)
+    })
+    it("UNSUBSCRIBED y plan desconocido → false", () => {
+      expect(canUseAdvancedAts("UNSUBSCRIBED")).toBe(false)
+      expect(canUseAdvancedAts("nonsense")).toBe(false)
+    })
+    it("deriva del source of truth: coincide con ats-score quota ≠ 0", () => {
+      for (const plan of Object.keys(PLAN_LIMITS)) {
+        const expected = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS].aiLimitsByEndpoint["ats-score"] !== 0
+        expect(canUseAdvancedAts(plan)).toBe(expected)
+      }
     })
   })
 

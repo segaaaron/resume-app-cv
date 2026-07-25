@@ -171,6 +171,27 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   },
 }
 
+/**
+ * Whether a plan may use the ADVANCED ATS features — `ats-score` and its two
+ * quota-less companions, the deterministic re-score (`ats-rescore`) and the
+ * real-PDF verify (`ats-verify-real`). Derived from the single source of truth:
+ * a plan whose `ats-score` lifetime quota is 0 must not reach the F3/F4 ATS
+ * routes either.
+ *
+ * WHY THIS EXISTS: the quota'd ATS routes already enforce PRO/LIMITED-only via
+ * `enforceAIQuota` (limit 0 → 403 for BASIC/SPRINT/UNSUBSCRIBED). But
+ * `ats-rescore` and `ats-verify-real` carry NO quota by design (no LLM), so
+ * their only gate was `requireUser({ pro: true })` → `isActive`, which is true
+ * for BASIC/SPRINT within their window — letting a non-PRO plan reach a PRO-only
+ * feature (and, for verify-real, the expensive PDF render). Those routes call
+ * this to close the gap without duplicating the plan policy. PRO/LIMITED → true;
+ * BASIC/SPRINT/UNSUBSCRIBED → false.
+ */
+export function canUseAdvancedAts(plan: string): boolean {
+  const limits = PLAN_LIMITS[plan as Plan]
+  return !!limits && limits.aiLimitsByEndpoint["ats-score"] !== 0
+}
+
 
 // Anti-abuse import quota per plan — the SINGLE source of truth for whether a
 // plan can import and how often. Import is open to EVERY plan (a free import is a
