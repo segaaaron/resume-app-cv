@@ -20,6 +20,13 @@ model User {
   subscriptionEndsAt           DateTime?
   subscriptionStatus           SubscriptionStatus   @default(NONE)
   planInterval                 String?
+  // Which gateway provisioned the CURRENT active plan. Existing rows are Stripe
+  // (default). The internal plan state (plan/subscriptionStatus/subscriptionEndsAt)
+  // stays gateway-agnostic — these IDs never mix with the Stripe ones above.
+  paymentProvider              PaymentProvider?     @default(STRIPE)
+  paypalSubscriptionId         String?              @unique
+  paypalPlanId                 String?
+  paypalOrderId                String?              // one-time BASIC/SPRINT
   accounts                     Account[]
   sessions                     Session[]
   resumes                      Resume[]
@@ -277,6 +284,18 @@ model StripeEvent {
   @@index([userId, processedAt])
 }
 
+/// Idempotency/dedup for PayPal webhooks — mirror of StripeEvent. PayPal delivers
+/// events out of order, duplicated, and late, so every event id is processed once.
+model PaypalEvent {
+  id          String   @id // PayPal event id (e.g. WH-xxx)
+  processedAt DateTime @default(now())
+  userId      String? // set when the event maps to a known user
+  resourceId  String? // subscription_id / capture_id the event refers to
+
+  @@index([processedAt])
+  @@index([userId])
+}
+
 /// Durable observability log for every Stripe webhook the app receives.
 /// Separate from StripeEvent (idempotency/dedup): this records BOTH successes
 /// and failures with type/status/error/latency for the admin monitoring view.
@@ -366,6 +385,11 @@ enum SubscriptionStatus {
   CANCELED
   EXPIRED
   PAST_DUE
+}
+
+enum PaymentProvider {
+  STRIPE
+  PAYPAL
 }
 
 enum WebhookStatus {
