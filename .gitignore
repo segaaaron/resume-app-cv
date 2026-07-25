@@ -98,3 +98,10 @@ ruvector.db
 memory/security_audit.md
 
 .thumbnail-cache/
+
+# Scripts de ops locales (sandbox/reportes puntuales). No van a PROD: no los
+# importa el código de la app, no aportan al producto, y paypal-spike/verify
+# ESCRIBEN en PayPal (spike no es idempotente). Se corren a mano en local.
+scripts/paypal-spike.ts
+scripts/paypal-verify.ts
+scripts/pricing-mix-report.ts
