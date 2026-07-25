@@ -17,7 +17,7 @@ export type PayPalAction =
   | { kind: "payment-failed"; subscriptionId: string } // PAST_DUE
   | { kind: "expire-pro"; subscriptionId: string } // → UNSUBSCRIBED
   | { kind: "provision-onetime"; userId: string; plan: "BASIC" | "SPRINT"; orderId?: string }
-  | { kind: "refund"; subscriptionId?: string; captureId?: string } // → UNSUBSCRIBED
+  | { kind: "refund"; subscriptionId?: string; userId?: string } // → UNSUBSCRIBED
   | { kind: "ignore"; reason: string }
 
 export interface PlanIdMap {
@@ -108,7 +108,12 @@ export function interpretEvent(event: unknown, plans: PlanIdMap): PayPalAction {
       return { kind: "refund", subscriptionId: str(resource.billing_agreement_id) }
     }
     case "PAYMENT.CAPTURE.REFUNDED": {
-      return { kind: "refund", captureId: str(resource.id) }
+      // resource.id here is the REFUND's own id, not the capture/order id — it
+      // never matches our stored paypalOrderId. PayPal echoes the original
+      // custom_id ("<userId>|BASIC"/"<userId>|SPRINT") onto the refund resource
+      // too, so resolve the user the same way provision-onetime does.
+      const { userId } = parseCustomId(str(resource.custom_id))
+      return { kind: "refund", userId }
     }
 
     default:

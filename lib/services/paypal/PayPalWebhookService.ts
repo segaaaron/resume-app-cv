@@ -190,7 +190,7 @@ export class PayPalWebhookService {
         }
 
         case "refund": {
-          const user = await this.resolveUser(tx, { paypalSubscriptionId: action.subscriptionId, paypalOrderId: action.captureId })
+          const user = await this.resolveUser(tx, { userId: action.userId, paypalSubscriptionId: action.subscriptionId })
           if (!user || user.isManaged) return null
           await tx.user.update({
             where: { id: user.id },

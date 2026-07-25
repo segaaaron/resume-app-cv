@@ -72,10 +72,10 @@ describe("paypal event interpreter · refunds & noise", () => {
       subscriptionId: "I-1",
     })
   })
-  it("CAPTURE.REFUNDED → refund by capture", () => {
-    expect(interpretEvent(ev("PAYMENT.CAPTURE.REFUNDED", { id: "CAP-1" }), PLANS)).toEqual({
+  it("CAPTURE.REFUNDED → refund by userId parsed from custom_id (resource.id is the refund's own id, never the stored order id)", () => {
+    expect(interpretEvent(ev("PAYMENT.CAPTURE.REFUNDED", { id: "RE-1", custom_id: "u1|BASIC" }), PLANS)).toEqual({
       kind: "refund",
-      captureId: "CAP-1",
+      userId: "u1",
     })
   })
   it("unhandled event type → ignore with reason", () => {
