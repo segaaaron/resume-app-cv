@@ -19,6 +19,7 @@ const SCENES: Record<string, { bg: string; text: "light" | "dark"; overlay: numb
   "act-ats":       { bg: "#052e16", text: "light", overlay: 0.22 },
   "act-cover":     { bg: "#172554", text: "light", overlay: 0.22 },
   "act-review":    { bg: "#431407", text: "light", overlay: 0.22 },
+  "act-tracker":   { bg: "#0a1e35", text: "light", overlay: 0.24 },
   "act-templates": { bg: "#1c1917", text: "light", overlay: 0.25 },
   "act-climax":    { bg: "#d4d0cc", text: "dark",  overlay: 0.08 },
 }
@@ -33,6 +34,7 @@ const SCENE_IMAGE: Record<string, string> = {
   "act-ats":       "/images/bg/bg-act-ats.webp",
   "act-cover":     "/images/bg/bg-act-cover.webp",
   "act-review":    "/images/bg/bg-act-review.webp",
+  "act-tracker":   "/images/bg/bg-act-cover.webp",
   "act-templates": "/images/bg/bg-act-templates.webp",
   "act-climax":    "/images/bg/bg-act-climax.webp",
 }
@@ -45,7 +47,7 @@ const PARALLAX_MAX    = 80 // px
 // Strict order: scenes can only advance one step at a time in scroll direction
 const SCENE_ORDER = [
   "act-entry", "act-problem", "act-reveal", "act-fill", "act-bullets",
-  "act-summary", "act-ats", "act-cover", "act-review", "act-templates", "act-climax",
+  "act-summary", "act-ats", "act-cover", "act-review", "act-tracker", "act-templates", "act-climax",
 ]
 
 interface Props {

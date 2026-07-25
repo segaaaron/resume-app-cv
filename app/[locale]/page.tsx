@@ -13,6 +13,7 @@ import SummaryMockup from "@/components/guide/mockups/SummaryMockup"
 import ATSScoreMockup from "@/components/guide/mockups/ATSScoreMockup"
 import CoverLetterMockup from "@/components/guide/mockups/CoverLetterMockup"
 import CVReviewMockup from "@/components/guide/mockups/CVReviewMockup"
+import KanbanTrackerMockup from "@/components/guide/mockups/KanbanTrackerMockup"
 import ActTemplates from "@/components/marketing/cinematic/ActTemplates"
 import ActClimax from "@/components/marketing/cinematic/ActClimax"
 
@@ -303,6 +304,14 @@ export default async function HomePage({
           body={t("feature_review_body")}
           mockup={<CVReviewMockup locale={locale} />}
           reverse={true}
+        />
+        <ActFeatureScene
+          scene="act-tracker"
+          badge={t("feature_tracker_badge")}
+          headline={t("feature_tracker_headline")}
+          body={t("feature_tracker_body")}
+          mockup={<KanbanTrackerMockup locale={locale} />}
+          reverse={false}
         />
         <ActTemplates
           headline={t("templates_headline")}
