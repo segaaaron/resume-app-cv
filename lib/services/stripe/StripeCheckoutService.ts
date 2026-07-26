@@ -2,6 +2,7 @@ import { db } from "@/lib/db"
 import { stripeEnabled } from "@/lib/stripe"
 import { resend, emailEnabled } from "@/lib/resend"
 import { AppError } from "@/lib/services/auth/AppError"
+import { blocksNewPurchase } from "@/lib/plans"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
@@ -32,7 +33,10 @@ export class StripeCheckoutService {
     })
     if (!user) throw new AppError("user_not_found", 404)
 
-    if (user.subscriptionStatus === "ACTIVE" || user.subscriptionStatus === "PAST_DUE") {
+    // Shared with the pricing UI so the two can never drift — see blocksNewPurchase().
+    // Semantics unchanged: ACTIVE/PAST_DUE blocked, NONE (one-time → PRO upgrade) and
+    // CANCELED (monthly → annual switch, re-subscribe) allowed.
+    if (blocksNewPurchase(user.subscriptionStatus, isOneTime)) {
       throw new AppError("already_subscribed", 400)
     }
 

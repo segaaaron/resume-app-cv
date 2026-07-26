@@ -82,6 +82,63 @@ export function isSuperAdmin(role?: string | null): boolean {
   return role === "SUPER_ADMIN"
 }
 
+/**
+ * A recurring subscription actually exists at the gateway, so the billing portal
+ * and the self-serve cancel have something to act on.
+ *
+ * Deliberately NOT `isActive()`: that answers "does this user have PRO access?",
+ * which is a different question. SUPER_ADMINs get access from their role and
+ * BASIC/SPRINT buyers from a one-time payment that leaves subscriptionStatus at
+ * "NONE" — neither has billing to manage, and offering them the Stripe portal
+ * fails with `no_active_subscription` (StripeBillingService.createPortalSession).
+ */
+export function hasManageableBilling(subscriptionStatus?: SubscriptionStatus | string | null): boolean {
+  return subscriptionStatus === "ACTIVE"
+    || subscriptionStatus === "PAST_DUE"
+    || subscriptionStatus === "CANCELED"
+}
+
+/** PRO access granted purely by the SUPER_ADMIN role — nothing bought, nothing to manage. */
+export function isStaffAccess(role?: string | null, subscriptionStatus?: SubscriptionStatus | string | null): boolean {
+  return isSuperAdmin(role) && !hasManageableBilling(subscriptionStatus)
+}
+
+/**
+ * A live recurring subscription is billing this user, so NO new checkout may start.
+ *
+ * THE SINGLE SOURCE for this rule — `StripeCheckoutService.createSession` throws
+ * `already_subscribed` on it, and the pricing UI hides the buy button on it. They
+ * must never drift: a UI that offers a purchase the backend rejects produces a raw
+ * error toast, and a UI that hides one the backend accepts silently loses a sale.
+ *
+ * Pass `isOneTimePurchase` for BASIC/SPRINT checkouts — they are stricter, see below.
+ *
+ * Why it stops at ACTIVE/PAST_DUE for recurring plans — direction matters:
+ *   · UPGRADE (BASIC/SPRINT → PRO): status is "NONE", nothing is billing → allowed
+ *     immediately. Blocking it would refuse money from a user who wants to pay.
+ *   · SWITCH (monthly → annual) or RE-SUBSCRIBE after cancelling: status is
+ *     "CANCELED", the subscription is already winding down → allowed, and
+ *     createSession cancels the old one before opening the new checkout.
+ *   · DOWNGRADE while ACTIVE (PRO → one-time BASIC/SPRINT): blocked. Provisioning a
+ *     one-time plan clears `subscriptionId`, which would ORPHAN the live Stripe
+ *     subscription — it keeps charging forever with nothing in our DB pointing at
+ *     it. The user must cancel first and buy once the paid period ends.
+ */
+export function blocksNewPurchase(
+  subscriptionStatus?: SubscriptionStatus | string | null,
+  isOneTimePurchase = false,
+): boolean {
+  // Buying a one-time plan is a DOWNGRADE, and it clears `subscriptionId`. It must
+  // wait until no subscription exists at all — CANCELED included. A cancelled sub is
+  // still live until its period end, and Stripe will emit `customer.subscription.deleted`
+  // for it later: that handler resolves the user by `stripeCustomerId` and resets them to
+  // UNSUBSCRIBED with `subscriptionEndsAt: null`, which would WIPE the one-time month
+  // they paid for in between. Blocking here keeps that unreachable.
+  if (isOneTimePurchase) return hasManageableBilling(subscriptionStatus)
+
+  return subscriptionStatus === "ACTIVE" || subscriptionStatus === "PAST_DUE"
+}
+
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   LIMITED: {
     maxResumes: -1,

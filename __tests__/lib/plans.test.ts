@@ -5,6 +5,9 @@ import {
   effectivePlan,
   canUsePremiumTemplates,
   canUseAdvancedAts,
+  hasManageableBilling,
+  blocksNewPurchase,
+  isStaffAccess,
   PLAN_LIMITS,
 } from "@/lib/plans"
 
@@ -100,6 +103,108 @@ describe("plans · BASIC + SPRINT capabilities", () => {
       expect(canUsePremiumTemplates("LIMITED")).toBe(true)
       expect(canUsePremiumTemplates("BASIC")).toBe(false)
       expect(canUsePremiumTemplates("UNSUBSCRIBED")).toBe(false)
+    })
+  })
+
+  describe("hasManageableBilling — access is NOT the same as billing", () => {
+    it("is true only for a real recurring subscription", () => {
+      expect(hasManageableBilling("ACTIVE")).toBe(true)
+      // Still inside the paid period / retry window: the subscription exists.
+      expect(hasManageableBilling("PAST_DUE")).toBe(true)
+      expect(hasManageableBilling("CANCELED")).toBe(true)
+    })
+
+    it("is false with no subscription, whatever the access says", () => {
+      // What one-time BASIC/SPRINT checkout writes (StripeWebhookService).
+      expect(hasManageableBilling("NONE")).toBe(false)
+      expect(hasManageableBilling("EXPIRED")).toBe(false)
+      expect(hasManageableBilling(null)).toBe(false)
+      expect(hasManageableBilling(undefined)).toBe(false)
+    })
+
+    it("regression: a SUPER_ADMIN has PRO access but NO billing portal", () => {
+      // isActive() short-circuits to true on role — that used to render the
+      // "manage subscription" button, which 400s with no_active_subscription
+      // because the admin never went through Stripe.
+      expect(isActive("UNSUBSCRIBED", null, "NONE", "SUPER_ADMIN")).toBe(true)
+      expect(hasManageableBilling("NONE")).toBe(false)
+      expect(isStaffAccess("SUPER_ADMIN", "NONE")).toBe(true)
+    })
+
+    it("regression: a one-time BASIC buyer has access but must still be able to buy PRO", () => {
+      expect(isActive("BASIC", future, "NONE", "USER")).toBe(true)
+      // False → the PRO card shows "buy", not a portal button it cannot open.
+      expect(hasManageableBilling("NONE")).toBe(false)
+      expect(isStaffAccess("USER", "NONE")).toBe(false)
+    })
+  })
+
+  describe("blocksNewPurchase — shared with the backend checkout guard", () => {
+    it("blocks only while a live subscription is billing", () => {
+      expect(blocksNewPurchase("ACTIVE")).toBe(true)
+      expect(blocksNewPurchase("PAST_DUE")).toBe(true)
+    })
+
+    it("regression: CANCELED must NOT block a recurring upgrade", () => {
+      // The hole this closes: CANCELED has billing to manage (portal) but is still
+      // allowed to buy, e.g. monthly → annual, or re-subscribing before the period
+      // ends. Lumping it with ACTIVE hid the buy button and dead-ended the flow.
+      expect(blocksNewPurchase("CANCELED")).toBe(false)
+      expect(hasManageableBilling("CANCELED")).toBe(true)
+    })
+
+    it("regression: CANCELED DOES block a one-time purchase — it would wipe the paid window", () => {
+      // A cancelled subscription is still live until its period end, and Stripe emits
+      // customer.subscription.deleted for it afterwards. That handler resolves the user
+      // by stripeCustomerId and resets them to UNSUBSCRIBED with subscriptionEndsAt=null
+      // — erasing the BASIC/SPRINT month bought in between. Block it instead.
+      expect(blocksNewPurchase("CANCELED", true)).toBe(true)
+      expect(blocksNewPurchase("ACTIVE", true)).toBe(true)
+      expect(blocksNewPurchase("PAST_DUE", true)).toBe(true)
+    })
+
+    it("one-time is allowed once no subscription remains", () => {
+      expect(blocksNewPurchase("NONE", true)).toBe(false)
+      expect(blocksNewPurchase("EXPIRED", true)).toBe(false)
+      expect(blocksNewPurchase(null, true)).toBe(false)
+    })
+
+    it("one-time is never LOOSER than recurring", () => {
+      const STATUSES = ["NONE", "ACTIVE", "CANCELED", "EXPIRED", "PAST_DUE"] as const
+      for (const s of STATUSES) {
+        if (blocksNewPurchase(s, false)) expect(blocksNewPurchase(s, true)).toBe(true)
+      }
+    })
+
+    it("does not block one-time buyers upgrading (BASIC/SPRINT → PRO)", () => {
+      // handleOneTimeCheckout leaves subscriptionStatus at "NONE".
+      expect(blocksNewPurchase("NONE")).toBe(false)
+      expect(blocksNewPurchase("EXPIRED")).toBe(false)
+      expect(blocksNewPurchase(null)).toBe(false)
+      expect(blocksNewPurchase(undefined)).toBe(false)
+    })
+
+    it("is stricter than hasManageableBilling, never looser", () => {
+      // Any status that blocks a purchase must also be manageable — otherwise the UI
+      // could show neither a buy button nor a portal, dead-ending the user.
+      const STATUSES = ["NONE", "ACTIVE", "CANCELED", "EXPIRED", "PAST_DUE"] as const
+      for (const s of STATUSES) {
+        if (blocksNewPurchase(s)) expect(hasManageableBilling(s)).toBe(true)
+      }
+    })
+  })
+
+  describe("isStaffAccess", () => {
+    it("is false for regular users regardless of subscription state", () => {
+      expect(isStaffAccess("USER", "ACTIVE")).toBe(false)
+      expect(isStaffAccess("USER", "NONE")).toBe(false)
+      expect(isStaffAccess(null, null)).toBe(false)
+    })
+
+    it("is false for an admin who also pays — they get the real portal", () => {
+      expect(isStaffAccess("SUPER_ADMIN", "ACTIVE")).toBe(false)
+      expect(isStaffAccess("SUPER_ADMIN", "PAST_DUE")).toBe(false)
+      expect(isStaffAccess("SUPER_ADMIN", "CANCELED")).toBe(false)
     })
   })
 })

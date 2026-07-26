@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isActive } from "@/lib/plans"
+import { isActive, hasManageableBilling, blocksNewPurchase, isStaffAccess as isStaffAccessFn } from "@/lib/plans"
 import { paypalEnabled } from "@/lib/paypal"
 import { PRICING, priceForSchema } from "@/lib/pricing"
 import { redirect } from "next/navigation"
@@ -120,9 +120,19 @@ export default async function PricingPage({
 
   const [session, isEU] = await Promise.all([auth(), isEUUser()])
   let userIsPro = false
+  let canManageBilling = false
+  let blocksRecurringPurchase = false
+  let blocksOneTimePurchase = false
+  let isStaffAccess = false
   let subscriptionEndsAt: Date | null = null
   let planInterval: string | null = null
   let paymentProvider: string | null = null
+  // Which KIND of access the banner is describing. The banner used to assume every
+  // `userIsPro` was a subscriber, so it told one-time BASIC/SPRINT buyers "you're a Pro
+  // member, your plan renews on X" — both false: they aren't PRO and a one-time payment
+  // never renews. Admins got "your subscription is active" with no subscription at all.
+  let accessKind: "subscription" | "one_time" | "staff" = "subscription"
+  let oneTimePlanLabel: string | null = null
 
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
@@ -142,11 +152,30 @@ export default async function PricingPage({
         dbUser.managedBlocked,
         dbUser.managedExpiresAt,
       )
+      // THREE separate questions, deliberately not one flag (they answer differently
+      // for admins, one-time buyers and users who already cancelled):
+      //   · userIsPro        → does the user have PRO ACCESS right now?
+      //   · canManageBilling → is there a subscription the portal can act on?
+      //   · blocks*Purchase  → would a new checkout be rejected? (mirrors the backend)
+      // A CANCELED user is the case that proves they must stay apart: billing to
+      // manage (portal) YES, upgrade blocked NO, one-time downgrade blocked YES.
+      canManageBilling = hasManageableBilling(dbUser.subscriptionStatus)
+      blocksRecurringPurchase = blocksNewPurchase(dbUser.subscriptionStatus, false)
+      blocksOneTimePurchase = blocksNewPurchase(dbUser.subscriptionStatus, true)
+      isStaffAccess = isStaffAccessFn(dbUser.role, dbUser.subscriptionStatus)
       subscriptionEndsAt = dbUser.subscriptionEndsAt
       planInterval = dbUser.planInterval
       paymentProvider = dbUser.paymentProvider
+
+      const isOneTimePlan = dbUser.plan === "BASIC" || dbUser.plan === "SPRINT"
+      accessKind = isStaffAccess ? "staff" : isOneTimePlan ? "one_time" : "subscription"
+      oneTimePlanLabel = isOneTimePlan ? (dbUser.plan === "BASIC" ? "Basic" : "Sprint") : null
     }
   }
+
+  const formattedEndsAt = subscriptionEndsAt
+    ? format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })
+    : null
 
   const features = [
     t("feature1"),
@@ -192,17 +221,32 @@ export default async function PricingPage({
           titleText={t("title")}
           subtitleText={t("subtitle")}
           accentLabel={t("accent_label")}
-          subscriptionEndsAt={
-            subscriptionEndsAt
-              ? format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })
-              : null
-          }
+          subscriptionEndsAt={formattedEndsAt}
           planInterval={planInterval}
           isEU={isEU}
           isEs={locale === "es"}
           paypalAvailable={paypalEnabled()}
           proMemberManage={t("pro_member_manage")}
           isPayPalPayer={paymentProvider === "PAYPAL"}
+          canManageBilling={canManageBilling}
+          blocksRecurringPurchase={blocksRecurringPurchase}
+          blocksOneTimePurchase={blocksOneTimePurchase}
+          isStaffAccess={isStaffAccess}
+          accessKind={accessKind}
+          oneTimePlanLabel={oneTimePlanLabel}
+          memberTitleOneTime={t("member_title_onetime")}
+          memberTitleStaff={t("member_title_staff")}
+          memberOneTimeUntil={
+            formattedEndsAt
+              ? t("member_onetime_until", { date: formattedEndsAt })
+              : t("member_onetime_no_date")
+          }
+          memberStaffNote={t("member_staff_note")}
+          memberCancelledUntil={
+            formattedEndsAt
+              ? t("member_cancelled_until", { date: formattedEndsAt })
+              : t("member_cancelled")
+          }
         />
       </main>
       <Footer />

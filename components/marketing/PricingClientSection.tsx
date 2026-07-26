@@ -35,6 +35,33 @@ interface Props {
   proMemberManage: string
   /** Current plan was provisioned by PayPal → manage in-app (PayPal has no portal). */
   isPayPalPayer: boolean
+  /** A subscription exists that the portal can act on (ACTIVE · PAST_DUE · CANCELED). */
+  canManageBilling: boolean
+  /** A live subscription is billing → a recurring checkout would be rejected (ACTIVE · PAST_DUE). */
+  blocksRecurringPurchase: boolean
+  /**
+   * Any subscription still exists → a one-time checkout would be rejected
+   * (ACTIVE · PAST_DUE · CANCELED). Stricter on purpose: buying one-time clears
+   * `subscriptionId`, and the later `subscription.deleted` event would wipe the
+   * one-time window the user paid for.
+   */
+  blocksOneTimePurchase: boolean
+  /** PRO access granted by SUPER_ADMIN role, with nothing purchased. */
+  isStaffAccess: boolean
+  /**
+   * What KIND of access the banner describes. Subscription copy ("your plan renews
+   * on X") is a lie for one-time BASIC/SPRINT buyers and for role-based staff access.
+   */
+  accessKind: "subscription" | "one_time" | "staff"
+  /** "Basic" | "Sprint" for the one-time pill; null otherwise. */
+  oneTimePlanLabel: string | null
+  memberTitleOneTime: string
+  memberTitleStaff: string
+  /** Already interpolated with the end date (or the no-date variant). */
+  memberOneTimeUntil: string
+  memberStaffNote: string
+  /** Already interpolated. Shown when the subscription is cancelled but still running. */
+  memberCancelledUntil: string
 }
 
 export default function PricingClientSection({
@@ -60,11 +87,45 @@ export default function PricingClientSection({
   paypalAvailable,
   proMemberManage,
   isPayPalPayer,
+  canManageBilling,
+  blocksRecurringPurchase,
+  blocksOneTimePurchase,
+  isStaffAccess,
+  accessKind,
+  oneTimePlanLabel,
+  memberTitleOneTime,
+  memberTitleStaff,
+  memberOneTimeUntil,
+  memberStaffNote,
+  memberCancelledUntil,
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const [billing, setBilling] = useState<"annual" | "monthly">("monthly")
 
   const t = (es: string, en: string) => (isEs ? es : en)
+
+  // Cancelled but still inside the paid period — the only status that can manage
+  // billing while a recurring upgrade stays allowed (see blocksNewPurchase).
+  // Its note must NOT say "renews on X": the user cancelled, nothing will renew.
+  const isCancelledButActive = canManageBilling && !blocksRecurringPurchase
+
+  // Banner copy by kind of access, not by a single "is pro" boolean — a lookup instead
+  // of nested ternaries so a new access kind can't silently fall through to subscription
+  // wording (that fallthrough is exactly what told one-time buyers their plan renews).
+  const BANNER_COPY: Record<Props["accessKind"], { title: string; note: string; pill: string | null }> = {
+    subscription: {
+      title: proMemberTitle,
+      note: isCancelledButActive
+        ? memberCancelledUntil
+        : subscriptionEndsAt
+          ? `${proMemberRenews} ${subscriptionEndsAt}`
+          : proMemberActive,
+      pill: planInterval ? (planInterval === "annual" ? planAnnual : planMonthly) : null,
+    },
+    one_time: { title: memberTitleOneTime, note: memberOneTimeUntil, pill: oneTimePlanLabel },
+    staff: { title: memberTitleStaff, note: memberStaffNote, pill: null },
+  }
+  const banner = BANNER_COPY[accessKind]
 
   const revealVariants = {
     visible: (i: number) => ({
@@ -137,21 +198,22 @@ export default function PricingClientSection({
               <BadgeCheck className="h-6 w-6 shrink-0 text-[#00D4FF]" />
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-[15px] font-bold text-[#1a2e4a]">{proMemberTitle}</p>
-                  {planInterval && (
+                  <p className="text-[15px] font-bold text-[#1a2e4a]">{banner.title}</p>
+                  {banner.pill && (
                     <span className="rounded-full border border-[#00D4FF]/20 bg-[#00D4FF]/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[#00D4FF]">
-                      {planInterval === "annual" ? planAnnual : planMonthly}
+                      {banner.pill}
                     </span>
                   )}
                 </div>
-                <p className="mt-0.5 text-[13px] text-[#6B7A8C]">
-                  {subscriptionEndsAt ? `${proMemberRenews} ${subscriptionEndsAt}` : proMemberActive}
-                </p>
+                <p className="mt-0.5 text-[13px] text-[#6B7A8C]">{banner.note}</p>
               </div>
             </div>
-            {/* PayPal payers have no hosted portal — send them to Settings, where
+            {/* Only users with a real recurring subscription get a manage action:
+                staff access and one-time BASIC/SPRINT have no billing to manage,
+                and the Stripe portal 400s for them.
+                PayPal payers have no hosted portal — send them to Settings, where
                 the provider-aware cancel lives. Stripe payers get the portal. */}
-            {isPayPalPayer ? (
+            {!canManageBilling ? null : isPayPalPayer ? (
               <a
                 href={`/${isEs ? "es" : "en"}/dashboard/settings`}
                 className="shrink-0 inline-flex min-h-[44px] items-center justify-center rounded-xl bg-primary px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D4FF] focus-visible:ring-offset-2"
@@ -183,7 +245,7 @@ export default function PricingClientSection({
               </span>
               <div>
                 <p className="text-[15px] font-bold text-[#1a2e4a]">Basic</p>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("Acceso 1 mes", "1-month access")}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{t("1 mes · sin suscripción", "1 month · no subscription")}</p>
               </div>
             </div>
             <div className="relative mb-1 flex items-baseline gap-1">
@@ -191,7 +253,7 @@ export default function PricingClientSection({
               <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">{PRICING.basic}</span>
               <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
             </div>
-            <p className="relative mb-5 text-[13px] text-slate-400">{t("Un solo pago · sin renovación", "One payment · no renewal")}</p>
+            <p className="relative mb-5 text-[13px] text-slate-400">{t("Empieza sin atarte a nada: pagas una vez y ya.", "Start without committing to anything: pay once, done.")}</p>
             <div className="relative mb-5 h-px bg-slate-100" />
             <ul className="relative mb-6 flex flex-col gap-3">
               {basicPerks.map((p) => <CheckRow key={p} text={p} accent="#1a2e4a" />)}
@@ -202,6 +264,10 @@ export default function PricingClientSection({
             <div className="relative mt-auto">
               <PricingButtons
                 plan="basic"
+                isStaffAccess={isStaffAccess}
+                blocksPurchase={blocksOneTimePurchase}
+                alreadyCancelled={isCancelledButActive}
+                currentPlanEndsAt={subscriptionEndsAt}
                 isEU={isEU}
                 paypalAvailable={paypalAvailable}
                 buttonClassName="!bg-white !text-[#1a2e4a] !font-semibold !rounded-[14px] !border !border-[#1a2e4a]/20 hover:!bg-[#1a2e4a]/[0.03] !py-3.5 w-full"
@@ -226,7 +292,7 @@ export default function PricingClientSection({
               </span>
               <div>
                 <p className="text-[15px] font-bold text-[#1a2e4a]">Job Sprint</p>
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#00B4DB]">{t("Acceso 7 días", "7-day access")}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-[#00B4DB]">{t("7 días · sin suscripción", "7 days · no subscription")}</p>
               </div>
             </div>
             <div className="relative mb-1 flex items-baseline gap-1">
@@ -234,7 +300,7 @@ export default function PricingClientSection({
               <span className="text-5xl font-extrabold tabular-nums tracking-[-0.04em] text-[#1a2e4a]">{PRICING.sprint}</span>
               <span className="text-sm font-medium text-slate-400">{t("pago único", "one-time")}</span>
             </div>
-            <p className="relative mb-5 text-[13px] text-slate-400">{t("Sprint de 7 días para postular", "7-day sprint to apply")}</p>
+            <p className="relative mb-5 text-[13px] text-slate-400">{t("Una semana con IA para redactar. Pagas una vez.", "A week with AI to write. Pay once.")}</p>
             <div className="relative mb-5 h-px bg-slate-100" />
             <ul className="relative mb-6 flex flex-col gap-3">
               {sprintPerks.map((p) => <CheckRow key={p} text={p} accent="#00B4DB" />)}
@@ -245,6 +311,10 @@ export default function PricingClientSection({
             <div className="relative mt-auto">
               <PricingButtons
                 plan="sprint"
+                isStaffAccess={isStaffAccess}
+                blocksPurchase={blocksOneTimePurchase}
+                alreadyCancelled={isCancelledButActive}
+                currentPlanEndsAt={subscriptionEndsAt}
                 isEU={isEU}
                 paypalAvailable={paypalAvailable}
                 buttonClassName="!bg-[#00D4FF] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 hover:!brightness-105 w-full"
@@ -349,7 +419,10 @@ export default function PricingClientSection({
                 <div className="mt-auto">
                   <PricingButtons
                     plan={proPlan}
-                    isPro={userIsPro}
+                    isStaffAccess={isStaffAccess}
+                    blocksPurchase={blocksRecurringPurchase}
+                    currentPlanEndsAt={subscriptionEndsAt}
+                    isPayPalPayer={isPayPalPayer}
                     isEU={isEU}
                     paypalAvailable={paypalAvailable}
                     buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_8px_24px_rgba(0,212,255,0.35)] hover:!brightness-105 w-full"
