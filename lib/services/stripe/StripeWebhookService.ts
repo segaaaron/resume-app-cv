@@ -196,12 +196,25 @@ export class StripeWebhookService {
   private async handleOneTimeCheckout(event: Stripe.Event, userId: string, planType: "basic" | "sprint"): Promise<void> {
     const newPlan = planType === "basic" ? "BASIC" : "SPRINT"
     const now = new Date()
-    const subscriptionEndsAt = planType === "basic" ? addMonths(now, 1) : addDays(now, 7)
+    const purchasedUntil = planType === "basic" ? addMonths(now, 1) : addDays(now, 7)
 
     const result = await db.$transaction(async (tx) => {
-      if (!await claimEvent(tx, event.id, { userId })) return { skip: true }
-      const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { isManaged: true } })
-      if (targetUser?.isManaged) return { skip: true }
+      if (!await claimEvent(tx, event.id, { userId })) return { skip: true, subscriptionEndsAt: null }
+      const targetUser = await tx.user.findUnique({
+        where: { id: userId },
+        select: { isManaged: true, subscriptionEndsAt: true },
+      })
+      if (targetUser?.isManaged) return { skip: true, subscriptionEndsAt: null }
+
+      // NEVER SHORTEN A WINDOW THE USER ALREADY PAID FOR.
+      // This used to overwrite subscriptionEndsAt unconditionally, so a BASIC buyer
+      // (1 month) who bought SPRINT (7 days) on day 3 was cut from ~27 remaining days
+      // down to 7 — they paid more and got less. Keep whichever end date is later;
+      // the plan itself still switches, so they get the new plan's capabilities for
+      // the time they already own.
+      const current = targetUser?.subscriptionEndsAt ?? null
+      const subscriptionEndsAt = current && current > purchasedUntil ? current : purchasedUntil
+
       await tx.user.update({
         where: { id: userId },
         data: {
@@ -213,12 +226,12 @@ export class StripeWebhookService {
           sessionVersion: { increment: 1 },
         },
       })
-      return { skip: false }
+      return { skip: false, subscriptionEndsAt }
     }, TX_OPTS)
 
     if (result.skip) return
     purgeUserCache(userId)
-    this.logger.info("StripeWebhookService.handleOneTimeCheckout", { userId, planType, subscriptionEndsAt: subscriptionEndsAt.toISOString() })
+    this.logger.info("StripeWebhookService.handleOneTimeCheckout", { userId, planType, subscriptionEndsAt: result.subscriptionEndsAt?.toISOString() ?? null })
   }
 
   private async handleInvoicePaid(event: Stripe.Event): Promise<void> {

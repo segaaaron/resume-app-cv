@@ -287,6 +287,73 @@ describe("A. handleCheckoutCompleted", () => {
       data: expect.objectContaining({ plan: "PRO" }),
     }))
   })
+
+  // ── One-time plans (BASIC / SPRINT): never shorten a paid window ──
+  describe("one-time checkout (planType metadata)", () => {
+    function makeOneTimeEvent(planType: "basic" | "sprint", eventId = "ev_onetime_1") {
+      return {
+        type: "checkout.session.completed",
+        id: eventId,
+        data: {
+          object: { id: "cs_ot", payment_status: "paid", metadata: { userId: "u1", planType }, subscription: null },
+        },
+      } as unknown as Stripe.Event
+    }
+
+    /** Reads the subscriptionEndsAt the handler wrote. */
+    function writtenEndsAt(tx: ReturnType<typeof makeTx>): Date {
+      const call = vi.mocked(tx.user.update).mock.calls[0][0] as { data: { subscriptionEndsAt: Date } }
+      return call.data.subscriptionEndsAt
+    }
+
+    it("BASIC with no prior window → ends ~1 month out, subscriptionId cleared", async () => {
+      const { db } = await import("@/lib/db")
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeOneTimeEvent("basic"))
+      const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: null }) })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ plan: "BASIC", subscriptionStatus: "NONE", subscriptionId: null, planInterval: null }),
+      }))
+      const days = (writtenEndsAt(tx).getTime() - Date.now()) / 86_400_000
+      expect(days).toBeGreaterThan(26)
+    })
+
+    it("regression: BASIC buyer with 25 days left buying SPRINT (7d) KEEPS the 25 days", async () => {
+      // The bug: subscriptionEndsAt was overwritten unconditionally, so this user paid
+      // $7.99 and was cut from 25 remaining days down to 7. Paid more, got less.
+      const { db } = await import("@/lib/db")
+      const remaining = new Date(Date.now() + 25 * 86_400_000)
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeOneTimeEvent("sprint"))
+      const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: remaining }) })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      // Plan switches to SPRINT (better capabilities) but the window is not clipped.
+      expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+        data: expect.objectContaining({ plan: "SPRINT" }),
+      }))
+      expect(writtenEndsAt(tx).getTime()).toBe(remaining.getTime())
+    })
+
+    it("an EXPIRED window in the past never wins over the newly purchased one", async () => {
+      const { db } = await import("@/lib/db")
+      const stale = new Date(Date.now() - 60 * 86_400_000)
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeOneTimeEvent("sprint"))
+      const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: stale }) })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      expect(writtenEndsAt(tx).getTime()).toBeGreaterThan(Date.now())
+    })
+
+    it("managed user → no write at all", async () => {
+      const { db } = await import("@/lib/db")
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeOneTimeEvent("basic"))
+      const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: true, subscriptionEndsAt: null }) })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      expect(tx.user.update).not.toHaveBeenCalled()
+    })
+  })
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
