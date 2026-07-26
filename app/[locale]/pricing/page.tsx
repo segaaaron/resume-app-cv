@@ -7,7 +7,7 @@ import { getTranslations } from "next-intl/server"
 import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isActive, hasManageableBilling, blocksNewPurchase, isStaffAccess as isStaffAccessFn } from "@/lib/plans"
+import { isActive, hasManageableBilling, hasGatewayBilling, hasStripeBillingPortal, blocksNewPurchase, isStaffAccess as isStaffAccessFn } from "@/lib/plans"
 import { paypalEnabled } from "@/lib/paypal"
 import { PRICING, priceForSchema } from "@/lib/pricing"
 import { redirect } from "next/navigation"
@@ -121,6 +121,9 @@ export default async function PricingPage({
   const [session, isEU] = await Promise.all([auth(), isEUUser()])
   let userIsPro = false
   let canManageBilling = false
+  let subscriptionCancelled = false
+  /** Access with no gateway behind it — nothing to cancel, nothing to buy, only support can unblock. */
+  let billingNeedsSupport = false
   let blocksRecurringPurchase = false
   let blocksOneTimePurchase = false
   let isStaffAccess = false
@@ -137,7 +140,7 @@ export default async function PricingPage({
   if (session?.user?.id) {
     const dbUser = await db.user.findUnique({
       where: { id: session.user.id },
-      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, paymentProvider: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true },
+      select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, paymentProvider: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, stripeCustomerId: true },
     })
     if (dbUser?.isManaged || dbUser?.plan === "LIMITED") {
       redirect(`/${locale}/dashboard`)
@@ -152,17 +155,48 @@ export default async function PricingPage({
         dbUser.managedBlocked,
         dbUser.managedExpiresAt,
       )
-      // THREE separate questions, deliberately not one flag (they answer differently
-      // for admins, one-time buyers and users who already cancelled):
+      // FOUR separate questions, deliberately not one flag (they answer differently
+      // for admins, one-time buyers, users who already cancelled, and rows whose
+      // status has no gateway behind it):
       //   · userIsPro        → does the user have PRO ACCESS right now?
-      //   · canManageBilling → is there a subscription the portal can act on?
+      //   · hasRealBilling   → is a gateway actually billing them? (status can lie)
+      //   · canManageBilling → is there a manage action that will not fail?
       //   · blocks*Purchase  → would a new checkout be rejected? (mirrors the backend)
       // A CANCELED user is the case that proves they must stay apart: billing to
       // manage (portal) YES, upgrade blocked NO, one-time downgrade blocked YES.
-      canManageBilling = hasManageableBilling(dbUser.subscriptionStatus)
+      //
+      // `subscriptionStatus` is NOT proof that money is moving. A row granted outside
+      // checkout (admin grant, manual DB fix, migrated data) carries ACTIVE with no
+      // Stripe customer and no PayPal agreement: the portal 400s
+      // (`no_active_subscription`), and telling them to "cancel first" points at
+      // something that does not exist.
+      const hasRealBilling = hasGatewayBilling(
+        dbUser.subscriptionStatus,
+        dbUser.stripeCustomerId,
+        dbUser.paymentProvider,
+      )
+      // PayPal has no hosted portal but does have the in-app cancel in Settings, so
+      // for them real billing IS a manage action. Stripe additionally needs the
+      // customer the portal opens against.
+      canManageBilling = dbUser.paymentProvider === "PAYPAL"
+        ? hasRealBilling
+        : hasStripeBillingPortal(dbUser.subscriptionStatus, dbUser.stripeCustomerId)
+      // Cancelled-but-still-running is about the STATUS only — it drives the banner
+      // copy ("you keep access until X" instead of "renews on X"), which stays true
+      // whether or not a Stripe customer exists.
+      subscriptionCancelled = hasManageableBilling(dbUser.subscriptionStatus)
+        && !blocksNewPurchase(dbUser.subscriptionStatus, false)
       blocksRecurringPurchase = blocksNewPurchase(dbUser.subscriptionStatus, false)
       blocksOneTimePurchase = blocksNewPurchase(dbUser.subscriptionStatus, true)
-      isStaffAccess = isStaffAccessFn(dbUser.role, dbUser.subscriptionStatus)
+      // An admin whose ACTIVE status has no gateway behind it is staff access, not a
+      // subscriber. Judging this by status alone was the gap: it produced a banner
+      // claiming their subscription renews, a portal button that 400s, and one-time
+      // cards locked behind a date that never comes.
+      isStaffAccess = isStaffAccessFn(dbUser.role, dbUser.subscriptionStatus, hasRealBilling)
+      // Access with no gateway behind it and a status that blocks buying: the user can
+      // neither manage nor purchase, and every "cancel first" instruction is
+      // unfollowable. Only support can fix the row, so say that instead.
+      billingNeedsSupport = !isStaffAccess && !hasRealBilling && hasManageableBilling(dbUser.subscriptionStatus)
       subscriptionEndsAt = dbUser.subscriptionEndsAt
       planInterval = dbUser.planInterval
       paymentProvider = dbUser.paymentProvider
@@ -231,6 +265,8 @@ export default async function PricingPage({
           proMemberManage={t("pro_member_manage")}
           isPayPalPayer={paymentProvider === "PAYPAL"}
           canManageBilling={canManageBilling}
+          subscriptionCancelled={subscriptionCancelled}
+          billingNeedsSupport={billingNeedsSupport}
           blocksRecurringPurchase={blocksRecurringPurchase}
           blocksOneTimePurchase={blocksOneTimePurchase}
           isStaffAccess={isStaffAccess}

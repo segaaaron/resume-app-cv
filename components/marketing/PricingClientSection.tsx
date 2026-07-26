@@ -35,8 +35,23 @@ interface Props {
   proMemberManage: string
   /** Current plan was provisioned by PayPal → manage in-app (PayPal has no portal). */
   isPayPalPayer: boolean
-  /** A subscription exists that the portal can act on (ACTIVE · PAST_DUE · CANCELED). */
+  /**
+   * The Stripe portal can actually be opened: manageable status (ACTIVE · PAST_DUE ·
+   * CANCELED) AND a `stripeCustomerId` on the row. Status alone is not enough —
+   * `createPortalSession` 400s without a customer.
+   */
   canManageBilling: boolean
+  /**
+   * Subscription cancelled but still inside the paid period. Derived from the STATUS
+   * only, so the banner copy stays correct even when no Stripe customer exists.
+   */
+  subscriptionCancelled: boolean
+  /**
+   * PRO access with a purchase-blocking status but no gateway behind it. Nothing to
+   * cancel, nothing to buy — the Pro card points at support instead of telling the
+   * user to cancel a subscription that does not exist.
+   */
+  billingNeedsSupport: boolean
   /** A live subscription is billing → a recurring checkout would be rejected (ACTIVE · PAST_DUE). */
   blocksRecurringPurchase: boolean
   /**
@@ -88,6 +103,8 @@ export default function PricingClientSection({
   proMemberManage,
   isPayPalPayer,
   canManageBilling,
+  subscriptionCancelled,
+  billingNeedsSupport,
   blocksRecurringPurchase,
   blocksOneTimePurchase,
   isStaffAccess,
@@ -107,7 +124,11 @@ export default function PricingClientSection({
   // Cancelled but still inside the paid period — the only status that can manage
   // billing while a recurring upgrade stays allowed (see blocksNewPurchase).
   // Its note must NOT say "renews on X": the user cancelled, nothing will renew.
-  const isCancelledButActive = canManageBilling && !blocksRecurringPurchase
+  // Comes from the server as a STATUS fact: it used to be derived from
+  // `canManageBilling`, which now also requires a Stripe customer, and that would
+  // have silently flipped the copy back to "renews on X" for a cancelled user
+  // without one.
+  const isCancelledButActive = subscriptionCancelled
 
   // Banner copy by kind of access, not by a single "is pro" boolean — a lookup instead
   // of nested ternaries so a new access kind can't silently fall through to subscription
@@ -266,6 +287,7 @@ export default function PricingClientSection({
                 plan="basic"
                 isStaffAccess={isStaffAccess}
                 blocksPurchase={blocksOneTimePurchase}
+                billingNeedsSupport={billingNeedsSupport}
                 alreadyCancelled={isCancelledButActive}
                 currentPlanEndsAt={subscriptionEndsAt}
                 isEU={isEU}
@@ -313,6 +335,7 @@ export default function PricingClientSection({
                 plan="sprint"
                 isStaffAccess={isStaffAccess}
                 blocksPurchase={blocksOneTimePurchase}
+                billingNeedsSupport={billingNeedsSupport}
                 alreadyCancelled={isCancelledButActive}
                 currentPlanEndsAt={subscriptionEndsAt}
                 isEU={isEU}
@@ -421,8 +444,9 @@ export default function PricingClientSection({
                     plan={proPlan}
                     isStaffAccess={isStaffAccess}
                     blocksPurchase={blocksRecurringPurchase}
+                    billingNeedsSupport={billingNeedsSupport}
+                    alreadyCancelled={isCancelledButActive}
                     currentPlanEndsAt={subscriptionEndsAt}
-                    isPayPalPayer={isPayPalPayer}
                     isEU={isEU}
                     paypalAvailable={paypalAvailable}
                     buttonClassName="!bg-gradient-to-r !from-[#00D4FF] !to-[#0099CC] !text-[#06283D] !font-bold !rounded-[14px] !border-0 !py-3.5 !shadow-[0_8px_24px_rgba(0,212,255,0.35)] hover:!brightness-105 w-full"

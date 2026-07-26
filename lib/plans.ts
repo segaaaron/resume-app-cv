@@ -98,9 +98,64 @@ export function hasManageableBilling(subscriptionStatus?: SubscriptionStatus | s
     || subscriptionStatus === "CANCELED"
 }
 
-/** PRO access granted purely by the SUPER_ADMIN role — nothing bought, nothing to manage. */
-export function isStaffAccess(role?: string | null, subscriptionStatus?: SubscriptionStatus | string | null): boolean {
-  return isSuperAdmin(role) && !hasManageableBilling(subscriptionStatus)
+/**
+ * The Stripe-hosted billing portal can actually be opened for this user.
+ *
+ * THE SINGLE SOURCE for that question — it mirrors the only two things
+ * `StripeBillingService.createPortalSession` needs, so no surface can offer a
+ * portal button the route then rejects with `no_active_subscription` (400), which
+ * the UI can only render as a generic error toast.
+ *
+ * `hasManageableBilling` alone is NOT enough, and that gap shipped: a row can carry
+ * subscriptionStatus = ACTIVE with stripeCustomerId = null whenever the plan was
+ * granted outside checkout (admin grant, manual DB fix, migrated data). Status says
+ * yes, Stripe has no customer to open, the request 400s.
+ *
+ * PayPal payers are a different question — they never get a stripeCustomerId and
+ * PayPal has no hosted portal at all, so callers route them to the in-app cancel
+ * instead. Ask `hasManageableBilling` for them, not this.
+ */
+export function hasStripeBillingPortal(
+  subscriptionStatus?: SubscriptionStatus | string | null,
+  stripeCustomerId?: string | null,
+): boolean {
+  return hasManageableBilling(subscriptionStatus) && Boolean(stripeCustomerId)
+}
+
+/**
+ * SOME gateway is really billing this user — Stripe with a customer to act on, or
+ * PayPal, which never writes a `stripeCustomerId` and is managed in-app instead.
+ *
+ * The question `subscriptionStatus` alone cannot answer. A status can outlive (or
+ * precede) any real billing relationship: rows granted outside checkout carry
+ * ACTIVE with nothing behind it at either gateway. Everything the UI offers a
+ * subscriber — the portal, "cancel first to switch", a renewal date — is a lie for
+ * such a row, because there is nothing to open, cancel or renew.
+ */
+export function hasGatewayBilling(
+  subscriptionStatus?: SubscriptionStatus | string | null,
+  stripeCustomerId?: string | null,
+  paymentProvider?: string | null,
+): boolean {
+  if (!hasManageableBilling(subscriptionStatus)) return false
+  return paymentProvider === "PAYPAL" || Boolean(stripeCustomerId)
+}
+
+/**
+ * PRO access granted purely by the SUPER_ADMIN role — nothing bought, nothing to manage.
+ *
+ * `hasGatewayBilling` defaults to the status-only answer so existing callers keep
+ * their behaviour. Pass it explicitly wherever the customer id is available: an
+ * admin row whose ACTIVE status has no gateway behind it IS staff access, and
+ * treating it as a subscription tells them their plan renews, offers a portal that
+ * 400s, and blocks the one-time cards behind a date that never arrives.
+ */
+export function isStaffAccess(
+  role?: string | null,
+  subscriptionStatus?: SubscriptionStatus | string | null,
+  gatewayBilling: boolean = hasManageableBilling(subscriptionStatus),
+): boolean {
+  return isSuperAdmin(role) && !gatewayBilling
 }
 
 /**

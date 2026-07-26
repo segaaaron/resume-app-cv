@@ -22,7 +22,10 @@ export default function ManageBillingButton() {
       if (res.ok && data.url) {
         window.location.href = data.url
       } else {
-        toast.error(t("toast_payment_error"))
+        // The banner only renders this button when a Stripe customer exists, so a
+        // 400 here means the row changed under us. Name the real cause instead of
+        // "Error starting the payment", which describes a checkout that never ran.
+        toast.error(data.error === "no_active_subscription" ? t("toast_no_billing_to_manage") : t("toast_payment_error"))
       }
     } catch {
       toast.error(t("toast_connection_error"))

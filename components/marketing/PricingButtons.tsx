@@ -16,13 +16,23 @@ interface Props {
    * recurring cards get the ACTIVE/PAST_DUE rule, one-time cards the stricter one that
    * also covers CANCELED.
    *
-   * NOT the same as "has PRO access". Drives two states by direction: on the PRO card
-   * it becomes "manage subscription"; on the one-time cards (a DOWNGRADE) it becomes
-   * "available when your plan ends".
+   * NOT the same as "has PRO access". When true the card stops offering a purchase
+   * and explains when it becomes possible — no request is made either way, because
+   * the backend would refuse it.
    */
   blocksPurchase?: boolean
-  /** PRO access comes from the SUPER_ADMIN role — nothing to buy, nothing to manage. */
+  /**
+   * PRO access from the SUPER_ADMIN role with no gateway behind it — nothing to buy,
+   * nothing to manage. Resolved server-side by `isStaffAccess(role, status, realBilling)`.
+   */
   isStaffAccess?: boolean
+  /**
+   * The row has PRO access and a purchase-blocking status, but no gateway behind it
+   * (no Stripe customer, not a PayPal payer) — typically granted outside checkout.
+   * There is nothing to cancel and nothing to buy, so "cancel first to switch" is
+   * unfollowable; only support can fix the row.
+   */
+  billingNeedsSupport?: boolean
   /** Formatted date the current paid period ends, for the downgrade-blocked copy. */
   currentPlanEndsAt?: string | null
   /**
@@ -31,12 +41,6 @@ interface Props {
    * cancelled → it is the RENEWAL date, so the user must be told to cancel first.
    */
   alreadyCancelled?: boolean
-  /**
-   * Current plan was provisioned by PayPal. PayPal has no hosted billing portal, so
-   * `/api/stripe/portal` would 400 for them — route the manage action to Settings,
-   * where the provider-aware cancel lives (same rule as the Pro banner).
-   */
-  isPayPalPayer?: boolean
   theme?: "light" | "dark"
   buttonClassName?: string
   isEU?: boolean
@@ -48,7 +52,7 @@ interface Props {
   paypalAvailable?: boolean
 }
 
-export default function PricingButtons({ plan, blocksPurchase = false, isStaffAccess = false, currentPlanEndsAt = null, alreadyCancelled = false, isPayPalPayer = false, theme = "light", buttonClassName, isEU = false, paypalAvailable = false }: Props) {
+export default function PricingButtons({ plan, blocksPurchase = false, isStaffAccess = false, billingNeedsSupport = false, currentPlanEndsAt = null, alreadyCancelled = false, theme = "light", buttonClassName, isEU = false, paypalAvailable = false }: Props) {
   const [loading, setLoading] = useState(false)
   const [consented, setConsented] = useState(false)
   const [method, setMethod] = useState<PaymentMethod>("stripe")
@@ -58,34 +62,21 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
   // One-time plans (BASIC/SPRINT) do NOT auto-renew → use accurate consent wording.
   const isOneTime = plan === "basic" || plan === "sprint"
   const consentKey = isOneTime ? "checkout_consent_onetime" : "checkout_consent"
-  // Upgrades/switches keep the recurring card actionable (portal); moving DOWN to a
-  // one-time plan has to wait for the paid period to end.
-  const showPortal = blocksPurchase && !isOneTime
+  // Two directions, refused for different reasons but with the same answer for the
+  // user: wait for the paid period to end, or cancel to end it sooner.
+  //   · switchBlocked    — a live subscription already bills them, so a new recurring
+  //                        checkout (including monthly → annual) is refused.
+  //   · downgradeBlocked — moving DOWN to a one-time plan while any subscription
+  //                        still exists.
+  // Neither name mentions a portal any more: this component makes no billing-portal
+  // request at all (see the render below).
+  const switchBlocked = blocksPurchase && !isOneTime
   const downgradeBlocked = blocksPurchase && isOneTime
 
+  // Only ever starts a CHECKOUT now. The portal branch that used to live here is
+  // gone: when a subscription blocks the purchase this component renders an
+  // explanation instead of a button, so there is nothing left to click.
   async function handleClick() {
-    if (showPortal) {
-      setLoading(true)
-      try {
-        const res = await apiFetch("/api/stripe/portal", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ locale }),
-        })
-        const data = await res.json()
-        if (res.ok && data.url) {
-          window.location.href = data.url
-        } else {
-          toast.error(t("toast_payment_error"))
-        }
-      } catch {
-        toast.error(t("toast_connection_error"))
-      } finally {
-        setLoading(false)
-      }
-      return
-    }
-
     setLoading(true)
     try {
       // PayPal only when the selector is actually available AND chosen; otherwise
@@ -149,49 +140,60 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
     )
   }
 
-  // Moving DOWN to a one-time plan while any subscription still exists is refused by
-  // the backend: provisioning one clears `subscriptionId`, so a still-ACTIVE sub would
-  // keep charging unlinked, and an already-CANCELED one would later fire
-  // `subscription.deleted` and wipe the one-time window the user just paid for.
-  //
+  // Tells the user WHEN the switch becomes possible and what to do meanwhile.
   // Two different truths, so two different messages:
   //   · already cancelled → `currentPlanEndsAt` is a real END date → "available from X"
-  //   · still active      → it is the RENEWAL date → they must cancel first, and saying
-  //                         "you can switch on X" would be false (it renews that day)
-  if (downgradeBlocked) {
-    const note = alreadyCancelled
-      ? currentPlanEndsAt
-        ? t("plan_change_available_on", { date: currentPlanEndsAt })
-        : t("plan_change_when_current_ends")
-      : currentPlanEndsAt
-        ? t("plan_change_cancel_first_on", { date: currentPlanEndsAt })
-        : t("plan_change_cancel_first")
+  //   · still active      → it is the RENEWAL date, so "you can switch on X" would be
+  //                         false (it renews that day) → they must cancel first
+  const blockedNote = alreadyCancelled
+    ? currentPlanEndsAt
+      ? t("plan_change_available_on", { date: currentPlanEndsAt })
+      : t("plan_change_when_current_ends")
+    : currentPlanEndsAt
+      ? t("plan_change_cancel_first_on", { date: currentPlanEndsAt })
+      : t("plan_change_cancel_first")
 
+  const blockedUntilPlanEnds = (
+    <div className="flex flex-col gap-2">
+      <Button size="lg" className="w-full" disabled>
+        {t("plan_change_when_current_ends")}
+      </Button>
+      <p className="text-center text-[11px] leading-[1.5] opacity-75">{blockedNote}</p>
+    </div>
+  )
+
+  // Access with no gateway behind it, on ANY card: nothing to cancel, nothing to wait
+  // for, and no checkout allowed either (the status still blocks it). Must come before
+  // the two blocks below — both tell the user to cancel a plan or wait for it to end,
+  // and neither is followable when no such plan exists at Stripe or PayPal.
+  if ((downgradeBlocked || switchBlocked) && billingNeedsSupport) {
     return (
       <div className="flex flex-col gap-2">
         <Button size="lg" className="w-full" disabled>
-          {t("plan_change_when_current_ends")}
+          {t("plan_change_unavailable")}
         </Button>
-        <p className="text-center text-[11px] leading-[1.5] opacity-75">{note}</p>
+        <p className="text-center text-[11px] leading-[1.5] opacity-75">{t("plan_change_contact_support")}</p>
       </div>
     )
   }
 
-  if (showPortal) {
-    // PayPal has no hosted portal — Settings holds the provider-aware cancel.
-    if (isPayPalPayer) {
-      return (
-        <Button size="lg" className="w-full" asChild>
-          <a href={`/${locale}/dashboard/settings`}>{t("pro_member_manage")}</a>
-        </Button>
-      )
-    }
-    return (
-      <Button size="lg" className="w-full" onClick={handleClick} disabled={loading}>
-        {loading ? t("btn_loading") : t("pro_member_manage")}
-      </Button>
-    )
-  }
+  // Moving DOWN to a one-time plan while any subscription still exists is refused by
+  // the backend: provisioning one clears `subscriptionId`, so a still-ACTIVE sub would
+  // keep charging unlinked, and an already-CANCELED one would later fire
+  // `subscription.deleted` and wipe the one-time window the user just paid for.
+  if (downgradeBlocked) return blockedUntilPlanEnds
+
+  // A live recurring subscription (ACTIVE/PAST_DUE) is billing this user, so
+  // `StripeCheckoutService` rejects a new checkout with `already_subscribed`. That is
+  // true for a monthly→annual switch too: the switch is not a purchase we can start
+  // from here. So the card states the rule instead of offering an action that fails —
+  // cancel, or wait for the paid period to end.
+  //
+  // This card used to open the billing portal, which meant a user aiming for annual
+  // clicked "manage subscription" and either landed somewhere that could not do it or,
+  // with no `stripeCustomerId`, got a raw error toast. The portal still lives in the
+  // Pro banner above (and in Settings), where it is the manage action it claims to be.
+  if (switchBlocked) return blockedUntilPlanEnds
 
   return (
     <div className="flex flex-col gap-3">
