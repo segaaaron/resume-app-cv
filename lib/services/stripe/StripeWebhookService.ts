@@ -229,14 +229,12 @@ export class StripeWebhookService {
       })
       if (targetUser?.isManaged) return { skip: true, subscriptionEndsAt: null }
 
-      // NEVER SHORTEN A WINDOW THE USER ALREADY PAID FOR.
+      // NEVER SHORTEN A WINDOW THE USER ALREADY PAID FOR — see laterOf().
       // This used to overwrite subscriptionEndsAt unconditionally, so a BASIC buyer
       // (1 month) who bought SPRINT (7 days) on day 3 was cut from ~27 remaining days
-      // down to 7 — they paid more and got less. Keep whichever end date is later;
-      // the plan itself still switches, so they get the new plan's capabilities for
-      // the time they already own.
-      const current = targetUser?.subscriptionEndsAt ?? null
-      const subscriptionEndsAt = current && current > purchasedUntil ? current : purchasedUntil
+      // down to 7 — they paid more and got less. The plan itself still switches, so
+      // they get the new plan's capabilities for the time they already own.
+      const subscriptionEndsAt = laterOf(purchasedUntil, targetUser?.subscriptionEndsAt ?? null)
 
       await tx.user.update({
         where: { id: userId },
