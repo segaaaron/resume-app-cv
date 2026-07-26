@@ -676,6 +676,71 @@ describe("C. handleSubscriptionUpdated", () => {
       data: expect.objectContaining({ action: "SUBSCRIPTION_UPDATED" }),
     }))
   })
+
+  // ── Never move a paid end date earlier, never downgrade a paid one-time plan ──
+  describe("protects a separately paid one-time window", () => {
+    const FAR = Date.now() + 40 * 86_400_000   // one-time window, further out
+    const NEAR = Math.floor((Date.now() + 5 * 86_400_000) / 1000) // subscription period end
+
+    function writtenData(tx: ReturnType<typeof makeTx>): Record<string, unknown> {
+      return (vi.mocked(tx.user.update).mock.calls[0][0] as { data: Record<string, unknown> }).data
+    }
+
+    it("cancel_at_period_end does NOT shorten a longer paid window", async () => {
+      const { db } = await import("@/lib/db")
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(
+        makeSubUpdatedEvent({ cancel_at_period_end: true, cancel_at: NEAR }, "ev_ot_cancel"),
+      )
+      const tx = makeTx({
+        userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "BASIC", subscriptionEndsAt: new Date(FAR) }),
+      })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      expect((writtenData(tx).subscriptionEndsAt as Date).getTime()).toBe(FAR)
+    })
+
+    it("an active period end still moves the date FORWARD as usual", async () => {
+      const { db } = await import("@/lib/db")
+      const forward = Math.floor((Date.now() + 90 * 86_400_000) / 1000)
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(
+        makeSubUpdatedEvent({ status: "active", items: { data: [{ current_period_end: forward }] } }, "ev_ot_active"),
+      )
+      const tx = makeTx({
+        userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "PRO", subscriptionEndsAt: new Date(FAR) }),
+      })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      expect((writtenData(tx).subscriptionEndsAt as Date).getTime()).toBe(forward * 1000)
+    })
+
+    it("incomplete_expired does NOT downgrade a valid one-time plan", async () => {
+      const { db } = await import("@/lib/db")
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(
+        makeSubUpdatedEvent({ status: "incomplete_expired" }, "ev_ot_expired"),
+      )
+      const tx = makeTx({
+        userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "SPRINT", subscriptionEndsAt: new Date(FAR) }),
+      })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      const data = writtenData(tx)
+      expect(data.subscriptionStatus).toBe("EXPIRED")
+      expect(data).not.toHaveProperty("plan")
+    })
+
+    it("incomplete_expired DOES downgrade a PRO subscriber", async () => {
+      const { db } = await import("@/lib/db")
+      vi.mocked(mockStripeClient.constructEvent).mockReturnValue(
+        makeSubUpdatedEvent({ status: "paused" }, "ev_pro_expired"),
+      )
+      const tx = makeTx({
+        userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "PRO", subscriptionEndsAt: new Date(FAR) }),
+      })
+      await mockTx(db, tx)
+      await makeWebhook().handleEvent("body", "sig", "secret")
+      expect(writtenData(tx).plan).toBe("UNSUBSCRIBED")
+    })
+  })
 })
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -728,6 +793,56 @@ describe("D. handleSubscriptionDeleted", () => {
     await makeWebhook().handleEvent("body", "sig", "secret")
     expect(tx.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({
       data: expect.objectContaining({ action: "CANCEL_SUBSCRIPTION" }),
+    }))
+  })
+
+  // ── A separately paid one-time window must survive this event ──
+  it("BLOCKER: a valid BASIC window is NOT wiped — only the subscription is detached", async () => {
+    // Reachable in existing data: the one-time buy buttons used to be shown to
+    // cancelled subscribers. Such a user cancelled PRO, bought BASIC while it wound
+    // down, and this event would reset them to UNSUBSCRIBED with no end date —
+    // taking away the month they had just paid for.
+    const { db } = await import("@/lib/db")
+    const paidUntil = new Date(Date.now() + 20 * 86_400_000)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeSubDeletedEvent())
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "BASIC", subscriptionEndsAt: paidUntil }),
+    })
+    await mockTx(db, tx)
+    await makeWebhook().handleEvent("body", "sig", "secret")
+
+    const written = (vi.mocked(tx.user.update).mock.calls[0][0] as { data: Record<string, unknown> }).data
+    expect(written.subscriptionId).toBeNull()
+    expect(written.subscriptionStatus).toBe("NONE")
+    // The paid plan and its window are untouched.
+    expect(written).not.toHaveProperty("plan")
+    expect(written).not.toHaveProperty("subscriptionEndsAt")
+  })
+
+  it("an EXPIRED one-time window does not block the normal downgrade", async () => {
+    const { db } = await import("@/lib/db")
+    const stale = new Date(Date.now() - 5 * 86_400_000)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeSubDeletedEvent())
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "SPRINT", subscriptionEndsAt: stale }),
+    })
+    await mockTx(db, tx)
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ plan: "UNSUBSCRIBED", subscriptionEndsAt: null, subscriptionStatus: "EXPIRED" }),
+    }))
+  })
+
+  it("a PRO subscriber is downgraded as before", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeSubDeletedEvent())
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, plan: "PRO", subscriptionEndsAt: new Date(Date.now() + 86_400_000) }),
+    })
+    await mockTx(db, tx)
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED" }),
     }))
   })
 })

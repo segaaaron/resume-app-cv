@@ -173,8 +173,10 @@ export default async function PricingPage({
     }
   }
 
+  // The Spanish pattern hardcodes "de", so English read "26 de August 2026".
+  // Same split SettingsForm already uses.
   const formattedEndsAt = subscriptionEndsAt
-    ? format(new Date(subscriptionEndsAt), "d 'de' MMMM yyyy", { locale: dateLocale })
+    ? format(new Date(subscriptionEndsAt), locale === "es" ? "d 'de' MMMM yyyy" : "MMMM d, yyyy", { locale: dateLocale })
     : null
 
   const features = [

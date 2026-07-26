@@ -25,6 +25,29 @@ function errMessage(e: unknown): string {
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
 
+/**
+ * The user is on a one-time plan (BASIC/SPRINT) whose paid window has NOT elapsed.
+ *
+ * These plans carry no subscription — `handleOneTimeCheckout` sets `subscriptionId`
+ * to null and `subscriptionStatus` to "NONE" — so subscription lifecycle events must
+ * never move their plan or their end date. Without this check, a `subscription.deleted`
+ * for an unrelated (already cancelled) subscription resets the user to UNSUBSCRIBED and
+ * wipes a window they paid for.
+ */
+function isOneTimePlanStillValid(plan: string, subscriptionEndsAt: Date | null): boolean {
+  if (plan !== "BASIC" && plan !== "SPRINT") return false
+  return subscriptionEndsAt !== null && subscriptionEndsAt > new Date()
+}
+
+/**
+ * Never move a paid end date EARLIER. Subscription events carry the subscription's own
+ * period end, which can sit before a one-time window bought on top of it; writing it
+ * verbatim would silently shorten access the user already paid for.
+ */
+function laterOf(candidate: Date, current: Date | null): Date {
+  return current && current > candidate ? current : candidate
+}
+
 /** Claim an event for idempotent processing. Returns false if already processed. */
 async function claimEvent(tx: TxClient, eventId: string, extra?: Record<string, unknown>): Promise<boolean> {
   try {
@@ -306,28 +329,39 @@ export class StripeWebhookService {
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, isManaged: true, plan: true, subscriptionEndsAt: true },
+      })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
 
+      // A one-time plan bought on top of this subscription owns the plan + end date;
+      // the subscription's own dates must not shorten it, and expiring the subscription
+      // must not downgrade it. See isOneTimePlanStillValid().
+      const oneTimeActive = isOneTimePlanStillValid(user.plan, user.subscriptionEndsAt)
+
       if (sub.cancel_at_period_end) {
         let cancelAt = sub.cancel_at ? new Date(sub.cancel_at * 1000) : undefined
         if (!cancelAt) { const periodEnd = sub.items.data[0]?.current_period_end; if (periodEnd) cancelAt = new Date(periodEnd * 1000) }
-        await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "CANCELED", ...(cancelAt ? { subscriptionEndsAt: cancelAt } : {}), sessionVersion: { increment: 1 } } })
+        const endsAt = cancelAt ? laterOf(cancelAt, user.subscriptionEndsAt) : undefined
+        await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "CANCELED", ...(endsAt ? { subscriptionEndsAt: endsAt } : {}), sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { cancelAt: cancelAt?.toISOString() } } })
       } else if (sub.status === "active") {
         const periodEnd = sub.items.data[0]?.current_period_end
         const interval = sub.items.data[0]?.price?.recurring?.interval
         const planInterval = interval === "year" ? "annual" : "monthly"
-        await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "ACTIVE", planInterval, ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
+        const endsAt = periodEnd ? laterOf(new Date(periodEnd * 1000), user.subscriptionEndsAt) : undefined
+        await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "ACTIVE", planInterval, ...(endsAt ? { subscriptionEndsAt: endsAt } : {}), sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "ACTIVE", planInterval, periodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null } } })
       } else if (sub.status === "past_due" || sub.status === "unpaid") {
         await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "PAST_DUE", stripeStatus: sub.status } } })
       } else if (sub.status === "incomplete_expired" || sub.status === "paused") {
-        await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
-        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "EXPIRED", stripeStatus: sub.status } } })
+        // Downgrade only if there is no separately paid one-time window to protect.
+        await tx.user.update({ where: { id: user.id }, data: { ...(oneTimeActive ? {} : { plan: "UNSUBSCRIBED" }), subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
+        await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "EXPIRED", stripeStatus: sub.status, keptOneTimePlan: oneTimeActive ? user.plan : null } } })
       }
       return { skip: false, userId: user.id }
     }, TX_OPTS)
@@ -342,10 +376,43 @@ export class StripeWebhookService {
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, isManaged: true, plan: true, subscriptionEndsAt: true },
+      })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
+
+      // A one-time plan (BASIC/SPRINT) was bought SEPARATELY and is not tied to this
+      // subscription — `handleOneTimeCheckout` clears `subscriptionId`, so there is no
+      // link left between the two. Resetting to UNSUBSCRIBED here would erase a window
+      // the user paid for: they cancelled PRO, bought BASIC while it wound down, and
+      // this event would take the BASIC month away. Detach the subscription only.
+      //
+      // Reachable in existing data: before the checkout guard covered CANCELED, the
+      // one-time buy buttons were shown to cancelled subscribers. It also stays
+      // reachable for purchases created outside our checkout (e.g. a Stripe payment
+      // link carrying `planType` metadata), which no UI guard can prevent.
+      if (isOneTimePlanStillValid(user.plan, user.subscriptionEndsAt)) {
+        await tx.user.update({
+          where: { id: user.id },
+          data: { subscriptionId: null, subscriptionStatus: "NONE", sessionVersion: { increment: 1 } },
+        })
+        await tx.auditLog.create({
+          data: {
+            userId: user.id,
+            action: "CANCEL_SUBSCRIPTION",
+            metadata: {
+              reason: "subscription_deleted",
+              keptOneTimePlan: user.plan,
+              keptUntil: user.subscriptionEndsAt?.toISOString() ?? null,
+            },
+          },
+        })
+        return { skip: false, userId: user.id }
+      }
+
       await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
       await tx.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { reason: "subscription_deleted" } } })
       return { skip: false, userId: user.id }
