@@ -249,6 +249,30 @@ export class StripeWebhookService {
           sessionVersion: { increment: 1 },
         },
       })
+
+      // Leave a trail. This was the only billing handler that wrote no AuditLog, so a
+      // one-time purchase existed nowhere queryable — if a user claimed they lost a
+      // month they paid for, there was no way to confirm or deny it from data. The
+      // window is recorded explicitly, plus whether an existing longer one was kept.
+      //
+      // Action reuse is deliberate: a dedicated AuditAction value would need a Prisma
+      // enum migration, and a code path writing an enum value the DB does not have yet
+      // would throw inside this transaction and leave the purchase unprovisioned. The
+      // metadata carries the specifics instead.
+      await tx.auditLog.create({
+        data: {
+          userId,
+          action: "SUBSCRIPTION_UPDATED",
+          metadata: {
+            source: "one_time_checkout",
+            plan: newPlan,
+            purchasedUntil: purchasedUntil.toISOString(),
+            subscriptionEndsAt: subscriptionEndsAt.toISOString(),
+            keptLongerExistingWindow: subscriptionEndsAt.getTime() !== purchasedUntil.getTime(),
+            checkoutSessionId: (event.data.object as Stripe.Checkout.Session).id,
+          },
+        },
+      })
       return { skip: false, subscriptionEndsAt }
     }, TX_OPTS)
 
