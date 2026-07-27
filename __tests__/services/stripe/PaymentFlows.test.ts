@@ -1566,3 +1566,551 @@ describe("J. full webhook sequence — a paid one-time month survives the chain"
     expect(isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, "USER")).toBe(false)
   })
 })
+
+// ═════════════════════════════════════════════════════════════════════════════
+// L. Revocation SEQUENCES — refund, dispute and fraud warning
+//
+// Block J proved a paid one-time month survives `subscription.deleted`. It did not
+// cover the other three paths that revoke access, and those still had the same hole:
+// they reset plan + subscriptionEndsAt from a charge that never paid for that window.
+//
+// Same method as J: one mutable user row threaded through a real ordered chain, so
+// each handler reads what the previous one wrote.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("L. revocation sequences — a paid one-time window survives events about other charges", () => {
+  type Row = {
+    id: string
+    email: string
+    name: string
+    isManaged: boolean
+    plan: string
+    planInterval: string | null
+    subscriptionId: string | null
+    subscriptionStatus: string
+    subscriptionEndsAt: Date | null
+    stripeCustomerId: string
+    sessionVersion: number
+  }
+
+  function statefulTx(user: Row) {
+    const applyUpdate = (data: Record<string, unknown>) => {
+      for (const [k, v] of Object.entries(data)) {
+        if (k === "sessionVersion") { user.sessionVersion += 1; continue }
+        ;(user as unknown as Record<string, unknown>)[k] = v
+      }
+      return user
+    }
+    return {
+      stripeEvent: { create: vi.fn().mockResolvedValue({}), update: vi.fn().mockResolvedValue({}) },
+      user: {
+        findUnique: vi.fn().mockImplementation(async () => ({ ...user })),
+        update: vi.fn().mockImplementation(async ({ data }: { data: Record<string, unknown> }) => applyUpdate(data)),
+      },
+      auditLog: { create: vi.fn().mockResolvedValue({}), count: vi.fn().mockResolvedValue(0) },
+      consentLog: { findFirst: vi.fn().mockResolvedValue(null) },
+    }
+  }
+
+  const DAY = 86_400_000
+
+  /** A user who cancelled PRO and then bought a BASIC month that is still running. */
+  async function userWithPaidBasicMonth(id: string) {
+    const { db } = await import("@/lib/db")
+    const user: Row = {
+      id, email: `${id}@b.com`, name: "Alice", isManaged: false,
+      plan: "UNSUBSCRIBED", planInterval: null, subscriptionId: null,
+      subscriptionStatus: "NONE", subscriptionEndsAt: null,
+      stripeCustomerId: `cus_${id}`, sessionVersion: 1,
+    }
+    const tx = statefulTx(user)
+    await mockTx(db, tx as unknown as ReturnType<typeof makeTx>)
+
+    const periodEnd = Math.floor((Date.now() + 20 * DAY) / 1000)
+    const webhook = makeWebhook()
+
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: periodEnd }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: `ev_${id}_pro`,
+      data: { object: { id: "cs_pro", payment_status: "paid", metadata: { userId: id, planInterval: "monthly" }, subscription: `sub_${id}` } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: `ev_${id}_basic`,
+      data: { object: { id: "cs_basic", payment_status: "paid", metadata: { userId: id, planType: "basic" }, subscription: null } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("BASIC")
+    return { user, webhook, basicWindowEnd: user.subscriptionEndsAt!.getTime() }
+  }
+
+  it("refunding the SUBSCRIPTION charge keeps the separately paid BASIC month", async () => {
+    // The money returned paid for PRO. The BASIC month was a different purchase that
+    // nobody refunded — erasing it took away access the user still owned.
+    const { user, webhook, basicWindowEnd } = await userWithPaidBasicMonth("ru1")
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "charge.refunded",
+      id: "ev_ru1_refund",
+      data: { object: { id: "ch_sub", customer: "cus_ru1", amount: 1500, amount_refunded: 1500, metadata: { userId: "ru1", planInterval: "monthly" } } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("BASIC")
+    expect(user.subscriptionEndsAt?.getTime()).toBe(basicWindowEnd)
+    expect(isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, "USER")).toBe(true)
+  })
+
+  it("refunding the ONE-TIME charge takes that window back", async () => {
+    // The other direction: the refunded payment IS the window, so access goes with it.
+    // Told apart by the planType metadata the checkout stamps on the PaymentIntent.
+    const { user, webhook } = await userWithPaidBasicMonth("ru2")
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "charge.refunded",
+      id: "ev_ru2_refund",
+      data: { object: { id: "ch_basic", customer: "cus_ru2", amount: 299, amount_refunded: 299, metadata: { userId: "ru2", planType: "basic" } } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("UNSUBSCRIBED")
+    expect(user.subscriptionEndsAt).toBeNull()
+    expect(isActive(user.plan, user.subscriptionEndsAt, user.subscriptionStatus, "USER")).toBe(false)
+  })
+
+  it("a chargeback on the subscription keeps the BASIC month", async () => {
+    const { user, webhook, basicWindowEnd } = await userWithPaidBasicMonth("ru3")
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "charge.dispute.created",
+      id: "ev_ru3_dispute",
+      data: { object: { id: "dp_1", amount: 1500, reason: "fraudulent", charge: { id: "ch_sub", customer: "cus_ru3", metadata: { planInterval: "monthly" } } } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("BASIC")
+    expect(user.subscriptionEndsAt?.getTime()).toBe(basicWindowEnd)
+  })
+
+  it("a fraud warning on the subscription keeps the BASIC month", async () => {
+    const { user, webhook, basicWindowEnd } = await userWithPaidBasicMonth("ru4")
+
+    vi.mocked(mockStripeClient.retrieveCharge).mockResolvedValue({
+      id: "ch_sub", customer: "cus_ru4", metadata: { planInterval: "monthly" },
+    } as unknown as Stripe.Charge)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "radar.early_fraud_warning.created",
+      id: "ev_ru4_fraud",
+      data: { object: { id: "efw_1", charge: "ch_sub", fraud_type: "made_with_stolen_card", actionable: true } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("BASIC")
+    expect(user.subscriptionEndsAt?.getTime()).toBe(basicWindowEnd)
+  })
+
+  it("a PRO subscriber is still fully downgraded by a refund", async () => {
+    // The protection must not become a blanket "never downgrade".
+    const { db } = await import("@/lib/db")
+    const user: Row = {
+      id: "ru5", email: "e@b.com", name: "Eve", isManaged: false,
+      plan: "PRO", planInterval: "monthly", subscriptionId: "sub_ru5",
+      subscriptionStatus: "ACTIVE", subscriptionEndsAt: new Date(Date.now() + 20 * DAY),
+      stripeCustomerId: "cus_ru5", sessionVersion: 1,
+    }
+    await mockTx(db, statefulTx(user) as unknown as ReturnType<typeof makeTx>)
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "charge.refunded",
+      id: "ev_ru5_refund",
+      data: { object: { id: "ch_pro", customer: "cus_ru5", amount: 1500, amount_refunded: 1500, metadata: { planInterval: "monthly" } } },
+    } as unknown as Stripe.Event)
+    await makeWebhook().handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("UNSUBSCRIBED")
+    expect(user.subscriptionStatus).toBe("EXPIRED")
+    expect(user.subscriptionEndsAt).toBeNull()
+  })
+
+  it("a managed (LIMITED) user is untouched by refund, dispute and fraud warning", async () => {
+    // Their plan is administrator-granted. These three handlers never checked.
+    const { db } = await import("@/lib/db")
+    const endsAt = new Date(Date.now() + 300 * DAY)
+    const user: Row = {
+      id: "ru6", email: "m@b.com", name: "Managed", isManaged: true,
+      plan: "LIMITED", planInterval: null, subscriptionId: null,
+      subscriptionStatus: "NONE", subscriptionEndsAt: endsAt,
+      stripeCustomerId: "cus_ru6", sessionVersion: 1,
+    }
+    await mockTx(db, statefulTx(user) as unknown as ReturnType<typeof makeTx>)
+    const webhook = makeWebhook()
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "charge.refunded",
+      id: "ev_ru6_refund",
+      data: { object: { id: "ch_x", customer: "cus_ru6", amount: 1500, amount_refunded: 1500, metadata: {} } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "charge.dispute.created",
+      id: "ev_ru6_dispute",
+      data: { object: { id: "dp_x", amount: 1500, reason: "fraudulent", charge: { id: "ch_x", customer: "cus_ru6", metadata: {} } } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    vi.mocked(mockStripeClient.retrieveCharge).mockResolvedValue({
+      id: "ch_x", customer: "cus_ru6", metadata: {},
+    } as unknown as Stripe.Charge)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "radar.early_fraud_warning.created",
+      id: "ev_ru6_fraud",
+      data: { object: { id: "efw_x", charge: "ch_x", fraud_type: "made_with_stolen_card", actionable: true } },
+    } as unknown as Stripe.Event)
+    await webhook.handleEvent("body", "sig", "secret")
+
+    expect(user.plan).toBe("LIMITED")
+    expect(user.subscriptionEndsAt).toBe(endsAt)
+  })
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// M. Asynchronous payments, SCA, and the upgrade paths that used to shorten a
+//    window already paid for.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("M. async payment methods (OXXO / SEPA / boleto)", () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("checkout.session.completed with an UNPAID async session provisions nothing", async () => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx()
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: "ev_async_pending",
+      data: { object: { id: "cs_oxxo", payment_status: "unpaid", metadata: { userId: "u1", planType: "basic" } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update).not.toHaveBeenCalled()
+  })
+
+  it("async_payment_succeeded provisions the plan the money paid for", async () => {
+    // Without this handler the charge settles and the user never gets access.
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: null }) })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.async_payment_succeeded",
+      id: "ev_async_ok",
+      data: { object: { id: "cs_oxxo", payment_status: "paid", metadata: { userId: "u1", planType: "basic" } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update).toHaveBeenCalledTimes(1)
+    expect(tx.user.update.mock.calls[0][0].data.plan).toBe("BASIC")
+  })
+
+  it("async_payment_failed provisions nothing and revokes nothing", async () => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx()
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.async_payment_failed",
+      id: "ev_async_fail",
+      data: { object: { id: "cs_oxxo", metadata: { userId: "u1", planType: "basic" } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update).not.toHaveBeenCalled()
+  })
+})
+
+describe("M2. invoice.payment_action_required (3DS / SCA)", () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("warns the customer without marking the subscription past due", async () => {
+    // Stripe is still waiting for authentication; the subscription has not failed.
+    // Flipping it to PAST_DUE here would show a payment problem that does not exist.
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", name: "Alice", email: "a@b.com", isManaged: false }),
+    })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.payment_action_required",
+      id: "ev_sca",
+      data: { object: { id: "in_1", customer: "cus_1", hosted_invoice_url: "https://pay.stripe.com/i/1" } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+
+    expect(tx.user.update).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).toHaveBeenCalledTimes(1)
+    expect(tx.auditLog.create.mock.calls[0][0].data.metadata).toMatchObject({
+      source: "payment_action_required",
+      invoiceUrl: "https://pay.stripe.com/i/1",
+    })
+  })
+
+  it("never touches a managed user", async () => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", name: "M", email: "m@b.com", isManaged: true }),
+    })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.payment_action_required",
+      id: "ev_sca_managed",
+      data: { object: { id: "in_2", customer: "cus_1", hosted_invoice_url: null } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+  })
+})
+
+describe("M3. upgrading never shortens a window already paid for", () => {
+  const DAY = 86_400_000
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("checkout to PRO keeps a longer one-time window", async () => {
+    // A SPRINT/BASIC buyer upgrading mid-window was cut back to the new subscription's
+    // first period end — days they had already paid for.
+    const longer = new Date(Date.now() + 40 * DAY)
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: longer }) })
+    await mockTx(db, tx)
+
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: Math.floor((Date.now() + 30 * DAY) / 1000) }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: "ev_up_1",
+      data: { object: { id: "cs_1", payment_status: "paid", metadata: { userId: "u1", planInterval: "monthly" }, subscription: "sub_1" } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect(data.plan).toBe("PRO")
+    expect((data.subscriptionEndsAt as Date).getTime()).toBe(longer.getTime())
+  })
+
+  it("a renewal still advances the date normally", async () => {
+    const { db } = await import("@/lib/db")
+    const renewal = Math.floor((Date.now() + 30 * DAY) / 1000)
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", name: "A", email: "a@b.com", isManaged: false, subscriptionEndsAt: new Date(Date.now() + 1 * DAY) }),
+    })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: renewal, price: { recurring: { interval: "month" } } }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.paid",
+      id: "ev_up_2",
+      data: { object: { id: "in_1", customer: "cus_1", parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect((data.subscriptionEndsAt as Date).getTime()).toBe(renewal * 1000)
+  })
+
+  it("a renewal does not shorten a one-time window that runs past it", async () => {
+    const { db } = await import("@/lib/db")
+    const longer = new Date(Date.now() + 45 * DAY)
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", name: "A", email: "a@b.com", isManaged: false, subscriptionEndsAt: longer }),
+    })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: Math.floor((Date.now() + 30 * DAY) / 1000), price: { recurring: { interval: "month" } } }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.paid",
+      id: "ev_up_3",
+      data: { object: { id: "in_2", customer: "cus_1", parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect((data.subscriptionEndsAt as Date).getTime()).toBe(longer.getTime())
+  })
+
+  it("a subscription created outside checkout keeps a longer paid window", async () => {
+    const { db } = await import("@/lib/db")
+    const longer = new Date(Date.now() + 60 * DAY)
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ id: "u1", isManaged: false, subscriptionEndsAt: longer }) })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "customer.subscription.created",
+      id: "ev_up_4",
+      data: { object: { id: "sub_ext", customer: "cus_1", status: "active", items: { data: [{ current_period_end: Math.floor((Date.now() + 30 * DAY) / 1000) }] } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect((data.subscriptionEndsAt as Date).getTime()).toBe(longer.getTime())
+  })
+})
+
+// ═════════════════════════════════════════════════════════════════════════════
+// N. Gateway ownership + the full plan matrix on the Stripe side.
+//
+// Stripe and PayPal are NOT interchangeable: different subscription ids, different
+// cancel endpoints, and only one of them has a hosted billing portal. The row records
+// which gateway is billing the user right now, and every provisioning path must claim
+// it — otherwise the UI routes the user to the wrong gateway's actions.
+// ═════════════════════════════════════════════════════════════════════════════
+
+describe("N. Stripe claims the row when it provisions", () => {
+  const DAY = 86_400_000
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("BLOCKER: a PayPal buyer who later subscribes with a card can cancel again", async () => {
+    // Before: paymentProvider stayed "PAYPAL", so SettingsForm hid the Stripe portal and
+    // sent the cancel to /api/paypal/cancel, which 400s with no paypalSubscriptionId.
+    // The card subscription kept charging with no way to stop it.
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: null }) })
+    await mockTx(db, tx)
+
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: Math.floor((Date.now() + 30 * DAY) / 1000) }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: "ev_gw_1",
+      data: { object: { id: "cs_1", payment_status: "paid", metadata: { userId: "u1", planInterval: "monthly" }, subscription: "sub_1" } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    expect(tx.user.update.mock.calls[0][0].data.paymentProvider).toBe("STRIPE")
+  })
+
+  it.each([
+    ["monthly", "PRO"],
+    ["annual", "PRO"],
+  ])("subscription checkout (%s) provisions %s under Stripe", async (interval, expectedPlan) => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: null }) })
+    await mockTx(db, tx)
+
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: Math.floor((Date.now() + 30 * DAY) / 1000) }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: `ev_matrix_${interval}`,
+      data: { object: { id: "cs_1", payment_status: "paid", metadata: { userId: "u1", planInterval: interval }, subscription: "sub_1" } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect(data.plan).toBe(expectedPlan)
+    expect(data.planInterval).toBe(interval)
+    expect(data.subscriptionStatus).toBe("ACTIVE")
+    expect(data.paymentProvider).toBe("STRIPE")
+  })
+
+  it.each([
+    ["basic", "BASIC", 27],
+    ["sprint", "SPRINT", 6],
+  ])("one-time checkout (%s) provisions %s with no subscription", async (planType, expectedPlan, minDays) => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ isManaged: false, subscriptionEndsAt: null }) })
+    await mockTx(db, tx)
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "checkout.session.completed",
+      id: `ev_matrix_${planType}`,
+      data: { object: { id: "cs_1", payment_status: "paid", metadata: { userId: "u1", planType }, subscription: null } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect(data.plan).toBe(expectedPlan)
+    // One-time plans carry NO subscription — that is what makes them survive
+    // subscription lifecycle events.
+    expect(data.subscriptionId).toBeNull()
+    expect(data.subscriptionStatus).toBe("NONE")
+    expect(data.planInterval).toBeNull()
+    expect(data.paymentProvider).toBe("STRIPE")
+    expect((data.subscriptionEndsAt as Date).getTime()).toBeGreaterThan(Date.now() + minDays * DAY)
+  })
+
+  it("a renewal keeps the row on Stripe", async () => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({
+      userFindUnique: vi.fn().mockResolvedValue({ id: "u1", name: "A", email: "a@b.com", isManaged: false, subscriptionEndsAt: null }),
+    })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: Math.floor((Date.now() + 30 * DAY) / 1000), price: { recurring: { interval: "year" } } }] },
+    } as unknown as Stripe.Subscription)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.paid",
+      id: "ev_gw_renew",
+      data: { object: { id: "in_1", customer: "cus_1", parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+    const data = tx.user.update.mock.calls[0][0].data
+    expect(data.paymentProvider).toBe("STRIPE")
+    expect(data.planInterval).toBe("annual")
+  })
+})
+
+describe("O. invoice.finalization_failed — revenue that silently never gets charged", () => {
+  beforeEach(() => { vi.clearAllMocks() })
+
+  it("records the failure and leaves access alone", async () => {
+    // Stripe marks this critical: the invoice never became payable, so no charge is
+    // attempted and no payment event follows. The customer did nothing wrong and keeps
+    // access — but without this handler nobody ever learns they are not being billed.
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ id: "u1", email: "a@b.com" }) })
+    await mockTx(db, tx)
+
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.finalization_failed",
+      id: "ev_fin_fail",
+      data: { object: { id: "in_1", customer: "cus_1", last_finalization_error: { code: "customer_tax_location_invalid", message: "Could not determine tax location" } } },
+    } as unknown as Stripe.Event)
+
+    await makeWebhook().handleEvent("body", "sig", "secret")
+
+    expect(tx.user.update).not.toHaveBeenCalled()
+    expect(tx.auditLog.create).toHaveBeenCalledTimes(1)
+    expect(tx.auditLog.create.mock.calls[0][0].data.metadata).toMatchObject({
+      source: "invoice_finalization_failed",
+      errorCode: "customer_tax_location_invalid",
+    })
+    // Must be loud: this is the only signal that money is not being collected.
+    expect(mockLogger.error).toHaveBeenCalled()
+  })
+
+  it("an unknown customer is skipped without throwing", async () => {
+    const { db } = await import("@/lib/db")
+    const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue(null) })
+    await mockTx(db, tx)
+    vi.mocked(mockStripeClient.constructEvent).mockReturnValue({
+      type: "invoice.finalization_failed",
+      id: "ev_fin_fail_2",
+      data: { object: { id: "in_2", customer: "cus_unknown" } },
+    } as unknown as Stripe.Event)
+
+    await expect(makeWebhook().handleEvent("body", "sig", "secret")).resolves.toBeUndefined()
+    expect(tx.auditLog.create).not.toHaveBeenCalled()
+  })
+})

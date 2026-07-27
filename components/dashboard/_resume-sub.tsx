@@ -140,11 +140,24 @@ type UpgradeState = "idle" | "waiting" | "confirmed" | "timeout"
 
 interface UpgradeStatusOverlayProps {
   upgradeState: Exclude<UpgradeState, "idle">
+  /**
+   * Plan the webhook actually provisioned ("PRO" | "BASIC" | "SPRINT"), so the
+   * confirmation names what the customer bought. It used to say "Pro" to everyone,
+   * including the BASIC and SPRINT buyers who never reach that plan.
+   */
+  purchasedPlan?: string | null
 }
 
-export function UpgradeStatusOverlay({ upgradeState }: UpgradeStatusOverlayProps) {
+/** "BASIC" → "Basic". The plan column is upper case; the copy is not. */
+function planLabel(plan?: string | null): string {
+  if (!plan) return "Pro"
+  return plan.charAt(0) + plan.slice(1).toLowerCase()
+}
+
+export function UpgradeStatusOverlay({ upgradeState, purchasedPlan }: UpgradeStatusOverlayProps) {
   const t = useTranslations("dashboard.resumes")
   const locale = useLocale()
+  const plan = planLabel(purchasedPlan)
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background">
@@ -162,7 +175,7 @@ export function UpgradeStatusOverlay({ upgradeState }: UpgradeStatusOverlayProps
           <>
             <CheckCircle2 className="h-12 w-12 text-green-500" />
             <div>
-              <p className="text-lg font-semibold">{t("welcome_pro_title")}</p>
+              <p className="text-lg font-semibold">{t("welcome_plan_title", { plan })}</p>
               <p className="text-sm text-muted-foreground mt-1">{t("upgrade_relogin_subtitle")}</p>
             </div>
           </>

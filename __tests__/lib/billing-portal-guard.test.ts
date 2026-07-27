@@ -255,3 +255,55 @@ describe("the card state matches what the backend would do, status by status", (
     expect(!staff && !realBilling && hasManageableBilling(status)).toBe(false)
   })
 })
+
+describe("failures never sign the buyer out — they explain and stay put", () => {
+  const BUTTONS_SRC = "components/marketing/PricingButtons.tsx"
+  const DASHBOARD_SRC = "components/dashboard/ResumesDashboard.tsx"
+
+  it("a 503 from our own gateway config shows the reason instead of pushing to /register", () => {
+    // payments_not_configured / plan_not_configured are OUR failure. This used to share
+    // the 401 branch, so a signed-in buyer was pushed to /register with no message.
+    const src = read(BUTTONS_SRC)
+    const block = src.slice(src.indexOf("res.status === 503"), src.indexOf("res.status === 503") + 240)
+    expect(block).toContain("toast_payments_unavailable")
+    expect(block, "a service failure still navigates the user away").not.toContain("router.push")
+  })
+
+  it("only a 401 sends the user to register, and it carries the plan", () => {
+    const src = read(BUTTONS_SRC)
+    const block = src.slice(src.indexOf("res.status === 401"), src.indexOf("res.status === 401") + 160)
+    expect(block).toMatch(/router\.push\(`\/register\?plan=\$\{plan\}`\)/)
+  })
+
+  it("no checkout failure path signs the user out", () => {
+    // Losing the session on a declined card or a gateway error would be the worst
+    // possible response: the buyer is bounced to login for something they did not cause.
+    const src = read(BUTTONS_SRC)
+    expect(src).not.toContain("logoutAction")
+    expect(src).not.toContain("signOut")
+  })
+
+  it("the post-purchase logout runs ONLY after the webhook is confirmed", () => {
+    // The sign-out exists to refresh a JWT that now carries a new plan. Firing it before
+    // the webhook landed would log the buyer out and show them their OLD plan.
+    const src = read(DASHBOARD_SRC)
+    const confirmBlock = src.slice(src.indexOf("if (purchaseConfirmed(data))"))
+    const logoutAt = confirmBlock.indexOf("logoutAction")
+    expect(logoutAt, "logout is no longer inside the confirmed branch").toBeGreaterThan(-1)
+    // And it must be the only automatic one: every other occurrence is user-initiated
+    // (the timeout screen's button).
+    expect(src.match(/logoutTimerRef\.current = setTimeout/g) ?? []).toHaveLength(1)
+  })
+
+  it("a transient polling error keeps waiting instead of giving up", () => {
+    const src = read(DASHBOARD_SRC)
+    expect(src).toMatch(/catch \{ \/\* transient error — keep polling \*\/ \}/)
+  })
+
+  it("both locales carry the service-unavailable message", () => {
+    for (const messages of [en, es]) {
+      const pricing = (messages as { pricing: Record<string, string> }).pricing
+      expect(pricing.toast_payments_unavailable).toBeTruthy()
+    }
+  })
+})

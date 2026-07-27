@@ -13,6 +13,7 @@ import { addMonths, addDays } from "date-fns"
 import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
 import { AppError } from "@/lib/services/auth/AppError"
+import { laterOf, revokeAccess } from "@/lib/services/billing/revoke-access"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { paypalConfig } from "@/lib/paypal"
 import type { PayPalClientAdapter } from "./PayPalClientAdapter"
@@ -160,11 +161,14 @@ export class PayPalWebhookService {
 
         case "expire-pro": {
           const user = await this.resolveUser(tx, { paypalSubscriptionId: action.subscriptionId })
-          if (!user || user.isManaged) return null
-          await tx.user.update({
-            where: { id: user.id },
-            data: { plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED", paypalSubscriptionId: null, subscriptionEndsAt: null, sessionVersion: { increment: 1 } },
-          })
+          if (!user) return null
+          // Mirror of Stripe's subscription.deleted: a BASIC/SPRINT window bought
+          // separately survives the subscription expiring. Nobody refunded it, and it
+          // carries no subscription of its own. Same helper, so the two gateways cannot
+          // drift again — this rule was fixed on the Stripe side only (9d00b92).
+          const revocation = revokeAccess(user, { gateway: "paypal", scope: "subscription" })
+          if (revocation.skip) return null
+          await tx.user.update({ where: { id: user.id }, data: revocation.data })
           return user.id
         }
 
@@ -172,7 +176,12 @@ export class PayPalWebhookService {
           const user = await this.resolveUser(tx, { userId: action.userId })
           if (!user || user.isManaged) return null
           const now = new Date()
-          const subscriptionEndsAt = action.plan === "BASIC" ? addMonths(now, 1) : addDays(now, 7)
+          const purchasedUntil = action.plan === "BASIC" ? addMonths(now, 1) : addDays(now, 7)
+          // NEVER SHORTEN A WINDOW THE USER ALREADY PAID FOR. Writing the new window
+          // verbatim cut a BASIC buyer (1 month) who bought SPRINT (7 days) on day 3 down
+          // to 7 days: they paid more and got less. Fixed on the Stripe side in ad025fa;
+          // this path never got it. Same helper now, so they cannot diverge.
+          const subscriptionEndsAt = laterOf(purchasedUntil, user.subscriptionEndsAt)
           await tx.user.update({
             where: { id: user.id },
             data: {
@@ -191,11 +200,14 @@ export class PayPalWebhookService {
 
         case "refund": {
           const user = await this.resolveUser(tx, { userId: action.userId, paypalSubscriptionId: action.subscriptionId })
-          if (!user || user.isManaged) return null
-          await tx.user.update({
-            where: { id: user.id },
-            data: { plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED", paypalSubscriptionId: null, subscriptionEndsAt: null, sessionVersion: { increment: 1 } },
-          })
+          if (!user) return null
+          // PayPal names the two refunds apart, so the scope is known exactly:
+          // PAYMENT.SALE.REFUNDED is a recurring charge (billing_agreement_id) and must
+          // not touch a separately paid one-time window; PAYMENT.CAPTURE.REFUNDED IS the
+          // one-time purchase, so its window goes back with the money.
+          const revocation = revokeAccess(user, { gateway: "paypal", scope: action.scope })
+          if (revocation.skip) return null
+          await tx.user.update({ where: { id: user.id }, data: revocation.data })
           return user.id
         }
 
@@ -205,21 +217,28 @@ export class PayPalWebhookService {
     }, TX_OPTS)
   }
 
-  /** Find the target user by custom_id userId first, then by stored PayPal ids. */
+  /**
+   * Find the target user by custom_id userId first, then by stored PayPal ids.
+   *
+   * `plan` and `subscriptionEndsAt` come along because every revocation and every
+   * one-time provisioning has to weigh the window the user already paid for —
+   * see revokeAccess() and laterOf().
+   */
   private async resolveUser(
     tx: TxClient,
     keys: { userId?: string; paypalSubscriptionId?: string; paypalOrderId?: string },
-  ): Promise<{ id: string; isManaged: boolean } | null> {
+  ): Promise<{ id: string; isManaged: boolean; plan: string; subscriptionEndsAt: Date | null } | null> {
+    const select = { id: true, isManaged: true, plan: true, subscriptionEndsAt: true } as const
     if (keys.userId) {
-      const u = await tx.user.findUnique({ where: { id: keys.userId }, select: { id: true, isManaged: true } })
+      const u = await tx.user.findUnique({ where: { id: keys.userId }, select })
       if (u) return u
     }
     if (keys.paypalSubscriptionId) {
-      const u = await tx.user.findUnique({ where: { paypalSubscriptionId: keys.paypalSubscriptionId }, select: { id: true, isManaged: true } })
+      const u = await tx.user.findUnique({ where: { paypalSubscriptionId: keys.paypalSubscriptionId }, select })
       if (u) return u
     }
     if (keys.paypalOrderId) {
-      const u = await tx.user.findFirst({ where: { paypalOrderId: keys.paypalOrderId }, select: { id: true, isManaged: true } })
+      const u = await tx.user.findFirst({ where: { paypalOrderId: keys.paypalOrderId }, select })
       if (u) return u
     }
     return null

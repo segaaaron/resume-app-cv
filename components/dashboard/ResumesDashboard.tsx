@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
-import { isActive } from "@/lib/plans"
+import { isActive, purchaseConfirmed } from "@/lib/plans"
 import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
 import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed, TranslatingOverlay } from "./_resume-sub"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
@@ -91,6 +91,8 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   // B-5: store logout timer in a ref so cleanup can always cancel it
   const logoutTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  /** Names the plan in the confirmation copy — "Pro" was hardcoded for all four. */
+  const [purchasedPlan, setPurchasedPlan] = useState<string | null>(null)
 
   useEffect(() => {
     if (searchParams.get("upgraded") !== "true") return
@@ -111,10 +113,16 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       try {
         const res = await apiFetch("/api/billing/post-purchase-status", { silent: true })
         if (res.ok) {
-          const data = await res.json() as { plan: string; subscriptionStatus: string }
-          if (data.plan === "PRO" && (data.subscriptionStatus === "ACTIVE" || data.subscriptionStatus === "PAST_DUE")) {
+          const data = await res.json() as { plan: string; subscriptionStatus: string; subscriptionEndsAt: string | null }
+          // EVERY paid plan, not just PRO. This asked for `plan === "PRO"` inline, so
+          // BASIC and SPRINT buyers never matched: the spinner ran the full 30s after a
+          // payment that had already succeeded, and the timeout copy then told them to
+          // look for "Pro access" they never bought.
+          if (purchaseConfirmed(data)) {
             upgradeActiveRef.current = false
+            setPurchasedPlan(data.plan)
             setUpgradeState("confirmed")
+            // The JWT carries the plan, so the session is refreshed by signing back in.
             logoutTimerRef.current = setTimeout(() => logoutAction(`/${locale}/login`), 3_000)
             return
           }
@@ -347,7 +355,7 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
   // ── Upgrade flow overlay ────────────────────────────────────────────────────
 
   if (upgradeState !== "idle") {
-    return <UpgradeStatusOverlay upgradeState={upgradeState} />
+    return <UpgradeStatusOverlay upgradeState={upgradeState} purchasedPlan={purchasedPlan} />
   }
 
   // ── Main render ─────────────────────────────────────────────────────────────

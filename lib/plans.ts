@@ -359,6 +359,34 @@ export function isActive(
 }
 
 /**
+ * The purchase the user just made has landed in the database.
+ *
+ * Used by the post-checkout screen, which polls until the webhook has provisioned the
+ * plan and then signs the user out so they come back with a token that carries it.
+ *
+ * It used to ask `plan === "PRO"` inline, so BASIC and SPRINT buyers never matched:
+ * they watched a spinner for the full 30s timeout after a payment that had already
+ * succeeded, and were then told to check for "Pro access" they had not bought.
+ * Every paid plan has to be recognised, each by its own signal — a subscription by its
+ * status, a one-time plan by a window that has not elapsed.
+ */
+export function purchaseConfirmed(user: {
+  plan?: string | null
+  subscriptionStatus?: SubscriptionStatus | string | null
+  subscriptionEndsAt?: Date | string | null
+}): boolean {
+  if (user.plan === "PRO") {
+    // PAST_DUE counts: the plan is provisioned and access is granted while Stripe retries.
+    return user.subscriptionStatus === "ACTIVE" || user.subscriptionStatus === "PAST_DUE"
+  }
+  if (user.plan === "BASIC" || user.plan === "SPRINT") {
+    if (!user.subscriptionEndsAt) return false
+    return new Date(user.subscriptionEndsAt) > new Date()
+  }
+  return false
+}
+
+/**
  * The plan that ACTUALLY applies right now. One-time plans (BASIC/SPRINT) fall
  * back to UNSUBSCRIBED once their window has passed, so every gate must resolve
  * the effective plan before reading limits — never trust the raw `plan` column.

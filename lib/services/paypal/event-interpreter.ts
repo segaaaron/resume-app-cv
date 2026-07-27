@@ -17,7 +17,14 @@ export type PayPalAction =
   | { kind: "payment-failed"; subscriptionId: string } // PAST_DUE
   | { kind: "expire-pro"; subscriptionId: string } // → UNSUBSCRIBED
   | { kind: "provision-onetime"; userId: string; plan: "BASIC" | "SPRINT"; orderId?: string }
-  | { kind: "refund"; subscriptionId?: string; userId?: string } // → UNSUBSCRIBED
+  /**
+   * Money went back. `scope` says HOW MUCH access goes with it:
+   *   · "subscription" — a recurring charge was refunded. A BASIC/SPRINT window bought
+   *     separately survives; nobody refunded it.
+   *   · "everything"   — the one-time purchase itself was refunded, so its window goes.
+   * PayPal splits these into two event types, so the answer is exact, not a guess.
+   */
+  | { kind: "refund"; subscriptionId?: string; userId?: string; scope: "subscription" | "everything" }
   | { kind: "ignore"; reason: string }
 
 export interface PlanIdMap {
@@ -104,16 +111,23 @@ export function interpretEvent(event: unknown, plans: PlanIdMap): PayPalAction {
       return { kind: "provision-onetime", userId, plan, orderId: str(resource.id) }
     }
 
-    case "PAYMENT.SALE.REFUNDED": {
-      return { kind: "refund", subscriptionId: str(resource.billing_agreement_id) }
+    // REVERSED is a chargeback: the money is gone the same way a refund takes it, so it
+    // revokes the same access. Stripe has charge.dispute.created for this; PayPal had
+    // nothing, which meant a customer could charge back and keep PRO indefinitely.
+    case "PAYMENT.SALE.REFUNDED":
+    case "PAYMENT.SALE.REVERSED": {
+      // A SALE is a recurring subscription charge → subscription scope only.
+      return { kind: "refund", subscriptionId: str(resource.billing_agreement_id), scope: "subscription" }
     }
-    case "PAYMENT.CAPTURE.REFUNDED": {
+    case "PAYMENT.CAPTURE.REFUNDED":
+    case "PAYMENT.CAPTURE.REVERSED": {
       // resource.id here is the REFUND's own id, not the capture/order id — it
       // never matches our stored paypalOrderId. PayPal echoes the original
       // custom_id ("<userId>|BASIC"/"<userId>|SPRINT") onto the refund resource
       // too, so resolve the user the same way provision-onetime does.
+      // A CAPTURE is the one-time purchase itself → the paid window goes back with it.
       const { userId } = parseCustomId(str(resource.custom_id))
-      return { kind: "refund", userId }
+      return { kind: "refund", userId, scope: "everything" }
     }
 
     default:

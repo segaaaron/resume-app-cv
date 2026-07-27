@@ -66,16 +66,22 @@ describe("paypal event interpreter · one-time (BASIC/SPRINT)", () => {
 })
 
 describe("paypal event interpreter · refunds & noise", () => {
-  it("SALE.REFUNDED → refund by subscription", () => {
+  it("SALE.REFUNDED → refund by subscription, scoped to the subscription only", () => {
+    // A SALE is a RECURRING charge. Its refund must not reach a BASIC/SPRINT window the
+    // user bought separately and nobody refunded — the scope carries that decision to
+    // revokeAccess().
     expect(interpretEvent(ev("PAYMENT.SALE.REFUNDED", { billing_agreement_id: "I-1" }), PLANS)).toEqual({
       kind: "refund",
       subscriptionId: "I-1",
+      scope: "subscription",
     })
   })
   it("CAPTURE.REFUNDED → refund by userId parsed from custom_id (resource.id is the refund's own id, never the stored order id)", () => {
+    // A CAPTURE *is* the one-time purchase, so the paid window goes back with the money.
     expect(interpretEvent(ev("PAYMENT.CAPTURE.REFUNDED", { id: "RE-1", custom_id: "u1|BASIC" }), PLANS)).toEqual({
       kind: "refund",
       userId: "u1",
+      scope: "everything",
     })
   })
   it("unhandled event type → ignore with reason", () => {
@@ -85,5 +91,31 @@ describe("paypal event interpreter · refunds & noise", () => {
   it("garbage input → ignore, never throws", () => {
     expect(interpretEvent(null, PLANS).kind).toBe("ignore")
     expect(interpretEvent({ event_type: "X" }, PLANS).kind).toBe("ignore")
+  })
+})
+
+describe("paypal event interpreter · chargebacks", () => {
+  // A reversal takes the money back exactly like a refund does, so it must revoke the
+  // same access. Stripe has charge.dispute.created for this; PayPal had no mapping at
+  // all, so a customer could charge back and keep PRO for as long as they liked.
+  it("SALE.REVERSED → same revocation as SALE.REFUNDED (subscription scope)", () => {
+    expect(interpretEvent(ev("PAYMENT.SALE.REVERSED", { billing_agreement_id: "I-1" }), PLANS)).toEqual({
+      kind: "refund",
+      subscriptionId: "I-1",
+      scope: "subscription",
+    })
+  })
+
+  it("CAPTURE.REVERSED → same revocation as CAPTURE.REFUNDED (window goes back)", () => {
+    expect(interpretEvent(ev("PAYMENT.CAPTURE.REVERSED", { id: "RE-2", custom_id: "u1|SPRINT" }), PLANS)).toEqual({
+      kind: "refund",
+      userId: "u1",
+      scope: "everything",
+    })
+  })
+
+  it("CAPTURE.DENIED stays ignored — nothing was ever collected to revoke", () => {
+    expect(interpretEvent(ev("PAYMENT.CAPTURE.DENIED", { id: "CAP-X", custom_id: "u1|BASIC" }), PLANS))
+      .toMatchObject({ kind: "ignore" })
   })
 })

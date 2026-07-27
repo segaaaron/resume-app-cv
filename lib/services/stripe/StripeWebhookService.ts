@@ -7,6 +7,7 @@ import { resend, emailEnabled } from "@/lib/resend"
 import { subscriptionConfirmationHtml, subscriptionConfirmationText } from "@/lib/emails/subscriptionConfirmation"
 import { paymentFailedHtml, paymentFailedText } from "@/lib/emails/paymentFailed"
 import { AppError } from "@/lib/services/auth/AppError"
+import { isOneTimePlanStillValid, laterOf, revokeAccess, scopeForCharge } from "@/lib/services/billing/revoke-access"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
@@ -24,29 +25,6 @@ function errMessage(e: unknown): string {
 }
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
-
-/**
- * The user is on a one-time plan (BASIC/SPRINT) whose paid window has NOT elapsed.
- *
- * These plans carry no subscription — `handleOneTimeCheckout` sets `subscriptionId`
- * to null and `subscriptionStatus` to "NONE" — so subscription lifecycle events must
- * never move their plan or their end date. Without this check, a `subscription.deleted`
- * for an unrelated (already cancelled) subscription resets the user to UNSUBSCRIBED and
- * wipes a window they paid for.
- */
-function isOneTimePlanStillValid(plan: string, subscriptionEndsAt: Date | null): boolean {
-  if (plan !== "BASIC" && plan !== "SPRINT") return false
-  return subscriptionEndsAt !== null && subscriptionEndsAt > new Date()
-}
-
-/**
- * Never move a paid end date EARLIER. Subscription events carry the subscription's own
- * period end, which can sit before a one-time window bought on top of it; writing it
- * verbatim would silently shorten access the user already paid for.
- */
-function laterOf(candidate: Date, current: Date | null): Date {
-  return current && current > candidate ? current : candidate
-}
 
 /** Claim an event for idempotent processing. Returns false if already processed. */
 async function claimEvent(tx: TxClient, eventId: string, extra?: Record<string, unknown>): Promise<boolean> {
@@ -81,6 +59,31 @@ export class StripeWebhookService {
     try {
       switch (event.type) {
         case "checkout.session.completed": await this.handleCheckoutCompleted(event); break
+        // Asynchronous payment methods (OXXO, boleto, SEPA debit, bank transfers)
+        // complete HOURS OR DAYS after checkout. Their `checkout.session.completed`
+        // arrives with payment_status "unpaid" and is correctly ignored below — the
+        // money is confirmed here instead. Without this case the charge would settle
+        // and the plan would never be provisioned: paid, no access.
+        // Not reachable while checkout is card-only, and deliberately wired BEFORE
+        // enabling local methods rather than after the first lost payment.
+        case "checkout.session.async_payment_succeeded": await this.handleCheckoutCompleted(event); break
+        case "checkout.session.async_payment_failed": {
+          const s = event.data.object as Stripe.Checkout.Session
+          // Nothing to revoke: nothing was ever provisioned for this session.
+          this.logger.warn("StripeWebhookService: async payment failed — nothing provisioned", { sessionId: s.id, userId: s.metadata?.userId, customerId: s.customer })
+          break
+        }
+        // The customer must authenticate (3DS/SCA) before a renewal can be collected.
+        // Stripe emits this INSTEAD of payment_failed at that point, so without it a
+        // European subscriber hears nothing until the retries run out and the
+        // subscription goes past due.
+        case "invoice.payment_action_required": await this.handlePaymentActionRequired(event); break
+        // Stripe marks this critical: the invoice could not even be FINALIZED (tax or
+        // address resolution failing, usually), so no payment is ever attempted. The
+        // subscription stays active and the customer keeps full access while nothing is
+        // collected — revenue lost with no failure anywhere to notice it. Nothing to
+        // revoke here: this is our problem to fix, not the customer's fault.
+        case "invoice.finalization_failed": await this.handleFinalizationFailed(event); break
         case "invoice.paid": await this.handleInvoicePaid(event); break
         case "customer.subscription.updated": await this.handleSubscriptionUpdated(event); break
         case "customer.subscription.deleted": await this.handleSubscriptionDeleted(event); break
@@ -162,6 +165,13 @@ export class StripeWebhookService {
     const session = event.data.object as Stripe.Checkout.Session
     const userId = session.metadata?.userId
     if (!userId) return
+    // DELIBERATELY STRICTER THAN STRIPE'S EXAMPLE, which fulfills on
+    // `payment_status != "unpaid"` — that includes "processing", the state a delayed
+    // method (OXXO, SEPA, boleto) sits in for hours or days before it can still fail.
+    // Their guidance targets physical goods, where shipping early is a business call.
+    // Access here is instant and irreversible, so we wait for the money: "processing"
+    // returns, and `checkout.session.async_payment_succeeded` provisions once the
+    // payment_status actually turns "paid".
     if (session.payment_status !== "paid") return
 
     // ── One-time plans (BASIC / SPRINT) ─────────────────────────────────────
@@ -191,11 +201,19 @@ export class StripeWebhookService {
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id, { userId, checkoutSessionId: session.id })) return { skip: true }
-      const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { isManaged: true } })
+      const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { isManaged: true, subscriptionEndsAt: true } })
       if (targetUser?.isManaged) return { skip: true }
+      // Upgrading to PRO must not shorten a window already paid for: a BASIC/SPRINT
+      // buyer who upgrades mid-window would otherwise be cut back to the new
+      // subscription's first period end. Same rule as everywhere else — never earlier.
+      const endsAt = subscriptionEndsAt ? laterOf(subscriptionEndsAt, targetUser?.subscriptionEndsAt ?? null) : undefined
       await tx.user.update({
         where: { id: userId },
-        data: { plan: "PRO", planInterval, subscriptionId: subscriptionId ?? undefined, subscriptionStatus: "ACTIVE", ...(subscriptionEndsAt ? { subscriptionEndsAt } : {}), sessionVersion: { increment: 1 } },
+        // The gateway that is billing this user NOW. Without it a PayPal buyer who later
+        // subscribes with a card keeps paymentProvider "PAYPAL", and Settings then hides
+        // the Stripe portal and routes their cancel to /api/paypal/cancel — which 400s.
+        // They would be unable to cancel a subscription that keeps charging them.
+        data: { plan: "PRO", paymentProvider: "STRIPE", planInterval, subscriptionId: subscriptionId ?? undefined, subscriptionStatus: "ACTIVE", ...(endsAt ? { subscriptionEndsAt: endsAt } : {}), sessionVersion: { increment: 1 } },
       })
       return { skip: false }
     }, TX_OPTS)
@@ -240,6 +258,8 @@ export class StripeWebhookService {
         where: { id: userId },
         data: {
           plan: newPlan,
+          // Claims the row for Stripe — see the note in handleCheckoutCompleted.
+          paymentProvider: "STRIPE",
           planInterval: null,
           subscriptionId: null,
           subscriptionStatus: "NONE",
@@ -306,7 +326,7 @@ export class StripeWebhookService {
       if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
       const user = await tx.user.findUnique({
         where: { stripeCustomerId: customerId },
-        select: { id: true, name: true, email: true, isManaged: true },
+        select: { id: true, name: true, email: true, isManaged: true, subscriptionEndsAt: true },
       })
       if (!user) return { skip: false, user: null }
       if (user.isManaged) return { skip: true, user: null }
@@ -315,8 +335,13 @@ export class StripeWebhookService {
         where: { id: user.id },
         data: {
           plan: "PRO",
+          paymentProvider: "STRIPE",
           subscriptionStatus: "ACTIVE",
-          subscriptionEndsAt: renewalDate,
+          // A renewal always moves the date forward, so this is a no-op in the normal
+          // case. It matters when a one-time window bought on top of the subscription
+          // runs past the new period end — writing the renewal date verbatim would eat
+          // the difference.
+          subscriptionEndsAt: laterOf(renewalDate, user.subscriptionEndsAt),
           planInterval,
           sessionVersion: { increment: 1 },
         },
@@ -403,40 +428,34 @@ export class StripeWebhookService {
         select: { id: true, isManaged: true, plan: true, subscriptionEndsAt: true },
       })
       if (!user) return { skip: false, userId: null }
-      if (user.isManaged) return { skip: true, userId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
 
-      // A one-time plan (BASIC/SPRINT) was bought SEPARATELY and is not tied to this
-      // subscription — `handleOneTimeCheckout` clears `subscriptionId`, so there is no
-      // link left between the two. Resetting to UNSUBSCRIBED here would erase a window
-      // the user paid for: they cancelled PRO, bought BASIC while it wound down, and
-      // this event would take the BASIC month away. Detach the subscription only.
+      // Scope "subscription": a one-time plan (BASIC/SPRINT) was bought SEPARATELY and
+      // is not tied to this subscription — one-time provisioning clears `subscriptionId`,
+      // so no link is left between the two. Resetting to UNSUBSCRIBED here would erase a
+      // window the user paid for: they cancelled PRO, bought BASIC while it wound down,
+      // and this event would take the BASIC month away. revokeAccess() detaches the
+      // subscription and leaves plan + end date untouched in that case.
       //
       // Reachable in existing data: before the checkout guard covered CANCELED, the
       // one-time buy buttons were shown to cancelled subscribers. It also stays
       // reachable for purchases created outside our checkout (e.g. a Stripe payment
       // link carrying `planType` metadata), which no UI guard can prevent.
-      if (isOneTimePlanStillValid(user.plan, user.subscriptionEndsAt)) {
-        await tx.user.update({
-          where: { id: user.id },
-          data: { subscriptionId: null, subscriptionStatus: "NONE", sessionVersion: { increment: 1 } },
-        })
-        await tx.auditLog.create({
-          data: {
-            userId: user.id,
-            action: "CANCEL_SUBSCRIPTION",
-            metadata: {
-              reason: "subscription_deleted",
-              keptOneTimePlan: user.plan,
-              keptUntil: user.subscriptionEndsAt?.toISOString() ?? null,
-            },
-          },
-        })
-        return { skip: false, userId: user.id }
-      }
+      const revocation = revokeAccess(user, { gateway: "stripe", scope: "subscription" })
+      if (revocation.skip) return { skip: true, userId: null }
 
-      await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
-      await tx.auditLog.create({ data: { userId: user.id, action: "CANCEL_SUBSCRIPTION", metadata: { reason: "subscription_deleted" } } })
+      await tx.user.update({ where: { id: user.id }, data: revocation.data })
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: "CANCEL_SUBSCRIPTION",
+          metadata: {
+            reason: "subscription_deleted",
+            keptOneTimePlan: revocation.keptOneTimePlan,
+            keptUntil: revocation.keptOneTimePlan ? user.subscriptionEndsAt?.toISOString() ?? null : null,
+          },
+        },
+      })
       return { skip: false, userId: user.id }
     }, TX_OPTS)
 
@@ -451,11 +470,14 @@ export class StripeWebhookService {
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true } })
+      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, isManaged: true, subscriptionEndsAt: true } })
       if (!user) return { skip: false, userId: null }
       if (user.isManaged) return { skip: true, userId: null }
       const periodEnd = sub.items.data[0]?.current_period_end
-      await tx.user.update({ where: { id: user.id }, data: { plan: "PRO", subscriptionId: sub.id, subscriptionStatus: "ACTIVE", ...(periodEnd ? { subscriptionEndsAt: new Date(periodEnd * 1000) } : {}), sessionVersion: { increment: 1 } } })
+      // Never earlier — a subscription created outside our checkout can carry a period
+      // end before a one-time window the user already paid for.
+      const endsAt = periodEnd ? laterOf(new Date(periodEnd * 1000), user.subscriptionEndsAt) : undefined
+      await tx.user.update({ where: { id: user.id }, data: { plan: "PRO", paymentProvider: "STRIPE", subscriptionId: sub.id, subscriptionStatus: "ACTIVE", ...(endsAt ? { subscriptionEndsAt: endsAt } : {}), sessionVersion: { increment: 1 } } })
       await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_CREATED_EXTERNAL", metadata: { subscriptionId: sub.id, status: sub.status } } })
       return { skip: false, userId: user.id }
     }, TX_OPTS)
@@ -469,17 +491,33 @@ export class StripeWebhookService {
     const customerId = charge.customer as string
     if (!customerId) return
 
+    // WHICH access this refund may take away. A charge attached to an invoice is a
+    // subscription payment (Stripe only invoices subscriptions); a one-time checkout
+    // produces a charge with no invoice. Without that distinction, refunding an old PRO
+    // invoice erased a BASIC month bought separately that nobody had refunded — the same
+    // hole that was closed in subscription.deleted and left open here.
+    const scope = scopeForCharge(charge.metadata)
+
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, partial: false, subscriptionId: null }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, subscriptionId: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, subscriptionId: true, isManaged: true, plan: true, subscriptionEndsAt: true },
+      })
       if (!user) return { skip: false, userId: null, partial: false, subscriptionId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
       if (charge.amount_refunded < charge.amount) {
         await tx.auditLog.create({ data: { userId: user.id, action: "PARTIAL_REFUND", metadata: { chargeId: charge.id, amountRefunded: charge.amount_refunded, totalAmount: charge.amount } } })
         return { skip: false, userId: user.id, partial: true, subscriptionId: null }
       }
-      await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
-      await tx.auditLog.create({ data: { userId: user.id, action: "REFUND_ISSUED", metadata: { chargeId: charge.id, amount: charge.amount_refunded } } })
+
+      // Managed (LIMITED) users are administrator-granted: a gateway event must never
+      // demote them. Every other handler already refused; this one did not.
+      const revocation = revokeAccess(user, { gateway: "stripe", scope })
+      if (revocation.skip) return { skip: true, userId: null, partial: false, subscriptionId: null }
+
+      await tx.user.update({ where: { id: user.id }, data: revocation.data })
+      await tx.auditLog.create({ data: { userId: user.id, action: "REFUND_ISSUED", metadata: { chargeId: charge.id, amount: charge.amount_refunded, scope, keptOneTimePlan: revocation.keptOneTimePlan } } })
       return { skip: false, userId: user.id, partial: false, subscriptionId: user.subscriptionId }
     }, TX_OPTS)
 
@@ -494,22 +532,38 @@ export class StripeWebhookService {
 
   private async handleDisputeCreated(event: Stripe.Event): Promise<void> {
     const dispute = event.data.object as Stripe.Dispute
-    const chargeId = typeof dispute.charge === "string" ? dispute.charge : (dispute.charge as Stripe.Charge | null)?.id ?? null
-    let customerId = typeof dispute.charge === "string" ? null : (dispute.charge as Stripe.Charge | null)?.customer as string | null
+    const expandedCharge = typeof dispute.charge === "string" ? null : (dispute.charge as Stripe.Charge | null)
+    const chargeId = typeof dispute.charge === "string" ? dispute.charge : expandedCharge?.id ?? null
+    let customerId = expandedCharge?.customer as string | null
+    // An expanded charge already carries its metadata, which is what decides how much
+    // access the chargeback may revoke. Only fetch when the payload gave us an id alone —
+    // no extra API call when Stripe already sent the object.
+    let chargeMetadata: Record<string, string> | null = expandedCharge?.metadata ?? null
 
-    if (!customerId && chargeId) {
+    if (!expandedCharge && chargeId) {
       const charge = await this.stripeClient.retrieveCharge(chargeId)
       customerId = charge.customer as string | null
+      chargeMetadata = charge.metadata ?? null
     }
     if (!customerId) return
     const resolvedCustomerId = customerId
+    const disputeScope = scopeForCharge(chargeMetadata)
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, subscriptionId: null }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: resolvedCustomerId }, select: { id: true, subscriptionId: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: resolvedCustomerId },
+        select: { id: true, subscriptionId: true, isManaged: true, plan: true, subscriptionEndsAt: true },
+      })
       if (!user) return { skip: false, userId: null, subscriptionId: null }
       await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
-      await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
+
+      // Only the disputed payment's access goes. A chargeback on a PRO invoice does not
+      // entitle us to erase a BASIC month the same user paid for and never disputed —
+      // and a managed user is never demoted by a gateway event.
+      const revocation = revokeAccess(user, { gateway: "stripe", scope: disputeScope })
+      if (revocation.skip) return { skip: true, userId: null, subscriptionId: null }
+      await tx.user.update({ where: { id: user.id }, data: revocation.data })
       // Compile usage evidence to defend the dispute: if the user already consumed
       // the digital service (used AI or downloaded a CV), the service was performed
       // and the EU right of withdrawal no longer applies (Directive 2011/83/EU Art. 16(m)).
@@ -622,6 +676,105 @@ export class StripeWebhookService {
     })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.payment_failed" }))
   }
 
+  /**
+   * The renewal needs the customer to authenticate (3DS / European SCA) before Stripe
+   * can collect it. The subscription is NOT past due yet — Stripe is waiting — so the
+   * status is deliberately left alone; only the customer is told, while there is still
+   * time to act. Doing nothing here meant the first thing a European subscriber heard
+   * was the payment failing days later.
+   *
+   * Reuses the payment-action email: `hosted_invoice_url` is exactly where the customer
+   * completes the authentication, which is the same place a failed payment is retried.
+   */
+  private async handlePaymentActionRequired(event: Stripe.Event): Promise<void> {
+    const invoice = event.data.object as Stripe.Invoice
+    const customerId = invoice.customer as string
+    const invoiceUrl = invoice.hosted_invoice_url ?? null
+
+    const result = await db.$transaction(async (tx) => {
+      if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, name: true, email: true, isManaged: true },
+      })
+      if (!user) return { skip: false, user: null }
+      if (user.isManaged) return { skip: true, user: null }
+      await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
+      await tx.auditLog.create({
+        data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { source: "payment_action_required", invoiceId: invoice.id, invoiceUrl } },
+      })
+      return { skip: false, user }
+    }, TX_OPTS)
+
+    if (result.skip || !result.user) return
+    if (!emailEnabled() || !resend || !result.user.email) return
+
+    const firstName = result.user.name?.split(" ")[0] ?? "Usuario"
+    const toEmail = result.user.email
+    const userId = result.user.id
+    const resendClient = resend
+    Promise.resolve().then(() => resendClient.emails.send({
+      from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
+      to: toEmail,
+      subject: "Acción requerida: confirma tu pago en READY CV",
+      html: paymentFailedHtml({ firstName, userId, invoiceUrl }),
+      text: paymentFailedText({ firstName, invoiceUrl }),
+    })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.payment_action_required" }))
+  }
+
+  /**
+   * The invoice never became payable, so no charge was attempted and no payment event
+   * will follow. Access is deliberately left alone — the customer did nothing wrong and
+   * their subscription is still active — but somebody has to know, or the account keeps
+   * consuming a paid plan indefinitely for free.
+   */
+  private async handleFinalizationFailed(event: Stripe.Event): Promise<void> {
+    const invoice = event.data.object as Stripe.Invoice
+    const customerId = invoice.customer as string
+    const reason = (invoice as unknown as { last_finalization_error?: { message?: string; code?: string } }).last_finalization_error
+
+    const result = await db.$transaction(async (tx) => {
+      if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, email: true },
+      })
+      if (!user) return { skip: false, user: null }
+      await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
+      await tx.auditLog.create({
+        data: {
+          userId: user.id,
+          action: "SUBSCRIPTION_UPDATED",
+          metadata: {
+            source: "invoice_finalization_failed",
+            invoiceId: invoice.id,
+            errorCode: reason?.code ?? null,
+            errorMessage: reason?.message ?? null,
+          },
+        },
+      })
+      return { skip: false, user }
+    }, TX_OPTS)
+
+    if (result.skip || !result.user) return
+
+    this.logger.error("StripeWebhookService: invoice could not be finalized — nothing will be charged", {
+      eventId: event.id, userId: result.user.id, invoiceId: invoice.id, errorCode: reason?.code, errorMessage: reason?.message,
+    })
+
+    if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+      const adminEmail = process.env.ADMIN_EMAIL
+      const resendClient = resend
+      const { id: userId, email } = result.user
+      Promise.resolve().then(() => resendClient.emails.send({
+        from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
+        to: adminEmail,
+        subject: `[ACTION REQUIRED] Invoice could not be finalized — nothing charged: ${email ?? userId}`,
+        text: `Stripe could not finalize invoice ${invoice.id}, so NO payment was attempted and none will be.\n\nUser: ${email ?? "no email"}\nUser ID: ${userId}\nError: ${reason?.code ?? "unknown"} — ${reason?.message ?? "no message"}\n\nThe subscription is still active and the customer keeps full access while nothing is collected.\n\nUsual cause: tax or billing address resolution. Fix it in the Stripe Dashboard (customer address / tax settings), then finalize the invoice manually.`,
+      })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.finalization_failed" }))
+    }
+  }
+
   private async handleFraudWarning(event: Stripe.Event): Promise<void> {
     const warning = event.data.object as Stripe.Radar.EarlyFraudWarning
     const chargeId = typeof warning.charge === "string" ? warning.charge : (warning.charge as Stripe.Charge | null)?.id ?? null
@@ -630,13 +783,21 @@ export class StripeWebhookService {
     const charge = await this.stripeClient.retrieveCharge(chargeId)
     const customerId = charge.customer as string | null
     if (!customerId) return
+    // Same rule as refunds and disputes: the warning is about ONE payment, so it revokes
+    // that payment's access — not a separately paid one-time window.
+    const warningScope = scopeForCharge(charge.metadata)
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, userId: null, subscriptionId: null }
-      const user = await tx.user.findUnique({ where: { stripeCustomerId: customerId }, select: { id: true, subscriptionId: true } })
+      const user = await tx.user.findUnique({
+        where: { stripeCustomerId: customerId },
+        select: { id: true, subscriptionId: true, isManaged: true, plan: true, subscriptionEndsAt: true },
+      })
       if (!user) return { skip: false, userId: null, subscriptionId: null }
-      await tx.user.update({ where: { id: user.id }, data: { plan: "UNSUBSCRIBED", subscriptionId: null, subscriptionEndsAt: null, subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
-      await tx.auditLog.create({ data: { userId: user.id, action: "FRAUD_WARNING", metadata: { warningId: warning.id, chargeId, fraudType: warning.fraud_type, actionable: warning.actionable } } })
+      const revocation = revokeAccess(user, { gateway: "stripe", scope: warningScope })
+      if (revocation.skip) return { skip: true, userId: null, subscriptionId: null }
+      await tx.user.update({ where: { id: user.id }, data: revocation.data })
+      await tx.auditLog.create({ data: { userId: user.id, action: "FRAUD_WARNING", metadata: { warningId: warning.id, chargeId, fraudType: warning.fraud_type, actionable: warning.actionable, scope: warningScope, keptOneTimePlan: revocation.keptOneTimePlan } } })
       return { skip: false, userId: user.id, subscriptionId: user.subscriptionId }
     }, TX_OPTS)
 

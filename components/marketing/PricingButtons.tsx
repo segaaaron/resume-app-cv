@@ -97,13 +97,20 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
         ),
       })
 
+      // Not signed in → registering IS the next step, and the plan travels with them.
       if (res.status === 401) {
         router.push(`/register?plan=${plan}`)
         return
       }
 
+      // 503 is OUR failure, not the user's: `payments_not_configured` (the gateway has
+      // no keys) or `plan_not_configured` (a price id is missing from env). It used to
+      // fall into the 401 branch and push a signed-in buyer to /register with no
+      // explanation — they lost the pricing page and were asked to create an account
+      // they already had. Say what happened and leave them where they are, so they can
+      // retry when the service is back.
       if (res.status === 503) {
-        router.push(`/register?plan=${plan}`)
+        toast.error(t("toast_payments_unavailable"))
         return
       }
 

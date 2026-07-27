@@ -96,10 +96,23 @@ export class StripeCheckoutService {
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl.replace(/\/$/, "")}/${locale}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/pricing`,
+      // Where Checkout's back button sends a customer who changes their mind (a declined
+      // card does NOT come here — that session stays open for retry).
+      // It used to be `${appUrl}/pricing`: no locale, and no trailing-slash strip. There
+      // is no next-intl middleware and no /pricing route outside [locale], so that URL
+      // is a 404 — the buyer who clicked "back" to compare plans landed on an error page
+      // instead of the pricing table. PayPal's checkout already built this correctly.
+      cancel_url: `${appUrl.replace(/\/$/, "")}/${locale}/pricing`,
       // One-time → planType drives provisioning (BASIC/SPRINT). Subscription → planInterval.
       metadata: isOneTime ? { userId, planType: plan } : { userId, planInterval: plan },
-      ...(isOneTime ? {} : { subscription_data: { metadata: { userId, planInterval: plan } } }),
+      // Stamp the same metadata on the PaymentIntent so the resulting CHARGE carries it.
+      // Refund/dispute/fraud events arrive with a charge and no session, and they must
+      // know whether the money being returned paid for a one-time window (revoke it) or
+      // for the subscription (leave a separately bought window alone). Stripe's old
+      // `charge.invoice` link no longer exists in the current API, so this is the signal.
+      ...(isOneTime
+        ? { payment_intent_data: { metadata: { userId, planType: plan } } }
+        : { subscription_data: { metadata: { userId, planInterval: plan } } }),
     })
 
     if (!checkoutSession.url) throw new AppError("checkout_url_missing", 500)
