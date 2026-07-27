@@ -12,13 +12,15 @@
  * every one of the seven revocation paths breaks with it — which is the point.
  */
 import { describe, it, expect } from "vitest"
+import { readFileSync } from "fs"
+import { join } from "path"
 import {
   isOneTimePlanStillValid,
   laterOf,
   revokeAccess,
   scopeForCharge,
 } from "@/lib/services/billing/revoke-access"
-import { purchaseConfirmed } from "@/lib/plans"
+import { purchaseConfirmed, isActive, PAST_DUE_GRACE_DAYS } from "@/lib/plans"
 
 const DAY = 86_400_000
 const future = (days: number) => new Date(Date.now() + days * DAY)
@@ -186,5 +188,103 @@ describe("purchaseConfirmed — the post-checkout screen must recognise EVERY pa
 
   it("does not confirm for a managed user, who bought nothing", () => {
     expect(purchaseConfirmed({ plan: "LIMITED", subscriptionEndsAt: future })).toBe(false)
+  })
+})
+
+describe("unpaid subscriptions cannot outlive the period they paid for", () => {
+  // Stripe's Dashboard decides what happens after Smart Retries give up, and only ONE
+  // of the three options tells us about it:
+  //   · "Cancel the subscription" → canceled → customer.subscription.deleted → we downgrade.
+  //   · "Mark the subscription as unpaid" → stays `unpaid` forever, no deleted event.
+  //   · "Leave the subscription past-due" → stays `past_due` forever, no deleted event.
+  // Our webhook maps BOTH unpaid and past_due to PAST_DUE, which grants access. If the
+  // setting is either of the last two, nothing would ever revoke the plan.
+  //
+  // What saves us is the date check in isActive(): PAST_DUE keeps access only until the
+  // period that was actually PAID runs out. These tests exist so that check is never
+  // "simplified" away — deleting it turns a Dashboard toggle into free PRO forever.
+  const DAY = 86_400_000
+
+  it("PAST_DUE keeps access while the paid period is still running", () => {
+    // Stripe is retrying and the customer already paid for this period. Cutting them off
+    // mid-cycle over an expired card is what dunning exists to avoid.
+    expect(isActive("PRO", new Date(Date.now() + 5 * DAY), "PAST_DUE", "USER")).toBe(true)
+  })
+
+  it("PAST_DUE stops granting access once the paid period AND its grace window elapse", () => {
+    // No customer.subscription.deleted will ever arrive under two of the three Dashboard
+    // settings. This is the only thing standing between us and unpaid PRO access — the
+    // grace window delays it by a bounded number of days, it never removes it.
+    expect(isActive("PRO", new Date(Date.now() - 30 * DAY), "PAST_DUE", "USER")).toBe(false)
+  })
+
+  it("the same holds for a cancelled subscription winding down", () => {
+    expect(isActive("PRO", new Date(Date.now() + 5 * DAY), "CANCELED", "USER")).toBe(true)
+    expect(isActive("PRO", new Date(Date.now() - DAY), "CANCELED", "USER")).toBe(false)
+  })
+
+  it("an admin keeps access regardless — their plan is not a payment", () => {
+    expect(isActive("PRO", new Date(Date.now() - DAY), "PAST_DUE", "SUPER_ADMIN")).toBe(true)
+  })
+})
+
+describe("PAST_DUE grace window — the recoverable slice of churn", () => {
+  const DAY = 86_400_000
+  const daysFromNow = (n: number) => new Date(Date.now() + n * DAY)
+
+  it("keeps access for the configured days after the paid period ends", () => {
+    // Stripe retries for up to 14 days. Ending access on day one of that recovery is
+    // what turns a recoverable failed payment into a lost customer.
+    expect(PAST_DUE_GRACE_DAYS).toBe(7)
+    expect(isActive("PRO", daysFromNow(-1), "PAST_DUE", "USER")).toBe(true)
+    expect(isActive("PRO", daysFromNow(-6), "PAST_DUE", "USER")).toBe(true)
+  })
+
+  it("ends access once the grace window is over", () => {
+    // Still no customer.subscription.deleted under two of the three Dashboard settings,
+    // so this date check remains the only thing that stops indefinite free access.
+    expect(isActive("PRO", daysFromNow(-(PAST_DUE_GRACE_DAYS + 1)), "PAST_DUE", "USER")).toBe(false)
+  })
+
+  it("grants NO grace to someone who cancelled", () => {
+    // They chose to leave and get exactly what they paid for. Nobody is trying to
+    // collect from them, so there is nothing to recover by extending it.
+    expect(isActive("PRO", daysFromNow(-1), "CANCELED", "USER")).toBe(false)
+    expect(isActive("PRO", daysFromNow(1), "CANCELED", "USER")).toBe(true)
+  })
+
+  it("grants no grace to an ACTIVE subscription whose date has passed", () => {
+    // An ACTIVE status with an elapsed date means the renewal never landed; treating it
+    // as paid would hand out access on stale data.
+    expect(isActive("PRO", daysFromNow(-1), "ACTIVE", "USER")).toBe(false)
+  })
+
+  it("EXPIRED is final, whatever the date says", () => {
+    expect(isActive("PRO", daysFromNow(30), "EXPIRED", "USER")).toBe(false)
+  })
+
+  it("one-time plans are untouched by the grace window", () => {
+    // BASIC/SPRINT carry no subscription and cannot be PAST_DUE — their window is the
+    // whole contract.
+    expect(isActive("BASIC", daysFromNow(-1), "NONE", "USER")).toBe(false)
+    expect(isActive("SPRINT", daysFromNow(-1), "NONE", "USER")).toBe(false)
+  })
+})
+
+describe("email links must resolve — dashboard routes only exist under a locale", () => {
+  it("the payment-failed email never links to a locale-less dashboard path", () => {
+    // The fallback used when Stripe sends no hosted_invoice_url pointed at
+    // /dashboard/settings, which is the 404 page: the one email whose entire purpose is
+    // "come fix your card" had a button that led nowhere.
+    const src = readFileSync(join(process.cwd(), "lib/emails/paymentFailed.ts"), "utf8")
+    expect(src).not.toMatch(/\$\{appUrl\}\/dashboard\//)
+    expect(src).toMatch(/dashboardUrl\("\/dashboard\/settings"\)/)
+  })
+
+  it("the subscription-confirmation email links into a real locale", () => {
+    // "Access your dashboard", sent to someone who just paid, was a 404.
+    const src = readFileSync(join(process.cwd(), "lib/emails/subscriptionConfirmation.ts"), "utf8")
+    expect(src).not.toMatch(/readycvv\.com\/dashboard\//)
+    expect(src.match(/readycvv\.com\/es\/dashboard\//g) ?? []).toHaveLength(4)
   })
 })

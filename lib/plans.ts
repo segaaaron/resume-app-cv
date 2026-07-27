@@ -61,6 +61,25 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
 
 export const AI_DAILY_CAP_WINDOW_MS = 24 * 60 * 60 * 1000
 
+/**
+ * Days a PAST_DUE subscriber keeps access AFTER the period they paid for has ended.
+ *
+ * Stripe retries a failed renewal for up to 14 days (Smart Retries). Without a grace
+ * window, access ended the moment the paid period did — the customer lost the product
+ * on day one of a recovery process that usually succeeds, over an expired card or a
+ * bank block they need a few days to resolve. Failed payments are 20-40% of SaaS churn,
+ * and most of it is recoverable; cutting access first is what makes it unrecoverable.
+ *
+ * Seven days is the industry norm: long enough to replace a card or call a bank, short
+ * enough that it neither inflates MRR with non-payers nor removes the urgency to fix it.
+ *
+ * ONLY for PAST_DUE. A CANCELED subscriber chose to leave and gets exactly the period
+ * they paid for — extending that would be giving away service nobody is trying to
+ * collect. If Stripe cancels the subscription before the window is over, the deletion
+ * event downgrades the user immediately and this never applies.
+ */
+export const PAST_DUE_GRACE_DAYS = 7
+
 // UNSUBSCRIBED can download their single (basic-template) CV a bounded number of
 // times per rolling 24h. This is a deliberate freemium loosening: the hard limits
 // that drive conversion stay in place (1 CV, no PRO templates, no translate/clone,
@@ -343,9 +362,14 @@ export function isActive(
   }
   if (plan === "PRO") {
     if (subscriptionStatus === "EXPIRED") return false
-    if (subscriptionEndsAt && new Date() > subscriptionEndsAt) return false
+    if (subscriptionEndsAt) {
+      // PAST_DUE gets a grace window ON TOP of the paid period; every other status gets
+      // exactly what was paid for. See PAST_DUE_GRACE_DAYS for why.
+      const graceMs = subscriptionStatus === "PAST_DUE" ? PAST_DUE_GRACE_DAYS * 24 * 60 * 60 * 1000 : 0
+      if (Date.now() > subscriptionEndsAt.getTime() + graceMs) return false
+    }
     // CANCELED: paid period not yet over — allow access until subscriptionEndsAt
-    // PAST_DUE: payment failed, Stripe retrying — user keeps access during retry window
+    // PAST_DUE: payment failed, Stripe retrying — access continues through the grace window
     return subscriptionStatus === "ACTIVE" || subscriptionStatus === "CANCELED" || subscriptionStatus === "PAST_DUE"
   }
   // One-time plans (no Stripe subscription): active strictly while within the

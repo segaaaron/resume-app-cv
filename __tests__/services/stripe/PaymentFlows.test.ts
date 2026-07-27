@@ -7,7 +7,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest"
 import type Stripe from "stripe"
 import { StripeWebhookService } from "@/lib/services/stripe/StripeWebhookService"
 import { StripeCheckoutService } from "@/lib/services/stripe/StripeCheckoutService"
-import { isActive } from "@/lib/plans"
+import { isActive, PAST_DUE_GRACE_DAYS } from "@/lib/plans"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
@@ -1240,8 +1240,15 @@ describe("J. lib/plans.ts — isActive()", () => {
     expect(isActive("PRO", FUTURE, "PAST_DUE")).toBe(true)
   })
 
-  it("PRO + PAST_DUE + past date → false", () => {
-    expect(isActive("PRO", PAST, "PAST_DUE")).toBe(false)
+  it("PRO + PAST_DUE + date inside the grace window → true", () => {
+    // A failed renewal now keeps access for PAST_DUE_GRACE_DAYS past the paid period,
+    // because Stripe is still retrying and most of those payments recover.
+    expect(isActive("PRO", PAST, "PAST_DUE")).toBe(true)
+  })
+
+  it("PRO + PAST_DUE + past the grace window → false", () => {
+    const LONG_PAST = new Date(Date.now() - 86400 * 1000 * (PAST_DUE_GRACE_DAYS + 1))
+    expect(isActive("PRO", LONG_PAST, "PAST_DUE")).toBe(false)
   })
 
   it("PRO + EXPIRED → false regardless of date", () => {

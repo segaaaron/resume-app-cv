@@ -6,9 +6,20 @@ interface PaymentFailedProps {
   invoiceUrl?: string | null
 }
 
+/**
+ * Dashboard links must carry a locale segment. Those routes only exist under
+ * `app/[locale]/`, and there is no next-intl middleware to add one, so `/dashboard/...`
+ * resolves to the 404 page. The emails themselves are written in Spanish and the User
+ * model stores no language, so the default locale is both the correct fallback and the
+ * one that matches the copy.
+ */
+const DASHBOARD_LOCALE = "es"
+const dashboardUrl = (path: string) =>
+  `${(process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com").replace(/\/$/, "")}/${DASHBOARD_LOCALE}${path}`
+
 export function paymentFailedHtml({ firstName, userId, invoiceUrl }: PaymentFailedProps): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"
-  const payUrl = invoiceUrl ?? `${appUrl}/dashboard/settings`
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com").replace(/\/$/, "")
+  const payUrl = invoiceUrl ?? dashboardUrl("/dashboard/settings")
   return `<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8"/></head><body style="font-family:sans-serif;background:#f4f6f8;padding:40px 0;">
 <table width="580" style="max-width:580px;margin:0 auto;background:#fff;border-radius:16px;padding:40px;">
 <tr><td><h2 style="color:#dc2626;">Problema con tu pago</h2>
@@ -21,6 +32,6 @@ export function paymentFailedHtml({ firstName, userId, invoiceUrl }: PaymentFail
 }
 
 export function paymentFailedText({ firstName, invoiceUrl }: { firstName: string; invoiceUrl?: string | null }): string {
-  const payUrl = invoiceUrl ?? `${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/dashboard/settings`
+  const payUrl = invoiceUrl ?? dashboardUrl("/dashboard/settings")
   return `Hola ${firstName},\n\nNo pudimos procesar el pago de tu suscripción a READY CV. Tienes 3 días para actualizar tu método de pago.\n\nActualiza en: ${payUrl}\n\n© ${new Date().getFullYear()} READY CV`
 }

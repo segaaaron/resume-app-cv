@@ -147,7 +147,7 @@ export function subscriptionConfirmationHtml({
                     <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:28px;">
                       <tr>
                         <td align="center">
-                          <a href="https://www.readycvv.com/dashboard/resumes"
+                          <a href="https://www.readycvv.com/es/dashboard/resumes"
                             style="display:inline-block;background:#2a72d7;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;padding:14px 36px;border-radius:10px;">
                             Ir a mi dashboard →
                           </a>
@@ -157,7 +157,7 @@ export function subscriptionConfirmationHtml({
 
                     <p style="margin:0;font-size:13px;color:#9ca3af;text-align:center;line-height:1.6;">
                       Puedes gestionar o cancelar tu suscripción en cualquier momento desde
-                      <a href="https://www.readycvv.com/dashboard/settings" style="color:#2a72d7;text-decoration:none;">Configuración</a>.
+                      <a href="https://www.readycvv.com/es/dashboard/settings" style="color:#2a72d7;text-decoration:none;">Configuración</a>.
                     </p>
                     <p style="font-size:12px;color:#9ca3af;margin-top:32px;text-align:center;">
                       Si no deseas recibir más correos, <a href="https://www.readycvv.com/api/user/unsubscribe?uid=${encodeURIComponent(userId)}&t=${generateUnsubscribeToken(userId)}" style="color:#9ca3af;">cancela tu suscripción a emails aquí</a>.
@@ -212,9 +212,9 @@ Precio: ${planPrice}
 Estado: Activo
 Próxima renovación: ${formatDate(renewalDate)}
 
-Accede a tu dashboard en: https://www.readycvv.com/dashboard/resumes
+Accede a tu dashboard en: https://www.readycvv.com/es/dashboard/resumes
 
-Puedes gestionar tu suscripción en: https://www.readycvv.com/dashboard/settings
+Puedes gestionar tu suscripción en: https://www.readycvv.com/es/dashboard/settings
 
 © ${new Date().getFullYear()} READY CV`
 }
