@@ -1,12 +1,12 @@
 import { resend, emailEnabled } from "@/lib/resend"
 import { createLogger } from "@/lib/logger"
-import { registrationOtpHtml, registrationOtpText } from "@/lib/emails/registrationOtp"
-import { passwordResetHtml, passwordResetText } from "@/lib/emails/passwordReset"
-import { sessionChallengeHtml, sessionChallengeText } from "@/lib/emails/sessionChallenge"
-import { sessionChallengeFailedHtml, sessionChallengeFailedText } from "@/lib/emails/sessionChallengeFailedAttempt"
-import { sessionChallengeBlockedHtml, sessionChallengeBlockedText } from "@/lib/emails/sessionChallengeBlocked"
-import { sessionForcedHtml, sessionForcedText } from "@/lib/emails/sessionForced"
-import { managedWelcomeHtml, managedWelcomeText, managedWelcomeSubject } from "@/lib/emails/managedWelcome"
+import { registrationOtpHtml, registrationOtpText, registrationOtpSubject } from "@/lib/emails/registrationOtp"
+import { passwordResetHtml, passwordResetText, passwordResetSubject } from "@/lib/emails/passwordReset"
+import { sessionChallengeHtml, sessionChallengeText, sessionChallengeSubject } from "@/lib/emails/sessionChallenge"
+import { sessionChallengeFailedHtml, sessionChallengeFailedText, sessionChallengeFailedSubject } from "@/lib/emails/sessionChallengeFailedAttempt"
+import { sessionChallengeBlockedHtml, sessionChallengeBlockedText, sessionChallengeBlockedSubject } from "@/lib/emails/sessionChallengeBlocked"
+import { sessionForcedHtml, sessionForcedText, sessionForcedSubject } from "@/lib/emails/sessionForced"
+import { managedWelcomeHtml, managedWelcomeText, managedWelcomeSubjectFor } from "@/lib/emails/managedWelcome"
 import type { IEmailService } from "@/lib/interfaces/IEmailService"
 
 const FROM = process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>"
@@ -18,75 +18,75 @@ function maskEmail(email: string): string {
 }
 
 export class ResendEmailService implements IEmailService {
-  async sendRegistrationOtp(to: string, name: string, code: string): Promise<void> {
+  async sendRegistrationOtp(to: string, name: string, code: string, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     await resend!.emails.send({
       from: FROM, to,
-      subject: "Tu código de verificación — READY CV",
-      html: registrationOtpHtml({ userName: name, code }),
-      text: registrationOtpText({ userName: name, code }),
+      subject: registrationOtpSubject(locale),
+      html: registrationOtpHtml({ userName: name, code, locale }),
+      text: registrationOtpText({ userName: name, code, locale }),
     }).catch((e) => logger.error("sendRegistrationOtp failed — user cannot complete registration", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 
-  async sendPasswordResetOtp(to: string, name: string, code: string): Promise<void> {
+  async sendPasswordResetOtp(to: string, name: string, code: string, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     await resend!.emails.send({
       from: FROM, to,
-      subject: "Tu código para restablecer contraseña — READY CV",
-      html: passwordResetHtml({ userName: name, code }),
-      text: passwordResetText({ userName: name, code }),
+      subject: passwordResetSubject(locale),
+      html: passwordResetHtml({ userName: name, code, locale }),
+      text: passwordResetText({ userName: name, code, locale }),
     }).catch((e) => logger.error("sendPasswordResetOtp failed — user cannot reset password", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 
-  async sendSessionChallenge(to: string, name: string, code: string): Promise<void> {
+  async sendSessionChallenge(to: string, name: string, code: string, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     await resend!.emails.send({
       from: FROM, to,
-      subject: "Código de acceso a tu cuenta READY CV",
-      html: sessionChallengeHtml({ userName: name, code }),
-      text: sessionChallengeText({ userName: name, code }),
+      subject: sessionChallengeSubject(locale),
+      html: sessionChallengeHtml({ userName: name, code, locale }),
+      text: sessionChallengeText({ userName: name, code, locale }),
     }).catch((e) => logger.error("sendSessionChallenge failed — user cannot complete login", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 
-  async sendSessionChallengeFailed(to: string, name: string, attemptsLeft: number): Promise<void> {
+  async sendSessionChallengeFailed(to: string, name: string, attemptsLeft: number, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     await resend!.emails.send({
       from: FROM, to,
-      subject: "Intento fallido de acceso — READY CV",
-      html: sessionChallengeFailedHtml({ userName: name, attemptsLeft }),
-      text: sessionChallengeFailedText({ userName: name, attemptsLeft }),
+      subject: sessionChallengeFailedSubject(locale),
+      html: sessionChallengeFailedHtml({ userName: name, attemptsLeft, locale }),
+      text: sessionChallengeFailedText({ userName: name, attemptsLeft, locale }),
     }).catch((e) => logger.error("sendSessionChallengeFailed failed", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 
-  async sendSessionChallengeBlocked(to: string, name: string, unblockedAt: Date): Promise<void> {
+  async sendSessionChallengeBlocked(to: string, name: string, unblockedAt: Date, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     await resend!.emails.send({
       from: FROM, to,
-      subject: "Cuenta bloqueada temporalmente — READY CV",
-      html: sessionChallengeBlockedHtml({ userName: name, unblockedAt }),
-      text: sessionChallengeBlockedText({ userName: name, unblockedAt }),
+      subject: sessionChallengeBlockedSubject(locale),
+      html: sessionChallengeBlockedHtml({ userName: name, unblockedAt, locale }),
+      text: sessionChallengeBlockedText({ userName: name, unblockedAt, locale }),
     }).catch((e) => logger.error("sendSessionChallengeBlocked failed", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 
-  async sendSessionForced(to: string, name: string): Promise<void> {
+  async sendSessionForced(to: string, name: string, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     await resend!.emails.send({
       from: FROM, to,
-      subject: "Tu sesión fue cerrada — READY CV",
-      html: sessionForcedHtml({ userName: name }),
-      text: sessionForcedText({ userName: name }),
+      subject: sessionForcedSubject(locale),
+      html: sessionForcedHtml({ userName: name, locale }),
+      text: sessionForcedText({ userName: name, locale }),
     }).catch((e) => logger.error("sendSessionForced failed", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 
-  async sendManagedWelcome(to: string, password: string, expiresAt: Date, downloadLimit: number | null): Promise<void> {
+  async sendManagedWelcome(to: string, password: string, expiresAt: Date, downloadLimit: number | null, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
     const base = process.env.NEXTAUTH_URL ?? "https://www.readycvv.com"
     const loginUrl = `${base}/es/login`
     await resend!.emails.send({
       from: FROM, to,
-      subject: managedWelcomeSubject,
-      html: managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUrl }),
-      text: managedWelcomeText({ password, expiresAt, downloadLimit, loginUrl }),
+      subject: managedWelcomeSubjectFor(locale),
+      html: managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUrl, locale }),
+      text: managedWelcomeText({ password, expiresAt, downloadLimit, loginUrl, locale }),
     }).catch((e) => logger.error("sendManagedWelcome failed", { to: maskEmail(to) }, e instanceof Error ? e : undefined))
   }
 }

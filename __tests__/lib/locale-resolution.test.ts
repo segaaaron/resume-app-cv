@@ -190,3 +190,131 @@ describe("billing emails speak the customer's language", () => {
     expect(read("lib/services/stripe/StripeCheckoutService.ts")).toMatch(/planInterval: plan, locale/)
   })
 })
+
+describe("every email template speaks both languages", () => {
+  // All eleven templates were hardcoded Spanish. The account-access ones are the worst
+  // of it: a user who signed up in English got their verification code, their password
+  // reset and their session challenges in a language they may not read.
+  const SPANISH_MARKERS = /Hola |Tu cuenta|contraseña|código|suscripción|Usuario/
+
+  it("the one-time-code emails render in English", async () => {
+    const { registrationOtpHtml, registrationOtpSubject } = await import("@/lib/emails/registrationOtp")
+    const { passwordResetHtml, passwordResetSubject } = await import("@/lib/emails/passwordReset")
+    const { sessionChallengeHtml, sessionChallengeSubject } = await import("@/lib/emails/sessionChallenge")
+
+    for (const [html, subject] of [
+      [registrationOtpHtml({ userName: "Ana", code: "123456", locale: "en" }), registrationOtpSubject("en")],
+      [passwordResetHtml({ userName: "Ana", code: "123456", locale: "en" }), passwordResetSubject("en")],
+      [sessionChallengeHtml({ userName: "Ana", code: "123456", locale: "en" }), sessionChallengeSubject("en")],
+    ] as const) {
+      expect(html).toContain('lang="en"')
+      expect(html).toContain("123456")
+      expect(html).not.toMatch(SPANISH_MARKERS)
+      expect(subject).not.toMatch(SPANISH_MARKERS)
+    }
+  })
+
+  it("the one-time-code emails still render in Spanish by default", async () => {
+    const { registrationOtpHtml } = await import("@/lib/emails/registrationOtp")
+    expect(registrationOtpHtml({ userName: "Ana", code: "123456" })).toContain('lang="es"')
+    expect(registrationOtpHtml({ userName: "Ana", code: "123456", locale: "es" })).toMatch(SPANISH_MARKERS)
+  })
+
+  it("the session-security emails render in English", async () => {
+    const { sessionForcedHtml } = await import("@/lib/emails/sessionForced")
+    const { sessionChallengeFailedHtml } = await import("@/lib/emails/sessionChallengeFailedAttempt")
+    const { sessionChallengeBlockedHtml } = await import("@/lib/emails/sessionChallengeBlocked")
+
+    const forced = sessionForcedHtml({ userName: "Ana", locale: "en" })
+    expect(forced).toContain('lang="en"')
+    expect(forced).toContain("Your session was signed out")
+
+    const failed = sessionChallengeFailedHtml({ userName: "Ana", attemptsLeft: 2, locale: "en" })
+    expect(failed).toContain("attempts left")
+
+    const blocked = sessionChallengeBlockedHtml({ userName: "Ana", unblockedAt: new Date("2027-03-01T10:00:00Z"), locale: "en" })
+    expect(blocked).toContain("Account temporarily blocked")
+    // The date must be localised too — it used to be forced to es-ES for everyone.
+    expect(blocked).toMatch(/March/)
+  })
+
+  it("singular and plural attempts read correctly in both languages", async () => {
+    const { sessionChallengeFailedHtml } = await import("@/lib/emails/sessionChallengeFailedAttempt")
+    expect(sessionChallengeFailedHtml({ userName: "A", attemptsLeft: 1, locale: "en" })).toContain("1</strong> attempt ")
+    expect(sessionChallengeFailedHtml({ userName: "A", attemptsLeft: 2, locale: "en" })).toContain("attempts")
+    expect(sessionChallengeFailedHtml({ userName: "A", attemptsLeft: 1, locale: "es" })).toContain("Te queda ")
+    expect(sessionChallengeFailedHtml({ userName: "A", attemptsLeft: 3, locale: "es" })).toContain("Te quedan ")
+  })
+
+  it("the transactional emails render in English", async () => {
+    const { managedWelcomeHtml, managedWelcomeSubjectFor } = await import("@/lib/emails/managedWelcome")
+    const { renewalReminderHtml, renewalReminderSubject } = await import("@/lib/emails/renewalReminder")
+    const { referralRewardHtml, referralRewardSubject } = await import("@/lib/emails/referralReward")
+
+    const welcome = managedWelcomeHtml({ password: "abc", expiresAt: new Date("2027-05-02"), downloadLimit: 10, loginUrl: "https://x/login", locale: "en" })
+    expect(welcome).toContain('lang="en"')
+    expect(welcome).toContain("Temporary password")
+    expect(managedWelcomeSubjectFor("en")).toBe("Your ReadyCV access is ready")
+
+    const renewal = renewalReminderHtml({ userName: "Ana", userId: "u1", planInterval: "annual", renewalDate: new Date("2027-05-02"), locale: "en" })
+    expect(renewal).toContain("Your plan renews in")
+    expect(renewalReminderSubject("en")).toMatch(/renews in/)
+
+    const referral = referralRewardHtml({ userName: "Ana", userId: "u1", tier: 2, tierLabel: "Silver", creditAmount: "$4.50", totalCredit: "$7.50", cycleCount: 2, isCycleComplete: false, locale: "en" })
+    expect(referral).toContain("Pro referrals")
+    expect(referralRewardSubject("en")).toBe("Referral reward — READY CV")
+  })
+
+  it("the renewal reminder quotes the price from the single source", async () => {
+    // Same drift that put $144 on the pricing page for a plan Stripe charged $99 for.
+    const { renewalReminderHtml } = await import("@/lib/emails/renewalReminder")
+    expect(renewalReminderHtml({ userName: "A", userId: "u1", planInterval: "annual", renewalDate: new Date(), locale: "en" }))
+      .toContain(`$${PRICING.proAnnual} USD`)
+  })
+
+  it("no template links to a locale-less dashboard path", async () => {
+    const { renewalReminderHtml } = await import("@/lib/emails/renewalReminder")
+    const { referralRewardHtml } = await import("@/lib/emails/referralReward")
+    for (const locale of ["es", "en"] as const) {
+      const pages = [
+        renewalReminderHtml({ userName: "A", userId: "u1", planInterval: "monthly", renewalDate: new Date(), locale }),
+        referralRewardHtml({ userName: "A", userId: "u1", tier: 1, tierLabel: "Bronze", creditAmount: "$1", totalCredit: "$1", cycleCount: 1, isCycleComplete: false, locale }),
+      ]
+      for (const html of pages) {
+        for (const link of html.match(/https?:\/\/[^"']*\/dashboard\/[a-z]+/g) ?? []) {
+          expect(link, `${link} has no locale segment`).toMatch(new RegExp(`/${locale}/dashboard/`))
+        }
+      }
+    }
+  })
+
+  it("the API routes pass the request's language to the email service", async () => {
+    // Without this the templates would be translated and never used.
+    for (const route of [
+      "app/api/auth/register/route.ts",
+      "app/api/auth/reset-password/request/route.ts",
+      "app/api/auth/session-challenge/route.ts",
+      "app/api/auth/session-challenge/verify/route.ts",
+    ]) {
+      expect(read(route), `${route} does not resolve the request language`).toContain("localeFromRequest")
+    }
+  })
+})
+
+describe("the billing portal is only offered where it can open", () => {
+  it("Settings hides the portal button without a Stripe customer", () => {
+    const src = read("components/dashboard/SettingsForm.tsx")
+    expect(src).toContain("hasStripeBillingPortal")
+    expect(src).toMatch(/!isPayPalPayer && hasStripePortal/)
+    // And its parent must fetch the id, or the rule reads undefined.
+    expect(read("app/[locale]/(dashboard)/dashboard/settings/page.tsx")).toMatch(/stripeCustomerId:\s*true/)
+  })
+
+  it("the resumes dashboard resolves it server-side", () => {
+    // The session token carries no customer id, so the client cannot decide this.
+    const page = read("app/[locale]/(dashboard)/dashboard/resumes/page.tsx")
+    expect(page).toContain("hasStripeBillingPortal")
+    expect(page).toMatch(/canManageBilling=\{canManageBilling\}/)
+    expect(read("components/dashboard/_resume-sub.tsx")).toMatch(/onManagePlan\?\: \(\) => void/)
+  })
+})

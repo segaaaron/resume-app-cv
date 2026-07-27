@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/emails/renewalReminder", () => ({
   renewalReminderHtml: vi.fn().mockReturnValue("<html>renewal</html>"),
   renewalReminderText: vi.fn().mockReturnValue("renewal text"),
+  renewalReminderSubject: vi.fn().mockReturnValue("Tu plan se renueva en 2 días — READY CV"),
 }))
 
 // ---------- helpers ----------
@@ -98,7 +99,7 @@ describe("CronService.sendRenewalReminders", () => {
       expect.objectContaining({
         from: "READY CV <no-reply@readycvv.com>",
         to: "ana@example.com",
-        subject: "Tu plan se renueva en 2 días ⏰",
+        subject: "Tu plan se renueva en 2 días — READY CV",
       }),
     )
     expect(db.user.updateMany).toHaveBeenCalledWith(

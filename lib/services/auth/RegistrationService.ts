@@ -15,6 +15,8 @@ export interface RegisterInput {
   ageConsent: true
   referralCode?: string
   ipAddress: string
+  /** Language of the request, so the verification code arrives in a language they read. */
+  locale?: string | null
 }
 
 export interface ConfirmInput {
@@ -61,7 +63,7 @@ export class RegistrationService {
       otpExp,
     })
 
-    await this.email.sendRegistrationOtp(input.email, input.name, code)
+    await this.email.sendRegistrationOtp(input.email, input.name, code, input.locale)
     this.logger.info("RegistrationService.requestOtp: OTP sent", { email: input.email })
     return { pending: true }
   }

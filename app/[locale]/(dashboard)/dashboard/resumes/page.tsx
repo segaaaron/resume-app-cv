@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { hasStripeBillingPortal } from "@/lib/plans"
 import ResumesDashboard from "@/components/dashboard/ResumesDashboard"
 
 export const dynamic = "force-dynamic"
@@ -38,5 +39,18 @@ export default async function ResumesPage({
     redirect(`/${locale}/login`)
   }
 
-  return <ResumesDashboard initialResumes={resumes} />
+  // The "manage plan" action opens Stripe's hosted portal, which needs a
+  // stripeCustomerId. The session token carries none, and a PRO row can lack one (plan
+  // granted outside checkout) — the button then 400s and shows an error toast.
+  const billing = await db.user.findUnique({
+    where: { id: session.user.id },
+    select: { subscriptionStatus: true, stripeCustomerId: true, paymentProvider: true },
+  })
+  // PayPal payers have no Stripe customer and no hosted portal at all — they cancel
+  // from Settings, so the portal action is not theirs either.
+  const canManageBilling =
+    billing?.paymentProvider !== "PAYPAL"
+    && hasStripeBillingPortal(billing?.subscriptionStatus, billing?.stripeCustomerId)
+
+  return <ResumesDashboard initialResumes={resumes} canManageBilling={canManageBilling} />
 }

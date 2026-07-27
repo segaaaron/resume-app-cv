@@ -95,7 +95,17 @@ export function GhostButton({ label, onClick, disabled }: { label: string; onCli
 
 // ── ProBanner ─────────────────────────────────────────────────────────────────
 
-export function ProBanner({ onManagePlan, portalLoading }: { onManagePlan: () => void; portalLoading: boolean }) {
+export function ProBanner({
+  onManagePlan,
+  portalLoading,
+}: {
+  /**
+   * Omitted when the Stripe portal cannot be opened (no customer, or a PayPal payer).
+   * The banner keeps confirming PRO status; only the action that would 400 disappears.
+   */
+  onManagePlan?: () => void
+  portalLoading: boolean
+}) {
   const t = useTranslations("dashboard.resumes")
   return (
     <div
@@ -124,7 +134,9 @@ export function ProBanner({ onManagePlan, portalLoading }: { onManagePlan: () =>
         </div>
         <div className="text-xs text-dash-muted">{t("pro_banner_desc")}</div>
       </div>
-      <GhostButton label={portalLoading ? t("opening_portal") : t("pro_banner_manage")} onClick={onManagePlan} disabled={portalLoading} />
+      {onManagePlan && (
+        <GhostButton label={portalLoading ? t("opening_portal") : t("pro_banner_manage")} onClick={onManagePlan} disabled={portalLoading} />
+      )}
       {/* decorative glyph — font-size/opacity are fixed design values, keep inline */}
       <span
         className="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none select-none text-dash-cyan"

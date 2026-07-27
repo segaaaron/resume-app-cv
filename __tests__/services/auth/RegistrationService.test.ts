@@ -83,7 +83,7 @@ describe("RegistrationService.requestOtp", () => {
     const result = await makeService().requestOtp(input)
     expect(result).toEqual({ pending: true })
     expect(mockPending.upsert).toHaveBeenCalledOnce()
-    expect(mockEmail.sendRegistrationOtp).toHaveBeenCalledWith(input.email, input.name, expect.stringMatching(/^\d{6}$/))
+    expect(mockEmail.sendRegistrationOtp).toHaveBeenCalledWith(input.email, input.name, expect.stringMatching(/^\d{6}$/), undefined)
   })
 
   it("OTP code is exactly 6 digits between 100000–999999", async () => {

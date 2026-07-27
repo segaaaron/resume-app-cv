@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { hasStripeBillingPortal } from "@/lib/plans"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
 import { FieldInput, BtnGold, BtnGhost, DataCard } from "./_settings-sub"
@@ -32,6 +33,12 @@ interface UserData {
   planInterval: string | null
   /** Gateway that provisioned the active plan — decides which cancel API to call. */
   paymentProvider?: string | null
+  /**
+   * Stripe customer behind this row. The hosted portal opens against it, so without one
+   * `/api/stripe/portal` returns 400 and the button can only show an error. A PRO row
+   * can lack it when the plan was granted outside checkout (admin grant, manual fix).
+   */
+  stripeCustomerId?: string | null
   createdAt: Date
   isManaged?: boolean
   managedExpiresAt?: Date | null
@@ -102,6 +109,8 @@ export default function SettingsForm({ user }: { user: UserData }) {
   const isOneTime = user.plan === "BASIC" || user.plan === "SPRINT"
   const isActive = subscriptionStatus === "ACTIVE"
   const isPayPalPayer = user.paymentProvider === "PAYPAL"
+  // Same rule the pricing page uses (lib/plans.ts) — never re-derived here.
+  const hasStripePortal = hasStripeBillingPortal(subscriptionStatus, user.stripeCustomerId)
   const endsAt   = user.subscriptionEndsAt ? new Date(user.subscriptionEndsAt) : null
   const isManaged = !!user.isManaged
 
@@ -350,7 +359,10 @@ export default function SettingsForm({ user }: { user: UserData }) {
               {/* Stripe's hosted Billing Portal has no PayPal equivalent — showing
                   this button to a PayPal payer would just 400. They manage the
                   subscription through the cancel action below instead. */}
-              {!isPayPalPayer && (
+              {/* Also hidden for a PRO row with no Stripe customer: the portal has
+                  nothing to open, so the button could only produce an error toast.
+                  The cancel action below still applies to them. */}
+              {!isPayPalPayer && hasStripePortal && (
                 <BtnGhost onClick={handleBillingPortal} disabled={portalLoading} fullWidth>
                   {portalLoading ? t("opening_portal") : t("manage_billing")}
                 </BtnGhost>

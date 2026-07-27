@@ -321,7 +321,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
     expect(err.code).toBe("invalid")
     expect(err.status).toBe(400)
     expect(err.extra?.attemptsLeft).toBe(3) // MAX_ATTEMPTS(5) - newAttempts(2)
-    expect(mockEmail.sendSessionChallengeFailed).toHaveBeenCalledWith("a@b.com", "Ana", 3)
+    expect(mockEmail.sendSessionChallengeFailed).toHaveBeenCalledWith("a@b.com", "Ana", 3, undefined)
     expect(mockUsers.updateSessionChallenge).toHaveBeenCalledWith("u1", { sessionChallengeAttempts: 2 })
   })
 
@@ -355,7 +355,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
     const err = await makeChallengeService().verifyChallenge("a@b.com", "000000").catch((e) => e) as AppError
     expect(err.code).toBe("blocked")
     expect(err.status).toBe(429)
-    expect(mockEmail.sendSessionChallengeBlocked).toHaveBeenCalledWith("a@b.com", "Ana", expect.any(Date))
+    expect(mockEmail.sendSessionChallengeBlocked).toHaveBeenCalledWith("a@b.com", "Ana", expect.any(Date), undefined)
 
     // The update should include blockedUntil, null code + exp
     const [, update] = vi.mocked(mockUsers.updateSessionChallenge).mock.calls[0]
@@ -401,7 +401,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
     const result = await makeChallengeService().verifyChallenge("a@b.com", "654321")
     expect(result).toEqual({ success: true })
     expect(mockSession.clearActiveSession).toHaveBeenCalledWith("u1")
-    expect(mockEmail.sendSessionForced).toHaveBeenCalledWith("a@b.com", "Ana")
+    expect(mockEmail.sendSessionForced).toHaveBeenCalledWith("a@b.com", "Ana", undefined)
     // purgeUserCache is called (mocked via vi.mock("@/lib/auth"))
     const { purgeUserCache } = await import("@/lib/auth")
     expect(purgeUserCache).toHaveBeenCalledWith("u1")
@@ -508,6 +508,7 @@ describe("B. RegistrationService — requestOtp", () => {
       REGISTER_INPUT.email,
       REGISTER_INPUT.name,
       expect.stringMatching(/^\d{6}$/),
+      undefined,
     )
   })
 
@@ -798,7 +799,7 @@ describe("C. PasswordResetService — requestReset", () => {
     const result = await makePasswordResetService().requestReset("1.2.3.4", "a@b.com")
     expect(result).toEqual({ sent: true })
     expect(mockResets.upsert).toHaveBeenCalledOnce()
-    expect(mockEmail.sendPasswordResetOtp).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/))
+    expect(mockEmail.sendPasswordResetOtp).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/), undefined)
   })
 
   it("C05 user with null name → uses fallback 'Usuario' in the email", async () => {
@@ -808,7 +809,7 @@ describe("C. PasswordResetService — requestReset", () => {
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
     await makePasswordResetService().requestReset("1.2.3.4", "a@b.com")
-    expect(mockEmail.sendPasswordResetOtp).toHaveBeenCalledWith("a@b.com", "Usuario", expect.any(String))
+    expect(mockEmail.sendPasswordResetOtp).toHaveBeenCalledWith("a@b.com", "Usuario", expect.any(String), undefined)
   })
 
   it("C06 requestReset uses IP as rate-limit key with 'reset-password-request' and limit 3", async () => {

@@ -77,7 +77,7 @@ describe("PasswordResetService.requestReset", () => {
     const result = await makeService().requestReset("1.2.3.4", "a@b.com")
     expect(result).toEqual({ sent: true })
     expect(mockResets.upsert).toHaveBeenCalledOnce()
-    expect(mockEmail.sendPasswordResetOtp).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/))
+    expect(mockEmail.sendPasswordResetOtp).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/), undefined)
   })
 })
 

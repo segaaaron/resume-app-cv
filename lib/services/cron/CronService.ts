@@ -3,6 +3,7 @@ import { db } from "@/lib/db"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import {
   renewalReminderHtml,
+  renewalReminderSubject,
   renewalReminderText,
 } from "@/lib/emails/renewalReminder"
 
@@ -101,7 +102,7 @@ export class CronService {
       await this.emailClient!.emails.send({
         from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: user.email,
-        subject: "Tu plan se renueva en 2 días ⏰",
+        subject: renewalReminderSubject(),
         html: renewalReminderHtml({
           userName: user.name ?? "Usuario",
           userId: user.id,

@@ -96,6 +96,33 @@ export class StripeWebhookService {
         // collected — revenue lost with no failure anywhere to notice it. Nothing to
         // revoke here: this is our problem to fix, not the customer's fault.
         case "invoice.finalization_failed": await this.handleFinalizationFailed(event); break
+        // Received-and-understood, deliberately no-ops. Logged rather than left to the
+        // default branch so the admin webhook panel shows them as handled traffic
+        // instead of unknown noise — and so the reason for doing nothing is written down.
+        case "checkout.session.expired": {
+          // Nothing was ever provisioned: the session died unpaid.
+          const cs = event.data.object as Stripe.Checkout.Session
+          this.logger.info("StripeWebhookService: checkout session expired, nothing to undo", { sessionId: cs.id, userId: cs.metadata?.userId })
+          break
+        }
+        case "charge.refund.updated": {
+          // A refund changed state after the fact (delayed methods can fail one). Access
+          // was already revoked by charge.refunded; re-granting it automatically would
+          // hand out paid access on a state Stripe may still change again.
+          const r = event.data.object as Stripe.Refund
+          if (r.status === "failed" || r.status === "canceled") {
+            this.logger.error("StripeWebhookService: refund did not complete — access stays revoked, review manually", { refundId: r.id, status: r.status, chargeId: r.charge })
+          }
+          break
+        }
+        case "customer.deleted": {
+          // The customer is gone at Stripe, so the stored id can no longer open a portal
+          // or a checkout. Detaching it lets the next checkout create a fresh customer
+          // instead of failing against a dead one. The PLAN is untouched: deleting a
+          // customer is not a refund and takes nothing the user paid for.
+          await this.handleCustomerDeleted(event)
+          break
+        }
         case "invoice.paid": await this.handleInvoicePaid(event); break
         case "customer.subscription.updated": await this.handleSubscriptionUpdated(event); break
         case "customer.subscription.deleted": await this.handleSubscriptionDeleted(event); break
@@ -789,6 +816,31 @@ export class StripeWebhookService {
         text: `Stripe could not finalize invoice ${invoice.id}, so NO payment was attempted and none will be.\n\nUser: ${email ?? "no email"}\nUser ID: ${userId}\nError: ${reason?.code ?? "unknown"} — ${reason?.message ?? "no message"}\n\nThe subscription is still active and the customer keeps full access while nothing is collected.\n\nUsual cause: tax or billing address resolution. Fix it in the Stripe Dashboard (customer address / tax settings), then finalize the invoice manually.`,
       })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.finalization_failed" }))
     }
+  }
+
+  /**
+   * The Stripe customer was deleted. Only the dead pointer is cleared — plan, status and
+   * paid window stay exactly as they are, because deleting a customer is an operational
+   * act, not a refund. Leaving the id in place would make every later portal call and
+   * checkout fail against a customer that no longer exists.
+   */
+  private async handleCustomerDeleted(event: Stripe.Event): Promise<void> {
+    const customer = event.data.object as Stripe.Customer
+    const result = await db.$transaction(async (tx) => {
+      if (!await claimEvent(tx, event.id)) return { skip: true, userId: null }
+      const user = await tx.user.findUnique({ where: { stripeCustomerId: customer.id }, select: { id: true, isManaged: true } })
+      if (!user || user.isManaged) return { skip: true, userId: null }
+      await tx.stripeEvent.update({ where: { id: event.id }, data: { userId: user.id } })
+      await tx.user.update({ where: { id: user.id }, data: { stripeCustomerId: null, sessionVersion: { increment: 1 } } })
+      await tx.auditLog.create({
+        data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { source: "customer_deleted", stripeCustomerId: customer.id } },
+      })
+      return { skip: false, userId: user.id }
+    }, TX_OPTS)
+
+    if (result.skip || !result.userId) return
+    purgeUserCache(result.userId)
+    this.logger.warn("StripeWebhookService: Stripe customer deleted, id detached", { userId: result.userId, customerId: customer.id })
   }
 
   private async handleFraudWarning(event: Stripe.Event): Promise<void> {

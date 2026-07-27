@@ -25,7 +25,7 @@ export class PasswordResetService {
     private readonly logger: ILogger,
   ) {}
 
-  async requestReset(ipAddress: string, emailAddress: string): Promise<{ sent: true }> {
+  async requestReset(ipAddress: string, emailAddress: string, locale?: string | null): Promise<{ sent: true }> {
     const allowed = await this.rateLimit.check(ipAddress, "reset-password-request", 3)
     if (!allowed) {
       this.logger.warn("PasswordResetService.requestReset: rate limited", { ip: ipAddress })
@@ -43,7 +43,7 @@ export class PasswordResetService {
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000)
 
     await this.resets.upsert(emailAddress, otpHash, expiresAt)
-    await this.email.sendPasswordResetOtp(emailAddress, user.name ?? "Usuario", code)
+    await this.email.sendPasswordResetOtp(emailAddress, user.name ?? "Usuario", code, locale)
     this.logger.info("PasswordResetService.requestReset: OTP sent", { email: emailAddress })
     return { sent: true }
   }

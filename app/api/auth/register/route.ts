@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { registrationService, handleError } from "@/lib/controllers/auth-deps"
+import { localeFromRequest } from "@/lib/locale"
 
 const schema = z.object({
   name:             z.string().min(2).max(255),
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
 
   try {
-    const result = await registrationService.requestOtp({ ...parsed.data, ageConsent: parsed.data.ageConsent as true, ipAddress: ip })
+    const result = await registrationService.requestOtp({ ...parsed.data, ageConsent: parsed.data.ageConsent as true, ipAddress: ip, locale: localeFromRequest(req) })
     return NextResponse.json(result)
   } catch (err) {
     return handleError(err)

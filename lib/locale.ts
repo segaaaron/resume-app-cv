@@ -57,3 +57,20 @@ export function resolveLocale(cookieValue?: string | null, acceptLanguage?: stri
   if (isSupported(cookieValue)) return cookieValue
   return localeFromAcceptLanguage(acceptLanguage) ?? routing.defaultLocale
 }
+
+/**
+ * Language for a request handled outside the `[locale]` tree — API routes have no
+ * locale segment in their path, so this is how they learn which language to answer
+ * (and which language to write an email in).
+ *
+ * Same order of authority as the pages: explicit choice, then the browser, then default.
+ */
+export function localeFromRequest(req: Request): Locale {
+  const cookie = req.headers
+    .get("cookie")
+    ?.split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith(`${LOCALE_COOKIE}=`))
+    ?.split("=")[1]
+  return resolveLocale(cookie, req.headers.get("accept-language"))
+}

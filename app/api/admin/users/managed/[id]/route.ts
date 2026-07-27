@@ -7,6 +7,7 @@ import { z } from "zod"
 import bcrypt from "@/lib/bcrypt"
 import { ResendEmailService } from "@/lib/services/email/ResendEmailService"
 import { generateManagedPassword } from "@/lib/managed-password"
+import { localeFromRequest } from "@/lib/locale"
 
 const logger = createLogger("admin-managed-user-actions")
 
@@ -96,7 +97,7 @@ export async function PATCH(req: Request, { params }: Params) {
 
     if (existing.managedExpiresAt) {
       const emailService = new ResendEmailService()
-      await emailService.sendManagedWelcome(existing.email, newPassword, existing.managedExpiresAt, existing.managedDownloadLimit)
+      await emailService.sendManagedWelcome(existing.email, newPassword, existing.managedExpiresAt, existing.managedDownloadLimit, localeFromRequest(req))
         .catch((e) => logger.error("sendManagedWelcome on reset failed", { targetUserId: id }, e instanceof Error ? e : undefined))
     }
 

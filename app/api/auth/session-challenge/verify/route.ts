@@ -3,6 +3,7 @@ import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { sessionChallengeService, handleError } from "@/lib/controllers/auth-deps"
 import { AppError } from "@/lib/services/auth/AppError"
+import { localeFromRequest } from "@/lib/locale"
 
 const bodySchema = z.object({
   email: z.string().email(),
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 })
 
   try {
-    const result = await sessionChallengeService.verifyChallenge(parsed.data.email, parsed.data.code)
+    const result = await sessionChallengeService.verifyChallenge(parsed.data.email, parsed.data.code, localeFromRequest(req))
     return NextResponse.json(result)
   } catch (err) {
     if (err instanceof AppError && err.code === "invalid" && err.extra?.attemptsLeft !== undefined) {

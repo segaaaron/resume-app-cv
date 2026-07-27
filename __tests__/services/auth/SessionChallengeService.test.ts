@@ -86,7 +86,7 @@ describe("SessionChallengeService.issueChallenge", () => {
     expect(updateCall[0]).toBe("u1")
     expect(updateCall[1].sessionChallengeCode).toMatch(/^\$2[aby]\$/)
     expect(updateCall[1].sessionChallengeAttempts).toBe(0)
-    expect(mockEmail.sendSessionChallenge).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/))
+    expect(mockEmail.sendSessionChallenge).toHaveBeenCalledWith("a@b.com", "Ana", expect.stringMatching(/^\d{6}$/), undefined)
   })
 })
 
@@ -140,7 +140,7 @@ describe("SessionChallengeService.verifyChallenge", () => {
     const err = await makeService().verifyChallenge("a@b.com", "000000").catch((e) => e)
     expect(err.code).toBe("invalid")
     expect(err.extra?.attemptsLeft).toBe(3)
-    expect(mockEmail.sendSessionChallengeFailed).toHaveBeenCalledWith("a@b.com", "Ana", 3)
+    expect(mockEmail.sendSessionChallengeFailed).toHaveBeenCalledWith("a@b.com", "Ana", 3, undefined)
   })
 
   it("invalid code at max_attempts → blocks user, sends blocked email, throws 429 blocked", async () => {
@@ -155,7 +155,7 @@ describe("SessionChallengeService.verifyChallenge", () => {
     const err = await makeService().verifyChallenge("a@b.com", "000000").catch((e) => e)
     expect(err.code).toBe("blocked")
     expect(err.status).toBe(429)
-    expect(mockEmail.sendSessionChallengeBlocked).toHaveBeenCalledWith("a@b.com", "Ana", expect.any(Date))
+    expect(mockEmail.sendSessionChallengeBlocked).toHaveBeenCalledWith("a@b.com", "Ana", expect.any(Date), undefined)
   })
 
   it("valid code → clears session, sends forced email, returns { success: true }", async () => {
@@ -170,6 +170,6 @@ describe("SessionChallengeService.verifyChallenge", () => {
     const result = await makeService().verifyChallenge("a@b.com", "654321")
     expect(result).toEqual({ success: true })
     expect(mockSession.clearActiveSession).toHaveBeenCalledWith("u1")
-    expect(mockEmail.sendSessionForced).toHaveBeenCalledWith("a@b.com", "Ana")
+    expect(mockEmail.sendSessionForced).toHaveBeenCalledWith("a@b.com", "Ana", undefined)
   })
 })

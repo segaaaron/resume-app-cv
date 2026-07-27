@@ -1,7 +1,7 @@
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { resend, emailEnabled } from "@/lib/resend"
-import { referralRewardHtml, referralRewardText } from "@/lib/emails/referralReward"
+import { referralRewardHtml, referralRewardText, referralRewardSubject } from "@/lib/emails/referralReward"
 import { createLogger } from "@/lib/logger"
 
 const logger = createLogger("referral-rewards")
@@ -177,9 +177,11 @@ async function sendReferralRewardEmail({
     await resend.emails.send({
       from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
       to: referrer.email,
-      subject: isCycleComplete
-        ? "🏆 ¡1 mes gratis! Completaste tu ciclo de referidos"
-        : `🎉 Nivel ${newTier} de referidos alcanzado — ${highestTier.label}`,
+      // Language: this email goes to the REFERRER, not to the buyer whose payment
+      // triggered it, so the checkout locale would be someone else's language. The
+      // referrer's own language is not stored anywhere, so it stays the default until
+      // it is — see the note on ReferralRewardProps.locale.
+      subject: referralRewardSubject(),
       html: referralRewardHtml({
         userName: referrer.name ?? referrer.email,
         userId: referrer.id,

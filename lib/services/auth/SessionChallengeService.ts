@@ -19,7 +19,7 @@ export class SessionChallengeService {
     private readonly logger: ILogger,
   ) {}
 
-  async issueChallenge(emailAddress: string): Promise<{ sent: true }> {
+  async issueChallenge(emailAddress: string, locale?: string | null): Promise<{ sent: true }> {
     const allowed = await this.rateLimit.check(emailAddress, "session-challenge", 5)
     if (!allowed) {
       this.logger.warn("SessionChallengeService.issueChallenge: rate limited", { email: emailAddress })
@@ -48,12 +48,12 @@ export class SessionChallengeService {
       sessionChallengeAttempts: 0,
     })
 
-    if (user.name) await this.email.sendSessionChallenge(emailAddress, user.name, code)
+    if (user.name) await this.email.sendSessionChallenge(emailAddress, user.name, code, locale)
     this.logger.info("SessionChallengeService.issueChallenge: OTP sent", { email: emailAddress })
     return { sent: true }
   }
 
-  async verifyChallenge(emailAddress: string, code: string): Promise<{ success: true }> {
+  async verifyChallenge(emailAddress: string, code: string, locale?: string | null): Promise<{ success: true }> {
     const allowed = await this.rateLimit.check(emailAddress, "session-challenge-verify", 10)
     if (!allowed) throw new AppError("rate_limited", 429)
 
@@ -84,21 +84,21 @@ export class SessionChallengeService {
           sessionChallengeCode:         null,
           sessionChallengeExp:          null,
         })
-        if (user.name) await this.email.sendSessionChallengeBlocked(emailAddress, user.name, blockedUntil)
+        if (user.name) await this.email.sendSessionChallengeBlocked(emailAddress, user.name, blockedUntil, locale)
         this.logger.warn("SessionChallengeService.verifyChallenge: user blocked", { email: emailAddress })
         throw new AppError("blocked", 429, { blockedUntil: blockedUntil.toISOString() })
       }
 
       await this.users.updateSessionChallenge(user.id, { sessionChallengeAttempts: newAttempts })
       const attemptsLeft = MAX_ATTEMPTS - newAttempts
-      if (user.name) await this.email.sendSessionChallengeFailed(emailAddress, user.name, attemptsLeft)
+      if (user.name) await this.email.sendSessionChallengeFailed(emailAddress, user.name, attemptsLeft, locale)
       this.logger.warn("SessionChallengeService.verifyChallenge: invalid code", { email: emailAddress, attemptsLeft })
       throw new AppError("invalid", 400, { attemptsLeft })
     }
 
     await this.session.clearActiveSession(user.id)
     purgeUserCache(user.id)
-    if (user.name) await this.email.sendSessionForced(emailAddress, user.name)
+    if (user.name) await this.email.sendSessionForced(emailAddress, user.name, locale)
     this.logger.info("SessionChallengeService.verifyChallenge: session forced out", { email: emailAddress })
     return { success: true }
   }

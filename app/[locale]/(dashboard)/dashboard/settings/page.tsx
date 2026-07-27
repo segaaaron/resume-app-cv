@@ -17,7 +17,7 @@ export default async function SettingsPage({ params }: { params: Promise<{ local
     select: {
       id: true, name: true, email: true, image: true,
       plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, paymentProvider: true, createdAt: true,
-      isManaged: true, managedExpiresAt: true, managedBlocked: true,
+      isManaged: true, managedExpiresAt: true, managedBlocked: true, stripeCustomerId: true,
     },
   })
 

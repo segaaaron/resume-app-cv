@@ -24,7 +24,18 @@ import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
 import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed, TranslatingOverlay } from "./_resume-sub"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
-export default function ResumesDashboard({ initialResumes }: { initialResumes: ResumeCard[] }) {
+export default function ResumesDashboard({
+  initialResumes,
+  canManageBilling = false,
+}: {
+  initialResumes: ResumeCard[]
+  /**
+   * Resolved server-side: the Stripe portal can actually be opened. The session token
+   * has no customer id, so this cannot be derived here — and without it the "manage
+   * plan" action 400s and only shows an error toast.
+   */
+  canManageBilling?: boolean
+}) {
   const t = useTranslations("dashboard.resumes")
   const locale = useLocale()
   const dateLocale = locale === "es" ? es : enUS
@@ -403,7 +414,12 @@ export default function ResumesDashboard({ initialResumes }: { initialResumes: R
       </div>
 
       {/* ── Manage plan (active PRO only) — non-PRO users get UpgradeCTACard above ── */}
-      {isPro && <ProBanner onManagePlan={handleBillingPortal} portalLoading={portalLoading} />}
+      {isPro && (
+        <ProBanner
+          onManagePlan={canManageBilling ? handleBillingPortal : undefined}
+          portalLoading={portalLoading}
+        />
+      )}
 
       {/* ── Stats row ── */}
       <StatsRow resumes={resumes} isPro={isPro} />

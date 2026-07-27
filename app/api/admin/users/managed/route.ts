@@ -7,6 +7,7 @@ import { z } from "zod"
 import bcrypt from "@/lib/bcrypt"
 import { ResendEmailService } from "@/lib/services/email/ResendEmailService"
 import { generateManagedPassword } from "@/lib/managed-password"
+import { localeFromRequest } from "@/lib/locale"
 
 const logger = createLogger("admin-managed-users")
 
@@ -88,7 +89,7 @@ export async function POST(req: Request) {
   }).catch((e) => logger.error("auditLog MANAGED_USER_CREATED failed", { userId: user.id }, e instanceof Error ? e : undefined))
 
   const emailService = new ResendEmailService()
-  await emailService.sendManagedWelcome(email, plainPassword, managedExpiresAt, downloadLimit ?? null)
+  await emailService.sendManagedWelcome(email, plainPassword, managedExpiresAt, downloadLimit ?? null, localeFromRequest(req))
     .catch((e) => logger.error("sendManagedWelcome failed after user creation", { userId: user.id }, e instanceof Error ? e : undefined))
 
   return NextResponse.json({
