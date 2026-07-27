@@ -75,6 +75,8 @@ export class CronService {
         email: true,
         planInterval: true,
         subscriptionEndsAt: true,
+        // The cron has no request to infer a language from — this is the only source.
+        preferredLocale: true,
       },
       take: 200,
     })
@@ -102,18 +104,20 @@ export class CronService {
       await this.emailClient!.emails.send({
         from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: user.email,
-        subject: renewalReminderSubject(),
+        subject: renewalReminderSubject(user.preferredLocale),
         html: renewalReminderHtml({
           userName: user.name ?? "Usuario",
           userId: user.id,
           planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
           renewalDate: user.subscriptionEndsAt!,
+          locale: user.preferredLocale,
         }),
         text: renewalReminderText({
           userName: user.name ?? "Usuario",
           userId: user.id,
           planInterval: (user.planInterval ?? "monthly") as "monthly" | "annual",
           renewalDate: user.subscriptionEndsAt!,
+          locale: user.preferredLocale,
         }),
       })
     }

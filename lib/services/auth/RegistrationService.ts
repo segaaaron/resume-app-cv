@@ -22,6 +22,8 @@ export interface RegisterInput {
 export interface ConfirmInput {
   email: string
   code: string
+  /** Language of the request, stored on the new user for later crons and webhooks. */
+  locale?: string | null
 }
 
 export class RegistrationService {
@@ -105,7 +107,7 @@ export class RegistrationService {
     }
 
     try {
-      await this.users.createFromPending(pending, nanoid(8), referrerId)
+      await this.users.createFromPending(pending, nanoid(8), referrerId, input.locale)
     } catch (e: unknown) {
       if ((e as { code?: string })?.code === "P2002") throw new AppError("email_taken", 409)
       throw e

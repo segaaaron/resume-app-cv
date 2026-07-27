@@ -21,7 +21,7 @@ export class PrismaUserRepository implements IUserRepository {
     return db.user.findUnique({ where: { referralCode: code }, select: { id: true } })
   }
 
-  async createFromPending(pending: PendingRecord, referralCode: string, referrerId?: string): Promise<void> {
+  async createFromPending(pending: PendingRecord, referralCode: string, referrerId?: string, preferredLocale?: string | null): Promise<void> {
     await db.$transaction([
       db.user.create({
         data: {
@@ -33,6 +33,9 @@ export class PrismaUserRepository implements IUserRepository {
           termsAcceptedAt:  new Date(),
           referralCode,
           emailVerified:    new Date(),
+          // Captured at sign-up so a cron or a webhook can write to this person in a
+          // language they read — neither has a request to infer it from.
+          ...(preferredLocale ? { preferredLocale } : {}),
           ...(referrerId ? { referredBy: referrerId } : {}),
         },
       }),

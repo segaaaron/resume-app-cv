@@ -3,6 +3,7 @@ import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { registrationService, handleError } from "@/lib/controllers/auth-deps"
 import { AppError } from "@/lib/services/auth/AppError"
+import { localeFromRequest } from "@/lib/locale"
 
 const schema = z.object({
   email: z.string().email(),
@@ -17,7 +18,7 @@ export async function POST(req: Request) {
   if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
 
   try {
-    const result = await registrationService.confirmOtp(parsed.data)
+    const result = await registrationService.confirmOtp({ ...parsed.data, locale: localeFromRequest(req) })
     return NextResponse.json(result)
   } catch (err) {
     if (err instanceof AppError && err.code === "invalid" && err.extra?.attemptsLeft !== undefined) {

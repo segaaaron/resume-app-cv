@@ -7,26 +7,33 @@ datasource db {
 }
 
 model User {
-  id                           String               @id @default(cuid())
-  name                         String?
-  email                        String               @unique
-  emailVerified                DateTime?
-  image                        String?
-  password                     String?
-  plan                         Plan                 @default(UNSUBSCRIBED)
-  role                         Role                 @default(USER)
-  stripeCustomerId             String?              @unique
-  subscriptionId               String?              @unique
-  subscriptionEndsAt           DateTime?
-  subscriptionStatus           SubscriptionStatus   @default(NONE)
-  planInterval                 String?
+  id                 String             @id @default(cuid())
+  name               String?
+  email              String             @unique
+  emailVerified      DateTime?
+  image              String?
+  password           String?
+  plan               Plan               @default(UNSUBSCRIBED)
+  role               Role               @default(USER)
+  stripeCustomerId   String?            @unique
+  subscriptionId     String?            @unique
+  subscriptionEndsAt DateTime?
+  subscriptionStatus SubscriptionStatus @default(NONE)
+  planInterval       String?
+  // Language this user reads, captured at sign-up and updated whenever they switch it.
+  // Null for everyone who registered before it existed — and for them the emails fall
+  // back exactly as they did. Needed because a cron or a webhook has no request to read
+  // Accept-Language from, so without this the renewal reminder and the referral reward
+  // could not be written in the reader's language.
+  preferredLocale    String?
+
   // Which gateway provisioned the CURRENT active plan. Existing rows are Stripe
   // (default). The internal plan state (plan/subscriptionStatus/subscriptionEndsAt)
   // stays gateway-agnostic — these IDs never mix with the Stripe ones above.
   paymentProvider              PaymentProvider?     @default(STRIPE)
   paypalSubscriptionId         String?              @unique
   paypalPlanId                 String?
-  paypalOrderId                String?              // one-time BASIC/SPRINT
+  paypalOrderId                String? // one-time BASIC/SPRINT
   accounts                     Account[]
   sessions                     Session[]
   resumes                      Resume[]
@@ -59,15 +66,15 @@ model User {
   createdAt                    DateTime             @default(now())
   updatedAt                    DateTime             @updatedAt
 
-  isManaged                    Boolean              @default(false)
-  managedExpiresAt             DateTime?
-  managedDownloadLimit         Int?
-  managedDownloadsUsed         Int                  @default(0)
-  managedCreatedBy             String?
-  managedNote                  String?
-  managedBlocked               Boolean              @default(false)
+  isManaged            Boolean   @default(false)
+  managedExpiresAt     DateTime?
+  managedDownloadLimit Int?
+  managedDownloadsUsed Int       @default(0)
+  managedCreatedBy     String?
+  managedNote          String?
+  managedBlocked       Boolean   @default(false)
 
-  consentLogs                  ConsentLog[]
+  consentLogs ConsentLog[]
 
   @@index([referredBy])
   @@index([deletedAt])
@@ -78,16 +85,16 @@ model User {
 }
 
 model ConsentLog {
-  id              String   @id @default(cuid())
-  userId          String
-  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan            String
-  ipHash          String
-  userAgent       String?  @db.Text
-  locale          String
-  consentVersion  String
-  consentText     String   @db.Text
-  acceptedAt      DateTime @default(now())
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan           String
+  ipHash         String
+  userAgent      String?  @db.Text
+  locale         String
+  consentVersion String
+  consentText    String   @db.Text
+  acceptedAt     DateTime @default(now())
 
   @@index([userId])
   @@index([acceptedAt])
@@ -132,40 +139,40 @@ model VerificationToken {
 }
 
 model Resume {
-  id              String          @id @default(cuid())
-  userId          String
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  title           String          @default("Mi CV")
-  templateId      String          @default("classic")
-  colorScheme     String          @default("#2a72d7")
-  fontFamily      String          @default("Poppins")
-  fontSize        Int             @default(14)
-  spacing         Float           @default(1.0)
-  sections        Json            @default("[]")
-  personalDetails Json            @default("{}")
-  photoUrl        String?         @db.Text
-  photoPosition   Int             @default(15)
-  thumbnailUrl    String?         @db.Text
-  language        String          @default("es")
+  id               String          @id @default(cuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String          @default("Mi CV")
+  templateId       String          @default("classic")
+  colorScheme      String          @default("#2a72d7")
+  fontFamily       String          @default("Poppins")
+  fontSize         Int             @default(14)
+  spacing          Float           @default(1.0)
+  sections         Json            @default("[]")
+  personalDetails  Json            @default("{}")
+  photoUrl         String?         @db.Text
+  photoPosition    Int             @default(15)
+  thumbnailUrl     String?         @db.Text
+  language         String          @default("es")
   // Source CV this one was translated FROM (null for originals). Makes translation
   // idempotent: a CV has at most one translation per target language, so repeat
   // "translate" clicks return the existing copy instead of spending another LLM call.
   translatedFromId String?
-  isPublic        Boolean         @default(false)
-  publicSlug      String?         @unique
-  versions        ResumeVersion[]
-  views           CVView[]
-  createdAt       DateTime        @default(now())
-  updatedAt       DateTime        @updatedAt
+  isPublic         Boolean         @default(false)
+  publicSlug       String?         @unique
+  versions         ResumeVersion[]
+  views            CVView[]
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
 
-  @@index([userId])
-  @@index([userId, updatedAt(sort: Desc)])
   // UNIQUE (not just index): DB-level guarantee of idempotency — a source CV can
   // have at most ONE translation per language. Two concurrent "translate" clicks
   // can never create duplicates; the second insert fails and the route returns
   // the existing copy. (Postgres treats NULLs as distinct, so originals — where
   // translatedFromId is NULL — are unaffected.)
   @@unique([translatedFromId, language])
+  @@index([userId])
+  @@index([userId, updatedAt(sort: Desc)])
 }
 
 model ResumeVersion {

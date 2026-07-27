@@ -15,7 +15,7 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync } from "fs"
 import { join } from "path"
-import { localeFromAcceptLanguage, resolveLocale, LOCALE_COOKIE } from "@/lib/locale"
+import { localeFromAcceptLanguage, resolveLocale, LOCALE_COOKIE, FALLBACK_LOCALE } from "@/lib/locale"
 import { paymentFailedHtml, paymentFailedText, paymentFailedSubject } from "@/lib/emails/paymentFailed"
 import { subscriptionConfirmationHtml, subscriptionConfirmationSubject } from "@/lib/emails/subscriptionConfirmation"
 import { PAST_DUE_GRACE_DAYS } from "@/lib/plans"
@@ -65,9 +65,25 @@ describe("resolveLocale — an explicit choice always outranks the browser", () 
     expect(resolveLocale(undefined, "en-GB")).toBe("en")
   })
 
-  it("falls back to the default when neither says anything useful", () => {
-    expect(resolveLocale(null, "de-DE")).toBe("es")
-    expect(resolveLocale(null, null)).toBe("es")
+  it("falls back to ENGLISH for a language we do not speak", () => {
+    // A browser in German, Chinese or Japanese asks for something we do not have.
+    // English is the likelier of our two to be readable; sending them to Spanish picked
+    // a language for a market they are not in.
+    expect(resolveLocale(null, "de-DE")).toBe("en")
+    expect(resolveLocale(null, "zh-CN,zh;q=0.9")).toBe("en")
+    expect(resolveLocale(null, "ja")).toBe("en")
+    expect(resolveLocale(null, null)).toBe("en")
+    expect(FALLBACK_LOCALE).toBe("en")
+  })
+
+  it("but a browser that really asks for Spanish gets Spanish", () => {
+    // Spain and Latin America must keep landing on Spanish — it is a language we speak,
+    // so it wins on its own merits, not as a fallback.
+    expect(resolveLocale(null, "es-ES,es;q=0.9")).toBe("es")
+    expect(resolveLocale(null, "es-MX")).toBe("es")
+    expect(resolveLocale(null, "es-419,es;q=0.9,en;q=0.8")).toBe("es")
+    // Even ranked below an unsupported language, Spanish is the best we can offer.
+    expect(resolveLocale(null, "zh-CN,es;q=0.5")).toBe("es")
   })
 
   it("ignores a cookie holding an unsupported language", () => {
@@ -316,5 +332,43 @@ describe("the billing portal is only offered where it can open", () => {
     expect(page).toContain("hasStripeBillingPortal")
     expect(page).toMatch(/canManageBilling=\{canManageBilling\}/)
     expect(read("components/dashboard/_resume-sub.tsx")).toMatch(/onManagePlan\?\: \(\) => void/)
+  })
+})
+
+describe("the language is remembered on the account, not only in the browser", () => {
+  it("sign-up stores the language the account was created in", () => {
+    // A cookie only travels with one browser. The emails that need this are sent with no
+    // browser in sight — a cron for the renewal reminder, a webhook for the referral.
+    expect(read("lib/repositories/PrismaUserRepository.ts")).toMatch(/preferredLocale \? \{ preferredLocale \}/)
+    expect(read("app/api/auth/register/confirm/route.ts")).toContain("localeFromRequest")
+  })
+
+  it("switching the language updates the account when signed in", () => {
+    const src = read("lib/actions/locale.ts")
+    expect(src).toMatch(/preferredLocale: locale/)
+    // Best-effort: failing to persist a preference must not break switching languages.
+    expect(src).toMatch(/catch/)
+  })
+
+  it("the cron reads the user's own language for the renewal reminder", () => {
+    const src = read("lib/services/cron/CronService.ts")
+    expect(src).toMatch(/preferredLocale: true/)
+    expect(src).toContain("renewalReminderSubject(user.preferredLocale)")
+  })
+
+  it("the referral reward uses the REFERRER's language, never the buyer's", () => {
+    // The email goes to the person who referred, not to the person whose payment fired
+    // the webhook. Using the checkout locale would write to them in someone else's
+    // language.
+    const src = read("lib/referral-rewards.ts")
+    expect(src).toMatch(/preferredLocale: true/)
+    expect(src).toContain("referralRewardSubject(referrer.preferredLocale)")
+    expect(src).toMatch(/locale: referrer\.preferredLocale/)
+  })
+
+  it("the column is nullable, so existing accounts keep their current behaviour", () => {
+    expect(read("prisma/schema.prisma")).toMatch(/preferredLocale\s+String\?/)
+    expect(read("prisma/migrations/20260727000000_add_user_preferred_locale/migration.sql"))
+      .toMatch(/ADD COLUMN "preferredLocale" TEXT;/)
   })
 })

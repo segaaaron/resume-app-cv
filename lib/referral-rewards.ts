@@ -68,6 +68,9 @@ export async function checkAndApplyReferralReward(newProUserId: string): Promise
         referralRewardTier: true,
         referralCycleOffset: true,
         stripeCustomerId: true,
+        // Their own language: this webhook has no request, and the buyer's locale
+        // belongs to a different person.
+        preferredLocale: true,
       },
     })
     if (!referrer) return
@@ -141,6 +144,8 @@ interface ReferrerSnapshot {
   stripeCustomerId: string | null
   referralRewardTier: number
   referralCycleOffset: number
+  /** Their own language. The buyer's locale belongs to a different person. */
+  preferredLocale: string | null
 }
 
 async function sendReferralRewardEmail({
@@ -178,10 +183,9 @@ async function sendReferralRewardEmail({
       from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
       to: referrer.email,
       // Language: this email goes to the REFERRER, not to the buyer whose payment
-      // triggered it, so the checkout locale would be someone else's language. The
-      // referrer's own language is not stored anywhere, so it stays the default until
-      // it is — see the note on ReferralRewardProps.locale.
-      subject: referralRewardSubject(),
+      // triggered it, so the checkout locale would be someone else's language. Their own
+      // preference is the only correct source.
+      subject: referralRewardSubject(referrer.preferredLocale),
       html: referralRewardHtml({
         userName: referrer.name ?? referrer.email,
         userId: referrer.id,
@@ -191,6 +195,7 @@ async function sendReferralRewardEmail({
         totalCredit: fmt(totalCreditCents),
         cycleCount,
         isCycleComplete,
+        locale: referrer.preferredLocale,
       }),
       text: referralRewardText({
         userName: referrer.name ?? referrer.email,
@@ -201,6 +206,7 @@ async function sendReferralRewardEmail({
         totalCredit: fmt(totalCreditCents),
         cycleCount,
         isCycleComplete,
+        locale: referrer.preferredLocale,
       }),
     })
   } catch (e) {

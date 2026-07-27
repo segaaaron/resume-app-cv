@@ -3,6 +3,11 @@
 import { cookies } from "next/headers"
 import { LOCALE_COOKIE, LOCALE_COOKIE_MAX_AGE } from "@/lib/locale"
 import { routing } from "@/i18n/routing"
+import { auth } from "@/lib/auth"
+import { db } from "@/lib/db"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("setLocaleCookie")
 
 /**
  * Remember an explicit language choice.
@@ -28,4 +33,16 @@ export async function setLocaleCookie(locale: string): Promise<void> {
     // language check possible without another round trip.
     httpOnly: false,
   })
+
+  // Signed in? Remember it on the account as well. The cookie only travels with this
+  // browser, and the emails that matter here are sent with no browser in sight — a cron
+  // for the renewal reminder, a webhook for the referral reward. Best-effort on purpose:
+  // failing to persist a preference must never break switching the language.
+  try {
+    const session = await auth()
+    if (!session?.user?.id) return
+    await db.user.update({ where: { id: session.user.id }, data: { preferredLocale: locale } })
+  } catch (e) {
+    logger.error("setLocaleCookie: could not persist preferredLocale", {}, e instanceof Error ? e : undefined)
+  }
 }

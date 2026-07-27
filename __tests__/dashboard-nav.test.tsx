@@ -30,6 +30,10 @@ vi.mock("sonner", () => ({
 }))
 vi.mock("@/lib/apiFetch", () => ({ apiFetch: async () => new Response("{}") }))
 vi.mock("next-auth/react", () => ({ signOut: async () => {} }))
+// The locale switcher calls a Server Action that persists the choice on the account.
+// That action reaches auth + db, which drag next-auth's server entrypoint into this
+// jsdom run. The nav test only cares that the switch renders and navigates.
+vi.mock("@/lib/actions/locale", () => ({ setLocaleCookie: async () => {} }))
 vi.mock("@/lib/actions/logout", () => ({ clearSessionToken: async () => {} }))
 
 import DashboardNav from "@/components/dashboard/DashboardNav"
