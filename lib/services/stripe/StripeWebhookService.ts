@@ -4,8 +4,8 @@ import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
 import { checkAndApplyReferralReward } from "@/lib/referral-rewards"
 import { resend, emailEnabled } from "@/lib/resend"
-import { subscriptionConfirmationHtml, subscriptionConfirmationText } from "@/lib/emails/subscriptionConfirmation"
-import { paymentFailedHtml, paymentFailedText } from "@/lib/emails/paymentFailed"
+import { subscriptionConfirmationHtml, subscriptionConfirmationText, subscriptionConfirmationSubject } from "@/lib/emails/subscriptionConfirmation"
+import { paymentFailedHtml, paymentFailedText, paymentFailedSubject } from "@/lib/emails/paymentFailed"
 import { AppError } from "@/lib/services/auth/AppError"
 import { isOneTimePlanStillValid, laterOf, revokeAccess, scopeForCharge } from "@/lib/services/billing/revoke-access"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
@@ -25,6 +25,18 @@ function errMessage(e: unknown): string {
 }
 
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
+
+/**
+ * Language the customer checked out in, stamped on the subscription's metadata.
+ * A webhook has no request to read Accept-Language from and the User model stores no
+ * language, so this is the only signal available — without it every billing email went
+ * out in Spanish, including to customers who had bought entirely in English.
+ */
+function localeFromInvoice(invoice: Stripe.Invoice): string | null {
+  const details = invoice.parent?.type === "subscription_details" ? invoice.parent.subscription_details : null
+  const meta = details?.metadata as Record<string, string> | null | undefined
+  return meta?.locale ?? null
+}
 
 /** Claim an event for idempotent processing. Returns false if already processed. */
 async function claimEvent(tx: TxClient, eventId: string, extra?: Record<string, unknown>): Promise<boolean> {
@@ -319,6 +331,8 @@ export class StripeWebhookService {
     const firstItem = subscription.items.data[0]
     if (!firstItem) return
     const renewalDate = new Date(firstItem.current_period_end * 1000)
+    // Language the customer checked out in, stamped on the subscription at checkout.
+    const locale = subscription.metadata?.locale ?? null
     const invoiceInterval = firstItem.price?.recurring?.interval
     const planInterval = (invoiceInterval === "year" ? "annual" : "monthly") as "monthly" | "annual"
 
@@ -363,9 +377,9 @@ export class StripeWebhookService {
       Promise.resolve().then(() => resendClient.emails.send({
         from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
         to: toEmail,
-        subject: "¡Tu suscripción Pro está activa! 🎉",
-        html: subscriptionConfirmationHtml({ userName, userId, planInterval, renewalDate }),
-        text: subscriptionConfirmationText({ userName, userId, planInterval, renewalDate }),
+        subject: subscriptionConfirmationSubject(locale),
+        html: subscriptionConfirmationHtml({ userName, userId, planInterval, renewalDate, locale }),
+        text: subscriptionConfirmationText({ userName, userId, planInterval, renewalDate, locale }),
       })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.paid" }))
     }
   }
@@ -642,6 +656,7 @@ export class StripeWebhookService {
     const invoice = event.data.object as Stripe.Invoice
     const customerId = invoice.customer as string
     const invoiceUrl = invoice.hosted_invoice_url ?? null
+    const locale = localeFromInvoice(invoice)
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
@@ -670,9 +685,9 @@ export class StripeWebhookService {
     Promise.resolve().then(() => resendClient.emails.send({
       from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
       to: toEmail,
-      subject: "Acción requerida: problema con tu pago en READY CV",
-      html: paymentFailedHtml({ firstName, userId, invoiceUrl }),
-      text: paymentFailedText({ firstName, invoiceUrl }),
+      subject: paymentFailedSubject(locale),
+      html: paymentFailedHtml({ firstName, userId, invoiceUrl, locale }),
+      text: paymentFailedText({ firstName, invoiceUrl, locale }),
     })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.payment_failed" }))
   }
 
@@ -690,6 +705,7 @@ export class StripeWebhookService {
     const invoice = event.data.object as Stripe.Invoice
     const customerId = invoice.customer as string
     const invoiceUrl = invoice.hosted_invoice_url ?? null
+    const locale = localeFromInvoice(invoice)
 
     const result = await db.$transaction(async (tx) => {
       if (!await claimEvent(tx, event.id)) return { skip: true, user: null }
@@ -716,9 +732,9 @@ export class StripeWebhookService {
     Promise.resolve().then(() => resendClient.emails.send({
       from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
       to: toEmail,
-      subject: "Acción requerida: confirma tu pago en READY CV",
-      html: paymentFailedHtml({ firstName, userId, invoiceUrl }),
-      text: paymentFailedText({ firstName, invoiceUrl }),
+      subject: paymentFailedSubject(locale),
+      html: paymentFailedHtml({ firstName, userId, invoiceUrl, locale }),
+      text: paymentFailedText({ firstName, invoiceUrl, locale }),
     })).catch((e) => this.logger.error("stripe.email.send_failed", { error: e, eventId: event.id, kind: "invoice.payment_action_required" }))
   }
 

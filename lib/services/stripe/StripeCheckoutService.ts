@@ -104,15 +104,18 @@ export class StripeCheckoutService {
       // instead of the pricing table. PayPal's checkout already built this correctly.
       cancel_url: `${appUrl.replace(/\/$/, "")}/${locale}/pricing`,
       // One-time → planType drives provisioning (BASIC/SPRINT). Subscription → planInterval.
-      metadata: isOneTime ? { userId, planType: plan } : { userId, planInterval: plan },
+      // `locale` rides along so the webhook can write emails in the language the customer
+      // bought in. The User model stores no language, and a webhook has no request to
+      // read Accept-Language from — this is the only place that knows it.
+      metadata: isOneTime ? { userId, planType: plan, locale } : { userId, planInterval: plan, locale },
       // Stamp the same metadata on the PaymentIntent so the resulting CHARGE carries it.
       // Refund/dispute/fraud events arrive with a charge and no session, and they must
       // know whether the money being returned paid for a one-time window (revoke it) or
       // for the subscription (leave a separately bought window alone). Stripe's old
       // `charge.invoice` link no longer exists in the current API, so this is the signal.
       ...(isOneTime
-        ? { payment_intent_data: { metadata: { userId, planType: plan } } }
-        : { subscription_data: { metadata: { userId, planInterval: plan } } }),
+        ? { payment_intent_data: { metadata: { userId, planType: plan, locale } } }
+        : { subscription_data: { metadata: { userId, planInterval: plan, locale } } }),
     })
 
     if (!checkoutSession.url) throw new AppError("checkout_url_missing", 500)

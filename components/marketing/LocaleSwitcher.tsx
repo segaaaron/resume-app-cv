@@ -3,6 +3,7 @@
 import React, { useTransition } from "react"
 import { useLocale } from "next-intl"
 import { usePathname, useRouter } from "next/navigation"
+import { setLocaleCookie } from "@/lib/actions/locale"
 
 interface LocaleSwitcherProps {
   variant?: "dashboard" | "marketing"
@@ -17,6 +18,13 @@ export default function LocaleSwitcher({ variant = "dashboard", inactiveColor }:
 
   function switchLocale(nextLocale: string) {
     if (nextLocale === locale) return
+    // REMEMBER the choice. Without this the switch only changed the current URL: every
+    // entry point outside [locale] (home, login, register, privacy, terms) read this
+    // cookie, never found it, and sent the user back to the default language. Picking
+    // English and returning the next day meant Spanish again.
+    // Fire-and-forget: the navigation below must not wait on it, and a failed write only
+    // means the browser's language decides next time.
+    void setLocaleCookie(nextLocale)
     const segments = pathname.split("/")
     const pathWithoutLocale = segments.slice(2).join("/")
     const newPath = `/${nextLocale}${pathWithoutLocale ? `/${pathWithoutLocale}` : ""}`

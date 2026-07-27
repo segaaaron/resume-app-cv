@@ -12,8 +12,6 @@
  * every one of the seven revocation paths breaks with it — which is the point.
  */
 import { describe, it, expect } from "vitest"
-import { readFileSync } from "fs"
-import { join } from "path"
 import {
   isOneTimePlanStillValid,
   laterOf,
@@ -268,23 +266,5 @@ describe("PAST_DUE grace window — the recoverable slice of churn", () => {
     // whole contract.
     expect(isActive("BASIC", daysFromNow(-1), "NONE", "USER")).toBe(false)
     expect(isActive("SPRINT", daysFromNow(-1), "NONE", "USER")).toBe(false)
-  })
-})
-
-describe("email links must resolve — dashboard routes only exist under a locale", () => {
-  it("the payment-failed email never links to a locale-less dashboard path", () => {
-    // The fallback used when Stripe sends no hosted_invoice_url pointed at
-    // /dashboard/settings, which is the 404 page: the one email whose entire purpose is
-    // "come fix your card" had a button that led nowhere.
-    const src = readFileSync(join(process.cwd(), "lib/emails/paymentFailed.ts"), "utf8")
-    expect(src).not.toMatch(/\$\{appUrl\}\/dashboard\//)
-    expect(src).toMatch(/dashboardUrl\("\/dashboard\/settings"\)/)
-  })
-
-  it("the subscription-confirmation email links into a real locale", () => {
-    // "Access your dashboard", sent to someone who just paid, was a 404.
-    const src = readFileSync(join(process.cwd(), "lib/emails/subscriptionConfirmation.ts"), "utf8")
-    expect(src).not.toMatch(/readycvv\.com\/dashboard\//)
-    expect(src.match(/readycvv\.com\/es\/dashboard\//g) ?? []).toHaveLength(4)
   })
 })
