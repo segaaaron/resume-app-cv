@@ -14,6 +14,14 @@ import { ATS_SKILLS, allSkillForms, findSkill } from "./skills-dictionary";
 import { expandTerm, normalizeTerm } from "./vocabulary";
 import { partitionByPresence } from "./core/matching";
 import { foldAccentsLower } from "@/lib/text/normalize";
+import {
+  SECTION_KEYWORDS,
+  hasUnicodeBulletMarkers,
+  detectDateFormatFamilies,
+  contactLooksRepeatedInHeaderFooter,
+  findNonStandardSectionHeadings,
+} from "./signals";
+import { simulateAtsEngines, type EngineSimulation } from "./engines";
 
 export type Locale = "en" | "es";
 
@@ -65,6 +73,8 @@ export type AtsAnalysisResult = {
     detailedSuggestions: string[];
     upgradePath: string;
   };
+  /** Per-engine deterministic simulation (Workday, Taleo, iCIMS, Greenhouse, Lever). */
+  engines: EngineSimulation;
 };
 
 /* ---------------------- Stopwords (EN + ES) ---------------------- */
@@ -242,28 +252,73 @@ function scoreFormat(resumeText: string, locale: Locale) {
     passes.push(locale === "es" ? "Uso moderado de caracteres especiales" : "Reasonable use of special characters");
   }
 
+  // ── Documented parser-failure checks ─────────────────────────────────────
+  // Each REPORTS a risk that real ATS engines are documented to trip on; none
+  // fabricates a penalty. They enter the same passes/issues channel so a clean
+  // resume earns a pass and a risky one earns an issue — the ratio does the rest.
+
+  // Unicode bullet glyphs used as list markers (iCIMS flags them for manual
+  // review, Taleo can fail the line). We look at what a LINE starts with, not a
+  // raw count, so a lone symbol mid-sentence never trips it. Standard "-"/"*" safe.
+  if (hasUnicodeBulletMarkers(lines)) {
+    issues.push(
+      locale === "es"
+        ? "Vinetas con simbolos especiales (flechas, checks) - usa guiones simples: algunos ATS las descartan."
+        : "List bullets use special glyphs (arrows, checks) - use plain hyphens: some ATS drop them.",
+    );
+  } else {
+    passes.push(locale === "es" ? "Vinetas estandar legibles por ATS" : "Standard ATS-readable bullets");
+  }
+
+  // Inconsistent date formats within one resume. ~15% of parse failures;
+  // Workday/Taleo enforce a strict "Month YYYY" and iCIMS sends the whole
+  // experience block to manual entry on a single mismatch.
+  const dateFamilies = detectDateFormatFamilies(resumeText);
+  if (dateFamilies.length > 1) {
+    issues.push(
+      locale === "es"
+        ? 'Formatos de fecha mezclados (ej. "Ene 2022" y "01/2022") - unificalos a "Mes AAAA".'
+        : 'Mixed date formats (e.g. "Jan 2022" and "01/2022") - unify them to "Month YYYY".',
+    );
+  } else if (dateFamilies.length === 1) {
+    passes.push(locale === "es" ? "Formato de fecha consistente" : "Consistent date format");
+  }
+
+  // Non-standard section labels. Greenhouse returns an empty array when a section
+  // is renamed ("Professional Journey" instead of "Experience"); Taleo needs
+  // exact-match labels. We only flag ALL-CAPS standalone header-style lines that
+  // match no known section, so job titles and company names never trip it.
+  const nonStandardHeadings = findNonStandardSectionHeadings(lines, locale);
+  if (nonStandardHeadings.length > 0) {
+    issues.push(
+      locale === "es"
+        ? `Encabezado de seccion no estandar ("${nonStandardHeadings[0]}") - usa nombres que el ATS reconoce (Experiencia, Educacion, Habilidades).`
+        : `Non-standard section heading ("${nonStandardHeadings[0]}") - use labels the ATS knows (Experience, Education, Skills).`,
+    );
+  }
+
+  // Contact details repeated across the document usually sit in a running
+  // header/footer, and most ATS ignore those regions entirely - the parser
+  // literally never sees the name/email. Repetition is the text-level signature.
+  if (contactLooksRepeatedInHeaderFooter(resumeText)) {
+    issues.push(
+      locale === "es"
+        ? "Tu email/telefono aparece repetido - si esta en el encabezado/pie, el ATS no lo lee. Ponlo en el cuerpo."
+        : "Your email/phone is repeated - if it sits in a header/footer, the ATS won't read it. Put it in the body.",
+    );
+  }
+
   // ratio passes/(passes+issues)
   const total = passes.length + issues.length;
   const score = total ? Math.round((passes.length / total) * 100) : 0;
   return { score, passes, issues };
 }
 
-const SECTION_KEYWORDS: Record<Locale, Record<string, string[]>> = {
-  en: {
-    contact: ["contact", "personal information"],
-    summary: ["summary", "objective", "profile", "about"],
-    experience: ["experience", "work history", "employment", "professional experience"],
-    education: ["education", "academic"],
-    skills: ["skills", "competencies", "technical skills"],
-  },
-  es: {
-    contact: ["contacto", "información personal", "datos personales"],
-    summary: ["resumen", "perfil", "objetivo", "acerca de mí"],
-    experience: ["experiencia", "experiencia profesional", "trayectoria"],
-    education: ["educación", "formación", "estudios", "formación académica"],
-    skills: ["habilidades", "competencias", "aptitudes"],
-  },
-};
+
+
+
+
+
 
 function scoreSections(resumeText: string, locale: Locale) {
   const norm = normalize(resumeText);
@@ -382,6 +437,7 @@ export function analyzeAts(input: AtsAnalysisInput): AtsAnalysisResult {
       detailedSuggestions: Array.from(new Set(detailedSuggestions)),
       upgradePath,
     },
+    engines: simulateAtsEngines(resumeText, locale),
   };
 }
 
