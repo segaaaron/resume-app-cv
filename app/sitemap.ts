@@ -32,6 +32,9 @@ const corePages: Array<Page & { lastModified: Date }> = [
   { path: "/terms",        changeFrequency: "yearly",  priority: 0.2, lastModified: new Date("2026-04-01") },
   { path: "/cookie-policy", changeFrequency: "yearly", priority: 0.2, lastModified: new Date("2026-04-01") },
   { path: "/dmca",          changeFrequency: "yearly", priority: 0.2, lastModified: new Date("2026-04-01") },
+  // Public, indexable, static — same tier as the other legal/info pages above; it was
+  // simply never listed.
+  { path: "/accessibility", changeFrequency: "yearly", priority: 0.2, lastModified: new Date("2026-04-01") },
 ]
 
 // Blog articles — high priority for SEO cluster strategy
