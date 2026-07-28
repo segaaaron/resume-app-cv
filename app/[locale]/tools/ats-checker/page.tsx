@@ -5,6 +5,7 @@ import { CheckCircle2, Zap, ClipboardPaste, Sparkles, Gauge, Shield, FileSearch,
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import AtsFeatureShowcase from "@/components/tools/ats-checker/AtsFeatureShowcase"
+import AtsEngineChecker from "@/components/tools/ats-checker/AtsEngineChecker"
 import AtsFaq from "@/components/tools/ats-checker/AtsFaq"
 
 const BASE_URL = "https://readycvv.com"
@@ -174,6 +175,10 @@ export default async function AtsCheckerPage({
             <span className="inline-flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4 text-emerald-500" /> {t("hero.feat3")}</span>
           </div>
         </section>
+
+        {/* Free, live per-engine parseability check — runs the real deterministic
+            engine client-side on pasted text. No upload, no account. */}
+        <AtsEngineChecker />
 
         {/* How the ATS works in ReadyCVV — two worked examples across tech stacks */}
         <section className="relative mx-auto max-w-4xl px-6 pb-10">

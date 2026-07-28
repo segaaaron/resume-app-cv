@@ -12,6 +12,7 @@ import { useAICall } from "@/hooks/useAICall"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
+import type { EngineSimulation } from "@/lib/ats/engines"
 
 export interface ATSSubScores {
   hardSkills: number | null
@@ -63,6 +64,8 @@ export interface VerifyResult {
     length: { score: number; recommendation: string }
     contact: { score: number; hasEmail: boolean; hasPhone: boolean; hasLinkedIn: boolean }
   }
+  /** Per-engine verdicts of the REAL extracted PDF text. */
+  engines?: EngineSimulation
   extractedText: string
   wordCount: number
 }

@@ -63,6 +63,9 @@ export async function POST(req: Request) {
     return NextResponse.json({
       realScore: analysis.scoreOverall,
       breakdown: analysis.breakdown,
+      // Per-engine verdicts computed from the SAME extracted text — the real PDF a
+      // strict parser reads, not the structured data. This is where the matrix is honest.
+      engines: analysis.engines,
       extractedText: extracted.text.slice(0, 2000),
       wordCount: extracted.wordCount,
     })

@@ -81,6 +81,16 @@ describe("ATS-safe output parses clean in every engine", () => {
     expect(simulateAtsEngines(txt, "es").cleanCount).toBe(5)
   })
 
+  it("tolerates a resume whose personalDetails key is absent (DB default '{}')", () => {
+    // The ats-safe-export endpoint reads resume.personalDetails, which defaults to "{}"
+    // in the DB — so the object can arrive with no personalDetails key at all. Must not
+    // throw (it did: 'Cannot read properties of undefined (reading firstName)').
+    // @ts-expect-error deliberately malformed to mimic the raw DB default shape
+    expect(() => toAtsSafeResumeText({}, "en")).not.toThrow()
+    // @ts-expect-error same
+    expect(toAtsSafeResumeText({}, "en")).toBe("")
+  })
+
   it("an empty resume produces no crash and no false red", () => {
     const empty = makeData({ workExperience: [], education: [], skills: [], summary: "", certifications: [], languages: [] })
     const txt = toAtsSafeResumeText(empty, "en")

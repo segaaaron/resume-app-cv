@@ -76,9 +76,11 @@ export async function proxy(request: NextRequest) {
 
   const isAuth = getIsAuth(request)
 
-  // Allow PDF print pages with a signed print token — Puppeteer has no session cookie
+  // Allow PDF print pages with a signed print token — Puppeteer has no session cookie.
+  // `ats-print` is the ATS-safe single-column export, rendered by the same microservice
+  // with a print token and no cookies, so it needs the same exemption as `print`.
   const isPrintPath =
-    /^\/resume\/[^/]+\/print$/.test(pathnameWithoutLocale) ||
+    /^\/resume\/[^/]+\/(ats-)?print$/.test(pathnameWithoutLocale) ||
     /^\/cover-letter\/[^/]+\/print$/.test(pathnameWithoutLocale)
   const hasPrintToken = request.nextUrl.searchParams.has("pt")
 

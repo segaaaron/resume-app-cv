@@ -120,7 +120,9 @@ const SKILL_SEP = ", ";
  */
 export function toAtsSafeResumeText(data: ResumeSections, locale: Locale): string {
   const L = SECTION_LABELS[locale];
-  const pd = data.personalDetails;
+  // A brand-new resume's `personalDetails` DB column defaults to "{}", so the key can be
+  // absent at runtime even though the type marks it required — tolerate it, don't crash.
+  const pd = data.personalDetails ?? ({} as ResumeSections["personalDetails"]);
   const lines: string[] = [];
 
   // ── Name + contact, once, in the body ──────────────────────────────────────

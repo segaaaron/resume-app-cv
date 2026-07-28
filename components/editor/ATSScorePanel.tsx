@@ -8,6 +8,8 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
+import AtsEngineMatrix from "./AtsEngineMatrix"
+import AtsSafeDownload from "./AtsSafeDownload"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
@@ -761,6 +763,9 @@ export default function ATSScorePanel() {
                       </span>
                     )}
                   </div>
+                  {/* Per-engine verdicts of the SAME extracted text — each real ATS
+                      parses differently, so one score hides the truth. */}
+                  {verifyResult.engines && <AtsEngineMatrix simulation={verifyResult.engines} />}
                   <details className="group">
                     <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-800 select-none">
                       {t("verify_extracted_label")}
@@ -772,6 +777,9 @@ export default function ATSScorePanel() {
                 </div>
               )}
             </div>
+
+            {/* Machine-readable twin — one click, generated from the same resume. */}
+            <AtsSafeDownload />
 
             {/* Step 2. The score measures; this rewrites. Chained off the same
                 job description rather than asking for it a second time. */}
