@@ -11,18 +11,20 @@ const COPY = {
       `Alcanzaste <strong>${count} referidos Pro</strong> en este ciclo. Tu recompensa: <strong>1 mes gratis</strong> (${credit} de crédito). El contador se reinicia para que puedas volver a ganar.`,
     progress: (count: number, tier: number, label: string, credit: string) =>
       `Uno de tus referidos se suscribió al plan Pro. Ahora tienes <strong>${count} referidos Pro</strong> en este ciclo y alcanzaste el <strong>Nivel ${tier} — ${label}</strong>. Se aplicó un crédito de <strong>${credit}</strong> a tu cuenta.`,
-    creditApplied: "${t.creditApplied}",
+    creditApplied: "Crédito aplicado a tu cuenta",
     labelTierCredit: "Crédito de este nivel",
     labelCycle: "Referidos Pro este ciclo",
     labelTotal: "Crédito total acumulado",
-    cycleReset: "${t.cycleReset}",
-    cta: "${t.cta}",
-    invoiceNote: "${t.invoiceNote}",
+    cycleReset: "🔄 <strong>Ciclo reiniciado.</strong> Tu contador vuelve a 0 — sigue refiriendo amigos para ganar nuevas recompensas.",
+    cta: "Ver mis referidos →",
+    invoiceNote: "El crédito se descontará automáticamente en tu próxima factura de Stripe.",
     unsubscribePrefix: "Si no deseas recibir más correos, ",
     unsubscribe: "cancela tu suscripción a emails aquí",
     rights: "Todos los derechos reservados",
     privacy: "Privacidad",
     terms: "Términos",
+    heroTitle: (done: boolean) => done ? "¡Completaste el ciclo — 1 mes gratis!" : "¡Nuevo nivel de referidos alcanzado!",
+    greeting: (name: string) => `Hola <strong>${name}</strong>,`,
     textIntro: "¡Tienes una recompensa de referidos!",
     textSeeReferrals: "Ver tus referidos",
   },
@@ -46,6 +48,8 @@ const COPY = {
     rights: "All rights reserved",
     privacy: "Privacy",
     terms: "Terms",
+    heroTitle: (done: boolean) => done ? "You completed the cycle — 1 month free!" : "New referral level reached!",
+    greeting: (name: string) => `Hi <strong>${name}</strong>,`,
     textIntro: "You've earned a referral reward!",
     textSeeReferrals: "See your referrals",
   },
@@ -89,9 +93,7 @@ export function referralRewardHtml({
   const tierEmoji = tier === 1 ? "🥉" : tier === 2 ? "🥈" : "🏆"
   const tierColor = tier === 1 ? "#d97706" : tier === 2 ? "#2563eb" : "#7c3aed"
 
-  const headline = isCycleComplete
-    ? "¡Completaste el ciclo — 1 mes gratis!"
-    : `¡Nuevo nivel de referidos alcanzado!`
+  const headline = t.heroTitle(isCycleComplete)
 
   const bodyText = isCycleComplete
     ? t.complete(cycleCount, creditAmount)
@@ -144,7 +146,7 @@ export function referralRewardHtml({
                   <td style="padding:36px 40px;">
 
                     <p style="margin:0 0 20px;font-size:16px;color:#374151;line-height:1.6;">
-                      Hola <strong>${firstName}</strong>,
+                      ${t.greeting(firstName)}
                     </p>
                     <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;">
                       ${bodyText}

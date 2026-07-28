@@ -23,14 +23,15 @@ const COPY = {
   es: {
     subject: `Tu plan se renueva en ${DAYS_BEFORE_RENEWAL} días — READY CV`,
     heading: `Tu plan se renueva en ${DAYS_BEFORE_RENEWAL} días`,
-    heroSub: "${t.heroSub}",
+    heroSub: "Solo queremos avisarte con tiempo",
+    greeting: (name: string) => `Hola <strong>${name}</strong>,`,
     intro: `Te recordamos que tu suscripción a READY CV se renovará automáticamente en <strong>${DAYS_BEFORE_RENEWAL} días</strong>. Si no deseas renovarla, puedes cancelarla antes de la fecha de renovación.`,
-    summary: "${t.summary}",
+    summary: "Resumen de renovación",
     labelPlan: "Plan",
     labelAmount: "Monto a cobrar",
     labelDate: "Fecha de renovación",
-    ctaPrimary: "${t.ctaPrimary}",
-    ctaSecondary: "${t.ctaSecondary}",
+    ctaPrimary: "Ir a mi dashboard →",
+    ctaSecondary: "Gestionar o cancelar suscripción",
     planName: (i: "monthly" | "annual") => (i === "annual" ? "Pro Anual" : "Pro Mensual"),
     price: (i: "monthly" | "annual") => `$${i === "annual" ? PRICING.proAnnual : PRICING.proMonthly} USD / ${i === "annual" ? "año" : "mes"}`,
     unsubscribePrefix: "Si no deseas recibir más correos, ",
@@ -43,6 +44,7 @@ const COPY = {
     subject: `Your plan renews in ${DAYS_BEFORE_RENEWAL} days — READY CV`,
     heading: `Your plan renews in ${DAYS_BEFORE_RENEWAL} days`,
     heroSub: "Just giving you a heads-up",
+    greeting: (name: string) => `Hi <strong>${name}</strong>,`,
     intro: `Your READY CV subscription renews automatically in <strong>${DAYS_BEFORE_RENEWAL} days</strong>. If you'd rather not renew, you can cancel before the renewal date.`,
     summary: "Renewal summary",
     labelPlan: "Plan",
@@ -128,7 +130,7 @@ export function renewalReminderHtml({
                   <td style="padding:36px 40px;">
 
                     <p style="margin:0 0 24px;font-size:16px;color:#374151;line-height:1.6;">
-                      Hola <strong>${firstName}</strong>,
+                      ${t.greeting(firstName)}
                     </p>
                     <p style="margin:0 0 28px;font-size:15px;color:#6b7280;line-height:1.7;">
                       ${t.intro}
