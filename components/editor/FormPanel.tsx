@@ -165,10 +165,17 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
         </div>
       )}
 
-      {/* Scrollable content */}
+      {/* Scrollable content.
+          Every tab below stays MOUNTED and is toggled with display:none instead
+          of being conditionally rendered. Unmounting wiped each panel's local
+          state on tab switch — the pasted job posting + ATS result, the CV-review
+          answer, the AI-fill suggestions and applied flags all vanished when the
+          user navigated away and back. Keep-alive preserves them. Safe: none of
+          these panels fetches on mount (DesignPanel/CVReviewPanel/AIProfileFill
+          only call APIs from user actions; the review cooldown ticker no-ops when
+          idle), and the gated ones don't mount their children for non-Pro users. */}
       <div style={{ ...scrollAreaStyle, display: activeTab === "planillas" ? "none" : undefined }}>
-        {activeTab === "content" && (
-          <div className="px-5 pt-4 pb-6">
+        <div className="px-5 pt-4 pb-6" style={{ display: activeTab === "content" ? undefined : "none" }}>
             <CVCompletenessWidget />
             <EmploymentGapAdvisory />
             <ProvenSkillsCard />
@@ -197,38 +204,29 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
               )}
 
             </SectionDropdownProvider>
-          </div>
-        )}
+        </div>
 
-        {activeTab === "design" && (
-          <div style={otherPadStyle}>
-            <DesignPanel />
-          </div>
-        )}
+        <div style={{ ...otherPadStyle, display: activeTab === "design" ? undefined : "none" }}>
+          <DesignPanel />
+        </div>
 
-        {activeTab === "ats" && (
-          <div style={otherPadStyle}>
-            <AIProGate feature="ATS Checker" endpoint="ats-score">
-              <ATSScorePanel />
-            </AIProGate>
-          </div>
-        )}
+        <div style={{ ...otherPadStyle, display: activeTab === "ats" ? undefined : "none" }}>
+          <AIProGate feature="ATS Checker" endpoint="ats-score">
+            <ATSScorePanel />
+          </AIProGate>
+        </div>
 
-        {activeTab === "review" && (
-          <div style={otherPadStyle}>
-            <AIProGate feature="CV Review" endpoint="review-cv">
-              <CVReviewPanel />
-            </AIProGate>
-          </div>
-        )}
+        <div style={{ ...otherPadStyle, display: activeTab === "review" ? undefined : "none" }}>
+          <AIProGate feature="CV Review" endpoint="review-cv">
+            <CVReviewPanel />
+          </AIProGate>
+        </div>
 
-        {activeTab === "ai" && (
-          <div style={otherPadStyle}>
-            <AIProGate feature="AI Profile Fill" endpoint="fill-profile">
-              <AIProfileFillPanel inTab />
-            </AIProGate>
-          </div>
-        )}
+        <div style={{ ...otherPadStyle, display: activeTab === "ai" ? undefined : "none" }}>
+          <AIProGate feature="AI Profile Fill" endpoint="fill-profile">
+            <AIProfileFillPanel inTab />
+          </AIProGate>
+        </div>
       </div>
     </aside>
   )

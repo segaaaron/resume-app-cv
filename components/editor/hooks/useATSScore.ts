@@ -124,6 +124,11 @@ export function useATSScore() {
   const [offTopic, setOffTopic] = useState(false)
   /** Last score movement (+/-). Owned here so both rescore paths keep it truthful. */
   const [scoreDelta, setScoreDelta] = useState<number | null>(null)
+  // Identity of the job input (`mode:text`) that produced the current result.
+  // Keyed on the JOB posting only, NOT the CV: CV edits are picked up live by the
+  // debounced rescore() below, so re-running the LLM on the same posting adds
+  // nothing. This lets the UI say "up to date" instead of inviting a dead click.
+  const [analyzedInputKey, setAnalyzedInputKey] = useState<string | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ats")
   const lastKeyRef = useRef<string | null>(null)
 
@@ -207,6 +212,7 @@ export function useATSScore() {
         await onSuccess()
       }
       lastKeyRef.current = key
+      setAnalyzedInputKey(`${mode}:${text}`)
       setCooldownUntil(Date.now() + 120_000)
     } catch {
       toast.error(t("error"))
@@ -323,6 +329,9 @@ export function useATSScore() {
   }, [input, locale, t, verifyLoading])
 
   const hasResult = atsResult !== null || reviewResult !== null
+  // True when a result is on screen AND the job input is unchanged since it was
+  // produced. The Analyze button reflects this: "up to date" vs "Re-analyze".
+  const upToDate = hasResult && analyzedInputKey !== null && `${mode}:${input.trim()}` === analyzedInputKey
 
   return {
     input, setInput,
@@ -331,6 +340,7 @@ export function useATSScore() {
     atsResult, reviewResult,
     offTopic,
     hasResult,
+    upToDate,
     analyze,
     rescore,
     scoreDelta,

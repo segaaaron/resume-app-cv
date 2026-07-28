@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ArrowRight } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import AtsEngineMatrix from "./AtsEngineMatrix"
 import AtsSafeDownload from "./AtsSafeDownload"
@@ -136,6 +136,8 @@ export default function ATSScorePanel() {
     loading,
     atsResult, reviewResult,
     offTopic,
+    hasResult,
+    upToDate,
     analyze,
     rescore,
     scoreDelta: delta,
@@ -455,12 +457,29 @@ export default function ATSScorePanel() {
           </p>
         )}
 
-        {/* Analyze button */}
-        <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < (roleMode ? 3 : 15) || !cvReady}
-          className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white text-xs font-bold shadow-lg shadow-dash-cyan/30 hover:shadow-dash-cyan/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
-          {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inCooldown ? <Clock className="h-3.5 w-3.5" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
-          {loading ? t("analyzing") : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : t("analyze")}
-        </button>
+        {/* Analyze button — once a result is on screen and the job input is
+            unchanged, it flips to an "up to date" state instead of a live button.
+            The ATS score keeps refreshing on its own as the CV is edited (debounced
+            rescore, deterministic/no-LLM), so re-running on the SAME posting adds
+            nothing; the hint says so. Editing the posting reactivates "Re-analyze". */}
+        {upToDate && !loading ? (
+          <div className="flex flex-col gap-1.5">
+            <div className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold shadow-lg shadow-emerald-500/30">
+              <CheckCircle2 className="h-3.5 w-3.5" /> {t("analysis_up_to_date")}
+            </div>
+            {atsResult && (
+              <p className="text-[10px] text-slate-400 text-center flex items-start justify-center gap-1 leading-relaxed px-2">
+                <TrendingUp className="h-3 w-3 text-emerald-400 shrink-0 mt-0.5" /> {t("live_score_hint")}
+              </p>
+            )}
+          </div>
+        ) : (
+          <button type="button" onClick={handleSubmit} disabled={loading || inCooldown || input.trim().length < (roleMode ? 3 : 15) || !cvReady}
+            className="w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white text-xs font-bold shadow-lg shadow-dash-cyan/30 hover:shadow-dash-cyan/50 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:scale-100">
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : inCooldown ? <Clock className="h-3.5 w-3.5" /> : inputIsQuestion && input.trim().length > 0 ? <MessageSquare className="h-3.5 w-3.5" /> : <Target className="h-3.5 w-3.5" />}
+            {loading ? t("analyzing") : inCooldown ? t("wait", { seconds: cooldownLabel }) : inputIsQuestion && input.trim().length > 0 ? t("button_consultar") : hasResult ? t("re_analyze") : t("analyze")}
+          </button>
+        )}
 
         {offTopic && (
           <ATSErrorBlock title={t("off_topic_title")} description={t("off_topic_description")} />
@@ -626,7 +645,7 @@ export default function ATSScorePanel() {
                     onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "content" }))}
                     className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-100 hover:bg-violet-200 border border-violet-200 rounded-full px-2.5 py-0.5 transition-all"
                   >
-                    <Wand2 className="h-2.5 w-2.5" /> {t("content_quality_action")}
+                    {t("content_quality_action")} <ArrowRight className="h-2.5 w-2.5" />
                   </button>
                 </div>
               </div>
