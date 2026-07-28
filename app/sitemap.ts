@@ -18,8 +18,12 @@ const corePages: Array<Page & { lastModified: Date }> = [
   { path: "/pricing",      changeFrequency: "monthly", priority: 0.9, lastModified: new Date("2026-05-02") },
   { path: "/templates",    changeFrequency: "monthly", priority: 0.9, lastModified: new Date("2026-05-02") },
   { path: "/blog",         changeFrequency: "weekly",  priority: 0.7, lastModified: new Date("2026-05-02") },
-  { path: "/register",     changeFrequency: "yearly",  priority: 0.8, lastModified: new Date("2026-04-01") },
-  { path: "/login",        changeFrequency: "yearly",  priority: 0.4, lastModified: new Date("2026-04-01") },
+  // NOT /register or /login: both carry `robots: { index: false }` in their metadata
+  // (standard for auth pages). Listing them here contradicted that noindex — Google
+  // reported them under "Excluded by 'noindex' tag" and it wastes crawl budget on pages
+  // we explicitly do not want indexed. Same rule already applied to the salary leaf
+  // pages below. The pages stay reachable by users; they just aren't advertised for
+  // indexing.
   { path: "/guide",        changeFrequency: "monthly", priority: 0.9, lastModified: new Date("2026-05-09") },
   { path: "/tools/ats-checker", changeFrequency: "weekly", priority: 0.9, lastModified: new Date("2026-06-01") },
   { path: "/tools/salary-calculator", changeFrequency: "weekly", priority: 0.9, lastModified: new Date("2026-06-01") },
