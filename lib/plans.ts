@@ -80,6 +80,26 @@ export const AI_DAILY_CAP_WINDOW_MS = 24 * 60 * 60 * 1000
  */
 export const PAST_DUE_GRACE_DAYS = 7
 
+/**
+ * Days after the last paid period ends before the expiry cron force-downgrades a
+ * subscription still stuck in PAST_DUE.
+ *
+ * The cron cannot touch PAST_DUE rows earlier than this: Stripe Smart Retries run for
+ * up to ~14 days, and downgrading mid-retry would clobber a subscription Stripe might
+ * still recover. But it MUST touch them eventually. If the Dashboard is set to "cancel
+ * after retries", `customer.subscription.deleted` cleans the row up first and this never
+ * fires. If it is set to "mark unpaid" or "leave past due", NO event ever arrives — and
+ * without this backstop the user is stranded: `isActive` cut their access at
+ * PAST_DUE_GRACE_DAYS, yet `blocksNewPurchase(PAST_DUE)` still refuses any new checkout,
+ * so they have no access AND cannot buy again. This makes the cleanup independent of a
+ * Dashboard setting we do not control.
+ *
+ * 21 days clears the whole documented retry window with margin; measured from
+ * `subscriptionEndsAt`, which for a PAST_DUE row still holds the last PAID period end
+ * (payment_failed never advances it).
+ */
+export const PAST_DUE_DOWNGRADE_AFTER_DAYS = 21
+
 // UNSUBSCRIBED can download their single (basic-template) CV a bounded number of
 // times per rolling 24h. This is a deliberate freemium loosening: the hard limits
 // that drive conversion stay in place (1 CV, no PRO templates, no translate/clone,

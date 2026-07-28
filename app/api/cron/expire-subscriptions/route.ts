@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { purgeUserCache } from "@/lib/auth"
 import { createLogger } from "@/lib/logger"
 import { recordCronRun } from "@/lib/services/cron/cronRunner"
+import { PAST_DUE_DOWNGRADE_AFTER_DAYS } from "@/lib/plans"
 
 const logger = createLogger("cron.expire-subscriptions")
 
@@ -30,17 +31,29 @@ export async function GET(req: Request) {
     const summary = await recordCronRun("expire-subscriptions", async () => {
     const now = new Date()
 
+    // Threshold past which a still-PAST_DUE subscription is force-downgraded: long
+    // enough that Stripe's retries are certainly over. See PAST_DUE_DOWNGRADE_AFTER_DAYS.
+    const pastDueCutoff = new Date(now.getTime() - PAST_DUE_DOWNGRADE_AFTER_DAYS * 24 * 60 * 60 * 1000)
+
     // Parallelize all queries — independent, no shared state
-    const [canceled, activeStale, expiredLimited, expiredOneTime] = await Promise.all([
+    const [canceled, activeStale, pastDueStuck, expiredLimited, expiredOneTime] = await Promise.all([
       // Users who canceled and whose period has now ended
       db.user.findMany({
         where: { plan: "PRO", subscriptionStatus: "CANCELED", subscriptionEndsAt: { lt: now }, isManaged: false },
         select: { id: true },
       }),
       // Webhook drift guard: PRO/ACTIVE users whose subscriptionEndsAt is in the past
-      // PAST_DUE excluded — Stripe smart-retry can run up to ~3 weeks; do not downgrade mid-retry
+      // PAST_DUE excluded HERE — see the separate, later cutoff below; do not downgrade mid-retry
       db.user.findMany({
         where: { plan: "PRO", subscriptionStatus: "ACTIVE", subscriptionEndsAt: { lt: now }, isManaged: false },
+        select: { id: true },
+      }),
+      // PAST_DUE stuck past the entire retry window. Without this they are stranded:
+      // access already cut by isActive at the grace boundary, but blocksNewPurchase still
+      // refuses a fresh checkout, and no Stripe event arrives when dunning is set to
+      // "mark unpaid" / "leave past due". This is the backstop that frees them.
+      db.user.findMany({
+        where: { plan: "PRO", subscriptionStatus: "PAST_DUE", subscriptionEndsAt: { lt: pastDueCutoff }, isManaged: false },
         select: { id: true },
       }),
       // LIMITED users whose admin-set expiry has passed and not yet processed — invalidate JWT
@@ -55,7 +68,7 @@ export async function GET(req: Request) {
       }),
     ])
 
-    const ids = [...new Set([...canceled, ...activeStale, ...expiredOneTime].map((u) => u.id))]
+    const ids = [...new Set([...canceled, ...activeStale, ...pastDueStuck, ...expiredOneTime].map((u) => u.id))]
     const limitedIds = expiredLimited.map((u) => u.id)
 
     await Promise.all([
@@ -86,6 +99,7 @@ export async function GET(req: Request) {
       downgraded: ids.length,
       canceledCount: canceled.length,
       stalePROCount: activeStale.length,
+      pastDueStuckCount: pastDueStuck.length,
       expiredLimited: limitedIds.length,
     }
     })
