@@ -34,7 +34,11 @@ export async function generateMetadata({
       languages: {
         es: "https://readycvv.com/es",
         en: "https://readycvv.com/en",
-        "x-default": "https://readycvv.com/es",
+        // x-default = the page for a visitor whose language matches neither es nor en.
+        // English, mirroring the app's own runtime fallback (FALLBACK_LOCALE="en" in
+        // lib/locale.ts) — a browser in pt/zh/de is served /en, so Google must be told
+        // the same. It used to point to /es, contradicting the runtime.
+        "x-default": "https://readycvv.com/en",
       },
     },
     openGraph: {

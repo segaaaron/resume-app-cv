@@ -7,7 +7,20 @@ import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext"
 
 const BASE_URL = "https://readycvv.com"
 
-export const metadata: Metadata = {
+// Locale-aware so the site-wide OG locale and x-default follow the language the
+// subtree is rendered in — a static `es_ES` / x-default=/es leaked onto every
+// English page that doesn't set its own openGraph (privacy, terms, cookie-policy,
+// dmca, accessibility), telling crawlers those /en pages were Spanish. Content
+// pages still override alternates/OG with their own path; this only fixes the
+// inherited default. x-default = English, mirroring the runtime FALLBACK_LOCALE.
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>
+}): Promise<Metadata> {
+  const { locale } = await params
+  const isEs = locale === "es"
+  return {
   metadataBase: new URL(BASE_URL),
   title: {
     default: "ReadyCVV — AI Resume Builder | Beat ATS, 128 Templates",
@@ -49,18 +62,18 @@ export const metadata: Metadata = {
     },
   },
   alternates: {
-    canonical: BASE_URL,
+    canonical: `${BASE_URL}/${locale}`,
     languages: {
       es: `${BASE_URL}/es`,
       en: `${BASE_URL}/en`,
-      "x-default": `${BASE_URL}/es`,
+      "x-default": `${BASE_URL}/en`,
     },
   },
   openGraph: {
     type: "website",
-    locale: "es_ES",
-    alternateLocale: ["en_US"],
-    url: BASE_URL,
+    locale: isEs ? "es_ES" : "en_US",
+    alternateLocale: isEs ? ["en_US"] : ["es_ES"],
+    url: `${BASE_URL}/${locale}`,
     siteName: "ReadyCVV",
     title: "ReadyCVV — AI Resume Builder | Beat ATS, 128 Templates",
     description:
@@ -86,6 +99,7 @@ export const metadata: Metadata = {
   verification: {
     google: "a7b236b7cefc3ac7e10f5ca57c3ec884eaea1aac",
   },
+  }
 }
 
 export function generateStaticParams() {

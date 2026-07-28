@@ -24,7 +24,9 @@ export async function generateMetadata({
       languages: {
         es: "https://readycvv.com/es/faq",
         en: "https://readycvv.com/en/faq",
-        "x-default": "https://readycvv.com/es/faq",
+        // x-default → English, mirroring the runtime fallback (lib/locale.ts). Was /es,
+        // which contradicted where the app actually sends an unknown-language visitor.
+        "x-default": "https://readycvv.com/en/faq",
       },
     },
   }
