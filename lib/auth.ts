@@ -6,8 +6,34 @@ import bcrypt from "@/lib/bcrypt"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
 import { checkAndIncrementRateLimit, checkRateLimit, recordRateLimitUsage } from "@/lib/rate-limit"
+import { resolveLocale } from "@/lib/locale"
+import { headers } from "next/headers"
 
 const logger = createLogger("auth")
+
+/**
+ * Record the user's language on their account the first time we ever have a signal for
+ * it — their login request. `preferredLocale` was only captured at sign-up and on an
+ * explicit switch, so every account created before it existed stayed null forever, and
+ * the emails sent with no browser in sight (the renewal-reminder cron, the referral
+ * webhook) fell back to a guess. Almost nobody clicks the language toggle, so waiting
+ * for that fixed nobody.
+ *
+ * Deliberately a SEPARATE write from the session-token update, and a `updateMany` gated
+ * on `preferredLocale: null`: it can never touch the session logic, never overwrite an
+ * explicit choice, and needs no prior read. Best-effort — a failure here must never
+ * block a login.
+ */
+async function backfillPreferredLocale(userId: string, acceptLanguage: string | null, cookie: string | null): Promise<void> {
+  const cookieValue = cookie
+    ?.split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("NEXT_LOCALE="))
+    ?.split("=")[1]
+  const locale = resolveLocale(cookieValue, acceptLanguage)
+  await db.user.updateMany({ where: { id: userId, preferredLocale: null }, data: { preferredLocale: locale } })
+    .catch((e) => logger.error("backfillPreferredLocale failed", { userId }, e instanceof Error ? e : undefined))
+}
 
 class InvalidCredentialsError extends CredentialsSignin {
   code = "invalid_credentials" as const
@@ -184,6 +210,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           data: { activeSessionToken, sessionChallengeAttempts: 0, sessionChallengeBlockedUntil: null },
         })
 
+        // Separate, best-effort write — never folded into the session update above.
+        await backfillPreferredLocale(user.id, request.headers.get("accept-language"), request.headers.get("cookie"))
+
         // Return plan data so jwt() callback can skip the second DB read on fresh login.
         return {
           id:                 user.id,
@@ -290,6 +319,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .then(() => { assigned = true })
           .catch((e) => logger.error("Google OAuth: activeSessionToken assign failed", { userId }, e instanceof Error ? e : undefined))
         if (assigned) token.activeSessionToken = googleSessionToken
+
+        // Same first-signal backfill as the credentials path. The jwt callback has no
+        // request object, so the language comes from next/headers — wrapped because a
+        // missing header store must never break a Google login.
+        try {
+          const h = await headers()
+          await backfillPreferredLocale(userId, h.get("accept-language"), h.get("cookie"))
+        } catch (e) {
+          logger.error("Google OAuth: preferredLocale backfill skipped", { userId }, e instanceof Error ? e : undefined)
+        }
       }
 
       maybePurgeExpired()

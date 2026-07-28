@@ -372,3 +372,33 @@ describe("the language is remembered on the account, not only in the browser", (
       .toMatch(/ADD COLUMN "preferredLocale" TEXT;/)
   })
 })
+
+describe("login records the language for accounts that never had it", () => {
+  // The root fix for the existing base: preferredLocale was only set at sign-up or on an
+  // explicit switch, so every pre-migration account stayed null and its cron/webhook
+  // emails guessed. Almost nobody clicks the toggle. Capturing it at login — which every
+  // active subscriber does — fills it from the real browser signal.
+  const src = read("lib/auth.ts")
+
+  it("backfills as a SEPARATE write, gated on null, that cannot touch session logic", () => {
+    // updateMany with preferredLocale:null in the WHERE: writes only when unset, never
+    // overwrites an explicit choice, needs no prior read, and is isolated from the
+    // session-token update.
+    expect(src).toMatch(/updateMany\(\{\s*where:\s*\{\s*id:\s*userId,\s*preferredLocale:\s*null\s*\}/)
+    expect(src).toContain("async function backfillPreferredLocale")
+  })
+
+  it("runs on BOTH login paths — credentials and Google", () => {
+    // Credentials login reads the request directly; Google login has no request object,
+    // so it reads next/headers. Both must backfill or half the base stays null.
+    const calls = src.match(/backfillPreferredLocale\(/g) ?? []
+    // one definition + two call sites
+    expect(calls.length).toBeGreaterThanOrEqual(3)
+    expect(src).toContain('request.headers.get("accept-language")')
+    expect(src).toMatch(/const h = await headers\(\)/)
+  })
+
+  it("is best-effort — a failed backfill never blocks a login", () => {
+    expect(src).toMatch(/backfillPreferredLocale failed/)
+  })
+})
