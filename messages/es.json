@@ -1532,6 +1532,7 @@
       "error": "Error al adaptar el CV. Intenta de nuevo.",
       "diff_replace_reason": "Solo este bullet se reemplazará. Los demás de la experiencia se conservan.",
       "diff_add_reason": "Este bullet se añadirá a la experiencia. Los demás se conservan.",
+      "diff_summary_reason": "Tu resumen actual se reemplazará por esta versión adaptada. Revisa ambos antes de aplicar.",
       "no_changes": "El CV y la oferta no han cambiado desde el último análisis",
       "cooldown": "Espera {seconds} antes de volver a adaptar",
       "cooldown_btn": "Espera {seconds}",
@@ -1706,7 +1707,10 @@
       "all_applied_title": "¡Mejoras aplicadas con éxito!",
       "all_applied_desc": "Todos los cambios sugeridos han sido aplicados. Revisa tu CV actualizado en el preview.",
       "advice_only_badge": "Consejo",
-      "advice_only_description": "Consejo manual: revísalo y aplícalo tú mismo desde la sección correspondiente."
+      "advice_only_description": "Consejo manual: revísalo y aplícalo tú mismo desde la sección correspondiente.",
+      "legend_strength": "Fortaleza",
+      "legend_action": "Arreglo en un clic",
+      "legend_tip": "Consejo manual"
     },
     "ai_profile_fill": {
       "title": "Ayúdate con la IA",

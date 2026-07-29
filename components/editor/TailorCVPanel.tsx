@@ -116,10 +116,16 @@ export default function TailorCVPanel({ jobDescription }: Props) {
     }
   }
 
-  function applySummary() {
+  // Open the diff modal instead of applying blind — the user asked to see the
+  // current summary vs the suggested one before it overwrites their text (a
+  // tailored summary can differ by only a word, and a silent overwrite hides that).
+  const [pendingSummary, setPendingSummary] = useState(false)
+
+  function confirmApplySummary() {
     if (!result?.summary) return
     updateSectionData("summary", result.summary)
     setAppliedSummary(true)
+    setPendingSummary(false)
     toast.success(t("summary_applied"))
   }
 
@@ -298,7 +304,7 @@ export default function TailorCVPanel({ jobDescription }: Props) {
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider">{t("section_summary")}</p>
                     <button
-                      onClick={applySummary}
+                      onClick={() => !appliedSummary && setPendingSummary(true)}
                       disabled={appliedSummary}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-semibold transition-all duration-200 disabled:opacity-60"
                       style={{
@@ -442,6 +448,21 @@ export default function TailorCVPanel({ jobDescription }: Props) {
             targetId: pendingBullet.targetId,
           }}
           currentValue={pendingBullet.currentBullet}
+        />
+      )}
+
+      {pendingSummary && result?.summary && (
+        <SuggestionDiffModal
+          open={true}
+          onClose={() => setPendingSummary(false)}
+          onConfirm={confirmApplySummary}
+          suggestion={{
+            field: "summary",
+            type: "replace",
+            preview: result.summary,
+            reason: t("diff_summary_reason"),
+          }}
+          currentValue={(sectionData.summary as string) ?? ""}
         />
       )}
     </div>

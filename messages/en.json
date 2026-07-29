@@ -1532,6 +1532,7 @@
       "error": "Error tailoring Resume. Please try again.",
       "diff_replace_reason": "Only this bullet will be replaced. The rest of the experience is kept.",
       "diff_add_reason": "This bullet will be added to the experience. The rest is kept.",
+      "diff_summary_reason": "Your current summary will be replaced with this tailored version. Review both before applying.",
       "no_changes": "Resume and job posting haven't changed since the last analysis",
       "cooldown": "Wait {seconds} before tailoring again",
       "cooldown_btn": "Wait {seconds}",
@@ -1706,7 +1707,10 @@
       "all_applied_title": "Improvements applied successfully!",
       "all_applied_desc": "All suggested changes have been applied. Review your updated Resume in the preview.",
       "advice_only_badge": "Tip",
-      "advice_only_description": "Manual tip: review it and apply it yourself from the corresponding section."
+      "advice_only_description": "Manual tip: review it and apply it yourself from the corresponding section.",
+      "legend_strength": "Strength",
+      "legend_action": "One-click fix",
+      "legend_tip": "Manual tip"
     },
     "ai_profile_fill": {
       "title": "AI Assistant",

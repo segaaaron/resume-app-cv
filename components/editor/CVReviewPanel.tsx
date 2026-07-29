@@ -43,17 +43,17 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
   }
 }
 
-const REVIEW_COLORS = [
-  { ring: 'ring-violet-200', bg: 'from-violet-50/80 to-purple-50/60', border: 'border-violet-100', accent: 'text-violet-600', bar: '#8B5CF6' },
-  { ring: 'ring-cyan-200', bg: 'from-cyan-50/80 to-blue-50/60', border: 'border-cyan-100', accent: 'text-cyan-600', bar: '#00D4FF' },
-  { ring: 'ring-emerald-200', bg: 'from-emerald-50/80 to-teal-50/60', border: 'border-emerald-100', accent: 'text-emerald-600', bar: '#10B981' },
-  { ring: 'ring-amber-200', bg: 'from-amber-50/80 to-orange-50/60', border: 'border-amber-100', accent: 'text-amber-600', bar: '#F59E0B' },
-] as const
+// Semantic colors — each means one thing, so the color itself tells the user what
+// the card is (the old palette rotated by index and carried no meaning):
+//   green  = a strength (nothing to do)
+//   cyan   = an improvement with a one-click fix (actionable)
+//   amber  = advice only, apply it yourself (handled in its own branch below)
+const STRENGTH_COLORS = { ring: 'ring-emerald-200', bg: 'from-emerald-50/80 to-teal-50/60', border: 'border-emerald-100', accent: 'text-emerald-600', bar: '#10B981' } as const
+const ACTION_COLORS = { ring: 'ring-cyan-200', bg: 'from-cyan-50/80 to-blue-50/60', border: 'border-cyan-100', accent: 'text-cyan-600', bar: '#00D4FF' } as const
 
 function ReviewItemRow({
   item,
   itemKey,
-  index,
   applied,
   t,
   tAts,
@@ -61,14 +61,13 @@ function ReviewItemRow({
 }: {
   item: ReviewItem
   itemKey: string
-  index: number
   applied: boolean
   t: ReturnType<typeof useTranslations>
   tAts: ReturnType<typeof useTranslations>
   onApply: (item: ReviewItem, key: string) => void
 }) {
-  const colors = REVIEW_COLORS[index % REVIEW_COLORS.length]
   const isStrength = itemKey.startsWith("strength")
+  const colors = isStrength ? STRENGTH_COLORS : ACTION_COLORS
   const hasSuggestion = Boolean(item.suggestion)
   const canApply = hasSuggestion && !applied
 
@@ -376,6 +375,20 @@ export default function CVReviewPanel() {
               <p className="text-xs text-slate-600 leading-relaxed">{result.summary}</p>
             </div>
 
+            {/* Color legend — the card colors below are semantic, not decorative */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-1">
+              {[
+                { c: "#10B981", label: t("legend_strength") },
+                { c: "#00D4FF", label: t("legend_action") },
+                { c: "#F59E0B", label: t("legend_tip") },
+              ].map(({ c, label }) => (
+                <span key={label} className="inline-flex items-center gap-1.5 text-[10px] text-slate-500">
+                  <span className="h-2 w-2 rounded-full shrink-0" style={{ background: c }} />
+                  {label}
+                </span>
+              ))}
+            </div>
+
             {/* All-applied success banner */}
             {allApplied && (
               <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 to-teal-50/60 p-4 flex items-start gap-3">
@@ -401,7 +414,6 @@ export default function CVReviewPanel() {
                       key={i}
                       item={item}
                       itemKey={`strength-${i}`}
-                      index={i}
                       applied={appliedItems.has(`strength-${i}`)}
                       t={t}
                       tAts={tAts}
@@ -424,7 +436,6 @@ export default function CVReviewPanel() {
                       key={i}
                       item={item}
                       itemKey={`improvement-${i}`}
-                      index={i + (result.strengths?.length ?? 0)}
                       applied={appliedItems.has(`improvement-${i}`)}
                       t={t}
                       tAts={tAts}
