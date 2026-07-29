@@ -423,6 +423,7 @@ CRITICAL RULES FOR SUGGESTIONS (mandatory, no exceptions):
 4. If the improvement requires data the user did not provide, OMIT "suggestion" and use ONLY "text" to describe what the user should add manually (e.g., "Add measurable metrics to your achievements" — NOT "Achieved 80% reduction in load time").
 5. NEVER use placeholders like [X%], [N users], <number>, or similar in the preview field. The preview must be production-ready text.
 6. If in doubt, OMIT "suggestion". A descriptive "text"-only advice is always preferable to an invented preview.
+7. For an ADVICE-ONLY improvement (no "suggestion"), STILL add a "location" object with the section it refers to, so the user knows WHERE to apply it: { "field": <one of the field values above>, "targetId": "<ID:xxx if the field starts with workExperience.>" }. e.g. advice about a skills typo → "location": { "field": "skills" }.
 
 Respond ONLY with valid JSON (no markdown):
 {
@@ -433,7 +434,7 @@ Respond ONLY with valid JSON (no markdown):
   "improvements": [
     { "text": "<improvement>", "suggestion": { "field": "workExperience.description", "type": "replace", "preview": "• <rewritten bullet 1>\\n• <rewritten bullet 2>", "reason": "<max 12 words>", "targetId": "<the job's ID:xxx>" } },
     { "text": "<improvement>", "suggestion": { "field": "summary", "type": "replace", "preview": "<enriched text>", "reason": "<max 12 words>" } },
-    { "text": "<improvement without automatable action>" }
+    { "text": "<improvement without automatable action>", "location": { "field": "skills" } }
   ],
   "answer": "<direct answer to candidate's question, or empty string if general review>"
 }`
@@ -481,6 +482,7 @@ REGLAS CRÍTICAS PARA SUGGESTIONS (obligatorias, sin excepciones):
 4. Si la mejora requiere datos que el usuario no proporcionó, OMITE "suggestion" y usa SOLO "text" para describir qué debe añadir manualmente (ej.: "Añade métricas medibles a tus logros" — NO "Logré reducir el tiempo de carga en un 80%").
 5. NUNCA uses placeholders como [X%], [N usuarios], <número>, ni similares en el campo preview. El preview debe ser texto listo para producción.
 6. Ante la duda, OMITE "suggestion". Un consejo descriptivo en "text" sin preview es siempre preferible a un preview inventado.
+7. Para una mejora SOLO-CONSEJO (sin "suggestion"), IGUAL agrega un objeto "location" con la sección a la que se refiere, para que el usuario sepa DÓNDE aplicarla: { "field": <uno de los valores de field de arriba>, "targetId": "<ID:xxx si el field empieza por workExperience.>" }. ej.: consejo sobre un typo en skills → "location": { "field": "skills" }.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {
@@ -491,7 +493,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   "improvements": [
     { "text": "<mejora>", "suggestion": { "field": "workExperience.description", "type": "replace", "preview": "• <bullet 1 reescrito>\\n• <bullet 2 reescrito>", "reason": "<max 12 palabras>", "targetId": "<el ID:xxx del trabajo>" } },
     { "text": "<mejora>", "suggestion": { "field": "summary", "type": "replace", "preview": "<texto enriquecido>", "reason": "<max 12 palabras>" } },
-    { "text": "<mejora sin acción automatizable>" }
+    { "text": "<mejora sin acción automatizable>", "location": { "field": "skills" } }
   ],
   "answer": "<respuesta directa a la pregunta del candidato, o cadena vacía si fue revisión general>"
 }`
@@ -537,13 +539,16 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       if (!item.suggestion) return { ...item, suggestion: undefined }
       const cleanedPreview = sanitizePreview(item.suggestion.preview)
       const { field, targetId } = item.suggestion
+      // When a suggestion is stripped below, the item becomes advice-only — but it
+      // still knows WHERE it applied, so preserve that as a location for the UI.
+      const loc = item.location ?? { field, targetId }
 
       // A workExperience suggestion with no targetId cannot be placed. The client
       // used to fall back to item [0], silently overwriting whichever job happened
       // to be first — so drop it and keep the advisory text instead.
       if (field.startsWith("workExperience.") && !targetId) {
         this.logger.warn("[AIService.reviewCV] dropped suggestion with no targetId", { field })
-        return { ...item, suggestion: undefined }
+        return { ...item, suggestion: undefined, location: loc }
       }
 
       // No-op guard: the model sometimes "suggests" replacing a field with text
@@ -553,7 +558,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       const currentValue = getCurrentFieldValue(field, targetId, sectionData)
       const normEq = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
       if (currentValue && normEq(currentValue) === normEq(cleanedPreview)) {
-        return { ...item, suggestion: undefined }
+        return { ...item, suggestion: undefined, location: loc }
       }
 
       // Cosmetic reword: a near-copy that only swaps synonyms ("improve"→"strengthen",
@@ -567,7 +572,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           field,
           previewSample: cleanedPreview.slice(0, 120),
         })
-        return { ...item, suggestion: undefined }
+        return { ...item, suggestion: undefined, location: loc }
       }
 
       // Fail-safe: if preview seems to have invented data not present in the
@@ -577,7 +582,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           field,
           previewSample: cleanedPreview.slice(0, 120),
         })
-        return { ...item, suggestion: undefined }
+        return { ...item, suggestion: undefined, location: loc }
       }
 
       // Rewriting is not summarizing: a description preview that comes back with
@@ -592,7 +597,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             this.logger.warn("[AIService.reviewCV] dropped suggestion that collapses bullets", {
               targetId, before, after,
             })
-            return { ...item, suggestion: undefined }
+            return { ...item, suggestion: undefined, location: loc }
           }
         }
       }

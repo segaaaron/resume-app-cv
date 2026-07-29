@@ -6,7 +6,7 @@ import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import {
   MessageSquare, Loader2, CheckCircle2, TrendingUp,
-  Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock, Info,
+  Lightbulb, Check, Wand2, Sparkles, AlertCircle, Clock, Info, ArrowRight,
 } from "lucide-react"
 import { toast } from "sonner"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
@@ -55,6 +55,7 @@ function ReviewItemRow({
   item,
   itemKey,
   applied,
+  locationLabel,
   t,
   tAts,
   onApply,
@@ -62,6 +63,7 @@ function ReviewItemRow({
   item: ReviewItem
   itemKey: string
   applied: boolean
+  locationLabel?: string
   t: ReturnType<typeof useTranslations>
   tAts: ReturnType<typeof useTranslations>
   onApply: (item: ReviewItem, key: string) => void
@@ -90,9 +92,16 @@ function ReviewItemRow({
 
         <p className="text-xs text-slate-700 leading-relaxed mb-2">{item.text}</p>
 
-        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-amber-700 bg-white/80 ring-1 ring-amber-200">
-          <Lightbulb className="h-2.5 w-2.5" /> {t("advice_only_badge")}
-        </span>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full text-amber-700 bg-white/80 ring-1 ring-amber-200">
+            <Lightbulb className="h-2.5 w-2.5" /> {t("advice_only_badge")}
+          </span>
+          {locationLabel && (
+            <span className="inline-flex items-center gap-1 text-[10px] font-semibold px-2 py-0.5 rounded-full text-slate-600 bg-slate-100 ring-1 ring-slate-200">
+              <ArrowRight className="h-2.5 w-2.5" /> {locationLabel}
+            </span>
+          )}
+        </div>
       </div>
     )
   }
@@ -437,6 +446,7 @@ export default function CVReviewPanel() {
                       item={item}
                       itemKey={`improvement-${i}`}
                       applied={appliedItems.has(`improvement-${i}`)}
+                      locationLabel={item.location ? getApplyLocation(item.location.field, item.location.targetId) : undefined}
                       t={t}
                       tAts={tAts}
                       onApply={openDiffModal}

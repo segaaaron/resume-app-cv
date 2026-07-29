@@ -194,6 +194,13 @@ export const SuggestionSchema = z.object({
 export const ReviewItemSchema = z.object({
   text: z.string().min(1),
   suggestion: SuggestionSchema.optional(),
+  // WHERE an advice-only improvement applies. Actionable items carry the location
+  // inside `suggestion`; advice items (no concrete fix) had nowhere to point, so
+  // the model now also sets this so the UI can tell the user which section it
+  // refers to. Optional + backward-safe: absent on old responses and on strengths.
+  // .catch(undefined): a malformed location from the model must never fail the
+  // whole item (and cascade into the no-suggestions fallback) — it just drops.
+  location: z.object({ field: z.enum(SUGGESTION_FIELDS), targetId: z.string().optional() }).optional().catch(undefined),
 })
 
 export const ReviewResponseSchema = z.object({

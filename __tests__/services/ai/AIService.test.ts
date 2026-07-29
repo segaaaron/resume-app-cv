@@ -698,6 +698,25 @@ describe("AIService", () => {
       // The advisory text stays, but the identical (already-applied) suggestion is gone.
       expect(res.improvements[0].text).toBe("Rewrite the summary")
       expect(res.improvements[0].suggestion).toBeUndefined()
+      // ...and it still knows WHERE it applied, so the UI can name the section.
+      expect((res.improvements[0] as { location?: { field: string } }).location?.field).toBe("summary")
+    })
+
+    it("keeps the model-provided location on an advice-only item", async () => {
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Solid resume.",
+        strengths: [],
+        improvements: [
+          { text: "Fix the Objective-C typo in your skills", location: { field: "skills" } },
+        ],
+        answer: "",
+      }))
+      const service = new AIService(aiClient, logger)
+      const res = await service.reviewCV("u1", { sectionData: { summary: "x" } }, "PRO")
+      expect(res.improvements[0].suggestion).toBeUndefined()
+      expect((res.improvements[0] as { location?: { field: string } }).location?.field).toBe("skills")
     })
   })
 

@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { useTranslations, useLocale } from "next-intl"
-import type { Suggestion } from "../SuggestionDiffModal"
+import type { Suggestion, SuggestionField } from "../SuggestionDiffModal"
 import { useAICooldown } from "./useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
@@ -16,6 +16,8 @@ import { useRouter } from "next/navigation"
 export interface ReviewItem {
   text: string
   suggestion?: Suggestion
+  /** WHERE an advice-only item applies, so the UI can name the section. */
+  location?: { field: SuggestionField; targetId?: string }
 }
 
 export interface CVReviewResult {
