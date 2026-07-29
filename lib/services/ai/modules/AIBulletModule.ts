@@ -8,7 +8,7 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { isTrivialEdit } from "../shared/text-similarity"
+import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
 import {
   AI_INPUT_LIMITS,
   BulletImprovementSchema,
@@ -171,6 +171,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // suggestion carrying "[N users]" is a hallucination like any other.
       if (detectHallucination(suggested, source)) { droppedHallucinated++; continue }
       if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
+      // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
+      // otherwise-identical bullet reads the same on both sides — drop it rather
+      // than sell a reword as an improvement. Spares spelling fixes + enrichments.
+      if (isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
 
       seenIndices.add(index)
       improvements.push({ index, text: suggested })

@@ -11,7 +11,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
-import { isTrivialEdit } from "../shared/text-similarity"
+import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2 } from "../shared/ai-types"
@@ -229,9 +229,11 @@ Reglas:
             return false
           }
           // No-op guard, unified with the other AIs: a rewrite ≥90% identical to
-          // the original bullet is not a real improvement — omit it.
+          // the original bullet is not a real improvement — omit it. Plus the
+          // cosmetic-reword guard Review/bullets use: a synonym-only swap
+          // ("enhance"→"improve") on an otherwise-identical bullet adds nothing.
           const orig = origBullets[b.index]
-          if (orig !== undefined && isTrivialEdit(orig, b.text)) {
+          if (orig !== undefined && (isTrivialEdit(orig, b.text) || isCosmeticReword(orig, b.text))) {
             droppedTrivial++
             return false
           }
@@ -267,7 +269,7 @@ Reglas:
     // "Apply" button that overwrites the summary with a near-copy is noise, so drop it.
     const origSummary = (typeof sectionData.summary === "string" ? sectionData.summary : "").trim()
     const tailoredSummary = raw.summary ?? null
-    const summaryOut = tailoredSummary && origSummary && isTrivialEdit(origSummary, tailoredSummary)
+    const summaryOut = tailoredSummary && origSummary && (isTrivialEdit(origSummary, tailoredSummary) || isCosmeticReword(origSummary, tailoredSummary))
       ? null
       : tailoredSummary
 
