@@ -92,7 +92,9 @@ const STOPWORDS = new Set<string>([...STOPWORDS_EN, ...STOPWORDS_ES]);
 /* ---------------------- Helpers ---------------------- */
 
 // Accents + compatibility chars folded away for matching (NFKD). Shared primitive.
-const normalize = (text: string): string => foldAccentsLower(text, "NFKD");
+// Exported so the cover-letter ATS engine normalizes text the exact same way the
+// resume tool does — same folding, so keyword presence agrees across both.
+export const normalize = (text: string): string => foldAccentsLower(text, "NFKD");
 
 function tokenize(text: string): string[] {
   return text
@@ -115,7 +117,9 @@ function singularize(word: string): string {
 
 /* ---------------------- Keyword extraction ---------------------- */
 
-function extractTopKeywords(jd: string): string[] {
+// Exported for the cover-letter ATS engine — the same JD keyword extractor the
+// resume tool uses, so a letter is checked against the very keywords the CV is.
+export function extractTopKeywords(jd: string): string[] {
   const norm = normalize(jd);
   const tokens = tokenize(norm).filter(
     (t) => !STOPWORDS.has(t) && !/^\d+$/.test(t) && t.length > 2,

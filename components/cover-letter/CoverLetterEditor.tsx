@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
-import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronUp, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronUp, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil, ShieldCheck } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations, useLocale } from "next-intl"
 import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
@@ -23,6 +23,7 @@ import dynamic from "next/dynamic"
 const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
 import { CoverLetterThumbnail } from "./thumbnails"
 import type { CandidateData, CoverLetterContent, TemplateProps } from "./templates/types"
+import CoverLetterAtsPanel from "./CoverLetterAtsPanel"
 
 const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = {
   elegant:   dynamic(() => import("./templates/ElegantTemplate"),       { ssr: false }),
@@ -175,7 +176,7 @@ export default function CoverLetterEditor({
   )
   const [openSection, setOpenSection] = useState<"candidate" | "content" | "body" | null>(null)
   const toggleSection = (id: "candidate" | "content" | "body") => setOpenSection(prev => prev === id ? null : id)
-  const [sidebarTab, setSidebarTab] = useState<"content" | "templates" | "ai">("content")
+  const [sidebarTab, setSidebarTab] = useState<"content" | "templates" | "ai" | "ats">("content")
   const [mobileView, setMobileView] = useState<"form" | "preview">("form")
   const [photoPosition, setPhotoPosition] = useState<number>(
     typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
@@ -630,6 +631,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
               { key: "content",   icon: <FileText className="w-3 h-3" />,   label: t("tab_content"),   activeStyle: { background: `linear-gradient(135deg, ${NAVY_DEEP} 0%, ${NAVY_MID} 100%)`, color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(11,27,61,0.2)" }, inactiveStyle: { background: "rgba(11,27,61,0.05)", color: MUTED_LABEL, border: `1px solid ${BORDER_LIGHT}` } },
               { key: "templates", icon: <LayoutGrid className="w-3 h-3" />,  label: t("tab_templates"), activeStyle: { background: "linear-gradient(135deg, #3B4F7A 0%, #2A3D6B 100%)", color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(42,61,107,0.25)" }, inactiveStyle: { background: "rgba(11,27,61,0.05)", color: MUTED_LABEL, border: `1px solid ${BORDER_LIGHT}` } },
               { key: "ai",        icon: <Sparkles className="w-3 h-3" />,    label: t("tab_ai"),        activeStyle: { background: `linear-gradient(135deg, ${CYAN} 0%, #00A8CC 100%)`, color: NAVY_DEEP, border: "none", boxShadow: "0 4px 14px rgba(0,212,255,0.35)" }, inactiveStyle: { background: "rgba(0,212,255,0.08)", color: "#00A8CC", border: "1px solid rgba(0,212,255,0.25)" } },
+              { key: "ats",       icon: <ShieldCheck className="w-3 h-3" />, label: t("tab_ats"),       activeStyle: { background: "linear-gradient(135deg, #10B981 0%, #059669 100%)", color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(16,185,129,0.3)" }, inactiveStyle: { background: "rgba(16,185,129,0.08)", color: "#059669", border: "1px solid rgba(16,185,129,0.25)" } },
             ] as const).map(({ key, icon, label, activeStyle, inactiveStyle }) => (
               <button
                 key={key}
@@ -697,6 +699,10 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                 })}
               </div>
             </div>
+          )}
+
+          {sidebarTab === "ats" && (
+            <CoverLetterAtsPanel body={content.body} company={content.company} jobTitle={content.subject ?? ""} isPro={isPro} onUpgrade={() => setUpgradeOpen(true)} />
           )}
 
           {sidebarTab === "content" && (() => {
