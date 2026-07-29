@@ -26,6 +26,6 @@ export async function POST(req: Request) {
     const result = await aiService.generateCoverLetter(authResult.userId, parsed.data, authResult.user.plan)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email })
   }
 }

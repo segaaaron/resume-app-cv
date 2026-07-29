@@ -18,6 +18,6 @@ export async function POST(req: Request) {
     const result = await passwordResetService.requestReset(ip, parsed.data.email, localeFromRequest(req))
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

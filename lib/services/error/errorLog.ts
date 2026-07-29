@@ -86,7 +86,9 @@ function pickString(ctx: Record<string, unknown>, ...keys: string[]): string | u
   const ctx = p.context ?? {}
   const statusRaw = ctx.status ?? ctx.statusCode
   logError({
-    source: p.service,
+    // Prefer an explicit service label from the log context (handleError derives it
+    // from the route: "ai", "stripe", …) over the generic logger name ("controller").
+    source: pickString(ctx, "source") ?? p.service,
     message: p.message,
     endpoint: pickString(ctx, "route", "endpoint", "path") ?? null,
     stack: p.stack ?? null,

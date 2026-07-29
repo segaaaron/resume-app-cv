@@ -14,6 +14,6 @@ export async function GET(req: Request) {
     const result = await userService.verifyEmail(token)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

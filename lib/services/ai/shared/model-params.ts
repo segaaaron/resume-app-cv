@@ -82,8 +82,15 @@ export function normalizeParamsForModel(params: ChatParams): ChatParams {
   if (max_tokens != null && normalized.max_completion_tokens == null) {
     normalized.max_completion_tokens = max_tokens
   }
-  // Pin reasoning depth deliberately unless the caller already chose one.
-  if (normalized.reasoning_effort == null) {
+  // Pin reasoning depth deliberately unless the caller already chose one. A value of
+  // "none" (the default) or empty means "use OpenAI's own default" and is OMITTED, not
+  // sent: the chat/completions API only accepts minimal|low|medium|high and 400s on any
+  // other literal. Sending "none" made EVERY reasoning-model call (tailor, review,
+  // summary, bullets, cover) fail with a 400 that the model-unavailable fallback does
+  // not catch — a param error, not a missing model. Set AI_REASONING_EFFORT to a real
+  // level to pin it; leaving it "none" now yields the same intended default WITHOUT the
+  // invalid literal that broke the call.
+  if (normalized.reasoning_effort == null && REASONING_EFFORT && REASONING_EFFORT !== "none") {
     normalized.reasoning_effort = REASONING_EFFORT as unknown as typeof normalized.reasoning_effort
   }
   // temperature/top_p/penalties/logit_bias are intentionally dropped — unsupported.

@@ -27,6 +27,6 @@ export async function POST(req: Request) {
     if (err instanceof AppError && err.code === "invalid_code" && err.extra?.attemptsLeft !== undefined) {
       return NextResponse.json({ error: "invalid_code", attemptsLeft: err.extra.attemptsLeft }, { status: 400 })
     }
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

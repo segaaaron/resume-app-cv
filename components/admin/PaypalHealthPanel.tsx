@@ -3,23 +3,14 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { useTranslations } from "next-intl"
-import {
-  RefreshCw,
-  Webhook,
-  AlertTriangle,
-  ShieldAlert,
-  Receipt,
-  CreditCard,
-  Ban,
-  DollarSign,
-} from "lucide-react"
-import type { StripeOverview } from "@/lib/services/stripe/stripeAdminReport"
+import { RefreshCw, Webhook, AlertTriangle, CreditCard, PauseCircle } from "lucide-react"
+import type { PaypalOverview } from "@/lib/services/paypal/paypalAdminReport"
 import { relativeTime as relative } from "@/lib/format/relativeTime"
 
 type Win = "24h" | "7d" | "30d"
 
-export default function StripeHealthPanel({ overview }: { overview: StripeOverview }) {
-  const t = useTranslations("dashboard_admin.stripe")
+export default function PaypalHealthPanel({ overview }: { overview: PaypalOverview }) {
+  const t = useTranslations("dashboard_admin.paypal")
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const [win, setWin] = useState<Win>("24h")
@@ -30,6 +21,17 @@ export default function StripeHealthPanel({ overview }: { overview: StripeOvervi
 
   return (
     <div>
+      {/* Disabled-in-prod notice: PayPal has no credentials yet, so 0s are expected. */}
+      {!overview.configured && (
+        <div className="flex items-start gap-2.5 rounded-[10px] border border-[#E4C97A] bg-[#FDF7E6] px-4 py-3 mb-4">
+          <PauseCircle className="w-4 h-4 text-[#B4740B] shrink-0 mt-0.5" />
+          <div>
+            <div className="text-[12.5px] font-bold text-[#7A5308]">{t("disabled_title")}</div>
+            <div className="text-[11.5px] text-[#8A6420] mt-0.5">{t("disabled_desc")}</div>
+          </div>
+        </div>
+      )}
+
       {/* Window segmented + refresh */}
       <div className="flex items-center justify-between gap-3 mb-4 flex-wrap">
         <div className="inline-flex rounded-[10px] border border-[#D9E1ED] bg-white p-1">
@@ -57,7 +59,7 @@ export default function StripeHealthPanel({ overview }: { overview: StripeOvervi
       </div>
 
       {/* Webhook KPI grid */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
         <Stat icon={Webhook} label={t("kpi_total", { window: win })} value={String(w.total)} tone="#1a2e4a" />
         <Stat icon={Webhook} label={t("kpi_success")} value={String(w.success)} tone="#0F9A6E" />
         <Stat
@@ -74,15 +76,6 @@ export default function StripeHealthPanel({ overview }: { overview: StripeOvervi
           tone={w.failureRate > 0 ? "#D33636" : "#0F9A6E"}
           sub={w.skipped > 0 ? t("kpi_skipped", { count: w.skipped }) : t("kpi_failure_rate_sub_ok")}
         />
-      </div>
-
-      {/* Billing + subscriptions KPI grid (30d / live) */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-6">
-        <Stat icon={ShieldAlert} label={t("kpi_disputes")} value={String(overview.billing30d.disputes)} tone={overview.billing30d.disputes > 0 ? "#B4740B" : "#1a2e4a"} />
-        <Stat icon={ShieldAlert} label={t("kpi_fraud")} value={String(overview.billing30d.fraud)} tone={overview.billing30d.fraud > 0 ? "#D33636" : "#1a2e4a"} />
-        <Stat icon={Receipt} label={t("kpi_refunds")} value={String(overview.billing30d.refunds)} tone="#1a2e4a" />
-        <Stat icon={Ban} label={t("kpi_cancellations")} value={String(overview.billing30d.cancellations)} tone="#1a2e4a" />
-        <Stat icon={DollarSign} label={t("kpi_mrr")} value={`$${overview.subscriptions.mrr}`} sub={t("kpi_active_pro", { count: overview.subscriptions.activePro })} tone="#00A8CC" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

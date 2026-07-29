@@ -20,6 +20,6 @@ export async function GET() {
     const result = await referralService.getStatus(session.user.id)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { route: "/api/referrals" })
   }
 }

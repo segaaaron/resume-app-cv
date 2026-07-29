@@ -372,6 +372,36 @@ describe("AIService", () => {
       expect(result.matchedKeywords.length + result.missingKeywords.length).toBeLessThanOrEqual(12)
     })
 
+    it("matches a skill listed past the 12th — the full skills list feeds the ATS haystack", async () => {
+      // Reported bug: a skill the user already added but sitting past the 12 that
+      // buildResumeContext keeps for the LLM prompt was invisible to the exact
+      // matcher and came back as "missing". buildAtsHaystack appends ALL skills, so
+      // "Kubernetes" (15th) must now match. (buildResumeContext is mocked to a fixed
+      // string with no skills, so this asserts the haystack augmentation directly.)
+      const sectionData = {
+        personalDetails: { jobTitle: "Developer" },
+        summary: "Experienced developer",
+        workExperience: [{ jobTitle: "Developer" }],
+        skills: [
+          ...Array.from({ length: 12 }, (_, i) => ({ name: `Filler${i + 1}` })),
+          { name: "Redis" },
+          { name: "GraphQL" },
+          { name: "Kubernetes" }, // 15th — past the 12-cap
+        ],
+        education: [{ degree: "BS" }],
+      }
+      const aiClient = makeMockAIClient(JSON.stringify(validExtraction)) // requires Developer + Kubernetes
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.atsScore("user-1", {
+        jobDescription: "We need a Developer with Kubernetes experience.",
+        sectionData,
+      }, "PRO")
+
+      expect(result.matchedKeywords).toContain("Kubernetes")
+      expect(result.missingKeywords).not.toContain("Kubernetes")
+    })
+
     it("role-only mode: scores from a job TITLE and flags the result as inferred", async () => {
       // No jobDescription — just roleTitle. The LLM infers standard requirements,
       // the deterministic engine scores them, and the result is flagged approximate.

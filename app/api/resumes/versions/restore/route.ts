@@ -15,6 +15,6 @@ export async function POST(req: Request) {
     const result = await resumeService.restoreVersion(authResult.userId, versionId)
     return NextResponse.json({ success: true, resumeId: result.resumeId })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

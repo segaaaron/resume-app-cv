@@ -19,6 +19,6 @@ export async function GET(req: Request) {
       headers: { "Cache-Control": "private, max-age=5, stale-while-revalidate=30" },
     })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

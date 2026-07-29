@@ -7,7 +7,7 @@ import { coverLetterPatchSchema } from "@/lib/services/cover-letter/CoverLetterS
 
 type Params = { params: Promise<{ id: string }> }
 
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -16,7 +16,7 @@ export async function GET(_req: Request, { params }: Params) {
     const letter = await coverLetterService.get(session.user.id, id)
     return NextResponse.json(letter)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -42,7 +42,7 @@ export async function PATCH(req: Request, { params }: Params) {
     await coverLetterService.update(session.user.id, id, parsed.data)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -56,6 +56,6 @@ export async function DELETE(req: Request, { params }: Params) {
     await coverLetterService.delete(session.user.id, id)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

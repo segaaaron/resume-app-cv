@@ -66,6 +66,6 @@ export async function POST(req: Request) {
     const result = await stripeCheckoutService.createSession(authResult.userId, parsed.data.plan, parsed.data.locale ?? "es")
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

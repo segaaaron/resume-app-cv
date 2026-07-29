@@ -25,6 +25,6 @@ export async function GET() {
     if (err instanceof AppError && err.status === 429) {
       return NextResponse.json({ error: "Solo puedes exportar tus datos una vez por hora." }, { status: 429 })
     }
-    return handleError(err)
+    return handleError(err, { route: "/api/user/data-export" })
   }
 }

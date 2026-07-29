@@ -30,6 +30,6 @@ export async function POST(req: Request) {
     )
     return NextResponse.json({ url })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

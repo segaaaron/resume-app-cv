@@ -29,7 +29,7 @@ export async function PATCH(req: Request, { params }: Params) {
     await applicationService.update(session.user.id, id, parsed.data)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -43,6 +43,6 @@ export async function DELETE(req: Request, { params }: Params) {
     await applicationService.delete(session.user.id, id)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

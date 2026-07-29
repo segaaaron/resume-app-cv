@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import Link from "next/link"
+import { reportClientError } from "@/lib/client-error-reporter"
 
 export default function GlobalError({
   error,
@@ -11,6 +12,8 @@ export default function GlobalError({
   reset: () => void
 }) {
   useEffect(() => {
+    // Surface the render crash in the admin Service Errors dashboard.
+    reportClientError(error.message, error.stack, "react")
   }, [error])
 
   return (

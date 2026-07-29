@@ -27,6 +27,6 @@ export async function POST(req: NextRequest) {
     if (err instanceof AppError && err.code === "blocked") {
       return NextResponse.json({ blocked: true, blockedUntil: err.extra?.blockedUntil }, { status: 429 })
     }
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

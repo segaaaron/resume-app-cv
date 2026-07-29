@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
+import { reportClientError } from "@/lib/client-error-reporter"
 
 export default function LocaleError({
   error,
@@ -12,6 +13,8 @@ export default function LocaleError({
   reset: () => void
 }) {
   useEffect(() => {
+    // Surface the render crash in the admin Service Errors dashboard.
+    reportClientError(error.message, error.stack, "react")
   }, [error])
 
   const t = useTranslations("common")

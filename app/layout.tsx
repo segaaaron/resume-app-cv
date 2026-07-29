@@ -4,6 +4,7 @@ import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import SessionProvider from "@/components/providers/SessionProvider"
 import ClarityScript from "@/components/analytics/ClarityScript"
+import ClientErrorReporter from "@/components/ClientErrorReporter"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -49,6 +50,7 @@ export default async function RootLayout({
       style={{ fontFamily: "var(--font-jakarta), sans-serif" }}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>
+        <ClientErrorReporter />
         <SessionProvider>
           {children}
           <Toaster position="top-center" />

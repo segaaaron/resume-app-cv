@@ -183,6 +183,31 @@ export class CronService {
     return { deleted: totalDeleted }
   }
 
+  /** Retention for the durable PayPal webhook observability log (admin "PayPal Health"). 90-day window, mirror of purgeStripeWebhookLogs. */
+  async purgePaypalWebhookLogs(): Promise<PurgeStripeEventsResult> {
+    const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90 days ago
+    const BATCH_SIZE = 500
+    let totalDeleted = 0
+
+    while (true) {
+      const rows = await db.paypalWebhookLog.findMany({
+        where: { createdAt: { lt: cutoff } },
+        select: { id: true },
+        take: BATCH_SIZE,
+      })
+      if (rows.length === 0) break
+      const { count } = await db.paypalWebhookLog.deleteMany({
+        where: { id: { in: rows.map((r) => r.id) } },
+      })
+      totalDeleted += count
+      if (rows.length < BATCH_SIZE) break
+      await new Promise((r) => setTimeout(r, 100))
+    }
+
+    this.logger.info(`[CronService] purgePaypalWebhookLogs: deleted=${totalDeleted}`)
+    return { deleted: totalDeleted }
+  }
+
   /** Purge processed PayPal webhook dedup rows older than 90 days (mirror of purgeStripeEvents). */
   async purgePaypalEvents(): Promise<PurgeStripeEventsResult> {
     const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90 days ago

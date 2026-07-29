@@ -28,6 +28,6 @@ export async function POST(req: Request) {
     const result = await registrationService.requestOtp({ ...parsed.data, ageConsent: parsed.data.ageConsent as true, ipAddress: ip, locale: localeFromRequest(req) })
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

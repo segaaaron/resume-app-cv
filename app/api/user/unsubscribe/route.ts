@@ -1,5 +1,8 @@
 import { userService } from "@/lib/controllers/user-deps"
 import { AppError } from "@/lib/services/auth/AppError"
+import { createLogger } from "@/lib/logger"
+
+const logger = createLogger("unsubscribe")
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
@@ -16,6 +19,9 @@ export async function GET(req: Request) {
     if (err instanceof AppError && err.status === 400) {
       return new Response("Link inválido o expirado.", { status: 400, headers: { "Content-Type": "text/plain" } })
     }
+    // Log so the failure lands in the admin Service Errors dashboard (this route
+    // returns text/plain, so it can't go through handleError's JSON path).
+    logger.error("unsubscribe: email unsubscribe failed", { userId, route: "/api/user/unsubscribe" }, err instanceof Error ? err : undefined)
     return new Response("Error interno.", { status: 500, headers: { "Content-Type": "text/plain" } })
   }
 

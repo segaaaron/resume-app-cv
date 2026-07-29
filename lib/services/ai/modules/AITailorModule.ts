@@ -16,6 +16,32 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2 } from "../shared/ai-types"
 
+// Filler words in requirement lines the model sometimes returns as "skills".
+// Dropped before token-overlap so a phrase's real signal ("gcd", "async/await")
+// decides coverage, not connective words shared with every CV.
+const SKILL_STOPWORDS = new Set([
+  "of", "and", "or", "the", "a", "an", "to", "in", "on", "with", "for", "using",
+  "strong", "experience", "knowledge", "concepts", "concept", "ability", "abilities",
+  "understanding", "familiarity", "proficiency", "proficient", "skills", "skill",
+  "including", "related", "etc", "maintaining", "publishing",
+])
+
+/**
+ * True when the CV already covers a required skill. Plain substring first (an atomic
+ * skill like "kubernetes"); then token overlap for the case the model hands back a
+ * whole requirement line — if ≥60% of its significant words already appear in the CV
+ * it is covered, so it is not re-suggested as "missing".
+ */
+function resumeCoversSkill(skill: string, resumeLower: string): boolean {
+  const sl = skill.toLowerCase().trim()
+  if (!sl) return true
+  if (resumeLower.includes(sl)) return true
+  const tokens = sl.split(/[^a-z0-9/+#.]+/).filter((w) => w.length > 2 && !SKILL_STOPWORDS.has(w))
+  if (tokens.length === 0) return false
+  const present = tokens.filter((w) => resumeLower.includes(w)).length
+  return present / tokens.length >= 0.6
+}
+
 export class AITailorModule {
   constructor(
     private readonly aiClient: IAIClient,
@@ -97,7 +123,7 @@ Rules:
 - For each changed bullet: use • prefix, CAR method. If the bullet would need a figure the CV does not state, omit the bullet rather than invent one or leave a bracket
 - Human voice (avoid AI-detection): vary sentence length/structure across bullets, natural not press-release tone. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source
 - NEVER add new bullets that don't exist in the original — only replace existing ones by index
-- missingSkills: skills required by job not present in CV (max 5)
+- missingSkills: skills required by job not present in CV (max 5). Each MUST be a SHORT atomic skill or keyword (1-3 words, e.g. "GCD", "async/await", "App Store", "Kubernetes") — NEVER a full requirement sentence like "Knowledge of GCD, async/await, and concurrency concepts"
 - If all bullets and summary are already well-optimized: return summary null, empty changedBullets for all experiences`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información presente en el CV DEL CANDIDATO. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el CV.
@@ -139,7 +165,7 @@ Reglas:
 - Para cada bullet cambiado: usar prefijo •, método CAR. Si el bullet necesitaría una cifra que el CV no declara, omite el bullet en vez de inventarla o dejar un corchete
 - Voz humana (evita detección de IA): varía el largo/estructura de las frases entre bullets, tono natural no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantén cada reescritura anclada a un dato concreto ya presente en el source
 - NUNCA agregar bullets nuevos que no existen en el original — solo reemplazar existentes por índice
-- missingSkills: habilidades requeridas por la oferta no presentes en el CV (máximo 5)
+- missingSkills: habilidades requeridas por la oferta no presentes en el CV (máximo 5). Cada una DEBE ser una habilidad o keyword CORTA y atómica (1-3 palabras, ej.: "GCD", "async/await", "App Store", "Kubernetes") — NUNCA una frase de requisito completa como "Conocimiento de GCD, async/await y conceptos de concurrencia"
 - Si todos los bullets y el resumen ya están bien optimizados: devolver summary null, changedBullets vacíos para todas las experiencias`
 
     const response = await this.aiClient.chat({
@@ -225,11 +251,14 @@ Reglas:
         const sl = s.toLowerCase().trim()
         // A skill is "missing" only if the JOB requires it (anti-invention: the
         // name must appear in the JD, never fabricated) AND the CV does not
-        // already contain it anywhere. The old `|| resumeLower.includes(sl)`
-        // re-admitted skills the candidate already lists, so freshly-added /
-        // pre-existing skills kept showing up as "missing" — the exact bug the
-        // user reported. Presence in the CV now EXCLUDES a skill from the list.
-        return jdLower.includes(sl) && !resumeLower.includes(sl)
+        // already cover it. `resumeCoversSkill` (token overlap, not a plain
+        // substring) is what fixes the reported bug: the model sometimes returns a
+        // whole JD requirement line ("Knowledge of GCD, async/await, and
+        // concurrency concepts") instead of an atomic skill, so `resumeLower
+        // .includes(phrase)` never matched the user's per-skill chips ("GCD",
+        // "async/await") and the skill resurfaced as "missing" even after they
+        // added it. Coverage now EXCLUDES a skill already demonstrated in the CV.
+        return jdLower.includes(sl) && !resumeCoversSkill(sl, resumeLower)
       })
       .slice(0, 5)
 

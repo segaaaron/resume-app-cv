@@ -325,6 +325,29 @@ model StripeWebhookLog {
   @@index([createdAt])
 }
 
+/// Durable observability log for every PayPal webhook the app receives — exact
+/// mirror of StripeWebhookLog. Separate from PaypalEvent (idempotency/dedup): this
+/// records BOTH successes and failures with type/status/error/latency for the admin
+/// "PayPal Health" panel. Populated even while PayPal is disabled-in-prod, so the
+/// panel is ready the moment the gateway is switched on.
+model PaypalWebhookLog {
+  id            String        @id @default(cuid())
+  paypalEventId String        @unique // WH-xxx — upsert increments attempts on PayPal retries
+  type          String // event_type (e.g. BILLING.SUBSCRIPTION.CANCELLED)
+  status        WebhookStatus
+  errorMessage  String?       @db.Text
+  latencyMs     Int?
+  attempts      Int           @default(1)
+  objectId      String? // resource.id (subscription/capture id) — NOT the full payload (PII)
+  userId        String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([type, createdAt])
+  @@index([status, createdAt])
+  @@index([createdAt])
+}
+
 model AuditLog {
   id        String      @id @default(cuid())
   userId    String

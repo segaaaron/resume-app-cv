@@ -10,7 +10,7 @@ export async function DELETE(req: Request) {
     await applicationService.deleteAll(authResult.userId)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
       headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=60" },
     })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -53,6 +53,6 @@ export async function POST(req: Request) {
     const app = await applicationService.create(authResult.userId, parsed.data)
     return NextResponse.json(app, { status: 201 })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

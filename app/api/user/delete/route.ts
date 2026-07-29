@@ -15,6 +15,6 @@ export async function DELETE(req: Request) {
     const result = await userService.deleteAccount(session.user.id)
     return NextResponse.json(result, { status: 200 })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

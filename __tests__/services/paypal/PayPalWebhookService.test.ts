@@ -23,9 +23,12 @@ const txState: {
   updateSpy: ReturnType<typeof vi.fn>
 } = { claimThrows: false, user: { id: "u1", isManaged: false }, updateSpy: vi.fn() }
 
+const webhookLogUpsert = vi.fn().mockResolvedValue({})
+
 vi.mock("@/lib/db", () => ({
   db: {
     paypalEvent: { create: vi.fn().mockResolvedValue({}) },
+    paypalWebhookLog: { upsert: (...a: unknown[]) => webhookLogUpsert(...a) },
     $transaction: vi.fn(async (cb: (tx: unknown) => unknown) => {
       const tx = {
         paypalEvent: {
@@ -402,5 +405,45 @@ describe("PayPalWebhookService — the four paid plans", () => {
       svc.handleEvent(bodyFor("WH-MTX-PENDING", "BILLING.SUBSCRIPTION.ACTIVATED", { id: "I-SUB1", custom_id: "u1", plan_id: "P-M" }), headers),
     ).rejects.toThrow()
     expect(txState.updateSpy).not.toHaveBeenCalled()
+  })
+})
+
+describe("PayPalWebhookService — durable observability log (PayPal Health)", () => {
+  it("records SUCCESS after a webhook is provisioned", async () => {
+    const getSub = vi.fn().mockResolvedValue({ status: "ACTIVE", billing_info: { next_billing_time: "2027-01-01T00:00:00Z" } })
+    const svc = new PayPalWebhookService(makeClient(getSub), logger)
+    await svc.handleEvent(bodyFor("WH-LOG-OK", "BILLING.SUBSCRIPTION.ACTIVATED", { id: "I-SUB1", custom_id: "u1", plan_id: "P-A" }), headers)
+    expect(webhookLogUpsert).toHaveBeenCalledTimes(1)
+    const arg = webhookLogUpsert.mock.calls[0][0]
+    expect(arg.where.paypalEventId).toBe("WH-LOG-OK")
+    expect(arg.create.status).toBe("SUCCESS")
+    expect(arg.create.type).toBe("BILLING.SUBSCRIPTION.ACTIVATED")
+  })
+
+  it("records SKIPPED for an intentionally-ignored event type", async () => {
+    const svc = new PayPalWebhookService(makeClient(vi.fn()), logger)
+    await svc.handleEvent(bodyFor("WH-LOG-SKIP", "SOME.UNHANDLED.EVENT", { id: "X" }), headers)
+    expect(webhookLogUpsert).toHaveBeenCalledTimes(1)
+    expect(webhookLogUpsert.mock.calls[0][0].create.status).toBe("SKIPPED")
+  })
+
+  it("records FAILED (and re-throws) when the handler errors", async () => {
+    const getSub = vi.fn().mockRejectedValue(new Error("paypal down"))
+    const svc = new PayPalWebhookService(makeClient(getSub), logger)
+    await expect(
+      svc.handleEvent(bodyFor("WH-LOG-FAIL", "BILLING.SUBSCRIPTION.ACTIVATED", { id: "I-SUB1", custom_id: "u1", plan_id: "P-A" }), headers),
+    ).rejects.toThrow()
+    expect(webhookLogUpsert).toHaveBeenCalledTimes(1)
+    expect(webhookLogUpsert.mock.calls[0][0].create.status).toBe("FAILED")
+    expect(webhookLogUpsert.mock.calls[0][0].create.errorMessage).toBeTruthy()
+  })
+
+  it("never lets a log-write failure break the money flow", async () => {
+    webhookLogUpsert.mockRejectedValueOnce(new Error("db down"))
+    const getSub = vi.fn().mockResolvedValue({ status: "ACTIVE", billing_info: { next_billing_time: "2027-01-01T00:00:00Z" } })
+    const svc = new PayPalWebhookService(makeClient(getSub), logger)
+    await expect(
+      svc.handleEvent(bodyFor("WH-LOG-SAFE", "BILLING.SUBSCRIPTION.ACTIVATED", { id: "I-SUB1", custom_id: "u1", plan_id: "P-A" }), headers),
+    ).resolves.toBeUndefined()
   })
 })

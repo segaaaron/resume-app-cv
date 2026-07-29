@@ -15,7 +15,7 @@ export async function GET(req: Request, { params }: Params) {
     const resume = await resumeService.get(authResult.userId, id)
     return NextResponse.json(resume)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -41,7 +41,7 @@ export async function PATCH(req: Request, { params }: Params) {
     await resumeService.update(authResult.userId, id, parsed.data)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -58,6 +58,6 @@ export async function DELETE(req: Request, { params }: Params) {
     if (err instanceof AppError && err.status === 404) {
       return NextResponse.json({ success: true })
     }
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

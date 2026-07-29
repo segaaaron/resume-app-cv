@@ -15,6 +15,6 @@ export async function GET(req: Request) {
     const stats = await resumeService.getViewStats(authResult.userId, resumeId)
     return NextResponse.json(stats)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

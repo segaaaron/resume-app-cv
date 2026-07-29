@@ -34,7 +34,7 @@ export async function GET(req: Request, { params }: Params) {
   try {
     letter = await coverLetterService.getPdfMeta(authResult.userId, id)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
   const etag = `"${letter.id}-${letter.updatedAt.getTime()}"`
   if (req.headers.get("if-none-match") === etag) {
@@ -77,6 +77,6 @@ export async function GET(req: Request, { params }: Params) {
     if (managedClaimed) {
       await refundManagedDownload(authResult.userId, { coverLetterId: id })
     }
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

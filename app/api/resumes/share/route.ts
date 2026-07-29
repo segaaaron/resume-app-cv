@@ -25,6 +25,6 @@ export async function POST(req: Request) {
     const result = await resumeService.toggleShare(authResult.userId, resumeId)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

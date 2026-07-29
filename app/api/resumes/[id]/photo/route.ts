@@ -59,7 +59,7 @@ export async function POST(req: Request, { params }: Params) {
     const result = await resumeService.updatePhoto(authResult.userId, id, base64)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -73,6 +73,6 @@ export async function DELETE(req: Request, { params }: Params) {
     await resumeService.deletePhoto(authResult.userId, id)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

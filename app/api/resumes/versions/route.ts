@@ -20,7 +20,7 @@ export async function GET(req: Request) {
     const versions = await resumeService.getVersions(authResult.userId, resumeId)
     return NextResponse.json({ versions })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     )
     return NextResponse.json({ version })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -72,6 +72,6 @@ export async function DELETE(req: Request) {
     await resumeService.deleteVersion(authResult.userId, id)
     return NextResponse.json({ success: true })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

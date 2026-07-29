@@ -17,6 +17,6 @@ export async function PATCH(req: Request) {
     const result = await userService.updateProfile(authResult.userId, body as { name: string })
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

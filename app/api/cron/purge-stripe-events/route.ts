@@ -31,13 +31,19 @@ export async function GET(req: Request) {
     const result = await recordCronRun("purge-stripe-events", async () => {
       const events = await cronService.purgeStripeEvents()
       const webhookLogs = await cronService.purgeStripeWebhookLogs()
-      // PayPal dedup rows share this job's schedule — no separate cron needed.
+      // PayPal dedup rows + observability log share this job's schedule — no separate cron needed.
       const paypalEvents = await cronService.purgePaypalEvents()
-      return { deleted: events.deleted, webhookLogsDeleted: webhookLogs.deleted, paypalEventsDeleted: paypalEvents.deleted }
+      const paypalWebhookLogs = await cronService.purgePaypalWebhookLogs()
+      return {
+        deleted: events.deleted,
+        webhookLogsDeleted: webhookLogs.deleted,
+        paypalEventsDeleted: paypalEvents.deleted,
+        paypalWebhookLogsDeleted: paypalWebhookLogs.deleted,
+      }
     })
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   } finally {
     try {
       await db.$queryRaw`SELECT pg_advisory_unlock(${ADVISORY_LOCK_KEY})`

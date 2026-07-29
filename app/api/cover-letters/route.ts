@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       headers: { "Cache-Control": "private, max-age=10, stale-while-revalidate=60" },
     })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
 
@@ -31,6 +31,6 @@ export async function POST(req: Request) {
     const letter = await coverLetterService.create(authResult.userId, title, authResult.user.plan)
     return NextResponse.json(letter, { status: 201 })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

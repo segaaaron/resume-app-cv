@@ -91,7 +91,7 @@ export default function AtsEngineMatrix({ simulation }: { simulation: EngineSimu
   const { engines, cleanCount, total } = simulation
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 to-white p-3.5">
+    <div className="@container rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50/90 to-white p-3.5">
       <div className="flex items-center justify-between gap-2 mb-2.5">
         <div>
           <p className="text-[10px] font-black tracking-widest uppercase text-[#1a2e4a] flex items-center gap-1.5">
@@ -117,7 +117,11 @@ export default function AtsEngineMatrix({ simulation }: { simulation: EngineSimu
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      {/* Container-query grid: adapts to the PANEL width, not the viewport. In the
+          narrow editor sidebar (~340px) this stays a single roomy column instead of
+          the 3 cramped columns viewport breakpoints (lg:) forced on wide desktops;
+          the wide public checker still gets 2–3 columns. */}
+      <div className="grid grid-cols-1 @md:grid-cols-2 @2xl:grid-cols-3 gap-2">
         {engines.map((e) => (
           <EngineCard key={e.engine} result={e} />
         ))}

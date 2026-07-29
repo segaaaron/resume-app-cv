@@ -273,6 +273,29 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
         </Link>
       </div>
 
+      {/* PayPal health entry point */}
+      <div className="dash-card-in mb-7" style={{ animationDelay: "119ms" }}>
+        <Link
+          href={`/${locale}/dashboard/admin/paypal`}
+          className="group flex items-center justify-between gap-4 px-5 py-4 rounded-[12px] border border-[rgba(0,48,135,0.18)] bg-gradient-to-br from-[#e9f0fb] via-white to-[#d6e4f7] shadow-[0_4px_16px_rgba(15,25,45,0.04)] hover:shadow-[0_8px_28px_rgba(0,48,135,0.16)] hover:-translate-y-px transition-all duration-200 no-underline"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#003087] to-[#009CDE] flex items-center justify-center text-white shadow-[0_4px_16px_rgba(0,48,135,0.3)]">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-[14px] font-bold text-[#1a2e4a] tracking-[-0.01em]">
+                {t("paypal_entry_title")}
+              </div>
+              <div className="text-[11.5px] text-[#6B7A8C] mt-px">
+                {t("paypal_entry_subtitle")}
+              </div>
+            </div>
+          </div>
+          <ArrowRight className="w-4 h-4 text-[#003087] transition-transform duration-200 group-hover:translate-x-0.5" />
+        </Link>
+      </div>
+
       {/* AI Usage Panel */}
       <AIUsagePanel />
 

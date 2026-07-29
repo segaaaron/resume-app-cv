@@ -14,6 +14,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { parseBullets } from "../shared/bullets"
+import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
@@ -240,7 +241,10 @@ Reglas:
       jobTitle: extraction.jobTitle,
       mustHaves: extraction.mustHaves,
     }
-    let match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText, undefined, recentTitles)
+    // Match against a haystack carrying ALL listed skills, not the 12 the LLM prompt
+    // caps — see buildAtsHaystack. resumeText itself keeps feeding the LLM prompt above.
+    const atsHaystack = buildAtsHaystack(data, resumeText)
+    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles)
 
     // ── Semantic recall pass (embeddings) ──────────────────────────────────────
     // The exact matcher misses a required skill the CV phrases differently
@@ -261,7 +265,7 @@ Reglas:
         (texts) => this.aiClient.embed(texts),
       )
       if (semanticMatches.size > 0) {
-        match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText, semanticMatches, recentTitles)
+        match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles)
       }
     }
 
@@ -321,7 +325,9 @@ Reglas:
     const sections = buildSectionPresence(data)
     const evidenceText = buildEvidenceText(data)
     // Recency weight here too, so the instant re-score stays identical to atsScore.
-    const match = computeATSMatch(keywords, resumeText, cvTitles, sections, evidenceText, undefined, buildRecentTitles(data))
+    // Same full-skills haystack as atsScore so a skill past the 12th is not falsely "missing".
+    const atsHaystack = buildAtsHaystack(data, resumeText)
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, buildRecentTitles(data))
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
@@ -550,6 +556,20 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         return { ...item, suggestion: undefined }
       }
 
+      // Cosmetic reword: a near-copy that only swaps synonyms ("improve"→"strengthen",
+      // "helped reduce"→"reduced") adds nothing but a diff that reads the same on both
+      // sides — the exact-equality guard above misses it because the words differ.
+      // isCosmeticReword is built to spare genuine spelling fixes (small in-word edits)
+      // and real enrichments (added keyword, nothing removed), so this only drops the
+      // no-value rewords the user was complaining about.
+      if (currentValue && isCosmeticReword(currentValue, cleanedPreview)) {
+        this.logger.warn("[AIService.reviewCV] dropped cosmetic reword suggestion", {
+          field,
+          previewSample: cleanedPreview.slice(0, 120),
+        })
+        return { ...item, suggestion: undefined }
+      }
+
       // Fail-safe: if preview seems to have invented data not present in the
       // resume context, drop the suggestion and keep only the advisory text.
       if (detectHallucination(cleanedPreview, resumeContext)) {
@@ -641,6 +661,22 @@ function buildCVTitles(data: Record<string, unknown>): string {
   const pd = data.personalDetails as { jobTitle?: string } | undefined
   const work = (data.workExperience as Array<{ jobTitle?: string }> | undefined) ?? []
   return [pd?.jobTitle, ...work.map((w) => w?.jobTitle)].filter(Boolean).join(" ")
+}
+
+/**
+ * The presence haystack for the exact keyword matcher. buildResumeContext caps the
+ * Skills list at 12 (a token budget for the LLM prompt), but the matcher must see
+ * EVERY listed skill — otherwise a skill past the 12th is invisible to termPresent
+ * and gets reported as "missing" though the user already has it (the reported bug:
+ * "tenía skills ya aplicadas y igual me lo sugirió"). Appending the full, deduped
+ * skill list is free here: this string feeds computeATSMatch only, never the LLM.
+ */
+function buildAtsHaystack(data: Record<string, unknown>, resumeText: string): string {
+  const names = ((data.skills as Array<{ name?: string }> | undefined) ?? [])
+    .map((s) => (s?.name ?? "").trim())
+    .filter(Boolean)
+  if (names.length === 0) return resumeText
+  return `${resumeText}\nSkills: ${[...new Set(names)].join(", ")}`
 }
 
 /** Current value of a suggestion's target field, so a no-op "improvement"

@@ -91,6 +91,6 @@ export async function POST(req: Request, { params }: Params) {
 
     return NextResponse.json(copy, { status: 201 })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

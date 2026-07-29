@@ -7,6 +7,17 @@ import { createLogger } from "@/lib/logger"
 
 const logger = createLogger("controller")
 
+/**
+ * Map a request path to a service family for the Service Errors dashboard:
+ * "/api/ai/tailor-cv" → "ai", "/api/stripe/webhook" → "stripe", "/api/user/x" → "user".
+ * Falls back to the first segment (or "app") for non-/api routes.
+ */
+function serviceFromRoute(route: string): string {
+  const segs = route.split("/").filter(Boolean)
+  if (segs[0] === "api" && segs[1]) return segs[1]
+  return segs[0] ?? "app"
+}
+
 export async function requireAuth(req: Request): Promise<{ userId: string } | NextResponse> {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -14,12 +25,41 @@ export async function requireAuth(req: Request): Promise<{ userId: string } | Ne
   return { userId: session.user.id }
 }
 
-export function handleError(err: unknown, ctx?: { userId?: string; route?: string }): NextResponse {
+export function handleError(
+  err: unknown,
+  ctx?: { userId?: string; userEmail?: string; route?: string; req?: Request },
+): NextResponse {
   if (err instanceof AppError) {
     return NextResponse.json({ error: err.code, ...err.extra }, { status: err.status })
   }
   // Only real (unhandled) failures reach here — captured into ErrorLog via logger.error.
-  logger.error("unhandled error", { status: 500, ...(ctx?.userId ? { userId: ctx.userId } : {}), ...(ctx?.route ? { route: ctx.route } : {}) }, err)
+  //
+  // The message MUST be the actual error text, not a fixed "unhandled error": that
+  // constant collapsed every 500 in the app into ONE unsearchable fingerprint with
+  // no endpoint. The Service Errors dashboard groups by (source|endpoint|message) and
+  // searches message/userEmail/userId — so a real message + endpoint + who-hit-it is
+  // what makes a failure visible and attributable instead of "0 errors — all clear".
+  const message = err instanceof Error && err.message ? err.message : "unhandled error"
+  let route = ctx?.route
+  if (!route && ctx?.req) {
+    try { route = new URL(ctx.req.url).pathname } catch { /* url unpar. — leave route unset */ }
+  }
+  // Service label for the dashboard. Without this every route error groups under the
+  // generic logger name "controller"; deriving the family from the route (ai / stripe /
+  // paypal / user / cron …) is what makes "which service failed" answerable and lights
+  // up the per-service colour + filter in the Service Errors panel.
+  const source = route ? serviceFromRoute(route) : undefined
+  logger.error(
+    message,
+    {
+      status: 500,
+      ...(source ? { source } : {}),
+      ...(route ? { route } : {}),
+      ...(ctx?.userId ? { userId: ctx.userId } : {}),
+      ...(ctx?.userEmail ? { userEmail: ctx.userEmail } : {}),
+    },
+    err,
+  )
   return NextResponse.json({ error: "server_error" }, { status: 500 })
 }
 
@@ -40,6 +80,7 @@ interface RequireUserSuccess {
   userId: string
   user: {
     id: string
+    email: string
     plan: string
     subscriptionStatus: string | null
     subscriptionEndsAt: Date | null
@@ -74,7 +115,7 @@ export async function requireUser(
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, managedDownloadLimit: true, managedDownloadsUsed: true },
+    select: { id: true, email: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, managedDownloadLimit: true, managedDownloadsUsed: true },
   })
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

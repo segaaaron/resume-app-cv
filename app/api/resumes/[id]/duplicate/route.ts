@@ -13,6 +13,6 @@ export async function POST(req: Request, { params }: Params) {
     const copy = await resumeService.duplicate(authResult.userId, id)
     return NextResponse.json(copy, { status: 201 })
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

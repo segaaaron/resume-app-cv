@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ArrowRight } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import AtsEngineMatrix from "./AtsEngineMatrix"
 import AtsSafeDownload from "./AtsSafeDownload"
@@ -638,16 +638,7 @@ export default function ATSScorePanel() {
                     </ul>
                   </div>
                 )}
-                <div className="flex items-center justify-between gap-2 mt-2">
-                  <p className="text-[10px] text-slate-500 leading-relaxed flex-1">{t("content_quality_hint")}</p>
-                  <button
-                    type="button"
-                    onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "content" }))}
-                    className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-violet-700 bg-violet-100 hover:bg-violet-200 border border-violet-200 rounded-full px-2.5 py-0.5 transition-all"
-                  >
-                    {t("content_quality_action")} <ArrowRight className="h-2.5 w-2.5" />
-                  </button>
-                </div>
+                <p className="text-[10px] text-slate-500 leading-relaxed mt-2">{t("content_quality_hint")}</p>
               </div>
             )}
 

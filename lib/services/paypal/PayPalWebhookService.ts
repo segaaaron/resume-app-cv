@@ -24,6 +24,13 @@ const TX_OPTS = { timeout: 15000, maxWait: 5000 }
 type TxClient = Parameters<Parameters<typeof db.$transaction>[0]>[0]
 type PrismaUniqueError = { code?: string }
 
+/** Human-readable reason for the durable webhook log (mirror of StripeWebhookService). */
+function errMessage(e: unknown): string {
+  if (e instanceof AppError) return e.code
+  if (e instanceof Error) return e.message
+  return String(e)
+}
+
 /** Claim an event id for idempotent processing. false = already processed. */
 async function claimEvent(tx: TxClient, eventId: string, extra?: Record<string, unknown>): Promise<boolean> {
   try {
@@ -48,6 +55,7 @@ export class PayPalWebhookService {
    * other error propagates so PayPal retries (idempotency guards duplicates).
    */
   async handleEvent(rawBody: string, headers: Headers): Promise<void> {
+    const start = Date.now()
     const cfg = paypalConfig()
     if (!cfg) throw new AppError("payments_not_configured", 503)
 
@@ -69,39 +77,94 @@ export class PayPalWebhookService {
     const action = interpretEvent(event, { monthly: cfg.planIdMonthly, annual: cfg.planIdAnnual })
     this.logger.info("PayPalWebhookService.handleEvent", { eventId, kind: action.kind })
 
-    if (action.kind === "ignore") {
-      // Still claim it so PayPal stops retrying an event we intentionally skip.
-      await db.paypalEvent.create({ data: { id: eventId } }).catch(() => undefined)
-      return
-    }
-
-    // Re-fetch authoritative subscription state before GRANTING or RENEWING PRO
-    // (rule 3). The GET is the source of truth for BOTH the status and the new
-    // period end — the recurring PAYMENT.SALE event does not carry the next
-    // billing date, so a renewal MUST read it here to advance subscriptionEndsAt.
-    if (action.kind === "provision-pro" || action.kind === "renew-pro") {
-      let sub
-      try {
-        sub = await this.client.getSubscription(action.subscriptionId)
-      } catch (e) {
-        // Re-fetch failed → let PayPal retry rather than act on an unverified payload.
-        this.logger.error("PayPalWebhookService: subscription re-fetch failed", { eventId }, e instanceof Error ? e : undefined)
-        throw new AppError("refetch_failed", 500)
+    // Durable observability side-write for the admin "PayPal Health" panel. Mirror of
+    // StripeWebhookService: SKIPPED for an intentionally-ignored type, SUCCESS once the
+    // action is applied, FAILED on any throw (re-thrown so PayPal retries). Best-effort —
+    // recordWebhook never throws into the money flow. Only reached AFTER signature
+    // verification, so a forged event is never logged.
+    try {
+      if (action.kind === "ignore") {
+        // Still claim it so PayPal stops retrying an event we intentionally skip.
+        await db.paypalEvent.create({ data: { id: eventId } }).catch(() => undefined)
+        await this.recordWebhook(event, "SKIPPED", Date.now() - start)
+        return
       }
-      if (sub.status !== "ACTIVE") {
-        // Not active yet (race with activation) or no longer active. Do NOT claim
-        // the event — throw so PayPal retries and the grant lands once the sub is
-        // ACTIVE. The reconciliation cron is the final backstop. Claiming here
-        // would silently kill the retry and lose the grant.
-        this.logger.info("PayPalWebhookService: subscription not ACTIVE on re-fetch", { eventId, status: sub.status })
-        throw new AppError("subscription_not_active", 409)
-      }
-      // Inject the authoritative next period end (advances endsAt on renewal).
-      action.endsAt = sub.billing_info?.next_billing_time
-    }
 
-    const userId = await this.applyAction(eventId, action)
-    if (userId) purgeUserCache(userId)
+      // Re-fetch authoritative subscription state before GRANTING or RENEWING PRO
+      // (rule 3). The GET is the source of truth for BOTH the status and the new
+      // period end — the recurring PAYMENT.SALE event does not carry the next
+      // billing date, so a renewal MUST read it here to advance subscriptionEndsAt.
+      if (action.kind === "provision-pro" || action.kind === "renew-pro") {
+        let sub
+        try {
+          sub = await this.client.getSubscription(action.subscriptionId)
+        } catch (e) {
+          // Re-fetch failed → let PayPal retry rather than act on an unverified payload.
+          this.logger.error("PayPalWebhookService: subscription re-fetch failed", { eventId }, e instanceof Error ? e : undefined)
+          throw new AppError("refetch_failed", 500)
+        }
+        if (sub.status !== "ACTIVE") {
+          // Not active yet (race with activation) or no longer active. Do NOT claim
+          // the event — throw so PayPal retries and the grant lands once the sub is
+          // ACTIVE. The reconciliation cron is the final backstop. Claiming here
+          // would silently kill the retry and lose the grant.
+          this.logger.info("PayPalWebhookService: subscription not ACTIVE on re-fetch", { eventId, status: sub.status })
+          throw new AppError("subscription_not_active", 409)
+        }
+        // Inject the authoritative next period end (advances endsAt on renewal).
+        action.endsAt = sub.billing_info?.next_billing_time
+      }
+
+      const userId = await this.applyAction(eventId, action)
+      if (userId) purgeUserCache(userId)
+      await this.recordWebhook(event, "SUCCESS", Date.now() - start, undefined, userId)
+    } catch (e) {
+      await this.recordWebhook(event, "FAILED", Date.now() - start, errMessage(e))
+      throw e
+    }
+  }
+
+  /**
+   * Durable observability side-write for the admin "PayPal Health" panel — mirror of
+   * StripeWebhookService.recordWebhook. Independent of the idempotency claim
+   * (PaypalEvent); on PayPal retries the same paypalEventId upserts and increments
+   * `attempts`. Fully best-effort: never throws into the webhook flow.
+   */
+  private async recordWebhook(
+    event: unknown,
+    status: "SUCCESS" | "FAILED" | "SKIPPED",
+    latencyMs: number,
+    errorMessage?: string,
+    userId?: string | null,
+  ): Promise<void> {
+    try {
+      const ev = event as { id?: unknown; event_type?: unknown; resource?: { id?: unknown } }
+      const eventId = typeof ev.id === "string" ? ev.id : null
+      if (!eventId) return
+      const type = typeof ev.event_type === "string" ? ev.event_type : "unknown"
+      const objectId = typeof ev.resource?.id === "string" ? ev.resource.id : null
+      const trimmedError = errorMessage ? errorMessage.slice(0, 2000) : null
+      await db.paypalWebhookLog.upsert({
+        where: { paypalEventId: eventId },
+        create: {
+          paypalEventId: eventId,
+          type,
+          status,
+          latencyMs,
+          objectId,
+          userId: userId ?? null,
+          errorMessage: trimmedError,
+        },
+        update: {
+          status,
+          latencyMs,
+          errorMessage: trimmedError,
+          attempts: { increment: 1 },
+        },
+      })
+    } catch (e) {
+      this.logger.error("PayPalWebhookService.recordWebhook: log write failed", { eventId: (event as { id?: string })?.id }, e instanceof Error ? e : undefined)
+    }
   }
 
   /** Apply the action atomically. Returns the affected userId (for cache purge). */

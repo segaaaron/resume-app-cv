@@ -45,6 +45,7 @@ const SOURCE_COLORS: { match: RegExp; color: string }[] = [
   { match: /stripe|billing/i, color: "#635BFF" },
   { match: /auth|session/i, color: "#0F9A6E" },
   { match: /cron/i, color: "#B4740B" },
+  { match: /client|browser/i, color: "#E4572E" },
 ]
 function sourceColor(source: string): string {
   return SOURCE_COLORS.find((s) => s.match.test(source))?.color ?? "#6B7A8C"

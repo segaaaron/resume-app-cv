@@ -17,6 +17,6 @@ export async function POST(req: NextRequest) {
     const result = await sessionChallengeService.issueChallenge(parsed.data.email, localeFromRequest(req))
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

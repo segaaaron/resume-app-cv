@@ -24,6 +24,6 @@ export async function POST(req: Request) {
     if (err instanceof AppError && err.code === "invalid_signature") {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
     }
-    return handleError(err)
+    return handleError(err, { req })
   }
 }

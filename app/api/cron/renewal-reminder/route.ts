@@ -21,6 +21,6 @@ export async function GET(req: Request) {
     if (err instanceof Error && err.message === "Email not configured") {
       return NextResponse.json({ error: "Email not configured" }, { status: 503 })
     }
-    return handleError(err)
+    return handleError(err, { req })
   }
 }
