@@ -24,13 +24,17 @@ function AtsSafeDocument({ text }: { text: string }) {
     blocks.push(
       <ul key={`u${key++}`} style={{ margin: "2pt 0 6pt", paddingLeft: "16pt" }}>
         {bullets.map((b, i) => (
-          <li key={i} style={{ marginBottom: "2pt" }}>{b}</li>
+          <li key={i} style={{ marginBottom: "3pt" }}>{b}</li>
         ))}
       </ul>,
     )
     bullets = []
   }
 
+  // The first plain line after the name is the contact line (email · phone · …).
+  // Styling it as a subheader and closing the header block with a rule reads as a
+  // real document — still plain text, one column, black on white, fully parseable.
+  let contactDone = false
   lines.forEach((raw, idx) => {
     const line = raw.trimEnd()
     if (!line.trim()) {
@@ -47,10 +51,16 @@ function AtsSafeDocument({ text }: { text: string }) {
     const letters = line.replace(/[^A-Za-zÀ-ÿ]/g, "")
     const isHeader = letters.length > 0 && line === line.toUpperCase() && line.length <= 40
     if (isName) {
-      blocks.push(<h1 key={`h${key++}`} style={{ fontSize: "18pt", fontWeight: 700, margin: "0 0 2pt" }}>{line}</h1>)
+      blocks.push(<h1 key={`h${key++}`} style={{ fontSize: "20pt", fontWeight: 700, letterSpacing: "-0.2pt", margin: "0 0 2pt" }}>{line}</h1>)
     } else if (isHeader) {
+      contactDone = true
       blocks.push(
-        <h2 key={`h${key++}`} style={{ fontSize: "11pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.5pt", margin: "12pt 0 4pt", paddingBottom: "2pt", borderBottom: "1px solid #000" }}>{line}</h2>,
+        <h2 key={`h${key++}`} style={{ fontSize: "10.5pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.9pt", margin: "15pt 0 5pt", paddingBottom: "2.5pt", borderBottom: "1px solid #000" }}>{line}</h2>,
+      )
+    } else if (!contactDone) {
+      contactDone = true
+      blocks.push(
+        <p key={`p${key++}`} style={{ fontSize: "9.5pt", color: "#222", margin: "0 0 10pt", paddingBottom: "9pt", borderBottom: "0.75pt solid #999" }}>{line}</p>,
       )
     } else {
       blocks.push(<p key={`p${key++}`} style={{ margin: "0 0 3pt" }}>{line}</p>)
@@ -113,11 +123,11 @@ export default async function AtsPrintPage({
           color: #000 !important;
           font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important;
           font-size: 10.5pt;
-          line-height: 1.4;
+          line-height: 1.48;
           -webkit-print-color-adjust: exact;
           print-color-adjust: exact;
         }
-        .ats-doc { max-width: 100%; margin: 0; padding: 16mm; box-sizing: border-box; }
+        .ats-doc { max-width: 100%; margin: 0; padding: 18mm 16mm; box-sizing: border-box; }
         .ats-doc h1, .ats-doc h2, .ats-doc p, .ats-doc ul, .ats-doc li { orphans: 3; widows: 3; }
         .ats-doc ul { page-break-inside: auto; }
         .ats-doc li, .ats-doc p { page-break-inside: avoid; }
