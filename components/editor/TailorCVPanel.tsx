@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
@@ -34,9 +34,15 @@ interface Props {
    * twice and paid for two LLM calls to get overlapping answers.
    */
   jobDescription: string
+  /**
+   * Missing keywords the ATS score already listed above. Tailor hides any
+   * missing-skill that duplicates one of these, so the user does not see the
+   * same "add this keyword" chip twice across the two panels.
+   */
+  atsMissingKeywords?: string[]
 }
 
-export default function TailorCVPanel({ jobDescription }: Props) {
+export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] }: Props) {
   const t = useTranslations("editor.tailor")
   const aiT = useTranslations("editor.ai")
   const locale = useLocale()
@@ -63,6 +69,19 @@ export default function TailorCVPanel({ jobDescription }: Props) {
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_tailor")
   const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
   const lastTailorKeyRef = useRef<string | null>(null)
+
+  // Missing skills the user can actually act on here: not already in their skills
+  // list, and not already shown as a missing keyword by the ATS score above. Used
+  // by BOTH the chip row and the "all applied" banner so they never disagree
+  // (a hidden skill must not keep the banner from ever firing).
+  const visibleMissingSkills = useMemo(() => {
+    if (!result) return []
+    const owned = new Set(((sectionData.skills ?? []) as SkillItem[]).map((s) => s.name.trim().toLowerCase()))
+    const atsShown = new Set(atsMissingKeywords.map((k) => k.trim().toLowerCase()))
+    return result.missingSkills.filter(
+      (s) => !owned.has(s.trim().toLowerCase()) && !atsShown.has(s.trim().toLowerCase()),
+    )
+  }, [result, sectionData.skills, atsMissingKeywords])
 
   async function handleTailor() {
     if (loading) return
@@ -265,10 +284,10 @@ export default function TailorCVPanel({ jobDescription }: Props) {
             const allChangedBullets = result.experiences.flatMap(e => e.changedBullets.map(b => ({ targetId: e.targetId, index: b.index })))
             const bulletsDone = allChangedBullets.every(({ targetId, index }) => isBulletApplied(targetId, index))
             const summaryDone = !result.summary || appliedSummary
-            const skillsDone = result.missingSkills.every((s) => addedSkills.has(s))
-            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || result.missingSkills?.length)
+            const skillsDone = visibleMissingSkills.every((s) => addedSkills.has(s))
+            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || visibleMissingSkills.length)
             const allDone = hasActionable && summaryDone && bulletsDone && skillsDone
-            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && !result.missingSkills?.length
+            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && visibleMissingSkills.length === 0
             return (
               <>
                 {allDone && !nothingToImprove ? (
@@ -377,10 +396,7 @@ export default function TailorCVPanel({ jobDescription }: Props) {
                   skill the user already added (this session, after the tailor
                   run) drops immediately instead of lingering as "missing". */}
               {(() => {
-                const owned = new Set(
-                  ((sectionData.skills ?? []) as SkillItem[]).map((s) => s.name.trim().toLowerCase()),
-                )
-                const visibleMissing = result.missingSkills.filter((s) => !owned.has(s.trim().toLowerCase()))
+                const visibleMissing = visibleMissingSkills
                 if (visibleMissing.length === 0) return null
                 return (
                 <div>

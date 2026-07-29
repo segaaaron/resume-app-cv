@@ -792,8 +792,10 @@ export default function ATSScorePanel() {
             <AtsSafeDownload />
 
             {/* Step 2. The score measures; this rewrites. Chained off the same
-                job description rather than asking for it a second time. */}
-            <TailorCVPanel jobDescription={input} />
+                job description rather than asking for it a second time.
+                atsMissingKeywords: the score already lists these above, so Tailor
+                hides any missing-skill that duplicates one — no "same thing twice". */}
+            <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} />
           </div>
         )}
 
