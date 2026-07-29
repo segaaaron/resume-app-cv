@@ -4,7 +4,7 @@ import { useState, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Wand2, Loader2, ChevronDown, ChevronUp, Plus, Check, Copy, Clock } from "lucide-react"
+import { Wand2, Loader2, ChevronDown, ChevronUp, Plus, Check, Copy, Clock, Sparkles } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { nanoid } from "nanoid"
@@ -52,6 +52,7 @@ export default function TailorCVPanel({ jobDescription }: Props) {
   const [appliedSummary, setAppliedSummary] = useState(false)
   const [appliedBullets, setAppliedBullets] = useState<Map<string, Set<number>>>(new Map())
   const [addedSkills, setAddedSkills] = useState<Set<string>>(new Set())
+  const [weavingSkill, setWeavingSkill] = useState<string | null>(null)
   const [pendingBullet, setPendingBullet] = useState<{
     targetId: string
     bulletIndex: number
@@ -161,6 +162,56 @@ export default function TailorCVPanel({ jobDescription }: Props) {
     updateSectionData("skills", [...skills, newSkill])
     setAddedSkills((prev) => new Set(prev).add(name))
     toast.success(t("skill_added"))
+  }
+
+  // Ask the model to weave a skill the candidate already has into ONE bullet of
+  // the best-fit job, then open the same confirm-diff modal used for tailored
+  // bullets — the user is the honesty gate before anything lands in the CV.
+  async function weaveBullet(skill: string) {
+    if (weavingSkill) return
+    setWeavingSkill(skill)
+    preCheck("skill-bullet")
+    try {
+      const res = await apiFetch("/api/ai/skill-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill, sectionData, language: locale === "en" ? "en" : "es" }),
+      })
+      if (res.status === 429 || res.status === 403) {
+        const handled = await handleApiError(res, {
+          openUpgradeModal,
+          redirect: (p) => router.push(p),
+          locale,
+          fallbackToast: () => toast.error(res.status === 429 ? t("rate_limit") : t("pro_only")),
+          dailyCapToast: () => toast.warning(aiT("daily_cap_reached"), { duration: 6000 }),
+        })
+        if (handled || res.status === 429 || res.status === 403) return
+      }
+      if (!res.ok) { toast.error(t("error")); return }
+      const data = await res.json() as
+        | { status: "written"; targetId: string; jobTitle: string; employer: string; text: string }
+        | { status: "no_fit" }
+      if (data.status === "no_fit") { toast.info(t("skill_bullet_no_fit")); return }
+
+      const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+      const job = work.find((j) => j.id === data.targetId)
+      if (!job) { toast.info(t("skill_bullet_no_fit")); return }
+      const desc = job.description ?? ""
+      const lines = desc.split("\n").map((l) => l.trim()).filter(Boolean)
+      // Append: bulletIndex past the end makes confirmApplyBullet push a new line.
+      setPendingBullet({
+        targetId: data.targetId,
+        bulletIndex: lines.length,
+        text: data.text,
+        currentDescription: desc,
+        currentBullet: "",
+      })
+      await onSuccess()
+    } catch {
+      toast.error(t("error"))
+    } finally {
+      setWeavingSkill(null)
+    }
   }
 
   return (
@@ -327,25 +378,42 @@ export default function TailorCVPanel({ jobDescription }: Props) {
                 if (visibleMissing.length === 0) return null
                 return (
                 <div>
-                  <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-2">{t("section_skills")}</p>
+                  <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-1">{t("section_skills")}</p>
+                  <p className="text-[10px] text-dash-muted leading-snug mb-2">{t("skill_bullet_hint")}</p>
                   <div className="flex flex-wrap gap-1.5">
                     {visibleMissing.map((skill) => {
                       const added = addedSkills.has(skill)
+                      const weaving = weavingSkill === skill
                       return (
-                        <button
+                        <div
                           key={skill}
-                          onClick={() => !added && addSkill(skill)}
-                          disabled={added}
-                          className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[10.5px] font-semibold transition-all duration-200 disabled:cursor-default"
+                          className="inline-flex items-stretch rounded-full overflow-hidden"
                           style={{
                             background: added ? "rgba(16,185,129,0.1)" : "rgba(245,158,11,0.08)",
-                            color: added ? "#10B981" : "#D97706",
                             border: `1px solid ${added ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.25)"}`,
                           }}
                         >
-                          {added ? <Check size={9} /> : <Plus size={9} />}
-                          {skill}
-                        </button>
+                          <button
+                            onClick={() => !added && addSkill(skill)}
+                            disabled={added}
+                            title={added ? t("applied") : t("skill_add_action")}
+                            className="flex items-center gap-1 pl-2.5 pr-2 py-1 text-[10.5px] font-semibold transition-all duration-200 disabled:cursor-default"
+                            style={{ color: added ? "#10B981" : "#D97706" }}
+                          >
+                            {added ? <Check size={9} /> : <Plus size={9} />}
+                            {skill}
+                          </button>
+                          <button
+                            onClick={() => weaveBullet(skill)}
+                            disabled={!!weavingSkill}
+                            title={t("skill_bullet_action")}
+                            aria-label={t("skill_bullet_action")}
+                            className="flex items-center justify-center px-2 border-l transition-all duration-200 hover:bg-amber-100/60 disabled:opacity-50 disabled:cursor-not-allowed"
+                            style={{ borderColor: added ? "rgba(16,185,129,0.3)" : "rgba(245,158,11,0.25)", color: "#00A8CC" }}
+                          >
+                            {weaving ? <Loader2 size={11} className="animate-spin" /> : <Sparkles size={11} />}
+                          </button>
+                        </div>
                       )
                     })}
                   </div>

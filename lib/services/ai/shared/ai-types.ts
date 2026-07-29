@@ -316,6 +316,20 @@ export interface TailorCVInput {
   language?: string
 }
 
+// Weave a skill the candidate already has into ONE bullet of the best-fit job.
+export interface SkillBulletInput {
+  /** Atomic skill/keyword to weave in (e.g. "async/await", "GraphQL"). */
+  skill: string
+  sectionData: Record<string, unknown>
+  language?: string
+}
+
+export type SkillBulletResult =
+  | { status: "written"; targetId: string; jobTitle: string; employer: string; text: string }
+  // No job in the CV is a reasonable home for the skill, or the draft failed the
+  // anti-invention guards — either way there is nothing safe to insert.
+  | { status: "no_fit" }
+
 export interface TranslateCVInput {
   /** Full ResumeSections object (the resume's `personalDetails` JSON column). */
   sectionData: Record<string, unknown>
@@ -377,4 +391,5 @@ export const AI_INPUT_LIMITS = {
   question: 300,
   bulletText: 4000,
   prompt: 500,
+  skillName: 100,
 } as const

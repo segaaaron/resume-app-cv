@@ -50,6 +50,7 @@ const ENDPOINT_LABELS: Record<string, string> = {
   "generate-cover-letter": "Generate Cover Letter",
   "improve-cover-letter": "Improve Cover Letter",
   "tailor-cv": "Tailor CV",
+  "skill-bullet": "Skill → Bullet",
   "ats-score": "ATS Score",
   "review-cv": "Review CV",
   "translate-cv": "Translate CV",

@@ -1,0 +1,195 @@
+// lib/services/ai/modules/AISkillBulletModule.ts
+// Weave a skill the candidate ALREADY has into ONE new bullet of the best-fit job.
+//
+// The user is looking at a skill they own (it sits in their skills list) that no
+// bullet mentions, and wants it surfaced in the experience where it best fits.
+// This writes a single capability bullet — verb-first, no invented metric, no
+// bracket placeholder — and returns it for the user to confirm in the diff modal.
+// The human-in-the-loop confirm is the honesty gate: an assertion the user never
+// did is rejected by them, exactly like every other suggestion in the editor.
+import { validateAIInput } from "@/lib/ai-safety"
+import {
+  AI_MODEL_PROSE,
+  AI_TEMPERATURE_STRUCTURED,
+  buildResumeContext,
+  logAIUsage,
+} from "@/lib/ai-client"
+import { AppError } from "@/lib/services/auth/AppError"
+import type { IAIClient } from "@/lib/interfaces/IAIClient"
+import type { ILogger } from "@/lib/interfaces/ILogger"
+import { enforceAIQuota } from "../shared/quota-enforcer"
+import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { computeCostUsd } from "../shared/cost-tracker"
+import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
+import { isTrivialEdit } from "../shared/text-similarity"
+import { AI_INPUT_LIMITS, type SkillBulletInput, type SkillBulletResult } from "../shared/ai-types"
+
+interface WorkRow { id?: string; jobTitle?: string; employer?: string; description?: string }
+
+/**
+ * True when the skill's significant signal already shows up in a bullet — so a
+ * "new" bullet weaving it in would just duplicate what the CV states. Substring
+ * first (atomic skill like "graphql"), then a loose token check for compound
+ * skills ("async/await" → "async", "await").
+ */
+function bulletMentionsSkill(skill: string, haystackLower: string): boolean {
+  const sl = skill.toLowerCase().trim()
+  if (!sl) return false
+  if (haystackLower.includes(sl)) return true
+  const tokens = sl.split(/[^a-z0-9+#.]+/).filter((w) => w.length > 2)
+  if (tokens.length === 0) return false
+  // Compound skill is "present" only if EVERY significant token is there, so
+  // "async/await" is not counted present just because a bullet says "await".
+  return tokens.every((w) => haystackLower.includes(w))
+}
+
+export class AISkillBulletModule {
+  constructor(
+    private readonly aiClient: IAIClient,
+    private readonly logger: ILogger,
+  ) {}
+
+  async weaveSkillBullet(userId: string, input: SkillBulletInput, plan: string): Promise<SkillBulletResult> {
+    await enforceAIQuota(userId, "skill-bullet", plan)
+
+    const { skill: rawSkill, sectionData, language: rawLanguage } = input
+    const { language, langInstruction } = resolveLanguage(rawLanguage)
+
+    const skill = rawSkill.trim()
+    const skillValidation = validateAIInput(skill, AI_INPUT_LIMITS.skillName)
+    if (!skillValidation.valid || !skill) throw new AppError("invalid_input", 400)
+
+    const work = ((sectionData.workExperience ?? []) as WorkRow[]).filter((j) => j.id)
+    if (work.length === 0) return { status: "no_fit" }
+
+    // FULL bullets, indexed by targetId — the model needs to see each job's real
+    // work to judge where the skill plausibly belongs. Bounded by job count (6),
+    // never by bullet text (a truncated bullet reads as a different job).
+    const jobs = work.slice(0, 6)
+    const workList = jobs.map((j) => {
+      const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
+        emptyLabel: "  (no bullets yet)",
+      })
+      return `ID:${j.id} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}:\n${bulletLines}`
+    }).join("\n\n")
+
+    // Grounding for detectHallucination: skills/education context + every job's
+    // bullets + the skill itself. Including the skill is what lets the new bullet
+    // name it without being flagged as an invented technology; anything ELSE the
+    // model introduces (a second framework, a metric) still trips the guard.
+    const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
+    const groundingSource = `${resumeContext}\n${workList}\n${skill}`
+
+    const prompt = language === "en"
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. Write about ONLY the skill "${skill}" and the job you place it in. Do NOT introduce any OTHER technology, framework, library, tool, company, certification, percentage, number, or date not already in that job.
+2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet has no metric — it states a capability, not a measured result. A bracket or invented figure gets the CV rejected.
+3. The bullet asserts the candidate USED this skill at the chosen job. Only place it where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
+
+TASK: The candidate already lists "${skill}" as one of their skills, but no bullet shows it. Pick the ONE job below where it most credibly fits and write ONE new bullet that demonstrates it.
+
+CANDIDATE CONTEXT:
+${resumeContext}
+
+WORK EXPERIENCE (bullets indexed by job ID):
+${workList}
+
+RULES:
+- Choose the single best-fit job by ID. If the skill fits none credibly, return {"targetId": null, "text": null}.
+- Write exactly ONE bullet, prefixed with "• ", verb-first (e.g. Built, Integrated, Automated, Migrated, Implemented). No pronouns (I, my). No clichés ("Responsible for", "Helped with").
+- The bullet must naturally contain "${skill}" and read like something the candidate would say in an interview — vary rhythm, natural tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy".
+- State a capability/action only. Do NOT invent an outcome, metric, scale, or timeframe. If you cannot write it without inventing a figure, still write the capability WITHOUT the figure — never fabricate one.
+
+Respond ONLY with valid JSON (no markdown):
+{"targetId": "ID", "text": "• bullet that uses ${skill}"}`
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. Escribe SOLO sobre la habilidad "${skill}" y el puesto donde la coloques. NO introduzcas NINGUNA otra tecnología, framework, librería, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
+2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet no tiene métrica — expresa una capacidad, no un resultado medido. Un corchete o cifra inventada hace que le rechacen el CV.
+3. El bullet afirma que el candidato USÓ esta habilidad en el puesto elegido. Colócala solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
+
+TAREA: El candidato ya lista "${skill}" entre sus habilidades, pero ningún bullet la muestra. Elige el ÚNICO puesto de abajo donde encaje de forma más creíble y escribe UN bullet nuevo que la demuestre.
+
+CONTEXTO DEL CANDIDATO:
+${resumeContext}
+
+EXPERIENCIA LABORAL (bullets indexados por ID de puesto):
+${workList}
+
+REGLAS:
+- Elige el único puesto que mejor encaje por ID. Si no encaja en ninguno de forma creíble, devuelve {"targetId": null, "text": null}.
+- Escribe exactamente UN bullet, con prefijo "• ", verbo primero (ej.: Desarrollé, Integré, Automaticé, Migré, Implementé). Sin pronombres (yo, mi). Sin clichés ("Responsable de", "Ayudé con").
+- El bullet debe contener "${skill}" de forma natural y sonar como algo que el candidato diría en una entrevista — varía el ritmo, tono natural, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia".
+- Expresa solo una capacidad/acción. NO inventes un resultado, métrica, escala ni plazo. Si no puedes escribirlo sin inventar una cifra, escribe igual la capacidad SIN la cifra — nunca la fabriques.
+
+Responde ÚNICAMENTE con JSON válido (sin markdown):
+{"targetId": "ID", "text": "• bullet que use ${skill}"}`
+
+    const response = await this.aiClient.chat({
+      model: AI_MODEL_PROSE,
+      max_tokens: 300,
+      temperature: AI_TEMPERATURE_STRUCTURED,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an elite resume coach. You weave a skill the candidate already has into a single, credible experience bullet. " +
+            "You NEVER invent metrics, numbers, outcomes, or technologies not already present — you write a capability statement grounded in the chosen job. " +
+            "Returning {\"targetId\": null} when no job is a credible fit is a correct, expected answer. " +
+            langInstruction,
+        },
+        { role: "user", content: prompt },
+      ],
+    })
+
+    const usage = response.usage
+    logAIUsage(userId, "skill-bullet", {
+      model: AI_MODEL_PROSE,
+      plan,
+      promptTokens: usage?.prompt_tokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+    })
+
+    const raw = parseAIJson<{ targetId?: unknown; text?: unknown }>(response.choices[0]?.message?.content ?? "{}")
+    const targetId = typeof raw.targetId === "string" ? raw.targetId : ""
+    const text = typeof raw.text === "string" ? raw.text.trim() : ""
+    if (!targetId || !text) return { status: "no_fit" }
+
+    const job = jobs.find((j) => j.id === targetId)
+    if (!job) {
+      // Model addressed a job that isn't in the list — cannot place it safely.
+      this.logger.warn("[AIService.weaveSkillBullet] unknown targetId", { targetId })
+      return { status: "no_fit" }
+    }
+
+    // Anti-invention: the new bullet may only introduce the skill itself, no other
+    // metric or technology absent from the CV.
+    if (detectHallucination(text, groundingSource)) {
+      this.logger.warn("[AIService.weaveSkillBullet] dropped hallucinated bullet", {
+        skill, previewSample: text.slice(0, 120),
+      })
+      return { status: "no_fit" }
+    }
+
+    // The whole point is to surface the skill — if the draft doesn't actually
+    // contain it, it's off-target noise.
+    if (!bulletMentionsSkill(skill, text.toLowerCase())) {
+      this.logger.warn("[AIService.weaveSkillBullet] bullet omits the skill", { skill })
+      return { status: "no_fit" }
+    }
+
+    // Don't re-state a bullet the job already has (or that already shows the skill).
+    const existing = parseBullets(job.description ?? "")
+    if (bulletMentionsSkill(skill, (job.description ?? "").toLowerCase())) return { status: "no_fit" }
+    if (existing.some((b) => isTrivialEdit(b, text))) return { status: "no_fit" }
+
+    return {
+      status: "written",
+      targetId,
+      jobTitle: job.jobTitle ?? "",
+      employer: job.employer ?? "",
+      text,
+    }
+  }
+}

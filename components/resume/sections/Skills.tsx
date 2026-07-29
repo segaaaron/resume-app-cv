@@ -38,12 +38,13 @@ export default function SkillsSection() {
   return (
     <div className="space-y-2">
       {skills.map((skill) => (
-        <div key={skill.id} className="flex items-center gap-2">
+        <div key={skill.id} className="flex items-center gap-1.5">
           <input
             value={skill.name}
             onChange={(e) => update(skill.id, "name", e.target.value)}
             placeholder={t("skills.placeholder")}
-            className="flex-1 outline-none text-[12.5px] font-medium transition-all duration-200"
+            title={skill.name || undefined}
+            className="min-w-0 flex-1 outline-none text-[12.5px] font-medium transition-all duration-200"
             style={{
               height: 40, paddingLeft: 14, paddingRight: 14, borderRadius: 20,
               background: "linear-gradient(135deg,rgba(240,248,255,0.85) 0%,rgba(232,244,251,0.65) 100%)",
@@ -54,7 +55,7 @@ export default function SkillsSection() {
             onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)"; e.currentTarget.style.boxShadow = "inset 0 1px 3px rgba(0,0,0,0.03)" }}
           />
           <Select value={skill.level} onValueChange={(v) => update(skill.id, "level", v ?? "intermediate")}>
-            <SelectTrigger className="h-10 w-32 text-xs" style={{ borderRadius: 20 }}>
+            <SelectTrigger className="h-10 w-28 shrink-0 text-xs" style={{ borderRadius: 20 }}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
