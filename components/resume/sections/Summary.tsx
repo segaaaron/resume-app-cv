@@ -40,6 +40,10 @@ export default function SummarySection() {
   // a fleeting toast — the "nothing to improve" answer gets a real surface.
   const [emptyNotice, setEmptyNotice] = useState<{ title: string; description: string } | null>(null)
   const [improved, setImproved] = useState(false)
+  // Persistent "already optimized" state so the user sees the summary is up to
+  // date and stops re-pressing Improve. Anchored to the current text — cleared
+  // the moment they edit the summary or their description (either can improve).
+  const [upToDate, setUpToDate] = useState(false)
   // The way in for someone with no CV yet. improve-summary has always had the
   // branch for it ("create a summary from scratch, based on the candidate's
   // description") and the copy below was written in both languages, but no
@@ -182,6 +186,7 @@ export default function SummarySection() {
       if (data.status === "already_optimized") {
         lastKeyRef.current = key
         setCooldownUntil(Date.now() + 120_000)
+        setUpToDate(true)
         setEmptyNotice({ title: ai("already_optimized_title"), description: ai("summary_already_optimized") })
         return
       }
@@ -203,6 +208,7 @@ export default function SummarySection() {
   // returns the user's own text and has no positioning to report.
   function showVersions(list: string[], types?: string[]) {
     setEmptyNotice(null)
+    setUpToDate(false)
     const byIndex: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
     setVersions(list.map((text, i) => ({
       type: (types?.[i] as SummaryVersion["type"]) ?? byIndex[i] ?? "executive",
@@ -229,14 +235,14 @@ export default function SummarySection() {
         <button
           type="button"
           onClick={isPro ? handleImprove : openUpgrade}
-          disabled={improving || inCooldown || (isPro && ((!hasContent && !hasDescription) || improved))}
+          disabled={improving || inCooldown || (isPro && ((!hasContent && !hasDescription) || improved || upToDate))}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
-            background: improved
+            background: improved || upToDate
               ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
               : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
             color: "#fff",
-            boxShadow: improved
+            boxShadow: improved || upToDate
               ? "0 2px 8px rgba(16,185,129,0.3)"
               : "0 2px 8px rgba(124,58,237,0.3)",
             border: "none",
@@ -250,7 +256,9 @@ export default function SummarySection() {
                 ? <><Loader2 className="h-3 w-3" />{cooldownLabel}</>
                 : improved
                   ? <><Check className="h-3 w-3" />{ai("bullet_improved")}</>
-                  : <><Wand2 className="h-3 w-3" />{ai("improve_summary")}</>
+                  : upToDate
+                    ? <><Check className="h-3 w-3" />{ai("summary_up_to_date")}</>
+                    : <><Wand2 className="h-3 w-3" />{ai("improve_summary")}</>
           }
         </button>
 
@@ -312,7 +320,7 @@ export default function SummarySection() {
           </p>
           <textarea
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(e) => { setDescription(e.target.value); if (upToDate) setUpToDate(false) }}
             placeholder={ai("improve_summary_placeholder")}
             rows={3}
             maxLength={500}
@@ -347,6 +355,7 @@ export default function SummarySection() {
             setLocal(e.target.value)
             if (versions.length > 0) setVersions([])
             if (improved) setImproved(false)
+            if (upToDate) setUpToDate(false)
           }}
           onBlur={(e) => {
             commitRef.current("summary", local)
