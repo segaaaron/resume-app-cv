@@ -3,7 +3,6 @@ import { db } from "@/lib/db"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL_PROSE,
-  AI_TEMPERATURE_CREATIVE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
   logAIUsage,
@@ -41,6 +40,14 @@ import {
  * filter compared an HTML original against plain-text rewrites, so nothing ever
  * looked like an echo and already_optimized could not fire at all.
  */
+// Stand-in employer names a thin profile provokes ("XYZ Corp", "[Company]",
+// "Company Name"). detectHallucination catches invented metrics/tech but not a
+// fabricated proper noun, so this belts that specific, reported failure. A match
+// only counts as invented when it is NOT in the grounding source (a real employer
+// literally called "ABC" survives).
+const PLACEHOLDER_COMPANY_REGEX =
+  /\b(?:XYZ|ABC)\b|\[(?:company|empresa|name|nombre|position|puesto)[^\]]*\]|\bcompany name\b|\bnombre de la empresa\b/i
+
 function plainToHtml(text: string): string {
   return text
     .split(/\n\n+/)
@@ -116,20 +123,20 @@ ${recipientName ? `Hiring Manager: ${recipientName}${recipientTitle ? `, ${recip
 
 Tone: ${toneLabel}
 
-Write 4 strong paragraphs:
+Write 3 tight paragraphs (4 maximum), 250–350 words TOTAL — the finished letter MUST fit on ONE page. A recruiter skims it in under 30 seconds; a shorter, specific letter beats a long one:
 1. HOOK — Open with a specific, compelling reason why this candidate wants THIS role at THIS company. Reference something concrete about the company or the role. No generic openers like "I am writing to apply...".
-2. EXPERIENCE & ACHIEVEMENTS — Highlight 2–3 specific accomplishments from the candidate's background that are directly relevant to this role. Use concrete details from the resume (technologies, companies, impact). Quantify where possible.
-3. VALUE PROPOSITION — Explain exactly what the candidate brings to the team that others don't. Connect their unique skills and experience to the company's likely challenges or goals.
-4. CLOSING CTA — End with a confident, warm call to action. Express genuine enthusiasm and invite next steps.
+2. FIT & ACHIEVEMENTS — Highlight 2–3 specific accomplishments from the candidate's profile that are directly relevant to this role, and what they uniquely bring. Use ONLY the real technologies, employers, and results the profile states. Use ONLY figures the profile explicitly states; if it states none, describe the impact WITHOUT a number.
+3. CLOSING CTA — End with a confident, warm call to action that invites next steps.
 
 Rules:
 - Write ONLY the body (no salutation, no date, no signature block)
 - Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
+- NEVER name a company, employer, product, or client that is not in the candidate profile. NEVER use a stand-in like "XYZ Corp", "ABC Company", or "Company Name" — if the profile names no employer, describe the work without naming one.
 - Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
-- Do NOT invent facts, metrics, or experiences not present in the candidate profile
+- Do NOT invent facts, metrics, technologies, or experiences not present in the candidate profile
 - NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
 - NEVER these phrases. Every one is checked and a letter carrying any is rejected: ${clicheBanList("en")}
-- Each paragraph must be 3–5 sentences, substantive and specific
+- Each paragraph must be 2–4 sentences, substantive and specific — never padding to reach a length
 - The letter must feel written by a human, not AI
 - Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never invent one.
 
@@ -146,20 +153,20 @@ ${recipientName ? `Responsable de selección: ${recipientName}${recipientTitle ?
 
 Tono: ${toneLabel}
 
-Escribe 4 párrafos sólidos:
+Escribe 3 párrafos concisos (4 máximo), 250–350 palabras EN TOTAL — la carta terminada DEBE caber en UNA página. El recruiter la escanea en menos de 30 segundos; una carta más corta y específica gana a una larga:
 1. GANCHO — Abre con una razón específica y convincente de por qué este candidato quiere ESTE puesto en ESTA empresa. Referencia algo concreto del rol o la empresa. Nada genérico como "Me dirijo a usted para...".
-2. EXPERIENCIA Y LOGROS — Destaca 2–3 logros concretos del perfil del candidato directamente relevantes para este puesto. Usa detalles reales del CV (tecnologías, empresas, impacto). Cuantifica donde sea posible.
-3. PROPUESTA DE VALOR — Explica exactamente qué aporta este candidato que otros no tienen. Conecta sus habilidades únicas con los desafíos u objetivos probables de la empresa.
-4. CIERRE Y CTA — Cierra con una llamada a la acción segura y cálida. Expresa entusiasmo genuino e invita a dar los próximos pasos.
+2. ENCAJE Y LOGROS — Destaca 2–3 logros concretos del perfil del candidato directamente relevantes para este puesto, y qué aporta que otros no. Usa SOLO las tecnologías, empresas y resultados reales que declara el perfil. Usa SOLO cifras que el perfil declare explícitamente; si no declara ninguna, describe el impacto SIN número.
+3. CIERRE Y CTA — Cierra con una llamada a la acción segura y cálida que invite a los siguientes pasos.
 
 Reglas:
 - Escribe SOLO el cuerpo (sin saludo, sin fecha, sin bloque de firma)
 - NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
+- NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre inventado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
 - NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
-- NO inventes datos, métricas ni experiencias que no estén en el perfil del candidato
+- NO inventes datos, métricas, tecnologías ni experiencias que no estén en el perfil del candidato
 - NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
 - NUNCA estas frases. Todas se comprueban y una carta que lleve cualquiera se rechaza: ${clicheBanList("es")}
-- Cada párrafo debe tener 3–5 oraciones, sustanciales y específicas
+- Cada párrafo debe tener 2–4 oraciones, sustanciales y específicas — nunca relleno para alcanzar un largo
 - La carta debe sonar escrita por un humano, no por IA
 - Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo inventes.
 
@@ -168,7 +175,11 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     const response = await this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 900,
-      temperature: AI_TEMPERATURE_CREATIVE,
+      // STRUCTURED (0.3), not CREATIVE (0.7): this endpoint invented employers and
+      // metrics ("XYZ Corp", "+40%") at high temperature with nothing filtering the
+      // output. Variety now comes from the tone param and the human-voice rules, not
+      // raw randomness — improveCoverLetter uses the same 0.3 for the same reason.
+      temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
         {
@@ -194,17 +205,84 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // Same defence as improveCoverLetter: the prompt asks for body only, but a
     // trailing "Sincerely,\n[Your Name]" slips through and the app renders the
     // candidate's real name underneath anyway.
-    const html = plainToHtml(stripSignOff(parsed.body))
+    let body = stripSignOff(parsed.body)
+
+    // Anti-invention guard — the belt that improveCoverLetter has and generate never
+    // did. A fresh letter can introduce framing prose (detectHallucination ignores
+    // that), but a fabricated metric, technology, or employer that isn't in the
+    // profile is exactly what got a user a letter about "XYZ Corp" and "+40%". On a
+    // trip, retry ONCE grounded harder; ship the cleaner draft, never an empty one.
+    const grounding = [resumeContext, userPrompt ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
+    let retryUsage: { prompt_tokens?: number; completion_tokens?: number } | undefined
+    if (this.letterInventsContent(body, grounding)) {
+      this.logger.warn("[AIService.generateCoverLetter] draft invented content, retrying grounded")
+      const retry = await this.retryGroundedGeneration(prompt, langInstruction, language)
+      if (retry) {
+        retryUsage = retry.usage
+        const retryBody = stripSignOff(retry.body)
+        // Prefer the retry when it's clean; if both are flagged keep the retry
+        // (grounded-harder) and log — the gate lowers the odds, it never returns nothing.
+        if (!this.letterInventsContent(retryBody, grounding)) {
+          body = retryBody
+        } else {
+          body = retryBody
+          this.logger.warn("[AIService.generateCoverLetter] retry still flagged; shipping best effort")
+        }
+      }
+    }
+
+    const html = plainToHtml(body)
 
     const genUsage = response.usage
+    const promptTokens = (genUsage?.prompt_tokens ?? 0) + (retryUsage?.prompt_tokens ?? 0)
+    const completionTokens = (genUsage?.completion_tokens ?? 0) + (retryUsage?.completion_tokens ?? 0)
     logAIUsage(userId, "generate-cover-letter", {
       model: AI_MODEL_PROSE,
       plan,
-      promptTokens: genUsage?.prompt_tokens ?? 0,
-      completionTokens: genUsage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL_PROSE, genUsage?.prompt_tokens ?? 0, genUsage?.completion_tokens ?? 0),
+      promptTokens,
+      completionTokens,
+      costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens),
     })
     return { body: html }
+  }
+
+  /** True when a fresh cover-letter draft carries content the profile does not
+   *  support: an invented metric/technology (detectHallucination) or a stand-in
+   *  employer name that is not in the grounding source. */
+  private letterInventsContent(body: string, grounding: string): boolean {
+    if (detectHallucination(body, grounding)) return true
+    const m = body.match(PLACEHOLDER_COMPANY_REGEX)
+    return !!m && !grounding.toLowerCase().includes(m[0].toLowerCase())
+  }
+
+  /** One grounded retry when the first draft invented content. Names the failure
+   *  last (the model must be told what it did wrong), and never quotes the invented
+   *  token back. Returns null on any failure — the first draft still stands. */
+  private async retryGroundedGeneration(
+    basePrompt: string,
+    langInstruction: string,
+    language: "es" | "en",
+  ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
+    const note = language === "en"
+      ? "YOUR LAST DRAFT INVENTED FACTS. Rewrite the letter using ONLY what the candidate profile states. Do NOT invent numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
+      : "TU BORRADOR ANTERIOR INVENTÓ DATOS. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO inventes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre inventado como \"XYZ Corp\"."
+    try {
+      const res = await this.aiClient.chat({
+        model: AI_MODEL_PROSE,
+        max_tokens: 900,
+        temperature: AI_TEMPERATURE_STRUCTURED,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
+          { role: "user", content: `${basePrompt}\n\n${note}` },
+        ],
+      })
+      const parsed = parseAIJson<{ body?: unknown }>(res.choices[0]?.message?.content ?? "")
+      if (typeof parsed.body !== "string" || !parsed.body.trim()) return null
+      return { body: parsed.body, usage: res.usage }
+    } catch {
+      return null
+    }
   }
 
   async improveCoverLetter(userId: string, input: ImproveCoverLetterInput, plan: string): Promise<VersionsResult> {
@@ -282,7 +360,7 @@ GOLDEN RULES (apply all):
    - Version 1: Formal and executive
    - Version 2: Balanced and direct
    - Version 3: Dynamic and impact-oriented
-6. Maximum 4 paragraphs per version, up to 350 words. Dense in value, no filler. (This app's own generator writes 4 paragraphs of 3-5 sentences — roughly 300-400 words — so a 200-word cap would force you to delete nearly half of a letter it produced.)
+6. Maximum 4 paragraphs per version, up to 350 words. Dense in value, no filler. (This app's own generator writes 3-4 tight paragraphs — roughly 250-350 words, one page — so keep each version in that range and never pad to fill space.)
 7. If the letter is already strong — concrete, specific, free of clichés, and aligned to the role — return {"status": "already_optimized", "versions": []}. That is a correct and expected answer. Never pad the response with three cosmetic rewordings of a letter that did not need them.
 
 ON NUMBERS — read this last and follow it exactly:
@@ -311,7 +389,7 @@ REGLAS DE ORO (aplica todas):
    - Versión 1: Formal y ejecutiva
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
-6. Máximo 4 párrafos por versión, hasta 350 palabras. Denso en valor, sin relleno. (El generador de esta misma app escribe 4 párrafos de 3-5 frases — unas 300-400 palabras — así que un tope de 200 te obligaría a borrar casi la mitad de una carta que ella misma produjo.)
+6. Máximo 4 párrafos por versión, hasta 350 palabras. Denso en valor, sin relleno. (El generador de esta misma app escribe 3-4 párrafos concisos — unas 250-350 palabras, una página — así que mantén cada versión en ese rango y nunca rellenes para ocupar espacio.)
 7. Si la carta ya está fuerte — concreta, específica, sin clichés y alineada al puesto — devuelve {"status": "already_optimized", "versions": []}. Es una respuesta correcta y esperada. Nunca rellenes con tres reescrituras cosméticas de una carta que no las necesitaba.
 
 SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
