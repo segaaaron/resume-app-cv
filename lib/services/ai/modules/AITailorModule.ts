@@ -14,6 +14,8 @@ import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-
 import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
+import { findSemanticMatches } from "../shared/semantic-match"
+import { normalizeTerm } from "@/lib/ats/vocabulary"
 import { AI_INPUT_LIMITS, type TailorCVInput, type TailorCVResultV2 } from "../shared/ai-types"
 
 // Filler words in requirement lines the model sometimes returns as "skills".
@@ -51,7 +53,7 @@ export class AITailorModule {
   async tailorCV(userId: string, input: TailorCVInput, plan: string): Promise<TailorCVResultV2> {
     await enforceAIQuota(userId, "tailor-cv", plan)
 
-    const { sectionData, jobDescription, language: rawLanguage } = input
+    const { sectionData, jobDescription, language: rawLanguage, atsMissingKeywords } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const jdValidation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
@@ -264,6 +266,25 @@ Reglas:
       })
       .slice(0, 5)
 
+    // Semantic dedup vs the ATS panel. The ATS score above already lists its own
+    // missing keywords for this posting; a Tailor skill that means the same thing
+    // ("k8s" vs "kubernetes", "async await" vs "async/await", cross-language pairs)
+    // would show the gap twice. The exact vocabulary the client filters with can't
+    // see those; embeddings can. ADD-only safety: this can only REMOVE a duplicate,
+    // never invent one, and fails closed (embed error → the list stands untouched).
+    let dedupedMissingSkills = cleanMissingSkills
+    const atsKeywords = (atsMissingKeywords ?? []).map((k) => k.trim()).filter(Boolean).slice(0, 50)
+    if (cleanMissingSkills.length > 0 && atsKeywords.length > 0) {
+      const dupNorms = await findSemanticMatches(
+        cleanMissingSkills,
+        atsKeywords,
+        (texts) => this.aiClient.embed(texts),
+      )
+      if (dupNorms.size > 0) {
+        dedupedMissingSkills = cleanMissingSkills.filter((s) => !dupNorms.has(normalizeTerm(s)))
+      }
+    }
+
     // No-op guard for the summary, unified with bullets/cover: a tailored summary
     // ≥90% identical to the current one is not a real improvement — showing an
     // "Apply" button that overwrites the summary with a near-copy is noise, so drop it.
@@ -280,7 +301,7 @@ Reglas:
     return {
       summary: summaryOut,
       experiences: sanitizedExperiences,
-      missingSkills: cleanMissingSkills,
+      missingSkills: dedupedMissingSkills,
     } satisfies TailorCVResultV2
   }
 }

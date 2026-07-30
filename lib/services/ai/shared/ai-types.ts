@@ -321,6 +321,13 @@ export interface TailorCVInput {
   sectionData: Record<string, unknown>
   jobDescription: string
   language?: string
+  /**
+   * Missing keywords the ATS score already listed for this same posting. Tailor
+   * drops any missingSkill semantically equivalent to one of these (embeddings),
+   * so the user never sees the same gap twice across the two panels — including
+   * under a different spelling/word-order/language the exact vocabulary misses.
+   */
+  atsMissingKeywords?: string[]
 }
 
 // Weave a skill the candidate already has into ONE bullet of the best-fit job.

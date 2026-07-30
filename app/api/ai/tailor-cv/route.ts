@@ -8,6 +8,9 @@ const schema = z.object({
   sectionData: z.record(z.string(), z.unknown()),
   jobDescription: z.string().min(20).max(AI_INPUT_LIMITS.jobDescription),
   language: z.enum(["es", "en"]).optional(),
+  // Keywords the ATS panel already showed for this posting. Bounded so a crafted
+  // request can't blow up the embed batch; each entry length-capped too.
+  atsMissingKeywords: z.array(z.string().max(80)).max(50).optional(),
 })
 
 export async function POST(req: Request) {

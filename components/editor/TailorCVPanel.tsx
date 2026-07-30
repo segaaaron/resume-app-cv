@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { nanoid } from "nanoid"
 import type { SkillItem, WorkExperienceItem } from "@/types/resume"
+import { filterVisibleMissingSkills } from "./tailor-dedupe"
 import SuggestionDiffModal from "./SuggestionDiffModal"
 import { useAICooldown, useCooldownLabel } from "./hooks/useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
@@ -74,12 +75,17 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
   // list, and not already shown as a missing keyword by the ATS score above. Used
   // by BOTH the chip row and the "all applied" banner so they never disagree
   // (a hidden skill must not keep the banner from ever firing).
+  //
+  // Match through the shared ATS vocabulary, not plain string equality: expandTerm
+  // unifies aliases (React ≡ React.js ≡ reactjs, aws ≡ amazon web services, ci/cd ≡
+  // continuous integration), so a skill the ATS already listed above never shows
+  // again here under a different spelling.
   const visibleMissingSkills = useMemo(() => {
     if (!result) return []
-    const owned = new Set(((sectionData.skills ?? []) as SkillItem[]).map((s) => s.name.trim().toLowerCase()))
-    const atsShown = new Set(atsMissingKeywords.map((k) => k.trim().toLowerCase()))
-    return result.missingSkills.filter(
-      (s) => !owned.has(s.trim().toLowerCase()) && !atsShown.has(s.trim().toLowerCase()),
+    return filterVisibleMissingSkills(
+      result.missingSkills,
+      ((sectionData.skills ?? []) as SkillItem[]).map((s) => s.name),
+      atsMissingKeywords,
     )
   }, [result, sectionData.skills, atsMissingKeywords])
 
@@ -108,7 +114,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
       const res = await apiFetch("/api/ai/tailor-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionData, jobDescription: jd, language: locale === "en" ? "en" : "es" }),
+        body: JSON.stringify({ sectionData, jobDescription: jd, language: locale === "en" ? "en" : "es", atsMissingKeywords }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
