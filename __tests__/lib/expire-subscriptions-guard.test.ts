@@ -46,4 +46,15 @@ describe("PAST_DUE cannot become a permanent trap", () => {
     // retrying, not be force-cancelled.
     expect(cron).not.toMatch(/subscriptionStatus:\s*"PAST_DUE",\s*subscriptionEndsAt:\s*\{\s*lt:\s*now\s*\}/)
   })
+
+  it("expired LIMITED is downgraded to UNSUBSCRIBED and un-managed — data untouched", () => {
+    // Queries LIMITED past its admin-set expiry…
+    expect(cron).toMatch(/plan:\s*"LIMITED",\s*managedExpiresAt:\s*\{\s*lt:\s*now\s*\}/)
+    // …and flips the plan to UNSUBSCRIBED + clears the managed relationship (not just block).
+    expect(cron).toMatch(/limitedIds[\s\S]*?plan:\s*"UNSUBSCRIBED"/)
+    expect(cron).toMatch(/isManaged:\s*false/)
+    expect(cron).toMatch(/managedResumeLimit:\s*null/)
+    // The cron must NEVER delete the user's resumes or cover letters.
+    expect(cron).not.toMatch(/resume\.delete|coverLetter\.delete|deleteMany/)
+  })
 })

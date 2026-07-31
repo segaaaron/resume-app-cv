@@ -56,9 +56,10 @@ export async function GET(req: Request) {
         where: { plan: "PRO", subscriptionStatus: "PAST_DUE", subscriptionEndsAt: { lt: pastDueCutoff }, isManaged: false },
         select: { id: true },
       }),
-      // LIMITED users whose admin-set expiry has passed and not yet processed — invalidate JWT
+      // LIMITED users whose admin-set expiry has passed — downgraded to UNSUBSCRIBED
+      // (data kept). plan flips to UNSUBSCRIBED after processing, so they never re-match.
       db.user.findMany({
-        where: { plan: "LIMITED", managedExpiresAt: { lt: now }, managedBlocked: false },
+        where: { plan: "LIMITED", managedExpiresAt: { lt: now } },
         select: { id: true },
       }),
       // One-time plans (BASIC/SPRINT) whose purchased window has ended
@@ -87,7 +88,23 @@ export async function GET(req: Request) {
       limitedIds.length > 0
         ? db.user.updateMany({
             where: { id: { in: limitedIds } },
-            data: { sessionVersion: { increment: 1 }, managedBlocked: true },
+            data: {
+              // An expired managed (LIMITED) account becomes a normal free user —
+              // consistent with how PRO/BASIC/SPRINT expire. Their resumes and cover
+              // letters are UNTOUCHED; only the managed relationship + access are
+              // cleared. The admin re-provisions if they want it managed again.
+              // managedCreatedBy / managedNote are kept as an audit trail.
+              plan: "UNSUBSCRIBED",
+              isManaged: false,
+              managedBlocked: false,
+              managedExpiresAt: null,
+              managedResumeLimit: null,
+              managedCoverLetterLimit: null,
+              managedDownloadLimit: null,
+              managedDownloadsUsed: 0,
+              subscriptionStatus: "EXPIRED",
+              sessionVersion: { increment: 1 },
+            },
           })
         : Promise.resolve(),
     ])
