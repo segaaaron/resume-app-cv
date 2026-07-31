@@ -10,6 +10,7 @@ import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import SummaryVersionModal, { type SummaryVersion } from "./SummaryVersionModal"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
+import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
 import { useAICall } from "@/hooks/useAICall"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
@@ -23,9 +24,13 @@ export default function SummarySection() {
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
-  const { sectionData, updateSectionData } = useResumeStore(
-    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
+  const { sectionData, updateSectionData, resumeId } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, resumeId: s.resumeId }))
   )
+  // Persistent "already optimized" guard, anchored to summary+description (the
+  // exact inputs improve-summary keys on). Survives reload; self-clears on edit.
+  const { markOptimized: markSummaryOptimized, isUpToDate: summaryUpToDateFn } =
+    useOptimizedGuard(`opt_summary_${resumeId ?? "x"}`)
   const [local, setLocal] = useState(sectionData.summary as string ?? "")
   const commitRef = useRef(updateSectionData)
   commitRef.current = updateSectionData
@@ -187,6 +192,7 @@ export default function SummarySection() {
         lastKeyRef.current = key
         setCooldownUntil(Date.now() + 120_000)
         setUpToDate(true)
+        markSummaryOptimized(guardContent)
         setEmptyNotice({ title: ai("already_optimized_title"), description: ai("summary_already_optimized") })
         return
       }
@@ -220,12 +226,19 @@ export default function SummarySection() {
     updateSectionData("summary", version)
     setVersions([])
     setImproved(true)
+    // The applied version is the optimized content — lock it (persisted) so a
+    // reload + re-press doesn't spend a call on what the AI just produced.
+    markSummaryOptimized(`${version.trim()} ${description.trim()}`)
     toast.success(ai("summary_applied"))
   }
 
   const charCount = local.length
   const hasContent = local.trim().length >= 10
   const hasDescription = description.trim().length >= 5
+  // Same content improve-summary keys on. `upToDate` covers the in-session run;
+  // the persistent guard covers reload / remount so a re-press can't waste a call.
+  const guardContent = `${local.trim()} ${description.trim()}`
+  const summaryUpToDate = upToDate || (isPro && summaryUpToDateFn(guardContent))
 
   return (
     <div className="space-y-3">
@@ -235,14 +248,14 @@ export default function SummarySection() {
         <button
           type="button"
           onClick={isPro ? handleImprove : openUpgrade}
-          disabled={improving || inCooldown || (isPro && ((!hasContent && !hasDescription) || improved || upToDate))}
+          disabled={improving || inCooldown || (isPro && ((!hasContent && !hasDescription) || improved || summaryUpToDate))}
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
           style={{
-            background: improved || upToDate
+            background: improved || summaryUpToDate
               ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
               : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
             color: "#fff",
-            boxShadow: improved || upToDate
+            boxShadow: improved || summaryUpToDate
               ? "0 2px 8px rgba(16,185,129,0.3)"
               : "0 2px 8px rgba(124,58,237,0.3)",
             border: "none",
@@ -256,7 +269,7 @@ export default function SummarySection() {
                 ? <><Loader2 className="h-3 w-3" />{cooldownLabel}</>
                 : improved
                   ? <><Check className="h-3 w-3" />{ai("bullet_improved")}</>
-                  : upToDate
+                  : summaryUpToDate
                     ? <><Check className="h-3 w-3" />{ai("summary_up_to_date")}</>
                     : <><Wand2 className="h-3 w-3" />{ai("improve_summary")}</>
           }

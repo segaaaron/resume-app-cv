@@ -18,6 +18,7 @@ import UpgradeModal from "@/components/editor/UpgradeModal"
 import UnsavedChangesModal from "@/components/editor/UnsavedChangesModal"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { useAICall } from "@/hooks/useAICall"
+import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import dynamic from "next/dynamic"
 const RichTextEditor = dynamic(() => import("./RichTextEditor"), { ssr: false })
@@ -210,6 +211,12 @@ export default function CoverLetterEditor({
   const [letterVersions, setLetterVersions] = useState<SummaryVersion[]>([])
   // "Already optimized" reuses the version modal's empty state instead of a toast.
   const [letterEmptyNotice, setLetterEmptyNotice] = useState<{ title: string; description: string } | null>(null)
+  // Persistent "already optimized" guard for improve-cover-letter, anchored to the
+  // letter body. Survives reload; self-clears when the body changes. Stops a
+  // wasted call on a body the AI already finished with.
+  const { markOptimized: markLetterOptimized, isUpToDate: letterUpToDateFn } =
+    useOptimizedGuard(`opt_cover_${id}`)
+  const letterUpToDate = isPro && letterUpToDateFn(content.body ?? "")
   const bodyHasContent = (content.body?.replace(/<[^>]+>/g, "").trim() ?? "").length > 0
 
 
@@ -337,6 +344,7 @@ export default function CoverLetterEditor({
       // as the only version — which must never be offered as an "improvement".
       const versions = (data.versions ?? []) as string[]
       if (data.status === "already_optimized" || versions.length === 0) {
+        markLetterOptimized(body)
         setLetterEmptyNotice({ title: t("ai_already_optimized_title"), description: t("ai_already_optimized") })
         return
       }
@@ -1028,11 +1036,11 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                         Shown whenever there is a letter, however it got written:
                         generated here, pasted, or typed by hand. */}
                     {(content.body?.trim().length ?? 0) >= 20 && (
-                      <button onClick={handleImproveAI} disabled={generating || improvingAI}
+                      <button onClick={handleImproveAI} disabled={generating || improvingAI || letterUpToDate}
                         className="w-full inline-flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-[13px] font-bold text-white py-[11px] px-[14px] rounded-[10px] mt-2"
-                        style={{ background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)", boxShadow: "0 6px 18px rgba(124,58,237,0.3)" }}>
-                        {improvingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-                        {improvingAI ? t("ai_generating") : t("ai_improve")}
+                        style={{ background: letterUpToDate ? "linear-gradient(135deg, #10B981 0%, #059669 100%)" : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)", boxShadow: letterUpToDate ? "0 6px 18px rgba(16,185,129,0.3)" : "0 6px 18px rgba(124,58,237,0.3)" }}>
+                        {improvingAI ? <Loader2 className="h-4 w-4 animate-spin" /> : letterUpToDate ? <Check className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                        {improvingAI ? t("ai_generating") : letterUpToDate ? t("ai_already_optimized_title") : t("ai_improve")}
                       </button>
                     )}
                   </div>
@@ -1128,7 +1136,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
         versions={letterVersions}
         emptyState={letterEmptyNotice}
         onClose={() => { setLetterVersions([]); setLetterEmptyNotice(null) }}
-        onSelect={(text) => { updateContent("body", text); toast.success(t("ai_success")) }}
+        onSelect={(text) => { updateContent("body", text); markLetterOptimized(text); toast.success(t("ai_success")) }}
       />
       <UpgradeModal open={upgradeOpen} onClose={() => setUpgradeOpen(false)} />
       <UnsavedChangesModal

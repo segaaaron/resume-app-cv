@@ -23,6 +23,7 @@ import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
+import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
 import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 import { formatBullet, parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
 
@@ -98,6 +99,11 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
   const { cooldownUntil, setCooldownUntil } = useAICooldown(`cooldown_work_${job.id}`)
+  // Persistent "already optimized" guard: survives collapse/tab-switch/reload and
+  // self-clears when the description changes. Stops a wasted improve-bullet call
+  // on content the AI already finished with.
+  const { markOptimized: markBulletsOptimized, isUpToDate: bulletsUpToDateFn, clear: clearBulletsMark } =
+    useOptimizedGuard(`opt_bullet_${job.id}`)
   const [nowTs, setNowTs] = useState(Date.now())
   const [improving, setImproving] = useState(false)
   const [improved, setImproved] = useState(false)
@@ -122,7 +128,10 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     : `${cooldownSecs}s`
 
   const isEmpty = !job.description.trim()
-  const aiButtonDisabled = isPro && (improving || improved || isEmpty || inCooldown)
+  // True when THIS description already went through the AI and hasn't changed since
+  // (persisted). Drives the "already optimized" chip and blocks a wasted call.
+  const bulletsUpToDate = isPro && !isEmpty && bulletsUpToDateFn(job.description)
+  const aiButtonDisabled = isPro && (improving || improved || isEmpty || inCooldown || bulletsUpToDate)
 
   async function handleImprove() {
     if (improving || isEmpty) return
@@ -166,6 +175,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
         // The AI is allowed to return nothing, and nothing is a real answer:
         // the content is already good. No metric interrogation.
         setAlreadyOptimized(true)
+        markBulletsOptimized(job.description)
         return
       }
 
@@ -180,7 +190,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
         .filter((s) => origLines[s.index] !== undefined)
         .map((s) => ({ index: s.index, original: origLines[s.index], improved: s.text }))
 
-      if (pairs.length === 0) { setAlreadyOptimized(true); return }
+      if (pairs.length === 0) { setAlreadyOptimized(true); markBulletsOptimized(job.description); return }
       setBulletModal({ pairs, working, total: origLines.length })
     } catch {
       toast.error(ai("error_bullet"))
@@ -207,9 +217,13 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     // must survive untouched.
     const merged = [...bulletModal.working]
     for (const pair of bulletModal.pairs) merged[pair.index] = pair.improved
-    onUpdate("description", serializeBullets(merged))
+    const mergedText = serializeBullets(merged)
+    onUpdate("description", mergedText)
     setBulletModal(null)
     setImproved(true)
+    // The applied result is now the optimized content — lock it so re-running the
+    // AI on what it just produced doesn't burn a call ("mejoras ya aplicadas").
+    markBulletsOptimized(mergedText)
     toast.success(ai("bullets_all_applied"), {
       duration: 10_000,
       action: {
@@ -217,6 +231,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
         onClick: () => {
           onUpdate("description", previous)
           setImproved(false)
+          clearBulletsMark()
           toast.info(ai("bullets_undone"))
         },
       },
@@ -264,7 +279,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
                 <FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD" }} />
                 {t("description")}
               </div>
-              {alreadyOptimized ? (
+              {(alreadyOptimized || bulletsUpToDate) ? (
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}>
                   <Check className="h-2.5 w-2.5" />
                   {ai("already_optimized")}

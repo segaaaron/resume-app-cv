@@ -184,4 +184,18 @@ describe("gateSummaryVersions", () => {
     const r = await gateSummaryVersions(client, logger, input({ rawVersions: "not an array" }))
     expect(r.versions).toEqual([])
   })
+
+  it("drops a version ≥90% identical to another (no near-duplicate choices)", async () => {
+    // CLEAN and its one-word twin are the same choice shown twice; the genuinely
+    // distinct version must survive alongside a single copy of CLEAN.
+    const NEAR_DUP = CLEAN.replace("code review", "peer review")
+    const DISTINCT = "Cut deploy time from 40 minutes to under 6 at Acme, then mentored 5 engineers. Owns the React checkout end to end."
+    const { client } = clientReturning({ versions: [CLEAN] })
+    const r = await gateSummaryVersions(client, logger, input({ rawVersions: [CLEAN, NEAR_DUP, DISTINCT] }))
+    const texts = r.versions.map((v) => v.text)
+    expect(texts).toContain(DISTINCT)
+    // Exactly one of the CLEAN/NEAR_DUP pair survives — not both.
+    expect(texts.filter((t) => t === CLEAN || t === NEAR_DUP)).toHaveLength(1)
+    expect(texts).toHaveLength(2)
+  })
 })

@@ -14,6 +14,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, stripVersionLabel, detectHallucination, ANY_METRIC_REGEX } from "./ai-helpers"
 import { assessSummary } from "./summary-quality"
+import { isTrivialEdit } from "./text-similarity"
 
 export interface SummaryGateUsage {
   promptTokens: number
@@ -137,7 +138,7 @@ export async function gateSummaryVersions(
   })
   if (dropped > 0) logger.warn(`[${endpoint}] dropped hallucinated versions`, { dropped, kept: clean.length })
 
-  const ranked = rank(clean, profileHasMetrics)
+  const ranked = dropNearDuplicates(rank(clean, profileHasMetrics))
 
   const flawed = ranked.filter((v) => !assessSummary(v.text, profileHasMetrics).alreadyGood)
   if (flawed.length > 0) {
@@ -182,7 +183,7 @@ export async function gateSummaryVersions(
   // The retry is model output too — it gets the same hallucination check the
   // first attempt got. Skipping it here would make "retry" a way in.
   const retryClean = retry.versions.filter((v) => !detectHallucination(v.text, source))
-  const retryRanked = rank(retryClean, profileHasMetrics)
+  const retryRanked = dropNearDuplicates(rank(retryClean, profileHasMetrics))
   if (retryRanked.length === 0) {
     logger.warn(`[${endpoint}] retry produced nothing usable — keeping the first result`)
     return { versions: ranked, retryUsage: retry.usage }
@@ -219,6 +220,26 @@ function rank(versions: GatedVersion[], profileHasMetrics: boolean): GatedVersio
     (a, b) =>
       assessSummary(a.text, profileHasMetrics).issues.length - assessSummary(b.text, profileHasMetrics).issues.length,
   )
+}
+
+/**
+ * Drop a version that is ≥90% identical to one already kept.
+ *
+ * The three versions are sold as distinct positionings (executive / specialist /
+ * value-proposition); when the model returns two that differ by a word, showing
+ * both is offering the same choice twice. This is the between-versions twin of
+ * the isTrivialEdit(original, version) check the caller already runs — that one
+ * stops a version echoing the CURRENT summary, this one stops the versions
+ * echoing EACH OTHER. Runs on the already-ranked list, so the cleanest of a
+ * near-identical pair is the one that survives.
+ */
+function dropNearDuplicates(versions: GatedVersion[]): GatedVersion[] {
+  const kept: GatedVersion[] = []
+  for (const v of versions) {
+    if (kept.some((k) => isTrivialEdit(k.text, v.text))) continue
+    kept.push(v)
+  }
+  return kept
 }
 
 /**
