@@ -999,7 +999,57 @@ function BloomThumb() {
   )
 }
 
+// Parametric mini-preview for the 15 ported ltr-* letters. Draws the header the
+// variant uses (band / rule / minimal / centered / rail) so each card matches its
+// real layout, without 15 hand-drawn SVGs. Colour = the user's scheme.
+function LtrThumb({ header, color }: { header: string; color: string }) {
+  const line = (y: number, w: number, o = 1) => <rect key={y} x="12" y={y} width={w} height="1.4" rx="0.7" fill="#d1d5db" opacity={o} />
+  const body = [58, 62, 66, 70, 74, 80, 84, 88].map((y, i) => line(y, i === 5 ? 30 : [56, 52, 58, 48, 54][i % 5] ?? 54))
+  return (
+    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+      <rect width="80" height="110" fill="#f9fafb" />
+      {header === "band" && (<>
+        <rect x="0" y="0" width="80" height="24" fill={color} />
+        <rect x="12" y="8" width="34" height="3" rx="1.5" fill="#fff" opacity="0.95" />
+        <rect x="12" y="14" width="24" height="2" rx="1" fill="#fff" opacity="0.6" />
+        <rect x="0" y="24" width="80" height="1.5" fill={color} opacity="0.85" />
+      </>)}
+      {header === "rule" && (<>
+        <rect x="12" y="12" width="38" height="3.5" rx="1.75" fill={color} />
+        <rect x="12" y="18" width="26" height="2" rx="1" fill="#9ca3af" />
+        <rect x="12" y="24" width="56" height="2" rx="1" fill={color} />
+      </>)}
+      {header === "minimal" && (<>
+        <rect x="12" y="12" width="38" height="3.5" rx="1.75" fill="#374151" />
+        <rect x="12" y="18" width="24" height="2" rx="1" fill="#9ca3af" />
+        <rect x="12" y="24" width="56" height="1" fill="#e5e7eb" />
+      </>)}
+      {header === "centered" && (<>
+        <rect x="21" y="12" width="38" height="3.5" rx="1.75" fill={color} />
+        <rect x="28" y="18" width="24" height="2" rx="1" fill="#9ca3af" />
+        <rect x="30" y="24" width="20" height="2" rx="1" fill={color} />
+      </>)}
+      {header === "rail" && (<>
+        <rect x="0" y="0" width="4" height="110" fill={color} />
+        <rect x="12" y="12" width="38" height="3.5" rx="1.75" fill={color} />
+        <rect x="12" y="18" width="26" height="2" rx="1" fill="#9ca3af" />
+      </>)}
+      <rect x="12" y={header === "band" ? 34 : 34} width="18" height="1.5" rx="0.75" fill={color} opacity="0.5" />
+      {body}
+      <rect x="12" y="98" width="20" height="1.5" rx="0.75" fill={color} opacity="0.8" />
+      <rect x="12" y="102" width="26" height="2.5" rx="1.25" fill={color} />
+    </svg>
+  )
+}
+
+const LTR_HEADER: Record<string, string> = {
+  ltrmeridian: "band", ltrverdant: "rail", ltrcardinal: "rule", ltrcobalt: "rail", ltrslate: "minimal",
+  ltrnordic: "centered", ltronyx: "minimal", ltrsable: "band", ltrcerulean: "band", ltrivory: "minimal",
+  ltrgarnet: "rule", ltrcopper: "band", ltrharbor: "rule", ltrgraphite: "band", ltrsequoia: "rule",
+}
+
 export function CoverLetterThumbnail({ id, color }: { id: string; color: string }) {
+  if (LTR_HEADER[id]) return <LtrThumb header={LTR_HEADER[id]} color={color} />
   if (id === "sidebar") return <SidebarThumb color={color} />
   if (id === "elegant" || id === "classic") return <ElegantThumb color={color} />
   if (id === "split") return <SplitThumb color={color} />

@@ -83,6 +83,9 @@ type TemplateId =
   | "aurum" | "onyx" | "velvet"
   | "signal" | "meridian" | "nova" | "obsidian" | "codex" | "axiom" | "terra"
   | "flare" | "herald" | "bloom"
+  | "ltrmeridian" | "ltrverdant" | "ltrcardinal" | "ltrcobalt" | "ltrslate"
+  | "ltrnordic" | "ltronyx" | "ltrsable" | "ltrcerulean" | "ltrivory"
+  | "ltrgarnet" | "ltrcopper" | "ltrharbor" | "ltrgraphite" | "ltrsequoia"
 
 interface Props {
   id: string
@@ -140,6 +143,21 @@ const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
   { id: "velvet",    labelKey: "template_velvet",    pro: true },
   { id: "verso",     labelKey: "template_verso",     pro: true },
   { id: "vertex",    labelKey: "template_vertex",    pro: true },
+  { id: "ltrmeridian", labelKey: "template_ltrmeridian", pro: true },
+  { id: "ltrverdant",  labelKey: "template_ltrverdant",  pro: true },
+  { id: "ltrcardinal", labelKey: "template_ltrcardinal", pro: true },
+  { id: "ltrcobalt",   labelKey: "template_ltrcobalt",   pro: true },
+  { id: "ltrslate",    labelKey: "template_ltrslate",    pro: true },
+  { id: "ltrnordic",   labelKey: "template_ltrnordic",   pro: true },
+  { id: "ltronyx",     labelKey: "template_ltronyx",     pro: true },
+  { id: "ltrsable",    labelKey: "template_ltrsable",    pro: true },
+  { id: "ltrcerulean", labelKey: "template_ltrcerulean", pro: true },
+  { id: "ltrivory",    labelKey: "template_ltrivory",    pro: true },
+  { id: "ltrgarnet",   labelKey: "template_ltrgarnet",   pro: true },
+  { id: "ltrcopper",   labelKey: "template_ltrcopper",   pro: true },
+  { id: "ltrharbor",   labelKey: "template_ltrharbor",   pro: true },
+  { id: "ltrgraphite", labelKey: "template_ltrgraphite", pro: true },
+  { id: "ltrsequoia",  labelKey: "template_ltrsequoia",  pro: true },
 ]
 
 
@@ -512,6 +530,21 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     flare: t("template_flare"),
     herald: t("template_herald"),
     bloom: t("template_bloom"),
+    ltrmeridian: t("template_ltrmeridian"),
+    ltrverdant: t("template_ltrverdant"),
+    ltrcardinal: t("template_ltrcardinal"),
+    ltrcobalt: t("template_ltrcobalt"),
+    ltrslate: t("template_ltrslate"),
+    ltrnordic: t("template_ltrnordic"),
+    ltronyx: t("template_ltronyx"),
+    ltrsable: t("template_ltrsable"),
+    ltrcerulean: t("template_ltrcerulean"),
+    ltrivory: t("template_ltrivory"),
+    ltrgarnet: t("template_ltrgarnet"),
+    ltrcopper: t("template_ltrcopper"),
+    ltrharbor: t("template_ltrharbor"),
+    ltrgraphite: t("template_ltrgraphite"),
+    ltrsequoia: t("template_ltrsequoia"),
   }
 
   // Palette constants used in conditional inline styles (tab bar, template grid)

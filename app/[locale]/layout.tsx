@@ -23,11 +23,11 @@ export async function generateMetadata({
   return {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "ReadyCVV — AI Resume Builder | Beat ATS, 128 Templates",
+    default: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
     template: "%s | ReadyCVV",
   },
   description:
-    "Build an ATS-optimized resume with AI in minutes. 128 professional templates, cover letter generator, job application tracker. Try ReadyCVV Pro from $15/month.",
+    "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. Try ReadyCVV Pro from $15/month.",
   keywords: [
     // High-intent EN (KD 50-65)
     "ai resume builder",
@@ -75,23 +75,23 @@ export async function generateMetadata({
     alternateLocale: isEs ? ["en_US"] : ["es_ES"],
     url: `${BASE_URL}/${locale}`,
     siteName: "ReadyCVV",
-    title: "ReadyCVV — AI Resume Builder | Beat ATS, 128 Templates",
+    title: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
     description:
-      "Build an ATS-optimized resume with AI in minutes. 128 professional templates, cover letter generator, job application tracker. From $15/month.",
+      "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. From $15/month.",
     images: [
       {
         url: `${BASE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: "ReadyCVV — AI Resume Builder with 128 Professional Templates",
+        alt: "ReadyCVV — AI Resume Builder with 143 Professional Templates",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReadyCVV — AI Resume Builder | Beat ATS, 128 Templates",
+    title: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
     description:
-      "Build an ATS-optimized resume with AI in minutes. 128 professional templates, cover letter generator, job application tracker.",
+      "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker.",
     images: [`${BASE_URL}/og-image.png`],
     creator: "@readycvv",
     site: "@readycvv",

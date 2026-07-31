@@ -175,6 +175,21 @@ export type TemplateId =
   | "luxurious"
   | "metro"
   | "ats"
+  | "atsmeridian"
+  | "atsverdant"
+  | "atscardinal"
+  | "atscobalt"
+  | "atsslate"
+  | "atsnordic"
+  | "atsonyx"
+  | "atssable"
+  | "atscerulean"
+  | "atsivory"
+  | "atsgarnet"
+  | "atscopper"
+  | "atsharbor"
+  | "atsgraphite"
+  | "atssequoia"
   | "sharp"
   | "glass"
   | "neon"
@@ -364,6 +379,21 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "luxurious", name: "Lujoso", description: "Tradicional con estética premium", columns: "single", hasPhoto: true },
   { id: "metro", name: "Metro", description: "Conservador pero audaz", columns: "double", hasPhoto: false },
   { id: "ats", name: "ATS Pro", description: "Optimizado para sistemas de selección automática", columns: "single", hasPhoto: false },
+  { id: "atsmeridian", name: "ATS Meridian", description: "ATS-safe con banda de color y tipografía limpia", columns: "single", hasPhoto: false },
+  { id: "atsverdant", name: "ATS Verdant", description: "ATS-safe, banda de color y viñetas de punto", columns: "single", hasPhoto: false },
+  { id: "atscardinal", name: "ATS Cardinal", description: "ATS-safe serif con regla superior", columns: "single", hasPhoto: false },
+  { id: "atscobalt", name: "ATS Cobalt", description: "ATS-safe con encabezado dividido y barras de sección", columns: "single", hasPhoto: false },
+  { id: "atsslate", name: "ATS Slate", description: "ATS-safe minimalista con subrayado de sección", columns: "single", hasPhoto: false },
+  { id: "atsnordic", name: "ATS Nordic", description: "ATS-safe con regla y barras de sección", columns: "single", hasPhoto: false },
+  { id: "atsonyx", name: "ATS Onyx", description: "ATS-safe minimalista con secciones tipo badge", columns: "single", hasPhoto: false },
+  { id: "atssable", name: "ATS Sable", description: "ATS-safe serif con banda de color", columns: "single", hasPhoto: false },
+  { id: "atscerulean", name: "ATS Cerulean", description: "ATS-safe con banda y barras de sección", columns: "single", hasPhoto: false },
+  { id: "atsivory", name: "ATS Ivory", description: "ATS-safe minimalista y ligero", columns: "single", hasPhoto: false },
+  { id: "atsgarnet", name: "ATS Garnet", description: "ATS-safe serif con subrayado de sección", columns: "single", hasPhoto: false },
+  { id: "atscopper", name: "ATS Copper", description: "ATS-safe serif con banda y barras", columns: "single", hasPhoto: false },
+  { id: "atsharbor", name: "ATS Harbor", description: "ATS-safe con encabezado dividido y badges", columns: "single", hasPhoto: false },
+  { id: "atsgraphite", name: "ATS Graphite", description: "ATS-safe con banda de color y barras", columns: "single", hasPhoto: false },
+  { id: "atssequoia", name: "ATS Sequoia", description: "ATS-safe serif con encabezado dividido y badges", columns: "single", hasPhoto: false },
   { id: "sharp", name: "Sharp", description: "Líneas angulares, máximo impacto visual", columns: "double", hasPhoto: true },
   { id: "glass", name: "Glass", description: "Efecto glassmorphism moderno", columns: "double", hasPhoto: true },
   { id: "neon", name: "Neon", description: "Neobrutalism vibrante para perfiles creativos", columns: "single", hasPhoto: false },

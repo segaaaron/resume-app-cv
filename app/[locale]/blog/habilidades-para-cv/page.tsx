@@ -616,7 +616,7 @@ export default async function HabilidadesParaCVPage({
               <BlogCTA
                 locale={locale}
                 title="Crea una sección de habilidades que pase el ATS y convenza al reclutador."
-                description="ReadyCV PRO te sugiere las skills exactas para tu rol objetivo, puntúa tu match ATS en tiempo real y ofrece 128 plantillas con compatibilidad ATS verificada. Empieza en menos de 2 minutos."
+                description="ReadyCV PRO te sugiere las skills exactas para tu rol objetivo, puntúa tu match ATS en tiempo real y ofrece 143 plantillas con compatibilidad ATS verificada. Empieza en menos de 2 minutos."
                 buttonLabel="Empezar con ReadyCV PRO"
                 hint="$15/mes o $99/año · 7 herramientas AI · Cancela cuando quieras"
               />

@@ -15,6 +15,10 @@ export const PRO_IDS: string[] = [
   "sahara", "pearl", "editorial2", "confetti", "frame", "show-cameo", "show-marquis", "show-soiree",
   "show-plume", "chef", "teacher", "journalist", "communicator", "filmmaker", "photographer", "architect",
   "doctor", "fashion", "writer",
+  // ATS premium set — 15 ATS-safe layouts (single column, colour-adjustable). PRO.
+  "atsmeridian", "atsverdant", "atscardinal", "atscobalt", "atsslate", "atsnordic",
+  "atsonyx", "atssable", "atscerulean", "atsivory", "atsgarnet", "atscopper",
+  "atsharbor", "atsgraphite", "atssequoia",
 ]
 
 export function isProTemplate(id: string): boolean {

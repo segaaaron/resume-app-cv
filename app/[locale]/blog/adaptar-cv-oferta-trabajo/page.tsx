@@ -305,7 +305,7 @@ export default async function AdaptarCvPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Reduce el tiempo de adaptación a la mitad con las herramientas correctas</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> ves qué keywords te faltan y dónde hay gaps de densidad frente a la oferta. La función <strong>tailor-cv</strong> de ReadyCV PRO lee la oferta, sugiere reorden de habilidades y reescritura de bullets, y produce una versión adaptada sobre cualquiera de las <Link href={`/${locale}/templates`}>128 plantillas ATS-verificadas</Link> — todo en menos de tres minutos por oferta.
+                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> ves qué keywords te faltan y dónde hay gaps de densidad frente a la oferta. La función <strong>tailor-cv</strong> de ReadyCV PRO lee la oferta, sugiere reorden de habilidades y reescritura de bullets, y produce una versión adaptada sobre cualquiera de las <Link href={`/${locale}/templates`}>143 plantillas ATS-verificadas</Link> — todo en menos de tres minutos por oferta.
                   </p>
                 </div>
               </div>
@@ -358,7 +358,7 @@ export default async function AdaptarCvPage({
               <BlogCTA
                 locale={locale}
                 title="Adapta tu CV en 3 minutos, no en 30."
-                description="La función tailor-cv de ReadyCV PRO lee la oferta de trabajo, reordena tus habilidades y bullets, corre el chequeo ATS y produce un CV adaptado sobre cualquiera de 128 plantillas ATS-verificadas — todo en menos de tres minutos por postulación."
+                description="La función tailor-cv de ReadyCV PRO lee la oferta de trabajo, reordena tus habilidades y bullets, corre el chequeo ATS y produce un CV adaptado sobre cualquiera de 143 plantillas ATS-verificadas — todo en menos de tres minutos por postulación."
                 buttonLabel="Empezar con ReadyCV PRO"
                 hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />

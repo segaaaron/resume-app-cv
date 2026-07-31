@@ -621,7 +621,7 @@ export default async function ResumeSkillsPage({
               <BlogCTA
                 locale={locale}
                 title="Build a skills section that passes ATS and impresses recruiters."
-                description="ReadyCV PRO suggests the exact skills for your target role, scores your ATS match in real time, and offers 128 templates with verified ATS compatibility. Start in under two minutes."
+                description="ReadyCV PRO suggests the exact skills for your target role, scores your ATS match in real time, and offers 143 templates with verified ATS compatibility. Start in under two minutes."
                 buttonLabel="Start with ReadyCV PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />

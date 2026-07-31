@@ -319,7 +319,7 @@ export default async function ChronoVsFunctionalPage({
               <BlogCTA
                 locale={locale}
                 title="Pick the right format and let ReadyCV PRO handle the rest."
-                description="128 ATS-verified templates covering chronological, combination and hybrid layouts. AI rewrites your bullets, summary and skills section to match any format you pick — in under two minutes."
+                description="143 ATS-verified templates covering chronological, combination and hybrid layouts. AI rewrites your bullets, summary and skills section to match any format you pick — in under two minutes."
                 buttonLabel="Start with ReadyCV PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />

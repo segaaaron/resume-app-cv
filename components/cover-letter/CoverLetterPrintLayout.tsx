@@ -50,6 +50,21 @@ import TerraTemplate from "./templates/TerraTemplate"
 import FlareTemplate from "./templates/FlareTemplate"
 import HeraldTemplate from "./templates/HeraldTemplate"
 import BloomTemplate from "./templates/BloomTemplate"
+import LtrMeridian from "./templates/LtrMeridian"
+import LtrVerdant from "./templates/LtrVerdant"
+import LtrCardinal from "./templates/LtrCardinal"
+import LtrCobalt from "./templates/LtrCobalt"
+import LtrSlate from "./templates/LtrSlate"
+import LtrNordic from "./templates/LtrNordic"
+import LtrOnyx from "./templates/LtrOnyx"
+import LtrSable from "./templates/LtrSable"
+import LtrCerulean from "./templates/LtrCerulean"
+import LtrIvory from "./templates/LtrIvory"
+import LtrGarnet from "./templates/LtrGarnet"
+import LtrCopper from "./templates/LtrCopper"
+import LtrHarbor from "./templates/LtrHarbor"
+import LtrGraphite from "./templates/LtrGraphite"
+import LtrSequoia from "./templates/LtrSequoia"
 import type { CandidateData, CoverLetterContent } from "./templates/types"
 
 interface Props {
@@ -146,6 +161,21 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
     if (templateId === "flare") return <FlareTemplate {...props} />
     if (templateId === "herald") return <HeraldTemplate {...props} />
     if (templateId === "bloom") return <BloomTemplate {...props} />
+    if (templateId === "ltrmeridian") return <LtrMeridian {...props} />
+    if (templateId === "ltrverdant") return <LtrVerdant {...props} />
+    if (templateId === "ltrcardinal") return <LtrCardinal {...props} />
+    if (templateId === "ltrcobalt") return <LtrCobalt {...props} />
+    if (templateId === "ltrslate") return <LtrSlate {...props} />
+    if (templateId === "ltrnordic") return <LtrNordic {...props} />
+    if (templateId === "ltronyx") return <LtrOnyx {...props} />
+    if (templateId === "ltrsable") return <LtrSable {...props} />
+    if (templateId === "ltrcerulean") return <LtrCerulean {...props} />
+    if (templateId === "ltrivory") return <LtrIvory {...props} />
+    if (templateId === "ltrgarnet") return <LtrGarnet {...props} />
+    if (templateId === "ltrcopper") return <LtrCopper {...props} />
+    if (templateId === "ltrharbor") return <LtrHarbor {...props} />
+    if (templateId === "ltrgraphite") return <LtrGraphite {...props} />
+    if (templateId === "ltrsequoia") return <LtrSequoia {...props} />
     return <ElegantTemplate {...props} />
   }
 

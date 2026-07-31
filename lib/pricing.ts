@@ -5,7 +5,7 @@
  * saying $144 — the big number on the pricing toggle plus three JSON-LD offers.
  * The card contradicted itself on screen ("$144/yr" above "$8.25/month · save
  * $81"), and Google was told the annual plan cost $144 while Stripe charged $99.
- * Same failure mode as the "164 templates vs 128" drift.
+ * Same failure mode as the "164 templates vs 143" drift.
  *
  * These are DISPLAY values. What a customer is actually charged comes from the
  * Stripe Price IDs in env (STRIPE_PRICE_ID_*) — changing a number here does NOT
