@@ -11,7 +11,9 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
-import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
+import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
+import { assessDescription } from "../shared/bullet-quality"
+import { hasCliche } from "../shared/cliches"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { findSemanticMatches } from "../shared/semantic-match"
@@ -238,6 +240,16 @@ Reglas:
           if (orig !== undefined && (isTrivialEdit(orig, b.text) || isCosmeticReword(orig, b.text))) {
             droppedTrivial++
             return false
+          }
+          // Lateral-rewrite guard (same as improve-bullet): a rewrite of an already-
+          // strong bullet that strips content and adds nothing concrete is different,
+          // not better. A real JD-tailored rewrite ADDS a keyword, so it survives.
+          if (orig !== undefined) {
+            const origStrong = assessDescription(orig).weakOpenerIndices.length === 0 && !hasCliche(orig)
+            if (origStrong && dropsContentWithoutGain(orig, b.text)) {
+              droppedTrivial++
+              return false
+            }
           }
           return true
         })

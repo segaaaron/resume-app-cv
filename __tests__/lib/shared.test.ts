@@ -5,6 +5,11 @@ import { AppError } from "@/lib/services/auth/AppError"
 
 vi.mock("@/lib/auth", () => ({ auth: vi.fn() }))
 vi.mock("@/lib/csrf", () => ({ checkOrigin: vi.fn() }))
+// Capture logger.error so we can assert which failures reach the Service Errors sink.
+const { errorSpy } = vi.hoisted(() => ({ errorSpy: vi.fn() }))
+vi.mock("@/lib/logger", () => ({
+  createLogger: () => ({ error: errorSpy, info: () => {}, warn: () => {}, debug: () => {} }),
+}))
 
 import { requireAuth, handleError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
@@ -59,5 +64,29 @@ describe("handleError", () => {
     expect(res.status).toBe(500)
     const body = await res.json()
     expect(body).toEqual({ error: "server_error" })
+  })
+
+  it("does NOT log a 4xx AppError — expected client outcome, not a service error", () => {
+    handleError(new AppError("off_topic", 422))
+    handleError(new AppError("not_found", 404))
+    expect(errorSpy).not.toHaveBeenCalled()
+  })
+
+  it("LOGS a 5xx AppError so it reaches the Service Errors panel", () => {
+    handleError(new AppError("invalid_response_format", 500), {
+      req: new Request("https://x.test/api/ai/review-cv", { method: "POST" }),
+      userId: "u1",
+    })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    const [message, ctx] = errorSpy.mock.calls[0]
+    expect(message).toBe("invalid_response_format")
+    expect(ctx).toMatchObject({ status: 500, source: "ai", route: "/api/ai/review-cv", userId: "u1" })
+  })
+
+  it("LOGS an unhandled throw with its real message", () => {
+    handleError(new Error("openai timeout"), { req: new Request("https://x.test/api/ai/tailor-cv", { method: "POST" }) })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy.mock.calls[0][0]).toBe("openai timeout")
+    expect(errorSpy.mock.calls[0][1]).toMatchObject({ source: "ai" })
   })
 })

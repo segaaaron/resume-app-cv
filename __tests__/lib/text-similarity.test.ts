@@ -3,6 +3,7 @@ import {
   normalizedSimilarity,
   isTrivialEdit,
   isCosmeticReword,
+  dropsContentWithoutGain,
   TRIVIAL_EDIT_SIMILARITY,
 } from "@/lib/services/ai/shared/text-similarity"
 
@@ -112,5 +113,46 @@ describe("isCosmeticReword", () => {
 
   it("does not fire on an empty suggestion", () => {
     expect(isCosmeticReword("• Built the thing", "   ")).toBe(false)
+  })
+})
+
+describe("dropsContentWithoutGain — lateral, lossy rewrites", () => {
+  it("flags the reported case: strips 'enhance functionality' + 'strengthen', adds nothing", () => {
+    const current = "Integrated RESTful APIs and third-party libraries to enhance iOS app functionality, while mentoring junior developers to raise code quality and strengthen team performance."
+    const suggested = "• Integrated RESTful APIs and third-party libraries into the iOS app, and mentored junior developers to raise code quality and team performance."
+    expect(dropsContentWithoutGain(current, suggested)).toBe(true)
+  })
+
+  it("does NOT flag a rewrite that adds a concrete new word", () => {
+    const orig = "Integrated RESTful APIs to enhance the iOS app."
+    const better = "Integrated RESTful APIs, cutting checkout latency 30%."
+    expect(dropsContentWithoutGain(orig, better)).toBe(false)
+  })
+
+  it("treats a tense change (mentoring → mentored) as the same word, not a gain", () => {
+    expect(dropsContentWithoutGain("Mentoring and coaching the whole team", "Mentored the team")).toBe(true)
+  })
+
+  it("flags dropping a single NAMED technology (RXSwift) with no concrete gain", () => {
+    const current = "• Improved app responsiveness and user engagement by implementing reactive programming patterns using RXSwift."
+    const suggested = "• Improved app responsiveness and user engagement by implementing reactive programming patterns."
+    expect(dropsContentWithoutGain(current, suggested)).toBe(true)
+  })
+
+  it("flags dropping a camelCase/known tech (GraphQL) alone", () => {
+    expect(dropsContentWithoutGain("Built the API with GraphQL", "Built the API")).toBe(true)
+  })
+
+  it("does NOT flag swapping a tech for another concrete one", () => {
+    // dropped RXSwift but added Combine (a named token) — a real change, not a loss.
+    expect(dropsContentWithoutGain("Built the app using RXSwift", "Rebuilt the app using Combine")).toBe(false)
+  })
+
+  it("does not flag dropping one plain word (not named, not ≥2)", () => {
+    expect(dropsContentWithoutGain("Built the payments module quickly", "Built the payments module")).toBe(false)
+  })
+
+  it("empty suggestion counts as no gain", () => {
+    expect(dropsContentWithoutGain("Built the payments API", "  ")).toBe(true)
   })
 })

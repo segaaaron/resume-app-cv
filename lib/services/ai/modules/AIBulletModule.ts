@@ -8,7 +8,9 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { isTrivialEdit, isCosmeticReword } from "../shared/text-similarity"
+import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
+import { assessDescription } from "../shared/bullet-quality"
+import { hasCliche } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
   BulletImprovementSchema,
@@ -66,6 +68,7 @@ TRANSFORMATION RULES:
 5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never invent one.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
 7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. Either end on a concrete result the source states (a number, a named system, a real outcome) or end on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
+8. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
 
 WHAT TO RETURN — read this last and follow it exactly:
 Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve using facts already in the source. Omit every other bullet. A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. A bullet with no number can still be improved by wording (stronger verb, clearer action/outcome) — improve it; never demand a figure.
@@ -99,6 +102,7 @@ REGLAS DE TRANSFORMACIÓN:
 5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo inventes.
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
 7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto que el source declare (una cifra, un sistema nombrado, un resultado real) o termina en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
+8. DEJA EN PAZ LOS BULLETS YA FUERTES. Si un bullet ya empieza con un verbo de acción fuerte Y nombra trabajo específico (herramientas, sistemas o resultados reales), ya está bien — OMÍTELO. NO lo reescribas solo para decirlo distinto o "condensarlo": cambiar "mejorar"→"ampliar" o eliminar "fortalecer el rendimiento del equipo" lo hace DIFERENTE, no mejor, y pierde en silencio detalle que el candidato declaró. Reescribe un bullet así SOLO si puedes AGREGAR un resultado concreto, cifra o keyword que el source respalde. Ante la duda, déjalo.
 
 QUÉ DEVOLVER — lee esto al final y cúmplelo exactamente:
 Incluye una entrada en "improvements" SOLO para un bullet que puedas mejorar MATERIALMENTE usando datos ya presentes en el source. Omite todos los demás. Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. Un bullet sin número igual se puede mejorar por redacción (verbo más fuerte, acción/resultado más claros) — mejóralo; nunca exijas una cifra.
@@ -177,6 +181,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // otherwise-identical bullet reads the same on both sides — drop it rather
       // than sell a reword as an improvement. Spares spelling fixes + enrichments.
       if (isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
+      // Lateral-rewrite guard: when the ORIGINAL is already strong (opens with a
+      // verb — no weak "responsible for" opener — and carries no cliché), a rewrite
+      // that STRIPS content it stated and adds nothing concrete is different, not
+      // better ("…to enhance iOS app functionality" → "…into the iOS app"). Leave
+      // the good bullet alone. Gated on "already strong" so a WEAK bullet still gets
+      // fixed even when the fix drops filler.
+      const originalIsStrong = assessDescription(original).weakOpenerIndices.length === 0 && !hasCliche(original)
+      if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
 
       seenIndices.add(index)
       improvements.push({ index, text: suggested })

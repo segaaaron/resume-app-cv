@@ -30,37 +30,54 @@ export function handleError(
   ctx?: { userId?: string; userEmail?: string; route?: string; req?: Request },
 ): NextResponse {
   if (err instanceof AppError) {
+    // A 5xx AppError is a REAL server failure — the AI returned malformed JSON
+    // ("invalid_response_format"), a parse blew up ("parse_error"), etc. It was
+    // returned to the user as a 500 but never logged, so the Service Errors panel
+    // showed "all clear" while review/tailor were actually failing. Log it exactly
+    // like an unhandled throw. A 4xx AppError is an EXPECTED client outcome (bad
+    // input, quota, off-topic) and must stay OUT of the panel.
+    if (err.status >= 500) logHandledFailure(err.code, err.status, ctx, err)
     return NextResponse.json({ error: err.code, ...err.extra }, { status: err.status })
   }
-  // Only real (unhandled) failures reach here — captured into ErrorLog via logger.error.
-  //
-  // The message MUST be the actual error text, not a fixed "unhandled error": that
-  // constant collapsed every 500 in the app into ONE unsearchable fingerprint with
-  // no endpoint. The Service Errors dashboard groups by (source|endpoint|message) and
-  // searches message/userEmail/userId — so a real message + endpoint + who-hit-it is
-  // what makes a failure visible and attributable instead of "0 errors — all clear".
+  // Unhandled throw — always a 500, always logged.
   const message = err instanceof Error && err.message ? err.message : "unhandled error"
+  logHandledFailure(message, 500, ctx, err)
+  return NextResponse.json({ error: "server_error" }, { status: 500 })
+}
+
+/**
+ * Send a server failure to the Service Errors sink (via logger.error → __errorLogSink).
+ *
+ * The message MUST be the actual error text, not a fixed constant: a constant
+ * collapses every 500 into ONE unsearchable fingerprint with no endpoint. The
+ * dashboard groups by (source|endpoint|message) and searches message/userEmail/userId,
+ * so a real message + endpoint + who-hit-it is what makes a failure visible and
+ * attributable. The service label is derived from the route (ai / stripe / paypal /
+ * user / cron …) so "which service failed" is answerable and the per-service colour
+ * lights up.
+ */
+function logHandledFailure(
+  message: string,
+  status: number,
+  ctx: { userId?: string; userEmail?: string; route?: string; req?: Request } | undefined,
+  err: unknown,
+): void {
   let route = ctx?.route
   if (!route && ctx?.req) {
     try { route = new URL(ctx.req.url).pathname } catch { /* url unpar. — leave route unset */ }
   }
-  // Service label for the dashboard. Without this every route error groups under the
-  // generic logger name "controller"; deriving the family from the route (ai / stripe /
-  // paypal / user / cron …) is what makes "which service failed" answerable and lights
-  // up the per-service colour + filter in the Service Errors panel.
   const source = route ? serviceFromRoute(route) : undefined
   logger.error(
     message,
     {
-      status: 500,
+      status,
       ...(source ? { source } : {}),
       ...(route ? { route } : {}),
       ...(ctx?.userId ? { userId: ctx.userId } : {}),
       ...(ctx?.userEmail ? { userEmail: ctx.userEmail } : {}),
     },
-    err,
+    err instanceof Error ? err : undefined,
   )
-  return NextResponse.json({ error: "server_error" }, { status: 500 })
 }
 
 interface RequireUserOptions {
@@ -91,6 +108,8 @@ interface RequireUserSuccess {
     managedExpiresAt: Date | null
     managedDownloadLimit: number | null
     managedDownloadsUsed: number
+    managedResumeLimit: number | null
+    managedCoverLetterLimit: number | null
   }
 }
 
@@ -115,7 +134,7 @@ export async function requireUser(
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, email: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, managedDownloadLimit: true, managedDownloadsUsed: true },
+    select: { id: true, email: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, emailVerified: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, managedDownloadLimit: true, managedDownloadsUsed: true, managedResumeLimit: true, managedCoverLetterLimit: true },
   })
 
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
