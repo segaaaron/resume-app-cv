@@ -6,7 +6,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 const moduleLogger = createLogger("resume-service")
 import { AppError } from "@/lib/services/auth/AppError"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema, DEFAULT_TEMPLATE_ID } from "@/types/resume"
-import { getLimits, isActive, effectivePlan } from "@/lib/plans"
+import { getLimits, isActive, effectivePlan, resolveResumeLimit } from "@/lib/plans"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 
@@ -152,8 +152,8 @@ export class ResumeService {
   // ── CREATE ────────────────────────────────────────────────────────────────
 
   async create(userId: string, templateId?: string) {
-    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, name: true, subscriptionEndsAt: true } })
-    const limits = getLimits(user ? effectivePlan(user) : "UNSUBSCRIBED")
+    const user = await db.user.findUnique({ where: { id: userId }, select: { plan: true, name: true, subscriptionEndsAt: true, managedResumeLimit: true } })
+    const maxResumes = resolveResumeLimit(user ? effectivePlan(user) : "UNSUBSCRIBED", user?.managedResumeLimit)
 
     const defaultData = ResumeSectionsSchema.parse({})
 
@@ -168,7 +168,7 @@ export class ResumeService {
     // Transaction ensures count-check and create are atomic — prevents two concurrent
     // requests from both passing the limit check and creating two resumes.
     const resume = await db.$transaction(async (tx) => {
-      await enforceResumeLimit(tx, userId, limits.maxResumes)
+      await enforceResumeLimit(tx, userId, maxResumes)
       return tx.resume.create({
         data: {
           userId,
@@ -228,15 +228,15 @@ export class ResumeService {
   async duplicate(userId: string, resumeId: string) {
     const [original, user] = await Promise.all([
       db.resume.findFirst({ where: { id: resumeId, userId } }),
-      db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionEndsAt: true } }),
+      db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionEndsAt: true, managedResumeLimit: true } }),
     ])
 
     if (!original) throw new AppError("not_found", 404)
 
-    const limits = getLimits(user ? effectivePlan(user) : "UNSUBSCRIBED")
+    const maxResumes = resolveResumeLimit(user ? effectivePlan(user) : "UNSUBSCRIBED", user?.managedResumeLimit)
 
     const copy = await db.$transaction(async (tx) => {
-      await enforceResumeLimit(tx, userId, limits.maxResumes, "duplicate")
+      await enforceResumeLimit(tx, userId, maxResumes, "duplicate")
       return tx.resume.create({
         data: {
           userId,
@@ -272,15 +272,15 @@ export class ResumeService {
   ) {
     const [original, user] = await Promise.all([
       db.resume.findFirst({ where: { id: sourceId, userId } }),
-      db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionEndsAt: true } }),
+      db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionEndsAt: true, managedResumeLimit: true } }),
     ])
 
     if (!original) throw new AppError("not_found", 404)
 
-    const limits = getLimits(user ? effectivePlan(user) : "UNSUBSCRIBED")
+    const maxResumes = resolveResumeLimit(user ? effectivePlan(user) : "UNSUBSCRIBED", user?.managedResumeLimit)
 
     const copy = await db.$transaction(async (tx) => {
-      await enforceResumeLimit(tx, userId, limits.maxResumes, "translate")
+      await enforceResumeLimit(tx, userId, maxResumes, "translate")
       return tx.resume.create({
         data: {
           userId,

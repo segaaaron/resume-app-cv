@@ -2,7 +2,7 @@
 import { db } from "@/lib/db"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { AppError } from "@/lib/services/auth/AppError"
-import { getLimits } from "@/lib/plans"
+import { resolveCoverLetterLimit } from "@/lib/plans"
 import { z } from "zod"
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -76,17 +76,20 @@ export class CoverLetterService {
     return letter
   }
 
-  async create(userId: string, title?: string, plan: string = "UNSUBSCRIBED") {
-    const limits = getLimits(plan)
+  async create(userId: string, title?: string, plan: string = "UNSUBSCRIBED", managedCoverLetterLimit?: number | null) {
+    // For LIMITED, the admin's per-user cap (or default 5); every other plan keeps
+    // its own maxCoverLetters. `plan` here is already the EFFECTIVE plan (resolved
+    // in requireUser), so an expired one-time buyer is treated as UNSUBSCRIBED.
+    const maxCoverLetters = resolveCoverLetterLimit(plan, managedCoverLetterLimit)
 
     // Atomic count-then-create. Mirrors ResumeService.create.
     let limitHit = false
     const letter = await db.$transaction(async (tx) => {
-      if (limits.maxCoverLetters !== -1) {
+      if (maxCoverLetters !== -1) {
         const count = await tx.coverLetter.count({ where: { userId } })
-        if (count >= limits.maxCoverLetters) {
+        if (count >= maxCoverLetters) {
           limitHit = true
-          throw new AppError("plan_limit_cover_letter", 403, { limit: limits.maxCoverLetters })
+          throw new AppError("plan_limit_cover_letter", 403, { limit: maxCoverLetters })
         }
       }
       return tx.coverLetter.create({
@@ -105,7 +108,7 @@ export class CoverLetterService {
     }).catch((err) => {
       if (limitHit) {
         db.auditLog
-          .create({ data: { userId, action: "FREE_COVER_LETTER_LIMIT_HIT", metadata: { limit: limits.maxCoverLetters } } })
+          .create({ data: { userId, action: "FREE_COVER_LETTER_LIMIT_HIT", metadata: { limit: maxCoverLetters } } })
           .catch((auditErr) => { this.logger.error("cover-letter.create: auditLog FREE_COVER_LETTER_LIMIT_HIT failed", { userId }, auditErr instanceof Error ? auditErr : undefined) })
       }
       throw err

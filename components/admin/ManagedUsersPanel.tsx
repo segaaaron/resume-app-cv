@@ -17,6 +17,7 @@ interface ManagedUser {
   id: string; email: string; managedExpiresAt: string | null
   managedBlocked: boolean; managedDownloadsUsed: number | null
   managedDownloadLimit: number | null; managedNote: string | null; createdAt: string
+  managedResumeLimit: number | null; managedCoverLetterLimit: number | null
 }
 
 type Banner = { kind: "success" | "error"; msg: string; password?: string } | null
@@ -32,12 +33,16 @@ export default function ManagedUsersPanel() {
   const [editTarget, setEditTarget]   = useState<ManagedUser | null>(null)
   const [editExpiry, setEditExpiry]   = useState("")
   const [editLimit, setEditLimit]     = useState("")
+  const [editResumeLimit, setEditResumeLimit] = useState("")
+  const [editCoverLimit, setEditCoverLimit]   = useState("")
   const [banner, setBanner]           = useState<Banner>(null)
   const [copied, setCopied]           = useState(false)
 
   const [email, setEmail]               = useState("")
   const [expiresAt, setExpiresAt]       = useState("")
   const [downloadLimit, setDownloadLimit] = useState("")
+  const [resumeLimit, setResumeLimit]   = useState("")
+  const [coverLimit, setCoverLimit]     = useState("")
   const [note, setNote]                 = useState("")
 
   const fetchList = useCallback(async () => {
@@ -55,7 +60,7 @@ export default function ManagedUsersPanel() {
 
   useEffect(() => { fetchList() }, [fetchList])
 
-  function resetForm() { setEmail(""); setExpiresAt(""); setDownloadLimit(""); setNote("") }
+  function resetForm() { setEmail(""); setExpiresAt(""); setDownloadLimit(""); setResumeLimit(""); setCoverLimit(""); setNote("") }
 
   function copyPassword(pw: string) {
     navigator.clipboard.writeText(pw).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
@@ -74,6 +79,8 @@ export default function ManagedUsersPanel() {
         body: JSON.stringify({
           email: email.trim(), expiresAt: new Date(expiresAt).toISOString(),
           ...(downloadLimit ? { downloadLimit: Number(downloadLimit) } : {}),
+          ...(resumeLimit ? { resumeLimit: Number(resumeLimit) } : {}),
+          ...(coverLimit ? { coverLetterLimit: Number(coverLimit) } : {}),
           ...(note.trim() ? { note: note.trim() } : {}),
         }),
       })
@@ -119,6 +126,8 @@ export default function ManagedUsersPanel() {
       action: "edit",
       expiresAt: new Date(editExpiry).toISOString(),
       ...(editLimit ? { downloadLimit: Number(editLimit) } : { downloadLimit: null }),
+      ...(editResumeLimit ? { resumeLimit: Number(editResumeLimit) } : { resumeLimit: null }),
+      ...(editCoverLimit ? { coverLetterLimit: Number(editCoverLimit) } : { coverLetterLimit: null }),
     })
     setEditTarget(null)
   }
@@ -135,6 +144,8 @@ export default function ManagedUsersPanel() {
     setEditTarget(u)
     setEditExpiry(u.managedExpiresAt ? format(new Date(u.managedExpiresAt), "yyyy-MM-dd") : "")
     setEditLimit(u.managedDownloadLimit?.toString() ?? "")
+    setEditResumeLimit(u.managedResumeLimit?.toString() ?? "")
+    setEditCoverLimit(u.managedCoverLetterLimit?.toString() ?? "")
   }
 
   function statusOf(u: ManagedUser): "active" | "blocked" | "expired" {
@@ -191,6 +202,12 @@ export default function ManagedUsersPanel() {
             </Field>
             <Field label={t("field_download_limit")}>
               <input type="number" min={1} value={downloadLimit} onChange={e => setDownloadLimit(e.target.value)} placeholder={t("field_download_limit_placeholder")} className={inputCls} />
+            </Field>
+            <Field label={t("field_resume_limit")}>
+              <input type="number" min={1} value={resumeLimit} onChange={e => setResumeLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
+            </Field>
+            <Field label={t("field_cover_limit")}>
+              <input type="number" min={1} value={coverLimit} onChange={e => setCoverLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
             </Field>
             <Field label={t("field_note")} hint={`${note.length}/500`}>
               <textarea value={note} onChange={e => setNote(e.target.value.slice(0, 500))} rows={2} placeholder={t("field_note_placeholder")} className={`${inputCls} resize-none`} />
@@ -286,6 +303,12 @@ export default function ManagedUsersPanel() {
             </Field>
             <Field label={t("field_download_limit")}>
               <input type="number" min={1} value={editLimit} onChange={e => setEditLimit(e.target.value)} placeholder={t("field_download_limit_placeholder")} className={inputCls} />
+            </Field>
+            <Field label={t("field_resume_limit")}>
+              <input type="number" min={1} value={editResumeLimit} onChange={e => setEditResumeLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
+            </Field>
+            <Field label={t("field_cover_limit")}>
+              <input type="number" min={1} value={editCoverLimit} onChange={e => setEditCoverLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
             </Field>
           </div>
           <AlertDialogFooter>

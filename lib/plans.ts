@@ -469,3 +469,25 @@ export function getLimits(plan: string): PlanLimits {
   if (plan === "BASIC") return PLAN_LIMITS.BASIC
   return PLAN_LIMITS.UNSUBSCRIBED
 }
+
+// LIMITED (managed) accounts are capped by the admin per user. When the admin
+// leaves the field blank (NULL in DB), this default applies. Only LIMITED uses
+// these — every other plan keeps its PLAN_LIMITS value untouched.
+export const LIMITED_DEFAULT_RESUME_LIMIT = 5
+export const LIMITED_DEFAULT_COVER_LETTER_LIMIT = 5
+
+/**
+ * Effective resume cap. For LIMITED, the admin's per-user value or the default
+ * (5). For every other plan, the plan's own PLAN_LIMITS.maxResumes — unchanged.
+ * `effPlan` must already be the EFFECTIVE plan (see effectivePlan).
+ */
+export function resolveResumeLimit(effPlan: Plan | string, managedResumeLimit: number | null | undefined): number {
+  if (effPlan === "LIMITED") return managedResumeLimit ?? LIMITED_DEFAULT_RESUME_LIMIT
+  return getLimits(effPlan).maxResumes
+}
+
+/** Effective cover-letter cap — same rule as resolveResumeLimit. */
+export function resolveCoverLetterLimit(effPlan: Plan | string, managedCoverLetterLimit: number | null | undefined): number {
+  if (effPlan === "LIMITED") return managedCoverLetterLimit ?? LIMITED_DEFAULT_COVER_LETTER_LIMIT
+  return getLimits(effPlan).maxCoverLetters
+}

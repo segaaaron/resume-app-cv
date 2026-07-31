@@ -15,6 +15,9 @@ const bodySchema = z.object({
   email: z.string().email(),
   expiresAt: z.string().datetime(),
   downloadLimit: z.number().int().positive().optional(),
+  // Omitted → the LIMITED default (5) applies in code.
+  resumeLimit: z.number().int().positive().optional(),
+  coverLetterLimit: z.number().int().positive().optional(),
   note: z.string().max(500).optional(),
 })
 
@@ -31,7 +34,7 @@ export async function POST(req: Request) {
   const parsed = bodySchema.safeParse(body)
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 422 })
 
-  const { email, expiresAt: expiresAtStr, downloadLimit, note } = parsed.data
+  const { email, expiresAt: expiresAtStr, downloadLimit, resumeLimit, coverLetterLimit, note } = parsed.data
   const managedExpiresAt = new Date(expiresAtStr)
   // Treat the supplied date as end-of-day UTC so an admin picking "today" via a
   // `<input type="date">` does not accidentally pass an already-past midnight.
@@ -71,6 +74,8 @@ export async function POST(req: Request) {
         emailVerified: new Date(),
         managedExpiresAt,
         managedDownloadLimit: downloadLimit ?? null,
+        managedResumeLimit: resumeLimit ?? null,
+        managedCoverLetterLimit: coverLetterLimit ?? null,
         managedCreatedBy: session.user.id,
         managedNote: note ?? null,
       },
@@ -85,7 +90,7 @@ export async function POST(req: Request) {
   }
 
   db.auditLog.create({
-    data: { userId: session.user.id, action: "MANAGED_USER_CREATED", metadata: { targetUserId: user.id, email, managedExpiresAt, managedDownloadLimit: downloadLimit ?? null } },
+    data: { userId: session.user.id, action: "MANAGED_USER_CREATED", metadata: { targetUserId: user.id, email, managedExpiresAt, managedDownloadLimit: downloadLimit ?? null, managedResumeLimit: resumeLimit ?? null, managedCoverLetterLimit: coverLetterLimit ?? null } },
   }).catch((e) => logger.error("auditLog MANAGED_USER_CREATED failed", { userId: user.id }, e instanceof Error ? e : undefined))
 
   const emailService = new ResendEmailService()

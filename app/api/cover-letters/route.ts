@@ -28,7 +28,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json().catch(() => ({}))
     const title = typeof body?.title === "string" ? body.title.slice(0, 200) : undefined
-    const letter = await coverLetterService.create(authResult.userId, title, authResult.user.plan)
+    const letter = await coverLetterService.create(authResult.userId, title, authResult.user.plan, authResult.user.managedCoverLetterLimit)
     return NextResponse.json(letter, { status: 201 })
   } catch (err) {
     return handleError(err, { req })

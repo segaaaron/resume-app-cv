@@ -23,6 +23,8 @@ export async function GET(request: NextRequest) {
       managedExpiresAt: true,
       managedDownloadLimit: true,
       managedDownloadsUsed: true,
+      managedResumeLimit: true,
+      managedCoverLetterLimit: true,
       managedBlocked: true,
       managedNote: true,
       managedCreatedBy: true,

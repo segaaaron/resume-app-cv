@@ -8,6 +8,10 @@ import {
   hasManageableBilling,
   blocksNewPurchase,
   isStaffAccess,
+  resolveResumeLimit,
+  resolveCoverLetterLimit,
+  LIMITED_DEFAULT_RESUME_LIMIT,
+  LIMITED_DEFAULT_COVER_LETTER_LIMIT,
   PLAN_LIMITS,
 } from "@/lib/plans"
 
@@ -205,6 +209,32 @@ describe("plans · BASIC + SPRINT capabilities", () => {
       expect(isStaffAccess("SUPER_ADMIN", "ACTIVE")).toBe(false)
       expect(isStaffAccess("SUPER_ADMIN", "PAST_DUE")).toBe(false)
       expect(isStaffAccess("SUPER_ADMIN", "CANCELED")).toBe(false)
+    })
+  })
+
+  // The admin-configurable managed caps must ONLY affect LIMITED. Every other
+  // plan keeps its PLAN_LIMITS value untouched — that is the whole safety promise.
+  describe("resolveResumeLimit / resolveCoverLetterLimit", () => {
+    it("LIMITED with no admin value falls back to the default (5)", () => {
+      expect(resolveResumeLimit("LIMITED", null)).toBe(LIMITED_DEFAULT_RESUME_LIMIT)
+      expect(resolveResumeLimit("LIMITED", undefined)).toBe(5)
+      expect(resolveCoverLetterLimit("LIMITED", null)).toBe(LIMITED_DEFAULT_COVER_LETTER_LIMIT)
+    })
+
+    it("LIMITED honors the admin's per-user value", () => {
+      expect(resolveResumeLimit("LIMITED", 3)).toBe(3)
+      expect(resolveResumeLimit("LIMITED", 20)).toBe(20)
+      expect(resolveCoverLetterLimit("LIMITED", 1)).toBe(1)
+    })
+
+    it("does NOT touch any other plan — managed value is ignored", () => {
+      // Even if a stray managed value is passed, non-LIMITED plans use PLAN_LIMITS.
+      expect(resolveResumeLimit("PRO", 2)).toBe(PLAN_LIMITS.PRO.maxResumes)          // -1
+      expect(resolveResumeLimit("BASIC", 2)).toBe(PLAN_LIMITS.BASIC.maxResumes)      // 5
+      expect(resolveResumeLimit("SPRINT", 2)).toBe(PLAN_LIMITS.SPRINT.maxResumes)
+      expect(resolveResumeLimit("UNSUBSCRIBED", 99)).toBe(PLAN_LIMITS.UNSUBSCRIBED.maxResumes) // 1
+      expect(resolveCoverLetterLimit("PRO", 2)).toBe(PLAN_LIMITS.PRO.maxCoverLetters)
+      expect(resolveCoverLetterLimit("UNSUBSCRIBED", 99)).toBe(PLAN_LIMITS.UNSUBSCRIBED.maxCoverLetters)
     })
   })
 })

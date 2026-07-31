@@ -12,7 +12,7 @@ export async function GET(req: Request) {
   if (authResult instanceof NextResponse) return authResult
 
   try {
-    const payload = await getQuotaStatusPayload(authResult.userId, authResult.user.plan)
+    const payload = await getQuotaStatusPayload(authResult.userId, authResult.user.plan, authResult.user.managedResumeLimit, authResult.user.managedCoverLetterLimit)
     // Short private cache: quota changes on every AI/resume/cover-letter action; staleness
     // capped to avoid UI flicker but kept low to reflect server enforcement promptly.
     return NextResponse.json(payload, {

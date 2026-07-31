@@ -8,6 +8,8 @@ import {
   AI_ENDPOINT_NAMES,
   getImportQuota,
   getLimits,
+  resolveResumeLimit,
+  resolveCoverLetterLimit,
   type AiEndpointName,
 } from "@/lib/plans"
 
@@ -68,8 +70,16 @@ export async function getAiQuotaStatus(userId: string, plan: string): Promise<Ai
   return status
 }
 
-/** Returns the full quota payload (AI + plan counters) for a user. */
-export async function getQuotaStatusPayload(userId: string, plan: string): Promise<QuotaStatusPayload> {
+/** Returns the full quota payload (AI + plan counters) for a user. The managed
+ *  caps (LIMITED only) must be threaded through so the displayed resume/cover
+ *  counters match what the services actually enforce — otherwise a capped managed
+ *  user is shown "unlimited". */
+export async function getQuotaStatusPayload(
+  userId: string,
+  plan: string,
+  managedResumeLimit?: number | null,
+  managedCoverLetterLimit?: number | null,
+): Promise<QuotaStatusPayload> {
   const limits = getLimits(plan)
 
   const [ai, resumesUsed, coverLettersUsed] = await Promise.all([
@@ -82,8 +92,8 @@ export async function getQuotaStatusPayload(userId: string, plan: string): Promi
     ai,
     plan: {
       plan,
-      resumes: describe(resumesUsed, limits.maxResumes),
-      coverLetters: describe(coverLettersUsed, limits.maxCoverLetters),
+      resumes: describe(resumesUsed, resolveResumeLimit(plan, managedResumeLimit)),
+      coverLetters: describe(coverLettersUsed, resolveCoverLetterLimit(plan, managedCoverLetterLimit)),
       canExportPdf: limits.canExportPdf,
       canImport: getImportQuota(plan).limit > 0,
     },

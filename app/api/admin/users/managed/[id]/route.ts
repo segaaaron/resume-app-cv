@@ -18,6 +18,9 @@ const patchSchema = z.discriminatedUnion("action", [
     action: z.literal("edit"),
     expiresAt: z.string().datetime(),
     downloadLimit: z.number().int().positive().nullable().optional(),
+    // NULL/omitted → the LIMITED default (5) applies in code.
+    resumeLimit: z.number().int().positive().nullable().optional(),
+    coverLetterLimit: z.number().int().positive().nullable().optional(),
   }),
   z.object({ action: z.literal("reset-downloads") }),
   z.object({ action: z.literal("reset-password") }),
@@ -69,14 +72,20 @@ export async function PATCH(req: Request, { params }: Params) {
     if (managedExpiresAt <= new Date()) return NextResponse.json({ error: "expiresAt must be in the future" }, { status: 422 })
     await db.user.update({
       where: { id },
-      data: { managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null, sessionVersion: { increment: 1 } },
+      data: {
+        managedExpiresAt,
+        managedDownloadLimit: data.downloadLimit ?? null,
+        managedResumeLimit: data.resumeLimit ?? null,
+        managedCoverLetterLimit: data.coverLetterLimit ?? null,
+        sessionVersion: { increment: 1 },
+      },
     })
     purgeUserCache(id)
     logger.info("admin: managed user edited", { targetUserId: id, managedExpiresAt, byAdmin: session.user.id })
     db.auditLog.create({
-      data: { userId: session.user.id, action: "MANAGED_USER_EDITED", metadata: { targetUserId: id, email: existing.email, managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null } },
+      data: { userId: session.user.id, action: "MANAGED_USER_EDITED", metadata: { targetUserId: id, email: existing.email, managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null, managedResumeLimit: data.resumeLimit ?? null, managedCoverLetterLimit: data.coverLetterLimit ?? null } },
     }).catch((err) => logger.error("auditLog MANAGED_USER_EDITED failed", { targetUserId: id }, err instanceof Error ? err : undefined))
-    return NextResponse.json({ id, managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null })
+    return NextResponse.json({ id, managedExpiresAt, managedDownloadLimit: data.downloadLimit ?? null, managedResumeLimit: data.resumeLimit ?? null, managedCoverLetterLimit: data.coverLetterLimit ?? null })
   }
 
   if (data.action === "reset-downloads") {
