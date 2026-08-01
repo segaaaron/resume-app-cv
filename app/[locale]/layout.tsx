@@ -93,8 +93,6 @@ export async function generateMetadata({
     description:
       "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker.",
     images: [`${BASE_URL}/og-image.png`],
-    creator: "@valhallaresume",
-    site: "@valhallaresume",
   },
   verification: {
     google: "ZSp58knctbj095ozmJb69X35jNn3pgP-uOZQ7PR5FSo",

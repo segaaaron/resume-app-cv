@@ -9,7 +9,7 @@ import { sessionForcedHtml, sessionForcedText, sessionForcedSubject } from "@/li
 import { managedWelcomeHtml, managedWelcomeText, managedWelcomeSubjectFor } from "@/lib/emails/managedWelcome"
 import type { IEmailService } from "@/lib/interfaces/IEmailService"
 
-const FROM = process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>"
+const FROM = process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>"
 const logger = createLogger("ResendEmailService")
 
 function maskEmail(email: string): string {

@@ -97,7 +97,7 @@ describe("CronService.sendRenewalReminders", () => {
     expect(mockEmailClient.emails.send).toHaveBeenCalledOnce()
     expect(mockEmailClient.emails.send).toHaveBeenCalledWith(
       expect.objectContaining({
-        from: "Valhalla Resume <techstackmssaravia@gmail.com>",
+        from: "Valhalla Resume <no-reply@valhallaresume.com>",
         to: "ana@example.com",
         subject: "Tu plan se renueva en 2 días — Valhalla Resume",
       }),

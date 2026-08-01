@@ -402,7 +402,7 @@ export class StripeWebhookService {
       const userId = result.user.id
       const resendClient = resend
       Promise.resolve().then(() => resendClient.emails.send({
-        from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+        from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
         to: toEmail,
         subject: subscriptionConfirmationSubject(locale),
         html: subscriptionConfirmationHtml({ userName, userId, planInterval, renewalDate, locale }),
@@ -670,7 +670,7 @@ export class StripeWebhookService {
         const resendClient = resend
         const adminEmail = process.env.ADMIN_EMAIL
         Promise.resolve().then(() => resendClient.emails.send({
-          from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+          from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
           to: adminEmail,
           subject: `[ACTION REQUIRED] Dispute won — user locked out: ${userEmail ?? userId}`,
           text: `Stripe dispute ${dispute.id} was WON.\n\nUser: ${userName ?? "unknown"} (${userEmail ?? "no email"})\nUser ID: ${userId}\nAmount: $${(dispute.amount / 100).toFixed(2)}\n\nThe user lost Pro access when the dispute was created. Their account is currently LOCKED OUT.\n\nTo re-activate:\n1. Go to Stripe Dashboard → create a new subscription for this customer\n2. Then run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n   This syncs the new subscription to the database and restores Pro access.\n\nAlternatively, issue a manual account credit in Stripe if no new subscription is needed.`,
@@ -710,7 +710,7 @@ export class StripeWebhookService {
     const userId = result.user.id
     const resendClient = resend
     Promise.resolve().then(() => resendClient.emails.send({
-      from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+      from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
       to: toEmail,
       subject: paymentFailedSubject(locale),
       html: paymentFailedHtml({ firstName, userId, invoiceUrl, locale }),
@@ -757,7 +757,7 @@ export class StripeWebhookService {
     const userId = result.user.id
     const resendClient = resend
     Promise.resolve().then(() => resendClient.emails.send({
-      from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+      from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
       to: toEmail,
       subject: paymentFailedSubject(locale),
       html: paymentFailedHtml({ firstName, userId, invoiceUrl, locale }),
@@ -810,7 +810,7 @@ export class StripeWebhookService {
       const resendClient = resend
       const { id: userId, email } = result.user
       Promise.resolve().then(() => resendClient.emails.send({
-        from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+        from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
         to: adminEmail,
         subject: `[ACTION REQUIRED] Invoice could not be finalized — nothing charged: ${email ?? userId}`,
         text: `Stripe could not finalize invoice ${invoice.id}, so NO payment was attempted and none will be.\n\nUser: ${email ?? "no email"}\nUser ID: ${userId}\nError: ${reason?.code ?? "unknown"} — ${reason?.message ?? "no message"}\n\nThe subscription is still active and the customer keeps full access while nothing is collected.\n\nUsual cause: tax or billing address resolution. Fix it in the Stripe Dashboard (customer address / tax settings), then finalize the invoice manually.`,
@@ -881,7 +881,7 @@ export class StripeWebhookService {
     })
     if (warning.actionable && emailEnabled() && resend && process.env.ADMIN_EMAIL) {
       await resend.emails.send({
-        from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+        from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
         to: process.env.ADMIN_EMAIL,
         subject: `[ACTION REQUIRED] Stripe Radar fraud warning — userId: ${result.userId}`,
         text: `Stripe Radar issued an actionable early fraud warning.\n\nUser ID: ${result.userId}\nWarning ID: ${warning.id}\nFraud type: ${warning.fraud_type}\nCharge ID: ${chargeId}\n\nThe user has been auto-downgraded to UNSUBSCRIBED. Review in Stripe Radar and decide whether to dispute or refund.`,

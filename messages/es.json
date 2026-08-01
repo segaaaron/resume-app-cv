@@ -312,7 +312,8 @@
     "legal": "Legal",
     "cookies": "Cookies",
     "copyright": "© {year} Valhalla Resume. Todos los derechos reservados.",
-    "accessibility": "Accesibilidad"
+    "accessibility": "Accesibilidad",
+    "built_by": "Desarrollado por"
   },
   "pricing": {
     "title": "Un precio, todo incluido",

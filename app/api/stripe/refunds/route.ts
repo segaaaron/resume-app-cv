@@ -163,7 +163,7 @@ export async function POST(req: Request) {
       }).catch((dbErr) => logger.error("refunds: failed to write sub-cancel-failed audit log", { userId }, dbErr instanceof Error ? dbErr : undefined))
       if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
         await resend.emails.send({
-          from: "Valhalla Resume <techstackmssaravia@gmail.com>",
+          from: "Valhalla Resume <no-reply@valhallaresume.com>",
           to: process.env.ADMIN_EMAIL,
           subject: `[CRITICAL] Refund issued but subscription NOT canceled: ${userId}`,
           text: `A refund was issued for user ${userId} but the Stripe subscription (${subId}) could NOT be canceled automatically.\n\nStripe will continue billing the user unless you cancel manually.\n\nAction required:\n1. Go to Stripe Dashboard → Subscriptions\n2. Search for subscription ${subId}\n3. Cancel immediately\n\nError: ${String(e)}`,

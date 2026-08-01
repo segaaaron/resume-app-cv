@@ -113,6 +113,15 @@ export default function Footer() {
           <p className="text-[#94A3B8] text-xs">
             {t("copyright", { year: new Date().getFullYear() })}
           </p>
+          <a
+            href="https://www.ms-tech-stack.cloud"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[#94A3B8] text-xs no-underline hover:!text-white transition-colors duration-200"
+          >
+            {t("built_by")}{" "}
+            <span className="font-semibold text-white/90">MS Saravia Tech Stack</span>
+          </a>
         </div>
       </div>
     </footer>

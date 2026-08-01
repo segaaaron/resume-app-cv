@@ -102,7 +102,7 @@ export class CronService {
       if (claimed.count === 0) return
 
       await this.emailClient!.emails.send({
-        from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
+        from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
         to: user.email,
         subject: renewalReminderSubject(user.preferredLocale),
         html: renewalReminderHtml({

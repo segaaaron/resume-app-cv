@@ -91,9 +91,6 @@ const jsonLdOrganization = {
     width: 512,
     height: 512,
   },
-  sameAs: [
-    "https://twitter.com/valhallaresume",
-  ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
