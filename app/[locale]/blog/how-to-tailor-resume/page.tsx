@@ -217,7 +217,7 @@ export default async function TailorResumePage({
                 <li><strong>Missing and not applicable.</strong> Leave out — never fabricate.</li>
               </ul>
               <p>
-                There is no target percentage, and anyone quoting one made it up. Use the posting's words where they describe work you actually did, and stop there. A recruiter spots a stuffed resume instantly, and a list of keywords with no achievement behind them fails the only test that matters — the human reading it.
+                There is no target percentage, and anyone quoting one made it up. Use the posting&apos;s words where they describe work you actually did, and stop there. A recruiter spots a stuffed resume instantly, and a list of keywords with no achievement behind them fails the only test that matters — the human reading it.
               </p>
 
               <h2 id="step3">Step 3: Rewrite the summary per job</h2>

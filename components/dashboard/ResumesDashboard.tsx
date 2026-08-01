@@ -507,7 +507,7 @@ export default function ResumesDashboard({
               {t("cancel")}
             </AlertDialogCancel>
             <AlertDialogAction
-              onClick={(e) => { e.preventDefault(); deleteId && deleteResume(deleteId) }}
+              onClick={(e) => { e.preventDefault(); if (deleteId) deleteResume(deleteId) }}
               disabled={deleting}
               className="flex-1 px-4 py-[11px] text-[13px] font-semibold text-white justify-center border-none cursor-pointer shadow-[0_2px_8px_rgba(220,38,38,0.25)] disabled:opacity-80 disabled:cursor-not-allowed"
               style={{ background: "linear-gradient(135deg, #DC2626 0%, #B91C1C 100%)" }}

@@ -289,7 +289,7 @@ export default async function ActionVerbsPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Pair strong verbs with ATS validation</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your rewritten bullets against the actual JD: it shows which of the posting's requirements your resume does not mention yet — so you can decide what to add before you apply, instead of guessing. Start from a <Link href={`/${locale}/templates`}>parser-clean template</Link> so the verbs are not undone by layout problems.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your rewritten bullets against the actual JD: it shows which of the posting&apos;s requirements your resume does not mention yet — so you can decide what to add before you apply, instead of guessing. Start from a <Link href={`/${locale}/templates`}>parser-clean template</Link> so the verbs are not undone by layout problems.
                   </p>
                 </div>
               </div>

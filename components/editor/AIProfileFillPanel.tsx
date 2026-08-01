@@ -571,7 +571,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
                       const inCV = (sectionData.skills as { name: string }[] ?? []).some(s => s.name.toLowerCase() === skill.toLowerCase())
                       return (
                         <button key={skill} type="button" disabled={appliedSkills || inCV}
-                          onClick={() => setSelectedSkills(prev => { const n = new Set(prev); n.has(skill) ? n.delete(skill) : n.add(skill); return n })}
+                          onClick={() => setSelectedSkills(prev => { const n = new Set(prev); if (n.has(skill)) n.delete(skill); else n.add(skill); return n })}
                           className={`text-[10px] border rounded-full px-2 py-0.5 transition-colors ${inCV ? "bg-gray-50 text-gray-400 border-gray-200 cursor-default" : appliedSkills ? "bg-green-50 text-green-700 border-green-300 cursor-default" : selected ? "bg-indigo-100 text-indigo-700 border-indigo-300" : "bg-white text-muted-foreground border-border hover:border-indigo-300"}`}>
                           {inCV ? "✓ " : selected && !appliedSkills ? "● " : ""}{skill}
                         </button>
@@ -604,7 +604,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
                       const inCV = (sectionData.languages as { name: string }[] ?? []).some(l => l.name.toLowerCase() === lang.name.toLowerCase())
                       return (
                         <button key={lang.name} type="button" disabled={appliedLanguages || inCV}
-                          onClick={() => setSelectedLanguages(prev => { const n = new Set(prev); n.has(lang.name) ? n.delete(lang.name) : n.add(lang.name); return n })}
+                          onClick={() => setSelectedLanguages(prev => { const n = new Set(prev); if (n.has(lang.name)) n.delete(lang.name); else n.add(lang.name); return n })}
                           className={`text-[10px] border rounded-full px-2 py-0.5 transition-colors ${inCV ? "bg-gray-50 text-gray-400 border-gray-200 cursor-default" : appliedLanguages ? "bg-green-50 text-green-700 border-green-300 cursor-default" : selected ? "bg-emerald-100 text-emerald-700 border-emerald-300" : "bg-white text-muted-foreground border-border hover:border-emerald-300"}`}>
                           {inCV ? "✓ " : selected && !appliedLanguages ? "● " : ""}{lang.name}
                         </button>
