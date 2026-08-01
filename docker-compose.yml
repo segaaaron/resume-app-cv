@@ -1,6 +1,15 @@
 services:
   app:
-    build: .
+    build:
+      context: .
+      # NEXT_PUBLIC_* are inlined by `next build`, so they must be passed as build
+      # args (the Dockerfile only declares the ARGs). Values resolve from Dokploy's
+      # configured environment via compose substitution, exactly like the runtime
+      # ${PDF_SERVICE_SECRET} below. Without this, the analytics <script> gate is
+      # empty and no tracking ships despite the env being set.
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_UMAMI_WEBSITE_ID: ${NEXT_PUBLIC_UMAMI_WEBSITE_ID}
     ports:
       - "3000:3000"
     env_file:
