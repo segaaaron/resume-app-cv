@@ -1,5 +1,5 @@
-Contact: security@readycvv.com
+Contact: techstackmssaravia@gmail.com
 Preferred-Languages: en, es
-Canonical: https://www.readycvv.com/.well-known/security.txt
-Policy: https://www.readycvv.com/security
+Canonical: https://www.valhallaresume.com/.well-known/security.txt
+Policy: https://www.valhallaresume.com/security
 Expires: 2027-04-27T00:00:00.000Z
