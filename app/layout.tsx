@@ -23,6 +23,14 @@ const playfairDisplay = Playfair_Display({
 
 const BASE_URL = "https://readycvv.com"
 
+// Umami analytics website id. This value is PUBLIC (it ships in every page's HTML),
+// so a hardcoded fallback is safe. It is also necessary: Dokploy builds this app
+// from the Dockerfile and does not reliably inline this NEXT_PUBLIC_* var at build
+// time, so the env alone left analytics dark. The env still wins when it is present
+// — set NEXT_PUBLIC_UMAMI_WEBSITE_ID in Dokploy's Build Args to override this.
+const UMAMI_WEBSITE_ID =
+  process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID || "84d805f1-2027-428d-bd64-cb53496daa9f"
+
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
@@ -55,9 +63,7 @@ export default async function RootLayout({
           {children}
           <Toaster position="top-center" />
         </SessionProvider>
-        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
-          <UmamiScript websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID} />
-        )}
+        {UMAMI_WEBSITE_ID && <UmamiScript websiteId={UMAMI_WEBSITE_ID} />}
       </body>
     </html>
   )
