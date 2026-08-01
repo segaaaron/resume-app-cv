@@ -20,7 +20,7 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
+const SANS = 'var(--font-space-grotesk), "Space Grotesk", "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 const MONO = '"Geist Mono", "JetBrains Mono", ui-monospace, "Courier New", monospace'
 
 const LANG_LEVEL_LABEL: Record<string, string> = {

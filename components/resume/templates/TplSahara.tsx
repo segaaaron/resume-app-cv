@@ -21,7 +21,7 @@ import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
-const SERIF = 'Georgia, "Times New Roman", serif'
+const SERIF = 'var(--font-cormorant), "Cormorant Garamond", Georgia, "Times New Roman", serif'
 
 export default function TplSaharaTemplate() {
   const paper = "#f4ece0"

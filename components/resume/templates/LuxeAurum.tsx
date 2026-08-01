@@ -22,7 +22,7 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SERIF = 'var(--font-playfair), "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif'
+const SERIF = 'var(--font-cormorant), "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif'
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 const LANG_LEVEL_PCT: Record<string, number> = {

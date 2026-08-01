@@ -19,7 +19,7 @@ import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
-const SERIF = 'Georgia, "Times New Roman", serif'
+const SERIF = 'var(--font-cormorant), "Cormorant Garamond", Georgia, "Times New Roman", serif'
 
 const LANG_LEVEL_LABEL: Record<string, string> = {
   a1: "A1", a2: "A2", b1: "B1", b2: "B2", c1: "C1", c2: "C2", native: "Native",

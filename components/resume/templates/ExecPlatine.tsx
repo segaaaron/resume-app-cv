@@ -22,7 +22,7 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Archivo", "Inter", system-ui, -apple-system, sans-serif'
+const SANS = 'var(--font-archivo), "Archivo", "Inter", system-ui, -apple-system, sans-serif'
 const MONO = '"Geist Mono", "JetBrains Mono", "Courier New", monospace'
 
 export default function ExecPlatineTemplate() {

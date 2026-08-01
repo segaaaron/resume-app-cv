@@ -21,7 +21,7 @@ import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
-const SERIF = 'Georgia, "Times New Roman", serif'
+const SERIF = 'var(--font-instrument), "Instrument Serif", Georgia, "Times New Roman", serif'
 
 export default function TplAtelierTemplate() {
   const paper = "#f7f3ea"
