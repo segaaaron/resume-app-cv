@@ -1,3 +1,4 @@
+import Link from "next/link"
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import type { Metadata } from "next"
@@ -228,7 +229,7 @@ export default async function TermsPage({
                 </h2>
                 <p className="text-muted-foreground leading-relaxed">
                   {t("s8_body1_pre")}{" "}
-                  <a href="/privacy" className="text-primary underline underline-offset-4">{t("s8_body1_link_label")}</a>
+                  <Link href="/privacy" className="text-primary underline underline-offset-4">{t("s8_body1_link_label")}</Link>
                   {t("s8_body1_post")}
                 </p>
                 <p className="text-muted-foreground leading-relaxed">{t.rich("s8_body2", { b })}</p>

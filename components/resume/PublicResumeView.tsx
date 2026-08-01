@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useEffect, useRef } from "react"
 import { useResumeStore } from "@/stores/resumeStore"
 import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
@@ -33,12 +34,12 @@ export default function PublicResumeView({ title, sections, sectionData, config 
           {t("shared_via")}{" "}
           <span className="font-semibold text-primary">ReadyCVV</span>
         </p>
-        <a
+        <Link
           href="/"
           className="text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
         >
           {t("create_cta")}
-        </a>
+        </Link>
       </div>
 
       {/* Resume */}

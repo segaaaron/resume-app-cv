@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
@@ -39,7 +40,7 @@ function CheckoutRedirectInner() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center gap-4 text-center px-4">
         <p className="text-lg font-semibold">{t("error_message")}</p>
-        <a href="/pricing" className="text-primary underline text-sm">{t("back_to_pricing")}</a>
+        <Link href="/pricing" className="text-primary underline text-sm">{t("back_to_pricing")}</Link>
       </div>
     )
   }

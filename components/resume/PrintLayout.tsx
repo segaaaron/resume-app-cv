@@ -175,12 +175,12 @@ export default function PrintLayout({ resumeId, title, sections, sectionData, co
           <p className="text-xs text-amber-800">
             <span className="font-semibold">Plan Free:</span> {t("watermark_upgrade")}
           </p>
-          <a
+          <Link
             href="/pricing"
             className="text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-700"
           >
             {t("see_plans")} →
-          </a>
+          </Link>
         </div>
       )}
 

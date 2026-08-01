@@ -1,3 +1,4 @@
+import Link from "next/link"
 import Navbar from "@/components/marketing/Navbar"
 import Footer from "@/components/marketing/Footer"
 import type { Metadata } from "next"
@@ -204,7 +205,7 @@ export default async function PrivacyPage({
             </div>
             <p className="text-muted-foreground leading-relaxed">
               {t.rich("s9_body_pre", { b })}{" "}
-              <a href="/cookie-policy" className="text-primary underline underline-offset-4">{t("s9_body_link_label")}</a>{" "}
+              <Link href="/cookie-policy" className="text-primary underline underline-offset-4">{t("s9_body_link_label")}</Link>{" "}
               {t("s9_body_post")}
             </p>
           </section>
