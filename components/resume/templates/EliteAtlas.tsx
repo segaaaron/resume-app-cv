@@ -112,7 +112,7 @@ export default function EliteAtlasTemplate() {
         minHeight: "297mm",
         display: "grid",
         gridTemplateColumns: "296px 1fr",
-        fontFamily: "inherit",
+        fontFamily: SANS,
         background: bone,
         color: ink,
         overflow: "hidden",

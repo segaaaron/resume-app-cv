@@ -70,7 +70,7 @@ export default function TplBloomTemplate() {
         minHeight: "297mm",
         background: "linear-gradient(160deg,#fef6f9 0%,#f5f0fc 100%)",
         color: ink,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         padding: "44px 46px",
         overflow: "hidden",
         position: "relative",

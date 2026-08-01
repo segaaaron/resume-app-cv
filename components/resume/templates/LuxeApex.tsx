@@ -172,7 +172,7 @@ export default function LuxeApexTemplate() {
         minHeight: "297mm",
         background: bg,
         color: cream,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         overflow: "hidden",
         position: "relative",
         padding: "46px 50px 40px",

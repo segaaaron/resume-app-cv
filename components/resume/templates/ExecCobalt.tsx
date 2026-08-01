@@ -171,7 +171,7 @@ export default function ExecCobaltTemplate() {
         minHeight: "297mm",
         background: `radial-gradient(ellipse 80% 60% at 85% 0%, ${accent}12, transparent 60%), ${bg}`,
         color: ice,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         overflow: "hidden",
         padding: "46px 48px 40px",
         position: "relative",

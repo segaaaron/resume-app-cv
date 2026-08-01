@@ -153,7 +153,7 @@ export default function LuxeRegentTemplate() {
         minHeight: "297mm",
         background: paper,
         color: ink,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         overflow: "hidden",
         position: "relative",
         WebkitPrintColorAdjust: "exact",

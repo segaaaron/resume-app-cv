@@ -105,7 +105,7 @@ export default function ExecPlatineTemplate() {
         minHeight: "297mm",
         background: bg,
         color: bone,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         overflow: "hidden",
         padding: "46px 52px 40px",
         position: "relative",
