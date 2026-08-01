@@ -5,6 +5,7 @@ import {
   Merriweather, Lato, Source_Sans_3, IBM_Plex_Sans, Work_Sans,
   EB_Garamond, PT_Serif, Karla, Libre_Franklin, Nunito_Sans, Roboto_Slab, Cabin, Figtree, Spectral, Asap,
 } from "next/font/google"
+import { GeistSans } from "geist/font/sans"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import SessionProvider from "@/components/providers/SessionProvider"
@@ -104,7 +105,7 @@ export default async function RootLayout({
   return (
     <html
       lang={locale}
-      className={`${plusJakartaSans.variable} ${playfairDisplay.variable} ${spaceGrotesk.variable} ${cormorant.variable} ${archivo.variable} ${dmSerif.variable} ${instrumentSerif.variable} ${merriweather.variable} ${lato.variable} ${sourceSans.variable} ${plexSans.variable} ${workSans.variable} ${ebGaramond.variable} ${ptSerif.variable} ${karla.variable} ${libreFranklin.variable} ${nunitoSans.variable} ${robotoSlab.variable} ${cabin.variable} ${figtree.variable} ${spectral.variable} ${asap.variable} h-full antialiased`}
+      className={`${plusJakartaSans.variable} ${playfairDisplay.variable} ${spaceGrotesk.variable} ${cormorant.variable} ${archivo.variable} ${dmSerif.variable} ${instrumentSerif.variable} ${merriweather.variable} ${lato.variable} ${sourceSans.variable} ${plexSans.variable} ${workSans.variable} ${ebGaramond.variable} ${ptSerif.variable} ${karla.variable} ${libreFranklin.variable} ${nunitoSans.variable} ${robotoSlab.variable} ${cabin.variable} ${figtree.variable} ${spectral.variable} ${asap.variable} ${GeistSans.variable} h-full antialiased`}
       style={{ fontFamily: "var(--font-jakarta), sans-serif" }}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground" suppressHydrationWarning>

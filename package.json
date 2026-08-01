@@ -37,6 +37,7 @@
     "dotenv": "^16.6.1",
     "fastest-levenshtein": "^1.0.16",
     "framer-motion": "^12.39.0",
+    "geist": "^1.7.2",
     "geoip-lite": "^1.4.10",
     "immer": "^11.1.4",
     "isomorphic-dompurify": "^3.14.0",

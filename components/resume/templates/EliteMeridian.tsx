@@ -11,7 +11,7 @@
  *  - Body: mist callout (summary), timeline list with teal dots (mist halo),
  *    sidebar with competencies list + languages + award badge.
  *
- * Font mapping: Geist (source) → Jakarta SANS stack.
+ * Font: Geist (the exact source typeface), self-hosted via the `geist` package.
  */
 
 import { fmtDesc } from "@/lib/utils"
@@ -19,7 +19,7 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
+const SANS = 'var(--font-geist-sans), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 const LANG_LEVEL_LABEL: Record<string, string> = {
   a1: "A1", a2: "A2", b1: "B1", b2: "B2", c1: "C1", c2: "C2", native: "Native",
@@ -81,7 +81,7 @@ export default function EliteMeridianTemplate() {
         minHeight: "297mm",
         background: "#fff",
         color: "#22333a",
-        fontFamily: "inherit",
+        fontFamily: SANS,
         position: "relative",
         overflow: "hidden",
         WebkitPrintColorAdjust: "exact",

@@ -9,8 +9,7 @@
  *  - Oversized initials watermark, avatar with translucent ring.
  *  - Body grid 1fr / 250px on ivory (#faf8ff) with purple-left summary bar.
  *
- * Font mapping:
- *  - "Geist" (source) → Jakarta sans stack.
+ * Font: Geist (the exact source typeface), self-hosted via the `geist` package.
  */
 
 import { fmtDesc } from "@/lib/utils"
@@ -19,7 +18,7 @@ import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
+const SANS = 'var(--font-geist-sans), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 export default function TplVelvetTemplate() {
   const ink = "#2a2440"
@@ -63,7 +62,7 @@ export default function TplVelvetTemplate() {
         minHeight: "297mm",
         background: "#faf8ff",
         color: ink,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         overflow: "hidden",
         position: "relative",
         WebkitPrintColorAdjust: "exact",
