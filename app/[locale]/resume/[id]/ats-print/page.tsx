@@ -1,76 +1,70 @@
 import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { isActive, isSuperAdmin } from "@/lib/plans"
 import { verifyPrintToken } from "@/lib/pdf/print-token"
-import { ResumeSectionsSchema } from "@/types/resume"
-import { toAtsSafeResumeText } from "@/lib/ats/ats-safe"
+import type { ResumeSection, ResumeSections, ResumeConfig } from "@/types/resume"
+import { DEFAULT_SECTIONS, ResumeSectionsSchema, TEMPLATES } from "@/types/resume"
+import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
+import PrintLayout from "@/components/resume/PrintLayout"
 
 export const dynamic = "force-dynamic"
 
-/**
- * Print surface for the ATS-safe PDF. The pdf-generator microservice fetches this URL
- * (with a signed print token) and renders it to PDF. Deliberately plain: one column,
- * system font, black on white, real text — the machine-readable twin of the user's
- * designed CV. Same deterministic text as the .txt export (toAtsSafeResumeText).
- */
-function AtsSafeDocument({ text }: { text: string }) {
-  const lines = text.split("\n")
-  const blocks: React.ReactNode[] = []
-  let bullets: string[] = []
-  let key = 0
+// The modern ATS-safe template the export falls back to when the user's own
+// template is NOT clean (two-column, or single-column but photo-bearing). Meridian
+// is single-column, image-free, system-font — elegant AND parse-clean everywhere.
+const DEFAULT_ATS_TEMPLATE = "atsmeridian"
 
-  const flushBullets = () => {
-    if (bullets.length === 0) return
-    blocks.push(
-      <ul key={`u${key++}`} style={{ margin: "2pt 0 6pt", paddingLeft: "16pt" }}>
-        {bullets.map((b, i) => (
-          <li key={i} style={{ marginBottom: "3pt" }}>{b}</li>
-        ))}
-      </ul>,
-    )
-    bullets = []
-  }
-
-  // The first plain line after the name is the contact line (email · phone · …).
-  // Styling it as a subheader and closing the header block with a rule reads as a
-  // real document — still plain text, one column, black on white, fully parseable.
-  let contactDone = false
-  lines.forEach((raw, idx) => {
-    const line = raw.trimEnd()
-    if (!line.trim()) {
-      flushBullets()
-      return
-    }
-    if (line.startsWith("- ")) {
-      bullets.push(line.slice(2))
-      return
-    }
-    flushBullets()
-    // First line is the name (largest); a header line is ALL-CAPS with letters.
-    const isName = idx === 0
-    const letters = line.replace(/[^A-Za-zÀ-ÿ]/g, "")
-    const isHeader = letters.length > 0 && line === line.toUpperCase() && line.length <= 40
-    if (isName) {
-      blocks.push(<h1 key={`h${key++}`} style={{ fontSize: "20pt", fontWeight: 700, letterSpacing: "-0.2pt", margin: "0 0 2pt" }}>{line}</h1>)
-    } else if (isHeader) {
-      contactDone = true
-      blocks.push(
-        <h2 key={`h${key++}`} style={{ fontSize: "10.5pt", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.9pt", margin: "15pt 0 5pt", paddingBottom: "2.5pt", borderBottom: "1px solid #000" }}>{line}</h2>,
-      )
-    } else if (!contactDone) {
-      contactDone = true
-      blocks.push(
-        <p key={`p${key++}`} style={{ fontSize: "9.5pt", color: "#222", margin: "0 0 10pt", paddingBottom: "9pt", borderBottom: "0.75pt solid #999" }}>{line}</p>,
-      )
-    } else {
-      blocks.push(<p key={`p${key++}`} style={{ margin: "0 0 3pt" }}>{line}</p>)
-    }
-  })
-  flushBullets()
-
-  return <>{blocks}</>
+const FONT_FILES: Record<string, string[]> = {
+  Inter:              ["inter-400", "inter-600", "inter-700"],
+  Poppins:            ["poppins-400", "poppins-600", "poppins-700"],
+  Roboto:             ["roboto-400", "roboto-700"],
+  Lato:               ["lato-400", "lato-700"],
+  Montserrat:         ["montserrat-400", "montserrat-600", "montserrat-700"],
+  "Playfair Display": ["playfair-400", "playfair-700", "playfair-400-italic", "playfair-700-italic"],
+  Merriweather:       ["merriweather-400", "merriweather-700"],
+  "Open Sans":        ["open-sans-400", "open-sans-600", "open-sans-700"],
+  Raleway:            ["raleway-400", "raleway-600", "raleway-700"],
+  "Source Sans 3":    ["source-sans-400", "source-sans-600", "source-sans-700"],
 }
 
+function FontPreload({ fontFamily }: { fontFamily: string }) {
+  const files = [
+    ...(FONT_FILES["Inter"] ?? []),
+    ...(FONT_FILES[fontFamily] ?? []),
+  ].filter((v, i, a) => a.indexOf(v) === i)
+
+  return (
+    <>
+      {files.map((f) => (
+        <link key={f} rel="preload" as="font" type="font/woff2" href={`/fonts/${f}.woff2`} crossOrigin="anonymous" />
+      ))}
+    </>
+  )
+}
+
+/**
+ * Picks the template the ATS export renders in. Keeps the user's own design when it
+ * is already ATS-clean — single-column AND photo-free (an embedded image is not
+ * parseable, so a photo-bearing single-column template still isn't ATS-safe). Any
+ * other template falls back to the modern default. Same source of truth as the ATS
+ * score (getTemplateAtsSafety → TEMPLATES[].columns).
+ */
+function resolveAtsTemplate(templateId: string | null | undefined): string {
+  if (!templateId) return DEFAULT_ATS_TEMPLATE
+  const meta = TEMPLATES.find((t) => t.id === templateId)
+  const clean = getTemplateAtsSafety(templateId) === "safe" && !meta?.hasPhoto
+  return clean ? templateId : DEFAULT_ATS_TEMPLATE
+}
+
+/**
+ * Print surface for the ATS-safe PDF. The pdf-generator microservice fetches this URL
+ * (with a signed print token) and renders it to PDF. Renders the resume through the
+ * SAME PrintLayout the normal export uses, but forced into a modern ATS-safe template
+ * and with the photo stripped — so the machine-readable twin is now elegant instead of
+ * a bare text dump, while staying single-column, image-free and fully parseable. The
+ * .txt export (toAtsSafeResumeText) remains the plainest fallback.
+ */
 export default async function AtsPrintPage({
   params,
   searchParams,
@@ -93,51 +87,49 @@ export default async function AtsPrintPage({
     userId = session.user.id
   }
 
-  const resume = await db.resume.findFirst({
-    where: { id, userId },
-    select: { id: true, personalDetails: true },
-  })
+  const [resume, user] = await Promise.all([
+    db.resume.findFirst({ where: { id, userId } }),
+    db.user.findUnique({ where: { id: userId }, select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true } }),
+  ])
   if (!resume) notFound()
 
-  const sectionData = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
-  const text = toAtsSafeResumeText(sectionData, locale === "es" ? "es" : "en")
+  const sections = (resume.sections as unknown as ResumeSection[]) ?? DEFAULT_SECTIONS
+  const sectionData: ResumeSections = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
 
-  // A fragment, not a full <html> document — the root app/layout.tsx owns <html>/<body>,
-  // exactly like the existing resume print page. The <style> below hoists to <head>.
-  //
-  // The DOM MUST expose ".resume-pages > div[data-print-layout]": the pdf-generator
-  // microservice (resume renderer, stretchPages=true) waits for that exact selector
-  // before capturing and TIMES OUT without it (see services/pdf-generator contracts.ts,
-  // RESUME_CONTENT_SELECTOR). single-column = no sidebar, so its layout-fix pass is a
-  // no-op on the background gradient. This is why the plain doc still wears those classes.
+  const config: ResumeConfig = {
+    templateId: resolveAtsTemplate(resume.templateId) as ResumeConfig["templateId"],
+    colorScheme: resume.colorScheme,
+    fontFamily: resume.fontFamily,
+    fontSize: resume.fontSize,
+    spacing: resume.spacing,
+    // The ATS twin never carries a photo — an embedded image is unparseable and the
+    // point of this export is a clean, machine-readable document.
+    photoUrl: null,
+    photoPosition: resume.photoPosition,
+    language: (resume.language as ResumeConfig["language"]) ?? "es",
+  }
+
+  const isPro = isSuperAdmin(user?.role) || isActive(
+    user?.plan ?? "UNSUBSCRIBED",
+    user?.subscriptionEndsAt ?? null,
+    user?.subscriptionStatus ?? null,
+    user?.role,
+    user?.isManaged,
+    user?.managedBlocked,
+    user?.managedExpiresAt,
+  )
+
   return (
     <>
-      <style>{`
-        /* margin: 0 to match the app's print CSS — the pdf-generator computes usable
-           page height as the FULL A4 (USABLE_PX_PER_PAGE, margin 0 assumed). A non-zero
-           @page margin would desync its page-break math and clip content. The visible
-           margin is padding on .ats-doc instead, exactly like the real templates. */
-        @page { size: A4; margin: 0; }
-        html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
-        body {
-          color: #000 !important;
-          font-family: Arial, Helvetica, "Liberation Sans", sans-serif !important;
-          font-size: 10.5pt;
-          line-height: 1.48;
-          -webkit-print-color-adjust: exact;
-          print-color-adjust: exact;
-        }
-        .ats-doc { max-width: 100%; margin: 0; padding: 18mm 16mm; box-sizing: border-box; }
-        .ats-doc h1, .ats-doc h2, .ats-doc p, .ats-doc ul, .ats-doc li { orphans: 3; widows: 3; }
-        .ats-doc ul { page-break-inside: auto; }
-        .ats-doc li, .ats-doc p { page-break-inside: avoid; }
-        .ats-doc h2 { page-break-after: avoid; }
-      `}</style>
-      <div className="resume-pages">
-        <div data-print-layout="single-column" className="ats-doc">
-          <AtsSafeDocument text={text} />
-        </div>
-      </div>
+      <FontPreload fontFamily={config.fontFamily ?? "Poppins"} />
+      <PrintLayout
+        resumeId={resume.id}
+        title={resume.title}
+        sections={sections}
+        sectionData={sectionData}
+        config={config}
+        isPro={isPro}
+      />
     </>
   )
 }
