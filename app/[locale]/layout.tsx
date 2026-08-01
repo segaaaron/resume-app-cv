@@ -97,7 +97,7 @@ export async function generateMetadata({
     site: "@valhallaresume",
   },
   verification: {
-    google: "a7b236b7cefc3ac7e10f5ca57c3ec884eaea1aac",
+    google: "ZSp58knctbj095ozmJb69X35jNn3pgP-uOZQ7PR5FSo",
   },
   }
 }
