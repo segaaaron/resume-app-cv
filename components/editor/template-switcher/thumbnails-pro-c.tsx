@@ -2,7 +2,7 @@
 import React from "react"
 import { PageShadow } from "./thumbnails-free"
 
-export function ClassicMonoThumb({ color }: { color: string }) {
+export function ClassicMonoThumb({ color: _color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
       <rect width="80" height="110" fill="#fbfaf7" />
@@ -606,7 +606,7 @@ export function CharcoalClassicThumb({ color }: { color: string }) {
   )
 }
 
-export function NavyExecutiveThumb({ color }: { color: string }) {
+export function NavyExecutiveThumb({ color: _color }: { color: string }) {
   return (
     <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
       <rect width="80" height="110" fill="#f7f3e8" />
@@ -1209,7 +1209,7 @@ export function PsychologistThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#f6f0e6" /><rect x="0" y="0" width="40" height="36" fill={color} opacity="0.85" /><rect x="40" y="0" width="40" height="36" fill="#c97a55" opacity="0.85" /><rect x="4" y="8" width="28" height="3" rx="1" fill="white" opacity="0.85" /><rect x="4" y="13" width="20" height="1.5" rx="0.75" fill="white" opacity="0.7" /><rect x="4" y="42" width="22" height="2" rx="1" fill={color} opacity="0.6" />{[0,1,2,3].map((i) => (<g key={i}><rect x="4" y={47 + i * 8} width="10" height="1" rx="0.5" fill="#c97a55" opacity="0.6" /><rect x="16" y={47 + i * 8} width="20" height="1.2" rx="0.6" fill="#2b2218" opacity="0.35" /></g>))}<rect x="44" y="42" width="18" height="2" rx="1" fill={color} opacity="0.6" /></svg>)
 }
 
-export function PilotLogThumb({ color }: { color: string }) {
+export function PilotLogThumb({ color: _color }: { color: string }) {
   const navy = "#0c2545", paper = "#f6f1e4", gold = "#d4a942"
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill={paper} /><rect x="0" y="0" width="80" height="22" fill={navy} /><rect x="6" y="4" width="28" height="3" rx="1" fill={paper} opacity="0.9" /><rect x="6" y="9" width="18" height="1.5" rx="0.75" fill={gold} opacity="0.8" /><polygon points="70,11 71.5,15 76,15 72.5,17.5 73.8,22 70,19.5 66.2,22 67.5,17.5 64,15 68.5,15" fill={gold} opacity="0.9" /><rect x="6" y="26" width="68" height="12" fill="none" stroke="#0a0a0a" strokeWidth="0.8" /><rect x="6" y="42" width="68" height="6" fill={navy} />{[0,1,2,3,4].map((i) => (<rect key={i} x={8 + i * 13} y="44" width="10" height="1.5" rx="0.5" fill={paper} opacity="0.7" />))}{[0,1,2,3,4].map((i) => (<rect key={i} x="6" y={50 + i * 7} width="68" height="6" fill={i % 2 ? "#ece7d8" : paper} />))}<rect x="0" y="104" width="80" height="6" fill={navy} /><rect x="6" y="106" width="16" height="1.5" rx="0.5" fill={gold} opacity="0.8" /><rect x="56" y="106" width="16" height="1.5" rx="0.5" fill={gold} opacity="0.8" /></svg>)
 }
@@ -1237,7 +1237,7 @@ export function UXTokensThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#1a1a2e" /><rect x="4" y="4" width="72" height="22" rx="2" fill="#252542" /><rect x="8" y="8" width="32" height="3" rx="1" fill="#eee" opacity="0.9" /><rect x="8" y="14" width="20" height="2" rx="0.5" fill={color} opacity="0.8" /><rect x="4" y="30" width="34" height="36" rx="2" fill="#252542" /><rect x="8" y="33" width="14" height="1.5" rx="0.5" fill={color} opacity="0.6" /><rect x="8" y="37" width="26" height="2" rx="0.5" fill="#eee" opacity="0.7" /><rect x="8" y="42" width="26" height="2" rx="0.5" fill="#eee" opacity="0.4" /><rect x="42" y="30" width="34" height="36" rx="2" fill="#252542" /><rect x="46" y="33" width="14" height="1.5" rx="0.5" fill={color} opacity="0.6" /><rect x="46" y="37" width="26" height="2" rx="0.5" fill="#eee" opacity="0.7" /><rect x="4" y="70" width="72" height="36" rx="2" fill="#252542" /><rect x="8" y="74" width="14" height="1.5" rx="0.5" fill={color} opacity="0.6" />{[0,1,2,3].map(i=><rect key={i} x={8+i*18} y={78} width={14} height={20} rx="1" fill={color} opacity={0.1+i*0.05} />)}</svg>)
 }
 
-export function BlueprintCVThumb({ color }: { color: string }) {
+export function BlueprintCVThumb({ color: _color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#1a3a5c" />{[10,20,30,40,50,60,70,80,90,100].map(y=><line key={y} x1="0" y1={y} x2="80" y2={y} stroke="#4a7ab5" strokeWidth="0.3" opacity="0.5" />)}{[8,16,24,32,40,48,56,64,72].map(x=><line key={x} x1={x} y1="0" x2={x} y2="110" stroke="#4a7ab5" strokeWidth="0.3" opacity="0.5" />)}<rect x="6" y="6" width="68" height="98" fill="none" stroke="#7ab8e8" strokeWidth="1" /><rect x="10" y="10" width="26" height="18" fill="none" stroke="#7ab8e8" strokeWidth="0.7" /><rect x="40" y="10" width="30" height="18" fill="none" stroke="#7ab8e8" strokeWidth="0.7" /><rect x="10" y="32" width="56" height="22" fill="none" stroke="#7ab8e8" strokeWidth="0.7" /><rect x="14" y="7" width="12" height="3" rx="0.5" fill="#7ab8e8" opacity="0.7" /><rect x="44" y="7" width="12" height="3" rx="0.5" fill="#7ab8e8" opacity="0.7" /></svg>)
 }
 

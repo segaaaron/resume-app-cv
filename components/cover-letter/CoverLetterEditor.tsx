@@ -2,15 +2,10 @@
 
 import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Separator } from "@/components/ui/separator"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { compressImage } from "@/lib/compressImage"
-import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronUp, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil, ShieldCheck } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations, useLocale } from "next-intl"
 import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
@@ -170,7 +165,7 @@ export default function CoverLetterEditor({
   initialCandidate,
   isPro = false,
   language = "es",
-  isNew = false,
+  isNew: _isNew = false,
 }: Props) {
   const t = useTranslations("cover_letter_editor")
   const aiT = useTranslations("editor.ai")
@@ -487,65 +482,6 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     ["creative", t("ai_tone_creative")],
   ] as const
 
-  const templateLabels: Record<TemplateId, string> = {
-    classic: t("template_elegant"),
-    elegant: t("template_elegant"),
-    sidebar: t("template_sidebar"),
-    split: t("template_split"),
-    executive: t("template_executive"),
-    material: t("template_material"),
-    gradient: t("template_gradient"),
-    twotone: t("template_twotone"),
-    timeline: t("template_timeline"),
-    minimal: t("template_minimal"),
-    monogram: t("template_monogram"),
-    architect: t("template_architect"),
-    diagonal: t("template_diagonal"),
-    newspaper: t("template_newspaper"),
-    // ── 27 premium templates ──
-    echo: t("template_echo"),
-    lumen: t("template_lumen"),
-    atlas: t("template_atlas"),
-    consul: t("template_consul"),
-    sterling: t("template_sterling"),
-    fortis: t("template_fortis"),
-    prism: t("template_prism"),
-    ember: t("template_ember"),
-    vantage: t("template_vantage"),
-    mosaic: t("template_mosaic"),
-    vertex: t("template_vertex"),
-    folio: t("template_folio"),
-    gazette: t("template_gazette"),
-    verso: t("template_verso"),
-    aurum: t("template_aurum"),
-    onyx: t("template_onyx"),
-    velvet: t("template_velvet"),
-    signal: t("template_signal"),
-    meridian: t("template_meridian"),
-    nova: t("template_nova"),
-    obsidian: t("template_obsidian"),
-    codex: t("template_codex"),
-    axiom: t("template_axiom"),
-    terra: t("template_terra"),
-    flare: t("template_flare"),
-    herald: t("template_herald"),
-    bloom: t("template_bloom"),
-    ltrmeridian: t("template_ltrmeridian"),
-    ltrverdant: t("template_ltrverdant"),
-    ltrcardinal: t("template_ltrcardinal"),
-    ltrcobalt: t("template_ltrcobalt"),
-    ltrslate: t("template_ltrslate"),
-    ltrnordic: t("template_ltrnordic"),
-    ltronyx: t("template_ltronyx"),
-    ltrsable: t("template_ltrsable"),
-    ltrcerulean: t("template_ltrcerulean"),
-    ltrivory: t("template_ltrivory"),
-    ltrgarnet: t("template_ltrgarnet"),
-    ltrcopper: t("template_ltrcopper"),
-    ltrharbor: t("template_ltrharbor"),
-    ltrgraphite: t("template_ltrgraphite"),
-    ltrsequoia: t("template_ltrsequoia"),
-  }
 
   // Palette constants used in conditional inline styles (tab bar, template grid)
   const NAVY_DEEP = "#0B1B3D", NAVY_MID = "#1a2e4a", CYAN = "#00D4FF"

@@ -30,7 +30,7 @@ interface Props {
 
 type MobileView = "form" | "preview"
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isManaged, managedBlocked, managedExpiresAt, isNew = false }: Props) {
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isManaged, managedBlocked, managedExpiresAt, isNew: _isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const router = useRouter()
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })

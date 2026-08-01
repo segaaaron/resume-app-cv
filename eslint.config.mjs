@@ -5,6 +5,16 @@ import nextTs from "eslint-config-next/typescript";
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  // Respect the repo convention that a leading underscore marks an intentionally
+  // unused binding (args, vars, caught errors) — e.g. `_args`, `_req`, `_locale`.
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_", caughtErrorsIgnorePattern: "^_", ignoreRestSiblings: true },
+      ],
+    },
+  },
   // Resume & cover-letter templates are a library of pure presentational
   // components rendered both in-app and by the standalone PDF microservice.
   // Two default rules are wrong for this context:
@@ -30,6 +40,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Local dev tooling — gitignored, never shipped, so not part of the app lint.
+    ".claude/**",
+    "scripts/ai-eval/**",
   ]),
 ]);
 

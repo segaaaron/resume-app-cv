@@ -2,7 +2,6 @@
 
 import React, { useState } from "react"
 import { useTranslations } from "next-intl"
-import { Loader2 } from "lucide-react"
 import { CoverLetterThumbnail } from "@/components/cover-letter/thumbnails"
 import { formatInTimezone } from "@/hooks/useUserTimezone"
 import type { Locale } from "date-fns"

@@ -21,7 +21,7 @@ export const TemplateCard = memo(function TemplateCard({
   template,
   locked,
   isSelected,
-  colorScheme,
+  colorScheme: _colorScheme,
   onSelect,
 }: TemplateCardProps) {
   const [hover, setHover] = useState(false)

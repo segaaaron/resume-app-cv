@@ -13,9 +13,6 @@ import {
 } from "react"
 import {
   ChevronRight,
-  Eye,
-  EyeOff,
-  Scissors,
   User,
   FileText,
   Briefcase,
@@ -30,7 +27,7 @@ import {
   Layout,
 } from "lucide-react"
 import { useResumeStore } from "@/stores/resumeStore"
-import type { ResumeSection, ResumeSections } from "@/types/resume"
+import type { ResumeSection } from "@/types/resume"
 import SectionContent from "./SectionContent"
 
 const SECTION_ICONS: Record<string, React.ReactNode> = {
@@ -84,13 +81,6 @@ export function SectionDropdownProvider({ children }: { children: ReactNode }) {
   )
 }
 
-function getItemCount(section: ResumeSection, data: ResumeSections | undefined): number | null {
-  if (!data) return null
-  const type = section.type as keyof ResumeSections
-  const value = (data as unknown as Record<string, unknown>)[type]
-  if (Array.isArray(value)) return value.length
-  return null
-}
 
 const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSection }) {
   const t = useTranslations("editor")

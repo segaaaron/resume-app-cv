@@ -604,7 +604,7 @@ export default function ATSScorePanel() {
                   <div className="mt-2 rounded-lg bg-white/60 border border-violet-100 p-2">
                     <p className="text-[9.5px] font-bold uppercase tracking-wide text-violet-500 mb-1.5">{t("content_quality_metricless_title")}</p>
                     <ul className="flex flex-col gap-1.5">
-                      {atsResult.contentQuality.metriclessBullets.map((b, i) => {
+                      {atsResult.contentQuality.metriclessBullets.map((b) => {
                         const key = `bullet-${b.targetId}-${b.index}`
                         const applied = appliedItems.has(key)
                         const busy = improvingKey === key

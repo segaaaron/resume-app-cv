@@ -166,8 +166,6 @@ export default function CinematicHomepage({ children, locale }: Props) {
   const current    = SCENES[scene] ?? SCENES["act-entry"]
   const isLight    = current.text === "light"
   const fg         = isLight ? "#FFFFFF" : "#0f172a"
-  const fgMuted    = isLight ? "rgba(255,255,255,0.75)" : "rgba(15,23,42,0.85)"
-  const pillBg     = isLight ? "rgba(255,255,255,0.18)" : "rgba(0,0,0,0.10)"
   const pillBorder = isLight ? "1px solid rgba(255,255,255,0.30)" : "1px solid rgba(0,0,0,0.20)"
   // Navbar always floats over dark image — always white text regardless of act
   const navFg      = "#FFFFFF"

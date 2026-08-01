@@ -11,14 +11,6 @@ import { track } from "@/lib/analytics/track"
 import { RejectModal, FoundJobModal, ClearBoardModal, RejectionDetailModal } from "./_board-modals"
 
 // ── CSS variables ─────────────────────────────────────────────────────────────
-const C = {
-  navy:       "#1a2e4a",
-  cyan:       "#00D4FF",
-  muted:      "#6B7A8C",
-  subtle:     "#A0AABE",
-  border:     "#D9E1ED",
-  danger:     "#EF4444",
-} as const
 
 const MODALIDADES = [
   { value: "Remoto",      labelKey: "modalidad_remote" as const },

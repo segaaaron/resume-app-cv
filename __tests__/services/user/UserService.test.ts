@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { UserService } from "@/lib/services/user/UserService"
-import { AppError } from "@/lib/services/auth/AppError"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
 // ─── Mock DB ──────────────────────────────────────────────────────────────────

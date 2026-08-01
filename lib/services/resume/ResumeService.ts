@@ -6,7 +6,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 const moduleLogger = createLogger("resume-service")
 import { AppError } from "@/lib/services/auth/AppError"
 import { DEFAULT_SECTIONS, ResumeSectionsSchema, DEFAULT_TEMPLATE_ID } from "@/types/resume"
-import { getLimits, isActive, effectivePlan, resolveResumeLimit } from "@/lib/plans"
+import { isActive, effectivePlan, resolveResumeLimit } from "@/lib/plans"
 import { nanoid } from "nanoid"
 import { z } from "zod"
 

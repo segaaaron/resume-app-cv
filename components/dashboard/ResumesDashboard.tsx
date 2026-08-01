@@ -43,7 +43,7 @@ export default function ResumesDashboard({
   const userTimezone = useUserTimezone()
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const isPro = isActive(
     session?.user?.plan ?? "UNSUBSCRIBED",
     session?.user?.subscriptionEndsAt ? new Date(session.user.subscriptionEndsAt) : null,
@@ -178,11 +178,6 @@ export default function ResumesDashboard({
     }
   }
 
-  function requirePro() {
-    // Legacy fallback retained for download path; create flow uses UpgradeModal.
-    router.push(`/${locale}/pricing`)
-    toast.info(t("require_pro_toast"))
-  }
 
   function requirePersonalUseConsent(action: () => Promise<void>) {
     setPersonalUseConsented(false)

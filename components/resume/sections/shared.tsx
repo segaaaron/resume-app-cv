@@ -7,42 +7,7 @@ import { CalendarDays, ChevronLeft, ChevronRight } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 
 // ── Shared CSS injected once ──────────────────────────────────────────────────
-const FIELD_CSS = `
-  .pf-input {
-    display: block; width: 100%;
-  }
-  .pf-input:focus {
-    outline: none;
-  }
-  .pf-input:focus ~ .pf-label,
-  .pf-input:not(:placeholder-shown) ~ .pf-label {
-    top: 7px !important;
-    transform: translateY(0) !important;
-    font-size: 9px !important;
-    color: #5B8FBD !important;
-    letter-spacing: 0.07em !important;
-    text-transform: uppercase !important;
-  }
-  .pf-input:focus ~ .pf-label { color: #00A8CC !important; }
-  .pf-input:focus ~ .pf-accent { opacity: 1 !important; transform: scaleX(1) !important; }
-  .pf-input:-webkit-autofill,
-  .pf-input:-webkit-autofill:hover,
-  .pf-input:-webkit-autofill:focus {
-    -webkit-box-shadow: 0 0 0px 1000px rgb(236,246,253) inset !important;
-    -webkit-text-fill-color: #1a2e4a !important;
-    caret-color: #1a2e4a;
-    transition: background-color 5000s ease-in-out 0s;
-  }
-`
 
-let cssInjected = false
-function injectCss() {
-  if (cssInjected || typeof document === "undefined") return
-  const el = document.createElement("style")
-  el.textContent = FIELD_CSS
-  document.head.appendChild(el)
-  cssInjected = true
-}
 
 // ── PField — floating label input (controlled) ────────────────────────────────
 export function PField({
