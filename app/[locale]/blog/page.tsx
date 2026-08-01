@@ -286,27 +286,40 @@ export default async function BlogIndexPage({
                   href={`/${locale}/blog/${article.slug}`}
                   className="group relative flex flex-col overflow-hidden rounded-3xl border border-[#1a2e4a]/8 bg-white shadow-[0_18px_40px_-16px_rgba(26,46,74,0.35),0_6px_12px_-6px_rgba(26,46,74,0.16)] transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_38px_70px_-20px_rgba(0,212,255,0.45),0_14px_28px_-12px_rgba(26,46,74,0.35)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00D4FF] focus-visible:ring-offset-2 motion-reduce:transition-none motion-reduce:hover:translate-y-0 sm:flex-row"
                 >
-                  {/* Cover visual — gradient panel + big category icon (the "image") */}
+                  {/* Cover visual — illustrated editorial tile: a tilted résumé sheet
+                      (the document the article is about) with the topic icon on a
+                      frosted-glass badge. Reads as an image, ships zero assets. */}
                   <div
-                    className="relative flex min-h-[150px] shrink-0 items-center justify-center overflow-hidden p-6 sm:w-56"
-                    style={{ backgroundImage: `linear-gradient(135deg, ${cover.from}, ${cover.to})` }}
+                    className="relative flex min-h-[184px] shrink-0 items-center justify-center overflow-hidden p-6 sm:w-64"
+                    style={{ backgroundImage: `linear-gradient(140deg, ${cover.from}, ${cover.to})` }}
                   >
-                    {/* dotted texture */}
+                    {/* fine grain + directional light + faint ring for depth */}
                     <div
                       aria-hidden
-                      className="absolute inset-0 opacity-[0.18]"
-                      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "16px 16px" }}
+                      className="absolute inset-0 opacity-[0.14]"
+                      style={{ backgroundImage: "radial-gradient(circle at 1px 1px, white 1px, transparent 0)", backgroundSize: "15px 15px" }}
                     />
-                    {/* gloss + concentric rings for depth */}
-                    <div aria-hidden className="absolute -left-8 -top-10 h-32 w-32 rounded-full bg-white/25 blur-2xl" />
-                    <div aria-hidden className="absolute -bottom-12 -right-12 h-40 w-40 rounded-full border border-white/20" />
-                    <div aria-hidden className="absolute -bottom-5 -right-5 h-24 w-24 rounded-full border border-white/10" />
-                    <CoverIcon
-                      aria-hidden
-                      strokeWidth={1.5}
-                      className="relative h-16 w-16 text-white drop-shadow-[0_6px_14px_rgba(0,0,0,0.35)] transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3"
-                    />
-                    <span className="absolute left-3 top-3 inline-flex items-center rounded-full bg-black/25 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+                    <div aria-hidden className="absolute -left-12 -top-14 h-44 w-44 rounded-full bg-white/25 blur-3xl" />
+                    <div aria-hidden className="absolute -bottom-16 -right-14 h-48 w-48 rounded-full border border-white/12" />
+
+                    {/* Scene: résumé sheet + overlapping topic badge */}
+                    <div aria-hidden className="relative">
+                      <div className="w-[116px] rotate-[-6deg] rounded-xl bg-white/95 p-3 shadow-[0_20px_34px_-14px_rgba(0,0,0,0.55)] ring-1 ring-black/[0.06] transition-transform duration-500 ease-out group-hover:rotate-[-3deg] group-hover:scale-[1.05] motion-reduce:transition-none motion-reduce:group-hover:rotate-[-6deg] motion-reduce:group-hover:scale-100">
+                        <div className="h-2 w-9 rounded-full" style={{ backgroundColor: cover.from }} />
+                        <div className="mt-2.5 h-1.5 w-full rounded-full bg-[#1a2e4a]/12" />
+                        <div className="mt-1.5 h-1.5 w-[86%] rounded-full bg-[#1a2e4a]/12" />
+                        <div className="mt-1.5 h-1.5 w-[68%] rounded-full bg-[#1a2e4a]/12" />
+                        <div className="mt-3 flex gap-1.5">
+                          <div className="h-1.5 w-7 rounded-full bg-[#1a2e4a]/[0.08]" />
+                          <div className="h-1.5 w-5 rounded-full bg-[#1a2e4a]/[0.08]" />
+                        </div>
+                      </div>
+                      <div className="absolute -right-4 -top-5 flex h-14 w-14 items-center justify-center rounded-2xl border border-white/40 bg-white/20 shadow-[0_10px_24px_-8px_rgba(0,0,0,0.5)] backdrop-blur-md transition-transform duration-500 ease-out group-hover:-translate-y-1 group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:translate-y-0 motion-reduce:group-hover:scale-100">
+                        <CoverIcon strokeWidth={1.75} className="h-7 w-7 text-white drop-shadow-[0_2px_6px_rgba(0,0,0,0.4)]" />
+                      </div>
+                    </div>
+
+                    <span className="absolute left-3 top-3 inline-flex items-center rounded-full bg-black/30 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
                       {article.readingTime} {tBlog("reading_time")}
                     </span>
                   </div>
