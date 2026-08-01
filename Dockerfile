@@ -32,6 +32,12 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ARG NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 
+# NEXT_PUBLIC_* are inlined by `next build`, so they must be present at build time,
+# not just at runtime. Umami's website id gates the analytics <script> in the root
+# layout — without this ARG the gate compiles to nothing and no tracking loads.
+ARG NEXT_PUBLIC_UMAMI_WEBSITE_ID
+ENV NEXT_PUBLIC_UMAMI_WEBSITE_ID=$NEXT_PUBLIC_UMAMI_WEBSITE_ID
+
 # DATABASE_URL is needed at build time because Next.js imports lib/db.ts during page data collection
 ARG DATABASE_URL
 ENV DATABASE_URL=$DATABASE_URL
