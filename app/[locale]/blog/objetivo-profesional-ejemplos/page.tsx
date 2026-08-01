@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://readycvv.com/es/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/es/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/es/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "es_ES",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -101,7 +101,7 @@ export default async function ObjetivoProfesionalPage({
     },
     {
       q: "¿Puedo usar el mismo objetivo profesional para todas las ofertas?",
-      a: "Técnicamente sí, estratégicamente no. Cambia 2-3 keywords del objetivo por cada oferta que aplicas — los términos que la propia oferta repite. Te toma 90 segundos y aproximadamente duplica tu match en sistemas ATS. El ATS Checker de ReadyCV te muestra exactamente qué cambiar.",
+      a: "Técnicamente sí, estratégicamente no. Cambia 2-3 keywords del objetivo por cada oferta que aplicas — los términos que la propia oferta repite. Te toma 90 segundos y aproximadamente duplica tu match en sistemas ATS. El ATS Checker de Valhalla Resume te muestra exactamente qué cambiar.",
     },
     {
       q: "¿Es buena idea mencionar la empresa específica en mi objetivo?",
@@ -374,7 +374,7 @@ export default async function ObjetivoProfesionalPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Tip pro — valida con el ATS Checker</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> lee tu objetivo (junto con el resto de tu CV) contra la oferta: te dice qué keywords del posting faltan, tu match actual y las 3 ediciones de mayor impacto. La mayoría sube su score 20+ puntos en menos de 10 minutos.
+                    Mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de Valhalla Resume PRO</Link> lee tu objetivo (junto con el resto de tu CV) contra la oferta: te dice qué keywords del posting faltan, tu match actual y las 3 ediciones de mayor impacto. La mayoría sube su score 20+ puntos en menos de 10 minutos.
                   </p>
                 </div>
               </div>
@@ -394,8 +394,8 @@ export default async function ObjetivoProfesionalPage({
               <BlogCTA
                 locale={locale}
                 title="Crea tu CV con un objetivo profesional que sí te lleve a entrevista."
-                description="ReadyCV PRO te ofrece 143 plantillas optimizadas para ATS, sugerencias AI de objetivo profesional adaptadas a tu rol objetivo y el ATS Checker que valida tu match en tiempo real. Empieza en menos de 2 minutos."
-                buttonLabel="Empezar con ReadyCV PRO"
+                description="Valhalla Resume PRO te ofrece 143 plantillas optimizadas para ATS, sugerencias AI de objetivo profesional adaptadas a tu rol objetivo y el ATS Checker que valida tu match en tiempo real. Empieza en menos de 2 minutos."
+                buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas AI · Cancela cuando quieras"
               />
             </div>

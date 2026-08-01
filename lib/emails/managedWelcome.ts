@@ -11,8 +11,8 @@ interface ManagedWelcomeProps {
 
 const COPY = {
   es: {
-    subject: "Tu acceso a ReadyCV está listo",
-    title: "Tu acceso a ReadyCV está listo",
+    subject: "Tu acceso a Valhalla Resume está listo",
+    title: "Tu acceso a Valhalla Resume está listo",
     heroSub: "Tu cuenta Premium ha sido configurada.",
     labelPassword: "Contraseña temporal",
     labelExpires: "Acceso válido hasta",
@@ -24,8 +24,8 @@ const COPY = {
     terms: "Términos",
   },
   en: {
-    subject: "Your ReadyCV access is ready",
-    title: "Your ReadyCV access is ready",
+    subject: "Your Valhalla Resume access is ready",
+    title: "Your Valhalla Resume access is ready",
     heroSub: "Your Premium account has been set up.",
     labelPassword: "Temporary password",
     labelExpires: "Access valid until",
@@ -60,7 +60,7 @@ function formatDate(date: Date, locale: EmailLocale): string {
   return date.toLocaleDateString(locale === "en" ? "en-US" : "es-ES", { day: "numeric", month: "long", year: "numeric" })
 }
 
-export const managedWelcomeSubject = "Tu acceso a ReadyCV está listo"
+export const managedWelcomeSubject = "Tu acceso a Valhalla Resume está listo"
 
 export function managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUrl, locale }: ManagedWelcomeProps): string {
   const lang = pickEmailLocale(locale)
@@ -83,8 +83,8 @@ export function managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUr
 
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <a href="https://www.readycvv.com" style="text-decoration:none;">
-                <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">READY CV</span>
+              <a href="https://www.valhallaresume.com" style="text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">Valhalla Resume</span>
               </a>
             </td>
           </tr>
@@ -110,7 +110,7 @@ export function managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUr
                   <td style="padding:36px 40px;">
 
                     <p style="margin:0 0 24px;font-size:15px;color:#374151;line-height:1.7;">
-                      Bienvenido a READY CV. Tu acceso ha sido habilitado y puedes comenzar a usar la plataforma de inmediato.
+                      Bienvenido a Valhalla Resume. Tu acceso ha sido habilitado y puedes comenzar a usar la plataforma de inmediato.
                     </p>
 
                     <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f7ff;border:1px solid #dbeafe;border-radius:12px;margin-bottom:28px;">
@@ -175,12 +175,12 @@ export function managedWelcomeHtml({ password, expiresAt, downloadLimit, loginUr
           <tr>
             <td style="padding:28px 0;text-align:center;">
               <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;">
-                &copy; ${new Date().getFullYear()} READY CV &middot; ${t.rights}
+                &copy; ${new Date().getFullYear()} Valhalla Resume &middot; ${t.rights}
               </p>
               <p style="margin:0;font-size:12px;color:#d1d5db;">
-                <a href="https://www.readycvv.com/privacy" style="color:#9ca3af;text-decoration:none;">${t.privacy}</a>
+                <a href="https://www.valhallaresume.com/privacy" style="color:#9ca3af;text-decoration:none;">${t.privacy}</a>
                 &nbsp;&middot;&nbsp;
-                <a href="https://www.readycvv.com/terms" style="color:#9ca3af;text-decoration:none;">${t.terms}</a>
+                <a href="https://www.valhallaresume.com/terms" style="color:#9ca3af;text-decoration:none;">${t.terms}</a>
               </p>
             </td>
           </tr>
@@ -214,5 +214,5 @@ ${t.changeNote}
 
 ${signIn}: ${loginUrl}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }

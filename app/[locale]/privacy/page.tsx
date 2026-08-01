@@ -15,11 +15,11 @@ export async function generateMetadata({
   return {
     title: t("title"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/privacy`,
+      canonical: `https://valhallaresume.com/${locale}/privacy`,
       languages: {
-        es: "https://readycvv.com/es/privacy",
-        en: "https://readycvv.com/en/privacy",
-        "x-default": "https://readycvv.com/en/privacy",
+        es: "https://valhallaresume.com/es/privacy",
+        en: "https://valhallaresume.com/en/privacy",
+        "x-default": "https://valhallaresume.com/en/privacy",
       },
     },
   }
@@ -35,7 +35,7 @@ export default async function PrivacyPage({
   const t = await getTranslations({ locale, namespace: "privacy_page" })
 
   const b = (chunks: React.ReactNode) => <strong className="text-foreground">{chunks}</strong>
-  const contactEmail = "soporte@readycvv.com"
+  const contactEmail = "techstackmssaravia@gmail.com"
 
   const s2Items = [
     [t("s2_l1_bold"), t("s2_l1_rest")],

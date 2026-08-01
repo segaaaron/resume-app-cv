@@ -32,7 +32,7 @@ export default async function ReferralsPage({ params }: { params: Promise<{ loca
   // Resolve origin from request headers (works behind proxies / Dokploy)
   const h = await headers()
   const proto = h.get("x-forwarded-proto") ?? "https"
-  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "readycvv.com"
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "valhallaresume.com"
   const origin = `${proto}://${host}`
 
   return <ReferralsPageClient locale={locale} origin={origin} initialStatus={status} />

@@ -43,8 +43,8 @@ export default function Navbar() {
       </a>
       <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link href={`/${locale}`} className="flex items-center gap-2 font-bold text-xl tracking-tight text-foreground">
-          <Image src="/logo.svg" alt="ReadyCVV" width={28} height={28} priority className="rounded-lg shrink-0" />
-          ReadyCVV
+          <Image src="/logo.svg" alt="Valhalla Resume" width={28} height={28} priority className="rounded-lg shrink-0" />
+          Valhalla Resume
         </Link>
 
         {/* Desktop nav */}

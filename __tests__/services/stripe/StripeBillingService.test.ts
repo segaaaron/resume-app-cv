@@ -19,7 +19,7 @@ const makeService = () => new StripeBillingService(mockStripeClient, mockLogger)
 
 beforeEach(async () => {
   vi.clearAllMocks()
-  process.env.NEXT_PUBLIC_APP_URL = "https://readycvv.com"
+  process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com"
   const { stripeEnabled } = await import("@/lib/stripe")
   vi.mocked(stripeEnabled).mockReturnValue(true)
 })

@@ -21,7 +21,7 @@ export default function SummaryMockup({ locale = "es" }: Props) {
         <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
         <div className="w-2 h-2 rounded-full bg-[#28c840]" />
         <span className="text-[10px] text-slate-400 ml-2 font-mono">
-          ReadyCVV · {isEs ? "Resumen IA" : "AI Summary"}
+          Valhalla Resume · {isEs ? "Resumen IA" : "AI Summary"}
         </span>
       </div>
 

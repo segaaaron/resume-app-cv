@@ -35,14 +35,14 @@ export default function Footer() {
             <Link href={`/${locale}`} className="flex items-center gap-2 mb-3 no-underline">
               <Image
                 src="/logo.svg"
-                alt="ReadyCVV"
+                alt="Valhalla Resume"
                 width={26}
                 height={26}
                 className="rounded-lg shrink-0"
                 style={{ boxShadow: "0 2px 10px rgba(0,212,255,0.3)" }}
               />
               <span className="text-white text-[15px] font-extrabold tracking-[-0.01em]">
-                ReadyCVV
+                Valhalla Resume
               </span>
             </Link>
           </div>

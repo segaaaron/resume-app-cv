@@ -19,25 +19,25 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog`,
+      canonical: `https://valhallaresume.com/${locale}/blog`,
       languages: {
-        es: "https://readycvv.com/es/blog",
-        en: "https://readycvv.com/en/blog",
-        "x-default": "https://readycvv.com/en/blog",
+        es: "https://valhallaresume.com/es/blog",
+        en: "https://valhallaresume.com/en/blog",
+        "x-default": "https://valhallaresume.com/en/blog",
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
-      url: `https://readycvv.com/${locale}/blog`,
+      url: `https://valhallaresume.com/${locale}/blog`,
       type: "website",
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -249,12 +249,12 @@ export default async function BlogIndexPage({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: t("collection_name"),
-    url: `https://readycvv.com/${locale}/blog`,
+    url: `https://valhallaresume.com/${locale}/blog`,
     description: t("collection_desc"),
     hasPart: articles.map((a) => ({
       "@type": "Article",
       headline: a.title,
-      url: `https://readycvv.com/${locale}/blog/${a.slug}`,
+      url: `https://valhallaresume.com/${locale}/blog/${a.slug}`,
     })),
   }
 

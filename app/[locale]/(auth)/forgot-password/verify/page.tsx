@@ -4,7 +4,7 @@ import { setRequestLocale } from "next-intl/server"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: "Verificar código — READY CV",
+  title: "Verificar código — Valhalla Resume",
   robots: { index: false, follow: false },
 }
 

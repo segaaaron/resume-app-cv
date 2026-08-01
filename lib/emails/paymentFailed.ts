@@ -18,7 +18,7 @@ function pick(locale?: string | null): EmailLocale {
     : routing.defaultLocale
 }
 
-const APP_URL = () => (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com").replace(/\/$/, "")
+const APP_URL = () => (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.valhallaresume.com").replace(/\/$/, "")
 
 /**
  * Dashboard links must carry a locale segment: those routes only exist under
@@ -35,28 +35,28 @@ const dashboardUrl = (locale: EmailLocale, path: string) => `${APP_URL()}/${loca
  */
 const COPY = {
   es: {
-    subject: "Acción requerida: problema con tu pago en READY CV",
+    subject: "Acción requerida: problema con tu pago en Valhalla Resume",
     heading: "Problema con tu pago",
     greeting: (name: string) => `Hola <strong>${name}</strong>,`,
-    body: `No pudimos procesar el pago de tu suscripción a READY CV. Tienes <strong>${PAST_DUE_GRACE_DAYS} días</strong> para actualizar tu método de pago antes de que tu acceso Pro se suspenda.`,
+    body: `No pudimos procesar el pago de tu suscripción a Valhalla Resume. Tienes <strong>${PAST_DUE_GRACE_DAYS} días</strong> para actualizar tu método de pago antes de que tu acceso Pro se suspenda.`,
     cta: "Actualizar método de pago",
     ignore: "Si ya actualizaste tu tarjeta, puedes ignorar este mensaje.",
     unsubscribe: "cancela tu suscripción a emails aquí",
     unsubscribePrefix: "Si no deseas recibir más correos, ",
     textBody: (name: string, url: string) =>
-      `Hola ${name},\n\nNo pudimos procesar el pago de tu suscripción a READY CV. Tienes ${PAST_DUE_GRACE_DAYS} días para actualizar tu método de pago.\n\nActualiza en: ${url}`,
+      `Hola ${name},\n\nNo pudimos procesar el pago de tu suscripción a Valhalla Resume. Tienes ${PAST_DUE_GRACE_DAYS} días para actualizar tu método de pago.\n\nActualiza en: ${url}`,
   },
   en: {
     subject: "Action required: there was a problem with your payment",
     heading: "There was a problem with your payment",
     greeting: (name: string) => `Hi <strong>${name}</strong>,`,
-    body: `We couldn't process the payment for your READY CV subscription. You have <strong>${PAST_DUE_GRACE_DAYS} days</strong> to update your payment method before your Pro access is suspended.`,
+    body: `We couldn't process the payment for your Valhalla Resume subscription. You have <strong>${PAST_DUE_GRACE_DAYS} days</strong> to update your payment method before your Pro access is suspended.`,
     cta: "Update payment method",
     ignore: "If you've already updated your card, you can ignore this message.",
     unsubscribe: "unsubscribe from these emails here",
     unsubscribePrefix: "If you'd rather not receive these emails, ",
     textBody: (name: string, url: string) =>
-      `Hi ${name},\n\nWe couldn't process the payment for your READY CV subscription. You have ${PAST_DUE_GRACE_DAYS} days to update your payment method.\n\nUpdate it at: ${url}`,
+      `Hi ${name},\n\nWe couldn't process the payment for your Valhalla Resume subscription. You have ${PAST_DUE_GRACE_DAYS} days to update your payment method.\n\nUpdate it at: ${url}`,
   },
 } as const
 
@@ -83,5 +83,5 @@ export function paymentFailedHtml({ firstName, userId, invoiceUrl, locale }: Pay
 export function paymentFailedText({ firstName, invoiceUrl, locale }: { firstName: string; invoiceUrl?: string | null; locale?: string | null }): string {
   const lang = pick(locale)
   const payUrl = invoiceUrl ?? dashboardUrl(lang, "/dashboard/settings")
-  return `${COPY[lang].textBody(firstName, payUrl)}\n\n© ${new Date().getFullYear()} READY CV`
+  return `${COPY[lang].textBody(firstName, payUrl)}\n\n© ${new Date().getFullYear()} Valhalla Resume`
 }

@@ -14,11 +14,11 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/accessibility`,
+      canonical: `https://valhallaresume.com/${locale}/accessibility`,
       languages: {
-        es: "https://readycvv.com/es/accessibility",
-        en: "https://readycvv.com/en/accessibility",
-        "x-default": "https://readycvv.com/en/accessibility",
+        es: "https://valhallaresume.com/es/accessibility",
+        en: "https://valhallaresume.com/en/accessibility",
+        "x-default": "https://valhallaresume.com/en/accessibility",
       },
     },
   }
@@ -33,7 +33,7 @@ export default async function AccessibilityPage({
   setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "accessibility_page" })
 
-  const contactEmail = "soporte@readycvv.com"
+  const contactEmail = "techstackmssaravia@gmail.com"
 
   const sections: { n: number; title: string; body: string }[] = [
     { n: 1, title: t("s1_title"), body: t("s1_body") },

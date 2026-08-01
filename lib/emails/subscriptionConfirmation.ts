@@ -19,7 +19,7 @@ function pick(locale?: string | null): EmailLocale {
     : routing.defaultLocale
 }
 
-const APP_URL = () => (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com").replace(/\/$/, "")
+const APP_URL = () => (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.valhallaresume.com").replace(/\/$/, "")
 
 /**
  * Dashboard links need a locale segment — those routes only exist under `app/[locale]/`
@@ -51,12 +51,12 @@ function planPrice(interval: "monthly" | "annual", locale: EmailLocale): string 
 const COPY = {
   es: {
     subject: "¡Tu suscripción Pro está activa! 🎉",
-    title: "Confirmación de suscripción — READY CV",
+    title: "Confirmación de suscripción — Valhalla Resume",
     heroTitle: "¡Tu suscripción está activa!",
     heroSub: (plan: string) => `Bienvenido al Plan ${plan}`,
     planName: (interval: "monthly" | "annual") => (interval === "annual" ? "Pro Anual" : "Pro Mensual"),
     greeting: (name: string) => `Hola <strong>${name}</strong>,`,
-    intro: "Tu pago fue procesado exitosamente. Ya tienes acceso completo a todas las plantillas y funciones de READY CV.",
+    intro: "Tu pago fue procesado exitosamente. Ya tienes acceso completo a todas las plantillas y funciones de Valhalla Resume.",
     detailsTitle: "Detalles de tu plan",
     labelPlan: "Plan",
     labelPrice: "Precio",
@@ -82,12 +82,12 @@ const COPY = {
   },
   en: {
     subject: "Your Pro subscription is active! 🎉",
-    title: "Subscription confirmation — READY CV",
+    title: "Subscription confirmation — Valhalla Resume",
     heroTitle: "Your subscription is active!",
     heroSub: (plan: string) => `Welcome to the ${plan} plan`,
     planName: (interval: "monthly" | "annual") => (interval === "annual" ? "Pro Annual" : "Pro Monthly"),
     greeting: (name: string) => `Hi <strong>${name}</strong>,`,
-    intro: "Your payment went through. You now have full access to every template and feature in READY CV.",
+    intro: "Your payment went through. You now have full access to every template and feature in Valhalla Resume.",
     detailsTitle: "Your plan",
     labelPlan: "Plan",
     labelPrice: "Price",
@@ -262,7 +262,7 @@ export function subscriptionConfirmationHtml({
           <tr>
             <td style="padding:28px 0;text-align:center;">
               <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;">
-                © ${new Date().getFullYear()} READY CV · ${t.rights}
+                © ${new Date().getFullYear()} Valhalla Resume · ${t.rights}
               </p>
               <p style="margin:0;font-size:12px;color:#d1d5db;">
                 <a href="${APP_URL()}/privacy" style="color:#9ca3af;text-decoration:none;">${t.privacy}</a>
@@ -293,8 +293,8 @@ export function subscriptionConfirmationText({
   const firstName = userName.split(" ")[0] || userName
 
   const header = lang === "en"
-    ? `Hi ${firstName}!\n\nYour READY CV subscription is active.`
-    : `¡Hola ${firstName}!\n\nTu suscripción a READY CV está activa.`
+    ? `Hi ${firstName}!\n\nYour Valhalla Resume subscription is active.`
+    : `¡Hola ${firstName}!\n\nTu suscripción a Valhalla Resume está activa.`
 
   return `${header}
 
@@ -309,5 +309,5 @@ ${dashboardUrl(lang, "/dashboard/resumes")}
 
 ${dashboardUrl(lang, "/dashboard/settings")}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }

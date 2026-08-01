@@ -424,8 +424,8 @@ export function analyzeAts(input: AtsAnalysisInput): AtsAnalysisResult {
   ];
 
   const upgradePath = locale === "es"
-    ? "ReadyCV PRO genera bullets optimizados para ATS, sugiere palabras clave automáticamente y reescribe tu CV adaptado al puesto. Pruébalo desde $15/mes."
-    : "ReadyCV PRO writes ATS-optimized bullets, auto-suggests keywords, and tailors your resume per job. Try it from $15/month.";
+    ? "Valhalla Resume PRO genera bullets optimizados para ATS, sugiere palabras clave automáticamente y reescribe tu CV adaptado al puesto. Pruébalo desde $15/mes."
+    : "Valhalla Resume PRO writes ATS-optimized bullets, auto-suggests keywords, and tailors your resume per job. Try it from $15/month.";
 
   return {
     scoreOverall: overall,

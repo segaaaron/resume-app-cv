@@ -31,7 +31,7 @@ export const RESUME_MISTAKES: ResumeMistake[] = [
     title: "Wrong file format or corrupted PDF",
     impact: "Deal-breaker",
     why: "ATS systems expect text-extractable PDFs. Scanned PDFs, exported images, or .pages files fail at the parsing stage and produce empty fields in the recruiter dashboard.",
-    fix: "Export as PDF from a text-based editor (Word, Google Docs, ReadyCV). Verify by opening the PDF and selecting the text — if you cannot, the ATS cannot either.",
+    fix: "Export as PDF from a text-based editor (Word, Google Docs, Valhalla Resume). Verify by opening the PDF and selecting the text — if you cannot, the ATS cannot either.",
   },
   {
     rank: 4,

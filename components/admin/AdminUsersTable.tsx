@@ -51,7 +51,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = `readycv-users-${new Date().toISOString().slice(0, 10)}.csv`
+    a.download = `valhalla-resume-users-${new Date().toISOString().slice(0, 10)}.csv`
     a.click()
     URL.revokeObjectURL(url)
   }, [users])

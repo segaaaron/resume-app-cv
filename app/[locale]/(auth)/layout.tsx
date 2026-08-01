@@ -71,7 +71,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
           {/* Bottom copyright */}
           <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.3)" }}>
-            © {new Date().getFullYear()} ReadyCV — readycvv.com
+            © {new Date().getFullYear()} Valhalla Resume — valhallaresume.com
           </p>
         </div>
       </div>

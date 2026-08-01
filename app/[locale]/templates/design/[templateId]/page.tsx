@@ -37,7 +37,7 @@ import {
   type TemplateSEO,
 } from "@/lib/templates-seo"
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 const SUPPORTED_LOCALES = ["es", "en"] as const
 type Locale = (typeof SUPPORTED_LOCALES)[number]
 
@@ -62,8 +62,8 @@ export async function generateMetadata({
 
   const isEs = locale === "es"
   const title = isEs
-    ? `Plantilla CV ${template.name} | ATS-Friendly | ReadyCV`
-    : `${template.name} Resume Template | ATS-Friendly | ReadyCV`
+    ? `Plantilla CV ${template.name} | ATS-Friendly | Valhalla Resume`
+    : `${template.name} Resume Template | ATS-Friendly | Valhalla Resume`
   const description = template.description[locale]
   const url = `${BASE_URL}/${locale}/templates/design/${templateId}`
 

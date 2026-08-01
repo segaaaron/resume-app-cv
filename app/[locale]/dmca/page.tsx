@@ -14,11 +14,11 @@ export async function generateMetadata({
   return {
     title: t("meta_title"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/dmca`,
+      canonical: `https://valhallaresume.com/${locale}/dmca`,
       languages: {
-        es: "https://readycvv.com/es/dmca",
-        en: "https://readycvv.com/en/dmca",
-        "x-default": "https://readycvv.com/en/dmca",
+        es: "https://valhallaresume.com/es/dmca",
+        en: "https://valhallaresume.com/en/dmca",
+        "x-default": "https://valhallaresume.com/en/dmca",
       },
     },
   }
@@ -33,7 +33,7 @@ export default async function DmcaPage({
   setRequestLocale(locale)
   const t = await getTranslations({ locale, namespace: "dmca" })
 
-  const copyrightEmail = "copyright@readycvv.com"
+  const copyrightEmail = "techstackmssaravia@gmail.com"
 
   return (
     <div className="flex flex-col min-h-screen">

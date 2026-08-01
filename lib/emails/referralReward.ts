@@ -4,8 +4,8 @@ import { pickEmailLocale, emailAppUrl, emailDashboardUrl } from "./locale"
 
 const COPY = {
   es: {
-    subject: "Recompensa de referidos — READY CV",
-    title: "Recompensa de referidos — READY CV",
+    subject: "Recompensa de referidos — Valhalla Resume",
+    title: "Recompensa de referidos — Valhalla Resume",
     tierLine: (tier: number, label: string) => `Nivel ${tier} — ${label}`,
     complete: (count: number, credit: string) =>
       `Alcanzaste <strong>${count} referidos Pro</strong> en este ciclo. Tu recompensa: <strong>1 mes gratis</strong> (${credit} de crédito). El contador se reinicia para que puedas volver a ganar.`,
@@ -29,8 +29,8 @@ const COPY = {
     textSeeReferrals: "Ver tus referidos",
   },
   en: {
-    subject: "Referral reward — READY CV",
-    title: "Referral reward — READY CV",
+    subject: "Referral reward — Valhalla Resume",
+    title: "Referral reward — Valhalla Resume",
     tierLine: (tier: number, label: string) => `Level ${tier} — ${label}`,
     complete: (count: number, credit: string) =>
       `You reached <strong>${count} Pro referrals</strong> this cycle. Your reward: <strong>1 month free</strong> (${credit} in credit). The counter resets so you can earn again.`,
@@ -115,8 +115,8 @@ export function referralRewardHtml({
           <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}" style="text-decoration:none;">
-                <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">READY CV</span>
+              <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.valhallaresume.com"}" style="text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">Valhalla Resume</span>
               </a>
             </td>
           </tr>
@@ -231,7 +231,7 @@ export function referralRewardHtml({
           <tr>
             <td style="padding:28px 0;text-align:center;">
               <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;">
-                © ${new Date().getFullYear()} READY CV · Todos los derechos reservados
+                © ${new Date().getFullYear()} Valhalla Resume · Todos los derechos reservados
               </p>
               <p style="margin:0;font-size:12px;color:#d1d5db;">
                 <a href="${emailAppUrl()}/privacy" style="color:#9ca3af;text-decoration:none;">${t.privacy}</a>
@@ -281,5 +281,5 @@ ${t.invoiceNote}
 
 ${t.textSeeReferrals}: ${emailDashboardUrl(lang, "/dashboard/settings")}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }

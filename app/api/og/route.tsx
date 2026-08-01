@@ -12,7 +12,7 @@ const TEXT_MUTED = "#94a3b8"
 type OgType = "landing" | "blog" | "template" | "tool"
 
 const TYPE_LABELS: Record<OgType, { es: string; en: string }> = {
-  landing:  { es: "ReadyCVV",  en: "ReadyCVV"  },
+  landing:  { es: "Valhalla Resume",  en: "Valhalla Resume"  },
   blog:     { es: "Artículo",  en: "Article"   },
   template: { es: "Plantilla", en: "Template"  },
   tool:     { es: "Herramienta", en: "Tool"    },
@@ -37,8 +37,8 @@ export async function GET(req: NextRequest) {
 
     const fallbackTitle =
       locale === "en"
-        ? "ReadyCVV — AI Resume Builder"
-        : "ReadyCVV — Constructor de CV con IA"
+        ? "Valhalla Resume — AI Resume Builder"
+        : "Valhalla Resume — Constructor de CV con IA"
     const fallbackDescription =
       locale === "en"
         ? "ATS-optimized resumes. 143 premium templates."
@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
                 display: "flex",
               }}
             >
-              ReadyCVV
+              Valhalla Resume
             </div>
           </div>
 
@@ -166,7 +166,7 @@ export async function GET(req: NextRequest) {
                 display: "flex",
               }}
             >
-              readycvv.com
+              valhallaresume.com
             </div>
             <div
               style={{

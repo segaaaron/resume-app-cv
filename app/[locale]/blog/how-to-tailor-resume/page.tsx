@@ -31,29 +31,29 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        es: `https://readycvv.com/es/blog/adaptar-cv-oferta-trabajo`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/adaptar-cv-oferta-trabajo`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -307,7 +307,7 @@ export default async function TailorResumePage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Cut tailoring time in half with the right tools</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> surfaces missing keywords and density gaps against the job. ReadyCV PRO&apos;s <strong>tailor-cv</strong> feature reads the JD, suggests skill reordering and bullet rewrites, and produces a tailored version on top of any of the <Link href={`/${locale}/templates`}>143 ATS-verified templates</Link> — all in under three minutes per job.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> surfaces missing keywords and density gaps against the job. Valhalla Resume PRO&apos;s <strong>tailor-cv</strong> feature reads the JD, suggests skill reordering and bullet rewrites, and produces a tailored version on top of any of the <Link href={`/${locale}/templates`}>143 ATS-verified templates</Link> — all in under three minutes per job.
                   </p>
                 </div>
               </div>
@@ -360,8 +360,8 @@ export default async function TailorResumePage({
               <BlogCTA
                 locale={locale}
                 title="Tailor your resume in 3 minutes, not 30."
-                description="ReadyCV PRO&apos;s tailor-cv feature reads the job description, reorders your skills and bullets, runs the ATS check and produces a tailored resume on any of 143 ATS-verified templates — all in under three minutes per application."
-                buttonLabel="Start with ReadyCV PRO"
+                description="Valhalla Resume PRO&apos;s tailor-cv feature reads the job description, reorders your skills and bullets, runs the ATS check and produces a tailored resume on any of 143 ATS-verified templates — all in under three minutes per application."
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

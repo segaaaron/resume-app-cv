@@ -14,11 +14,11 @@ export async function generateMetadata({
   return {
     title: t("meta_title"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/cookie-policy`,
+      canonical: `https://valhallaresume.com/${locale}/cookie-policy`,
       languages: {
-        es: "https://readycvv.com/es/cookie-policy",
-        en: "https://readycvv.com/en/cookie-policy",
-        "x-default": "https://readycvv.com/en/cookie-policy",
+        es: "https://valhallaresume.com/es/cookie-policy",
+        en: "https://valhallaresume.com/en/cookie-policy",
+        "x-default": "https://valhallaresume.com/en/cookie-policy",
       },
     },
   }
@@ -64,7 +64,7 @@ export default async function CookiePolicyPage({
     ["Microsoft Edge", t("s5_edge_url")],
   ]
 
-  const contactEmail = "soporte@readycvv.com"
+  const contactEmail = "techstackmssaravia@gmail.com"
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -114,7 +114,7 @@ export default async function CookiePolicyPage({
               {/* Intro card */}
               <div className="rounded-xl border bg-card p-6 mb-8">
                 <p className="text-muted-foreground leading-relaxed">
-                  {t("intro_pre")}<strong className="text-foreground">READY CV</strong>{t("intro_post")}
+                  {t("intro_pre")}<strong className="text-foreground">Valhalla Resume</strong>{t("intro_post")}
                 </p>
               </div>
 

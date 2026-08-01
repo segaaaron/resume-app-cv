@@ -44,7 +44,7 @@ export default function BlogCTA({
       <div className="relative max-w-2xl">
         <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] bg-[#00D4FF]/15 text-[#00D4FF] border border-[#00D4FF]/30 px-3 py-1.5 rounded-full mb-5">
           <Sparkles className="h-3 w-3" />
-          ReadyCV PRO
+          Valhalla Resume PRO
         </span>
         <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-white mb-3 leading-tight">
           {title}

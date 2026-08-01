@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -269,7 +269,7 @@ export default async function ResumeLengthPage({
                   { title: "5. Merge skills list onto fewer lines", text: "Use bullet separators (Python · JavaScript · Go) instead of one skill per line." },
                   { title: "6. Cut bullets from 5 to 3 per role", text: "Keep the top 3 most quantified achievements per role. Drop &apos;responsible for&apos; throwaway lines." },
                   { title: "7. Eliminate the objective if you have a summary", text: "Pick one or the other — never both. Summary wins in 2026." },
-                  { title: "8. Use ReadyCV one-column templates", text: "Single-column ATS templates pack tighter than two-column without sacrificing readability." },
+                  { title: "8. Use Valhalla Resume one-column templates", text: "Single-column ATS templates pack tighter than two-column without sacrificing readability." },
                 ].map(({ title, text }, i) => (
                   <div key={i} className="flex gap-4 rounded-2xl border border-emerald-100 bg-emerald-50/30 p-4 sm:p-5">
                     <Scissors className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
@@ -322,7 +322,7 @@ export default async function ResumeLengthPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Validate length and ATS parsing together</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your draft for both length and parser cleanliness. Start with a <Link href={`/${locale}/templates`}>length-optimized template</Link> built to land at exactly 1 or 2 pages without manual tuning.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> reads your draft for both length and parser cleanliness. Start with a <Link href={`/${locale}/templates`}>length-optimized template</Link> built to land at exactly 1 or 2 pages without manual tuning.
                   </p>
                 </div>
               </div>
@@ -375,8 +375,8 @@ export default async function ResumeLengthPage({
               <BlogCTA
                 locale={locale}
                 title="Hit the right length on the first draft."
-                description="ReadyCV PRO templates are tuned for 1-page or 2-page layouts with automatic font/margin balancing. The AI editor trims bullets when you go over, expands when you go under — so the page count answers itself."
-                buttonLabel="Start with ReadyCV PRO"
+                description="Valhalla Resume PRO templates are tuned for 1-page or 2-page layouts with automatic font/margin balancing. The AI editor trims bullets when you go over, expands when you go under — so the page count answers itself."
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

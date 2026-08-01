@@ -199,7 +199,7 @@ describe("billing emails speak the customer's language", () => {
   it("the webhook passes the language through instead of hardcoding Spanish", () => {
     const src = read("lib/services/stripe/StripeWebhookService.ts")
     expect(src).not.toContain('subject: "¡Tu suscripción Pro está activa! 🎉"')
-    expect(src).not.toContain('subject: "Acción requerida: problema con tu pago en READY CV"')
+    expect(src).not.toContain('subject: "Acción requerida: problema con tu pago en Valhalla Resume"')
     expect(src).toContain("subscriptionConfirmationSubject(locale)")
     expect(src).toContain("paymentFailedSubject(locale)")
     // And the checkout must stamp it, or there is nothing to pass through.
@@ -270,7 +270,7 @@ describe("every email template speaks both languages", () => {
     const welcome = managedWelcomeHtml({ password: "abc", expiresAt: new Date("2027-05-02"), downloadLimit: 10, loginUrl: "https://x/login", locale: "en" })
     expect(welcome).toContain('lang="en"')
     expect(welcome).toContain("Temporary password")
-    expect(managedWelcomeSubjectFor("en")).toBe("Your ReadyCV access is ready")
+    expect(managedWelcomeSubjectFor("en")).toBe("Your Valhalla Resume access is ready")
 
     const renewal = renewalReminderHtml({ userName: "Ana", userId: "u1", planInterval: "annual", renewalDate: new Date("2027-05-02"), locale: "en" })
     expect(renewal).toContain("Your plan renews in")
@@ -278,7 +278,7 @@ describe("every email template speaks both languages", () => {
 
     const referral = referralRewardHtml({ userName: "Ana", userId: "u1", tier: 2, tierLabel: "Silver", creditAmount: "$4.50", totalCredit: "$7.50", cycleCount: 2, isCycleComplete: false, locale: "en" })
     expect(referral).toContain("Pro referrals")
-    expect(referralRewardSubject("en")).toBe("Referral reward — READY CV")
+    expect(referralRewardSubject("en")).toBe("Referral reward — Valhalla Resume")
   })
 
   it("the renewal reminder quotes the price from the single source", async () => {

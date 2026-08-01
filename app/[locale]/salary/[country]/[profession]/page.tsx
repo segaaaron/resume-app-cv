@@ -17,7 +17,7 @@ import { buildEntry, getRelatedProfessions } from "@/lib/salary/salaries"
 import { formatSalary } from "@/lib/salary/format"
 import { getProfessionIcon } from "@/lib/salary/iconMap"
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 const LOCALES = ["en", "es"] as const
 
 export function generateStaticParams() {
@@ -156,7 +156,7 @@ export default async function ProfessionCountryPage({
       "salary",
       "compensation",
     ],
-    creator: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
+    creator: { "@type": "Organization", name: "Valhalla Resume", url: BASE_URL },
     distribution: {
       "@type": "DataDownload",
       encodingFormat: "text/html",
@@ -170,8 +170,8 @@ export default async function ProfessionCountryPage({
     "@type": "Article",
     headline: `${professionName} salary in ${countryName} 2026`,
     description: `Median, p25 and p90 salary for ${professionName} across experience levels in ${countryName}.`,
-    author: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
-    publisher: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
+    author: { "@type": "Organization", name: "Valhalla Resume", url: BASE_URL },
+    publisher: { "@type": "Organization", name: "Valhalla Resume", url: BASE_URL },
     datePublished: "2026-06-01",
     dateModified: "2026-06-01",
     mainEntityOfPage: canonical,

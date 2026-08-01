@@ -3,7 +3,7 @@ interface Props { locale?: string }
 export default function KanbanTrackerMockup({ locale = "es" }: Props) {
   const isEs = locale === "es"
 
-  const boardTitle   = isEs ? "ReadyCVV · Seguimiento" : "ReadyCVV · Tracker"
+  const boardTitle   = isEs ? "Valhalla Resume · Seguimiento" : "Valhalla Resume · Tracker"
   const appliedLabel = isEs ? "Enviadas"   : "Applied"
   const interviewLbl = isEs ? "Entrevista" : "Interview"
   const offerLabel   = isEs ? "Oferta"     : "Offer"

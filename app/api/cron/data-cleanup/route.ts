@@ -5,7 +5,7 @@ import { db } from "@/lib/db"
 import { recordCronRun } from "@/lib/services/cron/cronRunner"
 
 // GDPR Art. 17 — delete accounts marked for deletion after 90-day retention window.
-// Configure in Dokploy: 0 2 * * * → GET https://readycvv.com/api/cron/data-cleanup
+// Configure in Dokploy: 0 2 * * * → GET https://valhallaresume.com/api/cron/data-cleanup
 // Header: Authorization: Bearer <CRON_SECRET>
 
 export async function GET(req: Request) {

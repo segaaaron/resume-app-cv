@@ -28,25 +28,25 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/guide`,
+      canonical: `https://valhallaresume.com/${locale}/guide`,
       languages: {
-        es: "https://readycvv.com/es/guide",
-        en: "https://readycvv.com/en/guide",
-        "x-default": "https://readycvv.com/en/guide",
+        es: "https://valhallaresume.com/es/guide",
+        en: "https://valhallaresume.com/en/guide",
+        "x-default": "https://valhallaresume.com/en/guide",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://readycvv.com/${locale}/guide`,
+      url: `https://valhallaresume.com/${locale}/guide`,
       type: "website",
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -54,8 +54,8 @@ export async function generateMetadata({
 const jsonLdHowTo = {
   "@context": "https://schema.org",
   "@type": "HowTo",
-  name: "Cómo crear un CV profesional con ReadyCVV e Inteligencia Artificial",
-  description: "Guía paso a paso para crear un CV profesional usando las 7 herramientas de IA de ReadyCVV",
+  name: "Cómo crear un CV profesional con Valhalla Resume e Inteligencia Artificial",
+  description: "Guía paso a paso para crear un CV profesional usando las 7 herramientas de IA de Valhalla Resume",
   step: [
     {
       "@type": "HowToStep",

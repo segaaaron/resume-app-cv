@@ -21,7 +21,7 @@ export function pickEmailLocale(locale?: string | null): EmailLocale {
 
 /** Base URL with any trailing slash removed, so paths can be appended safely. */
 export function emailAppUrl(): string {
-  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com").replace(/\/$/, "")
+  return (process.env.NEXT_PUBLIC_APP_URL ?? "https://www.valhallaresume.com").replace(/\/$/, "")
 }
 
 /**

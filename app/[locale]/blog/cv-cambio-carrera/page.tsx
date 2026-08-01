@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://readycvv.com/es/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/es/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/es/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "es_ES",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -308,7 +308,7 @@ export default async function CVCambioCarreraPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Valida tu CV contra ofertas de la nueva industria</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Antes de postular, mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> lee tu CV reformulado contra ofertas reales del sector destino. Si el match es bajo, el problema no es tu experiencia — es que los keywords del nuevo sector no aparecen aún. Empieza desde una <Link href={`/${locale}/templates`}>plantilla combinada ATS-verificada</Link> diseñada para cambios de carrera.
+                    Antes de postular, mira cómo el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de Valhalla Resume PRO</Link> lee tu CV reformulado contra ofertas reales del sector destino. Si el match es bajo, el problema no es tu experiencia — es que los keywords del nuevo sector no aparecen aún. Empieza desde una <Link href={`/${locale}/templates`}>plantilla combinada ATS-verificada</Link> diseñada para cambios de carrera.
                   </p>
                 </div>
               </div>
@@ -370,8 +370,8 @@ export default async function CVCambioCarreraPage({
               <BlogCTA
                 locale={locale}
                 title="Construye tu CV de cambio de carrera con estrategia."
-                description="ReadyCV PRO incluye plantillas combinadas (skills arriba + cronología abajo) específicas para cambio de carrera, AI que reformula tus bullets al vocabulario del nuevo sector y validación ATS contra ofertas reales. Empieza en menos de dos minutos."
-                buttonLabel="Empezar con ReadyCV PRO"
+                description="Valhalla Resume PRO incluye plantillas combinadas (skills arriba + cronología abajo) específicas para cambio de carrera, AI que reformula tus bullets al vocabulario del nuevo sector y validación ATS contra ofertas reales. Empieza en menos de dos minutos."
+                buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>

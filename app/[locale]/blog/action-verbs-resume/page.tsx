@@ -37,29 +37,29 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        es: `https://readycvv.com/es/blog/verbos-de-accion-cv`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/verbos-de-accion-cv`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -289,7 +289,7 @@ export default async function ActionVerbsPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Pair strong verbs with ATS validation</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your rewritten bullets against the actual JD: it shows which of the posting&apos;s requirements your resume does not mention yet — so you can decide what to add before you apply, instead of guessing. Start from a <Link href={`/${locale}/templates`}>parser-clean template</Link> so the verbs are not undone by layout problems.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> reads your rewritten bullets against the actual JD: it shows which of the posting&apos;s requirements your resume does not mention yet — so you can decide what to add before you apply, instead of guessing. Start from a <Link href={`/${locale}/templates`}>parser-clean template</Link> so the verbs are not undone by layout problems.
                   </p>
                 </div>
               </div>
@@ -323,8 +323,8 @@ export default async function ActionVerbsPage({
               <BlogCTA
                 locale={locale}
                 title="Let AI pick the right verb for every bullet."
-                description="ReadyCV PRO&apos;s AI bullet editor rewrites your experience with verb-first structure, scope-matched intensity and embedded metrics — in seconds, across 143 ATS-verified templates."
-                buttonLabel="Start with ReadyCV PRO"
+                description="Valhalla Resume PRO&apos;s AI bullet editor rewrites your experience with verb-first structure, scope-matched intensity and embedded metrics — in seconds, across 143 ATS-verified templates."
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

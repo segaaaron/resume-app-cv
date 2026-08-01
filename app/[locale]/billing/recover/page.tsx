@@ -141,7 +141,7 @@ export default async function BillingRecoverPage({
               <div className="mt-6 pt-6 border-t border-white/10 flex items-center gap-2">
                 <Mail className="w-4 h-4 text-slate-400" />
                 <a
-                  href="mailto:support@readycvv.com"
+                  href="mailto:techstackmssaravia@gmail.com"
                   className="text-sm text-[#00D4FF] hover:text-[#00D4FF]/80 underline underline-offset-4 transition-colors"
                 >
                   {t("help.contact")}

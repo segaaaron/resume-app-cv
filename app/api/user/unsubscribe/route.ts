@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Cancelar suscripción — READY CV</title>
+  <title>Cancelar suscripción — Valhalla Resume</title>
   <style>body{font-family:sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;background:#f4f6f8;}
   .card{background:#fff;border-radius:16px;padding:48px 40px;max-width:480px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);}
   h1{color:#111827;font-size:22px;margin-bottom:12px;}p{color:#6b7280;line-height:1.6;}
@@ -40,8 +40,8 @@ export async function GET(req: Request) {
 <body>
   <div class="card">
     <h1>Solicitud recibida</h1>
-    <p>Hemos recibido tu solicitud para cancelar la suscripción a correos transaccionales de <strong>READY CV</strong>.</p>
-    <p>Si deseas eliminar tu cuenta o exportar tus datos, puedes hacerlo desde <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.readycvv.com"}/dashboard/settings`}">Configuración</a>.</p>
+    <p>Hemos recibido tu solicitud para cancelar la suscripción a correos transaccionales de <strong>Valhalla Resume</strong>.</p>
+    <p>Si deseas eliminar tu cuenta o exportar tus datos, puedes hacerlo desde <a href="${`${process.env.NEXT_PUBLIC_APP_URL ?? "https://www.valhallaresume.com"}/dashboard/settings`}">Configuración</a>.</p>
   </div>
 </body>
 </html>`,

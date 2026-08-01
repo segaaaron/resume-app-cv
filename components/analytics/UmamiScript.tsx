@@ -13,7 +13,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  *
  * Served same-origin via Next.js rewrites (see `next.config.ts`): the tracker
  * script is proxied at `/script.js` and events post to `/api/send`, both under
- * readycvv.com. That keeps everything within the existing CSP `'self'` (no
+ * valhallaresume.com. That keeps everything within the existing CSP `'self'` (no
  * whitelist needed) and side-steps ad blockers that pattern-match on external
  * `analytics.*` hosts. Loads with `afterInteractive` so it never blocks LCP/INP.
  *

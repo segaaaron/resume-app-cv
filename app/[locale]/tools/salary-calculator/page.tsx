@@ -19,7 +19,7 @@ import SalaryPopularSearches from "@/components/salary/SalaryPopularSearches"
 import SalaryFAQ from "@/components/salary/SalaryFAQ"
 import SalarySchemas from "@/components/salary/SalarySchemas"
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 
 export async function generateMetadata({
   params,
@@ -102,7 +102,7 @@ export default async function SalaryCalculatorPage({
     operatingSystem: "Any",
     url: canonical,
     offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-    publisher: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
+    publisher: { "@type": "Organization", name: "Valhalla Resume", url: BASE_URL },
   }
   const faqLd = {
     "@context": "https://schema.org",

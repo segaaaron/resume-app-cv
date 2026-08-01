@@ -22,28 +22,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://readycvv.com/es/blog/${SLUG}`,
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV"],
+      authors: ["Valhalla Resume"],
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -137,12 +137,12 @@ export default async function FreeVsPaidArticlePage({
         description: content.intro,
         datePublished: DATE_PUBLISHED,
         dateModified: DATE_MODIFIED,
-        author: { "@type": "Organization", name: "ReadyCVV", url: "https://readycvv.com" },
-        publisher: { "@type": "Organization", name: "ReadyCVV", logo: { "@type": "ImageObject", url: "https://readycvv.com/og-image.png" } },
-        image: "https://readycvv.com/og-image.png",
-        url: `https://readycvv.com/${locale}/blog/${SLUG}`,
+        author: { "@type": "Organization", name: "Valhalla Resume", url: "https://valhallaresume.com" },
+        publisher: { "@type": "Organization", name: "Valhalla Resume", logo: { "@type": "ImageObject", url: "https://valhallaresume.com/og-image.png" } },
+        image: "https://valhallaresume.com/og-image.png",
+        url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
         inLanguage: locale,
-        mainEntityOfPage: { "@type": "WebPage", "@id": `https://readycvv.com/${locale}/blog/${SLUG}` },
+        mainEntityOfPage: { "@type": "WebPage", "@id": `https://valhallaresume.com/${locale}/blog/${SLUG}` },
       }) }} />
       <Footer />
     </div>

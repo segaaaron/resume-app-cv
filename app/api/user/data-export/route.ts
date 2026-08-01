@@ -17,7 +17,7 @@ export async function GET(req: Request) {
       status: 200,
       headers: {
         "Content-Type": "application/json",
-        "Content-Disposition": 'attachment; filename="readycv-data-export.json"',
+        "Content-Disposition": 'attachment; filename="valhalla-resume-data-export.json"',
       },
     })
   } catch (err) {

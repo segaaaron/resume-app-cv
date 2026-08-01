@@ -31,29 +31,29 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://readycvv.com/es/blog/${SLUG}`,
-        en: `https://readycvv.com/en/blog/how-to-tailor-resume`,
-        "x-default": `https://readycvv.com/en/blog/how-to-tailor-resume`,
+        es: `https://valhallaresume.com/es/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/how-to-tailor-resume`,
+        "x-default": `https://valhallaresume.com/en/blog/how-to-tailor-resume`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "es_ES",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -305,7 +305,7 @@ export default async function AdaptarCvPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Reduce el tiempo de adaptación a la mitad con las herramientas correctas</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> ves qué keywords te faltan y dónde hay gaps de densidad frente a la oferta. La función <strong>tailor-cv</strong> de ReadyCV PRO lee la oferta, sugiere reorden de habilidades y reescritura de bullets, y produce una versión adaptada sobre cualquiera de las <Link href={`/${locale}/templates`}>143 plantillas ATS-verificadas</Link> — todo en menos de tres minutos por oferta.
+                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de Valhalla Resume PRO</Link> ves qué keywords te faltan y dónde hay gaps de densidad frente a la oferta. La función <strong>tailor-cv</strong> de Valhalla Resume PRO lee la oferta, sugiere reorden de habilidades y reescritura de bullets, y produce una versión adaptada sobre cualquiera de las <Link href={`/${locale}/templates`}>143 plantillas ATS-verificadas</Link> — todo en menos de tres minutos por oferta.
                   </p>
                 </div>
               </div>
@@ -358,8 +358,8 @@ export default async function AdaptarCvPage({
               <BlogCTA
                 locale={locale}
                 title="Adapta tu CV en 3 minutos, no en 30."
-                description="La función tailor-cv de ReadyCV PRO lee la oferta de trabajo, reordena tus habilidades y bullets, corre el chequeo ATS y produce un CV adaptado sobre cualquiera de 143 plantillas ATS-verificadas — todo en menos de tres minutos por postulación."
-                buttonLabel="Empezar con ReadyCV PRO"
+                description="La función tailor-cv de Valhalla Resume PRO lee la oferta de trabajo, reordena tus habilidades y bullets, corre el chequeo ATS y produce un CV adaptado sobre cualquiera de 143 plantillas ATS-verificadas — todo en menos de tres minutos por postulación."
+                buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>

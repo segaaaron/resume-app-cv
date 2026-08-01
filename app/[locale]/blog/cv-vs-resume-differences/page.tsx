@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -394,7 +394,7 @@ export default async function CVvsResumePage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Not sure which to send? Default to resume + ATS Checker</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    For any private-sector role outside of academia, the safe default in 2026 is a 1-2 page resume tailored to the posting. Then see how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads it to confirm your keyword match. Browse <Link href={`/${locale}/templates`}>ATS-verified templates</Link> to start from a format that works.
+                    For any private-sector role outside of academia, the safe default in 2026 is a 1-2 page resume tailored to the posting. Then see how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> reads it to confirm your keyword match. Browse <Link href={`/${locale}/templates`}>ATS-verified templates</Link> to start from a format that works.
                   </p>
                 </div>
               </div>
@@ -428,8 +428,8 @@ export default async function CVvsResumePage({
               <BlogCTA
                 locale={locale}
                 title="Build the right document for the right market — short or long-form resume."
-                description="ReadyCV PRO includes 143 ATS-verified templates covering both short US and long-form international resume formats, with AI suggestions tailored to your target country. Start in under two minutes."
-                buttonLabel="Start with ReadyCV PRO"
+                description="Valhalla Resume PRO includes 143 ATS-verified templates covering both short US and long-form international resume formats, with AI suggestions tailored to your target country. Start in under two minutes."
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

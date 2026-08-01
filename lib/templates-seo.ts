@@ -365,13 +365,13 @@ function buildTemplateSEO(t: TemplateInfo): TemplateSEO {
   const name = cleanName(t.name)
 
   const description = curated?.description ?? {
-    en: `${name} resume template — ${t.description}. ATS-friendly and fully editable in ReadyCVV.`,
-    es: `Plantilla de CV ${name} — ${t.description}. Compatible con ATS y totalmente editable en ReadyCVV.`,
+    en: `${name} resume template — ${t.description}. ATS-friendly and fully editable in Valhalla Resume.`,
+    es: `Plantilla de CV ${name} — ${t.description}. Compatible con ATS y totalmente editable en Valhalla Resume.`,
   }
 
   const longDescription = curated?.longDescription ?? {
-    en: `The ${name} template combines a ${category} aesthetic with practical recruiter-ready structure. ${t.description}. Build your CV in ReadyCVV's editor, customize colors and typography, then export to PDF — ready to send to recruiters in minutes.`,
-    es: `La plantilla ${name} combina una estética ${category} con estructura práctica lista para reclutadores. ${t.description}. Construye tu CV en el editor de ReadyCVV, personaliza colores y tipografía, luego exporta a PDF — listo para enviar en minutos.`,
+    en: `The ${name} template combines a ${category} aesthetic with practical recruiter-ready structure. ${t.description}. Build your CV in Valhalla Resume's editor, customize colors and typography, then export to PDF — ready to send to recruiters in minutes.`,
+    es: `La plantilla ${name} combina una estética ${category} con estructura práctica lista para reclutadores. ${t.description}. Construye tu CV en el editor de Valhalla Resume, personaliza colores y tipografía, luego exporta a PDF — listo para enviar en minutos.`,
   }
 
   const features = curated?.features ?? {

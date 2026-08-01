@@ -15,11 +15,11 @@ export async function generateMetadata({
   return {
     title: t("title"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/terms`,
+      canonical: `https://valhallaresume.com/${locale}/terms`,
       languages: {
-        es: "https://readycvv.com/es/terms",
-        en: "https://readycvv.com/en/terms",
-        "x-default": "https://readycvv.com/en/terms",
+        es: "https://valhallaresume.com/es/terms",
+        en: "https://valhallaresume.com/en/terms",
+        "x-default": "https://valhallaresume.com/en/terms",
       },
     },
   }
@@ -47,7 +47,7 @@ export default async function TermsPage({
   const s2Items = [t("s2_i1"), t("s2_i2"), t("s2_i3"), t("s2_i4"), t("s2_i5"), t("s2_i6")]
   const s9Items = [t("s9_i1"), t("s9_i2"), t("s9_i3"), t("s9_i4"), t("s9_i5"), t("s9_i6"), t("s9_i7"), t("s9_i8"), t("s9_i9"), t("s9_i10"), t("s9_i11")]
 
-  const contactEmail = "soporte@readycvv.com"
+  const contactEmail = "techstackmssaravia@gmail.com"
 
   return (
     <div className="flex flex-col min-h-screen bg-background">
@@ -356,8 +356,8 @@ export default async function TermsPage({
                   {t("s18_title")}
                 </h2>
                 <div className="space-y-1 text-muted-foreground">
-                  <p><strong className="text-foreground">MS Saravia Tech Stack LLC</strong> — ReadyCVV</p>
-                  <p>{t("s18_website_label")} <a href="https://www.readycvv.com" className="text-primary underline underline-offset-4">www.readycvv.com</a></p>
+                  <p><strong className="text-foreground">MS Saravia Tech Stack LLC</strong> — Valhalla Resume</p>
+                  <p>{t("s18_website_label")} <a href="https://www.valhallaresume.com" className="text-primary underline underline-offset-4">www.valhallaresume.com</a></p>
                   <p>{t("s18_email_label")} <a href={`mailto:${contactEmail}`} className="text-primary underline underline-offset-4">{contactEmail}</a></p>
                 </div>
               </section>

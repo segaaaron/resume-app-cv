@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://readycvv.com/es/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/es/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/es/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "es_ES",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -328,7 +328,7 @@ export default async function CVRecienGraduadoPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Antes de postular: valida tu CV contra el ATS</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Los CVs de recién graduados son los que más fallan en el ATS por falta de keywords del puesto. Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> validas tu match con cada oferta antes de enviar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla ATS-verificada</Link> diseñada para perfiles junior.
+                    Los CVs de recién graduados son los que más fallan en el ATS por falta de keywords del puesto. Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de Valhalla Resume PRO</Link> validas tu match con cada oferta antes de enviar. Empieza desde una <Link href={`/${locale}/templates`}>plantilla ATS-verificada</Link> diseñada para perfiles junior.
                   </p>
                 </div>
               </div>
@@ -382,8 +382,8 @@ export default async function CVRecienGraduadoPage({
               <BlogCTA
                 locale={locale}
                 title="Tu primer CV profesional, listo en minutos."
-                description="ReadyCV PRO incluye plantillas ATS-verificadas diseñadas específicamente para perfiles junior y recién egresados, con AI que transforma tus prácticas y proyectos académicos en bullets cuantificados. Empieza en menos de dos minutos."
-                buttonLabel="Empezar con ReadyCV PRO"
+                description="Valhalla Resume PRO incluye plantillas ATS-verificadas diseñadas específicamente para perfiles junior y recién egresados, con AI que transforma tus prácticas y proyectos académicos en bullets cuantificados. Empieza en menos de dos minutos."
+                buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />
             </div>

@@ -51,7 +51,7 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     // Umami analytics proxied same-origin so the tracker + collect endpoint stay
-    // under readycvv.com: keeps the CSP at `'self'` (no external whitelist) and
+    // under valhallaresume.com: keeps the CSP at `'self'` (no external whitelist) and
     // side-steps ad blockers. `beforeFiles` runs ahead of routes/filesystem, and
     // both paths are already excluded from the i18n middleware matcher
     // (`/api/*` and any path with a `.`), so no locale prefix is injected.

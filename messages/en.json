@@ -1,161 +1,161 @@
 {
   "metadata": {
     "home": {
-      "title": "ReadyCVV — Best AI Resume Builder | Beat ATS, 143 Templates",
-      "description": "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. Try ReadyCVV Pro from $15/month.",
-      "og_title": "ReadyCVV — Best AI Resume Builder | Beat ATS, 143 Templates",
+      "title": "Valhalla Resume — Best AI Resume Builder | Beat ATS, 143 Templates",
+      "description": "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. Try Valhalla Resume Pro from $15/month.",
+      "og_title": "Valhalla Resume — Best AI Resume Builder | Beat ATS, 143 Templates",
       "og_description": "Build your resume with AI in minutes. 143 professional templates, ATS Score, automatic cover letters and application tracker. Pro plan from $15/month.",
-      "og_image_alt": "ReadyCVV — AI Resume Builder"
+      "og_image_alt": "Valhalla Resume — AI Resume Builder"
     },
     "templates": {
-      "title": "AI Resume Templates — 143 ATS-Friendly Designs | ReadyCVV",
+      "title": "AI Resume Templates — 143 ATS-Friendly Designs | Valhalla Resume",
       "description": "Explore 143 professional ATS-friendly resume templates across creative, business, legal, health, engineering, hospitality, arts and classic categories. Change anytime without losing your content.",
-      "og_title": "143 Professional AI Resume Templates — ReadyCVV",
+      "og_title": "143 Professional AI Resume Templates — Valhalla Resume",
       "og_description": "Choose from 143 ATS-optimized resume templates for every industry. Unique designs, ready in minutes, download as PDF."
     },
     "pricing": {
-      "title": "ReadyCVV Pricing — Pro Plan $15/month | AI Resume Builder",
+      "title": "Valhalla Resume Pricing — Pro Plan $15/month | AI Resume Builder",
       "description": "143 premium templates, up to 10 personal resumes, 7 AI tools, ATS Score, AI cover letters and application tracker. Everything in one Pro plan. Cheaper than Zety or Resume.io.",
-      "og_title": "ReadyCVV Pricing — Pro Plan from $15/month",
+      "og_title": "Valhalla Resume Pricing — Pro Plan from $15/month",
       "og_description": "One Pro plan to get hired: 143 templates, AI, ATS Score, cover letters. From $15/month — cheaper than the competition. Cancel anytime."
     },
     "guide": {
-      "title": "How to use ReadyCVV — Complete AI Guide for your Resume",
-      "description": "Learn to create a professional resume with AI: improve bullets, generate summaries, analyze your ATS score and create cover letters in minutes with ReadyCVV.",
-      "og_title": "How to use ReadyCVV with AI — Step-by-step guide",
-      "og_description": "7 AI tools for your resume: improve bullets, generate summaries, analyze ATS score and create cover letters. All in ReadyCVV."
+      "title": "How to use Valhalla Resume — Complete AI Guide for your Resume",
+      "description": "Learn to create a professional resume with AI: improve bullets, generate summaries, analyze your ATS score and create cover letters in minutes with Valhalla Resume.",
+      "og_title": "How to use Valhalla Resume with AI — Step-by-step guide",
+      "og_description": "7 AI tools for your resume: improve bullets, generate summaries, analyze ATS score and create cover letters. All in Valhalla Resume."
     },
     "pro_designs": {
-      "title": "Pro Designs — READY CV",
+      "title": "Pro Designs — Valhalla Resume",
       "description": "Premium templates with custom SVGs and unique designs to make you stand out."
     },
     "privacy": {
-      "title": "Privacy Policy | ReadyCVV",
-      "description": "Learn how ReadyCVV protects your personal data. Full privacy policy: what we collect, how we use it, and your rights."
+      "title": "Privacy Policy | Valhalla Resume",
+      "description": "Learn how Valhalla Resume protects your personal data. Full privacy policy: what we collect, how we use it, and your rights."
     },
     "terms": {
-      "title": "Terms of Service | ReadyCVV",
-      "description": "ReadyCVV terms of service. Learn your rights, platform usage conditions, and cancellation policy."
+      "title": "Terms of Service | Valhalla Resume",
+      "description": "Valhalla Resume terms of service. Learn your rights, platform usage conditions, and cancellation policy."
     },
     "blog_index": {
-      "title": "Blog — CV Tips and Job Search Advice | READY CV",
+      "title": "Blog — CV Tips and Job Search Advice | Valhalla Resume",
       "description": "Practical guides on optimizing your resume, passing ATS filters, writing impactful bullets and getting more interviews."
     },
     "blog_ats": {
-      "title": "What is ATS and Why is It Rejecting Your Resume? — READY CV",
+      "title": "What is ATS and Why is It Rejecting Your Resume? — Valhalla Resume",
       "description": "Most ATS don't auto-reject your resume — recruiters do, by hand, and fast. Learn what an ATS actually does, what really gets filtered, and what to change."
     },
     "blog_bullets": {
-      "title": "How to Write CV Bullet Points That Get Interviews — READY CV",
+      "title": "How to Write CV Bullet Points That Get Interviews — Valhalla Resume",
       "description": "Practical guide with real examples to write experience bullets with action verbs, metrics and results-oriented language."
     },
     "blog_free_vs_paid": {
-      "title": "CV Builder Features That Actually Matter in 2026 | ReadyCVV",
+      "title": "CV Builder Features That Actually Matter in 2026 | Valhalla Resume",
       "description": "Honest comparison of CV builder tools. Which features change outcomes, what to look for, and when paying is worth it."
     },
     "blog_cover_letter": {
-      "title": "Cover Letter in 2026: Does It Still Matter? — READY CV",
+      "title": "Cover Letter in 2026: Does It Still Matter? — Valhalla Resume",
       "description": "Do you need a cover letter in 2026? Real data, when to include one and how to write one that works with AI."
     },
     "blog_ai_cv": {
-      "title": "How to Make a Resume with AI in 2026 (Step by Step) | ReadyCVV",
+      "title": "How to Make a Resume with AI in 2026 (Step by Step) | Valhalla Resume",
       "description": "Step-by-step guide to creating a professional ATS-optimized resume with AI in minutes. AI summary, bullet points, ATS Score and cover letter."
     },
     "blog_dev_cv": {
-      "title": "Software Developer Resume Guide 2026: Format & Examples | ReadyCVV",
+      "title": "Software Developer Resume Guide 2026: Format & Examples | Valhalla Resume",
       "description": "Format, skills section, impact bullets, projects and ATS Score. Everything your resume needs to land tech interviews."
     },
     "blog_pass_ats": {
-      "title": "How to Pass ATS Screening in 2026 (Proven Tactics) | ReadyCVV",
+      "title": "How to Pass ATS Screening in 2026 (Proven Tactics) | Valhalla Resume",
       "description": "What an ATS actually filters is narrower than you've been told. Learn the format, keyword and structure decisions that genuinely matter."
     },
     "blog_marketing_cv": {
-      "title": "Marketing Resume Guide 2026: Format, Metrics & Examples | ReadyCVV",
+      "title": "Marketing Resume Guide 2026: Format, Metrics & Examples | Valhalla Resume",
       "description": "How to structure your marketing resume, which metrics to include, tools to list and how to tailor it for more interviews."
     },
     "blog_cover_examples": {
-      "title": "Cover Letter Examples 2026: Templates That Actually Work | ReadyCVV",
+      "title": "Cover Letter Examples 2026: Templates That Actually Work | Valhalla Resume",
       "description": "Real examples for tech, marketing and career changers. The 3-paragraph structure, winning openings and mistakes to avoid."
     },
     "blog_resume_summary": {
-      "title": "How to Write a Resume Summary: 50 Examples That Get Interviews | ReadyCVV",
+      "title": "How to Write a Resume Summary: 50 Examples That Get Interviews | Valhalla Resume",
       "description": "The 4-line formula recruiters expect in 2026, 50 role-specific examples and the 7 mistakes that get your summary skipped. Pass ATS in 15 minutes."
     },
     "blog_cv_ingles": {
-      "title": "CV en Inglés: Guía Paso a Paso con Ejemplos (Resume 2026) | ReadyCVV",
+      "title": "CV en Inglés: Guía Paso a Paso con Ejemplos (Resume 2026) | Valhalla Resume",
       "description": "El formato real que usan en USA, UK y multinacionales. Estructura, vocabulario por sector, errores típicos del hispanohablante y plantillas listas."
     },
     "blog_resume_skills": {
-      "title": "Resume Skills: 200+ Skills by Industry (2026 Guide) | ReadyCVV",
+      "title": "Resume Skills: 200+ Skills by Industry (2026 Guide) | Valhalla Resume",
       "description": "200+ resume skills organized by industry, the framework to choose yours, ATS formatting rules and the 5 mistakes that tank your match score."
     },
     "blog_habilidades_cv": {
-      "title": "Habilidades para CV: 200+ Skills por Industria (Guía 2026) | ReadyCVV",
+      "title": "Habilidades para CV: 200+ Skills por Industria (Guía 2026) | Valhalla Resume",
       "description": "200+ habilidades organizadas por industria, el proceso para elegir las tuyas, reglas de formato ATS y los 5 errores que arruinan tu match score."
     },
     "blog_cv_vs_resume": {
-      "title": "CV vs Resume: Complete Comparison 2026 (When to Use Each) | ReadyCVV",
+      "title": "CV vs Resume: Complete Comparison 2026 (When to Use Each) | Valhalla Resume",
       "description": "CV and resume are not interchangeable. The 7 key differences, when to use each, and a country-by-country guide so you never send the wrong document."
     },
     "blog_objetivo_profesional": {
-      "title": "50 Ejemplos de Objetivo Profesional para CV (Guía 2026) | ReadyCVV",
+      "title": "50 Ejemplos de Objetivo Profesional para CV (Guía 2026) | Valhalla Resume",
       "description": "50 ejemplos por categoría (recién egresado, cambio de carrera, sin experiencia, con experiencia, por industria), la fórmula que funciona y los 6 errores que evitar."
     },
     "blog_chronological_functional": {
-      "title": "Chronological vs Functional Resume: Which Format to Use (2026) | ReadyCVV",
+      "title": "Chronological vs Functional Resume: Which Format to Use (2026) | Valhalla Resume",
       "description": "Chronological, functional or combination — which resume format wins in 2026, when to use each, ATS compatibility per format and real candidate examples."
     },
     "blog_resume_length": {
-      "title": "Resume Length: 1 or 2 Pages? Complete Guide for 2026 | ReadyCVV",
+      "title": "Resume Length: 1 or 2 Pages? Complete Guide for 2026 | Valhalla Resume",
       "description": "The real answer on resume length: when 1 page wins, when 2 is required, country-by-country expectations and 8 tactics to cut to a single page without losing impact."
     },
     "blog_cv_recien_graduado": {
-      "title": "CV para Recién Graduados Universitarios (Guía 2026 + Ejemplos) | ReadyCVV",
+      "title": "CV para Recién Graduados Universitarios (Guía 2026 + Ejemplos) | Valhalla Resume",
       "description": "La estructura ideal del CV recién graduado, cómo presentar prácticas y proyectos académicos como experiencia y 5 ejemplos completos por área profesional."
     },
     "blog_cv_cambio_carrera": {
-      "title": "CV para Cambio de Carrera: Guía Completa con Ejemplos (2026) | ReadyCVV",
+      "title": "CV para Cambio de Carrera: Guía Completa con Ejemplos (2026) | Valhalla Resume",
       "description": "El CV de cambio de carrera necesita estrategia distinta: formato correcto, habilidades transferibles, reformular experiencia y 4 ejemplos antes/después reales."
     },
     "blog_action_verbs": {
-      "title": "300+ Action Verbs for Your Resume (By Industry, 2026) | ReadyCVV",
+      "title": "300+ Action Verbs for Your Resume (By Industry, 2026) | Valhalla Resume",
       "description": "300+ resume action verbs organized by category — leadership, results, technical, sales — plus the 4-step framework to pick the right verb and 5 before/after rewrites."
     },
     "blog_verbos_accion": {
-      "title": "300+ Verbos de Acción para tu Currículum (Por Industria, 2026) | ReadyCVV",
+      "title": "300+ Verbos de Acción para tu Currículum (Por Industria, 2026) | Valhalla Resume",
       "description": "300+ verbos de acción organizados por categoría — liderazgo, resultados, técnicos, ventas — el framework para elegir el correcto y 5 ejemplos antes/después."
     },
     "blog_resume_mistakes": {
-      "title": "15 Resume Mistakes That Cost You The Interview (2026) | ReadyCVV",
+      "title": "15 Resume Mistakes That Cost You The Interview (2026) | Valhalla Resume",
       "description": "The 15 highest-cost resume mistakes ranked by impact: why each one hurts, how to fix it, before/after examples and a 12-item self-audit checklist."
     },
     "blog_errores_cv": {
-      "title": "15 Errores Comunes en el Currículum que Debes Evitar (2026) | ReadyCVV",
+      "title": "15 Errores Comunes en el Currículum que Debes Evitar (2026) | Valhalla Resume",
       "description": "Los 15 errores más costosos en el CV ranking por impacto: por qué dañan, cómo arreglarlos, ejemplos antes/después y checklist de auto-auditoría de 12 ítems."
     },
     "blog_tailor_resume": {
-      "title": "How to Tailor Your Resume for Each Job (Step-by-Step Guide 2026) | ReadyCVV",
+      "title": "How to Tailor Your Resume for Each Job (Step-by-Step Guide 2026) | Valhalla Resume",
       "description": "The 6-step process to adapt your resume per job in 15-30 minutes, with a worked example showing 3 versions from one base."
     },
     "blog_adaptar_cv": {
-      "title": "Cómo Adaptar tu CV a Cada Oferta de Trabajo (Guía Paso a Paso 2026) | ReadyCVV",
+      "title": "Cómo Adaptar tu CV a Cada Oferta de Trabajo (Guía Paso a Paso 2026) | Valhalla Resume",
       "description": "El proceso de 6 pasos para adaptar tu CV por oferta en 15-30 minutos, con ejemplo trabajado de 3 versiones desde una base."
     },
     "blog_cv_sin_experiencia": {
-      "title": "Cómo Hacer un CV Sin Experiencia (Guía Completa 2026 + 8 Ejemplos) | ReadyCVV",
+      "title": "Cómo Hacer un CV Sin Experiencia (Guía Completa 2026 + 8 Ejemplos) | Valhalla Resume",
       "description": "La estructura ideal del CV sin experiencia, cómo convertir proyectos y voluntariado en activos legítimos y 8 ejemplos completos por área profesional."
     },
     "login": {
       "title": "Sign In",
-      "description": "Sign in to your READY CV account to continue creating and editing your professional resume."
+      "description": "Sign in to your Valhalla Resume account to continue creating and editing your professional resume."
     },
     "register": {
       "title": "Create Account",
-      "description": "Sign up on READY CV and start creating your professional resume today."
+      "description": "Sign up on Valhalla Resume and start creating your professional resume today."
     },
     "accessibility": {
       "title": "Accessibility Statement",
-      "description": "ReadyCVV's commitment to digital accessibility and how to report a barrier."
+      "description": "Valhalla Resume's commitment to digital accessibility and how to report a barrier."
     }
   },
   "nav": {
@@ -174,13 +174,13 @@
     "rating": "Trusted by thousands of professionals",
     "title": "Build the Resume that gets",
     "title_highlight": "the interview",
-    "subtitle": "READY CV combines 143 professional templates with 7 AI tools and ATS analysis so your resume reaches real humans — not just algorithms.",
+    "subtitle": "Valhalla Resume combines 143 professional templates with 7 AI tools and ATS analysis so your resume reaches real humans — not just algorithms.",
     "cta_primary": "Create my Resume",
     "cta_secondary": "View templates",
     "no_credit_card": "No credit card required",
     "cancel_anytime": "Cancel anytime · Your Resumes are always yours",
     "pdf_downloaded": "✓ PDF downloaded",
-    "users_trust": "professionals trust ReadyCVV",
+    "users_trust": "professionals trust Valhalla Resume",
     "proof_ats": "ATS-compatible templates",
     "proof_pdf": "Export to PDF in one click",
     "proof_ai": "Improve your Resume with AI",
@@ -238,7 +238,7 @@
   },
   "faq": {
     "page_title": "Frequently Asked Questions",
-    "page_subtitle": "Everything you need to know about ReadyCVV, AI features, and the Pro plan",
+    "page_subtitle": "Everything you need to know about Valhalla Resume, AI features, and the Pro plan",
     "section_general": "General",
     "section_ai": "Artificial Intelligence",
     "section_ats": "ATS Score",
@@ -257,8 +257,8 @@
     "a5": "Yes. You can import your resume in PDF or Word (.docx) format and the system will automatically extract your information to populate the editor.",
     "q6": "Is my data secure?",
     "a6": "Absolutely. We use bank-level encryption and never share your data with third parties. You can delete your account and all your data at any time.",
-    "q_ai1": "How does ReadyCVV AI work?",
-    "a_ai1": "ReadyCVV uses OpenAI GPT-4o-mini to power its 7 AI tools. Each tool is specialized: it analyzes your profile context, sector, and job posting to generate relevant, professional content — not generic text.",
+    "q_ai1": "How does Valhalla Resume AI work?",
+    "a_ai1": "Valhalla Resume uses OpenAI GPT-4o-mini to power its 7 AI tools. Each tool is specialized: it analyzes your profile context, sector, and job posting to generate relevant, professional content — not generic text.",
     "q_ai2": "What does the bullet improvement tool do?",
     "a_ai2": "It takes each bullet point in your work experience and rewrites it with powerful action verbs, impact metrics, and results-oriented structure. It gives you 3 versions to choose the one that best fits your style.",
     "q_ai3": "What does the AI professional summary generate?",
@@ -270,12 +270,12 @@
     "q_ai6": "How does the cover letter generator work?",
     "a_ai6": "It analyzes your full Resume and the job posting to generate a personalized, formal, and convincing letter. You can edit it with the built-in rich text editor and generate variants if you are not satisfied with the first version.",
     "q_ats1": "What is ATS Score?",
-    "a_ats1": "ATS (Applicant Tracking System) are algorithms used by 98% of large companies to automatically filter resumes before a human recruiter sees them. ReadyCVV ATS Score analyzes how compatible your resume is with a specific job posting.",
+    "a_ats1": "ATS (Applicant Tracking System) are algorithms used by 98% of large companies to automatically filter resumes before a human recruiter sees them. Valhalla Resume ATS Score analyzes how compatible your resume is with a specific job posting.",
     "q_ats2": "How does ATS analysis work?",
-    "a_ats2": "You paste the job posting text and ReadyCVV compares your resume against it: detects present and missing keywords, analyzes skills, experience and education compatibility, and gives you a compatibility percentage with specific recommendations.",
+    "a_ats2": "You paste the job posting text and Valhalla Resume compares your resume against it: detects present and missing keywords, analyzes skills, experience and education compatibility, and gives you a compatibility percentage with specific recommendations.",
     "q_ats3": "Does a high ATS Score guarantee the job?",
     "a_ats3": "No. Nothing guarantees a job, and any tool that tells you otherwise is selling you something. What the score does is concrete: it shows you which of the posting's requirements your Resume doesn't mention yet, so you can decide what to add before you apply. That's a focus tool, not a magic gate.",
-    "q_ats4": "Are ReadyCVV templates ATS compatible?",
+    "q_ats4": "Are Valhalla Resume templates ATS compatible?",
     "a_ats4": "Yes — and we go further than most: we don't ask you to take our word for it. Every template is built with clean, semantic structures, aligned with the single-column reading order parsers handle most reliably. And on PRO you can render your real PDF and see the exact text extracted from it — not the editor preview, the file you actually send. We avoid complex tables, illogical multi-column layouts, and graphic elements that confuse parsers.",
     "q_tpl1": "How many templates are available?",
     "a_tpl1": "There are 143 templates organized into more than 10 categories: Technology, Design, Legal, Healthcare, Hospitality, Finance, Education, Marketing, Executive, and more. All included in the Pro plan.",
@@ -285,7 +285,7 @@
     "a_plan1": "$15/month or $99/year (equivalent to $8.25/month, saving 45%). There is no free plan — the Pro plan includes full access to everything without restrictions.",
     "q_plan2": "Can I cancel at any time?",
     "a_plan2": "Yes. Cancel anytime from your profile, with no commitments or penalties. You keep access until the end of your paid period.",
-    "q_priv1": "Does ReadyCVV use my resume to train AI?",
+    "q_priv1": "Does Valhalla Resume use my resume to train AI?",
     "a_priv1": "No. Your data is never used to train AI models. Each AI request is processed in isolation and not stored as training data. This is reflected in our Privacy Policy.",
     "q_priv2": "Can I delete my account and data?",
     "a_priv2": "Yes. From Settings → Account you can permanently delete your account. All your Resumes, letters, applications, and personal data are immediately and irreversibly deleted (GDPR Art. 17 compliance)."
@@ -311,7 +311,7 @@
     "blog": "Blog",
     "legal": "Legal",
     "cookies": "Cookies",
-    "copyright": "© {year} ReadyCVV. All rights reserved.",
+    "copyright": "© {year} Valhalla Resume. All rights reserved.",
     "accessibility": "Accessibility"
   },
   "pricing": {
@@ -436,7 +436,7 @@
   "accept_terms": {
     "title": "Before you continue",
     "subtitle": "Please review and accept our terms before accessing your account.",
-    "summary": "By continuing, you agree that ReadyCVV may process your data to provide the service, as described in our Privacy Policy. You may delete your account at any time from settings.",
+    "summary": "By continuing, you agree that Valhalla Resume may process your data to provide the service, as described in our Privacy Policy. You may delete your account at any time from settings.",
     "read_prefix": "I have read and accept the",
     "terms_link": "Terms & Conditions",
     "and": "and",
@@ -515,7 +515,7 @@
       "consent_required": "You must accept the terms to continue",
       "age_consent": "I confirm that I am 16 years of age or older.",
       "age_required": "You must confirm you are 16 or older to continue",
-      "marketing_consent": "I agree to receive emails about updates and offers from READY CV. You can unsubscribe at any time.",
+      "marketing_consent": "I agree to receive emails about updates and offers from Valhalla Resume. You can unsubscribe at any time.",
       "plan_pro_banner": "Create your account to activate your Pro Plan — takes only 30 seconds",
       "otp_title": "Verify your email",
       "otp_subtitle": "We sent a code to {email}. Enter it to activate your account.",
@@ -584,7 +584,7 @@
         "google": "This account was created with Google.",
         "google_cta": "Continue with Google"
       },
-      "not_registered": "This email is not registered in READY CV.",
+      "not_registered": "This email is not registered in Valhalla Resume.",
       "not_registered_cta": "Create an account",
       "continue_with_google": "Continue with Google"
     },
@@ -592,7 +592,7 @@
     "verify_email": {
       "loading": "Verifying your email...",
       "success_title": "Email verified",
-      "success_message": "Your account is active. You can now use all READY CV features.",
+      "success_message": "Your account is active. You can now use all Valhalla Resume features.",
       "success_cta": "Go to dashboard",
       "invalid_title": "Invalid link",
       "invalid_message": "This verification link is invalid or has already been used.",
@@ -607,7 +607,7 @@
       "headline_1": "Build your Resume",
       "headline_2": "professionally",
       "headline_accent": "in minutes.",
-      "headline_sub": "Join thousands of professionals who already landed their next job with ReadyCV.",
+      "headline_sub": "Join thousands of professionals who already landed their next job with Valhalla Resume.",
       "feature_1": "Over 143 professional templates",
       "feature_2": "Export to PDF in one click",
       "feature_3": "ATS-optimized",
@@ -627,17 +627,17 @@
     "bullet_title": "Turn job duties into achievement statements",
     "bullet_desc": "Paste any experience bullet and the AI rewrites it with impact language: action verbs, metrics and results-oriented framing.",
     "summary_title": "Stop staring at a blank summary field",
-    "summary_desc": "Describe your background in plain language and READY CV generates three polished summary versions in seconds. Pick one, edit freely.",
+    "summary_desc": "Describe your background in plain language and Valhalla Resume generates three polished summary versions in seconds. Pick one, edit freely.",
     "fill_title": "Go from nothing to complete in one prompt",
     "fill_desc": "Type something like 'I'm a UX designer with 5 years in fintech' and we populate your job title, summary and key skills instantly.",
     "ats_title": "Find out why your Resume keeps getting rejected",
-    "ats_desc": "Paste any job posting and get a compatibility score in seconds. READY CV shows you exactly which keywords are missing and how to add them.",
+    "ats_desc": "Paste any job posting and get a compatibility score in seconds. Valhalla Resume shows you exactly which keywords are missing and how to add them.",
     "skills_title": "Never miss a skill recruiters are screening for",
     "skills_desc": "Based on your target role, we suggest the exact skills hiring managers filter by — so you rank higher before a human reads your name.",
     "coverletter_title": "A personalized cover letter for every application in 30 seconds",
-    "coverletter_desc": "Paste the job description, choose your tone (formal, balanced or dynamic) and READY CV writes a letter using your actual Resume data.",
+    "coverletter_desc": "Paste the job description, choose your tone (formal, balanced or dynamic) and Valhalla Resume writes a letter using your actual Resume data.",
     "review_title": "Get honest feedback before a recruiter does",
-    "review_desc": "Ask READY CV anything about your Resume — 'Is my summary strong enough?' 'What's missing for a PM role?' — and get actionable answers, not generic tips."
+    "review_desc": "Ask Valhalla Resume anything about your Resume — 'Is my summary strong enough?' 'What's missing for a PM role?' — and get actionable answers, not generic tips."
   },
   "ats_section": {
     "title": "Recruiters stop reading once they have enough candidates",
@@ -645,7 +645,7 @@
     "step1": "You apply",
     "step2": "A recruiter scans for fit",
     "step3": "Seconds decide",
-    "solution_title": "READY CV tells you exactly where you stand before you apply",
+    "solution_title": "Valhalla Resume tells you exactly where you stand before you apply",
     "solution_desc": "Paste the job posting. Get a score from 0 to 100. See which keywords you're missing. Fix them in the editor. Apply with confidence.",
     "payoff": "Stop guessing. Start showing the fit.",
     "cta": "Try ATS Score — Pro feature"
@@ -681,7 +681,7 @@
     "back": "← Back to blog",
     "published": "Published",
     "reading_time": "min read",
-    "cta_title": "Build your professional Resume with ReadyCVV",
+    "cta_title": "Build your professional Resume with Valhalla Resume",
     "cta_desc": "143 templates, 7 AI tools and ATS analysis.",
     "cta_btn": "Create my Resume",
     "related_guides": "Related guides",
@@ -692,12 +692,12 @@
     "last_updated": "Last updated: April 27, 2026 · MS Saravia Tech Stack LLC",
     "badge": "Legal",
     "title_h1": "Privacy Policy",
-    "intro": "At READY CV, we take your privacy seriously. This policy explains what data we collect, how we use it, and the rights you have over your personal information.",
+    "intro": "At Valhalla Resume, we take your privacy seriously. This policy explains what data we collect, how we use it, and the rights you have over your personal information.",
     "contact_title": "Questions?",
     "contact_pre": "Contact our privacy team at ",
     "contact_post": ".",
     "s1_title": "Data Controller",
-    "s1_body_pre": "READY CV is operated by <b>MS Saravia Tech Stack LLC</b>. We are responsible for processing the personal data collected through this platform. Contact us at",
+    "s1_body_pre": "Valhalla Resume is operated by <b>MS Saravia Tech Stack LLC</b>. We are responsible for processing the personal data collected through this platform. Contact us at",
     "s1_body_post": ".",
     "s2_title": "Data We Collect",
     "s2_l1_bold": "Account data",
@@ -705,11 +705,11 @@
     "s2_l2_bold": "Resume profile data",
     "s2_l2_rest": "all information you enter in your documents (experience, education, skills, photo, etc.).",
     "s2_l3_bold": "Payment data",
-    "s2_l3_rest": "processed exclusively by Stripe; READY CV does not store credit card data.",
+    "s2_l3_rest": "processed exclusively by Stripe; Valhalla Resume does not store credit card data.",
     "s2_l4_bold": "Usage data",
     "s2_l4_rest": "activity and error logs to improve the service.",
     "s3_title": "Purpose of Processing",
-    "s3_i1": "Provide and improve the READY CV service.",
+    "s3_i1": "Provide and improve the Valhalla Resume service.",
     "s3_i2": "Manage your account and subscription.",
     "s3_i3": "Send you transactional communications (confirmations, account alerts).",
     "s3_i4": "Comply with legal obligations.",
@@ -721,7 +721,7 @@
     "s6_title": "Data Retention",
     "s6_body": "We retain your data while your account is active. Upon account deletion, your data becomes immediately inaccessible and will be permanently deleted within <b>30 days</b>, unless legally required to retain it longer.",
     "s7_title": "Rights Regarding Your Data",
-    "s7_intro": "To the extent recognized by the applicable law of your jurisdiction, and subject to the limitations set out in this Policy, you may request the following rights over your personal data. ReadyCVV will address these requests in accordance with its obligations under the laws of New Mexico, United States:",
+    "s7_intro": "To the extent recognized by the applicable law of your jurisdiction, and subject to the limitations set out in this Policy, you may request the following rights over your personal data. Valhalla Resume will address these requests in accordance with its obligations under the laws of New Mexico, United States:",
     "s7_l1_bold": "Access",
     "s7_l1_rest": "Request a copy of your data at any time.",
     "s7_l2_bold": "Rectification",
@@ -732,8 +732,8 @@
     "s7_l4_rest": "Export your data in machine-readable format.",
     "s7_l5_bold": "Objection",
     "s7_l5_rest": "Object to certain types of processing.",
-    "s7_lgpd_note": "Users in Brazil: ReadyCVV operates under the laws of New Mexico, United States, and does not guarantee full compliance with the LGPD or other local privacy regulations. If you have questions about your data, you may write to soporte@readycvv.com and we will make reasonable efforts to assist you. This statement is informational and does not constitute a legally binding commitment under the LGPD.",
-    "s7_mexico_note": "Users in Mexico: ReadyCVV operates under the laws of New Mexico, United States, and does not guarantee full compliance with the LFPDPPP or other local regulations. This Policy is an informational reference for Mexican users. For data inquiries write to soporte@readycvv.com. MS Saravia Tech Stack LLC assumes no obligations beyond those set out in this Policy under any Mexican law.",
+    "s7_lgpd_note": "Users in Brazil: Valhalla Resume operates under the laws of New Mexico, United States, and does not guarantee full compliance with the LGPD or other local privacy regulations. If you have questions about your data, you may write to techstackmssaravia@gmail.com and we will make reasonable efforts to assist you. This statement is informational and does not constitute a legally binding commitment under the LGPD.",
+    "s7_mexico_note": "Users in Mexico: Valhalla Resume operates under the laws of New Mexico, United States, and does not guarantee full compliance with the LFPDPPP or other local regulations. This Policy is an informational reference for Mexican users. For data inquiries write to techstackmssaravia@gmail.com. MS Saravia Tech Stack LLC assumes no obligations beyond those set out in this Policy under any Mexican law.",
     "s7_contact_pre": "To exercise these rights, write to us at",
     "s8_title": "Security",
     "s8_body": "We implement appropriate technical and organizational measures to protect your data, including encryption in transit (HTTPS) and at rest. However, <b>no transmission over the Internet is 100% secure</b>. By using the Service, you acknowledge that you provide your information at your own risk.",
@@ -742,7 +742,7 @@
     "s9_body_link_label": "Cookie Policy",
     "s9_body_post": "for details.",
     "s11_title": "Access from Other Jurisdictions",
-    "s11_body": "This Privacy Policy is designed in accordance with the laws of the State of New Mexico, United States, and the internationally recognized regulations described in Section 7. If the User accesses ReadyCVV from a jurisdiction whose local privacy laws are stricter than those described here, they do so voluntarily and at their own risk. MS Saravia Tech Stack LLC does not warrant compliance with additional local privacy regulations and assumes no obligations beyond those expressly set out in this Policy. It is the User's sole responsibility to determine whether use of ReadyCVV is compliant with the privacy laws applicable in their place of residence.",
+    "s11_body": "This Privacy Policy is designed in accordance with the laws of the State of New Mexico, United States, and the internationally recognized regulations described in Section 7. If the User accesses Valhalla Resume from a jurisdiction whose local privacy laws are stricter than those described here, they do so voluntarily and at their own risk. MS Saravia Tech Stack LLC does not warrant compliance with additional local privacy regulations and assumes no obligations beyond those expressly set out in this Policy. It is the User's sole responsibility to determine whether use of Valhalla Resume is compliant with the privacy laws applicable in their place of residence.",
     "s10_title": "Changes to this Policy",
     "s10_body": "We may update this policy periodically. We will notify you of relevant changes by email or through a notice on the platform at least <b>14 days</b> before changes take effect."
   },
@@ -769,11 +769,11 @@
     "toc_16": "Governing Law",
     "toc_17": "General",
     "toc_18": "Contact",
-    "intro": "These Terms and Conditions govern the use of <b>ReadyCVV</b>, available at <b>www.readycvv.com</b> (the \"Platform\" or \"Service\"), operated by <b>MS Saravia Tech Stack LLC</b> (\"the Company\", \"we\" or \"our\"). By accessing or using the Platform, you (\"User\") agree to be legally bound by these Terms.",
+    "intro": "These Terms and Conditions govern the use of <b>Valhalla Resume</b>, available at <b>www.valhallaresume.com</b> (the \"Platform\" or \"Service\"), operated by <b>MS Saravia Tech Stack LLC</b> (\"the Company\", \"we\" or \"our\"). By accessing or using the Platform, you (\"User\") agree to be legally bound by these Terms.",
     "s1_title": "Acceptance of Terms",
-    "s1_body": "By accessing or using ReadyCVV you agree to these Terms and Conditions, our Privacy Policy, and any other policy published on the Platform. If you do not agree, you must stop using the Service. <b>Continued use after any updates constitutes acceptance of the revised Terms.</b>",
+    "s1_body": "By accessing or using Valhalla Resume you agree to these Terms and Conditions, our Privacy Policy, and any other policy published on the Platform. If you do not agree, you must stop using the Service. <b>Continued use after any updates constitutes acceptance of the revised Terms.</b>",
     "s2_title": "Description of Service",
-    "s2_body": "ReadyCVV allows users to:",
+    "s2_body": "Valhalla Resume allows users to:",
     "s2_i1": "Create, edit and manage resumes using pre-designed templates.",
     "s2_i2": "Generate personalized cover letters.",
     "s2_i3": "Export documents in PDF format.",
@@ -796,12 +796,12 @@
     "s4_cancel_label": "Cancellation:",
     "s4_cancel": "You may cancel at any time from your account settings. Pro access continues until the end of the current billing period.",
     "s4_refund_label": "Refund Policy:",
-    "s4_refund_pre": "ReadyCVV does not offer refunds for partial billing periods, except in these exceptional cases: (a) verified double-charge due to technical error; (b) charge processed after a confirmed cancellation; (c) material service failure preventing use of contracted features for more than 72 consecutive hours. Refund requests must be submitted to",
+    "s4_refund_pre": "Valhalla Resume does not offer refunds for partial billing periods, except in these exceptional cases: (a) verified double-charge due to technical error; (b) charge processed after a confirmed cancellation; (c) material service failure preventing use of contracted features for more than 72 consecutive hours. Refund requests must be submitted to",
     "s4_refund_post": "within 7 calendar days of the charge. Consumers in the European Union retain their legal right of withdrawal under Directive 2011/83/EU, unless they have given explicit consent to immediate service delivery at the time of purchase.",
     "s4_price_label": "Price changes",
     "s4_price": "will be notified at least 30 days in advance by email.",
     "s5_title": "Artificial Intelligence — Disclaimer",
-    "s5_intro": "<b>By using ReadyCVV's artificial intelligence features, the User expressly consents to the use of AI as an assistance tool for the creation, improvement and analysis of professional documents, and acknowledges that the final generated content is of their exclusive authorship and responsibility.</b> ReadyCVV offers these features — including bullet improvement, professional summary generation, ATS scoring, cover letter drafting, and skill suggestions — as a starting point for the User's own writing. <b>These features are entirely optional.</b> Users may create, edit, and export documents without using any AI functionality. No AI feature is mandatory or applied automatically without the User's explicit action.",
+    "s5_intro": "<b>By using Valhalla Resume's artificial intelligence features, the User expressly consents to the use of AI as an assistance tool for the creation, improvement and analysis of professional documents, and acknowledges that the final generated content is of their exclusive authorship and responsibility.</b> Valhalla Resume offers these features — including bullet improvement, professional summary generation, ATS scoring, cover letter drafting, and skill suggestions — as a starting point for the User's own writing. <b>These features are entirely optional.</b> Users may create, edit, and export documents without using any AI functionality. No AI feature is mandatory or applied automatically without the User's explicit action.",
     "s5_list_header": "By using any AI feature, the User expressly acknowledges and agrees that:",
     "s5_l1": "AI-generated results are <b>suggestions only</b> — a creative starting point, not a final product. They do not constitute professional, career, legal, or HR advice of any kind.",
     "s5_l2": "AI models may produce <b>inaccurate, incomplete, outdated, or contextually inappropriate</b> content, including fabricated information (\"hallucinations\") with no basis in reality. <b>A suggestion may not reflect the User's actual qualifications, experience, or skills.</b>",
@@ -809,51 +809,51 @@
     "s5_l4": "The User is <b>solely responsible</b> for reviewing, fact-checking, and correcting all AI-generated content before including it in any document submitted to employers, recruiters, or any third party.",
     "s5_l5": "The ATS score is an <b>orientative estimate</b> based on keyword analysis and does not replicate the proprietary logic of any real ATS system. Results may vary significantly from actual recruiter outcomes.",
     "s5_l6": "<b>MS Saravia Tech Stack LLC makes no warranty, express or implied, that AI features will meet the User's expectations, improve employment outcomes, or produce results suitable for any specific purpose.</b>",
-    "s5_outro": "The User is the <b>sole and exclusive author and owner of the final content</b> of any document created via ReadyCVV. MS Saravia Tech Stack LLC shall not be held liable for any direct, indirect, incidental, or consequential damage arising from the use — or misuse — of AI-generated suggestions.",
+    "s5_outro": "The User is the <b>sole and exclusive author and owner of the final content</b> of any document created via Valhalla Resume. MS Saravia Tech Stack LLC shall not be held liable for any direct, indirect, incidental, or consequential damage arising from the use — or misuse — of AI-generated suggestions.",
     "s6_title": "No Guarantee of Employment Outcomes",
-    "s6_body": "<b>MS Saravia Tech Stack LLC does not guarantee, expressly or implicitly, that use of the Platform will lead to employment, job interviews, promotions, salary increases or any other favorable career outcome.</b> Hiring decisions depend on factors entirely outside ReadyCVV's control, including employer discretion, labor market conditions, candidate qualifications, and the proprietary evaluation criteria of each organization. The User accepts that MS Saravia Tech Stack LLC shall not be held liable for any negative result arising directly or indirectly from a job search, regardless of Platform use.",
+    "s6_body": "<b>MS Saravia Tech Stack LLC does not guarantee, expressly or implicitly, that use of the Platform will lead to employment, job interviews, promotions, salary increases or any other favorable career outcome.</b> Hiring decisions depend on factors entirely outside Valhalla Resume's control, including employer discretion, labor market conditions, candidate qualifications, and the proprietary evaluation criteria of each organization. The User accepts that MS Saravia Tech Stack LLC shall not be held liable for any negative result arising directly or indirectly from a job search, regardless of Platform use.",
     "s7_title": "Intellectual Property",
     "s7_body1": "Content entered by the User (personal data, work history, education, skills, texts) remains the <b>exclusive property of the User</b>. By using the Service, the User grants MS Saravia Tech Stack LLC a <b>non-exclusive, worldwide, royalty-free, revocable license</b> to store, process and transmit that content solely for the purpose of providing the Service, including sending relevant text to third-party AI providers to generate requested suggestions. This license terminates when the User deletes their account, subject to a maximum 90-day backup retention period.",
     "s7_body2": "The Platform, its design, source code, templates, algorithms, trademarks and logos are the exclusive property of MS Saravia Tech Stack LLC or its licensors. <b>Reverse engineering, decompilation or unauthorized reproduction is strictly prohibited.</b>",
     "s8_title": "Personal Data & Privacy",
-    "s8_body1_pre": "ReadyCVV collects and processes personal data in accordance with our",
+    "s8_body1_pre": "Valhalla Resume collects and processes personal data in accordance with our",
     "s8_body1_link_label": "Privacy Policy",
-    "s8_body1_post": ". When AI features are used, the relevant Resume text is sent to third-party AI provider servers. ReadyCVV does not transmit additional identity data beyond the text required to generate the requested suggestion.",
+    "s8_body1_post": ". When AI features are used, the relevant Resume text is sent to third-party AI provider servers. Valhalla Resume does not transmit additional identity data beyond the text required to generate the requested suggestion.",
     "s8_body2": "When the User enables the public resume link, the resume content becomes publicly accessible to anyone with that link. The User is responsible for deciding what personal information to include in a public resume. <b>The public link can be disabled at any time from the editor.</b>",
-    "s8_body3": "<b>Sensitive data.</b> The User is solely responsible for the information they choose to enter, upload, or publish through the Platform, including any sensitive or special-category data (such as data revealing health, religious or political beliefs, trade-union membership, racial or ethnic origin, or sexual orientation). By submitting such data, the User gives explicit consent to its processing for the sole purpose of providing the Service and acknowledges that MS Saravia Tech Stack LLC bears no liability for sensitive data the User voluntarily includes. ReadyCVV recommends not including sensitive data unless strictly necessary for the User's professional objective.",
+    "s8_body3": "<b>Sensitive data.</b> The User is solely responsible for the information they choose to enter, upload, or publish through the Platform, including any sensitive or special-category data (such as data revealing health, religious or political beliefs, trade-union membership, racial or ethnic origin, or sexual orientation). By submitting such data, the User gives explicit consent to its processing for the sole purpose of providing the Service and acknowledges that MS Saravia Tech Stack LLC bears no liability for sensitive data the User voluntarily includes. Valhalla Resume recommends not including sensitive data unless strictly necessary for the User's professional objective.",
     "s9_title": "Acceptable Use Policy",
-    "s9_intro": "The User agrees not to use ReadyCVV to:",
+    "s9_intro": "The User agrees not to use Valhalla Resume to:",
     "s9_i1": "Create documents containing false, fraudulent or misleading information to deceive employers or third parties.",
     "s9_i2": "Impersonate another person.",
     "s9_i3": "Upload, transmit or store illegal, defamatory, obscene, threatening content or content that infringes third-party rights.",
-    "s9_i4": "Attempt unauthorized access to ReadyCVV systems, servers or other users' data.",
+    "s9_i4": "Attempt unauthorized access to Valhalla Resume systems, servers or other users' data.",
     "s9_i5": "Reverse-engineer, decompile or extract the Platform's source code.",
     "s9_i6": "Use bots, scrapers or other automated means to access the Service without express consent.",
     "s9_i7": "Resell, sublicense or commercialize the Service without written authorization from MS Saravia Tech Stack LLC.",
     "s9_i8": "Deliberately overload the Service infrastructure.",
     "s9_i9": "Use AI features to generate content that promotes discrimination, violence, or illegal activities.",
     "s9_i10": "Access the Service from territories subject to economic sanctions issued by the United States government (OFAC), including Cuba, Iran, North Korea, Syria, and sanctioned regions of Ukraine. Access from such territories is expressly prohibited.",
-    "s9_i11": "Use the Platform to create, manage, or generate resumes or other documents on behalf of third parties for commercial, intermediary, or resale purposes, whether directly or indirectly, without prior written authorization from MS Saravia Tech Stack LLC. ReadyCVV is a personal, non-transferable service.",
+    "s9_i11": "Use the Platform to create, manage, or generate resumes or other documents on behalf of third parties for commercial, intermediary, or resale purposes, whether directly or indirectly, without prior written authorization from MS Saravia Tech Stack LLC. Valhalla Resume is a personal, non-transferable service.",
     "s9_outro": "Violation of any of the above prohibitions entitles MS Saravia Tech Stack LLC to <b>immediately and permanently suspend or terminate the account, without prior notice and without right to a refund</b> of any amount paid, including ongoing subscriptions. Specifically, creating Resumes or documents for third parties for commercial or resale purposes (§9.11) constitutes a serious violation that automatically results in permanent account termination. By using the Platform and by confirming the personal-use notice displayed when creating additional documents, the User acknowledges having been informed of these consequences and expressly agrees that no refund claim shall be valid in the event of a breach.",
     "s10_title": "Service Availability",
     "s10_body": "MS Saravia Tech Stack LLC does not guarantee uninterrupted or error-free service availability. Maintenance, updates or modifications may be performed at any time. The Company shall not be liable for losses caused by service interruptions, provided these are not the result of gross negligence or willful misconduct.",
     "s11_title": "Limitation of Liability",
     "s11_intro": "To the maximum extent permitted by applicable law:",
-    "s11_l1": "ReadyCVV is provided <b>\"as is\"</b> and <b>\"as available\"</b>, without warranties of any kind.",
+    "s11_l1": "Valhalla Resume is provided <b>\"as is\"</b> and <b>\"as available\"</b>, without warranties of any kind.",
     "s11_l2": "MS Saravia Tech Stack LLC shall not be liable for any indirect, incidental, special, consequential or punitive damages, including loss of data, revenue, employment opportunities or reputational harm.",
     "s11_l3": "Total maximum liability shall not exceed the <b>total amount paid by the User in the 3 months prior</b> to the claim, or <b>USD $45.00</b>, whichever is greater.",
     "s12_title": "Indemnification",
     "s12_body": "The User agrees to defend, indemnify and hold harmless MS Saravia Tech Stack LLC, its directors, employees, agents and licensors from any claims, damages, losses, costs and expenses (including reasonable legal fees) arising from: (a) use of the Service in violation of these Terms; (b) User content uploaded or shared via the Platform; (c) infringement of third-party rights; (d) false or misleading statements made through the Service.",
     "s12_misuse_title": "Misuse of Generated Documents",
-    "s12_misuse_body": "MS Saravia Tech Stack LLC assumes no liability for how the User uses documents generated through the Platform, including but not limited to: (a) submitting false, exaggerated or misleading information to employers, recruiters or third parties; (b) using AI-generated content without prior verification by the User; (c) consequences arising from publishing a Resume via a shared public link; (d) any employment, contractual or personal decision based on documents created with ReadyCVV. The User bears sole and exclusive responsibility for the final content of their documents and all consequences arising from their use.",
+    "s12_misuse_body": "MS Saravia Tech Stack LLC assumes no liability for how the User uses documents generated through the Platform, including but not limited to: (a) submitting false, exaggerated or misleading information to employers, recruiters or third parties; (b) using AI-generated content without prior verification by the User; (c) consequences arising from publishing a Resume via a shared public link; (d) any employment, contractual or personal decision based on documents created with Valhalla Resume. The User bears sole and exclusive responsibility for the final content of their documents and all consequences arising from their use.",
     "s13_title": "Third-Party Services",
-    "s13_body": "ReadyCVV integrates with <b>Stripe</b> (payments), <b>OpenAI</b> and <b>Anthropic</b> (AI), and cloud infrastructure providers. MS Saravia Tech Stack LLC is not responsible for the practices, policies, interruptions or errors of these third parties. Use of integrated services is subject to each provider's own terms.",
-    "s13_body2": "ReadyCVV is committed to protecting the security and confidentiality of User personal data within its own platform and infrastructure. However, MS Saravia Tech Stack LLC does not operate under European Union regulatory frameworks or other international jurisdictions, and has no control over the practices, privacy policies or legal obligations of external service providers — including AI providers — once data is transmitted to their services. The User acknowledges and agrees that the use of features involving data transfer to third parties is governed by the terms and privacy policies of those providers, and that MS Saravia Tech Stack LLC assumes no liability for the processing carried out by such providers under their own applicable regulations.",
+    "s13_body": "Valhalla Resume integrates with <b>Stripe</b> (payments), <b>OpenAI</b> and <b>Anthropic</b> (AI), and cloud infrastructure providers. MS Saravia Tech Stack LLC is not responsible for the practices, policies, interruptions or errors of these third parties. Use of integrated services is subject to each provider's own terms.",
+    "s13_body2": "Valhalla Resume is committed to protecting the security and confidentiality of User personal data within its own platform and infrastructure. However, MS Saravia Tech Stack LLC does not operate under European Union regulatory frameworks or other international jurisdictions, and has no control over the practices, privacy policies or legal obligations of external service providers — including AI providers — once data is transmitted to their services. The User acknowledges and agrees that the use of features involving data transfer to third parties is governed by the terms and privacy policies of those providers, and that MS Saravia Tech Stack LLC assumes no liability for the processing carried out by such providers under their own applicable regulations.",
     "s14_title": "Modifications to Terms",
     "s14_body": "MS Saravia Tech Stack LLC may modify these Terms at any time. Material changes will be notified by email at least <b>15 days in advance</b> and via a notice on the Platform. Continued use after the effective date constitutes acceptance.",
     "s15_title": "Termination",
-    "s15_body": "Users may cancel their account at any time from profile settings. MS Saravia Tech Stack LLC may suspend or terminate access for violations of these Terms, abusive conduct, non-payment or operational/legal reasons. Upon cancellation, the User will immediately lose access to all stored data. Personal data becomes inaccessible to ReadyCVV staff from the moment of cancellation. Permanent technical deletion will be completed within <b>30 days</b>, unless a longer retention period is required by law.",
-    "s16_jurisdiction": "The Service is designed and operated in accordance with the laws of the State of New Mexico, United States. If the User accesses ReadyCVV from a jurisdiction whose local laws impose obligations beyond those set out in these Terms or Privacy Policy, the User does so voluntarily and at their own risk. MS Saravia Tech Stack LLC does not warrant compliance with local regulations stricter than those of New Mexico and assumes no liability arising from access to the Service from such jurisdictions. It is the User's sole responsibility to determine whether use of ReadyCVV is compliant with the laws applicable in their place of residence.",
+    "s15_body": "Users may cancel their account at any time from profile settings. MS Saravia Tech Stack LLC may suspend or terminate access for violations of these Terms, abusive conduct, non-payment or operational/legal reasons. Upon cancellation, the User will immediately lose access to all stored data. Personal data becomes inaccessible to Valhalla Resume staff from the moment of cancellation. Permanent technical deletion will be completed within <b>30 days</b>, unless a longer retention period is required by law.",
+    "s16_jurisdiction": "The Service is designed and operated in accordance with the laws of the State of New Mexico, United States. If the User accesses Valhalla Resume from a jurisdiction whose local laws impose obligations beyond those set out in these Terms or Privacy Policy, the User does so voluntarily and at their own risk. MS Saravia Tech Stack LLC does not warrant compliance with local regulations stricter than those of New Mexico and assumes no liability arising from access to the Service from such jurisdictions. It is the User's sole responsibility to determine whether use of Valhalla Resume is compliant with the laws applicable in their place of residence.",
     "s16_title": "Governing Law & Dispute Resolution",
     "s16_body_pre": "These Terms are governed by the laws of the State of <b>New Mexico, United States</b>. The parties agree to first attempt amicable resolution by contacting",
     "s16_body_mid": "If not resolved within 30 days, disputes shall be submitted to the exclusive jurisdiction of the competent courts of <b>New Mexico, United States</b>. To the extent permitted by law, the User waives the right to participate in class-action lawsuits against MS Saravia Tech Stack LLC. <b>This waiver does not apply to consumers resident in the European Union, for whom it is void under applicable consumer protection law.</b>",
@@ -863,7 +863,7 @@
     "s18_title": "Contact",
     "s18_website_label": "Website:",
     "s18_email_label": "Email:",
-    "s4_refund_consumed": "<b>Service consumed.</b> Because ReadyCVV is digital content supplied immediately, once the User has used any AI feature or downloaded/exported any document, the service is deemed fully performed and consumed. From that moment no refund will be issued and the EU right of withdrawal no longer applies, in accordance with Article 16(m) of Directive 2011/83/EU."
+    "s4_refund_consumed": "<b>Service consumed.</b> Because Valhalla Resume is digital content supplied immediately, once the User has used any AI feature or downloaded/exported any document, the service is deemed fully performed and consumed. From that moment no refund will be issued and the EU right of withdrawal no longer applies, in accordance with Article 16(m) of Directive 2011/83/EU."
   },
   "locale_switcher": {
     "label": "Language"
@@ -946,7 +946,7 @@
       "cancel": "Cancel",
       "create_error": "Error creating Resume",
       "personal_use_warning_title": "Personal use only",
-      "personal_use_warning_desc": "ReadyCVV is a personal, non-transferable service. Creating Resumes for other people for commercial or resale purposes violates our Terms of Use (§9) and may result in the immediate suspension of your account without refund.",
+      "personal_use_warning_desc": "Valhalla Resume is a personal, non-transferable service. Creating Resumes for other people for commercial or resale purposes violates our Terms of Use (§9) and may result in the immediate suspension of your account without refund.",
       "personal_use_consent_label": "I confirm that this Resume is for my personal use only and that I am the account holder. I understand that creating Resumes for third parties is prohibited and may result in account termination.",
       "personal_use_confirm": "Understood, create Resume",
       "delete_success": "Resume deleted",
@@ -1128,7 +1128,7 @@
       "per_month": "/mo",
       "annual_discount": "· or $99/yr (save 45%)",
       "export_section_title": "My data",
-      "export_desc": "Download a copy of all your personal information stored in READY CV (account, Resumes and cover letters).",
+      "export_desc": "Download a copy of all your personal information stored in Valhalla Resume (account, Resumes and cover letters).",
       "exporting": "Exporting...",
       "export_button": "Download my data",
       "deleting": "Deleting...",
@@ -1164,7 +1164,7 @@
     },
     "referrals": {
       "meta": {
-        "title": "Referrals · ReadyCVV",
+        "title": "Referrals · Valhalla Resume",
         "description": "Share your link, track your conversions, and earn Stripe credits."
       },
       "eyebrow": "Referral program",
@@ -1182,8 +1182,8 @@
         "copied_toast": "Link copied to clipboard",
         "share_label": "Share via",
         "share_email": "Email",
-        "share_text": "I'm using ReadyCVV to build a professional resume. Sign up with my link and check it out:",
-        "email_subject": "Try ReadyCVV with me"
+        "share_text": "I'm using Valhalla Resume to build a professional resume. Sign up with my link and check it out:",
+        "email_subject": "Try Valhalla Resume with me"
       },
       "tiers": {
         "title": "Reward tiers",
@@ -1469,8 +1469,8 @@
       "error_pdf_500": "PDF service failed. Try again in a moment.",
       "pdf_pro_required": "PDF download requires an active Pro plan.",
       "see_plans": "See plans",
-      "watermark_text": "readycvv.com",
-      "watermark_upgrade": "Activate your Pro plan at readycvv.com",
+      "watermark_text": "valhallaresume.com",
+      "watermark_upgrade": "Activate your Pro plan at valhallaresume.com",
       "export_with_design": "With design and colors",
       "placeholder_warning": "{count, plural, one {⚠ Your Resume has 1 unfilled field (e.g. [X%]). Review it before downloading.} other {⚠ Your Resume has {count} unfilled fields (e.g. [X%]). Review them before downloading.}}",
       "placeholder_modal": {
@@ -1937,7 +1937,7 @@
     "reject_confirm": "Confirm",
     "found_title": "Congratulations!",
     "found_subtitle": "You got the job!",
-    "found_thanks": "Thanks, ReadyCVV!",
+    "found_thanks": "Thanks, Valhalla Resume!",
     "clear_confirm_title": "Clear the board?",
     "clear_confirm_desc": "All your applications will be deleted ({count} total)",
     "clear_cancel": "Cancel",
@@ -2214,7 +2214,7 @@
   },
   "cv_examples": {
     "title": "Your Resume could look like this",
-    "subtitle": "Real examples built with ReadyCVV — pick the style that represents you best.",
+    "subtitle": "Real examples built with Valhalla Resume — pick the style that represents you best.",
     "badge_tech": "Technology",
     "badge_design": "Design",
     "badge_legal": "Legal / Finance",
@@ -2468,7 +2468,7 @@
   "guide": {
     "hero": {
       "badge": "Complete guide",
-      "h1": "How to use ReadyCVV — Your Resume with Artificial Intelligence",
+      "h1": "How to use Valhalla Resume — Your Resume with Artificial Intelligence",
       "subtitle": "From blank page to professional resume in minutes. 7 AI tools that do the heavy lifting for you.",
       "stat_templates": "143 Resume Templates",
       "stat_cover_letters": "55+ Cover Letter Templates",
@@ -2532,7 +2532,7 @@
     },
     "cta": {
       "h2": "Ready to land the job?",
-      "subtitle": "Join thousands of professionals who already use ReadyCVV to stand out.",
+      "subtitle": "Join thousands of professionals who already use Valhalla Resume to stand out.",
       "button": "See plans",
       "button_secondary": "Start free",
       "note": "Pro plan from $15/month · Cancel anytime"
@@ -2551,8 +2551,8 @@
     "problem_stat": "2,000+",
     "problem_line1": "résumés per opening.",
     "problem_line2": "Yours gets seconds.",
-    "problem_body": "A machine reads it first, and most never reach a human. ReadyCVV scores your Resume against the posting — reading the real file an ATS reads — so yours gets through in the seconds it gets.",
-    "reveal_brand": "ReadyCVV",
+    "problem_body": "A machine reads it first, and most never reach a human. Valhalla Resume scores your Resume against the posting — reading the real file an ATS reads — so yours gets through in the seconds it gets.",
+    "reveal_brand": "Valhalla Resume",
     "reveal_tagline": "reads them before they do.",
     "reveal_stats_ai": "7 AI tools",
     "reveal_stats_templates": "143 templates",
@@ -2610,7 +2610,7 @@
   "blog_index": {
     "index_title": "Resume tips and job search guides",
     "index_subtitle": "Practical advice to optimize your resume and get more interviews.",
-    "collection_name": "Resume Tips and Job Search Guides — ReadyCVV Blog",
+    "collection_name": "Resume Tips and Job Search Guides — Valhalla Resume Blog",
     "collection_desc": "Practical guides on optimizing your resume, passing ATS filters and getting more interviews.",
     "que-es-ats-y-por-que-rechaza-tu-cv": {
       "title": "What is ATS and Why is It Rejecting Your Resume?",
@@ -2669,7 +2669,7 @@
     "s3_h": "5 reasons your resume fails ATS",
     "s3_b": "1. Missing keywords from the job description\n2. Using tables, columns, or complex formatting the parser can't read\n3. Saving as an image or scanned PDF instead of text-based PDF\n4. Putting critical information in headers or footers\n5. Using a creative template that looks great to humans but breaks the parser",
     "s4_h": "How to optimize your resume for ATS",
-    "s4_b": "• Mirror the language of the job description — use the exact same words, not synonyms\n• Use a clean, single-column layout (or a well-structured two-column that exports cleanly to text)\n• Include a skills section with specific technologies and tools\n• Quantify your experience with numbers and results\n• Use standard section headings: Experience, Education, Skills\n\nThe fastest way to check: paste your resume and the job description into ReadyCVV's ATS Score tool. You'll get a compatibility score in seconds and a list of missing keywords.",
+    "s4_b": "• Mirror the language of the job description — use the exact same words, not synonyms\n• Use a clean, single-column layout (or a well-structured two-column that exports cleanly to text)\n• Include a skills section with specific technologies and tools\n• Quantify your experience with numbers and results\n• Use standard section headings: Experience, Education, Skills\n\nThe fastest way to check: paste your resume and the job description into Valhalla Resume's ATS Score tool. You'll get a compatibility score in seconds and a list of missing keywords.",
     "s5_h": "Does ATS optimization mean keyword stuffing?",
     "s5_b": "No — and this is important. Stuffing your resume with keywords makes it pass the filter but fail the human review. The goal is to use the right keywords naturally, in context, backed by real experience.\n\nATS optimization and good writing aren't in conflict. The best resumes do both.",
     "r1_slug": "como-pasar-el-ats",
@@ -2692,7 +2692,7 @@
     "s4_h": "What if you don't have hard numbers?",
     "s4_b": "Not every role produces clear metrics. That's fine — estimate, or describe impact qualitatively:\n\n• \"Managed onboarding for 30+ enterprise clients per quarter.\"\n• \"First engineer on the team to implement end-to-end testing — adopted by the full team within 2 months.\"\n• \"Recognized as top-performing rep in Q3 2025 among a team of 12.\"\n\nEven without percentages, specificity beats vagueness every time.",
     "s5_h": "Use AI to rewrite your bullets",
-    "s5_b": "If you have a rough draft and want a stronger version, ReadyCVV's AI bullet improvement tool rewrites your bullets using impact language — action verbs, quantified results, recruiter-ready framing. Paste your bullet, get three improved versions in seconds.\n\nOne important rule: if the AI adds metrics like [X%] or [$Y], replace them with your real numbers before sending your resume. Never use placeholder metrics.",
+    "s5_b": "If you have a rough draft and want a stronger version, Valhalla Resume's AI bullet improvement tool rewrites your bullets using impact language — action verbs, quantified results, recruiter-ready framing. Paste your bullet, get three improved versions in seconds.\n\nOne important rule: if the AI adds metrics like [X%] or [$Y], replace them with your real numbers before sending your resume. Never use placeholder metrics.",
     "r1_slug": "que-es-ats-y-por-que-rechaza-tu-cv",
     "r1_title": "What is ATS and Why is It Rejecting Your Resume?",
     "r2_slug": "como-hacer-un-cv-con-ia",
@@ -2711,7 +2711,7 @@
     "s3_h": "What paid tools add (and why it matters)",
     "s3_b": "A good paid CV builder adds features that directly affect your results:\n\n• ATS Score analysis: know your compatibility before applying, not after getting rejected\n• AI bullet rewriting: turn job duties into achievement statements in seconds\n• Up to 10 personal CVs: tailor your resume for every role and industry\n• Clean PDF export: no watermark, high resolution, ready to send\n• AI cover letter: personalized letters in 30 seconds using your actual experience\n• Professional templates: 143 designs covering every industry and style",
     "s4_h": "The ROI calculation",
-    "s4_b": "ReadyCVV Pro costs $15/month. One extra interview — let alone one job offer — pays for months of the tool.\n\nIf you're spending more than 20 hours a month on your job search, paying $15 to get AI assistance, ATS scoring, and professional templates is straightforward math. The question isn't whether you can afford a paid tool. It's whether you can afford to keep job searching without one.",
+    "s4_b": "Valhalla Resume Pro costs $15/month. One extra interview — let alone one job offer — pays for months of the tool.\n\nIf you're spending more than 20 hours a month on your job search, paying $15 to get AI assistance, ATS scoring, and professional templates is straightforward math. The question isn't whether you can afford a paid tool. It's whether you can afford to keep job searching without one.",
     "s5_h": "When free is actually fine",
     "s5_b": "Free makes sense if:\n• You're applying to one specific job and have a strong existing resume\n• You're a student with no budget and just need a basic document\n• You need a quick reference document, not a competitive job application\n\nFor everything else — active job search, career change, competitive roles — the time you save and the edge you gain from AI features make the paid tier worth it.",
     "r1_slug": "como-pasar-el-ats",
@@ -2736,7 +2736,7 @@
     "s5_h": "The structure that works in 2026",
     "s5_b": "Opening: Hook with something specific — a company achievement, a shared mission, something that shows you did your research. Not \"I am writing to apply for...\"\n\nBody (1-2 paragraphs): Connect one or two of your strongest experiences directly to what the job requires. Use specifics.\n\nClose: Clear ask. Express genuine interest. Keep it under 5 lines.\n\nTotal length: 250-350 words. No more. Recruiters don't read long letters.",
     "s6_h": "Use AI to write it faster, not lazier",
-    "s6_b": "ReadyCVV's AI cover letter generator writes a personalized letter using your actual Resume data and the job description. Choose formal, balanced, or dynamic tone. Done in 30 seconds.\n\nThe rule: always edit what the AI gives you. Add one specific detail about the company that only a person who researched them would know. That's what separates AI-assisted from AI-generated.",
+    "s6_b": "Valhalla Resume's AI cover letter generator writes a personalized letter using your actual Resume data and the job description. Choose formal, balanced, or dynamic tone. Done in 30 seconds.\n\nThe rule: always edit what the AI gives you. Add one specific detail about the company that only a person who researched them would know. That's what separates AI-assisted from AI-generated.",
     "r1_slug": "carta-de-presentacion-ejemplos",
     "r1_title": "Cover Letter Examples 2026: Templates That Actually Work",
     "r2_slug": "como-hacer-un-cv-con-ia",
@@ -2751,15 +2751,15 @@
     "howto_name": "How to Make a Resume with AI in 2026",
     "howto_desc": "Step-by-step guide to building an ATS-optimized resume using AI tools",
     "s1_h": "Step 1: Start with your raw information",
-    "s1_b": "Before any AI can help you, you need your raw material ready: job titles, companies, dates, and a rough description of what you did in each role. Don't worry about phrasing — that's what AI is for.\n\nIn ReadyCVV, use the 'Help me with AI' panel (bottom of the Content tab). Describe your background in plain language — your role, industry, years of experience, main skills. The AI generates a structured starting point: summary, job title suggestion, skills list, and work experience entries. It's not a finished Resume — it's a first draft you'll refine.",
+    "s1_b": "Before any AI can help you, you need your raw material ready: job titles, companies, dates, and a rough description of what you did in each role. Don't worry about phrasing — that's what AI is for.\n\nIn Valhalla Resume, use the 'Help me with AI' panel (bottom of the Content tab). Describe your background in plain language — your role, industry, years of experience, main skills. The AI generates a structured starting point: summary, job title suggestion, skills list, and work experience entries. It's not a finished Resume — it's a first draft you'll refine.",
     "s2_h": "Step 2: Generate your professional summary with AI",
-    "s2_b": "The professional summary is the hardest part of a Resume to write — it requires condensing years of work into 3-4 lines that are both honest and compelling.\n\nIn ReadyCVV's Summary section, click the AI button. The model reads your existing content and generates 3 versions of your summary, each with a different emphasis: one technical, one leadership-focused, one achievement-led. Pick the one that fits the role you're targeting, edit as needed.\n\nImportant: always personalize the AI output. Add one specific achievement or context detail that makes it yours — recruiters have read thousands of AI-generated summaries and can spot the generic ones instantly.",
+    "s2_b": "The professional summary is the hardest part of a Resume to write — it requires condensing years of work into 3-4 lines that are both honest and compelling.\n\nIn Valhalla Resume's Summary section, click the AI button. The model reads your existing content and generates 3 versions of your summary, each with a different emphasis: one technical, one leadership-focused, one achievement-led. Pick the one that fits the role you're targeting, edit as needed.\n\nImportant: always personalize the AI output. Add one specific achievement or context detail that makes it yours — recruiters have read thousands of AI-generated summaries and can spot the generic ones instantly.",
     "s3_h": "Step 3: Improve your bullet points with AI",
-    "s3_b": "Most Resume bullets are duty descriptions: 'Responsible for managing social media accounts.' AI can transform them into impact statements: 'Grew Instagram engagement by 340% in 6 months through a daily content cadence and influencer partnership program.'\n\nFor each work experience entry in ReadyCVV, click the improve button on any bullet. The AI rewrites it with stronger verbs, quantified impact, and the format: [Action verb] + [what you did] + [result/scale]. You can generate multiple versions and pick the best one.\n\nNote: if the AI adds a number you can't verify (like '40% improvement'), change it to something accurate. Fabricated metrics create legal and ethical problems.",
+    "s3_b": "Most Resume bullets are duty descriptions: 'Responsible for managing social media accounts.' AI can transform them into impact statements: 'Grew Instagram engagement by 340% in 6 months through a daily content cadence and influencer partnership program.'\n\nFor each work experience entry in Valhalla Resume, click the improve button on any bullet. The AI rewrites it with stronger verbs, quantified impact, and the format: [Action verb] + [what you did] + [result/scale]. You can generate multiple versions and pick the best one.\n\nNote: if the AI adds a number you can't verify (like '40% improvement'), change it to something accurate. Fabricated metrics create legal and ethical problems.",
     "s4_h": "Step 4: Check your ATS Score",
-    "s4_b": "Writing a great Resume and having it rejected by an ATS is one of the most frustrating experiences in job searching. ReadyCVV's ATS Score feature prevents this.\n\nPaste the full job description into the ATS Score panel. The AI analyzes your Resume against it and scores you across keyword coverage, skills match, experience alignment, and structure. It then gives specific suggestions: 'Add keyword X from the job description to your skills section' or 'Your experience section is missing the term Y which appears 4 times in the JD.'\n\nDo this for every job you apply to. A Resume tailored to the posting saves the recruiter the work of deducing whether you fit — and that guesswork is all the time you were going to get.",
+    "s4_b": "Writing a great Resume and having it rejected by an ATS is one of the most frustrating experiences in job searching. Valhalla Resume's ATS Score feature prevents this.\n\nPaste the full job description into the ATS Score panel. The AI analyzes your Resume against it and scores you across keyword coverage, skills match, experience alignment, and structure. It then gives specific suggestions: 'Add keyword X from the job description to your skills section' or 'Your experience section is missing the term Y which appears 4 times in the JD.'\n\nDo this for every job you apply to. A Resume tailored to the posting saves the recruiter the work of deducing whether you fit — and that guesswork is all the time you were going to get.",
     "s5_h": "Step 5: Generate your cover letter with AI",
-    "s5_b": "A cover letter written from scratch takes 45-90 minutes. ReadyCVV's cover letter AI generates a personalized first draft in under a minute.\n\nPaste the job description and specify your tone (formal, conversational, technical). The AI writes a 3-paragraph letter: an opening that hooks with your strongest relevant achievement, a middle that connects your experience to the company's specific needs, and a close that requests the interview confidently.\n\nEdit it. Add one personal detail about the company (a product you use, a mission statement you believe in, a recent news item). That personal touch is what the AI can't add — but it's also what separates a good cover letter from a great one.",
+    "s5_b": "A cover letter written from scratch takes 45-90 minutes. Valhalla Resume's cover letter AI generates a personalized first draft in under a minute.\n\nPaste the job description and specify your tone (formal, conversational, technical). The AI writes a 3-paragraph letter: an opening that hooks with your strongest relevant achievement, a middle that connects your experience to the company's specific needs, and a close that requests the interview confidently.\n\nEdit it. Add one personal detail about the company (a product you use, a mission statement you believe in, a recent news item). That personal touch is what the AI can't add — but it's also what separates a good cover letter from a great one.",
     "s6_h": "What AI can't do (yet)",
     "s6_b": "AI can help you write, structure, and optimize. It cannot:\n\n• Verify your claims — you're responsible for accuracy\n• Replace your judgment about which experience is most relevant to a specific role\n• Add the specific detail that makes your application memorable\n• Know your personality, communication style, or what you actually want from your next role\n\nThe best AI-assisted Resume is one where the AI handled the structure and language, and you handled the strategy and authenticity. Use AI as an accelerator, not a replacement.",
     "r1_slug": "como-pasar-el-ats",
@@ -2778,11 +2778,11 @@
     "s2_h": "The skills section: your most important ATS signal",
     "s2_b": "Most developer Resumes bury skills at the bottom as an afterthought. This is a mistake. ATS systems scan for technical keywords and your skills section is the most reliable place to include them.\n\nOrganize by category:\n• Languages: Python, TypeScript, Go, Rust, Java\n• Frameworks: React, Next.js, Node.js, FastAPI, Spring Boot\n• Databases: PostgreSQL, MongoDB, Redis, DynamoDB\n• Cloud/DevOps: AWS, GCP, Docker, Kubernetes, Terraform, CI/CD\n• Other: REST APIs, GraphQL, gRPC, microservices\n\nOnly list skills you can discuss confidently in a technical interview. Listing 'Kubernetes' when you've only run a tutorial will create problems.",
     "s3_h": "Writing experience bullets that prove impact",
-    "s3_b": "Most developer experience bullets describe tasks. Hiring managers care about results.\n\nWeak: 'Worked on the checkout service.'\nStrong: 'Refactored checkout service from monolith to microservices, reducing p99 latency from 1.2s to 180ms and enabling independent deployments for 5 teams.'\n\nThe formula: [Action verb] + [what you built/changed] + [why it mattered] + [measurable result].\n\nUse ReadyCVV's AI bullet improver to transform your existing descriptions. It rewrites each bullet with stronger verbs and better structure — then you add the specific numbers only you know.",
+    "s3_b": "Most developer experience bullets describe tasks. Hiring managers care about results.\n\nWeak: 'Worked on the checkout service.'\nStrong: 'Refactored checkout service from monolith to microservices, reducing p99 latency from 1.2s to 180ms and enabling independent deployments for 5 teams.'\n\nThe formula: [Action verb] + [what you built/changed] + [why it mattered] + [measurable result].\n\nUse Valhalla Resume's AI bullet improver to transform your existing descriptions. It rewrites each bullet with stronger verbs and better structure — then you add the specific numbers only you know.",
     "s4_h": "Projects: your proof of skills",
     "s4_b": "For junior developers, personal projects are your strongest differentiator. For senior developers, significant side projects or open source contributions add credibility.\n\nFor each project include:\n• What it does (1 sentence)\n• The stack you used\n• One interesting technical challenge you solved\n• GitHub link or live URL\n\nDo not include tutorial projects (Todo app, weather app, movie database). Include projects that solve a real problem, have real users, or demonstrate an interesting technical decision.",
     "s5_h": "Using ATS Score to beat automated screening",
-    "s5_b": "Keyword matching will not get a bot to like you — most ATS don't score your resume at all. It does something more useful: it forces you to answer, before you apply, whether your CV actually says the things this role is asking for.\n\nReadyCVV's ATS Score feature lets you paste a job description and get a specific match analysis: which requirements from the posting are missing from your CV, which skills to highlight more prominently, and what structure improvements would help.\n\nA frontend developer applying to a React role should see React, TypeScript, Redux, testing libraries, and performance optimization mentioned. A backend role wants to see API design, database experience, and system design. Different roles, different maps — ATS Score shows you the gap for each application.",
+    "s5_b": "Keyword matching will not get a bot to like you — most ATS don't score your resume at all. It does something more useful: it forces you to answer, before you apply, whether your CV actually says the things this role is asking for.\n\nValhalla Resume's ATS Score feature lets you paste a job description and get a specific match analysis: which requirements from the posting are missing from your CV, which skills to highlight more prominently, and what structure improvements would help.\n\nA frontend developer applying to a React role should see React, TypeScript, Redux, testing libraries, and performance optimization mentioned. A backend role wants to see API design, database experience, and system design. Different roles, different maps — ATS Score shows you the gap for each application.",
     "s6_h": "Common mistakes on developer resumes",
     "s6_b": "1. Listing technologies you barely know — leads to failed technical screens\n2. No GitHub link — the most common omission for junior developers\n3. Vague responsibilities without any quantification\n4. Using a creative template that ATS can't parse — beautiful PDFs with columns or text boxes often fail ATS parsing\n5. Listing 'proficient in' without context — proficient compared to what?\n6. Education at the top for experienced developers — move it to the bottom after 2+ years\n7. Generic summary ('passionate developer with experience in multiple technologies') — says nothing, remembered by no one",
     "r1_slug": "como-pasar-el-ats",
@@ -2803,15 +2803,15 @@
     "s1_h": "Understand what ATS actually does",
     "s1_b": "An ATS doesn't 'read' your resume the way a human does. It parses the document into structured data fields (name, email, job titles, dates, skills) and then runs keyword matching against the job description. A resume that looks beautiful in PDF may be completely unreadable by an ATS parser if it uses tables, columns, text boxes, or unusual fonts.\n\nThe first rule of ATS optimization: format for machines first, humans second. That doesn't mean ugly — it means structured and standard.",
     "s2_h": "Use a single-column, text-based format",
-    "s2_b": "Multi-column layouts are the single biggest ATS killer. When a parser sees two columns, it often reads across both simultaneously, producing garbled output. Tables cause similar problems.\n\nUse a single-column layout with clearly labeled sections. If you want visual appeal, use spacing, font weight, and subtle color in section headers — not columns or text boxes.\n\nReadyCVV's ATS Pro template is specifically designed for the single-column reading order that major ATS platforms (Greenhouse, Lever, Workday, Taleo, iCIMS) parse most reliably: no tables, no columns, no graphics.",
+    "s2_b": "Multi-column layouts are the single biggest ATS killer. When a parser sees two columns, it often reads across both simultaneously, producing garbled output. Tables cause similar problems.\n\nUse a single-column layout with clearly labeled sections. If you want visual appeal, use spacing, font weight, and subtle color in section headers — not columns or text boxes.\n\nValhalla Resume's ATS Pro template is specifically designed for the single-column reading order that major ATS platforms (Greenhouse, Lever, Workday, Taleo, iCIMS) parse most reliably: no tables, no columns, no graphics.",
     "s3_h": "Name your sections conventionally",
     "s3_b": "ATS systems look for specific section names. If your experience section is titled 'What I've Done' or 'My Journey', the parser may not recognize it.\n\nUse these standard names:\n• Work Experience (not Career History or Professional Background)\n• Education (not Academic Background)\n• Skills (not Competencies or Tech Stack)\n• Certifications (not Credentials)\n• Projects (not Portfolio or Work Samples)\n\nThe more closely your section headers match standard ATS expectations, the more accurately your resume is parsed.",
     "s4_h": "Extract and match keywords from the job description",
-    "s4_b": "The most direct path to ATS success is keyword matching. Read the job description carefully and identify:\n\n1. Required skills and tools (exact spellings matter — 'JavaScript' vs 'Javascript')\n2. Soft skills and methodologies mentioned repeatedly\n3. Job title variations the company uses\n4. Industry-specific terminology\n\nIncorporate these keywords naturally into your skills section, experience bullets, and summary. Don't keyword-stuff — write them into context. 'Led cross-functional Agile sprints using Jira' beats 'Agile, Jira, Sprint, Scrum' as a keyword dump.\n\nReadyCVV's ATS Score feature automates this analysis: paste the job description, and the AI identifies missing keywords and shows you exactly where to add them.",
+    "s4_b": "The most direct path to ATS success is keyword matching. Read the job description carefully and identify:\n\n1. Required skills and tools (exact spellings matter — 'JavaScript' vs 'Javascript')\n2. Soft skills and methodologies mentioned repeatedly\n3. Job title variations the company uses\n4. Industry-specific terminology\n\nIncorporate these keywords naturally into your skills section, experience bullets, and summary. Don't keyword-stuff — write them into context. 'Led cross-functional Agile sprints using Jira' beats 'Agile, Jira, Sprint, Scrum' as a keyword dump.\n\nValhalla Resume's ATS Score feature automates this analysis: paste the job description, and the AI identifies missing keywords and shows you exactly where to add them.",
     "s5_h": "Fix the five most common ATS format mistakes",
     "s5_b": "1. Photos and graphics — ATS parsers can't read images. If your contact info is in a header graphic, it's invisible to the parser.\n2. Headers and footers — Many ATS platforms skip page headers/footers entirely. Don't put contact info there.\n3. Unusual bullet characters — Stick to standard bullets (•, -, *). Decorative symbols often parse as garbage characters.\n4. Text in tables — Tables confuse parsers. Use line breaks and indentation instead.\n5. Saved as the wrong file type — PDF is generally fine for modern ATS. Some older systems prefer .docx. When in doubt, submit both if the portal allows it.",
-    "s6_h": "Use ReadyCVV's ATS Score before every application",
-    "s6_b": "Manually checking keyword coverage for each job application takes 20+ minutes. ReadyCVV's ATS Score does it in seconds.\n\nPaste the full job description into the ATS Score panel in the editor. The AI scores your resume across:\n• Keyword coverage: which required terms are present vs missing\n• Skills match: how your listed skills align with what the role requires\n• Experience alignment: whether your seniority level and experience match what's described\n• Structure: whether your resume format will parse correctly\n\nThe ATS Score report gives specific suggestions: 'Add keyword X to your skills section' or 'Your summary doesn't mention Y, which appears 5 times in the job description.' Use it for every new application and your callback rate will improve significantly.",
+    "s6_h": "Use Valhalla Resume's ATS Score before every application",
+    "s6_b": "Manually checking keyword coverage for each job application takes 20+ minutes. Valhalla Resume's ATS Score does it in seconds.\n\nPaste the full job description into the ATS Score panel in the editor. The AI scores your resume across:\n• Keyword coverage: which required terms are present vs missing\n• Skills match: how your listed skills align with what the role requires\n• Experience alignment: whether your seniority level and experience match what's described\n• Structure: whether your resume format will parse correctly\n\nThe ATS Score report gives specific suggestions: 'Add keyword X to your skills section' or 'Your summary doesn't mention Y, which appears 5 times in the job description.' Use it for every new application and your callback rate will improve significantly.",
     "r1_slug": "que-es-ats-y-por-que-rechaza-tu-cv",
     "r1_title": "What is ATS and Why is It Rejecting Your Resume?",
     "r2_slug": "cv-para-desarrolladores-de-software",
@@ -2824,17 +2824,17 @@
     "title": "Marketing Resume Guide 2026: Format, Metrics & Examples",
     "intro": "Marketing is one of the most diverse fields in hiring. A content marketer and a performance marketer have almost nothing in common — yet both have 'marketing' on their resume. The first challenge is positioning: making it immediately clear what type of marketing you do, at what level, and with what measurable results.",
     "s1_h": "Position yourself clearly in your summary",
-    "s1_b": "The biggest mistake on marketing resumes is a generic summary: 'Experienced marketing professional with a passion for brand growth.' That describes 10,000 people.\n\nYour summary should answer three questions in 3-4 lines:\n1. What type of marketing do you do? (SEO, paid social, content, brand, email, growth, product marketing)\n2. At what stage of company? (early-stage startup, mid-market, enterprise, agency)\n3. What's your strongest proof point? (one specific metric or achievement)\n\nExample: 'Growth marketer specializing in B2B SaaS. 5 years scaling content and paid channels at Series A/B startups. Most recently: grew organic traffic from 12K to 180K monthly visitors as Head of SEO at [Company].'\n\nReadyCVV's AI summary generator can produce 3 versions of your summary — each with a different emphasis. Pick the one that best fits the role you're targeting.",
+    "s1_b": "The biggest mistake on marketing resumes is a generic summary: 'Experienced marketing professional with a passion for brand growth.' That describes 10,000 people.\n\nYour summary should answer three questions in 3-4 lines:\n1. What type of marketing do you do? (SEO, paid social, content, brand, email, growth, product marketing)\n2. At what stage of company? (early-stage startup, mid-market, enterprise, agency)\n3. What's your strongest proof point? (one specific metric or achievement)\n\nExample: 'Growth marketer specializing in B2B SaaS. 5 years scaling content and paid channels at Series A/B startups. Most recently: grew organic traffic from 12K to 180K monthly visitors as Head of SEO at [Company].'\n\nValhalla Resume's AI summary generator can produce 3 versions of your summary — each with a different emphasis. Pick the one that best fits the role you're targeting.",
     "s2_h": "Every bullet needs a metric",
-    "s2_b": "Marketing resumes live and die by quantification. Recruiters in marketing expect to see numbers. If you can't quantify it, you probably shouldn't include it.\n\nThe metrics marketing hiring managers want to see:\n• Traffic growth: 'Increased organic traffic by 340% in 18 months'\n• Conversion: 'Improved landing page conversion from 1.8% to 4.2%'\n• Revenue: 'Generated $1.2M in pipeline through inbound campaigns'\n• ROAS: 'Maintained 4.2x ROAS on Meta Ads with $80K monthly budget'\n• Engagement: 'Grew email list from 8K to 45K subscribers in 12 months'\n• Efficiency: 'Reduced cost per lead by 38% through audience refinement'\n\nIf you don't have exact numbers, use ranges or approximations with a qualifier: 'Generated approximately $500K in pipeline over Q3-Q4.'\n\nUse ReadyCVV's AI bullet improver to transform vague duty descriptions into metric-led impact statements.",
+    "s2_b": "Marketing resumes live and die by quantification. Recruiters in marketing expect to see numbers. If you can't quantify it, you probably shouldn't include it.\n\nThe metrics marketing hiring managers want to see:\n• Traffic growth: 'Increased organic traffic by 340% in 18 months'\n• Conversion: 'Improved landing page conversion from 1.8% to 4.2%'\n• Revenue: 'Generated $1.2M in pipeline through inbound campaigns'\n• ROAS: 'Maintained 4.2x ROAS on Meta Ads with $80K monthly budget'\n• Engagement: 'Grew email list from 8K to 45K subscribers in 12 months'\n• Efficiency: 'Reduced cost per lead by 38% through audience refinement'\n\nIf you don't have exact numbers, use ranges or approximations with a qualifier: 'Generated approximately $500K in pipeline over Q3-Q4.'\n\nUse Valhalla Resume's AI bullet improver to transform vague duty descriptions into metric-led impact statements.",
     "s3_h": "Build a strong tools and skills section",
     "s3_b": "Marketing is a tool-heavy field. ATS systems scan for platform keywords explicitly, so your skills section is critical.\n\nOrganize by category:\n• Analytics: Google Analytics 4, Mixpanel, Amplitude, Looker, Tableau\n• Paid: Meta Ads, Google Ads, LinkedIn Ads, TikTok Ads, DV360\n• SEO: Semrush, Ahrefs, Screaming Frog, Search Console\n• Email/CRM: HubSpot, Salesforce Marketing Cloud, Klaviyo, Mailchimp\n• Content: WordPress, Webflow, Contentful, Figma (basic)\n• Social: Sprout Social, Buffer, Hootsuite, Later\n\nOnly list tools you can use confidently in a working context. A hiring manager for a paid media role will often ask you to walk through your campaign setup process.",
     "s4_h": "Structure your experience by marketing type",
     "s4_b": "If you've done multiple types of marketing (content, paid, email, events), structure your bullets by channel or program — not just chronologically by task.\n\nFor each role, group your bullets:\n• Owned channels (content, SEO, email)\n• Paid channels (with budget and ROAS)\n• Brand/campaigns (with reach or awareness metrics)\n• Team/cross-functional work (with scope and outcome)\n\nThis structure helps recruiters quickly assess whether your marketing mix matches what they need. A company looking for a pure performance marketer will see immediately whether that's your strength — or whether you're a generalist applying to a specialist role.",
     "s5_h": "Include a portfolio or work samples section",
-    "s5_b": "Unlike most fields, marketing professionals can often show their work directly. A well-placed portfolio link adds credibility that bullet points alone can't provide.\n\nWhat to link:\n• Campaign landing pages you built or designed\n• Content pieces with strong organic rankings (include traffic in the description)\n• Case studies or decks from successful campaigns\n• LinkedIn articles or publications if they're high-quality\n\nIn ReadyCVV, add your portfolio link in the contact section or as a dedicated section. Keep it to 2-3 links — curated is better than comprehensive.",
+    "s5_b": "Unlike most fields, marketing professionals can often show their work directly. A well-placed portfolio link adds credibility that bullet points alone can't provide.\n\nWhat to link:\n• Campaign landing pages you built or designed\n• Content pieces with strong organic rankings (include traffic in the description)\n• Case studies or decks from successful campaigns\n• LinkedIn articles or publications if they're high-quality\n\nIn Valhalla Resume, add your portfolio link in the contact section or as a dedicated section. Keep it to 2-3 links — curated is better than comprehensive.",
     "s6_h": "Tailor your resume to the marketing sub-role",
-    "s6_b": "Marketing job descriptions are highly specific about what they want. A 'Marketing Manager' at one company means email and events. At another, it means paid performance and attribution modeling.\n\nBefore applying, identify the 3-5 most-mentioned capabilities in the job description. Then verify your resume leads with proof of those specific capabilities — not a generic overview of everything you've done.\n\nUse ReadyCVV's ATS Score to paste the job description and see exactly which keywords and skills are missing from your current resume. This tailoring process, done properly, takes 10-15 minutes and significantly increases your interview rate.",
+    "s6_b": "Marketing job descriptions are highly specific about what they want. A 'Marketing Manager' at one company means email and events. At another, it means paid performance and attribution modeling.\n\nBefore applying, identify the 3-5 most-mentioned capabilities in the job description. Then verify your resume leads with proof of those specific capabilities — not a generic overview of everything you've done.\n\nUse Valhalla Resume's ATS Score to paste the job description and see exactly which keywords and skills are missing from your current resume. This tailoring process, done properly, takes 10-15 minutes and significantly increases your interview rate.",
     "r1_slug": "carta-de-presentacion-ejemplos",
     "r1_title": "Cover Letter Examples 2026: Templates That Actually Work",
     "r2_slug": "como-pasar-el-ats",
@@ -2857,7 +2857,7 @@
     "s4_h": "Example: Career change cover letter",
     "s4_b": "Career changers face an extra challenge: explaining the pivot without apologizing for it. The tone should be confident transition, not 'despite my background in X.'\n\nWhat works:\n'Five years in operations gave me an unusual vantage point into why most data projects fail: not because of the analysis, but because of how findings are communicated and actioned. I've spent the last 18 months building that bridge from the other side — completing a Google Data Analytics certificate, building two predictive models for internal decision-making, and earning a 92nd percentile Kaggle ranking in my first competition. I'm applying to [Company] because your data team operates at the intersection of technical rigor and business impact — which is exactly what I've been building toward.'\n\nThis opening acknowledges the transition, reframes past experience as an asset, documents proof of the pivot, and connects specifically to the target company.",
     "s5_h": "What to personalize for every application",
-    "s5_b": "A cover letter template is a starting point, not a finished product. Recruiters immediately recognize templated letters — they're missing the specificity that only a real applicant can provide.\n\nFor every application, customize:\n• The company name (obvious, but often wrong due to copy-paste errors)\n• One specific thing about this company or role that isn't generic\n• Your most relevant achievement mapped to this role's stated priorities\n• The closing ask — 'for a call this week' is more direct than 'I look forward to hearing from you'\n\nReadyCVV's AI cover letter generator produces a personalized first draft in under a minute. Paste the job description, choose your tone, and the AI writes all three paragraphs. Then you add the specific company detail that makes it yours.",
+    "s5_b": "A cover letter template is a starting point, not a finished product. Recruiters immediately recognize templated letters — they're missing the specificity that only a real applicant can provide.\n\nFor every application, customize:\n• The company name (obvious, but often wrong due to copy-paste errors)\n• One specific thing about this company or role that isn't generic\n• Your most relevant achievement mapped to this role's stated priorities\n• The closing ask — 'for a call this week' is more direct than 'I look forward to hearing from you'\n\nValhalla Resume's AI cover letter generator produces a personalized first draft in under a minute. Paste the job description, choose your tone, and the AI writes all three paragraphs. Then you add the specific company detail that makes it yours.",
     "s6_h": "Mistakes that get cover letters ignored",
     "s6_b": "1. Starting with 'I am writing to apply for...' — the most skipped opening in recruiting\n2. Restating your resume in prose — add something, don't summarize\n3. Generic company praise ('your innovative company' or 'industry leader') — signals you didn't research\n4. Length over 350 words — if you can't say it in 300, edit harder\n5. No specific ask in the closing — end with a direct, confident request for the conversation\n6. Sending the same letter to every company — a recruiter knows immediately\n7. Focusing on what you want from the role instead of what you bring to it — the company cares about their problem, not your ambition",
     "r1_slug": "carta-de-presentacion-2026",
@@ -2871,7 +2871,7 @@
     "breadcrumb_templates": "Resume Templates"
   },
   "cookie_policy": {
-    "meta_title": "Cookie Policy — READY CV",
+    "meta_title": "Cookie Policy — Valhalla Resume",
     "badge": "Legal",
     "title": "Cookie Policy",
     "last_updated": "Last updated: April 27, 2026",
@@ -2888,29 +2888,29 @@
     "s1_title": "What Are Cookies?",
     "s1_body": "Cookies are small text files stored on your device by your browser when you visit a website. They allow the website to remember your preferences and session state across page loads.",
     "s2_title": "Cookies to Keep You Logged In",
-    "s2_body": "When you sign in to READY CV, we store a small cookie on your browser so you stay logged in as you navigate the platform. Without it, you would be logged out every time you change pages. This cookie contains no personal data — it only identifies your active session.",
+    "s2_body": "When you sign in to Valhalla Resume, we store a small cookie on your browser so you stay logged in as you navigate the platform. Without it, you would be logged out every time you change pages. This cookie contains no personal data — it only identifies your active session.",
     "s2_l1_label": "Purpose",
     "s2_l1_value": "Keeps you logged in during your visit.",
     "s2_l2_label": "Duration",
     "s2_l2_value": "Ends when you close your browser, or stays up to 30 days if you choose \"Remember me\".",
     "s2_l3_label": "Who sets it",
-    "s2_l3_value": "READY CV — stored only on your device.",
+    "s2_l3_value": "Valhalla Resume — stored only on your device.",
     "s3_title": "Cookies During Checkout",
-    "s3_body": "When you subscribe to READY CV Pro, the payment is processed by a certified and secure payment provider. As part of that process, a cookie may be placed on your browser to verify that the transaction is legitimate and protect you from fraud. This cookie is managed entirely by the payment provider and is never accessible to READY CV.",
+    "s3_body": "When you subscribe to Valhalla Resume Pro, the payment is processed by a certified and secure payment provider. As part of that process, a cookie may be placed on your browser to verify that the transaction is legitimate and protect you from fraud. This cookie is managed entirely by the payment provider and is never accessible to Valhalla Resume.",
     "s3_l1_label": "Purpose",
     "s3_l1_value": "Protects you from payment fraud.",
     "s3_l2_label": "Who sets it",
     "s3_l2_value": "Our payment provider — governed by their own privacy policy.",
-    "s3_l3_label": "Does READY CV see it?",
+    "s3_l3_label": "Does Valhalla Resume see it?",
     "s3_l3_value": "No. It is completely outside our control.",
     "s4_title": "What We Do NOT Track",
-    "s4_body": "We believe your data is yours. READY CV does not use cookies to track your behaviour, profile you, or share information with advertisers.",
+    "s4_body": "We believe your data is yours. Valhalla Resume does not use cookies to track your behaviour, profile you, or share information with advertisers.",
     "s4_i1": "We do not show you ads based on your activity.",
     "s4_i2": "We do not track which pages you visit across the web.",
     "s4_i3": "We do not share your data with social media platforms.",
     "s4_i4": "We do not use analytics tools that monitor your browsing behaviour.",
     "s5_title": "How to Disable Cookies",
-    "s5_body": "You can configure your browser to refuse or alert you to cookies. Note: disabling session cookies will prevent you from logging in to READY CV.",
+    "s5_body": "You can configure your browser to refuse or alert you to cookies. Note: disabling session cookies will prevent you from logging in to Valhalla Resume.",
     "s5_chrome_url": "https://support.google.com/chrome/answer/95647",
     "s5_firefox_url": "https://support.mozilla.org/en-US/kb/cookies-information-websites-store-on-your-computer",
     "s5_safari_url": "https://support.apple.com/guide/safari/manage-cookies-sfri11471/mac",
@@ -2922,12 +2922,12 @@
     "s7_post": "."
   },
   "dmca": {
-    "meta_title": "DMCA Policy — READY CV",
+    "meta_title": "DMCA Policy — Valhalla Resume",
     "title": "DMCA Policy",
     "last_updated": "Last updated: April 27, 2026",
-    "intro": "MS Saravia Tech Stack LLC (\"READY CV\", \"we\", \"us\") respects intellectual property rights and complies with the Digital Millennium Copyright Act (DMCA). This policy explains how to submit a takedown request or a counter-notice.",
+    "intro": "MS Saravia Tech Stack LLC (\"Valhalla Resume\", \"we\", \"us\") respects intellectual property rights and complies with the Digital Millennium Copyright Act (DMCA). This policy explains how to submit a takedown request or a counter-notice.",
     "s1_title": "Filing a DMCA Takedown Request",
-    "s1_intro_pre": "If you believe that content on READY CV infringes your copyright, please send a written notice to ",
+    "s1_intro_pre": "If you believe that content on Valhalla Resume infringes your copyright, please send a written notice to ",
     "s1_intro_post": " that includes all of the following:",
     "s1_i1_label": "Description of the copyrighted work:",
     "s1_i1": "Identify the work you claim has been infringed (e.g., a link to the original work or a description of it).",
@@ -2948,10 +2948,10 @@
     "s2_i1": "Your physical or electronic signature.",
     "s2_i2": "Identification of the material that was removed and its location before it was removed.",
     "s2_i3": "A statement under penalty of perjury that you have a good faith belief that the material was removed or disabled as a result of mistake or misidentification.",
-    "s2_i4": "Your name, address, and telephone number, and a statement that you consent to the jurisdiction of the federal district court for the judicial district in which your address is located (or, if outside the United States, any judicial district in which READY CV may be found).",
+    "s2_i4": "Your name, address, and telephone number, and a statement that you consent to the jurisdiction of the federal district court for the judicial district in which your address is located (or, if outside the United States, any judicial district in which Valhalla Resume may be found).",
     "s2_outro": "Upon receipt of a valid counter-notice, we will forward it to the original complainant and may restore the content after 10–14 business days unless the complainant seeks a court order.",
     "s3_title": "Repeat Infringers",
-    "s3_body": "READY CV will terminate the accounts of users who are determined to be repeat infringers of intellectual property rights.",
+    "s3_body": "Valhalla Resume will terminate the accounts of users who are determined to be repeat infringers of intellectual property rights.",
     "s4_title": "Contact",
     "s4_pre": "All DMCA notices and counter-notices must be sent to: ",
     "s4_post": ""
@@ -2978,11 +2978,11 @@
     "related_subtitle": "Other designs you might like",
     "faq_title": "Frequently asked questions",
     "faq_q1": "Is this template free to use?",
-    "faq_a1": "You can preview every template for free. To download, customize and export to PDF you need a ReadyCV Pro subscription ($15/month).",
+    "faq_a1": "You can preview every template for free. To download, customize and export to PDF you need a Valhalla Resume Pro subscription ($15/month).",
     "faq_q2": "Will this template pass ATS systems?",
-    "faq_a2": "Yes. Every ReadyCV template is built on semantic HTML that ATS parsers can read. Single-column templates follow the reading order systems like Workday, Greenhouse and Taleo parse most reliably.",
+    "faq_a2": "Yes. Every Valhalla Resume template is built on semantic HTML that ATS parsers can read. Single-column templates follow the reading order systems like Workday, Greenhouse and Taleo parse most reliably.",
     "faq_q3": "Can I edit colors, fonts and layout?",
-    "faq_a3": "Yes. In the ReadyCV editor you can change the color scheme, swap fonts, reorder sections, hide blocks and customize spacing — all in real time.",
+    "faq_a3": "Yes. In the Valhalla Resume editor you can change the color scheme, swap fonts, reorder sections, hide blocks and customize spacing — all in real time.",
     "faq_q4": "What file formats can I export to?",
     "faq_a4": "PDF (print-ready). It preserves the template design and is optimized for ATS submission.",
     "faq_q5": "Can I switch templates later without losing my data?",
@@ -3009,13 +3009,13 @@
   "tools": {
     "atsChecker": {
       "meta": {
-        "title": "How ReadyCVV's ATS Resume Score Works | ReadyCVV",
-        "description": "See how ReadyCVV scores your resume against a job posting: semantic keyword match, missing requirements, and verification against your real PDF. Included in the Pro and Limited plans."
+        "title": "How Valhalla Resume's ATS Resume Score Works | Valhalla Resume",
+        "description": "See how Valhalla Resume scores your resume against a job posting: semantic keyword match, missing requirements, and verification against your real PDF. Included in the Pro and Limited plans."
       },
       "hero": {
         "badge": "AI ATS analysis · Included in Pro & Limited",
         "title": "Your <accent>Resume</accent> ATS Score",
-        "subtitle": "This is how ReadyCVV scores your resume against a job posting: keywords, missing requirements, and exactly what to fix — all inside the editor. See how it works below.",
+        "subtitle": "This is how Valhalla Resume scores your resume against a job posting: keywords, missing requirements, and exactly what to fix — all inside the editor. See how it works below.",
         "feat1": "Semantic keyword match",
         "feat2": "Verifies against your real PDF",
         "feat3": "Bilingual: EN + ES"
@@ -3076,13 +3076,13 @@
         "missingKw": "Top missing keywords",
         "quickWins": "Quick wins",
         "unlock": "Unlock the full report",
-        "proCta": "Try ReadyCVV PRO"
+        "proCta": "Try Valhalla Resume PRO"
       },
       "email": {
         "title": "Send my full report",
         "subtitle": "We'll show your full report below and email you a copy so you can come back to it.",
         "emailLabel": "Your email",
-        "consent": "I agree to receive my ATS report and occasional resume tips from ReadyCVV. Unsubscribe anytime.",
+        "consent": "I agree to receive my ATS report and occasional resume tips from Valhalla Resume. Unsubscribe anytime.",
         "submit": "Send my full report",
         "submitting": "Sending…",
         "privacy": "We never share your email. GDPR + CCPA compliant.",
@@ -3138,7 +3138,7 @@
         "title": "How it works",
         "subtitle": "Three steps. Real recommendations. No fluff.",
         "s1Title": "Add your resume",
-        "s1Body": "Import or build your resume inside ReadyCVV — your data, in your account.",
+        "s1Body": "Import or build your resume inside Valhalla Resume — your data, in your account.",
         "s2Title": "Paste the job description",
         "s2Body": "Our engine identifies the keywords recruiters' software will look for.",
         "s3Title": "Get your score and fixes",
@@ -3162,17 +3162,17 @@
         "q1": "Is the ATS score included in my plan?",
         "a1": "The ATS analysis is part of the Pro and Limited plans. You paste a job posting and get your score, missing keywords, and actionable suggestions right inside the editor.",
         "q2": "How does the checker work?",
-        "a2": "Inside the editor you paste a job posting; ReadyCVV compares your resume against the keywords, structure and signals most ATS platforms (Workday, Greenhouse, Lever, Taleo) look for. Scoring is deterministic and explained per category.",
+        "a2": "Inside the editor you paste a job posting; Valhalla Resume compares your resume against the keywords, structure and signals most ATS platforms (Workday, Greenhouse, Lever, Taleo) look for. Scoring is deterministic and explained per category.",
         "q3": "Is my data safe?",
-        "a3": "Yes. Your resume lives in your ReadyCVV account; the analysis runs on your own data and we don't share it with third parties.",
+        "a3": "Yes. Your resume lives in your Valhalla Resume account; the analysis runs on your own data and we don't share it with third parties.",
         "q4": "Will a perfect score guarantee an interview?",
         "a4": "No. A high ATS score means recruiters' software is more likely to surface your resume to a human. The interview decision is made by people based on relevance and storytelling.",
-        "q5": "What is the difference vs ReadyCVV PRO?",
+        "q5": "What is the difference vs Valhalla Resume PRO?",
         "a5": "This page shows how the ATS analysis works. On the Pro and Limited plans you actually use it: AI-written bullets, automatic keyword targeting per job, 143 templates and built-in ATS optimization while you write."
       },
       "proCta": {
         "title": "Want help fixing these issues?",
-        "subtitle": "ReadyCVV PRO writes ATS-optimized bullets, suggests keywords per job and tailors your resume in minutes. Try it for $15/month.",
+        "subtitle": "Valhalla Resume PRO writes ATS-optimized bullets, suggests keywords per job and tailors your resume in minutes. Try it for $15/month.",
         "button": "See PRO plan"
       }
     },
@@ -3224,7 +3224,7 @@
         "boostTip3": "Tailor your Resume to each job description and keyword set.",
         "ctaTitle": "Boost your salary potential",
         "ctaSubtitle": "Build a Resume that actually gets you into the top brackets — fast.",
-        "ctaPrimary": "Build a winning Resume with ReadyCVV PRO",
+        "ctaPrimary": "Build a winning Resume with Valhalla Resume PRO",
         "ctaSecondary": "Check your Resume against ATS"
       },
       "how": {
@@ -3253,16 +3253,16 @@
         "q2": "Are taxes included?",
         "a2": "We show gross annual figures by default, except for countries where net is the dominant reporting standard (Spain, LATAM). Per-month and per-hour views divide by the local norm.",
         "q3": "Why these 6 countries?",
-        "a3": "We cover the largest English and Spanish-speaking labour markets where ReadyCVV users apply most often. More countries will be added.",
+        "a3": "We cover the largest English and Spanish-speaking labour markets where Valhalla Resume users apply most often. More countries will be added.",
         "q4": "Is my data stored?",
         "a4": "No. Calculations run in your browser using a static dataset — nothing is sent to a server or logged.",
-        "q5": "How does this compare to ReadyCVV PRO?",
-        "a5": "This tool tells you your market value. ReadyCVV PRO helps you reach the higher brackets with ATS-optimised resumes, AI-written bullets and 143 templates."
+        "q5": "How does this compare to Valhalla Resume PRO?",
+        "a5": "This tool tells you your market value. Valhalla Resume PRO helps you reach the higher brackets with ATS-optimised resumes, AI-written bullets and 143 templates."
       },
       "bottomCta": {
         "title": "Want to maximize your salary?",
         "subtitle": "Build a Resume that targets the top brackets — ATS-ready, recruiter-friendly, in minutes.",
-        "button": "Try ReadyCVV PRO"
+        "button": "Try Valhalla Resume PRO"
       }
     }
   },
@@ -3343,8 +3343,8 @@
       },
       "cta": {
         "title": "Customize your Resume for the {country} market",
-        "subtitle": "ReadyCVV PRO localises tone, structure and keywords for {country} recruiters.",
-        "button": "Try ReadyCVV PRO"
+        "subtitle": "Valhalla Resume PRO localises tone, structure and keywords for {country} recruiters.",
+        "button": "Try Valhalla Resume PRO"
       }
     },
     "profession": {
@@ -3403,7 +3403,7 @@
       },
       "cta": {
         "title": "Build a Resume that gets {profession} jobs in {country}",
-        "subtitle": "ReadyCVV PRO writes ATS-optimised bullets and tailors your Resume to each job in minutes.",
+        "subtitle": "Valhalla Resume PRO writes ATS-optimised bullets and tailors your Resume to each job in minutes.",
         "button": "See PRO plan"
       }
     },
@@ -3441,11 +3441,11 @@
   },
   "billing": {
     "recover": {
-      "meta_title": "Update your payment method · ReadyCV",
-      "meta_description": "Update your payment method to keep your ReadyCV PRO subscription active.",
+      "meta_title": "Update your payment method · Valhalla Resume",
+      "meta_description": "Update your payment method to keep your Valhalla Resume PRO subscription active.",
       "hero": {
         "title": "Update your payment method",
-        "subtitle": "Your subscription needs a valid payment method to keep ReadyCV PRO active. It only takes a minute."
+        "subtitle": "Your subscription needs a valid payment method to keep Valhalla Resume PRO active. It only takes a minute."
       },
       "why": {
         "title": "Why this matters",
@@ -3464,7 +3464,7 @@
       },
       "help": {
         "title": "Need help?",
-        "contact": "Contact support: support@readycvv.com"
+        "contact": "Contact support: techstackmssaravia@gmail.com"
       },
       "faq": {
         "q1": "Why did my payment fail?",
@@ -3509,7 +3509,7 @@
     "proFeature": {
       "title": "PRO feature: {feature}",
       "titleGeneric": "PRO-only feature",
-      "body": "This tool is available exclusively for PRO subscribers. Upgrade and unlock the full ReadyCV toolkit.",
+      "body": "This tool is available exclusively for PRO subscribers. Upgrade and unlock the full Valhalla Resume toolkit.",
       "cta": "Upgrade to PRO"
     },
     "watermarkRemove": {
@@ -3533,7 +3533,7 @@
       "atsBadge": "PRO",
       "reviewBadge": "PRO",
       "tooltipProOnly": "Available on PRO plan",
-      "watermarkAria": "ReadyCV preview — upgrade to remove watermark"
+      "watermarkAria": "Valhalla Resume preview — upgrade to remove watermark"
     },
     "errors": {
       "unexpected": "Unexpected error. Please try again."
@@ -3543,15 +3543,15 @@
     "badge": "Accessibility",
     "title_h1": "Accessibility Statement",
     "last_updated": "Last updated: June 2026",
-    "intro": "ReadyCVV (operated by MS Saravia Tech Stack LLC) is committed to making its platform usable by as many people as possible. We continually work to improve accessibility and aim to align with the Web Content Accessibility Guidelines (WCAG) 2.1, Level AA. Accessibility is an ongoing effort; we do not claim full conformance at all times.",
+    "intro": "Valhalla Resume (operated by MS Saravia Tech Stack LLC) is committed to making its platform usable by as many people as possible. We continually work to improve accessibility and aim to align with the Web Content Accessibility Guidelines (WCAG) 2.1, Level AA. Accessibility is an ongoing effort; we do not claim full conformance at all times.",
     "s1_title": "Measures we take",
     "s1_body": "We build with semantic HTML, descriptive alternative text for meaningful images, language attributes, keyboard-operable controls, and color choices intended to provide sufficient contrast. Accessibility is considered as part of our ongoing development process.",
     "s2_title": "Known limitations",
     "s2_body": "Despite our efforts, some parts of the platform may not yet be fully accessible. Third-party components, user-generated documents and certain interactive features may present barriers. We prioritize fixes by impact. Listing limitations reflects our good-faith, continuing commitment and is not a guarantee of full conformance.",
     "s3_title": "Feedback and how to report a barrier",
-    "s3_body": "If you encounter an accessibility barrier on ReadyCVV, we want to hear from you. Please include the page address, a description of the issue, and the assistive technology you use. We aim to acknowledge reports within a reasonable timeframe and to remediate confirmed issues as promptly as practicable.",
+    "s3_body": "If you encounter an accessibility barrier on Valhalla Resume, we want to hear from you. Please include the page address, a description of the issue, and the assistive technology you use. We aim to acknowledge reports within a reasonable timeframe and to remediate confirmed issues as promptly as practicable.",
     "s4_title": "Standards and scope",
-    "s4_body": "This statement applies to the ReadyCVV website; our target standard is WCAG 2.1 Level AA. Nothing in this statement waives or limits any rights you may have under applicable law, nor does it constitute a representation or warranty of full conformance.",
+    "s4_body": "This statement applies to the Valhalla Resume website; our target standard is WCAG 2.1 Level AA. Nothing in this statement waives or limits any rights you may have under applicable law, nor does it constitute a representation or warranty of full conformance.",
     "contact_title": "Report an accessibility issue",
     "contact_pre": "Email us at",
     "contact_post": " and we will respond as soon as reasonably possible."

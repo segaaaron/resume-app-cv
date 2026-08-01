@@ -20,13 +20,13 @@ export async function generateMetadata({
   if (!resume) return {}
 
   const title = resume.title
-    ? `${resume.title} — CV | ReadyCVV`
-    : "CV profesional | ReadyCVV"
+    ? `${resume.title} — CV | Valhalla Resume`
+    : "CV profesional | Valhalla Resume"
   const description =
     locale === "es"
-      ? `Mira el CV profesional creado con ReadyCVV. Crea el tuyo con IA en minutos.`
-      : `View this professional resume created with ReadyCVV. Build yours with AI in minutes.`
-  const url = `https://readycvv.com/${locale}/cv/${slug}`
+      ? `Mira el CV profesional creado con Valhalla Resume. Crea el tuyo con IA en minutos.`
+      : `View this professional resume created with Valhalla Resume. Build yours with AI in minutes.`
+  const url = `https://valhallaresume.com/${locale}/cv/${slug}`
 
   return {
     title,
@@ -37,13 +37,13 @@ export async function generateMetadata({
       description,
       type: "profile",
       url,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
     robots: { index: true, follow: false },
   }

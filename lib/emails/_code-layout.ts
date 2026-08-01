@@ -33,7 +33,7 @@ export function renderCodeEmailHtml(
   </div>
   <p style="color:#6b7280;font-size:13px;">${copy.footnote(CODE_EXPIRY_MINUTES)}</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;"/>
-  <p style="font-size:12px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} READY CV — readycvv.com</p>
+  <p style="font-size:12px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Valhalla Resume — valhallaresume.com</p>
 </td></tr>
 </table>
 </body></html>`
@@ -53,7 +53,7 @@ ${plain(copy.intro)}
 
 ${plain(copy.footnote(CODE_EXPIRY_MINUTES))}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }
 
 /** "Ana Pérez" → "Ana". Falls back to a neutral word in the reader's language. */

@@ -22,7 +22,7 @@ function formatDateTime(date: Date, locale: EmailLocale): string {
 
 const COPY = {
   es: {
-    subject: "Cuenta bloqueada temporalmente — READY CV",
+    subject: "Cuenta bloqueada temporalmente — Valhalla Resume",
     heading: "Cuenta bloqueada temporalmente",
     greeting: (n: string) => `Hola <strong>${n}</strong>,`,
     body: `Tu cuenta fue bloqueada por <strong>${CHALLENGE_BLOCK_HOURS} horas</strong> por demasiados intentos fallidos de verificación.`,
@@ -30,7 +30,7 @@ const COPY = {
     warning: "Si no reconoces estos intentos, cambia tu contraseña inmediatamente.",
   },
   en: {
-    subject: "Account temporarily blocked — READY CV",
+    subject: "Account temporarily blocked — Valhalla Resume",
     heading: "Account temporarily blocked",
     greeting: (n: string) => `Hi <strong>${n}</strong>,`,
     body: `Your account was blocked for <strong>${CHALLENGE_BLOCK_HOURS} hours</strong> after too many failed verification attempts.`,
@@ -57,7 +57,7 @@ export function sessionChallengeBlockedHtml({ userName, unblockedAt, locale }: S
   <p style="color:#374151;">${t.retry(formatDateTime(unblockedAt, lang))}</p>
   <p style="color:#6b7280;font-size:13px;">${t.warning}</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;"/>
-  <p style="font-size:12px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} READY CV — readycvv.com</p>
+  <p style="font-size:12px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Valhalla Resume — valhallaresume.com</p>
 </td></tr>
 </table>
 </body></html>`
@@ -74,5 +74,5 @@ ${plain(t.retry(formatDateTime(unblockedAt, lang)))}
 
 ${t.warning}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }

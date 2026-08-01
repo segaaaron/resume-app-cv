@@ -14,7 +14,7 @@ import { PROFESSIONS, getProfessionsByCategory } from "@/lib/salary/professions"
 import { buildEntry } from "@/lib/salary/salaries"
 import { formatSalary } from "@/lib/salary/format"
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 const LOCALES = ["en", "es"] as const
 
 export function generateStaticParams() {
@@ -130,7 +130,7 @@ export default async function CountrySalaryPage({
     description: `Salary estimates for 30 professions in ${countryName} across 4 experience levels.`,
     url: canonical,
     keywords: [countryName, "salary", "wages", "compensation"],
-    creator: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
+    creator: { "@type": "Organization", name: "Valhalla Resume", url: BASE_URL },
     spatialCoverage: countryName,
     variableMeasured: ["median salary", "25th percentile", "75th percentile", "90th percentile"],
   }

@@ -72,7 +72,7 @@ const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], weight
 const spectral = Spectral({ variable: "--font-spectral", subsets: ["latin"], weight: ["400", "600"], display: "swap" })
 const asap = Asap({ variable: "--font-asap", subsets: ["latin"], weight: ["400", "600", "700"], display: "swap" })
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 
 // Umami analytics website id. This value is PUBLIC (it ships in every page's HTML),
 // so a hardcoded fallback is safe. It is also necessary: Dokploy builds this app
@@ -85,8 +85,8 @@ const UMAMI_WEBSITE_ID =
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
-    template: "%s | ReadyCVV",
+    default: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
+    template: "%s | Valhalla Resume",
   },
   description:
     "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. From $15/month.",

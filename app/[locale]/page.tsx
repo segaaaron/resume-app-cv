@@ -30,26 +30,26 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}`,
+      canonical: `https://valhallaresume.com/${locale}`,
       languages: {
-        es: "https://readycvv.com/es",
-        en: "https://readycvv.com/en",
+        es: "https://valhallaresume.com/es",
+        en: "https://valhallaresume.com/en",
         // x-default = the page for a visitor whose language matches neither es nor en.
         // English, mirroring the app's own runtime fallback (FALLBACK_LOCALE="en" in
         // lib/locale.ts) — a browser in pt/zh/de is served /en, so Google must be told
         // the same. It used to point to /es, contradicting the runtime.
-        "x-default": "https://readycvv.com/en",
+        "x-default": "https://valhallaresume.com/en",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://readycvv.com/${locale}`,
+      url: `https://valhallaresume.com/${locale}`,
       type: "website",
       locale: locale === "es" ? "es_ES" : "en_US",
       images: [
         {
-          url: "https://readycvv.com/og-image.png",
+          url: "https://valhallaresume.com/og-image.png",
           width: 1200,
           height: 630,
           alt: t("og_image_alt"),
@@ -60,7 +60,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -68,13 +68,13 @@ export async function generateMetadata({
 const jsonLdWebsite = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "ReadyCVV",
-  url: "https://readycvv.com",
+  name: "Valhalla Resume",
+  url: "https://valhallaresume.com",
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://readycvv.com/templates?q={search_term_string}",
+      urlTemplate: "https://valhallaresume.com/templates?q={search_term_string}",
     },
     "query-input": "required name=search_term_string",
   },
@@ -83,29 +83,29 @@ const jsonLdWebsite = {
 const jsonLdOrganization = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "ReadyCVV",
-  url: "https://readycvv.com",
+  name: "Valhalla Resume",
+  url: "https://valhallaresume.com",
   logo: {
     "@type": "ImageObject",
-    url: "https://readycvv.com/icon.svg",
+    url: "https://valhallaresume.com/icon.svg",
     width: 512,
     height: 512,
   },
   sameAs: [
-    "https://twitter.com/readycvv",
+    "https://twitter.com/valhallaresume",
   ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer support",
-    email: "support@readycvv.com",
+    email: "techstackmssaravia@gmail.com",
   },
 }
 
 const jsonLdWebApp = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  name: "ReadyCVV",
-  url: "https://readycvv.com",
+  name: "Valhalla Resume",
+  url: "https://valhallaresume.com",
   description:
     `AI-powered resume builder with ATS analysis. ${TEMPLATE_COUNT} professional templates, cover letter generator, job application tracker.`,
   applicationCategory: "BusinessApplication",
@@ -140,7 +140,7 @@ const jsonLdWebApp = {
     "Resume version history",
   ],
   inLanguage: ["es", "en"],
-  screenshot: "https://readycvv.com/og-image.png",
+  screenshot: "https://valhallaresume.com/og-image.png",
   aggregateRating: {
     "@type": "AggregateRating",
     ratingValue: "4.8",
@@ -154,58 +154,58 @@ const jsonLdFaq = {
   mainEntity: [
     {
       "@type": "Question",
-      name: "What is ReadyCVV?",
+      name: "What is Valhalla Resume?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `ReadyCVV is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes ${TEMPLATE_COUNT} professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.`,
+        text: `Valhalla Resume is an AI-powered resume builder that helps you create ATS-optimized resumes in minutes. It includes ${TEMPLATE_COUNT} professional templates, an ATS score analyzer, AI cover letter generator, and a job application tracker — all in one platform.`,
       },
     },
     {
       "@type": "Question",
-      name: "How does the AI work in ReadyCVV?",
+      name: "How does the AI work in Valhalla Resume?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV uses OpenAI GPT-4.1 to power 7 AI tools: bullet point improvement, professional summary generation, ATS compatibility scoring, cover letter generation, Resume review with actionable suggestions, skills suggestion, and AI profile filling from a free-text description.",
+        text: "Valhalla Resume uses OpenAI GPT-4.1 to power 7 AI tools: bullet point improvement, professional summary generation, ATS compatibility scoring, cover letter generation, Resume review with actionable suggestions, skills suggestion, and AI profile filling from a free-text description.",
       },
     },
     {
       "@type": "Question",
-      name: "Is ReadyCVV compatible with ATS systems?",
+      name: "Is Valhalla Resume compatible with ATS systems?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "Yes. ReadyCVV includes a built-in ATS Score tool that analyzes your resume against a specific job description and scores compatibility. It also includes ATS-optimized templates that use clean formatting recruiters and ATS systems can parse correctly.",
+        text: "Yes. Valhalla Resume includes a built-in ATS Score tool that analyzes your resume against a specific job description and scores compatibility. It also includes ATS-optimized templates that use clean formatting recruiters and ATS systems can parse correctly.",
       },
     },
     {
       "@type": "Question",
-      name: "How much does ReadyCVV cost?",
+      name: "How much does Valhalla Resume cost?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `ReadyCVV Pro costs $15/month or $99/year (saving 45%). This includes unlimited resumes, all ${TEMPLATE_COUNT} templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.`,
+        text: `Valhalla Resume Pro costs $15/month or $99/year (saving 45%). This includes unlimited resumes, all ${TEMPLATE_COUNT} templates, all 7 AI features, ATS Score, cover letter generator, and job application tracker. There is no free plan — every feature is included in Pro.`,
       },
     },
     {
       "@type": "Question",
-      name: "In what languages is ReadyCVV available?",
+      name: "In what languages is Valhalla Resume available?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: "ReadyCVV is fully available in Spanish and English. The interface, AI tools, and templates work in both languages, making it the leading AI resume builder for Spanish-speaking professionals.",
+        text: "Valhalla Resume is fully available in Spanish and English. The interface, AI tools, and templates work in both languages, making it the leading AI resume builder for Spanish-speaking professionals.",
       },
     },
     {
       "@type": "Question",
-      name: "¿Qué es ReadyCVV?",
+      name: "¿Qué es Valhalla Resume?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `ReadyCVV es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye ${TEMPLATE_COUNT} plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.`,
+        text: `Valhalla Resume es un constructor de CV con inteligencia artificial que te ayuda a crear un currículum optimizado para ATS en minutos. Incluye ${TEMPLATE_COUNT} plantillas profesionales, análisis de compatibilidad ATS, generador de carta de presentación con IA, y un tracker de candidaturas — todo en una sola plataforma.`,
       },
     },
     {
       "@type": "Question",
-      name: "¿Cuánto cuesta ReadyCVV?",
+      name: "¿Cuánto cuesta Valhalla Resume?",
       acceptedAnswer: {
         "@type": "Answer",
-        text: `ReadyCVV Pro cuesta $15/mes o $99/año (ahorrando un 45%). Incluye CVs ilimitados, las ${TEMPLATE_COUNT} plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.`,
+        text: `Valhalla Resume Pro cuesta $15/mes o $99/año (ahorrando un 45%). Incluye CVs ilimitados, las ${TEMPLATE_COUNT} plantillas, las 7 herramientas de IA, ATS Score, generador de carta de presentación y tracker de candidaturas.`,
       },
     },
   ],

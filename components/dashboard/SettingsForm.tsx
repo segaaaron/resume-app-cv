@@ -195,7 +195,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
       a.href = url
-      a.download = "readycv-data-export.json"
+      a.download = "valhalla-resume-data-export.json"
       a.click()
       URL.revokeObjectURL(url)
     } catch {

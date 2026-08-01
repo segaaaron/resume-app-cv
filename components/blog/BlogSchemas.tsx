@@ -29,7 +29,7 @@ export default function BlogSchemas({
   breadcrumbBlogLabel,
   keywords = [],
 }: Props) {
-  const baseUrl = "https://readycvv.com"
+  const baseUrl = "https://valhallaresume.com"
   const canonical = `${baseUrl}/${locale}/blog/${slug}`
 
   const articleSchema = {
@@ -42,12 +42,12 @@ export default function BlogSchemas({
     dateModified,
     author: {
       "@type": "Organization",
-      name: "ReadyCVV Team",
+      name: "Valhalla Resume Team",
       url: baseUrl,
     },
     publisher: {
       "@type": "Organization",
-      name: "ReadyCVV",
+      name: "Valhalla Resume",
       logo: { "@type": "ImageObject", url: `${baseUrl}/og-image.png` },
     },
     mainEntityOfPage: { "@type": "WebPage", "@id": canonical },

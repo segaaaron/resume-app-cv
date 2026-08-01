@@ -11,7 +11,7 @@
  * file with zero runtime screenshot dependency.
  *
  * RUN once, and again whenever a template's design changes:
- *   PDF_SERVICE_URL=... PDF_SERVICE_SECRET=... NEXT_PUBLIC_APP_URL=https://readycvv.com \
+ *   PDF_SERVICE_URL=... PDF_SERVICE_SECRET=... NEXT_PUBLIC_APP_URL=https://valhallaresume.com \
  *     npx tsx scripts/generate-template-thumbnails.ts [--force]
  *
  * The APP_URL must be reachable by the PDF microservice (it fetches the print

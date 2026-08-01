@@ -22,7 +22,7 @@ export async function generateMetadata({
       follow: false,
     },
     alternates: {
-      canonical: `https://readycvv.com/${locale}/register`,
+      canonical: `https://valhallaresume.com/${locale}/register`,
     },
   }
 }

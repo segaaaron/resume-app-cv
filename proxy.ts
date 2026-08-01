@@ -59,11 +59,11 @@ export async function proxy(request: NextRequest) {
   // Redirect non-www to www in production. Build the target from a FIXED absolute
   // base: cloning request.nextUrl and only overriding .host left the app's internal
   // :3000 port (and could leave http:) in place, so the apex redirected to the broken
-  // https://www.readycvv.com:3000/… . Only the path + query carry over.
+  // https://www.valhallaresume.com:3000/… . Only the path + query carry over.
   const host = request.headers.get("host") ?? ""
-  if (process.env.NODE_ENV === "production" && host === "readycvv.com") {
+  if (process.env.NODE_ENV === "production" && host === "valhallaresume.com") {
     return NextResponse.redirect(
-      `https://www.readycvv.com${request.nextUrl.pathname}${request.nextUrl.search}`,
+      `https://www.valhallaresume.com${request.nextUrl.pathname}${request.nextUrl.search}`,
       { status: 301 },
     )
   }

@@ -32,29 +32,29 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        es: `https://readycvv.com/es/blog/errores-comunes-cv`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        es: `https://valhallaresume.com/es/blog/errores-comunes-cv`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -249,7 +249,7 @@ export default async function ResumeMistakesPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Run the audit automatically</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> automates 8 of the 12 audit items: PDF cleanliness, keyword match, verb-first structure, bullet metrics, length, and parser-safe layout. Start from an <Link href={`/${locale}/templates`}>ATS-verified template</Link> and the format-related mistakes never appear in the first place.
+                    <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> automates 8 of the 12 audit items: PDF cleanliness, keyword match, verb-first structure, bullet metrics, length, and parser-safe layout. Start from an <Link href={`/${locale}/templates`}>ATS-verified template</Link> and the format-related mistakes never appear in the first place.
                   </p>
                 </div>
               </div>
@@ -269,8 +269,8 @@ export default async function ResumeMistakesPage({
               <BlogCTA
                 locale={locale}
                 title="Build a resume that avoids all 15 mistakes by design."
-                description="ReadyCV PRO templates are pre-validated against every mistake in this guide: ATS-clean PDFs, structured headers, achievement-led bullet templates, country-aware photo conventions and AI keyword tailoring per application."
-                buttonLabel="Start with ReadyCV PRO"
+                description="Valhalla Resume PRO templates are pre-validated against every mistake in this guide: ATS-clean PDFs, structured headers, achievement-led bullet templates, country-aware photo conventions and AI keyword tailoring per application."
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

@@ -80,7 +80,7 @@ export default function ResumePreviewWatermark({ isPro, templateSlug }: Props) {
                 "var(--dash-serif, 'Playfair Display', Georgia, serif)",
             }}
           >
-            ReadyCV · Preview
+            Valhalla Resume · Preview
           </span>
         ))}
       </div>

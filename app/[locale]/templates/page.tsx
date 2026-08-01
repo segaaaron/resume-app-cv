@@ -20,21 +20,21 @@ export const dynamic = "force-dynamic"
 const jsonLdItemList = {
   "@context": "https://schema.org",
   "@type": "ItemList",
-  name: "Professional Resume Templates — ReadyCVV",
+  name: "Professional Resume Templates — Valhalla Resume",
   description: `${TEMPLATE_COUNT} ATS-optimized professional resume templates for every industry`,
-  url: "https://readycvv.com/templates",
+  url: "https://valhallaresume.com/templates",
   numberOfItems: TEMPLATE_COUNT,
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://readycvv.com/templates#featured" },
-    { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://readycvv.com/templates#city" },
-    { "@type": "ListItem", position: 3, name: "Creative Resume Templates", url: "https://readycvv.com/templates#creative" },
-    { "@type": "ListItem", position: 4, name: "Business Resume Templates", url: "https://readycvv.com/templates#business" },
-    { "@type": "ListItem", position: 5, name: "Health & Science Resume Templates", url: "https://readycvv.com/templates#health" },
-    { "@type": "ListItem", position: 6, name: "Legal & Academic Resume Templates", url: "https://readycvv.com/templates#legal" },
-    { "@type": "ListItem", position: 7, name: "Hospitality Resume Templates", url: "https://readycvv.com/templates#hospitality" },
-    { "@type": "ListItem", position: 8, name: "Engineering & Tech Resume Templates", url: "https://readycvv.com/templates#engineering" },
-    { "@type": "ListItem", position: 9, name: "Arts & Media Resume Templates", url: "https://readycvv.com/templates#arts" },
-    { "@type": "ListItem", position: 10, name: "Other Professional Resume Templates", url: "https://readycvv.com/templates#other" },
+    { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://valhallaresume.com/templates#featured" },
+    { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://valhallaresume.com/templates#city" },
+    { "@type": "ListItem", position: 3, name: "Creative Resume Templates", url: "https://valhallaresume.com/templates#creative" },
+    { "@type": "ListItem", position: 4, name: "Business Resume Templates", url: "https://valhallaresume.com/templates#business" },
+    { "@type": "ListItem", position: 5, name: "Health & Science Resume Templates", url: "https://valhallaresume.com/templates#health" },
+    { "@type": "ListItem", position: 6, name: "Legal & Academic Resume Templates", url: "https://valhallaresume.com/templates#legal" },
+    { "@type": "ListItem", position: 7, name: "Hospitality Resume Templates", url: "https://valhallaresume.com/templates#hospitality" },
+    { "@type": "ListItem", position: 8, name: "Engineering & Tech Resume Templates", url: "https://valhallaresume.com/templates#engineering" },
+    { "@type": "ListItem", position: 9, name: "Arts & Media Resume Templates", url: "https://valhallaresume.com/templates#arts" },
+    { "@type": "ListItem", position: 10, name: "Other Professional Resume Templates", url: "https://valhallaresume.com/templates#other" },
   ],
 }
 
@@ -75,25 +75,25 @@ export async function generateMetadata({
           "free resume templates download",
         ],
     alternates: {
-      canonical: `https://readycvv.com/${locale}/templates`,
+      canonical: `https://valhallaresume.com/${locale}/templates`,
       languages: {
-        es: "https://readycvv.com/es/templates",
-        en: "https://readycvv.com/en/templates",
-        "x-default": "https://readycvv.com/en/templates",
+        es: "https://valhallaresume.com/es/templates",
+        en: "https://valhallaresume.com/en/templates",
+        "x-default": "https://valhallaresume.com/en/templates",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://readycvv.com/${locale}/templates`,
+      url: `https://valhallaresume.com/${locale}/templates`,
       type: "website",
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -162,8 +162,8 @@ export default async function TemplatesPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://readycvv.com" },
-      { "@type": "ListItem", position: 2, name: tTemplates("breadcrumb_templates"), item: `https://readycvv.com/${locale}/templates` },
+      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://valhallaresume.com" },
+      { "@type": "ListItem", position: 2, name: tTemplates("breadcrumb_templates"), item: `https://valhallaresume.com/${locale}/templates` },
     ],
   }
 

@@ -21,11 +21,11 @@ const DAYS_BEFORE_RENEWAL = 2
 
 const COPY = {
   es: {
-    subject: `Tu plan se renueva en ${DAYS_BEFORE_RENEWAL} días — READY CV`,
+    subject: `Tu plan se renueva en ${DAYS_BEFORE_RENEWAL} días — Valhalla Resume`,
     heading: `Tu plan se renueva en ${DAYS_BEFORE_RENEWAL} días`,
     heroSub: "Solo queremos avisarte con tiempo",
     greeting: (name: string) => `Hola <strong>${name}</strong>,`,
-    intro: `Te recordamos que tu suscripción a READY CV se renovará automáticamente en <strong>${DAYS_BEFORE_RENEWAL} días</strong>. Si no deseas renovarla, puedes cancelarla antes de la fecha de renovación.`,
+    intro: `Te recordamos que tu suscripción a Valhalla Resume se renovará automáticamente en <strong>${DAYS_BEFORE_RENEWAL} días</strong>. Si no deseas renovarla, puedes cancelarla antes de la fecha de renovación.`,
     summary: "Resumen de renovación",
     labelPlan: "Plan",
     labelAmount: "Monto a cobrar",
@@ -41,11 +41,11 @@ const COPY = {
     terms: "Términos",
   },
   en: {
-    subject: `Your plan renews in ${DAYS_BEFORE_RENEWAL} days — READY CV`,
+    subject: `Your plan renews in ${DAYS_BEFORE_RENEWAL} days — Valhalla Resume`,
     heading: `Your plan renews in ${DAYS_BEFORE_RENEWAL} days`,
     heroSub: "Just giving you a heads-up",
     greeting: (name: string) => `Hi <strong>${name}</strong>,`,
-    intro: `Your READY CV subscription renews automatically in <strong>${DAYS_BEFORE_RENEWAL} days</strong>. If you'd rather not renew, you can cancel before the renewal date.`,
+    intro: `Your Valhalla Resume subscription renews automatically in <strong>${DAYS_BEFORE_RENEWAL} days</strong>. If you'd rather not renew, you can cancel before the renewal date.`,
     summary: "Renewal summary",
     labelPlan: "Plan",
     labelAmount: "Amount",
@@ -99,8 +99,8 @@ export function renewalReminderHtml({
           <!-- Logo -->
           <tr>
             <td align="center" style="padding-bottom:32px;">
-              <a href="https://www.readycvv.com" style="text-decoration:none;">
-                <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">READY CV</span>
+              <a href="https://www.valhallaresume.com" style="text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;color:#2a72d7;letter-spacing:-0.5px;">Valhalla Resume</span>
               </a>
             </td>
           </tr>
@@ -211,7 +211,7 @@ export function renewalReminderHtml({
           <tr>
             <td style="padding:28px 0;text-align:center;">
               <p style="margin:0 0 8px;font-size:13px;color:#9ca3af;">
-                © ${new Date().getFullYear()} READY CV · Todos los derechos reservados
+                © ${new Date().getFullYear()} Valhalla Resume · Todos los derechos reservados
               </p>
               <p style="margin:0;font-size:12px;color:#d1d5db;">
                 <a href="${emailAppUrl()}/privacy" style="color:#9ca3af;text-decoration:none;">${t.privacy}</a>
@@ -260,5 +260,5 @@ ${t.labelDate}: ${formatEmailDate(renewalDate, lang)}
 ${cancelNote}
 ${emailDashboardUrl(lang, "/dashboard/settings")}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }

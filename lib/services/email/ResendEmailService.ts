@@ -9,7 +9,7 @@ import { sessionForcedHtml, sessionForcedText, sessionForcedSubject } from "@/li
 import { managedWelcomeHtml, managedWelcomeText, managedWelcomeSubjectFor } from "@/lib/emails/managedWelcome"
 import type { IEmailService } from "@/lib/interfaces/IEmailService"
 
-const FROM = process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>"
+const FROM = process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>"
 const logger = createLogger("ResendEmailService")
 
 function maskEmail(email: string): string {
@@ -80,7 +80,7 @@ export class ResendEmailService implements IEmailService {
 
   async sendManagedWelcome(to: string, password: string, expiresAt: Date, downloadLimit: number | null, locale?: string | null): Promise<void> {
     if (!emailEnabled()) return
-    const base = process.env.NEXTAUTH_URL ?? "https://www.readycvv.com"
+    const base = process.env.NEXTAUTH_URL ?? "https://www.valhallaresume.com"
     const loginUrl = `${base}/es/login`
     await resend!.emails.send({
       from: FROM, to,

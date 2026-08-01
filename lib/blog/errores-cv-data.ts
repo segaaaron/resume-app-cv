@@ -32,7 +32,7 @@ export const ERRORES_CV: ErrorCV[] = [
     title: "Formato de archivo incorrecto o PDF corrupto",
     impact: "Crítico",
     why: "Los ATS esperan PDFs con texto extraíble. PDFs escaneados, exportados como imagen o archivos .pages fallan en parsing y producen campos vacíos en el dashboard del reclutador.",
-    fix: "Exporta como PDF desde un editor basado en texto (Word, Google Docs, ReadyCV). Verifica abriendo el PDF y seleccionando el texto — si no puedes, el ATS tampoco podrá.",
+    fix: "Exporta como PDF desde un editor basado en texto (Word, Google Docs, Valhalla Resume). Verifica abriendo el PDF y seleccionando el texto — si no puedes, el ATS tampoco podrá.",
   },
   {
     rank: 4,

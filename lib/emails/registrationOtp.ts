@@ -10,17 +10,17 @@ interface RegistrationOtpProps {
 
 const COPY: Record<"es" | "en", CodeEmailCopy & { subject: string }> = {
   es: {
-    subject: "Verifica tu email — READY CV",
+    subject: "Verifica tu email — Valhalla Resume",
     heading: "Verifica tu email",
     greeting: (name) => `Hola <strong>${name}</strong>,`,
-    intro: "Gracias por registrarte en READY CV. Usa este código para verificar tu dirección de email:",
+    intro: "Gracias por registrarte en Valhalla Resume. Usa este código para verificar tu dirección de email:",
     footnote: (m) => `Este código expira en <strong>${m} minutos</strong>. Si no solicitaste este código, ignora este mensaje.`,
   },
   en: {
-    subject: "Verify your email — READY CV",
+    subject: "Verify your email — Valhalla Resume",
     heading: "Verify your email",
     greeting: (name) => `Hi <strong>${name}</strong>,`,
-    intro: "Thanks for signing up to READY CV. Use this code to verify your email address:",
+    intro: "Thanks for signing up to Valhalla Resume. Use this code to verify your email address:",
     footnote: (m) => `This code expires in <strong>${m} minutes</strong>. If you didn't request it, you can ignore this message.`,
   },
 }

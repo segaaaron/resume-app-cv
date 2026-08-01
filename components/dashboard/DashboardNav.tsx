@@ -135,14 +135,14 @@ export default function DashboardNav({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo.svg"
-            alt="ReadyCVV"
+            alt="Valhalla Resume"
             width={38}
             height={38}
             className="rounded-[10px] shrink-0 block"
           />
           {/* Brand text */}
           <span className="[font-family:var(--dash-serif)] text-[15px] font-bold text-dash-navy tracking-[-0.02em] leading-none">
-            ReadyCVV
+            Valhalla Resume
           </span>
         </Link>
       </div>

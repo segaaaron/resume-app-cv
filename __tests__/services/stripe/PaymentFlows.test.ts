@@ -93,7 +93,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   process.env.STRIPE_PRICE_ID_MONTHLY = "price_monthly_test"
   process.env.STRIPE_PRICE_ID_ANNUAL  = "price_annual_test"
-  process.env.NEXT_PUBLIC_APP_URL = "https://readycvv.com"
+  process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com"
   delete process.env.ADMIN_EMAIL
 })
 
@@ -1114,7 +1114,7 @@ describe("H. handleDisputeClosed", () => {
 
   it("disputeWon=true → auditLog with DISPUTE_WON_MANUAL_REVIEW + admin email if ADMIN_EMAIL set", async () => {
     const { db } = await import("@/lib/db")
-    process.env.ADMIN_EMAIL = "admin@readycvv.com"
+    process.env.ADMIN_EMAIL = "techstackmssaravia@gmail.com"
     vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeDisputeClosedEvent("won"))
     const tx = makeTx({ userFindUnique: vi.fn().mockResolvedValue({ id: "u1", email: "user@b.com", name: "Alice" }) })
     await mockTx(db, tx)

@@ -43,7 +43,7 @@ export default async function GuideCTA({ locale }: { locale: string }) {
           <div className="flex items-center justify-center gap-2 mb-5">
             <div className="w-4 h-px bg-dash-cyan rounded-sm" />
             <span className="text-[10px] font-extrabold tracking-[0.14em] uppercase text-dash-cyan">
-              ReadyCVV
+              Valhalla Resume
             </span>
             <div className="w-4 h-px bg-dash-cyan rounded-sm" />
           </div>

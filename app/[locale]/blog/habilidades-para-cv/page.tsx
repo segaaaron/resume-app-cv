@@ -32,29 +32,29 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://readycvv.com/es/blog/${SLUG}`,
-        en: `https://readycvv.com/en/blog/${SLUG_EN}`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG_EN}`,
+        es: `https://valhallaresume.com/es/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG_EN}`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG_EN}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "es_ES",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -347,7 +347,7 @@ export default async function HabilidadesParaCVPage({
     },
     {
       q: "¿Cómo me aseguro de que mis habilidades pasen el ATS?",
-      a: "Usa las cadenas exactas que aparecen en la oferta, deletrea los acrónimos al menos una vez (Search Engine Optimization (SEO)), evita iconos y barras de progreso, y mantén las habilidades en texto plano. El ATS Checker de ReadyCV te dice qué keywords del posting están presentes y cuáles faltan — la mayoría sube su match score 20+ puntos con 10 minutos de reescritura de skills.",
+      a: "Usa las cadenas exactas que aparecen en la oferta, deletrea los acrónimos al menos una vez (Search Engine Optimization (SEO)), evita iconos y barras de progreso, y mantén las habilidades en texto plano. El ATS Checker de Valhalla Resume te dice qué keywords del posting están presentes y cuáles faltan — la mayoría sube su match score 20+ puntos con 10 minutos de reescritura de skills.",
     },
   ]
 
@@ -549,7 +549,7 @@ export default async function HabilidadesParaCVPage({
               </div>
 
               <p>
-                <strong>Recomendación por defecto para 2026:</strong> arriba, una columna, bajo tu resumen profesional. Esto gana tanto en puntuación ATS (skills indexadas en el tercio superior del documento) como en el escaneo humano de 7 segundos. Usa layout sidebar solo con plantillas verificadas — la <Link href={`/${locale}/templates`}>galería de plantillas de ReadyCV</Link> marca cada diseño con su nivel de compatibilidad ATS.
+                <strong>Recomendación por defecto para 2026:</strong> arriba, una columna, bajo tu resumen profesional. Esto gana tanto en puntuación ATS (skills indexadas en el tercio superior del documento) como en el escaneo humano de 7 segundos. Usa layout sidebar solo con plantillas verificadas — la <Link href={`/${locale}/templates`}>galería de plantillas de Valhalla Resume</Link> marca cada diseño con su nivel de compatibilidad ATS.
               </p>
 
               <h2 id="ats">Formato amigable con ATS</h2>
@@ -576,7 +576,7 @@ export default async function HabilidadesParaCVPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Verifica el match de keywords antes de aplicar</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de ReadyCV PRO</Link> ves tu match score contra la oferta, las keywords exactas que faltan y las 3 ediciones de mayor impacto — dentro del editor. Subida media tras una reescritura: +22 puntos.
+                    Con el <Link href={`/${locale}/tools/ats-checker`}>puntaje ATS de Valhalla Resume PRO</Link> ves tu match score contra la oferta, las keywords exactas que faltan y las 3 ediciones de mayor impacto — dentro del editor. Subida media tras una reescritura: +22 puntos.
                   </p>
                 </div>
               </div>
@@ -616,8 +616,8 @@ export default async function HabilidadesParaCVPage({
               <BlogCTA
                 locale={locale}
                 title="Crea una sección de habilidades que pase el ATS y convenza al reclutador."
-                description="ReadyCV PRO te sugiere las skills exactas para tu rol objetivo, puntúa tu match ATS en tiempo real y ofrece 143 plantillas con compatibilidad ATS verificada. Empieza en menos de 2 minutos."
-                buttonLabel="Empezar con ReadyCV PRO"
+                description="Valhalla Resume PRO te sugiere las skills exactas para tu rol objetivo, puntúa tu match ATS en tiempo real y ofrece 143 plantillas con compatibilidad ATS verificada. Empieza en menos de 2 minutos."
+                buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas AI · Cancela cuando quieras"
               />
             </div>

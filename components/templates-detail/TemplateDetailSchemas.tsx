@@ -39,7 +39,7 @@ export default function TemplateDetailSchemas({
     name: isEs ? `Plantilla CV ${template.name}` : `${template.name} Resume Template`,
     description: desc,
     image: ogImage,
-    brand: { "@type": "Brand", name: "ReadyCV" },
+    brand: { "@type": "Brand", name: "Valhalla Resume" },
     category: categoryLabel,
     offers: {
       "@type": "Offer",
@@ -48,14 +48,14 @@ export default function TemplateDetailSchemas({
       price: "15.00",
       priceValidUntil,
       availability: "https://schema.org/InStock",
-      seller: { "@type": "Organization", name: "ReadyCV" },
+      seller: { "@type": "Organization", name: "Valhalla Resume" },
     },
   }
 
   const softwareLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: `ReadyCV ${template.name}`,
+    name: `Valhalla Resume ${template.name}`,
     operatingSystem: "Web",
     applicationCategory: "BusinessApplication",
     description: desc,

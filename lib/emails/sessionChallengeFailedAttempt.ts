@@ -13,7 +13,7 @@ export const CHALLENGE_BLOCK_HOURS = 5
 
 const COPY = {
   es: {
-    subject: "Intento fallido de acceso — READY CV",
+    subject: "Intento fallido de acceso — Valhalla Resume",
     heading: "Intento fallido de acceso",
     greeting: (n: string) => `Hola <strong>${n}</strong>,`,
     body: "Se ingresó un código incorrecto para acceder a tu cuenta.",
@@ -22,7 +22,7 @@ const COPY = {
     warning: "Si no reconoces este intento, tu contraseña puede estar comprometida. Cámbiala ahora.",
   },
   en: {
-    subject: "Failed sign-in attempt — READY CV",
+    subject: "Failed sign-in attempt — Valhalla Resume",
     heading: "Failed sign-in attempt",
     greeting: (n: string) => `Hi <strong>${n}</strong>,`,
     body: "An incorrect code was entered to access your account.",
@@ -50,7 +50,7 @@ export function sessionChallengeFailedHtml({ userName, attemptsLeft, locale }: S
   <p style="color:#d97706;font-weight:600;">${t.attempts(attemptsLeft)}</p>
   <p style="color:#6b7280;font-size:13px;">${t.warning}</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:32px 0;"/>
-  <p style="font-size:12px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} READY CV — readycvv.com</p>
+  <p style="font-size:12px;color:#9ca3af;margin:0;">© ${new Date().getFullYear()} Valhalla Resume — valhallaresume.com</p>
 </td></tr>
 </table>
 </body></html>`
@@ -67,5 +67,5 @@ ${plain(t.attempts(attemptsLeft))}
 
 ${t.warning}
 
-© ${new Date().getFullYear()} READY CV`
+© ${new Date().getFullYear()} Valhalla Resume`
 }

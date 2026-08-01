@@ -25,7 +25,7 @@ export default function BlogHero({
   subtitle,
   datePublished,
   readingTime,
-  author = "ReadyCVV Team",
+  author = "Valhalla Resume Team",
   breadcrumbBlogLabel,
   breadcrumbHomeLabel,
   readingLabel,

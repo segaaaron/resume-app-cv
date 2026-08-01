@@ -54,7 +54,7 @@ export default function ATSScoreMockup({ locale = "es" }: Props) {
           <div className="w-2 h-2 rounded-full bg-[#ff5f57]" />
           <div className="w-2 h-2 rounded-full bg-[#febc2e]" />
           <div className="w-2 h-2 rounded-full bg-[#28c840]" />
-          <span className="text-[10px] text-slate-400 ml-2 font-mono">ReadyCVV · ATS Score</span>
+          <span className="text-[10px] text-slate-400 ml-2 font-mono">Valhalla Resume · ATS Score</span>
         </div>
 
         {/* Score circle */}

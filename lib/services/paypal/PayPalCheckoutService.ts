@@ -57,10 +57,10 @@ export class PayPalCheckoutService {
             amount: { currency_code: "USD", value: price.value },
             // custom_id carries userId + which plan so the webhook can provision it.
             custom_id: `${userId}|${price.plan}`,
-            description: `ReadyCVV ${price.plan}`,
+            description: `Valhalla Resume ${price.plan}`,
           },
         ],
-        application_context: { return_url: returnUrl, cancel_url: cancelUrl, user_action: "PAY_NOW", brand_name: "ReadyCVV" },
+        application_context: { return_url: returnUrl, cancel_url: cancelUrl, user_action: "PAY_NOW", brand_name: "Valhalla Resume" },
       })
       const url = approvalUrl(order.links)
       if (!url) throw new AppError("paypal_no_approval_url", 502)

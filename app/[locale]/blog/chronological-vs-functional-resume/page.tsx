@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -245,7 +245,7 @@ export default async function ChronoVsFunctionalPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Run a format check before submitting</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your draft against the role description: it catches missing date fields, structural parsing issues, and keyword gaps — the three reasons functional resumes commonly fall out of the pipeline. Start from a parser-clean <Link href={`/${locale}/templates`}>ATS-verified template</Link> to skip the rework.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> reads your draft against the role description: it catches missing date fields, structural parsing issues, and keyword gaps — the three reasons functional resumes commonly fall out of the pipeline. Start from a parser-clean <Link href={`/${locale}/templates`}>ATS-verified template</Link> to skip the rework.
                   </p>
                 </div>
               </div>
@@ -318,9 +318,9 @@ export default async function ChronoVsFunctionalPage({
 
               <BlogCTA
                 locale={locale}
-                title="Pick the right format and let ReadyCV PRO handle the rest."
+                title="Pick the right format and let Valhalla Resume PRO handle the rest."
                 description="143 ATS-verified templates covering chronological, combination and hybrid layouts. AI rewrites your bullets, summary and skills section to match any format you pick — in under two minutes."
-                buttonLabel="Start with ReadyCV PRO"
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

@@ -31,28 +31,28 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://readycvv.com/${locale}/blog/${SLUG}`,
+      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        en: `https://readycvv.com/en/blog/${SLUG}`,
-        "x-default": `https://readycvv.com/en/blog/${SLUG}`,
+        en: `https://valhallaresume.com/en/blog/${SLUG}`,
+        "x-default": `https://valhallaresume.com/en/blog/${SLUG}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://readycvv.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://readycvv.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
-      authors: ["ReadyCVV Team"],
+      authors: ["Valhalla Resume Team"],
       locale: "en_US",
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://readycvv.com/og-image.png"],
+      images: ["https://valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -105,7 +105,7 @@ export default async function ResumeSummaryPostPage({
     },
     {
       q: "Can I reuse the same summary for every job application?",
-      a: "Technically yes, strategically no. Swap one or two keywords from each job description into your summary. It takes 60 seconds and roughly doubles your ATS match score. ReadyCVV's ATS Checker shows you exactly which keywords are missing.",
+      a: "Technically yes, strategically no. Swap one or two keywords from each job description into your summary. It takes 60 seconds and roughly doubles your ATS match score. Valhalla Resume's ATS Checker shows you exactly which keywords are missing.",
     },
     {
       q: "Should I include soft skills in my summary?",
@@ -281,7 +281,7 @@ export default async function ResumeSummaryPostPage({
 
               <h3>Step 4 — Cut, then sharpen (2 min)</h3>
               <p>
-                Read it aloud. If a sentence has the words &quot;passionate,&quot; &quot;driven,&quot; &quot;detail-oriented,&quot; or &quot;dynamic,&quot; delete them. They add zero information. Replace with the evidence that earned you those traits in the first place. Then see how <Link href={`/${locale}/tools/ats-checker`}>ReadyCV PRO&apos;s ATS score</Link> reads your draft to confirm the keyword match.
+                Read it aloud. If a sentence has the words &quot;passionate,&quot; &quot;driven,&quot; &quot;detail-oriented,&quot; or &quot;dynamic,&quot; delete them. They add zero information. Replace with the evidence that earned you those traits in the first place. Then see how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> reads your draft to confirm the keyword match.
               </p>
 
               <h2 id="examples">50 resume summary examples by role</h2>
@@ -420,7 +420,7 @@ export default async function ResumeSummaryPostPage({
                 <div>
                   <p className="font-semibold text-[#1a2e4a] text-sm sm:text-base mb-1.5">Pro tip — Test before you send</p>
                   <p className="text-sm text-[#1a2e4a]/80 leading-relaxed">
-                    See how <Link href={`/${locale}/tools/ats-checker`}>ReadyCVV PRO&apos;s ATS score</Link> reads your summary against the job description: it tells you which keywords from the posting are missing, your match score and the three highest-impact edits. Most candidates lift their score 20+ points with a 5-minute summary rewrite.
+                    See how <Link href={`/${locale}/tools/ats-checker`}>Valhalla Resume PRO&apos;s ATS score</Link> reads your summary against the job description: it tells you which keywords from the posting are missing, your match score and the three highest-impact edits. Most candidates lift their score 20+ points with a 5-minute summary rewrite.
                   </p>
                 </div>
               </div>
@@ -440,8 +440,8 @@ export default async function ResumeSummaryPostPage({
               <BlogCTA
                 locale={locale}
                 title="Build a resume with a summary that gets you the interview."
-                description="ReadyCV PRO gives you 143 ATS-optimized templates, AI-generated summary suggestions tailored to your target role, and the ATS Checker that scores every keyword. Start in under two minutes."
-                buttonLabel="Start with ReadyCV PRO"
+                description="Valhalla Resume PRO gives you 143 ATS-optimized templates, AI-generated summary suggestions tailored to your target role, and the ATS Checker that scores every keyword. Start in under two minutes."
+                buttonLabel="Start with Valhalla Resume PRO"
                 hint="$15/mo or $99/yr · 7 AI tools included · Cancel anytime"
               />
             </div>

@@ -180,7 +180,7 @@ async function sendReferralRewardEmail({
 
   try {
     await resend.emails.send({
-      from: process.env.EMAIL_FROM ?? "READY CV <no-reply@readycvv.com>",
+      from: process.env.EMAIL_FROM ?? "Valhalla Resume <techstackmssaravia@gmail.com>",
       to: referrer.email,
       // Language: this email goes to the REFERRER, not to the buyer whose payment
       // triggered it, so the checkout locale would be someone else's language. Their own

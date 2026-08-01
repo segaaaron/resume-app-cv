@@ -24,7 +24,7 @@ beforeEach(async () => {
   process.env.STRIPE_PRICE_ID_ANNUAL = "price_annual_test"
   process.env.STRIPE_PRICE_ID_BASIC = "price_basic_test"
   process.env.STRIPE_PRICE_ID_SPRINT = "price_sprint_test"
-  process.env.NEXT_PUBLIC_APP_URL = "https://readycvv.com"
+  process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com"
   const { stripeEnabled } = await import("@/lib/stripe")
   vi.mocked(stripeEnabled).mockReturnValue(true)
 })

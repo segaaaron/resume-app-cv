@@ -223,8 +223,8 @@ export default function CinematicHomepage({ children, locale }: Props) {
           className="flex items-center gap-2 font-bold text-xl shrink-0 transition-colors duration-700"
           style={{ color: navFg }}
         >
-          <Image src="/logo.svg" alt="ReadyCVV" width={28} height={28} priority className="rounded-lg shrink-0" />
-          ReadyCVV
+          <Image src="/logo.svg" alt="Valhalla Resume" width={28} height={28} priority className="rounded-lg shrink-0" />
+          Valhalla Resume
         </Link>
 
         <div className="hidden md:flex items-center gap-5 text-sm font-medium">

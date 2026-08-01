@@ -8,7 +8,7 @@ import AtsFeatureShowcase from "@/components/tools/ats-checker/AtsFeatureShowcas
 import AtsEngineChecker from "@/components/tools/ats-checker/AtsEngineChecker"
 import AtsFaq from "@/components/tools/ats-checker/AtsFaq"
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 
 export async function generateMetadata({
   params,
@@ -77,7 +77,7 @@ export default async function AtsCheckerPage({
     operatingSystem: "Any",
     url: `${BASE_URL}/${locale}/tools/ats-checker`,
     offers: { "@type": "Offer", price: "15", priceCurrency: "USD" },
-    publisher: { "@type": "Organization", name: "ReadyCVV", url: BASE_URL },
+    publisher: { "@type": "Organization", name: "Valhalla Resume", url: BASE_URL },
   }
   const faqLd = {
     "@context": "https://schema.org",
@@ -180,7 +180,7 @@ export default async function AtsCheckerPage({
             engine client-side on pasted text. No upload, no account. */}
         <AtsEngineChecker />
 
-        {/* How the ATS works in ReadyCVV — two worked examples across tech stacks */}
+        {/* How the ATS works in Valhalla Resume — two worked examples across tech stacks */}
         <section className="relative mx-auto max-w-4xl px-6 pb-10">
           <div className="text-center">
             <span className="inline-flex items-center gap-2 rounded-full border border-[#00D4FF]/30 bg-white/80 px-4 py-1.5 text-[11px] font-bold uppercase tracking-[0.15em] text-[#1a2e4a] shadow-sm backdrop-blur">

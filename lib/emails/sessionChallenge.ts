@@ -10,14 +10,14 @@ interface SessionChallengeProps {
 
 const COPY: Record<"es" | "en", CodeEmailCopy & { subject: string }> = {
   es: {
-    subject: "Código de acceso — READY CV",
+    subject: "Código de acceso — Valhalla Resume",
     heading: "Código de acceso",
     greeting: (name) => `Hola <strong>${name}</strong>,`,
     intro: "Alguien intentó acceder a tu cuenta mientras había una sesión activa. Si eres tú, usa este código para continuar:",
     footnote: (m) => `Este código expira en <strong>${m} minutos</strong>. Si no eres tú, ignora este mensaje — tu sesión actual sigue activa.`,
   },
   en: {
-    subject: "Your access code — READY CV",
+    subject: "Your access code — Valhalla Resume",
     heading: "Access code",
     greeting: (name) => `Hi <strong>${name}</strong>,`,
     intro: "Someone tried to sign in to your account while another session was active. If that was you, use this code to continue:",

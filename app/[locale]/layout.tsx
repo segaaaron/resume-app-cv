@@ -5,7 +5,7 @@ import { routing } from "@/i18n/routing"
 import { notFound } from "next/navigation"
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext"
 
-const BASE_URL = "https://readycvv.com"
+const BASE_URL = "https://valhallaresume.com"
 
 // Locale-aware so the site-wide OG locale and x-default follow the language the
 // subtree is rendered in — a static `es_ES` / x-default=/es leaked onto every
@@ -23,11 +23,11 @@ export async function generateMetadata({
   return {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
-    template: "%s | ReadyCVV",
+    default: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
+    template: "%s | Valhalla Resume",
   },
   description:
-    "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. Try ReadyCVV Pro from $15/month.",
+    "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. Try Valhalla Resume Pro from $15/month.",
   keywords: [
     // High-intent EN (KD 50-65)
     "ai resume builder",
@@ -47,9 +47,9 @@ export async function generateMetadata({
     "plantillas cv ats compatible",
     "carta de presentacion con inteligencia artificial",
   ],
-  authors: [{ name: "ReadyCVV", url: BASE_URL }],
-  creator: "ReadyCVV",
-  publisher: "ReadyCVV",
+  authors: [{ name: "Valhalla Resume", url: BASE_URL }],
+  creator: "Valhalla Resume",
+  publisher: "Valhalla Resume",
   robots: {
     index: true,
     follow: true,
@@ -74,8 +74,8 @@ export async function generateMetadata({
     locale: isEs ? "es_ES" : "en_US",
     alternateLocale: isEs ? ["en_US"] : ["es_ES"],
     url: `${BASE_URL}/${locale}`,
-    siteName: "ReadyCVV",
-    title: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
+    siteName: "Valhalla Resume",
+    title: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
     description:
       "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. From $15/month.",
     images: [
@@ -83,18 +83,18 @@ export async function generateMetadata({
         url: `${BASE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: "ReadyCVV — AI Resume Builder with 143 Professional Templates",
+        alt: "Valhalla Resume — AI Resume Builder with 143 Professional Templates",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "ReadyCVV — AI Resume Builder | Beat ATS, 143 Templates",
+    title: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
     description:
       "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker.",
     images: [`${BASE_URL}/og-image.png`],
-    creator: "@readycvv",
-    site: "@readycvv",
+    creator: "@valhallaresume",
+    site: "@valhallaresume",
   },
   verification: {
     google: "a7b236b7cefc3ac7e10f5ca57c3ec884eaea1aac",

@@ -10,17 +10,17 @@ interface PasswordResetProps {
 
 const COPY: Record<"es" | "en", CodeEmailCopy & { subject: string }> = {
   es: {
-    subject: "Restablecer tu contraseña — READY CV",
+    subject: "Restablecer tu contraseña — Valhalla Resume",
     heading: "Restablecer contraseña",
     greeting: (name) => `Hola <strong>${name}</strong>,`,
-    intro: "Recibimos una solicitud para restablecer la contraseña de tu cuenta READY CV. Usa este código:",
+    intro: "Recibimos una solicitud para restablecer la contraseña de tu cuenta Valhalla Resume. Usa este código:",
     footnote: (m) => `Este código expira en <strong>${m} minutos</strong>. Si no solicitaste restablecer tu contraseña, ignora este mensaje — tu cuenta está segura.`,
   },
   en: {
-    subject: "Reset your password — READY CV",
+    subject: "Reset your password — Valhalla Resume",
     heading: "Reset your password",
     greeting: (name) => `Hi <strong>${name}</strong>,`,
-    intro: "We received a request to reset the password for your READY CV account. Use this code:",
+    intro: "We received a request to reset the password for your Valhalla Resume account. Use this code:",
     footnote: (m) => `This code expires in <strong>${m} minutes</strong>. If you didn't ask to reset your password, ignore this message — your account is safe.`,
   },
 }
