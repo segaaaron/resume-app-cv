@@ -63,6 +63,23 @@ describe("findProvenUnlistedSkills", () => {
     expect(findProvenUnlistedSkills(exp, ["Java"])).toContain("JavaScript")
   })
 
+  it("dedupes a MISTYPED listed skill against the canonical spelling", () => {
+    // The exact bug the CEO hit: "React Navite" (typo, distance 2 from "native")
+    // must still suppress the "React Native" suggestion.
+    const exp = "Shipped an iOS app with React Native."
+    expect(findProvenUnlistedSkills(exp, ["React Navite"])).not.toContain("React Native")
+    // A single transposition typo is caught too.
+    const exp2 = "Backend built in Kotlin."
+    expect(findProvenUnlistedSkills(exp2, ["Koltin"])).not.toContain("Kotlin")
+  })
+
+  it("typo tolerance never collides distinct skills (Java ≠ JavaScript)", () => {
+    // Length gap keeps them apart — listing one must not suppress the other.
+    expect(findProvenUnlistedSkills("Built the frontend in JavaScript.", ["Java"])).toContain("JavaScript")
+    // Short tokens (<6 chars) are exempt from fuzzy matching entirely.
+    expect(findProvenUnlistedSkills("Wrote services in Go.", ["Ru"])).toContain("Go")
+  })
+
   it("caps the number of suggestions", () => {
     const exp = "Used JavaScript TypeScript Python Java Go Rust Ruby PHP Swift Kotlin React Angular Vue."
     const result = findProvenUnlistedSkills(exp, [])

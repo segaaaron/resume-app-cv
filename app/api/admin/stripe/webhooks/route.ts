@@ -1,6 +1,7 @@
 // GET /api/admin/stripe/webhooks?status=FAILED&type=invoice.paid&cursor=<id>&limit=30
 // Paginated feed of processed Stripe webhooks (success/fail/skip). SUPER_ADMIN only.
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { createLogger } from "@/lib/logger"
 import { getWebhookFeed } from "@/lib/services/stripe/stripeAdminReport"
@@ -13,8 +14,8 @@ const VALID_STATUS: WebhookStatus[] = ["SUCCESS", "FAILED", "SKIPPED"]
 
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   const { searchParams } = new URL(req.url)
   const statusParam = searchParams.get("status")

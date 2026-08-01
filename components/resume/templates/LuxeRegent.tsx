@@ -17,6 +17,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Archivo", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -112,7 +113,7 @@ export default function LuxeRegentTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#cdb892"
+  const accent = designAccent(config.colorScheme, "#cdb892")
   const champ = accent
   const data = useTemplateSectionData()
   const {

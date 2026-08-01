@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -18,7 +19,7 @@ export default function SalesPitchTemplate() {
 
   const ink = "#101010"
   const cream = "#f5f1e8"
-  const accent = config.colorScheme || "#ff7a00"
+  const accent = designAccent(config.colorScheme, "#ff7a00")
 
   function H({ children }: { children: React.ReactNode }) {
     return (

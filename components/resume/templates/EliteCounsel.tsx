@@ -17,6 +17,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -33,7 +34,7 @@ export default function EliteCounselTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const gold = config.colorScheme || "#b8924f"
+  const gold = designAccent(config.colorScheme, "#b8924f")
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

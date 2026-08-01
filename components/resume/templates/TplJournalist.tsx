@@ -15,6 +15,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'Georgia, "Times New Roman", serif'
@@ -27,7 +28,7 @@ export default function TplJournalistTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#c0392b"
+  const accent = designAccent(config.colorScheme, "#c0392b")
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

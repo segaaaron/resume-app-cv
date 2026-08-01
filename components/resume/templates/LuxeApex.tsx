@@ -17,6 +17,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -140,7 +141,7 @@ export default function LuxeApexTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const ice = config.colorScheme || "#9fb6cf"
+  const ice = designAccent(config.colorScheme, "#9fb6cf")
   const line = "rgba(159,182,207,0.2)"
   const data = useTemplateSectionData()
   const {

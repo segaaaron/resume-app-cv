@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -20,7 +21,7 @@ export default function TranslatorCVTemplate() {
 
   const cream = "#f5f0e3"
   const ink = "#1a1810"
-  const red = config.colorScheme || "#7a1818"
+  const red = designAccent(config.colorScheme, "#7a1818")
 
   function H({ children }: { children: React.ReactNode }) {
     return (

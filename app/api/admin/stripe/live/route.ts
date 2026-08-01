@@ -4,6 +4,7 @@
 // Each section is fetched independently and degrades on its own — one failing call
 // must not blank the whole panel.
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { stripeClient } from "@/lib/controllers/stripe-deps"
@@ -22,13 +23,13 @@ async function safe<T>(label: string, fn: () => Promise<T>): Promise<{ data: T |
   }
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   if (!stripeEnabled() || !stripe) {
-    return NextResponse.json({ error: "Stripe not configured" }, { status: 503 })
+    return apiError(503, "Stripe not configured", { req })
   }
 
   const [balance, charges, disputes, subs] = await Promise.all([

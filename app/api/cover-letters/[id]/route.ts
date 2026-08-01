@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { checkOrigin } from "@/lib/csrf"
-import { handleError } from "@/lib/controllers/shared"
+import { handleError , apiError } from "@/lib/controllers/shared"
 import { coverLetterService, } from "@/lib/controllers/cover-letter-deps"
 import { coverLetterPatchSchema } from "@/lib/services/cover-letter/CoverLetterService"
 
@@ -9,7 +9,7 @@ type Params = { params: Promise<{ id: string }> }
 
 export async function GET(req: Request, { params }: Params) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
 
   try {
     const { id } = await params
@@ -22,20 +22,20 @@ export async function GET(req: Request, { params }: Params) {
 
 export async function PATCH(req: Request, { params }: Params) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   try {
     let body: unknown
     try {
       body = await req.json()
     } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+      return apiError(400, "Invalid JSON", { req })
     }
 
     const parsed = coverLetterPatchSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+      return apiError(422, "Invalid data", { req })
     }
 
     const { id } = await params
@@ -48,8 +48,8 @@ export async function PATCH(req: Request, { params }: Params) {
 
 export async function DELETE(req: Request, { params }: Params) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   try {
     const { id } = await params

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { registrationService, handleError } from "@/lib/controllers/auth-deps"
@@ -17,12 +18,12 @@ const schema = z.object({
 })
 
 export async function POST(req: Request) {
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown"
   const body = await req.json().catch(() => ({}))
   const parsed = schema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 })
+  if (!parsed.success) return apiError(400, "Datos inválidos", { req })
 
   try {
     const result = await registrationService.requestOtp({ ...parsed.data, ageConsent: parsed.data.ageConsent as true, ipAddress: ip, locale: localeFromRequest(req) })

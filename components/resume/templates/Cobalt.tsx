@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
@@ -41,7 +42,7 @@ export default function CobaltTemplate() {
   ]
 
   const sidebar = "#0d2137"
-  const accent = config.colorScheme || "#1e88e5"
+  const accent = designAccent(config.colorScheme, "#1e88e5")
   const L = getResumeLabels(config.language)
   const present = L.present
   const SKILL_W: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }

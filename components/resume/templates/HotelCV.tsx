@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -18,7 +19,7 @@ export default function HotelCVTemplate() {
 
   const sand = "#e8dfcd"
   const ink = "#1a1a1a"
-  const navy = config.colorScheme || "#1c3957"
+  const navy = designAccent(config.colorScheme, "#1c3957")
   const gold = "#a98a4a"
 
   function H({ children }: { children: React.ReactNode }) {

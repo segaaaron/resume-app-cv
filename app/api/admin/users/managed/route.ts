@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { checkOrigin } from "@/lib/csrf"
@@ -22,24 +23,24 @@ const bodySchema = z.object({
 })
 
 export async function POST(req: Request) {
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   let body: unknown
-  try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
+  try { body = await req.json() } catch { return apiError(400, "Invalid JSON", { req }) }
 
   const parsed = bodySchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 422 })
+  if (!parsed.success) return apiError(422, "Invalid payload", { req, extra: { details: parsed.error.flatten() } })
 
   const { email, expiresAt: expiresAtStr, downloadLimit, resumeLimit, coverLetterLimit, note } = parsed.data
   const managedExpiresAt = new Date(expiresAtStr)
   // Treat the supplied date as end-of-day UTC so an admin picking "today" via a
   // `<input type="date">` does not accidentally pass an already-past midnight.
   managedExpiresAt.setUTCHours(23, 59, 59, 999)
-  if (managedExpiresAt <= new Date()) return NextResponse.json({ error: "expiresAt must be in the future" }, { status: 422 })
+  if (managedExpiresAt <= new Date()) return apiError(422, "expiresAt must be in the future", { req })
 
   const existing = await db.user.findUnique({
     where: { email },

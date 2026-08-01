@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
@@ -21,23 +22,23 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   if (!stripeEnabled() || !stripe) {
-    return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
+    return apiError(503, "Payments not configured", { req })
   }
 
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
 
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const allowed = await checkRateLimit(session.user.id, "refunds", 3)
-  if (!allowed) return NextResponse.json({ error: "Demasiados intentos. Intenta más tarde." }, { status: 429 })
+  if (!allowed) return apiError(429, "Demasiados intentos. Intenta más tarde.", { req })
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Razón de reembolso inválida" }, { status: 400 })
+    return apiError(400, "Razón de reembolso inválida", { req })
   }
 
   const { reason, details } = parsed.data
@@ -55,9 +56,9 @@ export async function POST(req: Request) {
       },
     })
 
-    if (!user) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 })
-    if (!user.stripeCustomerId) return NextResponse.json({ error: "No se encontró cuenta de pago asociada" }, { status: 400 })
-    if (!user.subscriptionId) return NextResponse.json({ error: "No se encontró suscripción activa" }, { status: 400 })
+    if (!user) return apiError(404, "Usuario no encontrado", { req })
+    if (!user.stripeCustomerId) return apiError(400, "No se encontró cuenta de pago asociada", { req })
+    if (!user.subscriptionId) return apiError(400, "No se encontró suscripción activa", { req })
 
     // Step 1: Find the exact charge for this subscription via its latest invoice's payments.
     // Using charges.list({ customer, limit: 1 }) was incorrect — it could match an
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
       : (sub.latest_invoice as Stripe.Invoice | null)?.id ?? null
 
     if (!latestInvoiceId) {
-      return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+      return apiError(400, "No se encontró un pago elegible para reembolso", { req })
     }
 
     const invoicePayments = await stripe.invoicePayments.list({
@@ -85,19 +86,19 @@ export async function POST(req: Request) {
       : (paymentCharge as Stripe.Charge | null)?.id ?? null
 
     if (!chargeId) {
-      return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+      return apiError(400, "No se encontró un pago elegible para reembolso", { req })
     }
 
     const charge = await stripe.charges.retrieve(chargeId)
     if (!charge.paid || charge.refunded) {
-      return NextResponse.json({ error: "No se encontró un pago elegible para reembolso" }, { status: 400 })
+      return apiError(400, "No se encontró un pago elegible para reembolso", { req })
     }
 
     // Step 2: Validate 7-day refund window BEFORE claiming the refund slot.
     const periodStart = new Date(charge.created * 1000)
     const daysSincePeriodStart = Math.floor((Date.now() - periodStart.getTime()) / (1000 * 60 * 60 * 24))
     if (daysSincePeriodStart > 7) {
-      return NextResponse.json({ error: "El período de reembolso de 7 días ha expirado" }, { status: 400 })
+      return apiError(400, "El período de reembolso de 7 días ha expirado", { req })
     }
 
     // Step 3: Atomic CAS — claim the refund slot only after eligibility is confirmed.
@@ -113,7 +114,7 @@ export async function POST(req: Request) {
       },
     })
     if (claimed.count === 0) {
-      return NextResponse.json({ error: "La suscripción ya fue cancelada o reembolsada" }, { status: 400 })
+      return apiError(400, "La suscripción ya fue cancelada o reembolsada", { req })
     }
     purgeUserCache(userId)
 

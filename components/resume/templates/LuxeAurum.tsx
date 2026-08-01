@@ -19,6 +19,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif'
@@ -140,7 +141,7 @@ export default function LuxeAurumTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const gold = config.colorScheme || "#a8843a"
+  const gold = designAccent(config.colorScheme, "#a8843a")
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

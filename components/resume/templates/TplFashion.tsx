@@ -14,6 +14,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
@@ -26,7 +27,7 @@ export default function TplFashionTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const blush = config.colorScheme || "#d98a96"
+  const blush = designAccent(config.colorScheme, "#d98a96")
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

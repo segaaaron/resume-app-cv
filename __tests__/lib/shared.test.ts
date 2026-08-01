@@ -66,10 +66,23 @@ describe("handleError", () => {
     expect(body).toEqual({ error: "server_error" })
   })
 
-  it("does NOT log a 4xx AppError — expected client outcome, not a service error", () => {
-    handleError(new AppError("off_topic", 422))
-    handleError(new AppError("not_found", 404))
-    expect(errorSpy).not.toHaveBeenCalled()
+  it("LOGS a 4xx AppError too — the panel must surface ALL server errors, with status", () => {
+    handleError(new AppError("invalid_input", 400), {
+      req: new Request("https://x.test/api/ai/generate-cover-letter", { method: "POST" }),
+      userId: "u9",
+    })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    const [message, ctx] = errorSpy.mock.calls[0]
+    expect(message).toBe("invalid_input")
+    expect(ctx).toMatchObject({ status: 400, source: "ai", route: "/api/ai/generate-cover-letter", userId: "u9" })
+  })
+
+  it("LOGS a 429 quota rejection so the admin sees who was blocked", () => {
+    handleError(new AppError("quota_exceeded", 429), {
+      req: new Request("https://x.test/api/ai/tailor-cv", { method: "POST" }),
+    })
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    expect(errorSpy.mock.calls[0][1]).toMatchObject({ status: 429, source: "ai" })
   })
 
   it("LOGS a 5xx AppError so it reaches the Service Errors panel", () => {

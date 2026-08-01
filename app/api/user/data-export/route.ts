@@ -1,13 +1,12 @@
-import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { handleError } from "@/lib/controllers/shared"
+import { handleError , apiError } from "@/lib/controllers/shared"
 import { userService } from "@/lib/controllers/user-deps"
 import { AppError } from "@/lib/services/auth/AppError"
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
 
   try {
@@ -23,7 +22,7 @@ export async function GET() {
     })
   } catch (err) {
     if (err instanceof AppError && err.status === 429) {
-      return NextResponse.json({ error: "Solo puedes exportar tus datos una vez por hora." }, { status: 429 })
+      return apiError(429, "Solo puedes exportar tus datos una vez por hora.", { req })
     }
     return handleError(err, { route: "/api/user/data-export" })
   }

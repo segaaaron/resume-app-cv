@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -40,7 +41,7 @@ export default function NavyExecutiveTemplate() {
   const navy = "#0e2a44"
   const ivory = "#f7f3e8"
   const ink = "#1a1a1a"
-  const accent = config.colorScheme || "#b48a3c"
+  const accent = designAccent(config.colorScheme, "#b48a3c")
   const gold = accent
 
   return (

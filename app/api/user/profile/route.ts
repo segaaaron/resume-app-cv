@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { userService } from "@/lib/controllers/user-deps"
 
 export async function PATCH(req: Request) {
@@ -10,7 +10,7 @@ export async function PATCH(req: Request) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+    return apiError(400, "Invalid JSON", { req })
   }
 
   try {

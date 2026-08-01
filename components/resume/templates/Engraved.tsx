@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -17,7 +18,7 @@ export default function EngravedTemplate() {
 
   const paper = "#f6efde"
   const ink = "#0a0a0a"
-  const gold = config.colorScheme || "#8a6d2c"
+  const gold = designAccent(config.colorScheme, "#8a6d2c")
 
   // Get first letter of last name or first name for the monogram
   const monogram = (pd.lastName || pd.firstName || "C").charAt(0).toUpperCase()

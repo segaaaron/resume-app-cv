@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
 
@@ -39,7 +40,7 @@ export default function MinimalTemplate() {
     { id: "2", name: "Inglés", level: "full_professional" as const },
   ]
 
-  const navy = config.colorScheme || "#1a2744"
+  const navy = designAccent(config.colorScheme, "#1a2744")
   const present = config.language === "en" ? "Present" : "Presente"
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }
   const LANG_DOTS: Record<string, number> = { a1: 1, a2: 2, b1: 3, b2: 3, c1: 4, c2: 5, native: 5 }

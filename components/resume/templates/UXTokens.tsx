@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -20,7 +21,7 @@ export default function UXTokensTemplate() {
   const line = "#262a33"
   const text = "#e6e7ea"
   const dim = "#8a8e97"
-  const accent = config.colorScheme || "#7cf0bd"
+  const accent = designAccent(config.colorScheme, "#7cf0bd")
 
   return (
     <div data-print-layout="single-column" style={{

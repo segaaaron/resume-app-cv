@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireUser, handleError , apiError } from "@/lib/controllers/shared"
 import { paypalEnabled } from "@/lib/paypal"
 import { getPayPalCheckoutService } from "@/lib/controllers/paypal-deps"
 
@@ -13,14 +13,14 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   if (!paypalEnabled()) {
-    return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
+    return apiError(503, "Payments not configured", { req })
   }
 
   const authResult = await requireUser(req, { csrf: true })
   if (authResult instanceof NextResponse) return authResult
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  if (!parsed.success) return apiError(422, "Invalid data", { req })
 
   try {
     const { url } = await getPayPalCheckoutService().createCheckout(

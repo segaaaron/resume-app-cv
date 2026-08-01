@@ -19,6 +19,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Archivo", "Inter", system-ui, -apple-system, sans-serif'
@@ -32,7 +33,7 @@ export default function ExecPlatineTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#a9a9ad"
+  const accent = designAccent(config.colorScheme, "#a9a9ad")
   const plat = accent
   const line = `${accent}33`
   const data = useTemplateSectionData()

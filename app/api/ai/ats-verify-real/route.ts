@@ -6,7 +6,7 @@
 // PRO only. Does NOT consume a managed download claim (this is a check, not a download).
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { canUseAdvancedAts } from "@/lib/plans"
 import { db } from "@/lib/db"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
@@ -29,11 +29,11 @@ export async function POST(req: Request) {
   // PRO/LIMITED only (see route header). `pro: true` (isActive) also passes
   // BASIC/SPRINT; gate them out BEFORE the expensive PDF render below.
   if (!canUseAdvancedAts(authResult.user.plan)) {
-    return NextResponse.json({ error: "feature_pro_only" }, { status: 403 })
+    return apiError(403, "feature_pro_only", { req })
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  if (!parsed.success) return apiError(422, "invalid_data", { req })
   const { resumeId, jobDescription } = parsed.data
   const locale = parsed.data.locale ?? "en"
 
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
     where: { id: resumeId, userId: authResult.userId },
     select: { id: true, title: true },
   })
-  if (!resume) return NextResponse.json({ error: "not_found" }, { status: 404 })
+  if (!resume) return apiError(404, "not_found", { req })
 
   const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   const printToken = createPrintToken(authResult.userId, resumeId)
@@ -56,7 +56,7 @@ export async function POST(req: Request) {
     })
     const extracted = await extractTextFromPDF(pdf)
     if (!extracted.hasExtractableText) {
-      return NextResponse.json({ error: "not_extractable" }, { status: 422 })
+      return apiError(422, "not_extractable", { req })
     }
 
     const analysis = analyzeAts({ resumeText: extracted.text, jobDescription, locale })

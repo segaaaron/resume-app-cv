@@ -4,7 +4,7 @@
 // applies a fix, without spending another AI call or hitting the cooldown.
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
 import { canUseAdvancedAts } from "@/lib/plans"
 
@@ -26,11 +26,11 @@ export async function POST(req: Request) {
   // Advanced ATS is PRO/LIMITED only. `pro: true` (isActive) also passes
   // BASIC/SPRINT; this quota-less route must gate them out explicitly.
   if (!canUseAdvancedAts(authResult.user.plan)) {
-    return NextResponse.json({ error: "feature_pro_only" }, { status: 403 })
+    return apiError(403, "feature_pro_only", { req })
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  if (!parsed.success) return apiError(422, "invalid_data", { req })
 
   try {
     const result = aiService.atsRescore(parsed.data)

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { timingSafeEqual } from "crypto"
 import { db } from "@/lib/db"
 import { recordCronRun } from "@/lib/services/cron/cronRunner"
@@ -10,11 +11,11 @@ import { recordCronRun } from "@/lib/services/cron/cronRunner"
 export async function GET(req: Request) {
   const authHeader = req.headers.get("authorization")
   const cronSecret = process.env.CRON_SECRET
-  if (!cronSecret) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!cronSecret) return apiError(401, "Unauthorized", { req })
   const expected = Buffer.from(`Bearer ${cronSecret}`)
   const received = Buffer.from(authHeader ?? "")
   if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
 
   const result = await recordCronRun("data-cleanup", async () => {

@@ -19,6 +19,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Cormorant Garamond", "Playfair Display", Georgia, serif'
@@ -96,7 +97,7 @@ export default function ExecNocturneTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#cf9f86"
+  const accent = designAccent(config.colorScheme, "#cf9f86")
   const rose = accent
   const roseHi = accent
   const line = `${accent}38`

@@ -6,7 +6,7 @@
 // PRO/LIMITED only, same gate as the other advanced-ATS routes.
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { canUseAdvancedAts } from "@/lib/plans"
 import { db } from "@/lib/db"
 import { ResumeSectionsSchema } from "@/types/resume"
@@ -29,11 +29,11 @@ export async function POST(req: Request) {
   if (authResult instanceof NextResponse) return authResult
   // `pro: true` (isActive) also lets BASIC/SPRINT through; advanced ATS is PRO/LIMITED.
   if (!canUseAdvancedAts(authResult.user.plan)) {
-    return NextResponse.json({ error: "feature_pro_only" }, { status: 403 })
+    return apiError(403, "feature_pro_only", { req })
   }
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  if (!parsed.success) return apiError(422, "invalid_data", { req })
   const { resumeId } = parsed.data
   const locale = parsed.data.locale ?? "en"
   const format = parsed.data.format ?? "txt"
@@ -45,11 +45,11 @@ export async function POST(req: Request) {
       where: { id: resumeId, userId: authResult.userId },
       select: { id: true, title: true, personalDetails: true },
     })
-    if (!resume) return NextResponse.json({ error: "not_found" }, { status: 404 })
+    if (!resume) return apiError(404, "not_found", { req })
 
     const sectionData = ResumeSectionsSchema.parse((resume.personalDetails as object) ?? {})
     const text = toAtsSafeResumeText(sectionData, locale)
-    if (!text.trim()) return NextResponse.json({ error: "empty" }, { status: 422 })
+    if (!text.trim()) return apiError(422, "empty", { req })
 
     // This produces a downloadable resume file (txt or pdf) — for a managed (LIMITED)
     // user it counts against their download cap, exactly like the normal PDF export, so
@@ -58,7 +58,7 @@ export async function POST(req: Request) {
       isManaged: authResult.user.isManaged,
       managedDownloadLimit: authResult.user.managedDownloadLimit,
     })
-    if (!claim.ok) return NextResponse.json({ error: claim.error }, { status: claim.status })
+    if (!claim.ok) return apiError(claim.status, claim.error, { req })
     managedClaimed = claim.claimed
 
     if (format === "txt") {

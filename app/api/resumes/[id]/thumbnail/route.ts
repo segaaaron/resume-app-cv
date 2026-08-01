@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { callScreenshotService } from "@/lib/pdf/pdf-service-client"
@@ -30,12 +31,12 @@ type Params = { params: Promise<{ id: string }> }
 
 export async function POST(req: Request, { params }: Params) {
   if (!checkOrigin(req)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    return apiError(403, "Forbidden", { req })
   }
 
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
 
   const { id } = await params
@@ -47,7 +48,7 @@ export async function POST(req: Request, { params }: Params) {
     where: { id, userId: session.user.id },
     select: { id: true },
   })
-  if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!resume) return apiError(404, "Not found", { req })
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"
   const printToken = createPrintToken(session.user.id, id)

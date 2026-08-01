@@ -3,13 +3,13 @@
 // Stripe equivalent redirects to Stripe's Billing Portal instead).
 // Access is kept until subscriptionEndsAt — see PayPalBillingService.
 import { NextResponse } from "next/server"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { paypalEnabled } from "@/lib/paypal"
 import { getPayPalBillingService } from "@/lib/controllers/paypal-deps"
 
 export async function POST(req: Request) {
   if (!paypalEnabled()) {
-    return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
+    return apiError(503, "Payments not configured", { req })
   }
 
   // requireAuth already enforces the CSRF origin check.

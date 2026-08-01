@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, requireUser, handleError } from "@/lib/controllers/shared"
+import { requireAuth, requireUser, handleError , apiError } from "@/lib/controllers/shared"
 import { applicationService } from "@/lib/controllers/application-deps"
 import { applicationCreateSchema } from "@/lib/services/application/ApplicationService"
 
@@ -42,12 +42,12 @@ export async function POST(req: Request) {
     try {
       body = await req.json()
     } catch {
-      return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+      return apiError(400, "Invalid JSON", { req })
     }
 
     const parsed = applicationCreateSchema.safeParse(body)
     if (!parsed.success) {
-      return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+      return apiError(422, "Invalid data", { req })
     }
 
     const app = await applicationService.create(authResult.userId, parsed.data)

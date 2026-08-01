@@ -7,6 +7,27 @@ import type { SkillItem } from "@/types/resume"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
+import { ATS_SKILLS } from "@/lib/ats/skills-dictionary"
+
+// Autocomplete suggestions in the dictionary's canonical spelling. Offering the
+// right spelling as the user types kills mistyped skills at the source
+// ("React Navite" → "React Native"), which keeps dedup, ATS score and every
+// downstream consumer clean. A native <datalist> stays non-intrusive: it only
+// suggests — the field is still free-text, so nothing the user types is blocked.
+const CASE_OVERRIDE: Record<string, string> = {
+  javascript: "JavaScript", typescript: "TypeScript", "node.js": "Node.js", nodejs: "Node.js",
+  "ci/cd": "CI/CD", html: "HTML", css: "CSS", sql: "SQL", aws: "AWS", gcp: "GCP", ios: "iOS",
+  graphql: "GraphQL", github: "GitHub", gitlab: "GitLab", postgresql: "PostgreSQL", mongodb: "MongoDB",
+  php: "PHP", api: "API", rest: "REST", "rest api": "REST API", ui: "UI", ux: "UX", seo: "SEO",
+  "c#": "C#", "c++": "C++", devops: "DevOps", saas: "SaaS", "react native": "React Native",
+}
+function displayCase(term: string): string {
+  const o = CASE_OVERRIDE[term.toLowerCase()]
+  if (o) return o
+  return term.replace(/\b\w/g, (c) => c.toUpperCase())
+}
+const SKILL_SUGGESTIONS = Array.from(new Set(ATS_SKILLS.map((s) => displayCase(s.term)))).sort((a, b) => a.localeCompare(b))
+const SKILL_DATALIST_ID = "ats-skill-suggestions"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
@@ -37,6 +58,10 @@ export default function SkillsSection() {
 
   return (
     <div className="space-y-2">
+      {/* Shared canonical-spelling suggestions for every skill input below. */}
+      <datalist id={SKILL_DATALIST_ID}>
+        {SKILL_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
+      </datalist>
       {skills.map((skill) => (
         <div key={skill.id} className="flex items-center gap-1.5">
           <input
@@ -44,6 +69,8 @@ export default function SkillsSection() {
             onChange={(e) => update(skill.id, "name", e.target.value)}
             placeholder={t("skills.placeholder")}
             title={skill.name || undefined}
+            list={SKILL_DATALIST_ID}
+            autoComplete="off"
             className="min-w-0 flex-1 outline-none text-[12.5px] font-medium transition-all duration-200"
             style={{
               height: 40, paddingLeft: 14, paddingRight: 14, borderRadius: 20,

@@ -17,6 +17,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif'
@@ -70,7 +71,7 @@ export default function ExecRegencyTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#caa24c"
+  const accent = designAccent(config.colorScheme, "#caa24c")
   const gold = accent
   const line = `${accent}38`
   const data = useTemplateSectionData()

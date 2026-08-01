@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
@@ -44,7 +45,7 @@ export default function BannerTemplate() {
   ]
 
   const navy = "#0d3b6e"
-  const accent = config.colorScheme || "#1565c0"
+  const accent = designAccent(config.colorScheme, "#1565c0")
   const L = getResumeLabels(config.language)
   const present = L.present
   const SKILL_DOTS: Record<string, number> = { beginner: 1, intermediate: 2, advanced: 3, expert: 4 }

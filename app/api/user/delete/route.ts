@@ -1,15 +1,15 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { checkOrigin } from "@/lib/csrf"
-import { handleError } from "@/lib/controllers/shared"
+import { handleError , apiError } from "@/lib/controllers/shared"
 import { userService } from "@/lib/controllers/user-deps"
 
 export async function DELETE(req: Request) {
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   try {
     const result = await userService.deleteAccount(session.user.id)

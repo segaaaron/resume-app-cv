@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { paypalEnabled } from "@/lib/paypal"
 import { getPayPalWebhookService } from "@/lib/controllers/paypal-deps"
-import { handleError } from "@/lib/controllers/shared"
+import { handleError , apiError } from "@/lib/controllers/shared"
 import { AppError } from "@/lib/services/auth/AppError"
 
 // PayPal webhook receiver. Mirror of /api/stripe/webhook.
@@ -9,7 +9,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 // over the exact bytes PayPal sent, so we must NOT parse/re-serialize it here.
 export async function POST(req: Request) {
   if (!paypalEnabled()) {
-    return NextResponse.json({ error: "Payments not configured" }, { status: 503 })
+    return apiError(503, "Payments not configured", { req })
   }
 
   const rawBody = await req.text()
@@ -22,7 +22,7 @@ export async function POST(req: Request) {
     // 500 so PayPal retries transient failures; idempotency (PaypalEvent) makes
     // retries safe.
     if (err instanceof AppError && err.code === "invalid_signature") {
-      return NextResponse.json({ error: "Invalid signature" }, { status: 400 })
+      return apiError(400, "Invalid signature", { req })
     }
     return handleError(err, { req })
   }

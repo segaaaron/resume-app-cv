@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { sessionChallengeService, handleError } from "@/lib/controllers/auth-deps"
@@ -11,18 +12,18 @@ const bodySchema = z.object({
 })
 
 export async function POST(req: NextRequest) {
-  if (!checkOrigin(req)) return NextResponse.json({ error: "forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "forbidden", { req })
 
   const body = await req.json().catch(() => null)
   const parsed = bodySchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: "invalid_input" }, { status: 400 })
+  if (!parsed.success) return apiError(400, "invalid_input", { req })
 
   try {
     const result = await sessionChallengeService.verifyChallenge(parsed.data.email, parsed.data.code, localeFromRequest(req))
     return NextResponse.json(result)
   } catch (err) {
     if (err instanceof AppError && err.code === "invalid" && err.extra?.attemptsLeft !== undefined) {
-      return NextResponse.json({ error: "invalid", attemptsLeft: err.extra.attemptsLeft }, { status: 400 })
+      return apiError(400, "invalid", { req, extra: { attemptsLeft: err.extra.attemptsLeft } })
     }
     if (err instanceof AppError && err.code === "blocked") {
       return NextResponse.json({ blocked: true, blockedUntil: err.extra?.blockedUntil }, { status: 429 })

@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
@@ -45,7 +46,7 @@ export default function RoseTemplate() {
   ]
   const hob = hobbies || "Lectura, Yoga, Viajes"
 
-  const accent = config.colorScheme || "#c9947a"
+  const accent = designAccent(config.colorScheme, "#c9947a")
   const sidebarBg = "#f5e6e0"
   const dark = "#2d2d2d"
   const L = getResumeLabels(config.language)

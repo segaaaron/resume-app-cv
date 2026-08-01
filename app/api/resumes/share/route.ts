@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { resumeService } from "@/lib/controllers/resume-deps"
 import { checkRateLimit, recordRateLimitUsage } from "@/lib/rate-limit"
 import { createLogger } from "@/lib/logger"
@@ -13,13 +13,13 @@ export async function POST(req: Request) {
 
   // DB-backed rate limit — works across all replicas (60 req/hr per user)
   const allowed = await checkRateLimit(authResult.userId, "share-toggle", 60)
-  if (!allowed) return NextResponse.json({ error: "rate_limit_exceeded" }, { status: 429 })
+  if (!allowed) return apiError(429, "rate_limit_exceeded", { req })
   recordRateLimitUsage(authResult.userId, "share-toggle").catch((err) => {
     logger.error("recordRateLimitUsage share-toggle failed", { userId: authResult.userId }, err)
   })
 
   const { resumeId } = await req.json()
-  if (!resumeId) return NextResponse.json({ error: "Missing resumeId" }, { status: 400 })
+  if (!resumeId) return apiError(400, "Missing resumeId", { req })
 
   try {
     const result = await resumeService.toggleShare(authResult.userId, resumeId)

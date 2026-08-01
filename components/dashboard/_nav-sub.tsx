@@ -51,7 +51,10 @@ export function NavItem({ label, href, icon: Icon, count, isNew, locked, active,
       />
       <span className="flex-1">{label}</span>
       {count !== null && (
-        <span className="ml-auto text-[11px] font-bold text-white rounded-lg px-2 py-[3px] inline-flex items-center justify-center min-w-[22px] h-5 border-none [font-family:var(--dash-mono)] bg-gradient-to-br from-[#00D4FF] to-[#00A8CC] shadow-[0_2px_8px_rgba(0,212,255,0.3)]">
+        <span
+          className="ml-auto inline-flex items-center justify-center shrink-0 min-w-[22px] h-[22px] px-[7px] rounded-full text-[11px] font-bold leading-none text-white tabular-nums [font-family:var(--dash-mono)] bg-[linear-gradient(145deg,#22DBFF_0%,#00B4E0_55%,#0091B8_100%)] ring-1 ring-white/50 shadow-[0_2px_6px_rgba(0,168,204,0.4),0_0_0_1px_rgba(0,145,184,0.15),inset_0_1px_0_rgba(255,255,255,0.45)]"
+          aria-label={`${count} ${label}`}
+        >
           {count}
         </span>
       )}

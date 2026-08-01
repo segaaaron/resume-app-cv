@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { checkOrigin } from "@/lib/csrf"
@@ -29,27 +30,27 @@ const patchSchema = z.discriminatedUnion("action", [
 type Params = { params: Promise<{ id: string }> }
 
 export async function PATCH(req: Request, { params }: Params) {
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   const { id } = await params
 
   let body: unknown
-  try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
+  try { body = await req.json() } catch { return apiError(400, "Invalid JSON", { req }) }
 
   const parsed = patchSchema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload", details: parsed.error.flatten() }, { status: 422 })
+  if (!parsed.success) return apiError(422, "Invalid payload", { req, extra: { details: parsed.error.flatten() } })
 
   // Fetch all fields needed across all action branches in one query
   const existing = await db.user.findUnique({
     where: { id },
     select: { isManaged: true, email: true, managedExpiresAt: true, managedDownloadLimit: true },
   })
-  if (!existing) return NextResponse.json({ error: "User not found" }, { status: 404 })
-  if (!existing.isManaged) return NextResponse.json({ error: "Not a managed user" }, { status: 400 })
+  if (!existing) return apiError(404, "User not found", { req })
+  if (!existing.isManaged) return apiError(400, "Not a managed user", { req })
 
   const data = parsed.data
 
@@ -69,7 +70,7 @@ export async function PATCH(req: Request, { params }: Params) {
     // Match POST: treat the supplied date as end-of-day UTC so picking "today"
     // does not flip into the past at the moment of update.
     managedExpiresAt.setUTCHours(23, 59, 59, 999)
-    if (managedExpiresAt <= new Date()) return NextResponse.json({ error: "expiresAt must be in the future" }, { status: 422 })
+    if (managedExpiresAt <= new Date()) return apiError(422, "expiresAt must be in the future", { req })
     await db.user.update({
       where: { id },
       data: {
@@ -117,21 +118,21 @@ export async function PATCH(req: Request, { params }: Params) {
     return NextResponse.json({ id, generatedPassword: newPassword })
   }
 
-  return NextResponse.json({ error: "Unhandled action" }, { status: 500 })
+  return apiError(500, "Unhandled action", { req })
 }
 
 export async function DELETE(req: Request, { params }: Params) {
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   const { id } = await params
 
   const existing = await db.user.findUnique({ where: { id }, select: { isManaged: true, email: true } })
-  if (!existing) return NextResponse.json({ error: "User not found" }, { status: 404 })
-  if (!existing.isManaged) return NextResponse.json({ error: "Not a managed user" }, { status: 400 })
+  if (!existing) return apiError(404, "User not found", { req })
+  if (!existing.isManaged) return apiError(400, "Not a managed user", { req })
 
   // Audit BEFORE delete — once the user row is gone, AuditLog rows with userId pointing to
   // the deleted user would cascade away. Log against the admin's userId instead, with the

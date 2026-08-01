@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { handleError } from "@/lib/controllers/shared"
+import { handleError , apiError } from "@/lib/controllers/shared"
 import { userService } from "@/lib/controllers/user-deps"
 
 export async function GET(req: Request) {
@@ -7,7 +7,7 @@ export async function GET(req: Request) {
   const token = searchParams.get("token")
 
   if (!token || typeof token !== "string") {
-    return NextResponse.json({ error: "invalid_token" }, { status: 400 })
+    return apiError(400, "invalid_token", { req })
   }
 
   try {

@@ -18,6 +18,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif'
@@ -94,7 +95,7 @@ export default function ExecOxbloodTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#caa24c"
+  const accent = designAccent(config.colorScheme, "#caa24c")
   const gold = accent
   const data = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = data

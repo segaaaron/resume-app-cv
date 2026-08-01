@@ -19,6 +19,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
@@ -31,7 +32,7 @@ export default function TplFilmmakerTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#e8a33d"
+  const accent = designAccent(config.colorScheme, "#e8a33d")
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

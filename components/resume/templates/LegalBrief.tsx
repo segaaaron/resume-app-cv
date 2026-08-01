@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -19,7 +20,7 @@ export default function LegalBriefTemplate() {
 
   const paper = "#fbfaf6"
   const ink = "#0d0d0d"
-  const red = config.colorScheme || "#7a1f1f"
+  const red = designAccent(config.colorScheme, "#7a1f1f")
   const gold = "#a07a2c"
 
   return (

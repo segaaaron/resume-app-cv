@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { stripeBillingService } from "@/lib/controllers/stripe-deps"
 import { db } from "@/lib/db"
 
@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   if (authResult instanceof NextResponse) return authResult
 
   const userPlan = await db.user.findUnique({ where: { id: authResult.userId }, select: { plan: true } })
-  if (userPlan?.plan === "LIMITED") return NextResponse.json({ error: "Not available", code: "LIMITED_NO_PORTAL" }, { status: 403 })
+  if (userPlan?.plan === "LIMITED") return apiError(403, "Not available", { req, extra: { code: "LIMITED_NO_PORTAL" } })
 
   const body = await req.json().catch(() => ({})) as Record<string, unknown>
   const rawLocale = typeof body.locale === "string" ? body.locale : ""

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireUser, handleError , apiError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
 import { resumeService } from "@/lib/controllers/resume-deps"
 import { db } from "@/lib/db"
@@ -22,7 +22,7 @@ export async function POST(req: Request, { params }: Params) {
 
   try {
     const resume = await db.resume.findFirst({ where: { id, userId: authResult.userId } })
-    if (!resume) return NextResponse.json({ error: "not_found" }, { status: 404 })
+    if (!resume) return apiError(404, "not_found", { req })
 
     // Content lives in the `personalDetails` JSON column; `sections` is layout.
     const sectionData = ResumeSectionsSchema.parse(
@@ -38,7 +38,7 @@ export async function POST(req: Request, { params }: Params) {
     // the opposite one.
     const proseTexts = collectResumeSegments(sectionData).map((s) => s.text)
     if (proseTexts.length === 0 && sectionLabels.every((l) => !l.trim())) {
-      return NextResponse.json({ error: "nothing_to_translate" }, { status: 422 })
+      return apiError(422, "nothing_to_translate", { req })
     }
     const sourceLang = detectLanguage([...proseTexts, ...sectionLabels])
     const targetLang: "es" | "en" = sourceLang === "es" ? "en" : "es"

@@ -10,6 +10,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
@@ -27,7 +28,7 @@ export default function ShowSoireeTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#c8a45c"
+  const accent = designAccent(config.colorScheme, "#c8a45c")
   const data = useTemplateSectionData()
   const {
     personalDetails: pd, summary, workExperience, education,

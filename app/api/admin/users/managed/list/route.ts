@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 
@@ -7,8 +8,8 @@ const MAX_LIMIT = 500
 
 export async function GET(request: NextRequest) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req: request })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req: request })
 
   const { searchParams } = request.nextUrl
   const cursor = searchParams.get("cursor") ?? undefined

@@ -28,6 +28,47 @@ function collapse(s: string): string {
   return normalizeTerm(s).replace(/[\s.-]/g, "")
 }
 
+/** Damerau-Levenshtein (optimal string alignment) edit distance. */
+function editDistance(a: string, b: string): number {
+  const m = a.length, n = b.length
+  if (!m) return n
+  if (!n) return m
+  const d: number[][] = Array.from({ length: m + 1 }, () => new Array<number>(n + 1).fill(0))
+  for (let i = 0; i <= m; i++) d[i][0] = i
+  for (let j = 0; j <= n; j++) d[0][j] = j
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost)
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1)
+      }
+    }
+  }
+  return d[m][n]
+}
+
+/**
+ * A listed skill the candidate mistyped still dedupes against the dictionary
+ * spelling: "React Navite" (collapsed "reactnavite") suppresses the suggestion
+ * of "react native" ("reactnative", distance 2). Guarded so distinct skills
+ * never collide: only tokens ≥6 chars, length gap ≤2, and an allowed distance
+ * that scales with length (⌈len·0.2⌉, capped at 2). So "java"/"javascript" stay
+ * apart (length gap) and "kotlin"/"koltin" (1 edit) match. Stakes are one-
+ * directional — the worst case is failing to SUGGEST a skill, never corrupting
+ * the candidate's data — which is why a fuzzy match is safe HERE and nowhere the
+ * ATS matcher scores.
+ */
+function fuzzyMatchesListed(candidate: string, listedCollapsed: Iterable<string>): boolean {
+  if (candidate.length < 6) return false
+  for (const l of listedCollapsed) {
+    if (l.length < 6 || Math.abs(l.length - candidate.length) > 2) continue
+    const tol = Math.min(2, Math.ceil(Math.max(candidate.length, l.length) * 0.2))
+    if (editDistance(candidate, l) <= tol) return true
+  }
+  return false
+}
+
 /**
  * Returns the skill worded the way the candidate actually wrote it in `original`
  * (so "React", "Node.js", "CI/CD" keep their casing), or null when no term or
@@ -72,7 +113,11 @@ export function findProvenUnlistedSkills(experienceText: string, listedSkills: s
     if (termPresent(skill.term, listedNorm)) continue
     // Spacing-insensitive backstop: catches the same skill listed under a
     // different spacing that the word-boundary matcher above misses.
-    if ([skill.term, ...(skill.aliases ?? [])].map(collapse).some((f) => f && listedCollapsed.has(f))) continue
+    const collapsedForms = [skill.term, ...(skill.aliases ?? [])].map(collapse).filter(Boolean)
+    if (collapsedForms.some((f) => listedCollapsed.has(f))) continue
+    // Typo-tolerant backstop: a mistyped listed skill ("React Navite") still
+    // dedupes against the canonical spelling. Suggestion-only, tightly guarded.
+    if (collapsedForms.some((f) => fuzzyMatchesListed(f, listedCollapsed))) continue
 
     const display = displayAsWritten(experienceText, [skill.term, ...(skill.aliases ?? [])])
     if (!display) continue

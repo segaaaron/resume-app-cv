@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 import { getResumeLabels } from "@/lib/utils/resumeLabels"
@@ -21,7 +22,7 @@ export default function BlueprintCVTemplate() {
   const lineColor = "rgba(255,255,255,0.18)"
   const white = "#f6f8fb"
   const faint = "#cfdef0"
-  const accent = config.colorScheme || "#9ec1e8"
+  const accent = designAccent(config.colorScheme, "#9ec1e8")
   const subdue = accent
 
   // Section labels for SVG floor plan

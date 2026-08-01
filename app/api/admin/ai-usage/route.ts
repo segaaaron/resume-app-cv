@@ -1,6 +1,7 @@
 // GET /api/admin/ai-usage?from=YYYY-MM-DD&to=YYYY-MM-DD&limit=50&offset=0
 // Returns per-user aggregated AI usage stats. Restricted to SUPER_ADMIN.
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
@@ -9,8 +10,8 @@ const logger = createLogger("admin-ai-usage")
 
 export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   const { searchParams } = new URL(req.url)
   const fromStr = searchParams.get("from")

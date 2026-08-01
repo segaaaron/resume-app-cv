@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import sharp from "sharp"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { resumeService } from "@/lib/controllers/resume-deps"
 
 type Params = { params: Promise<{ id: string }> }
@@ -14,23 +14,23 @@ export async function POST(req: Request, { params }: Params) {
 
   const formData = await req.formData()
   const file = formData.get("photo") as File | null
-  if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
+  if (!file) return apiError(400, "No file provided", { req })
 
   const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"]
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return NextResponse.json({ error: "Solo se permiten imágenes JPEG, PNG, WebP o GIF" }, { status: 400 })
+    return apiError(400, "Solo se permiten imágenes JPEG, PNG, WebP o GIF", { req })
   }
 
   // Limit: 300 KB
   if (file.size > 300 * 1024) {
-    return NextResponse.json({ error: "La imagen no puede superar 300 KB" }, { status: 400 })
+    return apiError(400, "La imagen no puede superar 300 KB", { req })
   }
 
   let buffer: Buffer
   try {
     buffer = Buffer.from(await file.arrayBuffer())
   } catch {
-    return NextResponse.json({ error: "No se pudo leer el archivo" }, { status: 400 })
+    return apiError(400, "No se pudo leer el archivo", { req })
   }
 
   // Magic-byte validation
@@ -39,7 +39,7 @@ export async function POST(req: Request, { params }: Params) {
   const isWebp = buffer[8] === 0x57 && buffer[9] === 0x45 && buffer[10] === 0x42 && buffer[11] === 0x50
   const isGif  = buffer[0] === 0x47 && buffer[1] === 0x49 && buffer[2] === 0x46 && buffer[3] === 0x38
   if (!isPng && !isJpeg && !isWebp && !isGif) {
-    return NextResponse.json({ error: "Invalid image format" }, { status: 400 })
+    return apiError(400, "Invalid image format", { req })
   }
 
   // Compress and normalise to WebP: max 400px wide, quality 82 — ~15-40 KB
@@ -50,7 +50,7 @@ export async function POST(req: Request, { params }: Params) {
       .webp({ quality: 82 })
       .toBuffer()
   } catch {
-    return NextResponse.json({ error: "No se pudo procesar la imagen" }, { status: 400 })
+    return apiError(400, "No se pudo procesar la imagen", { req })
   }
 
   const base64 = `data:image/webp;base64,${compressed.toString("base64")}`

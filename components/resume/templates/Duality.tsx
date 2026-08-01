@@ -2,6 +2,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { Mail, Phone, MapPin, Globe } from "lucide-react"
@@ -41,7 +42,7 @@ export default function DualityTemplate() {
   ]
 
   const dark = "#1a2744"
-  const accent = config.colorScheme || "#00bcd4"
+  const accent = designAccent(config.colorScheme, "#00bcd4")
   const cyan = accent
   const L = getResumeLabels(config.language)
   const present = L.present

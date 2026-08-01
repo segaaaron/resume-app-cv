@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireUser, handleError } from "@/lib/controllers/shared"
+import { requireUser, handleError , apiError } from "@/lib/controllers/shared"
 import { coverLetterService } from "@/lib/controllers/cover-letter-deps"
 import { callPdfService } from "@/lib/pdf/pdf-service-client"
 import { createPrintToken } from "@/lib/pdf/print-token"
@@ -22,7 +22,7 @@ export async function GET(req: Request, { params }: Params) {
     db.auditLog.create({
       data: { userId: authResult.userId, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", coverLetterId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED cover-letter failed", { userId: authResult.userId, coverLetterId: id }, err) })
-    return NextResponse.json({ error: "subscription_required" }, { status: 403 })
+    return apiError(403, "subscription_required", { req })
   }
 
   const url = new URL(req.url)
@@ -45,7 +45,7 @@ export async function GET(req: Request, { params }: Params) {
     isManaged: authResult.user.isManaged,
     managedDownloadLimit: authResult.user.managedDownloadLimit,
   })
-  if (!claim.ok) return NextResponse.json({ error: claim.error }, { status: claim.status })
+  if (!claim.ok) return apiError(claim.status, claim.error, { req })
   const managedClaimed = claim.claimed
 
   try {

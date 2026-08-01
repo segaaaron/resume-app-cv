@@ -30,19 +30,46 @@ export function handleError(
   ctx?: { userId?: string; userEmail?: string; route?: string; req?: Request },
 ): NextResponse {
   if (err instanceof AppError) {
-    // A 5xx AppError is a REAL server failure — the AI returned malformed JSON
-    // ("invalid_response_format"), a parse blew up ("parse_error"), etc. It was
-    // returned to the user as a 500 but never logged, so the Service Errors panel
-    // showed "all clear" while review/tailor were actually failing. Log it exactly
-    // like an unhandled throw. A 4xx AppError is an EXPECTED client outcome (bad
-    // input, quota, off-topic) and must stay OUT of the panel.
-    if (err.status >= 500) logHandledFailure(err.code, err.status, ctx, err)
+    // Log EVERY handled failure — 4xx and 5xx alike (CEO directive: the Service
+    // Errors panel must surface ALL server errors, not only 500s). A 5xx is a real
+    // server fault (AI returned malformed JSON, a parse blew up). A 4xx is a
+    // rejected request (bad input, quota, off-topic, plan gate) — still a failure
+    // the admin wants to see (e.g. a user who couldn't generate a cover letter).
+    // The status is stored so the panel can tell a rejection from a crash.
+    // Pure auth challenges (401) never reach here — requireUser/requireAuth return
+    // before the try — so this does not flood with unauthenticated bot traffic.
+    logHandledFailure(err.code, err.status, ctx, err)
     return NextResponse.json({ error: err.code, ...err.extra }, { status: err.status })
   }
   // Unhandled throw — always a 500, always logged.
   const message = err instanceof Error && err.message ? err.message : "unhandled error"
   logHandledFailure(message, 500, ctx, err)
   return NextResponse.json({ error: "server_error" }, { status: 500 })
+}
+
+/**
+ * Build an error RESPONSE that is also recorded in the Service Errors sink.
+ *
+ * The gap this closes: a route that `return NextResponse.json({error}, {status})`
+ * — validation 422s, quota 429s, manual 5xx — never throws, so neither
+ * `handleError` nor Next's `onRequestError` ever sees it. Those failures were
+ * invisible in the admin dashboard. Route every returned error through here and
+ * the panel becomes exhaustive: one sink, every failure, with real message +
+ * status + endpoint + who hit it.
+ *
+ * 401 (unauthenticated) is deliberately NOT logged: it is an auth challenge, not
+ * a service fault, and logging every logged-out/bot request would bury the real
+ * errors. Everything else (403/404/422/429/5xx) is recorded.
+ */
+export function apiError(
+  status: number,
+  code: string,
+  ctx?: { req?: Request; route?: string; userId?: string; userEmail?: string; extra?: Record<string, unknown> },
+): NextResponse {
+  if (status !== 401) {
+    logHandledFailure(code, status, ctx && { userId: ctx.userId, userEmail: ctx.userEmail, route: ctx.route, req: ctx.req }, undefined)
+  }
+  return NextResponse.json({ error: code, ...(ctx?.extra ?? {}) }, { status })
 }
 
 /**

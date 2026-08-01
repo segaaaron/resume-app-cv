@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -11,27 +12,27 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   if (!checkOrigin(req)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    return apiError(403, "Forbidden", { req })
   }
 
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
   if (session.user.role !== "SUPER_ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    return apiError(403, "Forbidden", { req })
   }
 
   const body = await req.json().catch(() => null)
   const parsed = schema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload" }, { status: 400 })
+    return apiError(400, "Invalid payload", { req })
   }
 
   const { userId } = parsed.data
 
   if (userId === session.user.id) {
-    return NextResponse.json({ error: "Cannot invalidate your own session" }, { status: 400 })
+    return apiError(400, "Cannot invalidate your own session", { req })
   }
 
   const target = await db.user.findUnique({
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
     select: { id: true, deletedAt: true },
   })
   if (!target || target.deletedAt) {
-    return NextResponse.json({ error: "User not found" }, { status: 404 })
+    return apiError(404, "User not found", { req })
   }
 
   const now = new Date()

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { resumeService } from "@/lib/controllers/resume-deps"
 import { snapshotSchema } from "@/lib/services/resume/ResumeService"
 
@@ -14,7 +14,7 @@ export async function GET(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const resumeId = searchParams.get("resumeId")
-  if (!resumeId) return NextResponse.json({ error: "resumeId required" }, { status: 400 })
+  if (!resumeId) return apiError(400, "resumeId required", { req })
 
   try {
     const versions = await resumeService.getVersions(authResult.userId, resumeId)
@@ -30,12 +30,12 @@ export async function POST(req: Request) {
   if (authResult instanceof NextResponse) return authResult
 
   const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+  if (!body) return apiError(400, "Invalid JSON", { req })
 
   const { resumeId, label } = body
 
   if (!resumeId || typeof resumeId !== "string") {
-    return NextResponse.json({ error: "resumeId required" }, { status: 400 })
+    return apiError(400, "resumeId required", { req })
   }
 
   const parsed = snapshotSchema.safeParse(body.snapshot)
@@ -66,7 +66,7 @@ export async function DELETE(req: Request) {
 
   const { searchParams } = new URL(req.url)
   const id = searchParams.get("id")
-  if (!id) return NextResponse.json({ error: "id required" }, { status: 400 })
+  if (!id) return apiError(400, "id required", { req })
 
   try {
     await resumeService.deleteVersion(authResult.userId, id)

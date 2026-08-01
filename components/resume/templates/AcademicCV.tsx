@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
@@ -17,7 +18,7 @@ export default function AcademicCVTemplate() {
 
   const paper = "#fff"
   const ink = "#111"
-  const red = config.colorScheme || "#7a0010"
+  const red = designAccent(config.colorScheme, "#7a0010")
   const grey = "#666"
 
   return (

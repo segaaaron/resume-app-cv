@@ -17,6 +17,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Cormorant Garamond", "Playfair Display", Georgia, "Times New Roman", serif'
@@ -103,7 +104,7 @@ export default function ExecPorcelainTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#b08d4f"
+  const accent = designAccent(config.colorScheme, "#b08d4f")
   const champ = accent
   const data = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, languages, skills, certifications } = data

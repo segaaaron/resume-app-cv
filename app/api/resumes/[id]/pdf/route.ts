@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { createLogger } from "@/lib/logger"
@@ -17,7 +18,7 @@ type Params = { params: Promise<{ id: string }> }
 export async function GET(req: Request, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    return apiError(401, "Unauthorized", { req })
   }
 
   const { id } = await params
@@ -36,7 +37,7 @@ export async function GET(req: Request, { params }: Params) {
     }),
   ])
 
-  if (!resume) return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!resume) return apiError(404, "Not found", { req })
 
   const etag = `"${resume.id}-${resume.updatedAt.getTime()}"`
   if (req.headers.get("if-none-match") === etag) {
@@ -62,7 +63,7 @@ export async function GET(req: Request, { params }: Params) {
     db.auditLog.create({
       data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id } },
     }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })
-    return NextResponse.json({ error: "subscription_required" }, { status: 403 })
+    return apiError(403, "subscription_required", { req })
   }
 
   // Premium (PRO) templates require a plan that grants them (SPRINT/PRO/LIMITED/admin).
@@ -70,7 +71,7 @@ export async function GET(req: Request, { params }: Params) {
   // template via direct API. Runs BEFORE the free-tier daily count.
   const allowsPremium = isSuperAdmin(user?.role) || canUsePremiumTemplates(eff)
   if (resume.templateId && PRO_IDS.includes(resume.templateId) && !allowsPremium) {
-    return NextResponse.json({ error: "premium_template_requires_upgrade" }, { status: 403 })
+    return apiError(403, "premium_template_requires_upgrade", { req })
   }
 
   // Free-tier daily download cap (rolling 24h, auto-resetting — no cron, no DB
@@ -81,7 +82,7 @@ export async function GET(req: Request, { params }: Params) {
       db.auditLog.create({
         data: { userId: session.user.id, action: "FREE_DOWNLOAD_BLOCKED", metadata: { type: "pdf", resumeId: id, reason: "daily_cap", cap: UNSUBSCRIBED_DAILY_PDF_CAP } },
       }).catch((err) => { logger.error("auditLog FREE_DOWNLOAD_BLOCKED failed", { userId: session.user.id, resumeId: id }, err) })
-      return NextResponse.json({ error: "free_daily_download_cap", limit: UNSUBSCRIBED_DAILY_PDF_CAP }, { status: 429 })
+      return apiError(429, "free_daily_download_cap", { req, extra: { limit: UNSUBSCRIBED_DAILY_PDF_CAP } })
     }
   }
 
@@ -89,7 +90,7 @@ export async function GET(req: Request, { params }: Params) {
     isManaged: user?.isManaged ?? false,
     managedDownloadLimit: user?.managedDownloadLimit ?? null,
   })
-  if (!claim.ok) return NextResponse.json({ error: claim.error }, { status: claim.status })
+  if (!claim.ok) return apiError(claim.status, claim.error, { req })
   const managedClaimed = claim.claimed
 
   const internalUrl = process.env.INTERNAL_APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"

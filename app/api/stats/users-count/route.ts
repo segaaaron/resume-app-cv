@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { db } from "@/lib/db"
 import { unstable_cache } from "next/cache"
 
@@ -12,11 +13,11 @@ const getCachedUserCount = unstable_cache(
   { revalidate: 3600 }
 )
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const count = await getCachedUserCount()
     return NextResponse.json({ count })
   } catch {
-    return NextResponse.json({ error: "unavailable" }, { status: 503 })
+    return apiError(503, "unavailable", { req })
   }
 }

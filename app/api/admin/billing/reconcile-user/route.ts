@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
@@ -29,21 +30,21 @@ function mapStripeStatus(status: Stripe.Subscription.Status): SubscriptionStatus
 }
 
 export async function POST(req: Request) {
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  if (session.user.role !== "SUPER_ADMIN") return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
+  if (session.user.role !== "SUPER_ADMIN") return apiError(403, "Forbidden", { req })
 
   if (!stripeEnabled() || !stripe) {
-    return NextResponse.json({ error: "Stripe not configured" }, { status: 503 })
+    return apiError(503, "Stripe not configured", { req })
   }
 
   let body: unknown
-  try { body = await req.json() } catch { return NextResponse.json({ error: "Invalid JSON" }, { status: 400 }) }
+  try { body = await req.json() } catch { return apiError(400, "Invalid JSON", { req }) }
 
   const parsed = schema.safeParse(body)
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload" }, { status: 422 })
+  if (!parsed.success) return apiError(422, "Invalid payload", { req })
 
   const { userId } = parsed.data
 
@@ -51,10 +52,10 @@ export async function POST(req: Request) {
     where:  { id: userId },
     select: { id: true, stripeCustomerId: true, plan: true, subscriptionStatus: true, subscriptionEndsAt: true, deletedAt: true },
   })
-  if (!user || user.deletedAt) return NextResponse.json({ error: "User not found" }, { status: 404 })
+  if (!user || user.deletedAt) return apiError(404, "User not found", { req })
 
   if (!user.stripeCustomerId) {
-    return NextResponse.json({ error: "User has no Stripe customer" }, { status: 400 })
+    return apiError(400, "User has no Stripe customer", { req })
   }
 
   const before = { plan: user.plan, subscriptionStatus: user.subscriptionStatus, subscriptionEndsAt: user.subscriptionEndsAt }

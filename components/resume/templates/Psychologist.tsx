@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -20,7 +21,7 @@ export default function PsychologistTemplate() {
 
   const cream = "#f6f0e6"
   const ink = "#2b2218"
-  const olive = config.colorScheme || "#6f7a4a"
+  const olive = designAccent(config.colorScheme, "#6f7a4a")
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const terracotta = "#c97a55"
 

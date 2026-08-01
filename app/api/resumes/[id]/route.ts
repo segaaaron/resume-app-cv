@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { resumeService, } from "@/lib/controllers/resume-deps"
 import { resumePatchSchema } from "@/lib/services/resume/ResumeService"
 import { AppError } from "@/lib/services/auth/AppError"
@@ -29,12 +29,12 @@ export async function PATCH(req: Request, { params }: Params) {
   try {
     body = await req.json()
   } catch {
-    return NextResponse.json({ error: "Invalid JSON" }, { status: 400 })
+    return apiError(400, "Invalid JSON", { req })
   }
 
   const parsed = resumePatchSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+    return apiError(422, "Invalid data", { req })
   }
 
   try {

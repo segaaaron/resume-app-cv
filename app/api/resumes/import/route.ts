@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { checkOrigin } from "@/lib/csrf"
@@ -24,16 +25,16 @@ function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 
 export async function POST(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
 
-  if (!checkOrigin(req)) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  if (!checkOrigin(req)) return apiError(403, "Forbidden", { req })
 
   const dbUser = await db.user.findUnique({ where: { id: session.user.id }, select: { plan: true, role: true, subscriptionEndsAt: true } })
-  if (!dbUser) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!dbUser) return apiError(401, "Unauthorized", { req })
 
   const formData = await req.formData()
   const file = formData.get("file") as File | null
-  if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 })
+  if (!file) return apiError(400, "No file provided", { req })
 
   const ALLOWED_MIME = [
     "application/pdf",
@@ -42,11 +43,11 @@ export async function POST(req: Request) {
   ]
   const ext = file.name.split(".").pop()?.toLowerCase()
   if (!["pdf", "docx", "doc"].includes(ext ?? "") || !ALLOWED_MIME.includes(file.type)) {
-    return NextResponse.json({ error: "Formato no soportado. Usa PDF o DOCX." }, { status: 400 })
+    return apiError(400, "Formato no soportado. Usa PDF o DOCX.", { req })
   }
 
   if (file.size > 5 * 1024 * 1024) {
-    return NextResponse.json({ error: "El archivo no puede superar 5 MB" }, { status: 400 })
+    return apiError(400, "El archivo no puede superar 5 MB", { req })
   }
 
   // Validate magic bytes: PDF starts with %PDF, DOCX/DOC starts with PK (ZIP)
@@ -54,7 +55,7 @@ export async function POST(req: Request) {
   const isPdf  = header[0] === 0x25 && header[1] === 0x50 && header[2] === 0x44 && header[3] === 0x46
   const isZip  = header[0] === 0x50 && header[1] === 0x4b
   if (!isPdf && !isZip) {
-    return NextResponse.json({ error: "Formato no soportado. Usa PDF o DOCX." }, { status: 400 })
+    return apiError(400, "Formato no soportado. Usa PDF o DOCX.", { req })
   }
 
   // ── Anti-abuse import quota (per plan, rolling window) ────────────────────
@@ -104,14 +105,14 @@ export async function POST(req: Request) {
     const msg = err instanceof Error && err.message === "pdf_parse_timeout"
       ? "El archivo tardó demasiado en procesarse."
       : "No se pudo leer el archivo. Asegúrate de que no esté protegido con contraseña."
-    return NextResponse.json({ error: msg }, { status: 422 })
+    return apiError(422, String(msg), { req })
   }
 
   // Strip null bytes — some PDFs embed them; PostgreSQL rejects 0x00 in UTF-8 columns
   rawText = rawText.replace(/\x00/g, "")
 
   if (!rawText.trim()) {
-    return NextResponse.json({ error: "El archivo está vacío o no tiene texto legible" }, { status: 422 })
+    return apiError(422, "El archivo está vacío o no tiene texto legible", { req })
   }
 
   // ── 2. Detect language ───────────────────────────────────────────────────

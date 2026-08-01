@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
-import { handleError } from "@/lib/controllers/shared"
+import { handleError , apiError } from "@/lib/controllers/shared"
 import { referralService } from "@/lib/controllers/referral-deps"
 
 // GET /api/referrals — get current user's referral code, stats, cycle count and reward tier
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth()
-  if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  if (!session?.user?.id) return apiError(401, "Unauthorized", { req })
 
   // Managed users (plan=LIMITED) cannot use referrals — feature unavailable.
   if (session.user.isManaged) {

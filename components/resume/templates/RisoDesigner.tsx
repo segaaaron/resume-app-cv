@@ -1,6 +1,7 @@
 "use client"
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
@@ -19,7 +20,7 @@ export default function RisoDesignerTemplate() {
   const present = L.present
 
   const cream = "#f4e9d3"
-  const red = config.colorScheme || "#e94f37"
+  const red = designAccent(config.colorScheme, "#e94f37")
   const blue = "#1d3557"
 
   return (

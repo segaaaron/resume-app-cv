@@ -19,6 +19,7 @@
 
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
+import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SANS = 'var(--font-jakarta), "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif'
@@ -111,7 +112,7 @@ export default function ExecCobaltTemplate() {
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
-  const accent = config.colorScheme || "#aeb9cc"
+  const accent = designAccent(config.colorScheme, "#aeb9cc")
   const silver = accent
   const line = `${accent}2e`
   const data = useTemplateSectionData()

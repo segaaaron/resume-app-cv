@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic"
 
 import { NextResponse } from "next/server"
 import { z } from "zod"
-import { requireAuth, handleError } from "@/lib/controllers/shared"
+import { requireAuth, handleError , apiError } from "@/lib/controllers/shared"
 import { stripeCheckoutService } from "@/lib/controllers/stripe-deps"
 import { isEUUser, getClientIp } from "@/lib/geoip"
 import { db } from "@/lib/db"
@@ -24,14 +24,14 @@ export async function POST(req: Request) {
   if (authResult instanceof NextResponse) return authResult
 
   const userPlan = await db.user.findUnique({ where: { id: authResult.userId }, select: { plan: true } })
-  if (userPlan?.plan === "LIMITED") return NextResponse.json({ error: "Not available", code: "LIMITED_NO_CHECKOUT" }, { status: 403 })
+  if (userPlan?.plan === "LIMITED") return apiError(403, "Not available", { req, extra: { code: "LIMITED_NO_CHECKOUT" } })
 
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
-  if (!parsed.success) return NextResponse.json({ error: "Invalid data" }, { status: 422 })
+  if (!parsed.success) return apiError(422, "Invalid data", { req })
 
   const [isEU, ip] = await Promise.all([isEUUser(), getClientIp()])
   if (isEU && !parsed.data.consent) {
-    return NextResponse.json({ error: "eu_consent_required" }, { status: 422 })
+    return apiError(422, "eu_consent_required", { req })
   }
 
   try {
