@@ -56,12 +56,16 @@ function clearAuthCookiesAndRedirect(request: NextRequest, locale: string): Next
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Redirect non-www to www in production
+  // Redirect non-www to www in production. Build the target from a FIXED absolute
+  // base: cloning request.nextUrl and only overriding .host left the app's internal
+  // :3000 port (and could leave http:) in place, so the apex redirected to the broken
+  // https://www.readycvv.com:3000/… . Only the path + query carry over.
   const host = request.headers.get("host") ?? ""
   if (process.env.NODE_ENV === "production" && host === "readycvv.com") {
-    const url = request.nextUrl.clone()
-    url.host = "www.readycvv.com"
-    return NextResponse.redirect(url, { status: 301 })
+    return NextResponse.redirect(
+      `https://www.readycvv.com${request.nextUrl.pathname}${request.nextUrl.search}`,
+      { status: 301 },
+    )
   }
 
   // Skip locale routing for non-public paths
