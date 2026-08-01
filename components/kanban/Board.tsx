@@ -7,6 +7,7 @@ import KanbanColumn from "./Column"
 import { Dialog, DialogContent, DialogClose } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { RejectModal, FoundJobModal, ClearBoardModal, RejectionDetailModal } from "./_board-modals"
 
 // ── CSS variables ─────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
       if (!res.ok) { toast.error(t("create_error")); return }
       const data: ApplicationCard = await res.json()
       addApplication(data)
+      track("application_tracked", { status: "APPLIED" })
       setAddOpen(false)
       setJobTitle(""); setCompany(""); setModalidad("Remoto")
       toast.success(t("create_success"))
@@ -151,6 +153,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
     if (targetStatus === "WISHLIST") {
       const card = applications.find(a => a.id === draggingId)
       moveApplication(draggingId, "WISHLIST")
+      track("application_status_changed", { to_status: "WISHLIST" })
       apiFetch(`/api/applications/${draggingId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -162,6 +165,7 @@ export default function KanbanBoard({ initialApplications }: { initialApplicatio
     }
 
     moveApplication(draggingId, targetStatus)
+    track("application_status_changed", { to_status: targetStatus })
     apiFetch(`/api/applications/${draggingId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { hasStripeBillingPortal } from "@/lib/plans"
 import { format } from "date-fns"
 import { es, enUS } from "date-fns/locale"
@@ -154,6 +155,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       })
       const { url } = await res.json()
       if (!res.ok || !url) { toast.error(t("portal_error")); return }
+      track("billing_portal_opened", { provider: "stripe" })
       window.location.href = url
     } catch {
       toast.error(t("portal_error"))
@@ -171,6 +173,7 @@ export default function SettingsForm({ user }: { user: UserData }) {
       const res = await apiFetch(cancelUrl, { method: "POST" })
       const data = await res.json()
       if (res.ok && data.success) {
+        track("subscription_canceled", { plan: user.plan, provider: user.paymentProvider === "PAYPAL" ? "paypal" : "stripe" })
         setSubscriptionStatus("CANCELED")
         toast.success(t("cancel_success"))
       } else {

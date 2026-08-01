@@ -13,6 +13,9 @@ import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
 import type { EngineSimulation } from "@/lib/ats/engines"
+import { track } from "@/lib/analytics/track"
+import { scoreBucket } from "@/lib/analytics/user-type"
+import { useEditorPro } from "../EditorContext"
 
 export interface ATSSubScores {
   hardSkills: number | null
@@ -110,6 +113,7 @@ export function useATSScore() {
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
+  const { plan } = useEditorPro()
   const { sectionData, templateId } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, templateId: s.config?.templateId }))
   )
@@ -205,11 +209,12 @@ export function useATSScore() {
           if (handled || res.status === 429 || res.status === 403) return
         }
         if (res.status === 400) { toast.error(t("not_enough_data")); return }
-        if (res.status === 422) { setOffTopic(true); return }
+        if (res.status === 422) { track("ai_error_shown", { endpoint: "ats-score", error_type: "offtopic" }); setOffTopic(true); return }
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setAtsResult(data)
         await onSuccess()
+        track("ai_ats_scored", { plan, score_bucket: scoreBucket(typeof data?.score === "number" ? data.score : 0) })
       }
       lastKeyRef.current = key
       setAnalyzedInputKey(`${mode}:${text}`)
@@ -321,6 +326,7 @@ export function useATSScore() {
       }
       if (!res.ok) { toast.error(t("verify_error")); return }
       setVerifyResult(await res.json())
+      track("ats_verified_real", { plan })
     } catch {
       toast.error(t("verify_error"))
     } finally {

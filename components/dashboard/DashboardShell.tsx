@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Loader2, Plus } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
+import { track } from "@/lib/analytics/track"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 import DashboardNav from "./DashboardNav"
@@ -169,6 +170,22 @@ export default function DashboardShell({
   const locale = useLocale()
 
   const segment = pathname.split("/dashboard/")[1]?.split("/")[0] ?? ""
+
+  // Fire once per dashboard section entered. Maps the URL segment to the event's
+  // enum (hyphen → underscore); admin panels are internal and not tracked.
+  useEffect(() => {
+    const SECTIONS: Record<string, "resumes" | "cover_letters" | "applications" | "referrals" | "settings" | "jobs"> = {
+      resumes: "resumes",
+      "cover-letters": "cover_letters",
+      applications: "applications",
+      referrals: "referrals",
+      settings: "settings",
+      jobs: "jobs",
+    }
+    const section = SECTIONS[segment]
+    if (section) track("dashboard_viewed", { section })
+  }, [segment])
+
   const segments: Record<string, string> = {
     resumes: t("page_resumes"),
     "cover-letters": t("page_letters"),

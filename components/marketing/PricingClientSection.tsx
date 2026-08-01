@@ -4,8 +4,9 @@ import { TimelineContent } from "@/components/ui/timeline-animation"
 import { VerticalCutReveal } from "@/components/ui/vertical-cut-reveal"
 import { BadgeCheck, Check, FileText, Zap, Crown } from "lucide-react"
 import { motion } from "framer-motion"
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
 import PricingButtons from "@/components/marketing/PricingButtons"
+import { track } from "@/lib/analytics/track"
 import { PRICING } from "@/lib/pricing"
 import ManageBillingButton from "@/components/marketing/ManageBillingButton"
 
@@ -118,6 +119,22 @@ export default function PricingClientSection({
 }: Props) {
   const sectionRef = useRef<HTMLDivElement>(null)
   const [billing, setBilling] = useState<"annual" | "monthly">("monthly")
+
+  // Fires once when the pricing section mounts. Complements Umami's automatic
+  // pageview by marking it as an explicit funnel step for funnel reports.
+  // Also detects a return from an abandoned Stripe checkout (cancel_url carries
+  // ?checkout=cancelled) → emits checkout_abandoned, then strips the marker so a
+  // reload/bookmark can't refire it.
+  useEffect(() => {
+    track("pricing_viewed")
+    if (typeof window === "undefined") return
+    const url = new URL(window.location.href)
+    if (url.searchParams.get("checkout") === "cancelled") {
+      track("checkout_abandoned", {})
+      url.searchParams.delete("checkout")
+      window.history.replaceState({}, "", url.toString())
+    }
+  }, [])
 
   const t = (es: string, en: string) => (isEs ? es : en)
 

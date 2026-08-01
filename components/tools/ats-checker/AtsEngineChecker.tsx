@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useTranslations, useLocale } from "next-intl"
 import { ScanSearch, Sparkles, ArrowRight } from "lucide-react"
 import { simulateAtsEngines, type EngineSimulation } from "@/lib/ats/engines"
+import { track } from "@/lib/analytics/track"
 import type { Locale } from "@/lib/ats/signals"
 import AtsEngineMatrix from "@/components/editor/AtsEngineMatrix"
 
@@ -35,7 +36,12 @@ export default function AtsEngineChecker() {
     }
     setError(null)
     // Deterministic, synchronous, client-side. Same signals → same verdicts as PRO.
-    setResult(simulateAtsEngines(trimmed, locale))
+    const sim = simulateAtsEngines(trimmed, locale)
+    setResult(sim)
+    // Bucket by how cleanly the engines parse it (the public tool has no 0-100 score).
+    const risky = sim.engines.filter((e) => e.verdict === "risk").length
+    const bucket = risky === 0 ? "high" : risky <= 1 ? "mid" : "low"
+    track("ats_checker_used", { result_bucket: bucket })
   }
 
   return (

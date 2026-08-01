@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 
 interface Props {
   open: boolean
@@ -33,6 +34,8 @@ export default function UpgradeModal({ open, onClose }: Props) {
 
   async function handleCheckout(plan: "monthly" | "annual") {
     setLoading(plan)
+    const cycle = plan === "annual" ? "annual" : "monthly"
+    track("upgrade_cta_clicked", { from_feature: "editor" })
     try {
       const res = await apiFetch("/api/stripe/checkout", {
         method: "POST",
@@ -51,7 +54,10 @@ export default function UpgradeModal({ open, onClose }: Props) {
         return
       }
 
-      if (data.url) window.location.href = data.url
+      if (data.url) {
+        track("checkout_started", { plan: "PRO", billing_cycle: cycle, provider: "stripe" })
+        window.location.href = data.url
+      }
     } catch {
       toast.error(t("toast_connection_error"))
     } finally {

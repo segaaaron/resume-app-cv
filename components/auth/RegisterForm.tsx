@@ -10,6 +10,7 @@ import { z } from "zod"
 import { Loader2, Eye, EyeOff, Zap, Mail, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { useTranslations, useLocale } from "next-intl"
 import OtpInput from "@/components/auth/OtpInput"
 
@@ -60,6 +61,7 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
 
   async function onSubmit(data: FormData) {
     setEmailConflict(null)
+    track("signup_started", { locale: locale === "en" ? "en" : "es", source: refParam ? "referral" : undefined })
     const res = await apiFetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -99,6 +101,7 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
       const body = await res.json().catch(() => ({}))
 
       if (res.ok && body.success) {
+        track("signup_completed", { locale: locale === "en" ? "en" : "es" })
         await signIn("credentials", {
           email: submittedEmail,
           password: submittedPassword,

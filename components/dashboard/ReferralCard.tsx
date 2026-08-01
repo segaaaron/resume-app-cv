@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { isActive } from "@/lib/plans"
+import { track } from "@/lib/analytics/track"
 
 interface NextTier {
   tier: number
@@ -74,6 +75,7 @@ export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: 
   async function handleCopy() {
     if (!referralUrl) return
     await navigator.clipboard.writeText(referralUrl)
+    track("referral_link_shared", { channel: "copy" })
     setCopied(true)
     toast.success(t("copied"))
     setTimeout(() => setCopied(false), 2000)

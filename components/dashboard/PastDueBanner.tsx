@@ -6,6 +6,7 @@ import { useTranslations, useLocale } from "next-intl"
 import { AlertTriangle, X, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 
 export default function PastDueBanner() {
   const t = useTranslations("dashboard.past_due_banner")
@@ -19,6 +20,7 @@ export default function PastDueBanner() {
 
   async function openPortal() {
     setLoading(true)
+    track("past_due_recover_clicked")
     try {
       const res = await apiFetch("/api/stripe/portal", {
         method: "POST",
@@ -30,7 +32,10 @@ export default function PastDueBanner() {
         toast.error(t("error"))
         return
       }
-      if (data.url) window.location.href = data.url
+      if (data.url) {
+        track("billing_portal_opened", { provider: "stripe" })
+        window.location.href = data.url
+      }
     } finally {
       setLoading(false)
     }

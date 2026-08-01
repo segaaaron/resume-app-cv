@@ -8,6 +8,7 @@ import { useEditorPro } from "@/components/editor/EditorContext"
 import { Sparkles, Loader2, Lock, Wand2, Check, PenLine } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import SummaryVersionModal, { type SummaryVersion } from "./SummaryVersionModal"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
@@ -19,7 +20,7 @@ import { useRouter } from "next/navigation"
 export default function SummarySection() {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
-  const { isPro, openUpgrade } = useEditorPro()
+  const { isPro, plan, openUpgrade } = useEditorPro()
   const locale = useLocale()
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
@@ -132,6 +133,7 @@ export default function SummarySection() {
         return
       }
 
+      track("ai_summary_generated", { plan, mode: "generate" })
       showVersions(data.versions as string[], data.types as string[] | undefined)
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
@@ -197,6 +199,7 @@ export default function SummarySection() {
         return
       }
 
+      track("ai_summary_generated", { plan, mode: "improve" })
       showVersions(data.versions as string[], data.types as string[] | undefined)
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)

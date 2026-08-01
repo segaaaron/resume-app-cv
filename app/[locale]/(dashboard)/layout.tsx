@@ -5,6 +5,9 @@ import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
 import DashboardShell from "@/components/dashboard/DashboardShell"
 import PastDueBanner from "@/components/dashboard/PastDueBanner"
+import AnalyticsIdentity from "@/components/analytics/AnalyticsIdentity"
+import { deriveUserType, tenureBucket } from "@/lib/analytics/user-type"
+import type { IdentityTraits } from "@/lib/analytics/events"
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -39,10 +42,40 @@ export default async function DashboardLayout({
 
   const pastDueBanner = session.user.subscriptionStatus === "PAST_DUE" ? <PastDueBanner /> : undefined
 
-  const [resumeCount, letterCount] = await Promise.all([
+  const [resumeCount, letterCount, applicationCount, dbUser] = await Promise.all([
     db.resume.count({ where: { userId: session.user.id } }),
     db.coverLetter.count({ where: { userId: session.user.id } }),
+    db.application.count({ where: { userId: session.user.id } }),
+    db.user.findUnique({
+      where: { id: session.user.id },
+      select: { createdAt: true, referredBy: true, paymentProvider: true },
+    }),
   ])
+
+  // Non-PII session traits for Umami identify(). Segments only — never email/id.
+  const subStatus = session.user.subscriptionStatus ?? "NONE"
+  const provider: IdentityTraits["provider"] = !isPro
+    ? "none"
+    : dbUser?.paymentProvider === "PAYPAL"
+      ? "paypal"
+      : "stripe"
+  const identityTraits: IdentityTraits = {
+    user_type: deriveUserType({
+      isAuthenticated: true,
+      isManaged: !!session.user.isManaged,
+      hasActiveAccess: isPro,
+      wasPaying: !isPro && subStatus !== "NONE",
+      resumeCount,
+      coverLetterCount: letterCount,
+      applicationCount,
+    }),
+    plan: session.user.plan ?? "UNSUBSCRIBED",
+    provider,
+    locale: locale === "en" ? "en" : "es",
+    tenure: dbUser ? tenureBucket(dbUser.createdAt) : "new",
+    referred: !!dbUser?.referredBy,
+    is_authenticated: true,
+  }
 
   return (
     <DashboardShell
@@ -58,6 +91,7 @@ export default async function DashboardLayout({
       resumeCount={resumeCount}
       letterCount={letterCount}
     >
+      <AnalyticsIdentity traits={identityTraits} />
       {children}
     </DashboardShell>
   )

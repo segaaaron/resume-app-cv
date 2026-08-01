@@ -49,6 +49,19 @@ const nextConfig: NextConfig = {
       { source: "/:locale/pro-disenos", destination: "/:locale/templates#pro", permanent: true },
     ]
   },
+  async rewrites() {
+    // Umami analytics proxied same-origin so the tracker + collect endpoint stay
+    // under readycvv.com: keeps the CSP at `'self'` (no external whitelist) and
+    // side-steps ad blockers. `beforeFiles` runs ahead of routes/filesystem, and
+    // both paths are already excluded from the i18n middleware matcher
+    // (`/api/*` and any path with a `.`), so no locale prefix is injected.
+    return {
+      beforeFiles: [
+        { source: "/script.js", destination: "https://analytics.yasminmedrano.com/script.js" },
+        { source: "/api/send", destination: "https://analytics.yasminmedrano.com/api/send" },
+      ],
+    }
+  },
   async headers() {
     return [
       {

@@ -16,6 +16,8 @@ import { useAICall } from "@/hooks/useAICall"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
+import { track } from "@/lib/analytics/track"
+import { useEditorPro } from "./EditorContext"
 
 interface TailorResult {
   summary: string | null
@@ -50,6 +52,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
+  const { plan } = useEditorPro()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
@@ -126,7 +129,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
         })
         if (handled || res.status === 429 || res.status === 403) return
       }
-      if (res.status === 422) { toast.error(t("off_topic")); return }
+      if (res.status === 422) { track("ai_error_shown", { endpoint: "tailor-cv", error_type: "offtopic" }); toast.error(t("off_topic")); return }
       if (!res.ok) { toast.error(t("error")); return }
       const data = await res.json() as TailorResult
       setResult(data)
@@ -134,6 +137,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
       lastTailorKeyRef.current = tailorKey
       setCooldownUntil(Date.now() + 120_000)
       await onSuccess()
+      track("ai_tailor_completed", { plan, added_count: Array.isArray(data?.missingSkills) ? data.missingSkills.length : undefined })
     } catch {
       toast.error(t("error"))
     } finally {

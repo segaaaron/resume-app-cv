@@ -7,6 +7,8 @@ import { useLocale, useTranslations } from "next-intl"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
+import { isProTemplate } from "@/components/editor/template-switcher"
 
 interface Props {
   templateId: string
@@ -21,6 +23,7 @@ export default function UseTemplateButton({ templateId, label }: Props) {
   const [loading, setLoading] = useState(false)
 
   async function handleClick() {
+    track("template_use_clicked", { template_id: templateId, is_pro: isProTemplate(templateId) })
     if (!session?.user) {
       router.push(`/${locale}/register`)
       return
@@ -41,6 +44,7 @@ export default function UseTemplateButton({ templateId, label }: Props) {
       }
 
       const resume = await res.json()
+      track("resume_created", { method: "template", template_id: templateId })
       router.push(`/${locale}/editor/${resume.id}`)
     } catch {
       toast.error(t("create_error"))

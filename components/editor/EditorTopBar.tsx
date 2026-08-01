@@ -13,6 +13,7 @@ import { useShallow } from "zustand/react/shallow"
 import { useLocale, useTranslations } from "next-intl"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track, trackFirstDownloadOnce } from "@/lib/analytics/track"
 import UnsavedChangesModal from "./UnsavedChangesModal"
 import PlaceholderWarningModal from "./PlaceholderWarningModal"
 import { detectPlaceholders } from "@/lib/detectPlaceholders"
@@ -173,6 +174,7 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
 
   function handleDownloadLockedClick() {
     // Freemium funnel: paywall on download intent → shared UpgradeModal.
+    track("paywall_hit", { feature: "download", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
     openUpgradeModal("download")
   }
 
@@ -197,6 +199,7 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
           (res.status === 429 && body?.error === "free_daily_download_cap") ||
           (res.status === 403 && body?.error === "premium_template_requires_upgrade")
         ) {
+          track("paywall_hit", { feature: "download", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
           openUpgradeModal("download")
           return
         }
@@ -216,6 +219,8 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
       a.click()
       document.body.removeChild(a)
       URL.revokeObjectURL(url)
+      track("pdf_downloaded", { type: "resume", plan: session?.user?.plan ?? "UNSUBSCRIBED" })
+      trackFirstDownloadOnce({ plan: session?.user?.plan ?? "UNSUBSCRIBED" })
       triggerThumbnail()
     } catch {
       toast.error(t("print.error_pdf"))

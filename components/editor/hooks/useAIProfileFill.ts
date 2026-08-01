@@ -11,6 +11,8 @@ import { useAICall } from "@/hooks/useAICall"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
+import { track } from "@/lib/analytics/track"
+import { useEditorPro } from "../EditorContext"
 
 interface SuggestedLanguage { name: string; level: string }
 
@@ -42,6 +44,7 @@ export function useAIProfileFill() {
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
+  const { plan } = useEditorPro()
   const { sectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData }))
   )
@@ -86,11 +89,12 @@ export function useAIProfileFill() {
         if (handled || res.status === 429 || res.status === 403) return undefined
       }
       if (res.status === 400) { toast.error(t("toast_more_detail")); return undefined }
-      if (res.status === 422) { toast.error(t("toast_off_topic")); return undefined }
+      if (res.status === 422) { track("ai_error_shown", { endpoint: "fill-profile", error_type: "offtopic" }); toast.error(t("toast_off_topic")); return undefined }
       const data = await res.json() as FillProfileResult
       if (!res.ok) throw new Error((data as unknown as { error: string }).error)
       setResult(data)
       await onSuccess()
+      track("ai_profile_filled", { plan })
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)
       return data

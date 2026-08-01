@@ -5,8 +5,18 @@ import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
+import type { BillingCycle } from "@/lib/analytics/events"
 import { useTranslations, useLocale } from "next-intl"
 import PaymentMethodSelector, { type PaymentMethod } from "@/components/marketing/PaymentMethodSelector"
+
+// Maps a pricing card to its analytics plan name + billing cycle (low cardinality).
+const PLAN_META: Record<"monthly" | "annual" | "basic" | "sprint", { name: string; cycle: BillingCycle }> = {
+  monthly: { name: "PRO", cycle: "monthly" },
+  annual: { name: "PRO", cycle: "annual" },
+  basic: { name: "BASIC", cycle: "one_time" },
+  sprint: { name: "SPRINT", cycle: "one_time" },
+}
 
 interface Props {
   plan: "monthly" | "annual" | "basic" | "sprint"
@@ -78,6 +88,9 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
   // explanation instead of a button, so there is nothing left to click.
   async function handleClick() {
     setLoading(true)
+    const meta = PLAN_META[plan]
+    const analyticsProvider = paypalAvailable && method === "paypal" ? "paypal" : "stripe"
+    track("pricing_cta_clicked", { plan: meta.name, billing_cycle: meta.cycle })
     try {
       // PayPal only when the selector is actually available AND chosen; otherwise
       // this is byte-for-byte the previous Stripe-only path.
@@ -128,6 +141,7 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
       }
 
       if (data.url) {
+        track("checkout_started", { plan: meta.name, billing_cycle: meta.cycle, provider: analyticsProvider })
         window.location.href = data.url
       }
     } catch {

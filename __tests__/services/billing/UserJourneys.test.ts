@@ -670,15 +670,17 @@ describe("Purchase · the checkout session each plan opens", () => {
 
     expect(params.success_url).toContain("/en/dashboard/resumes")
     // The back button used to land on /pricing with no locale — a 404, since there is
-    // no next-intl middleware and the route only exists under [locale].
-    expect(params.cancel_url).toBe("https://readycvv.com/en/pricing")
+    // no next-intl middleware and the route only exists under [locale]. The
+    // ?checkout=cancelled marker lets the pricing page emit the checkout_abandoned
+    // analytics event on return.
+    expect(params.cancel_url).toBe("https://readycvv.com/en/pricing?checkout=cancelled")
   })
 
   it("a trailing slash in APP_URL never produces a double slash", async () => {
     process.env.NEXT_PUBLIC_APP_URL = "https://readycvv.com/"
     await new StripeCheckoutService(checkoutClient, logger2).createSession("u1", "basic", "es")
     const params = vi.mocked(checkoutClient.createCheckoutSession).mock.calls[0][0] as Record<string, string>
-    expect(params.cancel_url).toBe("https://readycvv.com/es/pricing")
+    expect(params.cancel_url).toBe("https://readycvv.com/es/pricing?checkout=cancelled")
     expect(params.success_url.startsWith("https://readycvv.com/es/")).toBe(true)
   })
 })

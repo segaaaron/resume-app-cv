@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import UpgradeCTACard from "./UpgradeCTACard"
 import { isActive } from "@/lib/plans"
 import { type LetterCard, LetterCardItem, LetterActivityItem } from "./_letter-sub"
@@ -53,6 +54,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
     setTimeout(() => setCreating(false), 1500)
     // Freemium funnel: 1 cover letter included free. Beyond that → UpgradeModal.
     if (!isPro && letters.length >= 1) {
+      track("paywall_hit", { feature: "cover_cap", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
       openUpgradeModal("second-cover-letter")
       return
     }
@@ -68,6 +70,7 @@ export default function CoverLettersDashboard({ initialLetters }: { initialLette
       if (!res.ok) { toast.error(t("create_error")); setCreating(false); return }
       const data = await res.json()
       if (!data?.id) { toast.error(t("create_error")); setCreating(false); return }
+      track("cover_letter_created", { method: "blank" })
       router.push(`/${locale}/cover-letter/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))

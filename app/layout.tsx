@@ -3,7 +3,7 @@ import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google"
 import "./globals.css"
 import { Toaster } from "@/components/ui/sonner"
 import SessionProvider from "@/components/providers/SessionProvider"
-import ClarityScript from "@/components/analytics/ClarityScript"
+import UmamiScript from "@/components/analytics/UmamiScript"
 import ClientErrorReporter from "@/components/ClientErrorReporter"
 
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -55,8 +55,8 @@ export default async function RootLayout({
           {children}
           <Toaster position="top-center" />
         </SessionProvider>
-        {process.env.NEXT_PUBLIC_CLARITY_ID && (
-          <ClarityScript projectId={process.env.NEXT_PUBLIC_CLARITY_ID} />
+        {process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <UmamiScript websiteId={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID} />
         )}
       </body>
     </html>

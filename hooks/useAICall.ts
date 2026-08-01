@@ -24,6 +24,7 @@ import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 import { useQuotaStatus } from "@/hooks/useQuotaStatus"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
+import { track } from "@/lib/analytics/track"
 
 export function useAICall() {
   const { data: quota, refresh } = useQuotaStatus()
@@ -31,9 +32,13 @@ export function useAICall() {
   const tEditor = useTranslations("freemium.editor")
   const tBanner = useTranslations("freemium.dashboard.banner")
   const warnedFor = useRef<Set<string>>(new Set())
+  // Remembers the endpoint of the in-flight call so onSuccess can emit the
+  // umbrella `ai_used` event for EVERY AI surface without touching each hook.
+  const lastEndpointRef = useRef<string | null>(null)
 
   const preCheck = useCallback(
     (endpoint: string): void => {
+      lastEndpointRef.current = endpoint
       if (!quota) return
       if (quota.plan?.plan !== "UNSUBSCRIBED") return
       const entry = quota.ai?.[endpoint]
@@ -58,9 +63,14 @@ export function useAICall() {
   )
 
   const onSuccess = useCallback(async () => {
+    // Umbrella AI-usage event — endpoint discriminates the surface; pairs with the
+    // per-endpoint events (ai_tailor_completed, ai_ats_scored…) for volume + cost.
+    if (lastEndpointRef.current) {
+      track("ai_used", { endpoint: lastEndpointRef.current, plan: quota?.plan?.plan ?? "UNSUBSCRIBED" })
+    }
     // Invalidate quota cache so the badge UI + next preCheck see fresh counters.
     await refresh()
-  }, [refresh])
+  }, [refresh, quota])
 
   return { preCheck, onSuccess }
 }

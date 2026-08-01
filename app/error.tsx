@@ -3,6 +3,7 @@
 import { useEffect } from "react"
 import Link from "next/link"
 import { reportClientError } from "@/lib/client-error-reporter"
+import { track } from "@/lib/analytics/track"
 
 export default function GlobalError({
   error,
@@ -14,6 +15,7 @@ export default function GlobalError({
   useEffect(() => {
     // Surface the render crash in the admin Service Errors dashboard.
     reportClientError(error.message, error.stack, "react")
+    track("client_crash", { route: typeof window !== "undefined" ? window.location.pathname : undefined })
   }, [error])
 
   return (

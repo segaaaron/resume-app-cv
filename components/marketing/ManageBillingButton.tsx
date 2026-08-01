@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { useTranslations, useLocale } from "next-intl"
 
 export default function ManageBillingButton() {
@@ -20,6 +21,7 @@ export default function ManageBillingButton() {
       })
       const data = await res.json()
       if (res.ok && data.url) {
+        track("billing_portal_opened", { provider: "stripe" })
         window.location.href = data.url
       } else {
         // The banner only renders this button when a Stripe customer exists, so a

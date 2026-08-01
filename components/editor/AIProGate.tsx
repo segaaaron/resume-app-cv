@@ -1,11 +1,13 @@
 "use client"
 
+import { useEffect } from "react"
 import { Sparkles, Lock } from "lucide-react"
 import { useEditorPro } from "./EditorContext"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "next-intl"
 import { getLimits, type AiEndpointName } from "@/lib/plans"
+import { track } from "@/lib/analytics/track"
 
 interface AIProGateProps {
   children: React.ReactNode
@@ -31,6 +33,11 @@ export default function AIProGate({ children, feature, endpoint }: AIProGateProp
   // Without an endpoint, fall back to the blanket isPro flag.
   const unlocked = endpoint ? getLimits(plan).aiLimitsByEndpoint[endpoint] === -1 : isPro
 
+  // Fires once when a locked gate is shown — "this feature is walled for this plan".
+  useEffect(() => {
+    if (!unlocked) track("paywall_hit", { feature: "ai", current_plan: plan })
+  }, [unlocked, plan])
+
   if (unlocked) return <>{children}</>
 
   return (
@@ -45,7 +52,10 @@ export default function AIProGate({ children, feature, endpoint }: AIProGateProp
       <Button
         size="sm"
         className="gap-1.5 mt-1"
-        onClick={() => open("pro-feature", feature ? { feature } : undefined)}
+        onClick={() => {
+          track("upgrade_cta_clicked", { from_feature: feature ?? "ai" })
+          open("pro-feature", feature ? { feature } : undefined)
+        }}
       >
         <Sparkles className="h-3.5 w-3.5" />
         {t("cta")}

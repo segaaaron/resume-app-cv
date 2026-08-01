@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track, trackFirstDownloadOnce } from "@/lib/analytics/track"
 import { isActive, purchaseConfirmed } from "@/lib/plans"
 import CVCard, { NewCVCard, type ResumeCard } from "./CVCard"
 import { ProBanner, UpgradeStatusOverlay, StatsRow, ResumesToolbar, ActivityFeed, TranslatingOverlay } from "./_resume-sub"
@@ -131,6 +132,12 @@ export default function ResumesDashboard({
           // look for "Pro access" they never bought.
           if (purchaseConfirmed(data)) {
             upgradeActiveRef.current = false
+            // One-time plans are always single-window; recurring cycle isn't known
+            // here (checkout_started already captured it), so omit it for PRO.
+            track("plan_purchased", {
+              plan: data.plan,
+              billing_cycle: data.plan === "BASIC" || data.plan === "SPRINT" ? "one_time" : undefined,
+            })
             setPurchasedPlan(data.plan)
             setUpgradeState("confirmed")
             // The JWT carries the plan, so the session is refreshed by signing back in.
@@ -190,6 +197,7 @@ export default function ResumesDashboard({
     setTimeout(() => setCreating(false), 1500)
     // Freemium funnel: 1 CV included on free plan. Beyond that → UpgradeModal.
     if (!isPro && resumes.length >= 1) {
+      track("paywall_hit", { feature: "resume_cap", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
       openUpgradeModal("second-resume")
       return
     }
@@ -206,6 +214,7 @@ export default function ResumesDashboard({
       const res = await apiFetch("/api/resumes", { method: "POST" })
       if (!res.ok) { toast.error(t("create_error")); return }
       const data = await res.json()
+      track("resume_created", { method: "blank" })
       router.push(`/${locale}/editor/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))
@@ -261,6 +270,7 @@ export default function ResumesDashboard({
       if (!res.ok) { toast.error(t("duplicate_error")); return }
       const copy = await res.json()
       setResumes((prev) => [copy, ...prev])
+      track("resume_duplicated")
       toast.success(t("duplicate_success"))
     } catch {
       toast.error(t("duplicate_error"))
@@ -271,6 +281,7 @@ export default function ResumesDashboard({
   // the resume's language and saves the translation as a NEW resume (copy).
   function translateResume(id: string) {
     if (!isPro) {
+      track("paywall_hit", { feature: "ai", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
       openUpgradeModal("pro-feature", { feature: t("translate"), endpoint: "translate-cv" })
       return
     }
@@ -298,6 +309,7 @@ export default function ResumesDashboard({
         toast.info(t("translate_already"))
       } else {
         setResumes((prev) => [copy, ...prev])
+        track("resume_translated", { target_locale: copy?.locale === "en" ? "en" : copy?.locale === "es" ? "es" : undefined })
         toast.success(t("translate_success"))
       }
     } catch {
@@ -336,6 +348,7 @@ export default function ResumesDashboard({
             (body?.error === "premium_template_requires_upgrade" || body?.error === "subscription_required"))
         if (paywall) {
           toast.dismiss(toastId)
+          track("paywall_hit", { feature: "download", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
           openUpgradeModal("download")
           return
         }
@@ -351,6 +364,8 @@ export default function ResumesDashboard({
       a.click()
       document.body.removeChild(a)
       setTimeout(() => URL.revokeObjectURL(url), 1_000)
+      track("pdf_downloaded", { type: "resume", plan: session?.user?.plan ?? "UNSUBSCRIBED" })
+      trackFirstDownloadOnce({ plan: session?.user?.plan ?? "UNSUBSCRIBED" })
       toast.success(`${resume.title || "resume"}.pdf`, { id: toastId })
     } catch {
       toast.error(t("pdf_error"), { id: toastId })

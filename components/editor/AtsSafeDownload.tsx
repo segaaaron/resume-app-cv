@@ -5,6 +5,7 @@ import { useTranslations, useLocale } from "next-intl"
 import { Download, Loader2, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { useResumeStore } from "@/stores/resumeStore"
 
 type Format = "pdf" | "txt"
@@ -60,6 +61,7 @@ export default function AtsSafeDownload() {
         const data: { text: string } = await res.json()
         triggerDownload(new Blob([data.text], { type: "text/plain;charset=utf-8" }), `${safeTitle}_ATS.txt`)
       }
+      track("ats_export_downloaded", { format })
       toast.success(t("export_done"))
     } catch {
       toast.error(t("export_error"))

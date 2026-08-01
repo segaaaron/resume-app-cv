@@ -4,6 +4,7 @@ import { useEffect } from "react"
 import Link from "next/link"
 import { useTranslations } from "next-intl"
 import { reportClientError } from "@/lib/client-error-reporter"
+import { track } from "@/lib/analytics/track"
 
 export default function LocaleError({
   error,
@@ -15,6 +16,7 @@ export default function LocaleError({
   useEffect(() => {
     // Surface the render crash in the admin Service Errors dashboard.
     reportClientError(error.message, error.stack, "react")
+    track("client_crash", { route: typeof window !== "undefined" ? window.location.pathname : undefined })
   }, [error])
 
   const t = useTranslations("common")

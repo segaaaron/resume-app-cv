@@ -7,6 +7,7 @@ import { Upload, Loader2, FileText, Lock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 
 interface Props {
@@ -72,6 +73,7 @@ export default function ImportResumeButton({ locked }: Props) {
         return
       }
 
+      track("resume_imported", { format: /\.docx?$/i.test(f.name) ? "docx" : "pdf" })
       toast.success(t("import_success"))
       if (data.truncated) {
         toast.warning(t("import_truncated"), { duration: 12_000 })

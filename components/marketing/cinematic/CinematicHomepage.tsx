@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import Image from "next/image"
 import Link from "next/link"
+import { track } from "@/lib/analytics/track"
 import { Menu, X } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { useSession } from "next-auth/react"
@@ -69,6 +70,11 @@ export default function CinematicHomepage({ children, locale }: Props) {
   const nav = useTranslations("nav")
   const { data: session } = useSession()
   useScrollReveal()
+
+  // Analytics: mark the homepage as an explicit funnel entry (top of funnel).
+  useEffect(() => {
+    track("home_viewed")
+  }, [])
 
   // Preload all scene images into browser cache on mount
   useEffect(() => {
@@ -254,6 +260,7 @@ export default function CinematicHomepage({ children, locale }: Props) {
             </Link>
           ) : (
             <Link href={`/${locale}/register`}
+              onClick={() => track("home_cta_clicked", { target: "build" })}
               className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 backdrop-blur-sm"
               style={{ background: "rgba(255,255,255,0.15)", color: navFg, border: "1px solid rgba(255,255,255,0.25)" }}
             >

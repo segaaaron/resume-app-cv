@@ -16,6 +16,7 @@ import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { useEditorPro } from "@/components/editor/EditorContext"
 import BulletsImprovementModal, { type BulletPair } from "./BulletsImprovementModal"
 import { useAICall } from "@/hooks/useAICall"
@@ -29,7 +30,7 @@ import { formatBullet, parseBullets, serializeBullets } from "@/lib/services/ai/
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
-  const { isPro, openUpgrade } = useEditorPro()
+  const { isPro, plan, openUpgrade } = useEditorPro()
   const locale = useLocale()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
@@ -71,6 +72,7 @@ export default function WorkExperienceSection() {
           onUpdate={(field, value) => updateJob(job.id, field, value)}
           onRemove={() => removeJob(job.id)}
           isPro={isPro}
+          plan={plan}
           openUpgrade={openUpgrade}
           locale={locale}
         />
@@ -82,13 +84,14 @@ export default function WorkExperienceSection() {
   )
 }
 
-function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPro, openUpgrade, locale }: {
+function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPro, plan, openUpgrade, locale }: {
   job: WorkExperienceItem
   isOpen: boolean
   onToggle: () => void
   onUpdate: (field: keyof WorkExperienceItem, value: unknown) => void
   onRemove: () => void
   isPro: boolean
+  plan: string
   openUpgrade: () => void
   locale: string
 }) {
@@ -157,10 +160,11 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
         })
         if (handled || res.status === 429 || res.status === 403) return
       }
-      if (res.status === 422) { await res.text().catch(() => {}); toast.error(ai("off_topic_bullet")); return }
+      if (res.status === 422) { await res.text().catch(() => {}); track("ai_error_shown", { endpoint: "improve-bullet", error_type: "offtopic" }); toast.error(ai("off_topic_bullet")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       await onSuccess()
+      track("ai_bullet_improved", { plan })
 
       // Shared API↔UI contract: validate the response shape before touching state.
       const contract = ImproveBulletResponseSchema.safeParse(data)
@@ -207,6 +211,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     const newWorking = [...bulletModal.working]
     newWorking[index] = pair.improved
     onUpdate("description", serializeBullets(newWorking))
+    track("ai_suggestion_applied", { type: "bullet" })
     setBulletModal({ ...bulletModal, working: newWorking })
   }
 
@@ -354,7 +359,7 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
       {bulletModal && (
         <BulletsImprovementModal
           open={true}
-          onClose={() => setBulletModal(null)}
+          onClose={() => { track("ai_suggestion_dismissed", { type: "bullet" }); setBulletModal(null) }}
           jobTitle={job.jobTitle}
           pairs={bulletModal.pairs}
           total={bulletModal.total}

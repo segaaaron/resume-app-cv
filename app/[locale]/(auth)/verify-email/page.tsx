@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { track } from "@/lib/analytics/track"
 
 type Status = "loading" | "success" | "invalid_token" | "token_expired" | "error"
 
@@ -23,6 +24,7 @@ function VerifyEmailInner() {
     fetch(`/api/user/verify-email?token=${encodeURIComponent(token)}`)
       .then(async (res) => {
         if (res.ok) {
+          track("email_verified")
           setStatus("success")
         } else {
           const data = await res.json().catch(() => ({}))

@@ -102,7 +102,7 @@ export class StripeCheckoutService {
       // is no next-intl middleware and no /pricing route outside [locale], so that URL
       // is a 404 — the buyer who clicked "back" to compare plans landed on an error page
       // instead of the pricing table. PayPal's checkout already built this correctly.
-      cancel_url: `${appUrl.replace(/\/$/, "")}/${locale}/pricing`,
+      cancel_url: `${appUrl.replace(/\/$/, "")}/${locale}/pricing?checkout=cancelled`,
       // One-time → planType drives provisioning (BASIC/SPRINT). Subscription → planInterval.
       // `locale` rides along so the webhook can write emails in the language the customer
       // bought in. The User model stores no language, and a webhook has no request to

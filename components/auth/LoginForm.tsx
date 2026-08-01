@@ -10,6 +10,7 @@ import { z } from "zod"
 import { Loader2, Eye, EyeOff, Zap, AlertTriangle, Lock, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { track } from "@/lib/analytics/track"
 import { useTranslations, useLocale } from "next-intl"
 
 type FormState = "login" | "challenge" | "blocked"
@@ -71,6 +72,7 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
     } else if (result?.error) {
       toast.error(t("error"))
     } else {
+      track("login_completed", { method: "password" })
       router.push(planParam ? `/${locale}/checkout?plan=${planParam}` : `/${locale}/dashboard/resumes`)
       router.refresh()
     }
@@ -131,6 +133,7 @@ export default function LoginForm({ serverError }: { serverError?: boolean } = {
           redirect: false,
         })
         if (result?.ok && !result.error) {
+          track("login_completed", { method: "password" })
           router.push(planParam ? `/${locale}/checkout?plan=${planParam}` : `/${locale}/dashboard/resumes`)
           router.refresh()
         } else {

@@ -1,4 +1,6 @@
 import { toast } from "sonner"
+import { track } from "@/lib/analytics/track"
+import { serviceFromUrl } from "@/lib/analytics/events"
 
 const MESSAGES = {
   es: {
@@ -76,14 +78,23 @@ export async function apiFetch(url: string, options?: ApiFetchOptions): Promise<
     if (err instanceof DOMException && (err.name === "AbortError" || err.name === "TimeoutError")) {
       throw err
     }
+    // Network-level failure the user actually saw (connection dropped, DNS, CORS).
+    const svc = serviceFromUrl(url)
+    track("service_error_shown", { source: svc.source, endpoint: svc.endpoint, status: 0, error_type: "network" })
     if (!silent) toast.error(msgs.network_error)
     throw new Error("network_error")
   } finally {
     clearTimeout(timeoutId)
     composed.cleanup()
   }
-  if (!silent && res.status >= 500) {
-    toast.error(res.status === 503 ? msgs.service_unavailable : msgs.server_error)
+  // Server failures (5xx) surfaced to the user. Client-side 4xx (quota, validation,
+  // off-topic) are expected and tracked closer to their surface, not here.
+  if (res.status >= 500) {
+    const svc = serviceFromUrl(url)
+    track("service_error_shown", { source: svc.source, endpoint: svc.endpoint, status: res.status, error_type: "server" })
+    if (!silent) {
+      toast.error(res.status === 503 ? msgs.service_unavailable : msgs.server_error)
+    }
   }
   return res
 }

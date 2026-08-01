@@ -1,5 +1,8 @@
+"use client"
+
 import Link from "next/link"
 import { ArrowRight, Sparkles } from "lucide-react"
+import { track } from "@/lib/analytics/track"
 
 type Props = {
   locale: string
@@ -9,6 +12,10 @@ type Props = {
   hint?: string
   /** Default routes to /pricing (PRO upgrade). Override only if needed. */
   href?: string
+  /** Content surface this CTA lives on — labels the analytics event. */
+  surface?: "blog" | "guide" | "faq"
+  /** Article slug, for attributing which content drove the click. */
+  slug?: string
 }
 
 /**
@@ -22,6 +29,8 @@ export default function BlogCTA({
   buttonLabel,
   hint,
   href,
+  surface = "blog",
+  slug,
 }: Props) {
   const target = href ?? `/${locale}/pricing`
 
@@ -46,6 +55,7 @@ export default function BlogCTA({
 
         <Link
           href={target}
+          onClick={() => track("content_cta_clicked", { surface, slug })}
           className="group inline-flex items-center gap-2.5 bg-gradient-to-r from-[#00D4FF] to-[#00B8E0] text-[#0f1d30] font-bold text-sm sm:text-base px-7 py-3.5 rounded-xl shadow-[0_8px_30px_-6px_rgba(0,212,255,0.6)] hover:shadow-[0_10px_40px_-6px_rgba(0,212,255,0.8)] hover:-translate-y-0.5 active:translate-y-0 transition-all"
         >
           {buttonLabel}

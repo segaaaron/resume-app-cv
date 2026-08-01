@@ -12,6 +12,8 @@ import { useAICall } from "@/hooks/useAICall"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
+import { track } from "@/lib/analytics/track"
+import { useEditorPro } from "../EditorContext"
 
 export interface ReviewItem {
   text: string
@@ -36,6 +38,7 @@ export function useCVReview() {
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
+  const { plan } = useEditorPro()
   const { sectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData }))
   )
@@ -89,11 +92,12 @@ export function useCVReview() {
         if (handled || res.status === 429 || res.status === 403) return
       }
       if (res.status === 400) { toast.error(t("not_enough_data")); return }
-      if (res.status === 422) { toast.error(t("off_topic")); return }
+      if (res.status === 422) { track("ai_error_shown", { endpoint: "review-cv", error_type: "offtopic" }); toast.error(t("off_topic")); return }
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       setResult(data)
       await onSuccess()
+      track("ai_review_completed", { plan, findings_count: Array.isArray(data?.improvements) ? data.improvements.length : undefined })
       lastReviewKeyRef.current = reviewKey
       setCooldownUntil(Date.now() + COOLDOWN_MS)
     } catch {
