@@ -11,11 +11,10 @@ export default function SalesPitchTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sd = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
 
   const ink = "#101010"
   const cream = "#f5f1e8"
@@ -139,7 +138,6 @@ export default function SalesPitchTemplate() {
                 <H><SectionIcon sectionId="workExperience" size={12} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{label("workExperience")}</H>
                 {workExperience.map((job) => {
                   const startY = job.startDate?.match(/\d{4}/)?.[0] ?? ""
-                  const endY = job.currentlyWorking ? present : (job.endDate?.match(/\d{4}/)?.[0] ?? "")
                   return (
                     <Row
                       key={job.id}

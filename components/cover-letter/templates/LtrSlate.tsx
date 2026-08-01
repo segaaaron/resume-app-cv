@@ -10,14 +10,16 @@ import type { TemplateProps } from "./types"
 import { AHead, AContact } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const WORKS = 'var(--font-work-sans), Helvetica, Arial, sans-serif'
 const C = "#37474f"
 
 export default function LtrSlate(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const a = designAccent(props.colorScheme, "#b06f16")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
 
   return (

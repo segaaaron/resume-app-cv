@@ -10,7 +10,7 @@ export default function EngravedTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sd = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id

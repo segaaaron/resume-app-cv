@@ -21,7 +21,6 @@ import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-dm-serif), "DM Serif Display", "Cormorant Garamond", Georgia, "Times New Roman", serif'
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 // Guilloché rosette ornament (from source LxRosette)
 function LxRosette({ size = 88, color }: { size?: number; color: string }) {

@@ -96,7 +96,7 @@ export default function GazetteTemplate({ content, candidate }: TemplateProps) {
             ["Phone", candidate.phone],
             ["Location", candidate.address],
             ["LinkedIn", candidate.linkedin],
-          ].filter(([_, v]) => Boolean(v)).map(([label, v], i) => (
+          ].filter(([, v]) => Boolean(v)).map(([label, v], i) => (
             <div key={i}>
               <div style={{ fontSize: 8, textTransform: "uppercase", letterSpacing: "0.1em", color: "#999", marginBottom: 2, fontFamily: FF.systemSans }}>
                 {label}

@@ -13,7 +13,6 @@ export default function TimelineVerticalTemplate() {
   const accent = config.colorScheme
   const initials = [pd.firstName?.[0], pd.lastName?.[0]].filter(Boolean).join("").toUpperCase()
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const ink = "#1c2329"

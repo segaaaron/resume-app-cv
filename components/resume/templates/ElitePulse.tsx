@@ -77,7 +77,7 @@ export default function ElitePulseTemplate() {
         minHeight: "297mm",
         background: "#f6f7fb",
         color: "#1a1c2e",
-        fontFamily: "inherit",
+        fontFamily: SANS,
         position: "relative",
         overflow: "hidden",
         WebkitPrintColorAdjust: "exact",

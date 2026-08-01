@@ -10,13 +10,15 @@ import type { TemplateProps } from "./types"
 import { AHead, AContact, AIco } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const LATO = 'var(--font-lato), Helvetica, Arial, sans-serif'
 
 export default function LtrMeridian(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#1f3a5f")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
 
   return (

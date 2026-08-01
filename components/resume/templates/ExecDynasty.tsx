@@ -22,7 +22,6 @@ import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif'
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 const IcoMail = () => (
   <svg viewBox="0 0 24 24" width="1em" height="1em" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">

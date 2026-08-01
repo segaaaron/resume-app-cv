@@ -13,6 +13,7 @@ import type { TemplateProps } from "./types"
 import { AContact, AIco, aFade, type IconKey } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const LATO = 'var(--font-lato), Helvetica, Arial, sans-serif'
 const RSLAB = 'var(--font-roboto-slab), Georgia, serif'
@@ -31,9 +32,10 @@ function Sec({ n, icon, children, color }: { n: string; icon: IconKey; children:
 }
 
 export default function LtrSequoia(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#a1441f")
-  const today = formatToday("es")
+  const today = formatToday(loc)
 
   return (
     <div style={{ fontFamily: LATO, minHeight: "297mm", display: "flex", flexDirection: "column", background: "#fffcfa", color: "#1a1a1a" }}>

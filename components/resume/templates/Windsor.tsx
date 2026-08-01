@@ -11,7 +11,6 @@ export default function WindsorTemplate() {
   )
   const sectionData = useTemplateSectionData()
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects, volunteer, references } = sectionData
-  const accent = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false

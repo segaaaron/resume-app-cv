@@ -11,14 +11,16 @@ import type { TemplateProps } from "./types"
 import { AHead, AIco } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const FIGT = 'var(--font-figtree), Helvetica, Arial, sans-serif'
 const INK = "#101114"
 
 export default function LtrOnyx(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#8a6a1f")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const trio = (["mail", "phone", "pin"] as const).filter((k) => v.contacts.some(([ck]) => ck === k))
   const meta = [props.candidate.email, props.candidate.phone, props.candidate.linkedin].filter(Boolean).join(" · ")
 
@@ -26,7 +28,7 @@ export default function LtrOnyx(props: TemplateProps) {
     <div style={{ fontFamily: FIGT, minHeight: "297mm", display: "flex", flexDirection: "column", background: "#fdfdfc", color: "#1a1a1a" }}>
       <div style={{ padding: "38px 46px 18px" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 18, paddingBottom: 11, borderBottom: `3px double ${INK}` }}>
-          <h1 style={{ margin: 0, fontSize: 37, fontWeight: 800, letterSpacing: "-0.035em", lineHeight: 0.95 }}>{v.first}<br />{v.last}</h1>
+          <h1 style={{ margin: 0, fontSize: 37, fontWeight: 800, letterSpacing: "-0.035em", lineHeight: 0.95 }}>{v.first}{v.last && <><br />{v.last}</>}</h1>
           <div style={{ textAlign: "right" }}>
             {v.jobTitle && <div style={{ fontSize: "10.5pt", fontWeight: 700, letterSpacing: "0.18em", textTransform: "uppercase", color: c }}>{v.jobTitle}</div>}
             {trio.length > 0 && <div style={{ display: "flex", gap: 6, justifyContent: "flex-end", marginTop: 7 }}>{trio.map((k) => <AIco key={k} k={k} c={INK} size={22} variant="solid" shape="square" />)}</div>}

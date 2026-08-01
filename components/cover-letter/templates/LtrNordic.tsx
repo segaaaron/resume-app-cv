@@ -11,13 +11,15 @@ import type { TemplateProps } from "./types"
 import { AContact, aFade } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const CABIN = 'var(--font-cabin), "Trebuchet MS", Arial, sans-serif'
 
 export default function LtrNordic(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#2d6ca2")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
 
   return (

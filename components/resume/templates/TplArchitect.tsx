@@ -16,8 +16,6 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
-const MONO = '"Courier New", monospace'
 
 export default function TplArchitectTemplate() {
   const steel = "#5b7b8a"

@@ -17,8 +17,6 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
-const SERIF = 'Georgia, "Times New Roman", serif'
 
 export default function TplWriterTemplate() {
   const ink = "#211d17"

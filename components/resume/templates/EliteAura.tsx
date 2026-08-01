@@ -88,7 +88,7 @@ export default function EliteAuraTemplate() {
         minHeight: "297mm",
         background: "linear-gradient(150deg,#fde3c4 0%,#f8c2d6 46%,#cdbcf2 100%)",
         color: dark,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         position: "relative",
         overflow: "hidden",
         padding: "44px 46px",

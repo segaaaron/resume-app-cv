@@ -76,7 +76,7 @@ export default function EliteCadenceTemplate() {
         minHeight: "297mm",
         background: ink,
         color: fog,
-        fontFamily: "inherit",
+        fontFamily: SANS,
         position: "relative",
         overflow: "hidden",
         WebkitPrintColorAdjust: "exact",

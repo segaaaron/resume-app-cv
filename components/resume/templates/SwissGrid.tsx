@@ -14,7 +14,6 @@ export default function SwissGridTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, certifications } = sd
   const accent = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const ink = "#0a0a0a"
@@ -22,7 +21,7 @@ export default function SwissGridTemplate() {
   const gridColor = "#ececec"
 
   const currentYear = new Date().getFullYear()
-  let yearsExp = parseInt(pd.yearsOfExperience || "0") || (() => {
+  const yearsExp = parseInt(pd.yearsOfExperience || "0") || (() => {
     if (workExperience.length === 0) return 10
     const earliest = workExperience.reduce((min, job) => {
       const y = parseInt(job.startDate?.match(/\d{4}/)?.[0] || "9999")
@@ -31,7 +30,6 @@ export default function SwissGridTemplate() {
     return earliest < 9999 ? currentYear - earliest : 10
   })()
 
-  const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ") || "Your Name"
   const lastName = pd.lastName || "Name"
 
   return (

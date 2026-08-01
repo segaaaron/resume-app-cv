@@ -14,7 +14,6 @@ import { designAccent } from "@/lib/resume/template-accent"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Space Grotesk", "Inter", system-ui, -apple-system, sans-serif'
 const SERIF = 'Georgia, "Playfair Display", "Times New Roman", serif'
 
 const LANG_LEVEL_LABEL: Record<string, string> = {

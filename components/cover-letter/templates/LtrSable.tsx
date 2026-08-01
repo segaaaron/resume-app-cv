@@ -11,14 +11,16 @@ import type { TemplateProps } from "./types"
 import { AHead, AContact } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const SSANS = 'var(--font-source-sans), Calibri, Arial, sans-serif'
 const SPEC = 'var(--font-spectral), Georgia, serif'
 
 export default function LtrSable(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#14453d")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
   const headContacts = v.contacts.filter(([k]) => k === "mail" || k === "phone")
 

@@ -12,14 +12,16 @@ import type { TemplateProps } from "./types"
 import { AContact, aFade } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const NUNI = 'var(--font-nunito-sans), "Segoe UI", Arial, sans-serif'
 const INK = "#22262c"
 
 export default function LtrGraphite(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const a = designAccent(props.colorScheme, "#b3261e")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
 
   return (

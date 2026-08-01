@@ -11,14 +11,16 @@ import type { TemplateProps } from "./types"
 import { AIco } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const LATO = 'var(--font-lato), Helvetica, Arial, sans-serif'
 const GARA = 'var(--font-eb-garamond), Garamond, Georgia, serif'
 
 export default function LtrGarnet(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#5b2a55")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const trio = (["mail", "phone", "pin"] as const).filter((k) => v.contacts.some(([ck]) => ck === k))
   const meta = [props.candidate.email, props.candidate.phone, props.candidate.address].filter(Boolean).join(" · ")
 

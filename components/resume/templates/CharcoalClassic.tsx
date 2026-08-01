@@ -5,7 +5,6 @@ import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 function SideSection({ title, ink, rule, children }: { title: string; ink: string; rule: string; children: React.ReactNode }) {
   return (
@@ -16,7 +15,7 @@ function SideSection({ title, ink, rule, children }: { title: string; ink: strin
   )
 }
 
-function MainBlock({ title, ink, rule, accent, children }: { title: string; ink: string; rule: string; accent: string; children: React.ReactNode }) {
+function MainBlock({ title, ink, children }: { title: string; ink: string; rule: string; accent: string; children: React.ReactNode }) {
   return (
     <section style={{ marginBottom: 24 }}>
       <h2 style={{ fontFamily: "inherit", fontSize: 14, letterSpacing: "0.22em", margin: "0 0 12px", textTransform: "uppercase", paddingBottom: 8, borderBottom: `1px solid ${ink}`, color: ink }}>{title}</h2>

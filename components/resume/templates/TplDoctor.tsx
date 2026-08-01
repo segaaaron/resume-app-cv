@@ -16,7 +16,6 @@ import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 const LANG_PCT: Record<string, number> = {
   a1: 25, a2: 40, b1: 55, b2: 70, c1: 85, c2: 95, native: 100,

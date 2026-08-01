@@ -36,7 +36,6 @@ export default function DataDrivenTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
-  const present = config.language === "en" ? "Present" : "Presente"
 
   const ink = "#0a0a0a"
   const paper = "#fafafa"

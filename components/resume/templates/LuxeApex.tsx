@@ -199,7 +199,7 @@ export default function LuxeApexTemplate() {
                 textTransform: "uppercase",
               }}
             >
-              // {pd.jobTitle}
+              {"// "}{pd.jobTitle}
             </div>
           )}
           <h1

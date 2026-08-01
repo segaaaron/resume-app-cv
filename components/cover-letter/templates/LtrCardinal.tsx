@@ -9,14 +9,16 @@ import type { TemplateProps } from "./types"
 import { AContact, AIco, aFade } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const LATO = 'var(--font-lato), Helvetica, Arial, sans-serif'
 const MERRI = 'var(--font-merriweather), Georgia, serif'
 
 export default function LtrCardinal(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#7a2230")
-  const today = formatToday("es")
+  const today = formatToday(loc)
 
   return (
     <div style={{ fontFamily: LATO, minHeight: "297mm", display: "flex", flexDirection: "column", background: "#fffdfc", color: "#1a1a1a" }}>

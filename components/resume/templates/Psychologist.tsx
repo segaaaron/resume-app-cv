@@ -12,7 +12,7 @@ export default function PsychologistTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sd = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -74,7 +74,7 @@ export default function PsychologistTemplate() {
         }}>
           {summary && visible("summary") && (
             <div style={{ position: "absolute", top: 36, right: 36, fontFamily: "'Lora', serif", fontStyle: "italic", fontSize: 15, lineHeight: 1.45, textAlign: "right", maxWidth: 220 }}>
-              <span style={{ fontSize: 60, lineHeight: 0, position: "relative", top: 18 }}>"</span>
+              <span style={{ fontSize: 60, lineHeight: 0, position: "relative", top: 18 }}>{'"'}</span>
               <p style={{ margin: "10px 0 0" }}>{summary}</p>
             </div>
           )}

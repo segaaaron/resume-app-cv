@@ -11,13 +11,15 @@ import type { TemplateProps } from "./types"
 import { AHead, AContact, AIco, aFade, aMix } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const FRANK = 'var(--font-libre-franklin), Helvetica, Arial, sans-serif'
 
 export default function LtrHarbor(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#0f6b73")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
   const colA = v.contacts.filter(([k]) => k === "mail" || k === "phone")
   const colB = v.contacts.filter(([k]) => k === "link" || k === "globe")

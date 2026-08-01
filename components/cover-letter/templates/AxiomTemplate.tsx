@@ -66,7 +66,7 @@ export default function AxiomTemplate({ content, candidate }: TemplateProps) {
             padding: "3px 10px",
             borderRadius: 4,
             marginTop: 8,
-          }}>// {candidate.jobTitle}</div>
+          }}>{"// "}{candidate.jobTitle}</div>
         )}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(2,1fr)", gap: 8, marginTop: 20, maxWidth: 480 }}>
           {candidate.email && <div style={{ display: "flex", alignItems: "center", gap: 8, fontFamily: FF.systemMono, fontSize: 11, color: "#8b949e" }}><span style={{ color: "#3fb950", marginRight: 2 }}>@</span>{candidate.email}</div>}
@@ -86,7 +86,7 @@ export default function AxiomTemplate({ content, candidate }: TemplateProps) {
           fontFamily: FF.systemMono,
           fontSize: 11,
         }}>
-          <div style={{ color: "#8b949e", marginBottom: 4 }}>/* Application Metadata */</div>
+          <div style={{ color: "#8b949e", marginBottom: 4 }}>{"/* Application Metadata */"}</div>
           {content.recipientName && <div style={{ marginBottom: 4 }}><span style={{ color: "#79c0ff" }}>to: </span><span style={{ color: "#a8d5a2" }}>{`"${content.recipientName}"`}</span></div>}
           {content.company && <div style={{ marginBottom: 4 }}><span style={{ color: "#79c0ff" }}>company: </span><span style={{ color: "#a8d5a2" }}>{`"${content.company}"`}</span></div>}
           {candidate.jobTitle && <div style={{ marginBottom: 4 }}><span style={{ color: "#79c0ff" }}>role: </span><span style={{ color: "#a8d5a2" }}>{`"${candidate.jobTitle}"`}</span></div>}
@@ -101,7 +101,7 @@ export default function AxiomTemplate({ content, candidate }: TemplateProps) {
           marginBottom: 14,
           borderBottom: `1px solid ${BORDER}`,
           paddingBottom: 6,
-        }}>// message</div>
+        }}>{"// message"}</div>
         <p style={{ marginBottom: 14, color: "#c9d1d9", fontSize: 13 }}>
           {content.recipientName
             ? t("salutation_named", { name: content.recipientName })
@@ -125,7 +125,7 @@ export default function AxiomTemplate({ content, candidate }: TemplateProps) {
               <div style={{ fontSize: 20, fontWeight: 700, color: "#f0f6fc" }}>{candidate.name}</div>
             )}
             {candidate.jobTitle && (
-              <div style={{ fontFamily: FF.systemMono, fontSize: 11, color: "#58a6ff", marginTop: 2 }}>// {candidate.jobTitle}</div>
+              <div style={{ fontFamily: FF.systemMono, fontSize: 11, color: "#58a6ff", marginTop: 2 }}>{"// "}{candidate.jobTitle}</div>
             )}
           </div>
           <div style={{ fontFamily: FF.systemMono, fontSize: 10, color: "#3a4048", textAlign: "right" }}>SHA: a4f7c2b1</div>

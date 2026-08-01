@@ -63,7 +63,7 @@ export default function VantageTemplate({ content, candidate }: TemplateProps) {
             ["Phone", candidate.phone],
             ["Location", candidate.address],
             ["LinkedIn", candidate.linkedin],
-          ].filter(([_, v]) => Boolean(v)).map(([label, value], i) => (
+          ].filter(([, v]) => Boolean(v)).map(([label, value], i) => (
             <div key={i}>
               <div style={{ fontSize: 7.5, color: "rgba(103,232,249,0.7)", textTransform: "uppercase", letterSpacing: "0.12em", marginBottom: 2 }}>{label}</div>
               <div style={{ fontSize: 8.5, color: "#A5F3FC", marginBottom: 12, wordBreak: "break-all", lineHeight: 1.4 }}>{value}</div>

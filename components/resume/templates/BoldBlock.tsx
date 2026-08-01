@@ -82,7 +82,7 @@ export default function BoldBlockTemplate() {
           {/* Summary */}
           {visible("summary") && summary && (
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("summary").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("summary").toLowerCase()}</h2>
               <p style={{ margin: 0, fontSize: 11.5, lineHeight: 1.6 }}>{summary}</p>
             </div>
           )}
@@ -90,7 +90,7 @@ export default function BoldBlockTemplate() {
           {/* Skills as "stack" */}
           {visible("skills") && skills.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("skills").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("skills").toLowerCase()}</h2>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {skills.map((sk) => (
                   <span key={sk.id} style={{
@@ -106,7 +106,7 @@ export default function BoldBlockTemplate() {
           {/* Education */}
           {visible("education") && education.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("education").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("education").toLowerCase()}</h2>
               {education.map((edu) => (
                 <div key={edu.id} style={{ borderLeft: `4px solid ${accent}`, paddingLeft: 12, marginBottom: 14, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
                   <div style={{ fontWeight: 800, fontSize: 12 }}>{edu.degree}{edu.fieldOfStudy ? ` ${edu.fieldOfStudy}` : ""}</div>
@@ -122,7 +122,7 @@ export default function BoldBlockTemplate() {
           {/* Languages */}
           {visible("languages") && languages.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("languages").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("languages").toLowerCase()}</h2>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8 }}>
                 {languages.map((lang) => (
                   <div key={lang.id} style={{
@@ -140,7 +140,7 @@ export default function BoldBlockTemplate() {
           {/* Certifications */}
           {visible("certifications") && certifications.length > 0 && (
             <div style={{ marginTop: 18 }}>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("certifications").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("certifications").toLowerCase()}</h2>
               {certifications.map((c) => (
                 <div key={c.id} style={{ borderLeft: `4px solid ${accent}`, paddingLeft: 12, marginBottom: 12, breakInside: "avoid", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}>
                   <div style={{ fontWeight: 800, fontSize: 12 }}>{c.name}</div>
@@ -158,7 +158,7 @@ export default function BoldBlockTemplate() {
           {/* Work Experience */}
           {visible("workExperience") && workExperience.length > 0 && (
             <div style={{ marginBottom: 24 }}>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("workExperience").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("workExperience").toLowerCase()}</h2>
               {workExperience.map((job) => (
                 <div key={job.id} className="resume-entry" style={{ marginBottom: 16 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -179,7 +179,7 @@ export default function BoldBlockTemplate() {
           {/* Projects */}
           {visible("projects") && projects.length > 0 && (
             <div>
-              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>// {label("projects").toLowerCase()}</h2>
+              <h2 style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, letterSpacing: "0.05em", margin: "0 0 12px", color: accent, fontWeight: 700 }}>{"// "}{label("projects").toLowerCase()}</h2>
               {projects.map((proj, i) => (
                 <div key={proj.id} style={{ display: "grid", gridTemplateColumns: "32px 1fr", gap: 10, marginBottom: 12, alignItems: "start" }}>
                   <div style={{ fontFamily: "inherit", fontSize: 22, color: accent, lineHeight: 1 }}>{String(i + 1).padStart(2, "0")}</div>

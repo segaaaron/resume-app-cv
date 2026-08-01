@@ -15,12 +15,6 @@ import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 const SKILL_W: Record<string, number> = { beginner: 22, intermediate: 50, advanced: 75, expert: 100 }
 const LANG_W: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
-function hexToRgb(hex: string) {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  return `${r},${g},${b}`
-}
 
 export default function CascadeTemplate() {
   const { config, sections } = useResumeStore(

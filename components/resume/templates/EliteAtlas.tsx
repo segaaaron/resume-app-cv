@@ -47,7 +47,6 @@ export default function EliteAtlasTemplate() {
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const langLbl = (lvl: string) => LANG_LEVEL_LABEL[lvl] ?? lvl.toUpperCase()
 
-  const fullName = [pd.firstName, pd.lastName].filter(Boolean).join(" ") || "Your Name"
   const firstLine = pd.firstName || "Your"
   const lastLine = pd.lastName || "Name"
 

@@ -5,7 +5,6 @@ import { useShallow } from "zustand/react/shallow"
 import { fmtDesc } from "@/lib/utils"
 
 const SKILL_PCT: Record<string, number> = { beginner: 25, intermediate: 50, advanced: 75, expert: 100 }
-const LANG_PCT: Record<string, number> = { a1: 17, a2: 33, b1: 50, b2: 67, c1: 83, c2: 100, native: 100 }
 
 export default function ClassicMonoTemplate() {
   const { config, sections } = useResumeStore(
@@ -188,7 +187,7 @@ function LineRow({ k, v, sub }: { k: string; v: string; sub: string }) {
   )
 }
 
-function MainBlock({ title, rule, accent, children }: { title: string; rule: string; accent: string; children: React.ReactNode }) {
+function MainBlock({ title, rule, children }: { title: string; rule: string; accent: string; children: React.ReactNode }) {
   return (
     <div style={{ marginTop: 28 }}>
       <div style={{ display: "flex", alignItems: "baseline", gap: 12, marginBottom: 12 }}>

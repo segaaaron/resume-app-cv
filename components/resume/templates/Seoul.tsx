@@ -4,7 +4,6 @@ import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { SectionIcon } from "@/lib/resume/section-icons"
 import { useShallow } from "zustand/react/shallow"
-import { Mail, Phone, MapPin, Globe, Link2, GitFork } from "lucide-react"
 
 export default function SeoulTemplate() {
   const { config, sections } = useResumeStore(
@@ -30,12 +29,6 @@ export default function SeoulTemplate() {
     github: "#6b7280",   // gray
   }
 
-  // Diamond divider for sections in main body
-  const DiamondDivider = () => (
-    <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
-      <polygon points="5,1 9,5 5,9 1,5" fill={accent} opacity="0.7" />
-    </svg>
-  )
 
   const MainSectionHeader = ({ id, title }: { id: string; title: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>

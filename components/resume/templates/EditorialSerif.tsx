@@ -12,7 +12,6 @@ export default function EditorialSerifTemplate() {
   const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications, projects } = sd
   const accent = config.colorScheme
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
-  const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
   const ink = "#2a221c"
@@ -20,10 +19,6 @@ export default function EditorialSerifTemplate() {
   const rule = "#d9d0bf"
   const muted = "#6b5e4d"
 
-  const now = new Date()
-  const yearStr = now.getFullYear()
-  const monthNames = ["ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO","JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"]
-  const monthStr = monthNames[now.getMonth()]
 
   // Drop cap: first letter of summary
   const summaryText = summary || ""

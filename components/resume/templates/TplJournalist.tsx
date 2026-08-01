@@ -19,7 +19,6 @@ import { designAccent } from "@/lib/resume/template-accent"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'Georgia, "Times New Roman", serif'
-const SANS = 'var(--font-jakarta), "Inter", system-ui, -apple-system, "Segoe UI", sans-serif'
 
 export default function TplJournalistTemplate() {
   const ink = "#15130f"

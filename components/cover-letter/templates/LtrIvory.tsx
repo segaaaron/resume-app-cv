@@ -11,13 +11,15 @@ import type { TemplateProps } from "./types"
 import { AHead, AContact, AIco, aFade } from "@/components/resume/templates/ats/atoms"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
+import { useLocale } from "next-intl"
 
 const LATO = 'var(--font-lato), Helvetica, Arial, sans-serif'
 
 export default function LtrIvory(props: TemplateProps) {
-  const v = useLtrView(props)
+  const loc = useLocale() === "en" ? "en" : "es"
+  const v = useLtrView(props, loc)
   const c = designAccent(props.colorScheme, "#6b5844")
-  const today = formatToday("es")
+  const today = formatToday(loc)
   const pca = { WebkitPrintColorAdjust: "exact" as const, printColorAdjust: "exact" as const }
 
   return (
@@ -25,7 +27,7 @@ export default function LtrIvory(props: TemplateProps) {
       <div style={{ padding: "48px 58px 0" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20 }}>
           <div>
-            <h1 style={{ margin: 0, fontSize: 30, fontWeight: 300, letterSpacing: "0.06em", textTransform: "uppercase" }}>{v.first} <strong style={{ fontWeight: 900 }}>{v.last}</strong></h1>
+            <h1 style={{ margin: 0, fontSize: 30, fontWeight: 300, letterSpacing: "0.06em", textTransform: "uppercase" }}>{v.first}{v.last && <> <strong style={{ fontWeight: 900 }}>{v.last}</strong></>}</h1>
             {v.jobTitle && <div style={{ fontSize: "10.5pt", color: c, letterSpacing: "0.12em", textTransform: "uppercase", marginTop: 6, fontWeight: 700 }}>{v.jobTitle}</div>}
           </div>
           <AIco k="mail" c={c} size={38} variant="outline" shape="circle" />

@@ -193,7 +193,7 @@ export default function RisoDesignerTemplate() {
   )
 }
 
-function H({ children, red, blue }: { children: React.ReactNode; red: string; blue: string }) {
+function H({ children, red }: { children: React.ReactNode; red: string; blue: string }) {
   return (
     <h3 style={{
       fontFamily: "inherit", fontSize: 14,
