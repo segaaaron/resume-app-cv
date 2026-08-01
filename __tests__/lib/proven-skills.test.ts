@@ -47,6 +47,22 @@ describe("findProvenUnlistedSkills", () => {
     expect(result).not.toContain("Python")
   })
 
+  it("dedupes a multi-word skill listed under a different spacing", () => {
+    // The dictionary term is "react native"; a candidate may have typed it with
+    // no space or a hyphen. All must still count as already listed.
+    const exp = "Shipped an iOS app with React Native."
+    expect(findProvenUnlistedSkills(exp, ["React Native"])).not.toContain("React Native")
+    expect(findProvenUnlistedSkills(exp, ["ReactNative"])).not.toContain("React Native")
+    expect(findProvenUnlistedSkills(exp, ["React-Native"])).not.toContain("React Native")
+    expect(findProvenUnlistedSkills(exp, ["React.Native"])).not.toContain("React Native")
+  })
+
+  it("collapse dedupe is exact per token, never substring", () => {
+    // Listing "Java" must NOT suppress "JavaScript" proven in the text.
+    const exp = "Built the frontend in JavaScript."
+    expect(findProvenUnlistedSkills(exp, ["Java"])).toContain("JavaScript")
+  })
+
   it("caps the number of suggestions", () => {
     const exp = "Used JavaScript TypeScript Python Java Go Rust Ruby PHP Swift Kotlin React Angular Vue."
     const result = findProvenUnlistedSkills(exp, [])

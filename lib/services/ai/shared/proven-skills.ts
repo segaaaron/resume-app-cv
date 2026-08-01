@@ -18,6 +18,17 @@ import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
 export const MAX_PROVEN_SKILLS = 8
 
 /**
+ * Spacing-insensitive form of a term: lowercase, accent-stripped, with spaces,
+ * hyphens and dots removed. So "React Native", "ReactNative", "React-Native" and
+ * "React.Native" all collapse to "reactnative". Used for a per-token equality
+ * check (never substring) so a differently-spaced skill the candidate already
+ * listed still dedupes against the dictionary's canonical spelling.
+ */
+function collapse(s: string): string {
+  return normalizeTerm(s).replace(/[\s.-]/g, "")
+}
+
+/**
  * Returns the skill worded the way the candidate actually wrote it in `original`
  * (so "React", "Node.js", "CI/CD" keep their casing), or null when no term or
  * alias appears there literally. Word boundaries mirror the vocabulary's own
@@ -43,6 +54,11 @@ export function findProvenUnlistedSkills(experienceText: string, listedSkills: s
   if (!expNorm) return []
 
   const listedNorm = normalizeTerm(listedSkills.filter(Boolean).join("  "))
+  // Collapsed forms of every listed skill, so a multi-word skill the candidate
+  // wrote without a space or with a hyphen ("ReactNative", "React-Native") still
+  // dedupes against the dictionary's spaced canonical ("react native"). Exact
+  // per-token equality below — never substring — so "java" ≠ "javascript".
+  const listedCollapsed = new Set(listedSkills.map(collapse).filter(Boolean))
 
   const out: string[] = []
   const seen = new Set<string>()
@@ -54,6 +70,9 @@ export function findProvenUnlistedSkills(experienceText: string, listedSkills: s
     // "React.js" listed counts as having "react").
     if (!termPresent(skill.term, expNorm)) continue
     if (termPresent(skill.term, listedNorm)) continue
+    // Spacing-insensitive backstop: catches the same skill listed under a
+    // different spacing that the word-boundary matcher above misses.
+    if ([skill.term, ...(skill.aliases ?? [])].map(collapse).some((f) => f && listedCollapsed.has(f))) continue
 
     const display = displayAsWritten(experienceText, [skill.term, ...(skill.aliases ?? [])])
     if (!display) continue
