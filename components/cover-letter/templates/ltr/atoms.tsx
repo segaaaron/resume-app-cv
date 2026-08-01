@@ -4,7 +4,7 @@
  * Cover-letter atoms — the letter-specific pieces (recipient block, body,
  * signature) that pair with the shared ATS atoms so each Ltr* cover letter can
  * be a faithful 1:1 port of the reference design (cv-letters-*.jsx) instead of
- * the generic CoverLetterBase engine. Body is the user's real HTML (sanitised);
+ * a shared generic engine. Body is the user's real HTML (sanitised);
  * nothing is fabricated (the reference "3 numbers" proof blocks are dropped —
  * we never invent metrics).
  */
