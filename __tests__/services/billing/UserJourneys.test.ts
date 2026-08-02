@@ -133,6 +133,7 @@ const stripeClient = {
   cancelSubscription: vi.fn().mockResolvedValue({}),
   updateSubscription: vi.fn(),
   createCheckoutSession: vi.fn(),
+  retrieveCheckoutSession: vi.fn(),
   createPortalSession: vi.fn(),
   listCustomers: vi.fn(),
   createCustomer: vi.fn(),
@@ -242,6 +243,46 @@ describe("Journey · Stripe · the one-time buyer", () => {
   })
 })
 
+describe("Idempotency · a paid checkout session provisions exactly once", () => {
+  // The webhook and the success-page reconcile endpoint both fulfill the same purchase.
+  // Idempotency is keyed on the SESSION (`checkout_session:<id>`), not the webhook event,
+  // so a second delivery — a different event carrying the same session, or the reconcile
+  // call after the webhook — must be a no-op: no double provisioning, no second
+  // sessionVersion bump (which would log the buyer out on the success page), no double charge.
+  it("the same session via a second event does not re-provision or re-bump sessionVersion", async () => {
+    vi.mocked(stripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: inDays(30), price: { recurring: { interval: "month" } } }] },
+    } as unknown as Stripe.Subscription)
+
+    await stripeEvent("checkout.session.completed", {
+      id: "cs_once", payment_status: "paid", metadata: { userId: "u1", planInterval: "monthly" }, subscription: "sub_1",
+    }, "ev_first")
+    expect(state.row.plan).toBe("PRO")
+    const versionAfterFirst = state.row.sessionVersion
+
+    await stripeEvent("checkout.session.completed", {
+      id: "cs_once", payment_status: "paid", metadata: { userId: "u1", planInterval: "monthly" }, subscription: "sub_1",
+    }, "ev_second")
+    expect(state.row.sessionVersion).toBe(versionAfterFirst)
+  })
+
+  it("a one-time session is also single-shot across two deliveries", async () => {
+    await stripeEvent("checkout.session.completed", {
+      id: "cs_basic_once", payment_status: "paid", metadata: { userId: "u1", planType: "basic" }, subscription: null,
+    }, "ev_b1")
+    expect(state.row.plan).toBe("BASIC")
+    const endsAt = state.row.subscriptionEndsAt!.getTime()
+    const version = state.row.sessionVersion
+
+    await stripeEvent("checkout.session.completed", {
+      id: "cs_basic_once", payment_status: "paid", metadata: { userId: "u1", planType: "basic" }, subscription: null,
+    }, "ev_b2")
+    // Window not extended, no second bump.
+    expect(state.row.subscriptionEndsAt!.getTime()).toBe(endsAt)
+    expect(state.row.sessionVersion).toBe(version)
+  })
+})
+
 describe("Journey · Stripe · the subscriber", () => {
   async function subscribe(interval: "monthly" | "annual", periodEnd = inDays(30)) {
     vi.mocked(stripeClient.retrieveSubscription).mockResolvedValue({
@@ -285,6 +326,33 @@ describe("Journey · Stripe · the subscriber", () => {
       parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } },
     })
     expect(state.row.subscriptionStatus).toBe("ACTIVE")
+    expect(access()).toMatchObject({ active: true, plan: "PRO" })
+  })
+
+  it("is revoked when Stripe's retries give up (unpaid), then fully recovers if paid", async () => {
+    await subscribe("monthly")
+    expect(access()).toMatchObject({ active: true, plan: "PRO" })
+
+    // Smart Retries EXHAUSTED → status `unpaid`. Unlike past_due (still retrying), this is
+    // terminal: revoke now, no dependence on the Dashboard "cancel" toggle.
+    await stripeEvent("customer.subscription.updated", {
+      id: "sub_1", customer: "cus_1", status: "unpaid", cancel_at_period_end: false,
+      items: { data: [{ current_period_end: inDays(-1) }] },
+    })
+    expect(state.row.subscriptionStatus).toBe("EXPIRED")
+    expect(state.row.plan).toBe("UNSUBSCRIBED")
+    expect(access()).toMatchObject({ active: false })
+
+    // Paying the open invoice fires invoice.paid → PRO/ACTIVE restored. Recovery loop closed.
+    vi.mocked(stripeClient.retrieveSubscription).mockResolvedValue({
+      items: { data: [{ current_period_end: inDays(30), price: { recurring: { interval: "month" } } }] },
+    } as unknown as Stripe.Subscription)
+    await stripeEvent("invoice.paid", {
+      id: "in_recover", customer: "cus_1",
+      parent: { type: "subscription_details", subscription_details: { subscription: "sub_1" } },
+    })
+    expect(state.row.subscriptionStatus).toBe("ACTIVE")
+    expect(state.row.plan).toBe("PRO")
     expect(access()).toMatchObject({ active: true, plan: "PRO" })
   })
 
@@ -613,6 +681,7 @@ describe("Purchase · the checkout session each plan opens", () => {
   const checkoutClient = {
     ...stripeClient,
     createCheckoutSession: vi.fn().mockResolvedValue({ url: "https://checkout.stripe.com/x" }),
+    retrieveCheckoutSession: vi.fn(),
     listCustomers: vi.fn().mockResolvedValue({ data: [] }),
     createCustomer: vi.fn().mockResolvedValue({ id: "cus_new" }),
   } as unknown as IStripeClient

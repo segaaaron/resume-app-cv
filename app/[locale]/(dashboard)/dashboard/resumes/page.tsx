@@ -1,8 +1,10 @@
+import { Suspense } from "react"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { hasStripeBillingPortal } from "@/lib/plans"
 import ResumesDashboard from "@/components/dashboard/ResumesDashboard"
+import CheckoutReconciler from "@/components/dashboard/CheckoutReconciler"
 
 export const dynamic = "force-dynamic"
 
@@ -52,5 +54,13 @@ export default async function ResumesPage({
     billing?.paymentProvider !== "PAYPAL"
     && hasStripeBillingPortal(billing?.subscriptionStatus, billing?.stripeCustomerId)
 
-  return <ResumesDashboard initialResumes={resumes} canManageBilling={canManageBilling} />
+  return (
+    <>
+      {/* Activates the plan on return from Stripe Checkout if the webhook is delayed. */}
+      <Suspense fallback={null}>
+        <CheckoutReconciler />
+      </Suspense>
+      <ResumesDashboard initialResumes={resumes} canManageBilling={canManageBilling} />
+    </>
+  )
 }

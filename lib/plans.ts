@@ -91,11 +91,12 @@ export const PAST_DUE_GRACE_DAYS = 7
  * up to ~14 days, and downgrading mid-retry would clobber a subscription Stripe might
  * still recover. But it MUST touch them eventually. If the Dashboard is set to "cancel
  * after retries", `customer.subscription.deleted` cleans the row up first and this never
- * fires. If it is set to "mark unpaid" or "leave past due", NO event ever arrives — and
- * without this backstop the user is stranded: `isActive` cut their access at
- * PAST_DUE_GRACE_DAYS, yet `blocksNewPurchase(PAST_DUE)` still refuses any new checkout,
- * so they have no access AND cannot buy again. This makes the cleanup independent of a
- * Dashboard setting we do not control.
+ * fires. If set to "mark unpaid", `customer.subscription.updated` (status `unpaid`) now
+ * revokes access directly in the webhook, so that path never reaches PAST_DUE either.
+ * Only "leave past due" emits NO terminating event — and without this backstop that user
+ * is stranded: `isActive` cut their access at PAST_DUE_GRACE_DAYS, yet
+ * `blocksNewPurchase(PAST_DUE)` still refuses any new checkout, so they have no access AND
+ * cannot buy again. This makes the cleanup independent of a Dashboard setting we do not control.
  *
  * 21 days clears the whole documented retry window with margin; measured from
  * `subscriptionEndsAt`, which for a PAST_DUE row still holds the last PAID period end

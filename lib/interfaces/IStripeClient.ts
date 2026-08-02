@@ -7,6 +7,7 @@ export interface IStripeClient {
   cancelSubscription(id: string): Promise<Stripe.Subscription>
   updateSubscription(id: string, params: Stripe.SubscriptionUpdateParams): Promise<Stripe.Subscription>
   createCheckoutSession(params: Stripe.Checkout.SessionCreateParams): Promise<Stripe.Checkout.Session>
+  retrieveCheckoutSession(id: string): Promise<Stripe.Checkout.Session>
   createPortalSession(params: Stripe.BillingPortal.SessionCreateParams): Promise<Stripe.BillingPortal.Session>
   listCustomers(params: Stripe.CustomerListParams): Promise<Stripe.ApiList<Stripe.Customer>>
   createCustomer(params: Stripe.CustomerCreateParams): Promise<Stripe.Customer>

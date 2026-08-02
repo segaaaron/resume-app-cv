@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { stripe, stripeEnabled } from "@/lib/stripe"
 import { checkOrigin } from "@/lib/csrf"
 import { createLogger } from "@/lib/logger"
+import { isOneTimePlanStillValid } from "@/lib/services/billing/revoke-access"
 import { z } from "zod"
 import type Stripe from "stripe"
 import { SubscriptionStatus, Prisma } from "@prisma/client"
@@ -82,6 +83,17 @@ export async function POST(req: Request) {
   const sub    = sorted.find((s) => s.status !== "canceled") ?? sorted[0] ?? null
 
   let reconciled: Record<string, unknown>
+
+  // A one-time buyer (BASIC/SPRINT) has NO Stripe subscription by design, so "no
+  // subscription found" is their normal state — it must NOT be read as "downgrade them".
+  // Their paid window lives in subscriptionEndsAt and carries no subscription to sync.
+  // Without this guard, reconciling a one-time buyer would wipe a window they paid for.
+  if (!sub && isOneTimePlanStillValid(user.plan, user.subscriptionEndsAt)) {
+    await db.auditLog.create({
+      data: { userId, action: "ADMIN_RECONCILE_USER", metadata: { byAdmin: session.user.id, before, after: before, source: "one_time_window_kept" } as Prisma.InputJsonValue },
+    })
+    return NextResponse.json({ userId, before, reconciled: before, source: "one_time_window_kept" })
+  }
 
   if (!sub) {
     reconciled = await db.user.update({

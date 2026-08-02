@@ -190,17 +190,18 @@ describe("purchaseConfirmed — the post-checkout screen must recognise EVERY pa
 })
 
 describe("unpaid subscriptions cannot outlive the period they paid for", () => {
-  // Stripe's Dashboard decides what happens after Smart Retries give up, and only ONE
-  // of the three options tells us about it:
+  // Stripe's Dashboard decides what happens after Smart Retries give up:
   //   · "Cancel the subscription" → canceled → customer.subscription.deleted → we downgrade.
-  //   · "Mark the subscription as unpaid" → stays `unpaid` forever, no deleted event.
-  //   · "Leave the subscription past-due" → stays `past_due` forever, no deleted event.
-  // Our webhook maps BOTH unpaid and past_due to PAST_DUE, which grants access. If the
-  // setting is either of the last two, nothing would ever revoke the plan.
+  //   · "Mark the subscription as unpaid" → status `unpaid` → customer.subscription.updated,
+  //     which we now REVOKE on directly (→ EXPIRED), independent of this toggle.
+  //   · "Leave the subscription past-due" → stays `past_due`, no further event.
+  // past_due (Stripe still retrying) maps to PAST_DUE and keeps access through the grace
+  // window; unpaid (retries exhausted) is revoked at once.
   //
-  // What saves us is the date check in isActive(): PAST_DUE keeps access only until the
-  // period that was actually PAID runs out. These tests exist so that check is never
-  // "simplified" away — deleting it turns a Dashboard toggle into free PRO forever.
+  // The last setting emits no terminating event, so the date check in isActive() is still
+  // the backstop: PAST_DUE keeps access only until the period that was actually PAID runs
+  // out. These tests exist so that check is never "simplified" away — deleting it turns a
+  // Dashboard toggle into free PRO forever.
   const DAY = 86_400_000
 
   it("PAST_DUE keeps access while the paid period is still running", () => {

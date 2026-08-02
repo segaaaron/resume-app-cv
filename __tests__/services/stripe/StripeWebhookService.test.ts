@@ -22,6 +22,7 @@ const mockStripeClient: IStripeClient = {
   cancelSubscription: vi.fn(),
   updateSubscription: vi.fn(),
   createCheckoutSession: vi.fn(),
+  retrieveCheckoutSession: vi.fn(),
   createPortalSession: vi.fn(),
   listCustomers: vi.fn(),
   createCustomer: vi.fn(),

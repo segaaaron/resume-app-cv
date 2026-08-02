@@ -201,9 +201,23 @@ export class StripeWebhookService {
   }
 
   private async handleCheckoutCompleted(event: Stripe.Event): Promise<void> {
-    const session = event.data.object as Stripe.Checkout.Session
+    await this.provisionCheckoutSession(event.data.object as Stripe.Checkout.Session)
+  }
+
+  /**
+   * Provision a PAID Checkout Session. Idempotent PER SESSION via the claim key
+   * `checkout_session:<id>`, so the webhook AND the success-page reconciliation
+   * (POST /api/stripe/reconcile-session) can both call it for the same purchase and
+   * exactly one wins — the loser is a P2002 no-op, so no double provisioning and no
+   * second `sessionVersion` bump. This is Stripe's recommended belt-and-suspenders
+   * fulfillment: webhooks can be delayed, so also fulfill when the buyer returns.
+   *
+   * Returns whether THIS call performed the provisioning (for the reconcile endpoint /
+   * UI). A no-op — unpaid, no userId, or already provisioned — returns provisioned:false.
+   */
+  async provisionCheckoutSession(session: Stripe.Checkout.Session): Promise<{ provisioned: boolean; plan: string | null }> {
     const userId = session.metadata?.userId
-    if (!userId) return
+    if (!userId) return { provisioned: false, plan: null }
     // DELIBERATELY STRICTER THAN STRIPE'S EXAMPLE, which fulfills on
     // `payment_status != "unpaid"` — that includes "processing", the state a delayed
     // method (OXXO, SEPA, boleto) sits in for hours or days before it can still fail.
@@ -211,14 +225,18 @@ export class StripeWebhookService {
     // Access here is instant and irreversible, so we wait for the money: "processing"
     // returns, and `checkout.session.async_payment_succeeded` provisions once the
     // payment_status actually turns "paid".
-    if (session.payment_status !== "paid") return
+    if (session.payment_status !== "paid") return { provisioned: false, plan: null }
+
+    // Idempotency boundary is the SESSION, not the webhook event — the same purchase can
+    // arrive via two events (completed + async_payment_succeeded) and via the reconcile
+    // endpoint. Keying on the session id makes "fulfill this purchase once" exact.
+    const claimKey = `checkout_session:${session.id}`
 
     // ── One-time plans (BASIC / SPRINT) ─────────────────────────────────────
     // No Stripe subscription; provision a time-boxed plan with our own expiry.
     const planType = session.metadata?.planType
     if (planType === "basic" || planType === "sprint") {
-      await this.handleOneTimeCheckout(event, userId, planType)
-      return
+      return this.provisionOneTime(session, userId, planType, claimKey)
     }
 
     const subscriptionId = typeof session.subscription === "string"
@@ -239,7 +257,7 @@ export class StripeWebhookService {
     }
 
     const result = await db.$transaction(async (tx) => {
-      if (!await claimEvent(tx, event.id, { userId, checkoutSessionId: session.id })) return { skip: true }
+      if (!await claimEvent(tx, claimKey, { userId, checkoutSessionId: session.id })) return { skip: true }
       const targetUser = await tx.user.findUnique({ where: { id: userId }, select: { isManaged: true, subscriptionEndsAt: true } })
       if (targetUser?.isManaged) return { skip: true }
       // Upgrading to PRO must not shorten a window already paid for: a BASIC/SPRINT
@@ -257,29 +275,32 @@ export class StripeWebhookService {
       return { skip: false }
     }, TX_OPTS)
 
-    if (result.skip) return
+    if (result.skip) return { provisioned: false, plan: null }
     purgeUserCache(userId)
     // Fire-and-forget: referral failure must not cause 500 → Stripe retry → idempotency skip → reward permanently lost.
     // Promise.resolve() guards against synchronous throws or non-Promise returns crashing the handler.
+    // checkAndApplyReferralReward is itself idempotent (unique ReferralConversion row), so a
+    // reconcile+webhook race cannot double-reward even if both somehow reached here.
     Promise.resolve(checkAndApplyReferralReward(userId)).catch((e) =>
-      this.logger.error("checkAndApplyReferralReward failed after checkout", { userId, eventId: event.id }, e instanceof Error ? e : undefined)
+      this.logger.error("checkAndApplyReferralReward failed after checkout", { userId, sessionId: session.id }, e instanceof Error ? e : undefined)
     )
+    return { provisioned: true, plan: "PRO" }
   }
 
   /**
-   * Provision a one-time plan (BASIC / SPRINT) from checkout.session.completed.
+   * Provision a one-time plan (BASIC / SPRINT) from a paid Checkout Session.
    * No Stripe subscription exists — we set our own expiry window:
    *   BASIC  → +1 calendar month, SPRINT → +7 days.
    * isActive(BASIC|SPRINT) relies on subscriptionEndsAt, not subscriptionStatus.
    * Idempotent via claimEvent; managed (LIMITED) users are never overwritten.
    */
-  private async handleOneTimeCheckout(event: Stripe.Event, userId: string, planType: "basic" | "sprint"): Promise<void> {
+  private async provisionOneTime(session: Stripe.Checkout.Session, userId: string, planType: "basic" | "sprint", claimKey: string): Promise<{ provisioned: boolean; plan: string | null }> {
     const newPlan = planType === "basic" ? "BASIC" : "SPRINT"
     const now = new Date()
     const purchasedUntil = planType === "basic" ? addMonths(now, 1) : addDays(now, 7)
 
     const result = await db.$transaction(async (tx) => {
-      if (!await claimEvent(tx, event.id, { userId })) return { skip: true, subscriptionEndsAt: null }
+      if (!await claimEvent(tx, claimKey, { userId, checkoutSessionId: session.id })) return { skip: true, subscriptionEndsAt: null }
       const targetUser = await tx.user.findUnique({
         where: { id: userId },
         select: { isManaged: true, subscriptionEndsAt: true },
@@ -326,16 +347,17 @@ export class StripeWebhookService {
             purchasedUntil: purchasedUntil.toISOString(),
             subscriptionEndsAt: subscriptionEndsAt.toISOString(),
             keptLongerExistingWindow: subscriptionEndsAt.getTime() !== purchasedUntil.getTime(),
-            checkoutSessionId: (event.data.object as Stripe.Checkout.Session).id,
+            checkoutSessionId: session.id,
           },
         },
       })
       return { skip: false, subscriptionEndsAt }
     }, TX_OPTS)
 
-    if (result.skip) return
+    if (result.skip) return { provisioned: false, plan: null }
     purgeUserCache(userId)
-    this.logger.info("StripeWebhookService.handleOneTimeCheckout", { userId, planType, subscriptionEndsAt: result.subscriptionEndsAt?.toISOString() ?? null })
+    this.logger.info("StripeWebhookService.provisionOneTime", { userId, planType, subscriptionEndsAt: result.subscriptionEndsAt?.toISOString() ?? null })
+    return { provisioned: true, plan: newPlan }
   }
 
   private async handleInvoicePaid(event: Stripe.Event): Promise<void> {
@@ -443,11 +465,19 @@ export class StripeWebhookService {
         const endsAt = periodEnd ? laterOf(new Date(periodEnd * 1000), user.subscriptionEndsAt) : undefined
         await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "ACTIVE", planInterval, ...(endsAt ? { subscriptionEndsAt: endsAt } : {}), sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "ACTIVE", planInterval, periodEnd: periodEnd ? new Date(periodEnd * 1000).toISOString() : null } } })
-      } else if (sub.status === "past_due" || sub.status === "unpaid") {
+      } else if (sub.status === "past_due") {
+        // Stripe is STILL retrying the charge (Smart Retries, up to ~2 weeks). Keep access
+        // through the grace window — invoice.payment_failed notifies the customer, and
+        // invoice.paid recovers them to ACTIVE. `unpaid` is the give-up state, handled below.
         await tx.user.update({ where: { id: user.id }, data: { subscriptionStatus: "PAST_DUE", sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "PAST_DUE", stripeStatus: sub.status } } })
-      } else if (sub.status === "incomplete_expired" || sub.status === "paused") {
-        // Downgrade only if there is no separately paid one-time window to protect.
+      } else if (sub.status === "unpaid" || sub.status === "incomplete_expired" || sub.status === "paused") {
+        // `unpaid` = Smart Retries EXHAUSTED and Stripe stopped collecting. Stripe's own
+        // guidance is to revoke access at that point. Revoking HERE — not only via the
+        // "Cancel subscription" Dashboard setting, the sole one that emits
+        // subscription.deleted — means the dunning outcome no longer depends on a Dashboard
+        // toggle. Fully recoverable: paying the open invoice fires invoice.paid, which
+        // restores PRO/ACTIVE. A separately paid one-time window (and managed users) survive.
         await tx.user.update({ where: { id: user.id }, data: { ...(oneTimeActive ? {} : { plan: "UNSUBSCRIBED" }), subscriptionStatus: "EXPIRED", sessionVersion: { increment: 1 } } })
         await tx.auditLog.create({ data: { userId: user.id, action: "SUBSCRIPTION_UPDATED", metadata: { status: "EXPIRED", stripeStatus: sub.status, keptOneTimePlan: oneTimeActive ? user.plan : null } } })
       }

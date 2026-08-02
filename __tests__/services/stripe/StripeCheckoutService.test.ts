@@ -9,7 +9,8 @@ vi.mock("@/lib/stripe", () => ({ stripeEnabled: vi.fn().mockReturnValue(true) })
 const mockStripeClient: IStripeClient = {
   constructEvent: vi.fn(), retrieveSubscription: vi.fn(), retrieveCharge: vi.fn(),
   cancelSubscription: vi.fn(), updateSubscription: vi.fn(),
-  createCheckoutSession: vi.fn(), createPortalSession: vi.fn(),
+  createCheckoutSession: vi.fn(),
+  retrieveCheckoutSession: vi.fn(), createPortalSession: vi.fn(),
   listCustomers: vi.fn(), createCustomer: vi.fn(), createRefund: vi.fn(),
   retrieveBalance: vi.fn(), listCharges: vi.fn(), listDisputes: vi.fn(), listSubscriptions: vi.fn(),
 }
@@ -108,5 +109,38 @@ describe("StripeCheckoutService.createSession", () => {
     const result = await makeService().createSession("u1", "monthly", "es")
     expect(result).toEqual({ url: "https://stripe.com/pay/test" })
     expect(mockStripeClient.listCustomers).not.toHaveBeenCalled()
+  })
+
+  // ── Stale customer recovery (Stripe account/mode switch, or deleted customer) ──
+
+  it("stale stored customer (resource_missing) → clears id, recreates, retries once, returns { url }", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", email: "a@b.com", stripeCustomerId: "cus_stale", plan: "UNSUBSCRIBED", subscriptionStatus: "NONE", subscriptionId: null } as unknown as import("@prisma/client").User)
+    vi.mocked(db.user.update).mockResolvedValue({} as never)
+    // First attempt fails because the stored customer does not exist in this Stripe account.
+    vi.mocked(mockStripeClient.createCheckoutSession)
+      .mockRejectedValueOnce(Object.assign(new Error("No such customer: 'cus_stale'"), { code: "resource_missing", param: "customer" }))
+      .mockResolvedValueOnce({ url: "https://stripe.com/pay/recovered" } as never)
+    vi.mocked(mockStripeClient.listCustomers).mockResolvedValue({ data: [] } as never)
+    vi.mocked(mockStripeClient.createCustomer).mockResolvedValue({ id: "cus_fresh" } as never)
+
+    const result = await makeService().createSession("u1", "monthly", "es")
+    expect(result).toEqual({ url: "https://stripe.com/pay/recovered" })
+    // Stale id nulled, fresh customer created and used on the retry.
+    expect(db.user.update).toHaveBeenCalledWith({ where: { id: "u1" }, data: { stripeCustomerId: null } })
+    expect(mockStripeClient.createCustomer).toHaveBeenCalledOnce()
+    expect(mockStripeClient.createCheckoutSession).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(mockStripeClient.createCheckoutSession).mock.calls[1][0].customer).toBe("cus_fresh")
+  })
+
+  it("resource_missing that is NOT the customer (e.g. price) → does NOT retry, rethrows", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", email: "a@b.com", stripeCustomerId: "cus_1", plan: "UNSUBSCRIBED", subscriptionStatus: "NONE", subscriptionId: null } as unknown as import("@prisma/client").User)
+    vi.mocked(mockStripeClient.createCheckoutSession)
+      .mockRejectedValueOnce(Object.assign(new Error("No such price: 'price_x'"), { code: "resource_missing", param: "line_items[0][price]" }))
+
+    await expect(makeService().createSession("u1", "monthly", "es")).rejects.toThrow(/No such price/)
+    expect(mockStripeClient.createCheckoutSession).toHaveBeenCalledTimes(1)
+    expect(mockStripeClient.createCustomer).not.toHaveBeenCalled()
   })
 })

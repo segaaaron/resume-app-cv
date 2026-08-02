@@ -40,6 +40,7 @@ const mockStripeClient: IStripeClient = {
   cancelSubscription: vi.fn(),
   updateSubscription: vi.fn(),
   createCheckoutSession: vi.fn(),
+  retrieveCheckoutSession: vi.fn(),
   createPortalSession: vi.fn(),
   listCustomers: vi.fn(),
   createCustomer: vi.fn(),
@@ -600,14 +601,16 @@ describe("C. handleSubscriptionUpdated", () => {
     }))
   })
 
-  it("status=unpaid → PAST_DUE", async () => {
+  it("status=unpaid → revoked (plan=UNSUBSCRIBED, status=EXPIRED) — Smart Retries gave up", async () => {
+    // `unpaid` is the terminal give-up state, NOT another retry (that is past_due). Stripe's
+    // guidance is to revoke, and we must not depend on the Dashboard being set to "cancel".
     const { db } = await import("@/lib/db")
     vi.mocked(mockStripeClient.constructEvent).mockReturnValue(makeSubUpdatedEvent({ status: "unpaid" }))
     const tx = makeTx()
     await mockTx(db, tx)
     await makeWebhook().handleEvent("body", "sig", "secret")
     expect(tx.user.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ subscriptionStatus: "PAST_DUE" }),
+      data: expect.objectContaining({ plan: "UNSUBSCRIBED", subscriptionStatus: "EXPIRED" }),
     }))
   })
 

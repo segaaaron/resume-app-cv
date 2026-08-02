@@ -21,6 +21,9 @@ export class StripeClientAdapter implements IStripeClient {
   async createCheckoutSession(params: Stripe.Checkout.SessionCreateParams): Promise<Stripe.Checkout.Session> {
     return stripe!.checkout.sessions.create(params)
   }
+  async retrieveCheckoutSession(id: string): Promise<Stripe.Checkout.Session> {
+    return stripe!.checkout.sessions.retrieve(id)
+  }
   async createPortalSession(params: Stripe.BillingPortal.SessionCreateParams): Promise<Stripe.BillingPortal.Session> {
     return stripe!.billingPortal.sessions.create(params)
   }

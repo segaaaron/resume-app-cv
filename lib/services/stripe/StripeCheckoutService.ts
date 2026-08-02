@@ -1,3 +1,4 @@
+import type Stripe from "stripe"
 import { db } from "@/lib/db"
 import { stripeEnabled } from "@/lib/stripe"
 import { resend, emailEnabled } from "@/lib/resend"
@@ -5,6 +6,17 @@ import { AppError } from "@/lib/services/auth/AppError"
 import { blocksNewPurchase } from "@/lib/plans"
 import type { IStripeClient } from "@/lib/interfaces/IStripeClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
+
+// A stored stripeCustomerId can point at a customer that no longer exists in the
+// active Stripe account — the account/mode was switched (test → live, or a brand
+// new account) or the customer was deleted. Stripe answers with a resource_missing
+// error whose `param` is "customer". Detect exactly that case (never a missing
+// price or other resource, which a customer recreation would not fix).
+function isMissingCustomerError(e: unknown): boolean {
+  const err = e as { code?: string; param?: string; message?: string }
+  return err?.code === "resource_missing" &&
+    (err?.param === "customer" || /customer/i.test(err?.message ?? ""))
+}
 
 export class StripeCheckoutService {
   constructor(
@@ -64,44 +76,15 @@ export class StripeCheckoutService {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL
     if (!appUrl) throw new AppError("server_misconfiguration", 500)
 
-    let customerId = user.stripeCustomerId
-    if (!customerId) {
-      const existing = await this.stripeClient.listCustomers({ email: user.email!, limit: 10 })
-      const match = existing.data.find(c => c.metadata?.userId === userId && !c.deleted)
-      if (match) {
-        customerId = match.id
-      } else {
-        const customer = await this.stripeClient.createCustomer({ email: user.email!, metadata: { userId } })
-        customerId = customer.id
-      }
-      try {
-        await db.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
-      } catch (e) {
-        this.logger.error("StripeCheckoutService: failed to save stripeCustomerId — orphan customer created", { userId, customerId }, e instanceof Error ? e : undefined)
-        if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
-          await resend.emails.send({
-            from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
-            to: process.env.ADMIN_EMAIL,
-            subject: `[WARNING] Orphan Stripe customer created: ${userId}`,
-            text: `A Stripe customer (${customerId}) was created for user ${userId} but could NOT be saved to the database.\n\nThis customer is now orphaned in Stripe. Future checkouts may create duplicate customers.\n\nAction required:\n1. Manually set stripeCustomerId = '${customerId}' for user ${userId} in the database\n2. Or run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n\nError: ${String(e)}`,
-          }).catch((emailErr) => this.logger.error("StripeCheckoutService: orphan alert email failed", { userId, customerId }, emailErr instanceof Error ? emailErr : undefined))
-        }
-        throw new AppError("checkout_failed", 500)
-      }
-    }
-
-    const checkoutSession = await this.stripeClient.createCheckoutSession({
-      customer: customerId,
+    const buildCheckoutParams = (customer: string): Stripe.Checkout.SessionCreateParams => ({
+      customer,
       mode: isOneTime ? "payment" : "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl.replace(/\/$/, "")}/${locale}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
       // Where Checkout's back button sends a customer who changes their mind (a declined
-      // card does NOT come here — that session stays open for retry).
-      // It used to be `${appUrl}/pricing`: no locale, and no trailing-slash strip. There
-      // is no next-intl middleware and no /pricing route outside [locale], so that URL
-      // is a 404 — the buyer who clicked "back" to compare plans landed on an error page
-      // instead of the pricing table. PayPal's checkout already built this correctly.
+      // card does NOT come here — that session stays open for retry). Locale-prefixed
+      // because there is no /pricing route outside [locale] and no next-intl middleware.
       cancel_url: `${appUrl.replace(/\/$/, "")}/${locale}/pricing?checkout=cancelled`,
       // One-time → planType drives provisioning (BASIC/SPRINT). Subscription → planInterval.
       // `locale` rides along so the webhook can write emails in the language the customer
@@ -118,8 +101,51 @@ export class StripeCheckoutService {
         : { subscription_data: { metadata: { userId, planInterval: plan, locale } } }),
     })
 
+    let customerId = await this.resolveCustomerId(userId, user.email!, user.stripeCustomerId)
+
+    let checkoutSession: Stripe.Checkout.Session
+    try {
+      checkoutSession = await this.stripeClient.createCheckoutSession(buildCheckoutParams(customerId))
+    } catch (e) {
+      // The stored customer id is stale (Stripe account/mode changed, or the customer
+      // was deleted). Drop it, mint a fresh customer in the active account, and retry
+      // once — otherwise the buyer hits a 500 they can never clear on their own.
+      if (!isMissingCustomerError(e)) throw e
+      this.logger.warn("StripeCheckoutService: stale Stripe customer, recreating", { userId, staleCustomerId: customerId })
+      await db.user.update({ where: { id: userId }, data: { stripeCustomerId: null } })
+      customerId = await this.resolveCustomerId(userId, user.email!, null)
+      checkoutSession = await this.stripeClient.createCheckoutSession(buildCheckoutParams(customerId))
+    }
+
     if (!checkoutSession.url) throw new AppError("checkout_url_missing", 500)
     this.logger.info("StripeCheckoutService.createSession", { userId, plan })
     return { url: checkoutSession.url }
+  }
+
+  // Returns a usable Stripe customer id for the user, persisting it when one is
+  // created. Reuses the stored id when present; otherwise finds a matching customer
+  // by email (metadata.userId) before creating a new one, to avoid duplicates.
+  private async resolveCustomerId(userId: string, email: string, currentId: string | null): Promise<string> {
+    if (currentId) return currentId
+
+    const existing = await this.stripeClient.listCustomers({ email, limit: 10 })
+    const match = existing.data.find(c => c.metadata?.userId === userId && !c.deleted)
+    const customerId = match ? match.id : (await this.stripeClient.createCustomer({ email, metadata: { userId } })).id
+
+    try {
+      await db.user.update({ where: { id: userId }, data: { stripeCustomerId: customerId } })
+    } catch (e) {
+      this.logger.error("StripeCheckoutService: failed to save stripeCustomerId — orphan customer created", { userId, customerId }, e instanceof Error ? e : undefined)
+      if (emailEnabled() && resend && process.env.ADMIN_EMAIL) {
+        await resend.emails.send({
+          from: process.env.EMAIL_FROM ?? "Valhalla Resume <no-reply@valhallaresume.com>",
+          to: process.env.ADMIN_EMAIL,
+          subject: `[WARNING] Orphan Stripe customer created: ${userId}`,
+          text: `A Stripe customer (${customerId}) was created for user ${userId} but could NOT be saved to the database.\n\nThis customer is now orphaned in Stripe. Future checkouts may create duplicate customers.\n\nAction required:\n1. Manually set stripeCustomerId = '${customerId}' for user ${userId} in the database\n2. Or run: POST /api/admin/billing/reconcile-user with { "userId": "${userId}" }\n\nError: ${String(e)}`,
+        }).catch((emailErr) => this.logger.error("StripeCheckoutService: orphan alert email failed", { userId, customerId }, emailErr instanceof Error ? emailErr : undefined))
+      }
+      throw new AppError("checkout_failed", 500)
+    }
+    return customerId
   }
 }

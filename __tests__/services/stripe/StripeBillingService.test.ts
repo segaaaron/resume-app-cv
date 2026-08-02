@@ -10,7 +10,8 @@ vi.mock("@/lib/stripe", () => ({ stripeEnabled: vi.fn().mockReturnValue(true) })
 const mockStripeClient: IStripeClient = {
   constructEvent: vi.fn(), retrieveSubscription: vi.fn(), retrieveCharge: vi.fn(),
   cancelSubscription: vi.fn(), updateSubscription: vi.fn(),
-  createCheckoutSession: vi.fn(), createPortalSession: vi.fn(),
+  createCheckoutSession: vi.fn(),
+  retrieveCheckoutSession: vi.fn(), createPortalSession: vi.fn(),
   listCustomers: vi.fn(), createCustomer: vi.fn(), createRefund: vi.fn(),
   retrieveBalance: vi.fn(), listCharges: vi.fn(), listDisputes: vi.fn(), listSubscriptions: vi.fn(),
 }
