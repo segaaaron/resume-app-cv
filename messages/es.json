@@ -551,7 +551,9 @@
       "back_to_login": "Volver al inicio de sesión",
       "forgot_link": "¿Olvidaste tu contraseña?",
       "sent_message": "Si el email está registrado, recibirás un código en tu bandeja de entrada.",
-      "google_account": "Esta cuenta usa Google para iniciar sesión. No necesitas contraseña.",
+      "google_title": "Inicia sesión con Google",
+      "google_account": "Esta cuenta se registró con Google, así que no tiene contraseña que restablecer. Continúa con Google para entrar.",
+      "google_cta": "Continuar con Google",
       "plan_not_allowed": "Tu plan no permite cambiar la contraseña. Contacta a tu proveedor.",
       "rate_limit": "Demasiados intentos. Intenta de nuevo más tarde.",
       "verify": {

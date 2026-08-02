@@ -43,13 +43,25 @@ export class PrismaUserRepository implements IUserRepository {
     ])
   }
 
-  async findForReset(email: string): Promise<{ id: string; name: string | null; hasPassword: boolean; plan: string } | null> {
+  async findForReset(email: string): Promise<{ id: string; name: string | null; hasPassword: boolean; plan: string; oauthProvider: string | null } | null> {
     const user = await db.user.findUnique({
       where: { email },
-      select: { id: true, name: true, password: true, plan: true },
+      select: {
+        id: true,
+        name: true,
+        password: true,
+        plan: true,
+        accounts: { select: { provider: true }, take: 1 },
+      },
     })
     if (!user) return null
-    return { id: user.id, name: user.name, hasPassword: !!user.password, plan: user.plan }
+    return {
+      id: user.id,
+      name: user.name,
+      hasPassword: !!user.password,
+      plan: user.plan,
+      oauthProvider: user.accounts[0]?.provider ?? null,
+    }
   }
 
   async updatePassword(userId: string, passwordHash: string): Promise<void> {

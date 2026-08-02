@@ -41,7 +41,7 @@ export interface IUserRepository {
   findByEmail(email: string): Promise<UserAuthRecord | null>
   findByReferralCode(code: string): Promise<{ id: string } | null>
   createFromPending(pending: PendingRecord, referralCode: string, referrerId?: string, preferredLocale?: string | null): Promise<void>
-  findForReset(email: string): Promise<{ id: string; name: string | null; hasPassword: boolean; plan: string } | null>
+  findForReset(email: string): Promise<{ id: string; name: string | null; hasPassword: boolean; plan: string; oauthProvider: string | null } | null>
   updatePassword(userId: string, passwordHash: string): Promise<void>
   findForChallenge(email: string): Promise<SessionChallengeUser | null>
   updateSessionChallenge(userId: string, data: SessionChallengeUpdate): Promise<void>

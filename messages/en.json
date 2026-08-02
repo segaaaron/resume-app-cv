@@ -551,7 +551,9 @@
       "back_to_login": "Back to login",
       "forgot_link": "Forgot your password?",
       "sent_message": "If the email is registered, you'll receive a code in your inbox.",
-      "google_account": "This account uses Google to sign in. You don't need a password.",
+      "google_title": "Sign in with Google",
+      "google_account": "This account was created with Google, so there's no password to reset. Continue with Google to sign in.",
+      "google_cta": "Continue with Google",
       "plan_not_allowed": "Your plan does not allow password changes. Contact your provider.",
       "rate_limit": "Too many attempts. Please try again later.",
       "verify": {

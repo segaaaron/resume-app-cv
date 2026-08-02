@@ -61,9 +61,16 @@ describe("PasswordResetService.requestReset", () => {
     expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
-  it("Google-only account (no password) → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
+  it("Google-only account (no password, oauth provider) → returns { sent: false, oauth }, no email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: false, plan: "PRO" })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: false, plan: "PRO", oauthProvider: "google" })
+    await expect(makeService().requestReset("1.2.3.4", "a@b.com")).resolves.toEqual({ sent: false, oauth: "google" })
+    expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
+  })
+
+  it("no password AND no oauth provider → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
+    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: false, plan: "PRO", oauthProvider: null })
     await expect(makeService().requestReset("1.2.3.4", "a@b.com")).resolves.toEqual({ sent: true })
     expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
     expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
@@ -71,7 +78,7 @@ describe("PasswordResetService.requestReset", () => {
 
   it("happy path → upserts reset record, sends email, returns { sent: true }", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
     const result = await makeService().requestReset("1.2.3.4", "a@b.com")

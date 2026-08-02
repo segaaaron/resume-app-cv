@@ -779,10 +779,20 @@ describe("C. PasswordResetService — requestReset", () => {
     expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
-  it("C03 Google-only account (no password) → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
+  it("C03 Google-only account (no password, oauth provider) → returns { sent: false, oauth }, no email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({
-      id: "u1", name: "Ana", hasPassword: false, plan: "PRO",
+      id: "u1", name: "Ana", hasPassword: false, plan: "PRO", oauthProvider: "google",
+    })
+    await expect(makePasswordResetService().requestReset("1.2.3.4", "a@b.com"))
+      .resolves.toEqual({ sent: false, oauth: "google" })
+    expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
+  })
+
+  it("C03b no password AND no oauth provider → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
+    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({
+      id: "u1", name: "Ana", hasPassword: false, plan: "PRO", oauthProvider: null,
     })
     await expect(makePasswordResetService().requestReset("1.2.3.4", "a@b.com"))
       .resolves.toEqual({ sent: true })
@@ -792,7 +802,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C04 happy path → upserts reset record, sends OTP email, returns { sent: true }", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -804,7 +814,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C05 user with null name → uses fallback 'Usuario' in the email", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: null, hasPassword: true, plan: "PRO" })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: null, hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -820,7 +830,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C07 OTP stored is bcrypt hash, not plain text", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 
@@ -831,7 +841,7 @@ describe("C. PasswordResetService — requestReset", () => {
 
   it("C08 OTP expiry is 10 minutes from now", async () => {
     vi.mocked(mockRateLimit.check).mockResolvedValue(true)
-    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO" })
+    vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
 

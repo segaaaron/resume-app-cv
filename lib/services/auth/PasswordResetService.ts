@@ -25,7 +25,7 @@ export class PasswordResetService {
     private readonly logger: ILogger,
   ) {}
 
-  async requestReset(ipAddress: string, emailAddress: string, locale?: string | null): Promise<{ sent: true }> {
+  async requestReset(ipAddress: string, emailAddress: string, locale?: string | null): Promise<{ sent: boolean; oauth?: string }> {
     const allowed = await this.rateLimit.check(ipAddress, "reset-password-request", 3)
     if (!allowed) {
       this.logger.warn("PasswordResetService.requestReset: rate limited", { ip: ipAddress })
@@ -33,6 +33,15 @@ export class PasswordResetService {
     }
 
     const user = await this.users.findForReset(emailAddress)
+
+    // OAuth-only account (registered with Google, no password): there is no
+    // password to reset. Tell the user to sign in with their provider instead
+    // of silently pretending an email was sent.
+    if (user && !user.hasPassword && user.oauthProvider) {
+      this.logger.info("PasswordResetService.requestReset: oauth-only account", { email: emailAddress, provider: user.oauthProvider })
+      return { sent: false, oauth: user.oauthProvider }
+    }
+
     if (!user || user.plan === "LIMITED" || !user.hasPassword) {
       await this.rateLimit.recordFailure(ipAddress, "reset-password-request")
       return { sent: true }
