@@ -36,13 +36,17 @@ interface Props {
   body: string
   company: string
   jobTitle: string
+  /** The single job description shared with the AI generator (lifted to the editor)
+   *  so tailoring and ATS scoring run against the exact same vacancy text. */
+  jobDescription: string
+  onJobDescriptionChange: (v: string) => void
   isPro: boolean
   onUpgrade: () => void
 }
 
-export default function CoverLetterAtsPanel({ body, isPro, onUpgrade }: Props) {
+export default function CoverLetterAtsPanel({ body, jobDescription, onJobDescriptionChange, isPro, onUpgrade }: Props) {
   const t = useTranslations("cover_letter_editor")
-  const [jd, setJd] = useState("")
+  const jd = jobDescription
   const [result, setResult] = useState<CoverLetterAtsResult | null>(null)
   const [running, setRunning] = useState(false)
 
@@ -104,7 +108,7 @@ export default function CoverLetterAtsPanel({ body, isPro, onUpgrade }: Props) {
         <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.06em] text-dash-muted">{t("ats_jd_label")}</label>
         <textarea
           value={jd}
-          onChange={(e) => setJd(e.target.value)}
+          onChange={(e) => onJobDescriptionChange(e.target.value)}
           placeholder={t("ats_jd_placeholder")}
           rows={4}
           maxLength={6000}

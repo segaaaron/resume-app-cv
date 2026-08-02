@@ -12,6 +12,7 @@ vi.mock("@/lib/ai-client", () => ({
 vi.mock("@/lib/db", () => ({ db: { resume: { findFirst: vi.fn() } } }))
 
 import { AICoverLetterModule } from "@/lib/services/ai/modules/AICoverLetterModule"
+import { db } from "@/lib/db"
 
 const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
@@ -86,5 +87,59 @@ describe("generateCoverLetter — anti-invention guard", () => {
     expect(chat).toHaveBeenCalledTimes(2)
     // returns the retry draft rather than nothing
     expect(res.body).toContain("30%")
+  })
+})
+
+describe("generateCoverLetter — anti-empty fallback (Phase 4)", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("retries once on an empty draft, then ships the grounded retry (not off_topic)", async () => {
+    const { client, chat } = queuedClient(["", "Here is a solid letter about my backend work.\n\nGlad to talk."])
+    const mod = new AICoverLetterModule(client, logger as never)
+    const res = await mod.generateCoverLetter("u1", input(), "PRO")
+    expect(chat).toHaveBeenCalledTimes(2)
+    expect(res.body).toContain("backend work")
+  })
+
+  it("throws off_topic only when BOTH the draft and its retry come back empty", async () => {
+    const { client, chat } = queuedClient(["", ""])
+    const mod = new AICoverLetterModule(client, logger as never)
+    await expect(mod.generateCoverLetter("u1", input(), "PRO")).rejects.toThrow("off_topic")
+    expect(chat).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe("generateCoverLetter — tailoring brief (Phase 2)", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("injects the deterministic brief into the prompt when a JD + résumé are given", async () => {
+    vi.mocked(db.resume.findFirst).mockResolvedValue({
+      personalDetails: {
+        skills: [{ name: "Swift" }, { name: "SwiftUI" }],
+        workExperience: [{ description: "Shipped Swift and SwiftUI apps integrating REST APIs." }],
+      },
+    } as never)
+    const { client, chat } = queuedClient(["I ship Swift and SwiftUI apps.\n\nGlad to talk."])
+    const mod = new AICoverLetterModule(client, logger as never)
+    await mod.generateCoverLetter(
+      "u1",
+      input({ resumeId: "r1", jobDescription: "We need a developer strong in Swift and SwiftUI building REST APIs. Kubernetes is required." }),
+      "PRO",
+    )
+    const prompt = ((chat.mock.calls[0] as unknown[])[0] as { messages: { content: string }[] }).messages[1].content
+    // the injected block header (the rule text mentions "TAILORING BRIEF" always;
+    // only the "=== TAILORING BRIEF ===" section is conditional on a JD).
+    expect(prompt).toContain("=== TAILORING BRIEF")
+    expect(prompt.toLowerCase()).toContain("swift")
+    // the gaps line names tech the résumé lacks and tells the model never to claim it
+    expect(prompt.toLowerCase()).toContain("kubernetes")
+  })
+
+  it("adds NO brief when there is no JD (purely additive — old behavior intact)", async () => {
+    const { client, chat } = queuedClient(["A letter with no vacancy targeting.\n\nThanks."])
+    const mod = new AICoverLetterModule(client, logger as never)
+    await mod.generateCoverLetter("u1", input(), "PRO")
+    const prompt = ((chat.mock.calls[0] as unknown[])[0] as { messages: { content: string }[] }).messages[1].content
+    expect(prompt).not.toContain("=== TAILORING BRIEF")
   })
 })

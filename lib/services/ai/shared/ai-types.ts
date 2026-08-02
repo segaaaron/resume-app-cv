@@ -295,6 +295,9 @@ export interface GenerateCoverLetterInput {
   tone?: string
   language?: string
   userPrompt?: string
+  /** The vacancy text. Fed to the deterministic planner (buildCoverLetterBrief)
+   *  so the letter is tailored to the role and grounded in the résumé. */
+  jobDescription?: string
 }
 
 export interface ImproveCoverLetterInput {

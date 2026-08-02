@@ -15,6 +15,7 @@ import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVer
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessCoverLetter } from "../shared/cover-letter-quality"
+import { buildCoverLetterBrief, type CoverLetterBrief } from "@/lib/ats/cover-letter-brief"
 import { hasCliche, findCliches, clicheBanList, substituteCliches } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
@@ -80,7 +81,7 @@ export class AICoverLetterModule {
   async generateCoverLetter(userId: string, input: GenerateCoverLetterInput, plan: string): Promise<CoverLetterResult> {
     await enforceAIQuota(userId, "generate-cover-letter", plan)
 
-    const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt } = input
+    const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt, jobDescription } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt].filter(Boolean).join(" ")
@@ -91,17 +92,28 @@ export class AICoverLetterModule {
     if (recipientName) { const v = validateAIInput(recipientName, AI_INPUT_LIMITS.recipientName); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (jobTitle) { const v = validateAIInput(jobTitle, AI_INPUT_LIMITS.jobTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (userPrompt) { const v = validateAIInput(userPrompt, AI_INPUT_LIMITS.userPrompt); if (!v.valid) throw new AppError("invalid_input", 400) }
+    if (jobDescription) { const v = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription); if (!v.valid) throw new AppError("invalid_input", 400) }
 
     let resumeContext = ""
+    let sectionData: Record<string, unknown> | null = null
     if (resumeId) {
       const resume = await db.resume.findFirst({
         where: { id: resumeId, userId },
         select: { personalDetails: true },
       })
       if (resume?.personalDetails) {
-        resumeContext = buildResumeContext(resume.personalDetails as Record<string, unknown>)
+        sectionData = resume.personalDetails as Record<string, unknown>
+        resumeContext = buildResumeContext(sectionData)
       }
     }
+
+    // Deterministic planning layer — "the algorithm detects, the AI writes". Given
+    // the vacancy + the real résumé, it computes which of the JD's keywords the
+    // résumé genuinely supports (feature these), which it lacks (never claim), and
+    // the real lines that back them. The model writes prose around this skeleton,
+    // so the letter is tailored AND grounded by construction, not by hope.
+    const brief = buildCoverLetterBrief({ jobDescription, sectionData, company, jobTitle })
+    const briefBlock = this.renderBriefBlock(brief, language)
 
     const toneMap = {
       formal: language === "en" ? "formal and professional" : "formal y profesional",
@@ -115,7 +127,7 @@ export class AICoverLetterModule {
 
 Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
 
-${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${userPrompt ? `=== CANDIDATE DESCRIPTION (use this as primary context) ===\n${userPrompt}\n` : ""}
+${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${userPrompt ? `=== CANDIDATE DESCRIPTION (use this as primary context) ===\n${userPrompt}\n` : ""}${briefBlock}
 === TARGET POSITION ===
 ${company ? `Company: ${company}` : ""}
 ${jobTitle ? `Role: ${jobTitle}` : ""}
@@ -129,6 +141,7 @@ Write 3 tight paragraphs (4 maximum), 250–350 words TOTAL — the finished let
 3. CLOSING CTA — End with a confident, warm call to action that invites next steps.
 
 Rules:
+- TAILORING BRIEF FIRST: if a "TAILORING BRIEF" section appears above, it is the plan. Weave its featured keywords into the FIT paragraph THROUGH the real achievements it lists (paraphrase them, never quote verbatim), and explicitly connect 2-3 of them to the vacancy's needs. NEVER mention or claim anything under its "NEVER claim" line — the résumé does not support it.
 - Write ONLY the body (no salutation, no date, no signature block)
 - Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
 - NEVER name a company, employer, product, or client that is not in the candidate profile. NEVER use a stand-in like "XYZ Corp", "ABC Company", or "Company Name" — if the profile names no employer, describe the work without naming one.
@@ -145,7 +158,7 @@ Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using 
 
 Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
 
-${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${userPrompt ? `=== DESCRIPCIÓN DEL CANDIDATO (usa esto como contexto principal) ===\n${userPrompt}\n` : ""}
+${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${userPrompt ? `=== DESCRIPCIÓN DEL CANDIDATO (usa esto como contexto principal) ===\n${userPrompt}\n` : ""}${briefBlock}
 === PUESTO OBJETIVO ===
 ${company ? `Empresa: ${company}` : ""}
 ${jobTitle ? `Puesto: ${jobTitle}` : ""}
@@ -159,6 +172,7 @@ Escribe 3 párrafos concisos (4 máximo), 250–350 palabras EN TOTAL — la car
 3. CIERRE Y CTA — Cierra con una llamada a la acción segura y cálida que invite a los siguientes pasos.
 
 Reglas:
+- BRIEF DE PERSONALIZACIÓN PRIMERO: si arriba aparece una sección "BRIEF DE PERSONALIZACIÓN", ese es el plan. Teje sus keywords destacadas en el párrafo de ENCAJE A TRAVÉS de los logros reales que lista (parafraséalos, nunca los cites textual), y conecta explícitamente 2-3 de ellos con las necesidades de la vacante. NUNCA menciones ni reclames nada bajo su línea "NUNCA reclames" — el perfil no lo respalda.
 - Escribe SOLO el cuerpo (sin saludo, sin fecha, sin bloque de firma)
 - NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
 - NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre inventado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
@@ -198,27 +212,39 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     const parsed = parseAIJson<{ body: string }>(raw)
 
     if (typeof parsed.body !== "string") throw new AppError("invalid_response_format", 500)
+
+    // Every retry's tokens must reach the ledger — accumulate, don't overwrite
+    // (the summary path once lost a retry's tokens by replacing a single usage var).
+    const retryUsages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
+
+    // Anti-empty fallback. Thin input used to fail silently as off_topic. With the
+    // required-field guard + the tailoring brief the model now has plenty to write
+    // from, so an empty first draft is almost always a transient miss — retry ONCE,
+    // grounded, before declaring off-topic. Only a genuinely empty second draft
+    // (no résumé, no JD, no real context) still returns off_topic.
+    let body: string
     if (parsed.body.trim() === "") {
-      throw new AppError("off_topic", 422)
+      this.logger.warn("[AIService.generateCoverLetter] empty draft, retrying grounded before off_topic")
+      const retry = await this.retryGroundedGeneration(prompt, langInstruction, language)
+      if (!retry || retry.body.trim() === "") throw new AppError("off_topic", 422)
+      retryUsages.push(retry.usage ?? {})
+      body = stripSignOff(retry.body)
+    } else {
+      // Same defence as improveCoverLetter: strip a trailing "Sincerely,\n[Your Name]"
+      // — the app renders the candidate's real name underneath anyway.
+      body = stripSignOff(parsed.body)
     }
 
-    // Same defence as improveCoverLetter: the prompt asks for body only, but a
-    // trailing "Sincerely,\n[Your Name]" slips through and the app renders the
-    // candidate's real name underneath anyway.
-    let body = stripSignOff(parsed.body)
-
-    // Anti-invention guard — the belt that improveCoverLetter has and generate never
-    // did. A fresh letter can introduce framing prose (detectHallucination ignores
-    // that), but a fabricated metric, technology, or employer that isn't in the
-    // profile is exactly what got a user a letter about "XYZ Corp" and "+40%". On a
-    // trip, retry ONCE grounded harder; ship the cleaner draft, never an empty one.
-    const grounding = [resumeContext, userPrompt ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
-    let retryUsage: { prompt_tokens?: number; completion_tokens?: number } | undefined
+    // Anti-invention guard — a fabricated metric, technology, or employer not in the
+    // profile is exactly what got a user a letter about "XYZ Corp" and "+40%". The JD
+    // counts as a grounding source too, so featuring a real vacancy term the brief
+    // asked for is never flagged. On a trip, retry ONCE grounded harder.
+    const grounding = [resumeContext, userPrompt ?? "", jobDescription ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
     if (this.letterInventsContent(body, grounding)) {
       this.logger.warn("[AIService.generateCoverLetter] draft invented content, retrying grounded")
       const retry = await this.retryGroundedGeneration(prompt, langInstruction, language)
       if (retry) {
-        retryUsage = retry.usage
+        retryUsages.push(retry.usage ?? {})
         const retryBody = stripSignOff(retry.body)
         // Prefer the retry when it's clean; if both are flagged keep the retry
         // (grounded-harder) and log — the gate lowers the odds, it never returns nothing.
@@ -234,8 +260,8 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     const html = plainToHtml(body)
 
     const genUsage = response.usage
-    const promptTokens = (genUsage?.prompt_tokens ?? 0) + (retryUsage?.prompt_tokens ?? 0)
-    const completionTokens = (genUsage?.completion_tokens ?? 0) + (retryUsage?.completion_tokens ?? 0)
+    const promptTokens = (genUsage?.prompt_tokens ?? 0) + retryUsages.reduce((s, u) => s + (u.prompt_tokens ?? 0), 0)
+    const completionTokens = (genUsage?.completion_tokens ?? 0) + retryUsages.reduce((s, u) => s + (u.completion_tokens ?? 0), 0)
     logAIUsage(userId, "generate-cover-letter", {
       model: AI_MODEL_PROSE,
       plan,
@@ -244,6 +270,22 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens),
     })
     return { body: html }
+  }
+
+  /** Render the deterministic brief into the prompt. Empty string when there is
+   *  no JD or nothing the résumé supports — the letter then generates from the
+   *  résumé context alone, exactly as before, so this is purely additive. */
+  private renderBriefBlock(brief: CoverLetterBrief, language: "es" | "en"): string {
+    if (!brief.hasJd || brief.featureKeywords.length === 0) return ""
+    const evidence = brief.supportingEvidence.map((e) => `- ${e.text}`).join("\n")
+    if (language === "en") {
+      return `\n=== TAILORING BRIEF (computed from the job description + the candidate's résumé) ===
+Feature these vacancy terms the résumé genuinely supports, woven in naturally: ${brief.featureKeywords.join(", ")}.
+${evidence ? `Back them with these real achievements from the résumé (paraphrase, do not quote verbatim):\n${evidence}\n` : ""}NEVER claim these — the résumé does not support them: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(none)"}.\n`
+    }
+    return `\n=== BRIEF DE PERSONALIZACIÓN (calculado desde la vacante + el CV del candidato) ===
+Destaca estos términos de la vacante que el CV sí respalda, tejidos con naturalidad: ${brief.featureKeywords.join(", ")}.
+${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites textual):\n${evidence}\n` : ""}NUNCA reclames esto — el CV no lo respalda: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(ninguno)"}.\n`
   }
 
   /** True when a fresh cover-letter draft carries content the profile does not

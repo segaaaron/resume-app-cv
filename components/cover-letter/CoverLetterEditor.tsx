@@ -95,6 +95,12 @@ interface Props {
   isNew?: boolean
 }
 
+// Minimum characters the AI-generation prompt requires before the call is allowed.
+// The description is a REQUIRED field: without real context (role, experience,
+// target position) the model returns an empty body → off_topic 422. 40 chars forces
+// at least one substantive sentence, so a thin prompt never reaches the endpoint.
+const AI_PROMPT_MIN = 40
+
 // Alphabetical by `id`. `elegant` (free) kept at top for prominence; the rest
 // of the PRO templates follow in strict alpha order for predictable browsing.
 const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
@@ -196,6 +202,7 @@ export default function CoverLetterEditor({
     typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
   )
   const photoInputRef = useRef<HTMLInputElement>(null)
+  const aiPromptRef = useRef<HTMLTextAreaElement>(null)
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -219,6 +226,9 @@ export default function CoverLetterEditor({
   const [selectedResumeId, setSelectedResumeId] = useState("")
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
   const [aiUserPrompt, setAiUserPrompt] = useState("")
+  // ONE job description for the whole editor: it targets the AI generation (the
+  // tailoring brief) AND the ATS panel. Lifted here so the two are never out of sync.
+  const [jobDescription, setJobDescription] = useState("")
   const [aiGenerated, setAiGenerated] = useState(false)
   const [improvingAI, setImprovingAI] = useState(false)
   const [letterVersions, setLetterVersions] = useState<SummaryVersion[]>([])
@@ -269,6 +279,16 @@ export default function CoverLetterEditor({
   }
 
   async function handleGenerateAI() {
+    // Required-field guard. The button stays enabled on purpose so the click gives
+    // the user a SPECIFIC alert (which field, where it is) instead of a dead greyed
+    // button that leaves them wondering why nothing happens. Also focus the field so
+    // they land exactly on it.
+    if (aiUserPrompt.trim().length < AI_PROMPT_MIN) {
+      toast.error(t("ai_prompt_required_alert"), { duration: 6000 })
+      aiPromptRef.current?.focus()
+      aiPromptRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+      return
+    }
     setGenerating(true)
     preCheck("generate-cover-letter")
     try {
@@ -280,9 +300,11 @@ export default function CoverLetterEditor({
           recipientName: content.recipientName,
           recipientTitle: content.recipientTitle,
           company: content.company,
+          jobTitle: content.subject || undefined,
           tone: aiTone,
           language: locale,
           userPrompt: aiUserPrompt.trim() || undefined,
+          jobDescription: jobDescription.trim() || undefined,
         }),
       })
       if (res.status === 429 || res.status === 403) {
@@ -679,7 +701,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
           )}
 
           {sidebarTab === "ats" && (
-            <CoverLetterAtsPanel body={content.body} company={content.company} jobTitle={content.subject ?? ""} isPro={isPro} onUpgrade={() => setUpgradeOpen(true)} />
+            <CoverLetterAtsPanel body={content.body} company={content.company} jobTitle={content.subject ?? ""} jobDescription={jobDescription} onJobDescriptionChange={setJobDescription} isPro={isPro} onUpgrade={() => setUpgradeOpen(true)} />
           )}
 
           {sidebarTab === "content" && (() => {
@@ -956,10 +978,13 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
                     {/* Prompt */}
                     <div className="mb-3">
-                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">{t("ai_prompt_label")}</div>
+                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">
+                        {t("ai_prompt_label")}
+                        <span className="text-[#00D4FF] not-italic normal-case" aria-hidden>*</span>
+                      </div>
                       <div className="relative">
-                        <textarea value={aiUserPrompt} onChange={(e) => setAiUserPrompt(e.target.value)}
-                          placeholder={t("ai_prompt_placeholder")} rows={4} maxLength={500}
+                        <textarea ref={aiPromptRef} value={aiUserPrompt} onChange={(e) => setAiUserPrompt(e.target.value)}
+                          placeholder={t("ai_prompt_placeholder")} rows={4} maxLength={500} required aria-required="true"
                           className="w-full bg-white/[0.05] border border-white/[0.12] rounded-lg pt-[10px] px-3 pb-6 text-[12px] text-white outline-none resize-none"
                           onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.3)" }}
                           onBlur={(e) => { e.currentTarget.style.boxShadow = "none" }} />
@@ -967,6 +992,33 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                           {aiUserPrompt.length}/500
                         </span>
                       </div>
+                      {/* Required-field guard: the model needs real context to write a letter.
+                          A thin prompt (a bare role, a few words) is what produced the
+                          off_topic 422 — so block generation until there is enough to work with. */}
+                      {aiUserPrompt.trim().length < AI_PROMPT_MIN && (
+                        <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4]">{t("ai_prompt_hint")}</p>
+                      )}
+                    </div>
+
+                    {/* Job description — optional. Feeds the deterministic tailoring
+                        brief (grounds the letter in the vacancy) AND the ATS panel;
+                        one JD for both, so they never drift apart. */}
+                    <div className="mb-3">
+                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] mb-[6px] flex items-center gap-[6px]">
+                        {t("ai_jd_label")}
+                        <span className="text-white/30 text-[10px] font-normal normal-case">{t("ai_jd_optional")}</span>
+                      </div>
+                      <div className="relative">
+                        <textarea value={jobDescription} onChange={(e) => setJobDescription(e.target.value)}
+                          placeholder={t("ai_jd_placeholder")} rows={4} maxLength={6000}
+                          className="w-full bg-white/[0.05] border border-white/[0.12] rounded-lg pt-[10px] px-3 pb-6 text-[12px] text-white outline-none resize-none"
+                          onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.3)" }}
+                          onBlur={(e) => { e.currentTarget.style.boxShadow = "none" }} />
+                        <span className="absolute tabular-nums bottom-[6px] right-[10px] text-[10px] text-white/40">
+                          {jobDescription.length}/6000
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4]">{t("ai_jd_hint")}</p>
                     </div>
 
                     {/* Success state after generation */}
@@ -993,7 +1045,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
                     {/* Generate */}
                     {!aiGenerated && (
-                      <button onClick={handleGenerateAI} disabled={generating || improvingAI || aiUserPrompt.trim().length < 10}
+                      <button onClick={handleGenerateAI} disabled={generating || improvingAI}
                         className="w-full inline-flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-[13px] font-bold text-[#0B1B3D] py-[11px] px-[14px] rounded-[10px]"
                         style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", boxShadow: "0 6px 18px rgba(0,212,255,0.3)" }}>
                         {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
