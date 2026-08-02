@@ -269,6 +269,8 @@ export default function CinematicHomepage({ children, locale }: Props) {
 
         <button className="md:hidden p-2 ml-auto" style={{ color: fg }}
           onClick={() => setMobileOpen(!mobileOpen)}
+          aria-label="Menu"
+          aria-expanded={mobileOpen}
         >
           {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
         </button>
