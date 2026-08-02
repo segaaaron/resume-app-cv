@@ -38,11 +38,11 @@ export default function ActClimax({ line1, line2, cta, note, locale }: Props) {
       </div>
 
       {/* Legal footer */}
-      <div className="absolute bottom-6 flex flex-wrap justify-center gap-4 text-xs text-muted-foreground/60">
-        <Link href={`/${locale}/privacy`} className="hover:text-muted-foreground transition-colors">Privacy</Link>
-        <Link href={`/${locale}/terms`} className="hover:text-muted-foreground transition-colors">Terms</Link>
-        <Link href={`/${locale}/cookie-policy`} className="hover:text-muted-foreground transition-colors">Cookies</Link>
-        <Link href={`/${locale}/pricing`} className="hover:text-muted-foreground transition-colors">Pricing</Link>
+      <div className="absolute bottom-6 flex flex-wrap justify-center gap-4 text-xs text-slate-700">
+        <Link href={`/${locale}/privacy`} className="hover:text-slate-900 transition-colors">Privacy</Link>
+        <Link href={`/${locale}/terms`} className="hover:text-slate-900 transition-colors">Terms</Link>
+        <Link href={`/${locale}/cookie-policy`} className="hover:text-slate-900 transition-colors">Cookies</Link>
+        <Link href={`/${locale}/pricing`} className="hover:text-slate-900 transition-colors">Pricing</Link>
       </div>
     </section>
   )
