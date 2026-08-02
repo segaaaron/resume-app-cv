@@ -3,9 +3,10 @@ interface Props {
   line1: string
   line2: string
   body: string
+  punch: string
 }
 
-export default function ActProblem({ stat, line1, line2, body }: Props) {
+export default function ActProblem({ stat, line1, line2, body, punch }: Props) {
   return (
     <section
       data-scene="act-problem"
@@ -28,6 +29,14 @@ export default function ActProblem({ stat, line1, line2, body }: Props) {
           style={{ transitionDelay: "0.3s" }}
         >
           {body}
+        </p>
+        {/* Sales punch — one tier above the muted body: bold, white, with a cyan
+            accent on the payoff clause. Sits below the explanation so it reads as
+            the takeaway, not a competing headline. */}
+        <p className="mt-8 text-xl sm:text-2xl font-bold text-white animate-blur-in"
+          style={{ transitionDelay: "0.45s", textShadow: "0 0 40px rgba(0,212,255,0.25)" }}
+        >
+          {punch}
         </p>
       </div>
     </section>

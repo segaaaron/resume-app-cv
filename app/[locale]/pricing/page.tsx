@@ -8,7 +8,6 @@ import { setRequestLocale } from "next-intl/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { isActive, hasManageableBilling, hasGatewayBilling, hasStripeBillingPortal, blocksNewPurchase, isStaffAccess as isStaffAccessFn } from "@/lib/plans"
-import { paypalEnabled } from "@/lib/paypal"
 import { PRICING, priceForSchema } from "@/lib/pricing"
 import { redirect } from "next/navigation"
 import { isEUUser } from "@/lib/geoip"
@@ -261,7 +260,7 @@ export default async function PricingPage({
           planInterval={planInterval}
           isEU={isEU}
           isEs={locale === "es"}
-          paypalAvailable={paypalEnabled()}
+          paypalAvailable={false /* PayPal hidden by CEO decision until launch — Stripe only. Existing PayPal payers still manage billing via isPayPalPayer below. Restore paypalEnabled() to re-enable the checkout option. */}
           proMemberManage={t("pro_member_manage")}
           isPayPalPayer={paymentProvider === "PAYPAL"}
           canManageBilling={canManageBilling}

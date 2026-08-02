@@ -251,10 +251,13 @@ export default async function HomePage({
           line1={t("problem_line1")}
           line2={t("problem_line2")}
           body={t("problem_body")}
+          punch={t("problem_punch")}
         />
         <ActReveal
           brand={t("reveal_brand")}
           tagline={t("reveal_tagline")}
+          value={t("reveal_value")}
+          trust={t("reveal_trust")}
           statAi={t("reveal_stats_ai")}
           statTemplates={t("reveal_stats_templates")}
           statAts={t("reveal_stats_ats")}
@@ -331,6 +334,8 @@ export default async function HomePage({
         <ActClimax
           line1={t("climax_line1")}
           line2={t("climax_line2")}
+          sub={t("climax_sub")}
+          speed={t("climax_speed")}
           cta={t("climax_cta")}
           note={t("climax_note")}
           locale={locale}
