@@ -85,7 +85,7 @@ export default function AtsEngineChecker() {
             <div className="flex flex-col items-start gap-3 rounded-2xl border border-[#00D4FF]/25 bg-[#00D4FF]/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-[12.5px] leading-relaxed text-[#1a2e4a]/75">{t("resultNote")}</p>
               <Link
-                href={`/${rawLocale}/register`}
+                href={`/${rawLocale}/login`}
                 className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#1a2e4a] px-4 py-2 text-[12px] font-bold text-white transition-all hover:bg-[#0f1a2e]"
               >
                 <Sparkles className="h-3.5 w-3.5 text-[#00D4FF]" />

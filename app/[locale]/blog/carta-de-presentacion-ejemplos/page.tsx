@@ -147,7 +147,7 @@ export default async function CoverLetterExamplesArticlePage({
             <p className="font-semibold text-lg mb-2">{tBlog("cta_title")}</p>
             <p className="text-muted-foreground mb-6">{tBlog("cta_desc")}</p>
             <Link
-              href={`/${locale}/register`}
+              href={`/${locale}/login`}
               className="inline-flex items-center gap-2 bg-primary text-white font-semibold px-6 py-3 rounded-xl hover:bg-primary/90 transition-colors text-sm"
             >
               {tBlog("cta_btn")} <ArrowRight className="h-4 w-4" />

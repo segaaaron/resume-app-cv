@@ -257,7 +257,7 @@ export default function CinematicHomepage({ children, locale }: Props) {
               {nav("dashboard")}
             </Link>
           ) : (
-            <Link href={`/${locale}/register`}
+            <Link href={`/${locale}/login`}
               onClick={() => track("home_cta_clicked", { target: "build" })}
               className="text-sm font-semibold px-4 py-2 rounded-full transition-all duration-300 backdrop-blur-sm"
               style={{ background: "rgba(255,255,255,0.15)", color: navFg, border: "1px solid rgba(255,255,255,0.25)" }}
@@ -310,7 +310,7 @@ export default function CinematicHomepage({ children, locale }: Props) {
               {nav("dashboard")}
             </Link>
           ) : (
-            <Link href={`/${locale}/register`} onClick={() => setMobileOpen(false)}
+            <Link href={`/${locale}/login`} onClick={() => setMobileOpen(false)}
               className="py-1 font-semibold" style={{ color: isLight ? "#FFFFFF" : "#0f172a" }}
             >
               {t("nav_cta")} →

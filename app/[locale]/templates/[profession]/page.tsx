@@ -593,7 +593,7 @@ export default async function ProfessionTemplatePage({
                   {isEs ? "Ver todas las plantillas" : "Browse all templates"} <ArrowRight className="h-4 w-4" />
                 </Button>
               </Link>
-              <Link href={`/${locale}/register`}>
+              <Link href={`/${locale}/login`}>
                 <Button size="lg" variant="outline" className="text-base">
                   {isEs ? "Crear mi CV gratis" : "Create my resume free"}
                 </Button>
@@ -712,7 +712,7 @@ export default async function ProfessionTemplatePage({
                 ? "Valhalla Resume Pro incluye IA para mejorar bullets, ATS Score, carta de presentación y más. Desde $15/mes."
                 : "Valhalla Resume Pro includes AI bullet improver, ATS Score, cover letter generator and more. From $15/month."}
             </p>
-            <Link href={`/${locale}/register`}>
+            <Link href={`/${locale}/login`}>
               <Button size="lg" className="gap-2 text-base">
                 {isEs ? "Empezar ahora" : "Get started"} <ArrowRight className="h-4 w-4" />
               </Button>

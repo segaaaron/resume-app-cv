@@ -412,7 +412,7 @@ export default async function TemplatesPage({
                 ? "Créalo gratis en minutos con tu información y descárgalo cuando estés listo."
                 : "Build it free in minutes with your info and download it when you're ready."}
             </p>
-            <Link href={`/${locale}/register`}>
+            <Link href={`/${locale}/login`}>
               <Button
                 size="lg"
                 className="gap-2 text-base font-semibold bg-[#00D4FF] hover:bg-[#00D4FF]/90 text-[#0a1322] shadow-[0_12px_45px_-10px_rgba(0,212,255,0.7)] hover:shadow-[0_18px_60px_-10px_rgba(0,212,255,0.9)] transition-all px-8"

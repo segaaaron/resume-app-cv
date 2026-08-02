@@ -44,7 +44,7 @@ export default function UpgradeModal({ open, onClose }: Props) {
       })
 
       if (res.status === 401) {
-        router.push(`/${locale}/register?plan=${plan}`)
+        router.push(`/${locale}/login?plan=${plan}`)
         return
       }
 

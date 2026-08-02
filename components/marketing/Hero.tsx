@@ -49,7 +49,7 @@ export default async function Hero() {
 
           <div className="flex flex-wrap gap-3">
             <Button size="lg" className="gap-2 shadow-brand-md" asChild>
-              <Link href={`/${locale}/register`}>
+              <Link href={`/${locale}/login`}>
                 {t("cta_primary")}
                 <ArrowRight className="h-4 w-4" />
               </Link>

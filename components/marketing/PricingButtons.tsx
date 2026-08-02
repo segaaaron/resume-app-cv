@@ -110,9 +110,11 @@ export default function PricingButtons({ plan, blocksPurchase = false, isStaffAc
         ),
       })
 
-      // Not signed in → registering IS the next step, and the plan travels with them.
+      // Not signed in → send them to LOGIN (the plan travels with them). Login is the
+      // right door for returning buyers; anyone without an account creates one from
+      // the "create account" link there, so new users are not turned away either.
       if (res.status === 401) {
-        router.push(`/register?plan=${plan}`)
+        router.push(`/login?plan=${plan}`)
         return
       }
 

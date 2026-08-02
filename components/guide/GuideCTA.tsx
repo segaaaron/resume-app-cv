@@ -67,7 +67,7 @@ export default async function GuideCTA({ locale }: { locale: string }) {
             >
               {t("button")} →
             </Link>
-            <Link href={`/${locale}/register`}
+            <Link href={`/${locale}/login`}
               className="inline-flex items-center gap-2 font-bold text-[14px] px-7 py-3.5 rounded-[14px] no-underline text-white transition-colors duration-200"
               style={{
                 background: "rgba(255,255,255,0.06)",

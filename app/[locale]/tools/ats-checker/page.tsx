@@ -201,7 +201,7 @@ export default async function AtsCheckerPage({
 
           <div className="mt-10 flex flex-col items-center gap-3">
             <Link
-              href={`/${locale}/register`}
+              href={`/${locale}/login`}
               className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#00D4FF] to-[#4F8BFF] px-8 py-3.5 text-sm font-bold text-[#0f1a2e] shadow-[0_15px_40px_-10px_rgba(0,212,255,0.55)] transition-all hover:scale-[1.02]"
             >
               <Zap className="h-4 w-4" />

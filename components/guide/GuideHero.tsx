@@ -73,7 +73,7 @@ export default async function GuideHero({ locale }: { locale: string }) {
 
         {/* CTAs */}
         <div className="flex flex-wrap gap-3 justify-center">
-          <Link href={`/${locale}/register`}
+          <Link href={`/${locale}/login`}
             className="inline-flex items-center gap-2 font-extrabold text-sm px-7 py-3.5 rounded-xl no-underline"
             style={{
               background: "linear-gradient(135deg, #00D4FF 0%, #0099CC 100%)",

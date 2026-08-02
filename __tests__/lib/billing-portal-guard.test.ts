@@ -269,10 +269,12 @@ describe("failures never sign the buyer out — they explain and stay put", () =
     expect(block, "a service failure still navigates the user away").not.toContain("router.push")
   })
 
-  it("only a 401 sends the user to register, and it carries the plan", () => {
+  it("only a 401 sends the user to login, and it carries the plan", () => {
     const src = read(BUTTONS_SRC)
-    const block = src.slice(src.indexOf("res.status === 401"), src.indexOf("res.status === 401") + 160)
-    expect(block).toMatch(/router\.push\(`\/register\?plan=\$\{plan\}`\)/)
+    const block = src.slice(src.indexOf("res.status === 401"), src.indexOf("res.status === 401") + 220)
+    // Logged-out buyers go to LOGIN (the plan travels); anyone without an account
+    // creates one from the login page's "create account" link.
+    expect(block).toMatch(/router\.push\(`\/login\?plan=\$\{plan\}`\)/)
   })
 
   it("no checkout failure path signs the user out", () => {

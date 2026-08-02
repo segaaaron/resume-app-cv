@@ -78,7 +78,7 @@ export default function Navbar() {
             </Button>
           ) : (
             <Button asChild className="shadow-brand-sm">
-              <Link href={`/${locale}/register`}>{t("register")}</Link>
+              <Link href={`/${locale}/login`}>{t("register")}</Link>
             </Button>
           )}
         </div>
@@ -120,7 +120,7 @@ export default function Navbar() {
           {session ? (
             <Button asChild><Link href={`/${locale}/dashboard/resumes`}>{t("dashboard")}</Link></Button>
           ) : (
-            <Button asChild><Link href={`/${locale}/register`}>{t("register")}</Link></Button>
+            <Button asChild><Link href={`/${locale}/login`}>{t("register")}</Link></Button>
           )}
         </div>
       )}

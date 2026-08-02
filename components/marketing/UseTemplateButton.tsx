@@ -25,7 +25,7 @@ export default function UseTemplateButton({ templateId, label }: Props) {
   async function handleClick() {
     track("template_use_clicked", { template_id: templateId, is_pro: isProTemplate(templateId) })
     if (!session?.user) {
-      router.push(`/${locale}/register`)
+      router.push(`/${locale}/login`)
       return
     }
 
