@@ -91,6 +91,6 @@ export async function POST(req: Request) {
       await refundManagedDownload(authResult.userId, { resumeId, type: "ats_export" }).catch(() => {})
     }
     logger.error("ats-safe-export failed", { resumeId, format }, err instanceof Error ? err : undefined)
-    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email })
+    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email, payload: parsed.data })
   }
 }

@@ -2315,6 +2315,13 @@
       "col_last_seen": "Visto",
       "col_last_user": "Último usuario",
       "detail_message": "Mensaje",
+      "detail_method": "Método",
+      "detail_status": "Estado",
+      "detail_query": "Query",
+      "detail_endpoint": "Endpoint",
+      "detail_user": "Usuario",
+      "detail_time": "Hora",
+      "detail_payload": "Payload de la petición",
       "detail_stack": "Stack trace"
     },
     "managed": {

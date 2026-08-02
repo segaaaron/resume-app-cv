@@ -71,6 +71,6 @@ export async function POST(req: Request) {
     })
   } catch (err) {
     logger.error("ats-verify-real failed", { resumeId }, err instanceof Error ? err : undefined)
-    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email })
+    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email, payload: parsed.data })
   }
 }

@@ -27,7 +27,7 @@ export async function requireAuth(req: Request): Promise<{ userId: string } | Ne
 
 export function handleError(
   err: unknown,
-  ctx?: { userId?: string; userEmail?: string; route?: string; req?: Request },
+  ctx?: { userId?: string; userEmail?: string; route?: string; req?: Request; payload?: unknown },
 ): NextResponse {
   if (err instanceof AppError) {
     // Log EVERY handled failure — 4xx and 5xx alike (CEO directive: the Service
@@ -64,10 +64,10 @@ export function handleError(
 export function apiError(
   status: number,
   code: string,
-  ctx?: { req?: Request; route?: string; userId?: string; userEmail?: string; extra?: Record<string, unknown> },
+  ctx?: { req?: Request; route?: string; userId?: string; userEmail?: string; payload?: unknown; extra?: Record<string, unknown> },
 ): NextResponse {
   if (status !== 401) {
-    logHandledFailure(code, status, ctx && { userId: ctx.userId, userEmail: ctx.userEmail, route: ctx.route, req: ctx.req }, undefined)
+    logHandledFailure(code, status, ctx && { userId: ctx.userId, userEmail: ctx.userEmail, route: ctx.route, req: ctx.req, payload: ctx.payload }, undefined)
   }
   return NextResponse.json({ error: code, ...(ctx?.extra ?? {}) }, { status })
 }
@@ -86,25 +86,48 @@ export function apiError(
 function logHandledFailure(
   message: string,
   status: number,
-  ctx: { userId?: string; userEmail?: string; route?: string; req?: Request } | undefined,
+  ctx: { userId?: string; userEmail?: string; route?: string; req?: Request; payload?: unknown } | undefined,
   err: unknown,
 ): void {
   let route = ctx?.route
-  if (!route && ctx?.req) {
-    try { route = new URL(ctx.req.url).pathname } catch { /* url unpar. — leave route unset */ }
+  let method: string | undefined
+  let query: string | undefined
+  if (ctx?.req) {
+    try {
+      const u = new URL(ctx.req.url)
+      if (!route) route = u.pathname
+      query = u.search || undefined
+      method = ctx.req.method
+    } catch { /* url unpar. — leave route/method unset */ }
   }
   const source = route ? serviceFromRoute(route) : undefined
+  const payload = ctx?.payload !== undefined ? safePayload(ctx.payload) : undefined
   logger.error(
     message,
     {
       status,
       ...(source ? { source } : {}),
       ...(route ? { route } : {}),
+      ...(method ? { method } : {}),
+      ...(query ? { query } : {}),
       ...(ctx?.userId ? { userId: ctx.userId } : {}),
       ...(ctx?.userEmail ? { userEmail: ctx.userEmail } : {}),
+      ...(payload ? { payload } : {}),
     },
     err instanceof Error ? err : undefined,
   )
+}
+
+/** Serialize the request body for the error log, bounded so a huge résumé JSON
+ *  can't bloat the row. Best-effort — a non-serializable payload is just skipped. */
+function safePayload(p: unknown): string | undefined {
+  try {
+    const s = typeof p === "string" ? p : JSON.stringify(p)
+    if (!s) return undefined
+    return s.length > 2000 ? s.slice(0, 2000) + "…(truncated)" : s
+  } catch {
+    return undefined
+  }
 }
 
 interface RequireUserOptions {

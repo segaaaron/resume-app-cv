@@ -23,6 +23,6 @@ export async function POST(req: Request) {
     const result = await aiService.improveBullet(authResult.userId, parsed.data, authResult.user.plan)
     return NextResponse.json(result)
   } catch (err) {
-    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email })
+    return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email, payload: parsed.data })
   }
 }

@@ -28,6 +28,7 @@ export interface ErrorIssueView {
   lastSeen: string
   lastUserEmail: string | null
   lastUserId: string | null
+  context: unknown
 }
 
 export interface ServiceErrorsReport {
@@ -259,6 +260,41 @@ export default function ServiceErrorsPanel({ report }: { report: ServiceErrorsRe
                     <div className="px-4 pb-4 pt-1 border-t border-[#EDF1F7] bg-[#FAFCFE]">
                       <div className="text-[10px] font-bold uppercase tracking-wide text-[#6B7A8C] mt-3 mb-1">{t("detail_message")}</div>
                       <div className="text-[12.5px] text-[#1a2e4a] break-words mb-3">{issue.message}</div>
+
+                      {(() => {
+                        const ctx = issue.context && typeof issue.context === "object" ? (issue.context as Record<string, unknown>) : null
+                        const payload = ctx?.payload
+                        const meta: [string, string][] = []
+                        if (ctx?.method) meta.push([t("detail_method"), String(ctx.method)])
+                        if (issue.statusCode != null) meta.push([t("detail_status"), String(issue.statusCode)])
+                        if (ctx?.query) meta.push([t("detail_query"), String(ctx.query)])
+                        if (issue.endpoint) meta.push([t("detail_endpoint"), issue.endpoint])
+                        if (issue.lastUserEmail || issue.lastUserId) meta.push([t("detail_user"), issue.lastUserEmail ?? issue.lastUserId!])
+                        meta.push([t("detail_time"), new Date(issue.lastSeen).toLocaleString()])
+                        return (
+                          <>
+                            {meta.length > 0 && (
+                              <div className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1">
+                                {meta.map(([k, v]) => (
+                                  <div key={k} className="text-[11.5px] min-w-0">
+                                    <span className="text-[#6B7A8C]">{k}: </span>
+                                    <span className="text-[#1a2e4a] font-medium break-words">{v}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {payload != null && (
+                              <>
+                                <div className="text-[10px] font-bold uppercase tracking-wide text-[#6B7A8C] mb-1">{t("detail_payload")}</div>
+                                <pre className="text-[11px] leading-relaxed text-[#4A5A6E] bg-white border border-[#D9E1ED] rounded-[8px] p-3 overflow-x-auto max-h-64 mb-3" style={{ fontFamily: "var(--mono,monospace)" }}>
+                                  {typeof payload === "string" ? payload : JSON.stringify(payload, null, 2)}
+                                </pre>
+                              </>
+                            )}
+                          </>
+                        )
+                      })()}
+
                       {issue.stack && (
                         <>
                           <div className="text-[10px] font-bold uppercase tracking-wide text-[#6B7A8C] mb-1">{t("detail_stack")}</div>

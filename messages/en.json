@@ -2315,6 +2315,13 @@
       "col_last_seen": "Last seen",
       "col_last_user": "Last user",
       "detail_message": "Message",
+      "detail_method": "Method",
+      "detail_status": "Status",
+      "detail_query": "Query",
+      "detail_endpoint": "Endpoint",
+      "detail_user": "User",
+      "detail_time": "Time",
+      "detail_payload": "Request payload",
       "detail_stack": "Stack trace"
     },
     "managed": {

@@ -137,6 +137,7 @@ export interface ErrorIssue {
   lastSeen: string
   lastUserId: string | null
   lastUserEmail: string | null
+  context: unknown
 }
 
 export interface ErrorReport {
@@ -197,6 +198,7 @@ export async function getErrorReport(params: ErrorReportParams = {}): Promise<Er
         lastSeen: (c._max.createdAt ?? r.createdAt).toISOString(),
         lastUserId: r.userId,
         lastUserEmail: r.userEmail,
+        context: (r.context ?? null) as unknown,
       }
     })
     .filter((x): x is ErrorIssue => x !== null)

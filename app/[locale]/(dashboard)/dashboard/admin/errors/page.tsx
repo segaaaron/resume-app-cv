@@ -65,6 +65,7 @@ export default async function AdminErrorsPage({
       lastSeen: i.lastSeen,
       lastUserId: i.lastUserId,
       lastUserEmail: i.lastUserEmail ?? (i.lastUserId ? emailById.get(i.lastUserId) ?? null : null),
+      context: i.context,
     })),
   }
 
