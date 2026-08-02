@@ -25,6 +25,26 @@ export async function requireAuth(req: Request): Promise<{ userId: string } | Ne
   return { userId: session.user.id }
 }
 
+// Human-readable "why it failed" for the terse AppError codes, so the Service
+// Errors panel shows a real explanation instead of a bare code like "off_topic".
+// The code is kept as a prefix so it stays searchable. Unknown codes fall back
+// to the code itself; genuine unhandled throws already log their real message.
+const ERROR_DESCRIPTIONS: Record<string, string> = {
+  off_topic: "the AI returned an empty result — the input lacked enough job/career context (no target role or company, or too thin) to write anything, or was off-topic",
+  invalid_response_format: "the AI replied in an unexpected shape (not the JSON the app expected) — a model or parsing failure",
+  parse_error: "could not parse the AI response as JSON",
+  invalid_input: "the submitted text failed validation (empty, too long, or malformed)",
+  invalid_data: "the request body did not match the expected schema",
+  missing_content: "no content was provided to process",
+  quota_exceeded: "the user reached their AI usage limit for their plan",
+  email_not_verified: "the user's email is not verified — action requires a verified account",
+  no_active_subscription: "no active subscription to manage/cancel",
+}
+function describeError(code: string, status: number): string {
+  const d = ERROR_DESCRIPTIONS[code]
+  return d ? `${code} (${status}) — ${d}` : code
+}
+
 export function handleError(
   err: unknown,
   ctx?: { userId?: string; userEmail?: string; route?: string; req?: Request; payload?: unknown },
@@ -38,7 +58,7 @@ export function handleError(
     // The status is stored so the panel can tell a rejection from a crash.
     // Pure auth challenges (401) never reach here — requireUser/requireAuth return
     // before the try — so this does not flood with unauthenticated bot traffic.
-    logHandledFailure(err.code, err.status, ctx, err)
+    logHandledFailure(describeError(err.code, err.status), err.status, ctx, err)
     return NextResponse.json({ error: err.code, ...err.extra }, { status: err.status })
   }
   // Unhandled throw — always a 500, always logged.
@@ -67,7 +87,7 @@ export function apiError(
   ctx?: { req?: Request; route?: string; userId?: string; userEmail?: string; payload?: unknown; extra?: Record<string, unknown> },
 ): NextResponse {
   if (status !== 401) {
-    logHandledFailure(code, status, ctx && { userId: ctx.userId, userEmail: ctx.userEmail, route: ctx.route, req: ctx.req, payload: ctx.payload }, undefined)
+    logHandledFailure(describeError(code, status), status, ctx && { userId: ctx.userId, userEmail: ctx.userEmail, route: ctx.route, req: ctx.req, payload: ctx.payload }, undefined)
   }
   return NextResponse.json({ error: code, ...(ctx?.extra ?? {}) }, { status })
 }

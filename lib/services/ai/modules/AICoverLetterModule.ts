@@ -186,8 +186,8 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
           role: "system",
           content:
             "Eres un asistente especializado EXCLUSIVAMENTE en redacción de cartas de presentación profesionales para búsqueda de empleo. " +
-            "Solo debes generar contenido relacionado con candidaturas laborales y experiencia profesional. " +
-            "Si la solicitud no corresponde a una carta de presentación laboral real, responde únicamente con: {\"body\": \"\"} sin texto adicional. " +
+            "Una descripción profesional del candidato (su rol, años de experiencia o habilidades) YA ES suficiente para escribir la carta — aunque NO haya empresa ni puesto específico, y aunque la descripción sea breve o quede a medias, escribe una carta general fuerte con lo que haya. NUNCA devuelvas vacío por falta de empresa/puesto o por poco detalle. " +
+            "Responde con {\"body\": \"\"} ÚNICAMENTE si la solicitud no tiene NADA que ver con empleo, carrera o experiencia profesional (por ejemplo: un poema, una receta, una pregunta random o texto sin sentido). " +
             langInstruction,
         },
         { role: "user", content: prompt },

@@ -73,7 +73,8 @@ describe("handleError", () => {
     })
     expect(errorSpy).toHaveBeenCalledTimes(1)
     const [message, ctx] = errorSpy.mock.calls[0]
-    expect(message).toBe("invalid_input")
+    // logged message is now a human description prefixed with the code
+    expect(message).toContain("invalid_input")
     expect(ctx).toMatchObject({ status: 400, source: "ai", route: "/api/ai/generate-cover-letter", userId: "u9" })
   })
 
@@ -92,7 +93,7 @@ describe("handleError", () => {
     })
     expect(errorSpy).toHaveBeenCalledTimes(1)
     const [message, ctx] = errorSpy.mock.calls[0]
-    expect(message).toBe("invalid_response_format")
+    expect(message).toContain("invalid_response_format")
     expect(ctx).toMatchObject({ status: 500, source: "ai", route: "/api/ai/review-cv", userId: "u1" })
   })
 
