@@ -38,7 +38,7 @@
       "description": "Valhalla Resume terms of service. Learn your rights, platform usage conditions, and cancellation policy."
     },
     "blog_index": {
-      "title": "Blog — CV Tips and Job Search Advice | Valhalla Resume",
+      "title": "Blog — Resume Tips and Job Search Advice | Valhalla Resume",
       "description": "Practical guides on optimizing your resume, passing ATS filters, writing impactful bullets and getting more interviews."
     },
     "blog_ats": {
@@ -46,12 +46,12 @@
       "description": "Most ATS don't auto-reject your resume — recruiters do, by hand, and fast. Learn what an ATS actually does, what really gets filtered, and what to change."
     },
     "blog_bullets": {
-      "title": "How to Write CV Bullet Points That Get Interviews — Valhalla Resume",
+      "title": "How to Write Resume Bullet Points That Get Interviews — Valhalla Resume",
       "description": "Practical guide with real examples to write experience bullets with action verbs, metrics and results-oriented language."
     },
     "blog_free_vs_paid": {
-      "title": "CV Builder Features That Actually Matter in 2026 | Valhalla Resume",
-      "description": "Honest comparison of CV builder tools. Which features change outcomes, what to look for, and when paying is worth it."
+      "title": "Resume Builder Features That Actually Matter in 2026 | Valhalla Resume",
+      "description": "Honest comparison of resume builder tools. Which features change outcomes, what to look for, and when paying is worth it."
     },
     "blog_cover_letter": {
       "title": "Cover Letter in 2026: Does It Still Matter? — Valhalla Resume",
@@ -252,7 +252,7 @@
     "q3": "What formats can I download my resume in?",
     "a3": "You can download in high-resolution PDF, ready to edit. Included in the Pro plan.",
     "q4": "Can I create more than one resume?",
-    "a4": "Yes. With the Pro plan you can create up to 10 personal resumes, allowing you to tailor your CV for different positions or industries.",
+    "a4": "Yes. With the Pro plan you can create up to 10 personal resumes, allowing you to tailor your resume for different positions or industries.",
     "q5": "Can I import my existing resume?",
     "a5": "Yes. You can import your resume in PDF or Word (.docx) format and the system will automatically extract your information to populate the editor.",
     "q6": "Is my data secure?",
@@ -2546,7 +2546,7 @@
     }
   },
   "cinematic": {
-    "entry_line1": "Your CV looks perfect.",
+    "entry_line1": "Your Resume looks perfect.",
     "entry_line2": "But what does the robot read?",
     "entry_scroll": "Scroll to discover",
     "problem_stat": "2,000+",
@@ -2706,11 +2706,11 @@
     "title": "Free vs Paid Resume Builders: What Actually Matters",
     "intro": "There are dozens of Resume builders out there, free and paid. The question isn't which one is cheapest — it's which one gives you a better shot at getting the job. Here's an honest breakdown.",
     "s1_h": "What free Resume builders actually give you",
-    "s1_b": "Most free tools offer:\n• Basic templates (usually 3-5 designs)\n• A limited editor\n• PDF export — often with a watermark\n• No AI features\n• One CV document\n\nFor a quick, one-off resume, this can be enough. If you're early in your career, applying to a handful of jobs, and don't need AI assistance, a free tool gets the job done.",
+    "s1_b": "Most free tools offer:\n• Basic templates (usually 3-5 designs)\n• A limited editor\n• PDF export — often with a watermark\n• No AI features\n• One resume document\n\nFor a quick, one-off resume, this can be enough. If you're early in your career, applying to a handful of jobs, and don't need AI assistance, a free tool gets the job done.",
     "s2_h": "Where free tools fall short",
     "s2_b": "The limitations compound quickly when you're actively job hunting:\n\n1. Watermarked PDFs look unprofessional and signal budget constraints to recruiters\n2. Limited templates mean your Resume looks the same as thousands of others\n3. No ATS Score means you're flying blind on keyword compatibility\n4. No AI assistance means spending hours on wording instead of applying\n5. One document limit means you can't tailor your Resume for different roles",
     "s3_h": "What paid tools add (and why it matters)",
-    "s3_b": "A good paid CV builder adds features that directly affect your results:\n\n• ATS Score analysis: know your compatibility before applying, not after getting rejected\n• AI bullet rewriting: turn job duties into achievement statements in seconds\n• Up to 10 personal CVs: tailor your resume for every role and industry\n• Clean PDF export: no watermark, high resolution, ready to send\n• AI cover letter: personalized letters in 30 seconds using your actual experience\n• Professional templates: 143 designs covering every industry and style",
+    "s3_b": "A good paid resume builder adds features that directly affect your results:\n\n• ATS Score analysis: know your compatibility before applying, not after getting rejected\n• AI bullet rewriting: turn job duties into achievement statements in seconds\n• Up to 10 personal resumes: tailor them for every role and industry\n• Clean PDF export: no watermark, high resolution, ready to send\n• AI cover letter: personalized letters in 30 seconds using your actual experience\n• Professional templates: 143 designs covering every industry and style",
     "s4_h": "The ROI calculation",
     "s4_b": "Valhalla Resume Pro costs $15/month. One extra interview — let alone one job offer — pays for months of the tool.\n\nIf you're spending more than 20 hours a month on your job search, paying $15 to get AI assistance, ATS scoring, and professional templates is straightforward math. The question isn't whether you can afford a paid tool. It's whether you can afford to keep job searching without one.",
     "s5_h": "When free is actually fine",
@@ -2783,7 +2783,7 @@
     "s4_h": "Projects: your proof of skills",
     "s4_b": "For junior developers, personal projects are your strongest differentiator. For senior developers, significant side projects or open source contributions add credibility.\n\nFor each project include:\n• What it does (1 sentence)\n• The stack you used\n• One interesting technical challenge you solved\n• GitHub link or live URL\n\nDo not include tutorial projects (Todo app, weather app, movie database). Include projects that solve a real problem, have real users, or demonstrate an interesting technical decision.",
     "s5_h": "Using ATS Score to beat automated screening",
-    "s5_b": "Keyword matching will not get a bot to like you — most ATS don't score your resume at all. It does something more useful: it forces you to answer, before you apply, whether your CV actually says the things this role is asking for.\n\nValhalla Resume's ATS Score feature lets you paste a job description and get a specific match analysis: which requirements from the posting are missing from your CV, which skills to highlight more prominently, and what structure improvements would help.\n\nA frontend developer applying to a React role should see React, TypeScript, Redux, testing libraries, and performance optimization mentioned. A backend role wants to see API design, database experience, and system design. Different roles, different maps — ATS Score shows you the gap for each application.",
+    "s5_b": "Keyword matching will not get a bot to like you — most ATS don't score your resume at all. It does something more useful: it forces you to answer, before you apply, whether your resume actually says the things this role is asking for.\n\nValhalla Resume's ATS Score feature lets you paste a job description and get a specific match analysis: which requirements from the posting are missing from your resume, which skills to highlight more prominently, and what structure improvements would help.\n\nA frontend developer applying to a React role should see React, TypeScript, Redux, testing libraries, and performance optimization mentioned. A backend role wants to see API design, database experience, and system design. Different roles, different maps — ATS Score shows you the gap for each application.",
     "s6_h": "Common mistakes on developer resumes",
     "s6_b": "1. Listing technologies you barely know — leads to failed technical screens\n2. No GitHub link — the most common omission for junior developers\n3. Vague responsibilities without any quantification\n4. Using a creative template that ATS can't parse — beautiful PDFs with columns or text boxes often fail ATS parsing\n5. Listing 'proficient in' without context — proficient compared to what?\n6. Education at the top for experienced developers — move it to the bottom after 2+ years\n7. Generic summary ('passionate developer with experience in multiple technologies') — says nothing, remembered by no one",
     "r1_slug": "como-pasar-el-ats",
@@ -3400,7 +3400,7 @@
         "q3": "Are these numbers guaranteed?",
         "a3": "No. They are credible market benchmarks. Individual offers depend on the company, city and specific skills.",
         "q4": "How can I land the top bracket?",
-        "a4": "Quantified achievements, targeted certifications and an ATS-ready CV are the levers that move offers up."
+        "a4": "Quantified achievements, targeted certifications and an ATS-ready resume are the levers that move offers up."
       },
       "cta": {
         "title": "Build a Resume that gets {profession} jobs in {country}",
