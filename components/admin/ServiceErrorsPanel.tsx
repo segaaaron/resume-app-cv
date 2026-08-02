@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { useTranslations } from "next-intl"
 import {
   RefreshCw,
+  Trash2,
   ShieldCheck,
   AlertOctagon,
   Users as UsersIcon,
@@ -66,6 +67,21 @@ export default function ServiceErrorsPanel({ report }: { report: ServiceErrorsRe
   const [isPending, startTransition] = useTransition()
   const [expanded, setExpanded] = useState<string | null>(null)
   const [qDraft, setQDraft] = useState(searchParams.get("q") ?? "")
+  const [confirmClear, setConfirmClear] = useState(false)
+  const [clearing, setClearing] = useState(false)
+
+  // Two-click confirm (no native dialog): first click arms, second wipes.
+  async function clearAll() {
+    if (!confirmClear) { setConfirmClear(true); return }
+    setClearing(true)
+    try {
+      await fetch("/api/admin/errors/clear", { method: "POST", credentials: "same-origin" })
+    } finally {
+      setClearing(false)
+      setConfirmClear(false)
+      startTransition(() => router.refresh())
+    }
+  }
 
   function setParam(key: string, value: string | null) {
     const p = new URLSearchParams(searchParams.toString())
@@ -103,7 +119,9 @@ export default function ServiceErrorsPanel({ report }: { report: ServiceErrorsRe
           })}
         </div>
 
-        {/* source filter */}
+        {/* source filter — always lists every known service family so you can
+            confirm any of them is clean (filter → "0, all clear"), not only the
+            ones that happen to have errors in the current window. */}
         <select
           value={searchParams.get("source") ?? ""}
           onChange={(e) => setParam("source", e.target.value || null)}
@@ -130,6 +148,19 @@ export default function ServiceErrorsPanel({ report }: { report: ServiceErrorsRe
             />
           </div>
         </form>
+
+        {/* clear — wipe the reviewed board (two-click confirm) */}
+        {report.total > 0 && (
+          <button
+            onClick={clearAll}
+            onBlur={() => setConfirmClear(false)}
+            disabled={clearing}
+            className={`inline-flex items-center justify-center gap-2 rounded-[10px] px-4 min-h-[40px] text-[12.5px] font-bold transition-colors duration-150 disabled:opacity-60 disabled:cursor-not-allowed self-start md:self-auto ${confirmClear ? "text-white bg-[#D33636] hover:bg-[#b82d2d]" : "text-[#6B7A8C] border border-[#D9E1ED] bg-white hover:text-[#D33636] hover:border-[#D33636]/50"}`}
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            {confirmClear ? t("clear_confirm") : t("clear")}
+          </button>
+        )}
 
         {/* refresh */}
         <button

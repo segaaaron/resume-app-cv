@@ -99,9 +99,26 @@ function pickString(ctx: Record<string, unknown>, ...keys: string[]): string | u
   })
 }
 
+/** Admin action: wipe every captured error so the panel reflects the CURRENT
+ *  state instead of a growing pile of already-reviewed failures. Returns how
+ *  many rows were removed. New errors keep being captured normally afterwards. */
+export async function clearErrors(): Promise<number> {
+  const { count } = await db.errorLog.deleteMany({})
+  return count
+}
+
 // ─────────────────────────── Admin report ───────────────────────────
 
 export type ErrorWindow = "24h" | "7d" | "30d"
+
+// Canonical service families (mirror the /api/<segment> map in serviceFromRoute
+// plus the explicit client/cron sinks). The filter always lists ALL of these —
+// even ones with zero errors right now — so an admin can pick a service and
+// confirm it is clean ("0 — all clear"), not only filter the ones already broken.
+const KNOWN_SERVICES = [
+  "ai", "stripe", "paypal", "user", "auth", "cron", "client",
+  "resumes", "cover-letters", "billing", "admin", "referrals", "applications",
+] as const
 
 const WINDOW_MS: Record<ErrorWindow, number> = {
   "24h": 24 * 60 * 60 * 1000,
@@ -190,7 +207,9 @@ export async function getErrorReport(params: ErrorReportParams = {}): Promise<Er
     total,
     affectedUsers: byUser.length,
     topSource: bySource[0] ? { source: bySource[0].source, count: bySource[0]._count.source } : null,
-    sources: allSources.map((s) => s.source),
+    // Every known service family + any extra source seen in the data, so the
+    // filter always offers the full list to pick from (not only broken ones).
+    sources: [...new Set<string>([...KNOWN_SERVICES, ...allSources.map((s) => s.source)])].sort(),
     issues,
   }
 }

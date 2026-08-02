@@ -2301,6 +2301,8 @@
       "page_subtitle": "Captured application failures grouped by issue. See which user hit an error and why. No realtime — hit Refresh for the latest.",
       "refresh": "Refresh",
       "all_services": "All services",
+      "clear": "Clear",
+      "clear_confirm": "Confirm — clear all?",
       "search_placeholder": "Search by user email or message…",
       "stat_errors": "Errors ({window})",
       "stat_affected_users": "Affected users",
