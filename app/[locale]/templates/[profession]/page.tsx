@@ -9,7 +9,7 @@ import { ArrowRight, CheckCircle } from "lucide-react"
 import { setRequestLocale } from "next-intl/server"
 import { templatesSEO } from "@/lib/templates-seo"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 
 type ProfessionData = {
   slug: string

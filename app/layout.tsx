@@ -72,7 +72,7 @@ const figtree = Figtree({ variable: "--font-figtree", subsets: ["latin"], weight
 const spectral = Spectral({ variable: "--font-spectral", subsets: ["latin"], weight: ["400", "600"], display: "swap" })
 const asap = Asap({ variable: "--font-asap", subsets: ["latin"], weight: ["400", "600", "700"], display: "swap" })
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 
 // Umami analytics website id. This value is PUBLIC (it ships in every page's HTML),
 // so a hardcoded fallback is safe. It is also necessary: Dokploy builds this app

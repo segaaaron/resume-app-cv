@@ -29,7 +29,7 @@ export default function BlogSchemas({
   breadcrumbBlogLabel,
   keywords = [],
 }: Props) {
-  const baseUrl = "https://valhallaresume.com"
+  const baseUrl = "https://www.valhallaresume.com"
   const canonical = `${baseUrl}/${locale}/blog/${slug}`
 
   const articleSchema = {

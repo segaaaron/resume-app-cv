@@ -30,26 +30,26 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}`,
+      canonical: `https://www.valhallaresume.com/${locale}`,
       languages: {
-        es: "https://valhallaresume.com/es",
-        en: "https://valhallaresume.com/en",
+        es: "https://www.valhallaresume.com/es",
+        en: "https://www.valhallaresume.com/en",
         // x-default = the page for a visitor whose language matches neither es nor en.
         // English, mirroring the app's own runtime fallback (FALLBACK_LOCALE="en" in
         // lib/locale.ts) — a browser in pt/zh/de is served /en, so Google must be told
         // the same. It used to point to /es, contradicting the runtime.
-        "x-default": "https://valhallaresume.com/en",
+        "x-default": "https://www.valhallaresume.com/en",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://valhallaresume.com/${locale}`,
+      url: `https://www.valhallaresume.com/${locale}`,
       type: "website",
       locale: locale === "es" ? "es_ES" : "en_US",
       images: [
         {
-          url: "https://valhallaresume.com/og-image.png",
+          url: "https://www.valhallaresume.com/og-image.png",
           width: 1200,
           height: 630,
           alt: t("og_image_alt"),
@@ -60,7 +60,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -69,12 +69,12 @@ const jsonLdWebsite = {
   "@context": "https://schema.org",
   "@type": "WebSite",
   name: "Valhalla Resume",
-  url: "https://valhallaresume.com",
+  url: "https://www.valhallaresume.com",
   potentialAction: {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: "https://valhallaresume.com/templates?q={search_term_string}",
+      urlTemplate: "https://www.valhallaresume.com/templates?q={search_term_string}",
     },
     "query-input": "required name=search_term_string",
   },
@@ -84,10 +84,10 @@ const jsonLdOrganization = {
   "@context": "https://schema.org",
   "@type": "Organization",
   name: "Valhalla Resume",
-  url: "https://valhallaresume.com",
+  url: "https://www.valhallaresume.com",
   logo: {
     "@type": "ImageObject",
-    url: "https://valhallaresume.com/icon.svg",
+    url: "https://www.valhallaresume.com/icon.svg",
     width: 512,
     height: 512,
   },
@@ -102,7 +102,7 @@ const jsonLdWebApp = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
   name: "Valhalla Resume",
-  url: "https://valhallaresume.com",
+  url: "https://www.valhallaresume.com",
   description:
     `AI-powered resume builder with ATS analysis. ${TEMPLATE_COUNT} professional templates, cover letter generator, job application tracker.`,
   applicationCategory: "BusinessApplication",
@@ -137,7 +137,7 @@ const jsonLdWebApp = {
     "Resume version history",
   ],
   inLanguage: ["es", "en"],
-  screenshot: "https://valhallaresume.com/og-image.png",
+  screenshot: "https://www.valhallaresume.com/og-image.png",
   aggregateRating: {
     "@type": "AggregateRating",
     ratingValue: "4.8",

@@ -620,7 +620,7 @@ describe("Purchase · the checkout session each plan opens", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(checkoutClient.createCheckoutSession).mockResolvedValue({ url: "https://checkout.stripe.com/x" } as never)
-    process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com"
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.valhallaresume.com"
     process.env.STRIPE_PRICE_ID_MONTHLY = "price_m"
     process.env.STRIPE_PRICE_ID_ANNUAL = "price_a"
     process.env.STRIPE_PRICE_ID_BASIC = "price_b"
@@ -673,15 +673,15 @@ describe("Purchase · the checkout session each plan opens", () => {
     // no next-intl middleware and the route only exists under [locale]. The
     // ?checkout=cancelled marker lets the pricing page emit the checkout_abandoned
     // analytics event on return.
-    expect(params.cancel_url).toBe("https://valhallaresume.com/en/pricing?checkout=cancelled")
+    expect(params.cancel_url).toBe("https://www.valhallaresume.com/en/pricing?checkout=cancelled")
   })
 
   it("a trailing slash in APP_URL never produces a double slash", async () => {
-    process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com/"
+    process.env.NEXT_PUBLIC_APP_URL = "https://www.valhallaresume.com/"
     await new StripeCheckoutService(checkoutClient, logger2).createSession("u1", "basic", "es")
     const params = vi.mocked(checkoutClient.createCheckoutSession).mock.calls[0][0] as Record<string, string>
-    expect(params.cancel_url).toBe("https://valhallaresume.com/es/pricing?checkout=cancelled")
-    expect(params.success_url.startsWith("https://valhallaresume.com/es/")).toBe(true)
+    expect(params.cancel_url).toBe("https://www.valhallaresume.com/es/pricing?checkout=cancelled")
+    expect(params.success_url.startsWith("https://www.valhallaresume.com/es/")).toBe(true)
   })
 })
 

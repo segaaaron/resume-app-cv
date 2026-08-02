@@ -26,7 +26,7 @@ export async function generateMetadata({
     locale === "es"
       ? `Mira el CV profesional creado con Valhalla Resume. Crea el tuyo con IA en minutos.`
       : `View this professional resume created with Valhalla Resume. Build yours with AI in minutes.`
-  const url = `https://valhallaresume.com/${locale}/cv/${slug}`
+  const url = `https://www.valhallaresume.com/${locale}/cv/${slug}`
 
   return {
     title,
@@ -37,13 +37,13 @@ export async function generateMetadata({
       description,
       type: "profile",
       url,
-      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://www.valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
     robots: { index: true, follow: false },
   }

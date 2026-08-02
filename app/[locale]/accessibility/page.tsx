@@ -14,11 +14,11 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/accessibility`,
+      canonical: `https://www.valhallaresume.com/${locale}/accessibility`,
       languages: {
-        es: "https://valhallaresume.com/es/accessibility",
-        en: "https://valhallaresume.com/en/accessibility",
-        "x-default": "https://valhallaresume.com/en/accessibility",
+        es: "https://www.valhallaresume.com/es/accessibility",
+        en: "https://www.valhallaresume.com/en/accessibility",
+        "x-default": "https://www.valhallaresume.com/en/accessibility",
       },
     },
   }

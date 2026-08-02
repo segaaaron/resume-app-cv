@@ -22,7 +22,7 @@ export async function generateMetadata({
       follow: false,
     },
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/login`,
+      canonical: `https://www.valhallaresume.com/${locale}/login`,
     },
   }
 }

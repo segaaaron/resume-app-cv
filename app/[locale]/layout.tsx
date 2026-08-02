@@ -5,7 +5,7 @@ import { routing } from "@/i18n/routing"
 import { notFound } from "next/navigation"
 import { UpgradeModalProvider } from "@/contexts/UpgradeModalContext"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 
 // Locale-aware so the site-wide OG locale and x-default follow the language the
 // subtree is rendered in — a static `es_ES` / x-default=/es leaked onto every

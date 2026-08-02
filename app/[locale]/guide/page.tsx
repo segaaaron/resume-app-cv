@@ -28,25 +28,25 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/guide`,
+      canonical: `https://www.valhallaresume.com/${locale}/guide`,
       languages: {
-        es: "https://valhallaresume.com/es/guide",
-        en: "https://valhallaresume.com/en/guide",
-        "x-default": "https://valhallaresume.com/en/guide",
+        es: "https://www.valhallaresume.com/es/guide",
+        en: "https://www.valhallaresume.com/en/guide",
+        "x-default": "https://www.valhallaresume.com/en/guide",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://valhallaresume.com/${locale}/guide`,
+      url: `https://www.valhallaresume.com/${locale}/guide`,
       type: "website",
-      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://www.valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
   }
 }

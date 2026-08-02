@@ -17,7 +17,7 @@ import { buildEntry, getRelatedProfessions } from "@/lib/salary/salaries"
 import { formatSalary } from "@/lib/salary/format"
 import { getProfessionIcon } from "@/lib/salary/iconMap"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 const LOCALES = ["en", "es"] as const
 
 export function generateStaticParams() {

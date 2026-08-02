@@ -37,7 +37,7 @@ import {
   type TemplateSEO,
 } from "@/lib/templates-seo"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 const SUPPORTED_LOCALES = ["es", "en"] as const
 type Locale = (typeof SUPPORTED_LOCALES)[number]
 

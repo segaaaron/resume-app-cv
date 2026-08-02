@@ -2,7 +2,7 @@ import type { MetadataRoute } from "next"
 import { templatesSEO } from "@/lib/templates-seo"
 import { COUNTRIES } from "@/lib/salary/countries"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 const locales = ["es", "en"] as const
 
 type Page = {

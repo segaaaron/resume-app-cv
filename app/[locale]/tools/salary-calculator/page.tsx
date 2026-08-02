@@ -19,7 +19,7 @@ import SalaryPopularSearches from "@/components/salary/SalaryPopularSearches"
 import SalaryFAQ from "@/components/salary/SalaryFAQ"
 import SalarySchemas from "@/components/salary/SalarySchemas"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 
 export async function generateMetadata({
   params,

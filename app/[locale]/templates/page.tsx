@@ -22,19 +22,19 @@ const jsonLdItemList = {
   "@type": "ItemList",
   name: "Professional Resume Templates — Valhalla Resume",
   description: `${TEMPLATE_COUNT} ATS-optimized professional resume templates for every industry`,
-  url: "https://valhallaresume.com/templates",
+  url: "https://www.valhallaresume.com/templates",
   numberOfItems: TEMPLATE_COUNT,
   itemListElement: [
-    { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://valhallaresume.com/templates#featured" },
-    { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://valhallaresume.com/templates#city" },
-    { "@type": "ListItem", position: 3, name: "Creative Resume Templates", url: "https://valhallaresume.com/templates#creative" },
-    { "@type": "ListItem", position: 4, name: "Business Resume Templates", url: "https://valhallaresume.com/templates#business" },
-    { "@type": "ListItem", position: 5, name: "Health & Science Resume Templates", url: "https://valhallaresume.com/templates#health" },
-    { "@type": "ListItem", position: 6, name: "Legal & Academic Resume Templates", url: "https://valhallaresume.com/templates#legal" },
-    { "@type": "ListItem", position: 7, name: "Hospitality Resume Templates", url: "https://valhallaresume.com/templates#hospitality" },
-    { "@type": "ListItem", position: 8, name: "Engineering & Tech Resume Templates", url: "https://valhallaresume.com/templates#engineering" },
-    { "@type": "ListItem", position: 9, name: "Arts & Media Resume Templates", url: "https://valhallaresume.com/templates#arts" },
-    { "@type": "ListItem", position: 10, name: "Other Professional Resume Templates", url: "https://valhallaresume.com/templates#other" },
+    { "@type": "ListItem", position: 1, name: "Featured Resume Templates", url: "https://www.valhallaresume.com/templates#featured" },
+    { "@type": "ListItem", position: 2, name: "City-Inspired Resume Templates", url: "https://www.valhallaresume.com/templates#city" },
+    { "@type": "ListItem", position: 3, name: "Creative Resume Templates", url: "https://www.valhallaresume.com/templates#creative" },
+    { "@type": "ListItem", position: 4, name: "Business Resume Templates", url: "https://www.valhallaresume.com/templates#business" },
+    { "@type": "ListItem", position: 5, name: "Health & Science Resume Templates", url: "https://www.valhallaresume.com/templates#health" },
+    { "@type": "ListItem", position: 6, name: "Legal & Academic Resume Templates", url: "https://www.valhallaresume.com/templates#legal" },
+    { "@type": "ListItem", position: 7, name: "Hospitality Resume Templates", url: "https://www.valhallaresume.com/templates#hospitality" },
+    { "@type": "ListItem", position: 8, name: "Engineering & Tech Resume Templates", url: "https://www.valhallaresume.com/templates#engineering" },
+    { "@type": "ListItem", position: 9, name: "Arts & Media Resume Templates", url: "https://www.valhallaresume.com/templates#arts" },
+    { "@type": "ListItem", position: 10, name: "Other Professional Resume Templates", url: "https://www.valhallaresume.com/templates#other" },
   ],
 }
 
@@ -75,25 +75,25 @@ export async function generateMetadata({
           "free resume templates download",
         ],
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/templates`,
+      canonical: `https://www.valhallaresume.com/${locale}/templates`,
       languages: {
-        es: "https://valhallaresume.com/es/templates",
-        en: "https://valhallaresume.com/en/templates",
-        "x-default": "https://valhallaresume.com/en/templates",
+        es: "https://www.valhallaresume.com/es/templates",
+        en: "https://www.valhallaresume.com/en/templates",
+        "x-default": "https://www.valhallaresume.com/en/templates",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://valhallaresume.com/${locale}/templates`,
+      url: `https://www.valhallaresume.com/${locale}/templates`,
       type: "website",
-      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://www.valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -162,8 +162,8 @@ export default async function TemplatesPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://valhallaresume.com" },
-      { "@type": "ListItem", position: 2, name: tTemplates("breadcrumb_templates"), item: `https://valhallaresume.com/${locale}/templates` },
+      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://www.valhallaresume.com" },
+      { "@type": "ListItem", position: 2, name: tTemplates("breadcrumb_templates"), item: `https://www.valhallaresume.com/${locale}/templates` },
     ],
   }
 

@@ -21,25 +21,25 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/blog`,
+      canonical: `https://www.valhallaresume.com/${locale}/blog`,
       languages: {
-        es: "https://valhallaresume.com/es/blog",
-        en: "https://valhallaresume.com/en/blog",
-        "x-default": "https://valhallaresume.com/en/blog",
+        es: "https://www.valhallaresume.com/es/blog",
+        en: "https://www.valhallaresume.com/en/blog",
+        "x-default": "https://www.valhallaresume.com/en/blog",
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
-      url: `https://valhallaresume.com/${locale}/blog`,
+      url: `https://www.valhallaresume.com/${locale}/blog`,
       type: "website",
-      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://www.valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -263,12 +263,12 @@ export default async function BlogIndexPage({
     "@context": "https://schema.org",
     "@type": "CollectionPage",
     name: t("collection_name"),
-    url: `https://valhallaresume.com/${locale}/blog`,
+    url: `https://www.valhallaresume.com/${locale}/blog`,
     description: t("collection_desc"),
     hasPart: articles.map((a) => ({
       "@type": "Article",
       headline: a.title,
-      url: `https://valhallaresume.com/${locale}/blog/${a.slug}`,
+      url: `https://www.valhallaresume.com/${locale}/blog/${a.slug}`,
     })),
   }
 

@@ -18,7 +18,7 @@ vi.mock("@/lib/db", () => ({
   db: { user: { findUnique: vi.fn(async () => userState.user) } },
 }))
 
-process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com"
+process.env.NEXT_PUBLIC_APP_URL = "https://www.valhallaresume.com"
 
 import { PayPalCheckoutService } from "@/lib/services/paypal/PayPalCheckoutService"
 

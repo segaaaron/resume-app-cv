@@ -14,11 +14,11 @@ export async function generateMetadata({
   return {
     title: t("meta_title"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/cookie-policy`,
+      canonical: `https://www.valhallaresume.com/${locale}/cookie-policy`,
       languages: {
-        es: "https://valhallaresume.com/es/cookie-policy",
-        en: "https://valhallaresume.com/en/cookie-policy",
-        "x-default": "https://valhallaresume.com/en/cookie-policy",
+        es: "https://www.valhallaresume.com/es/cookie-policy",
+        en: "https://www.valhallaresume.com/en/cookie-policy",
+        "x-default": "https://www.valhallaresume.com/en/cookie-policy",
       },
     },
   }

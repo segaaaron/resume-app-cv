@@ -15,11 +15,11 @@ export async function generateMetadata({
   return {
     title: t("title"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/privacy`,
+      canonical: `https://www.valhallaresume.com/${locale}/privacy`,
       languages: {
-        es: "https://valhallaresume.com/es/privacy",
-        en: "https://valhallaresume.com/en/privacy",
-        "x-default": "https://valhallaresume.com/en/privacy",
+        es: "https://www.valhallaresume.com/es/privacy",
+        en: "https://www.valhallaresume.com/en/privacy",
+        "x-default": "https://www.valhallaresume.com/en/privacy",
       },
     },
   }

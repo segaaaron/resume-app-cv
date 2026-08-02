@@ -23,7 +23,7 @@ const jsonLdSoftwareApp = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   name: "Valhalla Resume",
-  url: "https://valhallaresume.com",
+  url: "https://www.valhallaresume.com",
   applicationCategory: "BusinessApplication",
   operatingSystem: "Web",
   offers: [
@@ -75,25 +75,25 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/pricing`,
+      canonical: `https://www.valhallaresume.com/${locale}/pricing`,
       languages: {
-        es: "https://valhallaresume.com/es/pricing",
-        en: "https://valhallaresume.com/en/pricing",
-        "x-default": "https://valhallaresume.com/en/pricing",
+        es: "https://www.valhallaresume.com/es/pricing",
+        en: "https://www.valhallaresume.com/en/pricing",
+        "x-default": "https://www.valhallaresume.com/en/pricing",
       },
     },
     openGraph: {
       title: t("og_title"),
       description: t("og_description"),
-      url: `https://valhallaresume.com/${locale}/pricing`,
+      url: `https://www.valhallaresume.com/${locale}/pricing`,
       type: "website",
-      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
+      images: [{ url: "https://www.valhallaresume.com/og-image.png", width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: t("og_title"),
       description: t("og_description"),
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
   }
 }
@@ -112,8 +112,8 @@ export default async function PricingPage({
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://valhallaresume.com" },
-      { "@type": "ListItem", position: 2, name: t("breadcrumb_pricing"), item: `https://valhallaresume.com/${locale}/pricing` },
+      { "@type": "ListItem", position: 1, name: tCommon("home_label"), item: "https://www.valhallaresume.com" },
+      { "@type": "ListItem", position: 2, name: t("breadcrumb_pricing"), item: `https://www.valhallaresume.com/${locale}/pricing` },
     ],
   }
   const dateLocale = locale === "es" ? es : enUS

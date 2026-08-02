@@ -14,11 +14,11 @@ export async function generateMetadata({
   return {
     title: t("meta_title"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/dmca`,
+      canonical: `https://www.valhallaresume.com/${locale}/dmca`,
       languages: {
-        es: "https://valhallaresume.com/es/dmca",
-        en: "https://valhallaresume.com/en/dmca",
-        "x-default": "https://valhallaresume.com/en/dmca",
+        es: "https://www.valhallaresume.com/es/dmca",
+        en: "https://www.valhallaresume.com/en/dmca",
+        "x-default": "https://www.valhallaresume.com/en/dmca",
       },
     },
   }

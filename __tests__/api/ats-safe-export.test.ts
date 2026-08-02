@@ -23,7 +23,7 @@ function makeRequest(body: Record<string, unknown>) {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://valhallaresume.com",
+      Origin: process.env.NEXT_PUBLIC_APP_URL ?? "https://www.valhallaresume.com",
     },
     body: JSON.stringify(body),
   })

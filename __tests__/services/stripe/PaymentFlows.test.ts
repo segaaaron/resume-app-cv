@@ -93,7 +93,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   process.env.STRIPE_PRICE_ID_MONTHLY = "price_monthly_test"
   process.env.STRIPE_PRICE_ID_ANNUAL  = "price_annual_test"
-  process.env.NEXT_PUBLIC_APP_URL = "https://valhallaresume.com"
+  process.env.NEXT_PUBLIC_APP_URL = "https://www.valhallaresume.com"
   delete process.env.ADMIN_EMAIL
 })
 

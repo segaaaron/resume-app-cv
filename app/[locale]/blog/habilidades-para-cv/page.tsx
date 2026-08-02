@@ -32,19 +32,19 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
+      canonical: `https://www.valhallaresume.com/${locale}/blog/${SLUG}`,
       languages: {
-        es: `https://valhallaresume.com/es/blog/${SLUG}`,
-        en: `https://valhallaresume.com/en/blog/${SLUG_EN}`,
-        "x-default": `https://valhallaresume.com/en/blog/${SLUG_EN}`,
+        es: `https://www.valhallaresume.com/es/blog/${SLUG}`,
+        en: `https://www.valhallaresume.com/en/blog/${SLUG_EN}`,
+        "x-default": `https://www.valhallaresume.com/en/blog/${SLUG_EN}`,
       },
     },
     openGraph: {
       title: t("title"),
       description: t("description"),
       type: "article",
-      url: `https://valhallaresume.com/${locale}/blog/${SLUG}`,
-      images: [{ url: "https://valhallaresume.com/og-image.png", width: 1200, height: 630 }],
+      url: `https://www.valhallaresume.com/${locale}/blog/${SLUG}`,
+      images: [{ url: "https://www.valhallaresume.com/og-image.png", width: 1200, height: 630 }],
       publishedTime: DATE_PUBLISHED,
       modifiedTime: DATE_MODIFIED,
       authors: ["Valhalla Resume Team"],
@@ -54,7 +54,7 @@ export async function generateMetadata({
       card: "summary_large_image",
       title: t("title"),
       description: t("description"),
-      images: ["https://valhallaresume.com/og-image.png"],
+      images: ["https://www.valhallaresume.com/og-image.png"],
     },
   }
 }

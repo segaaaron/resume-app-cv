@@ -8,7 +8,7 @@ import AtsFeatureShowcase from "@/components/tools/ats-checker/AtsFeatureShowcas
 import AtsEngineChecker from "@/components/tools/ats-checker/AtsEngineChecker"
 import AtsFaq from "@/components/tools/ats-checker/AtsFaq"
 
-const BASE_URL = "https://valhallaresume.com"
+const BASE_URL = "https://www.valhallaresume.com"
 
 export async function generateMetadata({
   params,

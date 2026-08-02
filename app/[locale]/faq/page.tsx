@@ -20,13 +20,13 @@ export async function generateMetadata({
     title: `${t("page_title")} — Valhalla Resume`,
     description: t("page_subtitle"),
     alternates: {
-      canonical: `https://valhallaresume.com/${locale}/faq`,
+      canonical: `https://www.valhallaresume.com/${locale}/faq`,
       languages: {
-        es: "https://valhallaresume.com/es/faq",
-        en: "https://valhallaresume.com/en/faq",
+        es: "https://www.valhallaresume.com/es/faq",
+        en: "https://www.valhallaresume.com/en/faq",
         // x-default → English, mirroring the runtime fallback (lib/locale.ts). Was /es,
         // which contradicted where the app actually sends an unknown-language visitor.
-        "x-default": "https://valhallaresume.com/en/faq",
+        "x-default": "https://www.valhallaresume.com/en/faq",
       },
     },
   }
