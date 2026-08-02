@@ -30,15 +30,80 @@ export async function requireAuth(req: Request): Promise<{ userId: string } | Ne
 // The code is kept as a prefix so it stays searchable. Unknown codes fall back
 // to the code itself; genuine unhandled throws already log their real message.
 const ERROR_DESCRIPTIONS: Record<string, string> = {
+  // ── AI / content generation ────────────────────────────────────────────────
   off_topic: "the AI returned an empty result — the input lacked enough job/career context (no target role or company, or too thin) to write anything, or was off-topic",
   invalid_response_format: "the AI replied in an unexpected shape (not the JSON the app expected) — a model or parsing failure",
   parse_error: "could not parse the AI response as JSON",
+  missing_content: "no content was provided to process",
+  not_enough_data: "the input had too little content for the AI to produce a useful result",
+  not_enough_resume_data: "the résumé lacks enough content (experience/skills) to run this AI action",
+  not_extractable: "could not extract text from the uploaded file (scanned image, empty, or unsupported PDF)",
+  nothing_to_translate: "the résumé had no translatable content",
+  empty: "the generated/exported output came back empty",
+
+  // ── Input / validation ─────────────────────────────────────────────────────
   invalid_input: "the submitted text failed validation (empty, too long, or malformed)",
   invalid_data: "the request body did not match the expected schema",
-  missing_content: "no content was provided to process",
+  invalid_payload: "the request/webhook body was malformed or failed schema validation",
+  invalid: "a submitted value was invalid (e.g. a wrong verification code)",
+  invalid_name: "the provided name is invalid (empty or unsupported characters)",
+  invalid_email: "the email address is invalid",
+  invalid_code: "the code entered is invalid or does not match",
+  invalid_token: "the token is missing, malformed, or was tampered with",
+  token_expired: "the token has expired and is no longer valid",
+  expired: "the link or challenge has expired",
+
+  // ── Quota / rate limit / plan gate ─────────────────────────────────────────
   quota_exceeded: "the user reached their AI usage limit for their plan",
+  free_quota_exhausted: "the user used up their free-tier allowance for this action",
+  daily_cap_reached: "the daily usage cap for this action was reached",
+  free_daily_download_cap: "the free-tier daily PDF download limit was reached",
+  rate_limited: "too many requests in a short window — the caller was throttled",
+  rate_limit_exceeded: "request rate limit exceeded — the caller was throttled",
+  too_many_attempts: "too many failed attempts — temporarily locked out",
+  max_attempts: "the maximum number of attempts was reached",
+  pro_required: "the action requires an active Pro plan",
+  feature_pro_only: "this feature is available on Pro plans only",
+  premium_template_requires_upgrade: "the chosen template requires a paid plan",
+  subscription_required: "an active subscription is required for this action",
+  plan_not_allowed: "the user's plan is not allowed to perform the requested action",
+  plan_limit_resume: "the user hit the résumé count limit for their plan",
+  plan_limit_cover_letter: "the user hit the cover-letter count limit for their plan",
+  managed_account: "a managed (admin-provisioned) account cannot perform this itself — it must contact its administrator",
+  eu_consent_required: "EU consent must be accepted before starting checkout",
+
+  // ── Auth / session / account ───────────────────────────────────────────────
   email_not_verified: "the user's email is not verified — action requires a verified account",
+  user_not_found: "no user matches the request",
+  email_taken: "the email address is already registered",
+  email_exists: "the email address is already registered",
+  blocked: "temporarily blocked after repeated failed attempts",
+  no_challenge: "no active verification challenge exists for this session",
+  invalid_or_no_challenge: "the verification challenge is missing or the submitted code is wrong",
+  no_pending: "no pending registration/verification to confirm",
+  no_reset_request: "no password-reset request is pending for this account",
+  already_used: "the reset link/token was already used",
+  server_misconfiguration: "a required server setting is missing or misconfigured",
+
+  // ── Payments — Stripe / PayPal ─────────────────────────────────────────────
+  payments_not_configured: "the payment gateway is not configured (API keys missing) — checkout/billing is disabled",
+  plan_not_configured: "the requested plan has no configured price ID on the gateway",
+  checkout_failed: "the checkout session could not be created at the gateway",
+  checkout_url_missing: "the gateway returned no checkout/redirect URL",
+  paypal_no_approval_url: "PayPal returned no approval URL to redirect the buyer to",
+  invalid_signature: "the webhook signature failed verification — the event was not trusted",
+  handler_error: "the webhook handler threw while processing the event (the gateway will retry)",
+  refetch_failed: "could not re-fetch the resource from the payment gateway",
+  subscription_not_active: "there is no active subscription to act on",
+  already_subscribed: "the user already has an active subscription",
+  already_canceled: "the subscription is already canceled",
   no_active_subscription: "no active subscription to manage/cancel",
+
+  // ── Resources ──────────────────────────────────────────────────────────────
+  not_found: "the requested resource does not exist or does not belong to this user",
+  snapshot_corrupted: "the stored résumé snapshot is corrupted or unreadable",
+  unavailable: "the service or data is temporarily unavailable",
+  forbidden: "the caller is not allowed to access this resource",
 }
 function describeError(code: string, status: number): string {
   const d = ERROR_DESCRIPTIONS[code]
