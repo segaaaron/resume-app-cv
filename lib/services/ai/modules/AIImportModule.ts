@@ -22,6 +22,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
+import { normalizeDescription } from "@/lib/utils"
 import { randomUUID } from "crypto"
 
 export interface ImportExtractInput {
@@ -154,7 +155,7 @@ export class AIImportModule {
 Rules:
 - Full name: put the given name(s) in firstName and ALL surnames in lastName (Latin-American resumes usually have two surnames — keep both in lastName).
 - Language level: map any wording (native, fluent, "conversacional", B2, advanced, stars) to the nearest CEFR value (a1..c2 or native).
-- Work/project descriptions: copy the bullet points as written (one per line, prefixed with •). Do NOT rephrase or add metrics.
+- Work/project descriptions: preserve the ORIGINAL structure. If the source lists discrete achievements — whatever their marker (•, -, *, ●, ▪, →, ✓, numbered "1." / "a)") — return each as its own line prefixed with "• ". If a role is written as a genuine NARRATIVE PARAGRAPH (flowing prose describing scope and impact), keep it as prose — do NOT chop it into bullets. If it opens with an intro sentence and then lists achievements, keep the intro as a prose line and mark only the achievements with "• ". Never rephrase, merge, translate, or add metrics.
 - Put LinkedIn/GitHub in their own fields; any other social/portfolio link goes in socials[].
 
 === RESUME TEXT ===
@@ -182,6 +183,11 @@ ${rawText}`
       if (!val) return ""
       return detectHallucination(val, rawText) ? "" : val
     }
+    // Canonicalise the description so it renders with the author's intent preserved:
+    // any bullet marker (or numbered list) becomes a clean "• " bullet, an intro
+    // paragraph before bullets stays prose, and a genuine narrative paragraph is left
+    // untouched — never shredded into fake bullets. See normalizeDescription.
+    const bulletDesc = (v: unknown): string => normalizeDescription(safeDesc(v))
 
     const pd = p.personalDetails ?? {}
     const draft = {
@@ -214,7 +220,7 @@ ${rawText}`
           startDate: s(w.startDate),
           endDate: s(w.endDate),
           currentlyWorking: w.currentlyWorking === true,
-          description: safeDesc(w.description),
+          description: bulletDesc(w.description),
         }))
         .slice(0, 20),
       education: (p.education ?? [])
@@ -245,11 +251,11 @@ ${rawText}`
         .slice(0, 20),
       projects: (p.projects ?? [])
         .filter((pr) => grounded(pr.name))
-        .map((pr) => ({ id: randomUUID(), name: s(pr.name), role: s(pr.role), startDate: s(pr.startDate), endDate: s(pr.endDate), description: safeDesc(pr.description), url: contactOrEmpty(pr.url) }))
+        .map((pr) => ({ id: randomUUID(), name: s(pr.name), role: s(pr.role), startDate: s(pr.startDate), endDate: s(pr.endDate), description: bulletDesc(pr.description), url: contactOrEmpty(pr.url) }))
         .slice(0, 20),
       volunteer: (p.volunteer ?? [])
         .filter((v) => grounded(v.organization) || grounded(v.role))
-        .map((v) => ({ id: randomUUID(), organization: s(v.organization), role: s(v.role), startDate: s(v.startDate), endDate: s(v.endDate), description: safeDesc(v.description) }))
+        .map((v) => ({ id: randomUUID(), organization: s(v.organization), role: s(v.role), startDate: s(v.startDate), endDate: s(v.endDate), description: bulletDesc(v.description) }))
         .slice(0, 12),
       hobbies: s(p.hobbies),
     }
