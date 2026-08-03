@@ -109,7 +109,7 @@ export function ProBanner({
   const t = useTranslations("dashboard.resumes")
   return (
     <div
-      className="flex items-center gap-4 rounded-[10px] px-5 py-4 mt-8 relative overflow-hidden border border-dash-cyan/15"
+      className="flex items-center gap-4 rounded-[10px] px-5 py-4 mt-8 mb-7 relative overflow-hidden border border-dash-cyan/15"
       style={{ background: "linear-gradient(135deg, rgba(0,212,255,0.05) 0%, rgba(0,212,255,0.02) 100%)" }}
     >
       {/* top shimmer line — gradient must stay inline */}

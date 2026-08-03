@@ -81,7 +81,7 @@ export default function DashboardNav({
           icon: Gift,
           proOnly: false,
           count: null as number | null,
-          isNew: true,
+          isNew: false,
         },
       ]
 
