@@ -112,3 +112,7 @@ scripts/ai-eval/
 
 # Agent/Claude config — local only
 .agents/
+
+# Docs — local only
+README.md
+public/blog/README.md
