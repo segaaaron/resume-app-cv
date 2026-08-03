@@ -38,11 +38,13 @@ export interface CoverLetterAtsResult {
   readability: { verdict: CoverLetterAtsVerdict; avgSentenceWords: number; paragraphs: number }
 }
 
-// Ideal cover-letter length is one page ≈ 250-400 words (recruiters skim < 30s;
-// 250-word letters out-callback 500+ word ones). These bands turn that into a score.
-const LEN_IDEAL_MIN = 250
+// Ideal cover-letter length is one page ≈ 210-400 words (recruiters skim < 30s;
+// a tight 220-word letter out-callbacks a 500+ word one). The floor is 210, not 250,
+// so a genuinely concise, specific letter (~230 words) reads as ideal, not "short" —
+// brevity is a virtue here, only true padding-shortness (< 180) is a caution.
+const LEN_IDEAL_MIN = 210
 const LEN_IDEAL_MAX = 400
-const LEN_OK_MIN = 180
+const LEN_OK_MIN = 160
 const LEN_OK_MAX = 520
 
 // Stand-in tokens that mean the letter was never finished: "XYZ Corp", "[Company]",
@@ -80,7 +82,11 @@ export function analyzeCoverLetterAts(letterText: string, jobDescription = ""): 
     keywords = {
       checked: true,
       score: kwScore,
-      verdict: kwScore >= 55 ? "pass" : kwScore >= 30 ? "caution" : "risk",
+      // A cover letter is PROSE, not a keyword list: a well-written one naturally
+      // echoes only a fraction of a JD's terms. Judging it by CV-grade keyword
+      // density (was pass≥55) flagged good letters as "risk". Hitting ~a third of
+      // the JD's keywords through real sentences is a healthy letter.
+      verdict: kwScore >= 30 ? "pass" : kwScore >= 15 ? "caution" : "risk",
       matched,
       missing,
     }
@@ -115,8 +121,12 @@ export function analyzeCoverLetterAts(letterText: string, jobDescription = ""): 
   const readability = { verdict: scoreToVerdict(readScore), avgSentenceWords, paragraphs }
 
   // ── Overall ───────────────────────────────────────────────────────────────
+  // Keywords are a NUDGE for a letter, not the verdict. They used to weigh 0.45,
+  // which let a low prose-vs-JD overlap (normal for a good letter) drag an otherwise
+  // clean, well-sized, readable letter down to red. Format/length/readability — what
+  // actually makes a letter parse and read well — now carry it; keywords inform.
   const score = keywords.checked
-    ? Math.round(0.45 * keywords.score + 0.2 * lengthScore + 0.2 * formatScore + 0.15 * readScore)
+    ? Math.round(0.25 * keywords.score + 0.25 * lengthScore + 0.3 * formatScore + 0.2 * readScore)
     : Math.round(0.4 * lengthScore + 0.35 * formatScore + 0.25 * readScore)
 
   return { score, verdict: scoreToVerdict(score), keywords, length, format, readability }
