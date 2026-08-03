@@ -80,6 +80,15 @@ export class StripeCheckoutService {
       customer,
       mode: isOneTime ? "payment" : "subscription",
       payment_method_types: ["card"],
+      // Turn OFF Stripe's Adaptive Pricing (its ML currency guessing) — it is not
+      // deterministic and quoted a Bolivian IP in HKD. The presented currency must come
+      // ONLY from what we define on the Price: USD by default, plus any manual
+      // currency_options (e.g. EUR / GBP) configured in Stripe, which Checkout still
+      // auto-selects by the buyer's location even with Adaptive Pricing off. We do NOT
+      // pass a `currency` here on purpose — that would pin one currency and defeat the
+      // per-location auto-selection of those currency_options. Pinned per session so this
+      // holds even if the Dashboard toggle is (re-)enabled.
+      adaptive_pricing: { enabled: false },
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: `${appUrl.replace(/\/$/, "")}/${locale}/dashboard/resumes?upgraded=true&session_id={CHECKOUT_SESSION_ID}`,
       // Where Checkout's back button sends a customer who changes their mind (a declined

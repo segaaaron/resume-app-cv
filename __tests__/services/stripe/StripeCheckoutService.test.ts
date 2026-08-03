@@ -111,6 +111,19 @@ describe("StripeCheckoutService.createSession", () => {
     expect(mockStripeClient.listCustomers).not.toHaveBeenCalled()
   })
 
+  it("disables Adaptive Pricing and never pins a currency → only our own currency_options show (USD + any EUR/GBP), never an ML guess", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", email: "a@b.com", stripeCustomerId: "cus_1", plan: "UNSUBSCRIBED", subscriptionStatus: "NONE", subscriptionId: null } as unknown as import("@prisma/client").User)
+    vi.mocked(mockStripeClient.createCheckoutSession).mockResolvedValue({ url: "https://stripe.com/pay/x" } as never)
+    await makeService().createSession("u1", "monthly", "es")
+    const params = vi.mocked(mockStripeClient.createCheckoutSession).mock.calls[0][0]
+    // ML off...
+    expect(params.adaptive_pricing).toEqual({ enabled: false })
+    // ...and no explicit currency, so Checkout auto-selects among the Price's manual
+    // currency_options by location (EUR for EU, GBP for UK, USD otherwise).
+    expect(params.currency).toBeUndefined()
+  })
+
   // ── Stale customer recovery (Stripe account/mode switch, or deleted customer) ──
 
   it("stale stored customer (resource_missing) → clears id, recreates, retries once, returns { url }", async () => {
