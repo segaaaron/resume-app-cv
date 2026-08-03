@@ -64,6 +64,25 @@ const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = 
   flare:     dynamic(() => import("./templates/FlareTemplate"),         { ssr: false }),
   herald:    dynamic(() => import("./templates/HeraldTemplate"),        { ssr: false }),
   bloom:     dynamic(() => import("./templates/BloomTemplate"),         { ssr: false }),
+  // ── 15 letter designs mirroring the ATS resume set (Ltr*) ─────────────────
+  // These MUST be here too, not only in the picker list / print-layout: the live
+  // editor preview renders TEMPLATE_COMPONENTS[activeTemplate], so a missing entry
+  // silently fell back to `elegant` — every one of the 15 showed the same template.
+  ltrmeridian: dynamic(() => import("./templates/LtrMeridian"), { ssr: false }),
+  ltrverdant:  dynamic(() => import("./templates/LtrVerdant"),  { ssr: false }),
+  ltrcardinal: dynamic(() => import("./templates/LtrCardinal"), { ssr: false }),
+  ltrcobalt:   dynamic(() => import("./templates/LtrCobalt"),   { ssr: false }),
+  ltrslate:    dynamic(() => import("./templates/LtrSlate"),    { ssr: false }),
+  ltrnordic:   dynamic(() => import("./templates/LtrNordic"),   { ssr: false }),
+  ltronyx:     dynamic(() => import("./templates/LtrOnyx"),     { ssr: false }),
+  ltrsable:    dynamic(() => import("./templates/LtrSable"),    { ssr: false }),
+  ltrcerulean: dynamic(() => import("./templates/LtrCerulean"), { ssr: false }),
+  ltrivory:    dynamic(() => import("./templates/LtrIvory"),    { ssr: false }),
+  ltrgarnet:   dynamic(() => import("./templates/LtrGarnet"),   { ssr: false }),
+  ltrcopper:   dynamic(() => import("./templates/LtrCopper"),   { ssr: false }),
+  ltrharbor:   dynamic(() => import("./templates/LtrHarbor"),   { ssr: false }),
+  ltrgraphite: dynamic(() => import("./templates/LtrGraphite"), { ssr: false }),
+  ltrsequoia:  dynamic(() => import("./templates/LtrSequoia"),  { ssr: false }),
 }
 
 type TemplateId =
