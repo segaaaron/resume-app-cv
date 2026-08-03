@@ -87,7 +87,7 @@ const jsonLdOrganization = {
   url: "https://www.valhallaresume.com",
   logo: {
     "@type": "ImageObject",
-    url: "https://www.valhallaresume.com/icon.png",
+    url: "https://www.valhallaresume.com/icon.svg",
     width: 512,
     height: 512,
   },
