@@ -116,3 +116,10 @@ scripts/ai-eval/
 # Docs — local only
 README.md
 public/blog/README.md
+
+# One-off / ops / generator scripts — local only
+scripts/migrate-templates-to-classic.ts
+scripts/purge-cover-letters.ts
+scripts/purge-resumes.ts
+scripts/smoke-test-ai-models.ts
+scripts/generate-template-thumbnails.ts
