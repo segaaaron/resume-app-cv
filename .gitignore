@@ -109,3 +109,6 @@ scripts/pricing-mix-report.ts
 # Eval-harness de calidad AI (ops local, corre a mano, NO va a PROD: no lo
 # importa el codigo de la app, gasta API real). REGLA DE ORO 3.
 scripts/ai-eval/
+
+# Agent/Claude config — local only
+.agents/
