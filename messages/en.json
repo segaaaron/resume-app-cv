@@ -2027,6 +2027,7 @@
     "ats_verdict_caution": "Caution",
     "ats_verdict_risk": "Needs work",
     "ats_missing_label": "Keywords to weave in",
+    "ats_improve_with_job": "Improve body with AI for this job",
     "ats_disclaimer": "Not every ATS scores cover letters — but the same letter that passes here is the one a recruiter reads fastest.",
     "ats_pro_title": "ATS Check is a Pro feature",
     "ats_pro_desc": "See how your cover letter reads to an ATS and align it to the job's keywords.",

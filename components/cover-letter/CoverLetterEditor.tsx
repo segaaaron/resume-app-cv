@@ -720,7 +720,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
           )}
 
           {sidebarTab === "ats" && (
-            <CoverLetterAtsPanel body={content.body} company={content.company} jobTitle={content.subject ?? ""} jobDescription={jobDescription} onJobDescriptionChange={setJobDescription} isPro={isPro} onUpgrade={() => setUpgradeOpen(true)} />
+            <CoverLetterAtsPanel body={content.body} company={content.company} jobTitle={content.subject ?? ""} jobDescription={jobDescription} onJobDescriptionChange={setJobDescription} isPro={isPro} onUpgrade={() => setUpgradeOpen(true)} onImproveWithJob={() => setSidebarTab("ai")} />
           )}
 
           {sidebarTab === "content" && (() => {

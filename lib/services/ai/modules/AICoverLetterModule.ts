@@ -16,6 +16,7 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessCoverLetter } from "../shared/cover-letter-quality"
 import { buildCoverLetterBrief, type CoverLetterBrief } from "@/lib/ats/cover-letter-brief"
+import { analyzeCoverLetterAts } from "@/lib/ats/cover-letter-ats"
 import { hasCliche, findCliches, clicheBanList, substituteCliches } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
@@ -257,6 +258,33 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       }
     }
 
+    // ── ATS-in-the-loop ────────────────────────────────────────────────────────
+    // The deterministic ATS engine grades the draft; if the JD keyword overlap is
+    // weak, spend ONE retry weaving in the vacancy terms the résumé genuinely
+    // supports (from the brief's featureKeywords — never the gaps, so no invention).
+    // Keep the retry ONLY when it stays clean AND actually scores higher. This is the
+    // "expert engine + AI" loop: the engine judges, the model improves toward it.
+    if (jobDescription && brief.hasJd && brief.featureKeywords.length > 0) {
+      const before = analyzeCoverLetterAts(body, jobDescription)
+      if (before.keywords.checked && before.keywords.score < 45) {
+        const bodyLower = body.toLowerCase()
+        const stillMissing = brief.featureKeywords.filter((k) => !bodyLower.includes(k.toLowerCase()))
+        if (stillMissing.length > 0) {
+          const retry = await this.retryWeaveKeywords(prompt, stillMissing, langInstruction, language)
+          if (retry) {
+            retryUsages.push(retry.usage ?? {})
+            const retryBody = stripSignOff(retry.body)
+            const after = analyzeCoverLetterAts(retryBody, jobDescription)
+            if (!this.letterInventsContent(retryBody, grounding) && after.keywords.score > before.keywords.score) {
+              body = retryBody
+            } else {
+              this.logger.info("[AIService.generateCoverLetter] ATS retry kept the original (not cleaner/higher)")
+            }
+          }
+        }
+      }
+    }
+
     const html = plainToHtml(body)
 
     const genUsage = response.usage
@@ -308,6 +336,39 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     const note = language === "en"
       ? "YOUR LAST DRAFT INVENTED FACTS. Rewrite the letter using ONLY what the candidate profile states. Do NOT invent numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
       : "TU BORRADOR ANTERIOR INVENTÓ DATOS. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO inventes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre inventado como \"XYZ Corp\"."
+    try {
+      const res = await this.aiClient.chat({
+        model: AI_MODEL_PROSE,
+        max_tokens: 900,
+        temperature: AI_TEMPERATURE_STRUCTURED,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
+          { role: "user", content: `${basePrompt}\n\n${note}` },
+        ],
+      })
+      const parsed = parseAIJson<{ body?: unknown }>(res.choices[0]?.message?.content ?? "")
+      if (typeof parsed.body !== "string" || !parsed.body.trim()) return null
+      return { body: parsed.body, usage: res.usage }
+    } catch {
+      return null
+    }
+  }
+
+  /** ATS-in-the-loop retry: weave in specific résumé-supported vacancy terms the
+   *  first draft missed — naturally, through real achievements, never inventing and
+   *  never keyword-stuffing, and still one page. Returns null on any failure so the
+   *  first draft stands. */
+  private async retryWeaveKeywords(
+    basePrompt: string,
+    keywords: string[],
+    langInstruction: string,
+    language: "es" | "en",
+  ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
+    const list = keywords.slice(0, 8).join(", ")
+    const note = language === "en"
+      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT invent anything, do NOT keyword-stuff, keep it 250–350 words and ONE page.`
+      : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO inventes nada, NO amontones keywords, mantenla en 250–350 palabras y UNA página.`
     try {
       const res = await this.aiClient.chat({
         model: AI_MODEL_PROSE,

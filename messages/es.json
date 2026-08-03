@@ -2027,6 +2027,7 @@
     "ats_verdict_caution": "Atención",
     "ats_verdict_risk": "Por mejorar",
     "ats_missing_label": "Keywords para incluir",
+    "ats_improve_with_job": "Mejorar cuerpo con IA para esta oferta",
     "ats_disclaimer": "No todos los ATS puntúan las cartas — pero la misma carta que aprueba aquí es la que un reclutador lee más rápido.",
     "ats_pro_title": "El Chequeo ATS es una función Pro",
     "ats_pro_desc": "Mira cómo lee tu carta un ATS y alinéala a las keywords de la oferta.",
