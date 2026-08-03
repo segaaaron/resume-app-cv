@@ -1,6 +1,7 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { useTranslations, useLocale } from "next-intl"
 import { Upload, Loader2, FileText, Lock } from "lucide-react"
@@ -28,6 +29,11 @@ export default function ImportResumeButton({ locked }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  // The overlay is portaled to <body>: this button lives inside the dashboard nav,
+  // whose transform traps position:fixed inside the nav's box (it rendered small in
+  // the top-left instead of full-screen). Mounted-guard keeps SSR/hydration clean.
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
 
   /** Locked plans never reach the file picker — asking for a file we will refuse
    *  wastes the user's upload and delivers the paywall as an error. Sell first. */
@@ -119,8 +125,8 @@ export default function ImportResumeButton({ locked }: Props) {
         )}
       </Button>
 
-      {uploading && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+      {uploading && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] flex items-center justify-center z-[100]">
           <div className="bg-white rounded-2xl p-8 shadow-2xl flex flex-col items-center gap-4 max-w-sm w-full mx-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
               <FileText className="h-8 w-8 text-primary animate-pulse" />
@@ -138,7 +144,8 @@ export default function ImportResumeButton({ locked }: Props) {
             </div>
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   )
