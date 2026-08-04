@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import AtsEngineMatrix from "./AtsEngineMatrix"
 import AtsSafeDownload from "./AtsSafeDownload"
@@ -14,7 +14,7 @@ import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resume"
-import { useATSScore, isQuestion } from "./hooks/useATSScore"
+import { useATSScore, isQuestion, type GapLever } from "./hooks/useATSScore"
 import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
@@ -54,6 +54,36 @@ function getBarStyle(pct: number): { color: string; gradient: string } {
   if (pct >= 80) return { color: '#10B981', gradient: 'linear-gradient(90deg, #10B981, #00D4FF)' }
   if (pct >= 60) return { color: '#00D4FF', gradient: 'linear-gradient(90deg, #00D4FF, #00A8CC)' }
   return { color: '#F59E0B', gradient: 'linear-gradient(90deg, #F59E0B, #FCD34D)' }
+}
+
+// Path-to-target lever presentation. Icon per lever + which of the cards below it
+// jumps to (levers with no jump target — title, sections — are informative only).
+const LEVER_ICON: Record<GapLever["key"], React.ComponentType<{ className?: string }>> = {
+  hardSkills: Tag,
+  mustHaves: AlertCircle,
+  title: Target,
+  softSkills: Users,
+  sections: Layers,
+  template: LayoutTemplate,
+}
+
+// Numbered section header — turns the report into ONE ordered flow (verdict →
+// what to fix → rewrites → verify) instead of a stack of disconnected cards.
+function SectionHeader({ n, title }: { n: number; title: string }) {
+  return (
+    <div className="flex items-center gap-2 pt-1">
+      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1a2e4a] text-white text-[10px] font-black shrink-0">{n}</span>
+      <span className="text-[11px] font-black uppercase tracking-widest text-[#1a2e4a]">{title}</span>
+      <span className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
+    </div>
+  )
+}
+
+// Pass-risk pill styling — color-not-only (icon + word), readable in the report.
+const RISK_STYLE: Record<"low" | "medium" | "high", { chip: string; label: string }> = {
+  low: { chip: "bg-emerald-50 text-emerald-700 ring-emerald-200", label: "risk_low" },
+  medium: { chip: "bg-amber-50 text-amber-700 ring-amber-200", label: "risk_medium" },
+  high: { chip: "bg-rose-50 text-rose-700 ring-rose-200", label: "risk_high" },
 }
 
 function ScoreBar({ label, pct }: { label: string; pct: number }) {
@@ -239,6 +269,26 @@ export default function ATSScorePanel() {
   }
   const roleMode = mode === "role"
   const inputIsQuestion = !roleMode && isQuestion(input)
+
+  // Path-to-target: jump to the card that fixes a lever. title/sections have no
+  // single place to send the user, so they stay informative (no jump button).
+  const scrollToFirst = (...ids: string[]) => {
+    for (const id of ids) {
+      const el = document.getElementById(id)
+      if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); return }
+    }
+  }
+  function leverAction(key: GapLever["key"]): (() => void) | null {
+    switch (key) {
+      // Missing-keyword card can be deduped away when every missing keyword was a
+      // typo — fall back to the typo card, which is where the real fix lives then.
+      case "hardSkills": return () => scrollToFirst("ats-missing-keywords", "ats-typos")
+      case "mustHaves": return () => scrollToFirst("ats-gaps")
+      case "softSkills": return () => scrollToFirst("ats-tailor")
+      case "template": return () => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "planillas" }))
+      default: return null
+    }
+  }
 
   const summary = (sectionData.summary as string) ?? ""
   const workExp = (sectionData.workExperience as unknown[]) ?? []
@@ -518,6 +568,9 @@ export default function ATSScorePanel() {
                 </div>
               </div>
             )}
+            {/* ── ① Verdict + score ────────────────────────────────────────── */}
+            <SectionHeader n={1} title={t("section_verdict")} />
+
             {/* Score section */}
             <div className="flex flex-col items-center gap-1 py-2">
               <ScoreRing score={atsResult.score} label={t("score_label")} />
@@ -542,6 +595,164 @@ export default function ATSScorePanel() {
                 </span>
               )}
             </div>
+
+            {/* ① Verdict — the recruiter's honest read: would this pass, and the
+                biggest risk. The voice that ties the whole report together. */}
+            {atsResult.analysis?.verdict?.trim() && (() => {
+              const risk = RISK_STYLE[atsResult.analysis.passRisk] ?? RISK_STYLE.medium
+              return (
+                <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-white p-4">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <Stethoscope className="h-3.5 w-3.5 text-indigo-600 shrink-0" />
+                    <p className="text-[10px] font-black tracking-widest uppercase text-indigo-600 flex-1">{t("verdict_title")}</p>
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-black ring-1 ${risk.chip}`}>
+                      {atsResult.analysis.passRisk === "low" ? <CheckCircle2 className="h-2.5 w-2.5" /> : <AlertCircle className="h-2.5 w-2.5" />}
+                      {t(risk.label)}
+                    </span>
+                  </div>
+                  <p className="text-[12px] text-slate-700 leading-relaxed">{atsResult.analysis.verdict}</p>
+                </div>
+              )
+            })()}
+
+            {/* Score breakdown — per-category coverage. Lives under ① as score
+                detail (not a "fix"), computed server-side, applicable categories only. */}
+            {atsResult.subScores && (
+              <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 backdrop-blur-sm p-4">
+                <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("title")}</p>
+                {atsResult.subScores.hardSkills !== null && atsResult.subScores.hardSkills !== undefined && (
+                  <ScoreBar label={t("bar_hard_skills")} pct={atsResult.subScores.hardSkills} />
+                )}
+                {atsResult.subScores.softSkills !== null && atsResult.subScores.softSkills !== undefined && (
+                  <ScoreBar label={t("bar_soft_skills")} pct={atsResult.subScores.softSkills} />
+                )}
+                {atsResult.subScores.title !== null && atsResult.subScores.title !== undefined && (
+                  <ScoreBar label={t("bar_title_match")} pct={atsResult.subScores.title} />
+                )}
+                {atsResult.subScores.sections !== null && atsResult.subScores.sections !== undefined && (
+                  <ScoreBar label={t("bar_sections")} pct={atsResult.subScores.sections} />
+                )}
+              </div>
+            )}
+
+            {/* ── ② What to fix — by impact. Header only when there is at least one
+                thing to fix, so a near-perfect CV never shows an empty section. ── */}
+            {(() => {
+              const typoSet = new Set((atsResult.typoWarnings ?? []).map((w) => w.keyword.toLowerCase()))
+              const missingKwLeft = (atsResult.missingKeywords ?? []).filter((kw) => !typoSet.has(kw.toLowerCase()))
+              const hasFixes =
+                (atsResult.analysis?.criticalFixes?.length ?? 0) > 0 ||
+                (atsResult.score < 90 && (atsResult.gapPlan?.length ?? 0) > 0) ||
+                (atsResult.typoWarnings?.length ?? 0) > 0 ||
+                atsResult.templateSafety === "caution" ||
+                (atsResult.contentQuality?.totalBullets ?? 0) > 0 ||
+                (atsResult.gaps?.length ?? 0) > 0 ||
+                missingKwLeft.length > 0 ||
+                (atsResult.suggestions?.length ?? 0) > 0
+              return hasFixes ? <SectionHeader n={2} title={t("section_fixes")} /> : null
+            })()}
+
+            {/* Recruiter critical fixes — what a keyword matcher can't see (layout,
+                weak metrics, language mix, structure), ranked, each: issue → why →
+                fix. Typos and missing keywords live in their own cards below, deduped. */}
+            {(atsResult.analysis?.criticalFixes?.length ?? 0) > 0 && (
+              <div className="rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50/60 to-white p-4">
+                <div className="flex items-center gap-1.5 mb-2.5">
+                  <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                  <p className="text-[10px] font-black tracking-widest uppercase text-rose-600">{t("critical_fixes_title")}</p>
+                </div>
+                <ul className="flex flex-col gap-2.5">
+                  {(atsResult.analysis?.criticalFixes ?? []).map((f, i) => (
+                    <li key={i} className="rounded-xl border border-slate-100 bg-white/70 p-3">
+                      <div className="flex items-start gap-2">
+                        <span className={`mt-0.5 h-2 w-2 rounded-full shrink-0 ${f.severity === "high" ? "bg-rose-500" : "bg-amber-400"}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[11.5px] font-semibold text-slate-800 leading-snug">{f.issue}</p>
+                          {f.why?.trim() && <p className="text-[10.5px] text-slate-500 leading-snug mt-1">{f.why}</p>}
+                          {f.fix?.trim() && (
+                            <p className="text-[10.5px] text-emerald-700 leading-snug mt-1 flex items-start gap-1">
+                              <Wand2 className="h-3 w-3 shrink-0 mt-0.5" /> <span>{f.fix}</span>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Path to your target — the ranked, points-attributed answer to
+                "what do I need to reach 90/100?". Every lever is derived from the
+                SAME score weights (see gapLevers in ats-matcher), so the plan can
+                never contradict the number. Maxing them all lands on ~100. */}
+            {atsResult.score < 90 && (atsResult.gapPlan?.length ?? 0) > 0 && (() => {
+              const plan = atsResult.gapPlan ?? []
+              const potential = Math.min(100, atsResult.score + plan.reduce((a, l) => a + l.points, 0))
+              return (
+                <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-white to-cyan-50/50 p-4 shadow-sm">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <ListChecks className="h-3.5 w-3.5 text-cyan-600 shrink-0" />
+                    <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600">{t("path_title")}</p>
+                  </div>
+                  <p className="text-[11px] text-slate-600 leading-relaxed mb-3">
+                    {t.rich("path_subtitle", {
+                      score: atsResult.score,
+                      potential,
+                      b: (c) => <span className="font-bold text-slate-800 tabular-nums">{c}</span>,
+                    })}
+                  </p>
+                  <ul className="flex flex-col gap-1.5">
+                    {plan.map((lever) => {
+                      const Icon = LEVER_ICON[lever.key]
+                      const action = leverAction(lever.key)
+                      const label = t(`path_lever_${lever.key}`, { count: lever.missingCount ?? 0 })
+                      return (
+                        <li
+                          key={lever.key}
+                          className={`flex items-center gap-2.5 rounded-xl border border-slate-100 bg-white/70 px-3 py-2.5 transition-all ${action ? "hover:border-cyan-200 hover:bg-cyan-50/40 cursor-pointer" : ""}`}
+                          onClick={action ?? undefined}
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-50 to-blue-50 ring-1 ring-cyan-100 shrink-0">
+                            <Icon className="h-3.5 w-3.5 text-cyan-600" />
+                          </span>
+                          <span className="flex-1 text-[11.5px] text-slate-700 leading-snug">{label}</span>
+                          <span className="shrink-0 inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10.5px] font-black text-emerald-700 ring-1 ring-emerald-200 tabular-nums">
+                            <TrendingUp className="h-2.5 w-2.5" /> {t("path_points", { points: lever.points })}
+                          </span>
+                          {action && <ChevronRight className="h-3.5 w-3.5 text-slate-300 shrink-0" />}
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <p className="text-[10px] text-slate-400 leading-relaxed mt-2.5">{t("path_hint")}</p>
+                </div>
+              )
+            })()}
+
+            {/* Typo / near-miss warnings — a keyword the CV misspells so a real ATS
+                (exact match) misses it. Highest-value fix: the skill is already
+                there, one edit away from counting. Generic edit-distance, no word
+                list — works for any typo in any language. */}
+            {(atsResult.typoWarnings?.length ?? 0) > 0 && (
+              <div id="ats-typos" className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 to-orange-50/50 p-4 scroll-mt-4">
+                <div className="flex items-center gap-1.5 mb-1">
+                  <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                  <p className="text-[10px] font-black tracking-widest uppercase text-rose-600">{t("typo_title")}</p>
+                </div>
+                <p className="text-[11px] text-slate-600 leading-relaxed mb-2.5">{t("typo_subtitle")}</p>
+                <ul className="flex flex-col gap-1.5">
+                  {(atsResult.typoWarnings ?? []).map((w, i) => (
+                    <li key={i} className="flex items-center gap-2 rounded-xl border border-rose-100 bg-white/70 px-3 py-2 text-[11.5px]">
+                      <span className="font-semibold text-rose-700 line-through decoration-rose-300">{w.typed}</span>
+                      <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
+                      <span className="font-bold text-emerald-700">{w.keyword}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-[10px] text-slate-400 leading-relaxed mt-2">{t("typo_hint")}</p>
+              </div>
+            )}
 
             {/* C1 — parseability, template-aware. A single-column template parses
                 cleanly; a multi-column one may be reordered by a strict ATS, so we
@@ -568,27 +779,6 @@ export default function ATSScorePanel() {
                   <p className="text-[10.5px] font-bold text-emerald-800 leading-tight">{t("parseable_badge")}</p>
                   <p className="text-[9.5px] text-emerald-600/90 leading-snug mt-0.5">{t("parseable_hint")}</p>
                 </div>
-              </div>
-            )}
-
-            {/* Analysis bars — real per-category coverage sub-scores computed
-                server-side (not derived from list lengths). Categories the job
-                did not specify are omitted. */}
-            {atsResult.subScores && (
-              <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 backdrop-blur-sm p-4">
-                <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("title")}</p>
-                {atsResult.subScores.hardSkills !== null && atsResult.subScores.hardSkills !== undefined && (
-                  <ScoreBar label={t("bar_hard_skills")} pct={atsResult.subScores.hardSkills} />
-                )}
-                {atsResult.subScores.softSkills !== null && atsResult.subScores.softSkills !== undefined && (
-                  <ScoreBar label={t("bar_soft_skills")} pct={atsResult.subScores.softSkills} />
-                )}
-                {atsResult.subScores.title !== null && atsResult.subScores.title !== undefined && (
-                  <ScoreBar label={t("bar_title_match")} pct={atsResult.subScores.title} />
-                )}
-                {atsResult.subScores.sections !== null && atsResult.subScores.sections !== undefined && (
-                  <ScoreBar label={t("bar_sections")} pct={atsResult.subScores.sections} />
-                )}
               </div>
             )}
 
@@ -694,7 +884,7 @@ export default function ATSScorePanel() {
             )}
 
             {atsResult.gaps?.length > 0 && (
-              <div className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5">
+              <div id="ats-gaps" className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5 scroll-mt-4">
                 <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
                   <AlertCircle className="h-3 w-3" /> {t("gaps")}
                 </p>
@@ -708,8 +898,15 @@ export default function ATSScorePanel() {
               </div>
             )}
 
-            {atsResult.missingKeywords?.length > 0 && (
-              <div className="rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5">
+            {/* Dedup: a keyword the CV misspells is shown ONCE, as a typo above —
+                never also here as "missing". Keeps the unified report from saying
+                the same thing twice. */}
+            {(() => {
+              const typos = new Set((atsResult.typoWarnings ?? []).map((w) => w.keyword.toLowerCase()))
+              const missingKw = (atsResult.missingKeywords ?? []).filter((kw) => !typos.has(kw.toLowerCase()))
+              if (missingKw.length === 0) return null
+              return (
+              <div id="ats-missing-keywords" className="rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4">
                 <div className="flex items-center justify-between mb-2.5">
                   <p className="text-[10px] font-black tracking-widest uppercase text-slate-600 flex items-center gap-1.5">
                     <Tag className="h-3 w-3" /> {t("missing_keywords")}
@@ -720,7 +917,7 @@ export default function ATSScorePanel() {
                   </button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
-                  {atsResult.missingKeywords.map((kw, i) => {
+                  {missingKw.map((kw, i) => {
                     const added = addedKeywords.has(kw)
                     return (
                       <button key={i} type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
@@ -733,7 +930,8 @@ export default function ATSScorePanel() {
                 </div>
                 <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">{t("keyword_hint")}</p>
               </div>
-            )}
+              )
+            })()}
 
             {atsResult.suggestions?.length > 0 && (
               <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/80 to-orange-50/60 p-3.5">
@@ -750,6 +948,16 @@ export default function ATSScorePanel() {
                 </ul>
               </div>
             )}
+
+            {/* ── ③ Ready-to-apply rewrites (Tailor) — inline in the same report,
+                chained off the same job description. ─────────────────────────── */}
+            <SectionHeader n={3} title={t("section_rewrites")} />
+            <div id="ats-tailor" className="scroll-mt-4">
+              <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} />
+            </div>
+
+            {/* ── ④ Verify against your real PDF ───────────────────────────── */}
+            <SectionHeader n={4} title={t("section_verify")} />
 
             {/* F4 — verify against the REAL exported PDF. The score above reads the
                 structured data; this renders the file and reads what an ATS extracts. */}
@@ -802,12 +1010,6 @@ export default function ATSScorePanel() {
 
             {/* Machine-readable twin — one click, generated from the same resume. */}
             <AtsSafeDownload />
-
-            {/* Step 2. The score measures; this rewrites. Chained off the same
-                job description rather than asking for it a second time.
-                atsMissingKeywords: the score already lists these above, so Tailor
-                hides any missing-skill that duplicates one — no "same thing twice". */}
-            <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} />
           </div>
         )}
 

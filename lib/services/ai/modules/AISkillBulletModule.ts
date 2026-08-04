@@ -49,10 +49,64 @@ export class AISkillBulletModule {
     private readonly logger: ILogger,
   ) {}
 
+  /**
+   * Soft-skill variant. The candidate needs to EVIDENCE a behavior the job asks
+   * for (teamwork, communication, leadership, adaptability, problem-solving,
+   * ownership) in one real bullet. Unlike the hard variant, the bullet does not
+   * name the skill — it shows the action that proves it, grounded in the chosen
+   * job's real work. Every anti-invention rule stays; only the "name the term"
+   * requirement is dropped, because that is not how a soft skill reads on a CV.
+   */
+  private buildSoftPrompt(skill: string, resumeContext: string, workList: string, language: string): string {
+    return language === "en"
+      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+1. Use ONLY facts already in the chosen job. Do NOT introduce any technology, framework, tool, company, certification, percentage, number, or date not already in that job.
+2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet states a demonstrated behavior, not a measured result. A bracket or invented figure gets the CV rejected.
+3. The bullet asserts the candidate SHOWED "${skill}" at the chosen job. Place it only where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
+
+TASK: The job asks for the soft skill "${skill}" and the candidate's CV does not yet evidence it. Pick the ONE job below where it most credibly fits and write ONE new bullet that DEMONSTRATES "${skill}" through a concrete action — do NOT name the skill; show it (e.g. for "communication": "Presented release trade-offs to product and design so the team aligned on scope"; for "teamwork": "Coordinated with the backend and QA teams to unblock the mobile release").
+
+CANDIDATE CONTEXT:
+${resumeContext}
+
+WORK EXPERIENCE (bullets indexed by job ID):
+${workList}
+
+RULES:
+- Choose the single best-fit job by ID. If it fits none credibly, return {"targetId": null, "text": null}.
+- Write exactly ONE bullet, prefixed with "• ", verb-first (e.g. Coordinated, Presented, Aligned, Mentored, Facilitated, Negotiated). No pronouns (I, my). No clichés ("Responsible for", "Helped with").
+- Show the behavior through a real action anchored to that job. Do NOT write the word "${skill}" as a label; prove it. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy".
+- State a capability/action only. Do NOT invent an outcome, metric, scale, or timeframe. If you cannot write it without inventing a figure, still write the action WITHOUT the figure — never fabricate one.
+
+Respond ONLY with valid JSON (no markdown):
+{"targetId": "ID", "text": "• bullet that demonstrates ${skill}"}`
+      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+1. Usa SOLO datos que ya estén en el puesto elegido. NO introduzcas NINGUNA tecnología, framework, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
+2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet expresa una conducta demostrada, no un resultado medido. Un corchete o cifra inventada hace que le rechacen el CV.
+3. El bullet afirma que el candidato DEMOSTRÓ "${skill}" en el puesto elegido. Colócalo solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
+
+TAREA: La oferta pide la habilidad blanda "${skill}" y el CV del candidato aún no la evidencia. Elige el ÚNICO puesto de abajo donde encaje de forma más creíble y escribe UN bullet nuevo que DEMUESTRE "${skill}" mediante una acción concreta — NO nombres la habilidad; muéstrala (ej. para "comunicación": "Presenté las decisiones de release a producto y diseño para alinear el alcance con el equipo"; para "trabajo en equipo": "Coordiné con los equipos de backend y QA para desbloquear el release móvil").
+
+CONTEXTO DEL CANDIDATO:
+${resumeContext}
+
+EXPERIENCIA LABORAL (bullets indexados por ID de puesto):
+${workList}
+
+REGLAS:
+- Elige el único puesto que mejor encaje por ID. Si no encaja en ninguno de forma creíble, devuelve {"targetId": null, "text": null}.
+- Escribe exactamente UN bullet, con prefijo "• ", verbo primero (ej.: Coordiné, Presenté, Alineé, Mentoré, Facilité, Negocié). Sin pronombres (yo, mi). Sin clichés ("Responsable de", "Ayudé con").
+- Muestra la conducta a través de una acción real anclada a ese puesto. NO escribas la palabra "${skill}" como etiqueta; demuéstrala. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia".
+- Expresa solo una capacidad/acción. NO inventes un resultado, métrica, escala ni plazo. Si no puedes escribirlo sin inventar una cifra, escribe igual la acción SIN la cifra — nunca la fabriques.
+
+Responde ÚNICAMENTE con JSON válido (sin markdown):
+{"targetId": "ID", "text": "• bullet que demuestre ${skill}"}`
+  }
+
   async weaveSkillBullet(userId: string, input: SkillBulletInput, plan: string): Promise<SkillBulletResult> {
     await enforceAIQuota(userId, "skill-bullet", plan)
 
-    const { skill: rawSkill, sectionData, language: rawLanguage } = input
+    const { skill: rawSkill, sectionData, language: rawLanguage, soft = false } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const skill = rawSkill.trim()
@@ -77,10 +131,19 @@ export class AISkillBulletModule {
     // bullets + the skill itself. Including the skill is what lets the new bullet
     // name it without being flagged as an invented technology; anything ELSE the
     // model introduces (a second framework, a metric) still trips the guard.
+    //
+    // Soft mode does NOT license the skill word — a soft skill is a behavior, not
+    // a technology, so the bullet proves it through actions already in the CV and
+    // never needs to name it. Leaving the term out of grounding keeps the guard
+    // honest: an invented tool/metric still trips, common prose verbs do not.
     const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
-    const groundingSource = `${resumeContext}\n${workList}\n${skill}`
+    const groundingSource = soft
+      ? `${resumeContext}\n${workList}`
+      : `${resumeContext}\n${workList}\n${skill}`
 
-    const prompt = language === "en"
+    const prompt = soft
+      ? this.buildSoftPrompt(skill, resumeContext, workList, language)
+      : language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. Write about ONLY the skill "${skill}" and the job you place it in. Do NOT introduce any OTHER technology, framework, library, tool, company, certification, percentage, number, or date not already in that job.
 2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet has no metric — it states a capability, not a measured result. A bracket or invented figure gets the CV rejected.
@@ -172,16 +235,18 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return { status: "no_fit" }
     }
 
-    // The whole point is to surface the skill — if the draft doesn't actually
-    // contain it, it's off-target noise.
-    if (!bulletMentionsSkill(skill, text.toLowerCase())) {
+    // Hard mode only: the whole point is to surface the named skill, so a draft
+    // that doesn't contain it is off-target noise. A soft skill is proven by the
+    // action, not the word, so this check is skipped for it.
+    if (!soft && !bulletMentionsSkill(skill, text.toLowerCase())) {
       this.logger.warn("[AIService.weaveSkillBullet] bullet omits the skill", { skill })
       return { status: "no_fit" }
     }
 
-    // Don't re-state a bullet the job already has (or that already shows the skill).
+    // Don't re-state a bullet the job already has. In hard mode, also skip when the
+    // job already showcases the named skill (nothing to add).
     const existing = parseBullets(job.description ?? "")
-    if (bulletMentionsSkill(skill, (job.description ?? "").toLowerCase())) return { status: "no_fit" }
+    if (!soft && bulletMentionsSkill(skill, (job.description ?? "").toLowerCase())) return { status: "no_fit" }
     if (existing.some((b) => isTrivialEdit(b, text))) return { status: "no_fit" }
 
     return {

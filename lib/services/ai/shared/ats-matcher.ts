@@ -20,7 +20,7 @@
 // sets would force each engine to score inputs it cannot see. See TITLE_CONNECTORS
 // below for why the two word lists must stay separate too.
 
-import type { ATSSubScores } from "./ai-types"
+import type { ATSSubScores, GapLever } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
 import { dedupe, partitionByPresence } from "@/lib/ats/core/matching"
 
@@ -56,6 +56,11 @@ export interface ATSMatchResult {
   demonstratedKeywords: string[]
   /** Found only in a list, with nothing in the work experience behind it. */
   listedOnlyKeywords: string[]
+  /** The scored levers that can still move THIS score, each with the points it can
+   *  recover — computed from the SAME weights and renormalization the score uses,
+   *  so the "path to your target" can never contradict the number. Template layout
+   *  is added by the caller (the matcher does not know the template). */
+  gapLevers: GapLever[]
 }
 
 // Weighting of each category toward the overall score. Hard skills dominate
@@ -218,8 +223,34 @@ export function computeATSMatch(
     ? 0
     : Math.round(parts.reduce((acc, p) => acc + p.pct * p.w, 0) / totalW)
 
+  // Path to target. Each lever's recoverable points = its share of the score
+  // (w / totalW, the exact renormalization the score uses) times the gap it has
+  // left to 100. Same math as `score`, so maxing every lever here lands on 100 —
+  // the number and the plan can never disagree. Template layout is NOT here; the
+  // caller adds it because only it knows the template.
+  const share = (w: number) => (totalW === 0 ? 0 : w / totalW)
+  const lever = (
+    key: GapLever["key"],
+    pct: number | null,
+    w: number,
+    missingCount?: number,
+  ): GapLever | null => {
+    if (pct === null) return null
+    const points = Math.round(share(w) * (100 - pct))
+    if (points <= 0) return null
+    return { key, points, currentPct: pct, ...(missingCount !== undefined ? { missingCount } : {}) }
+  }
+  const gapLevers = [
+    lever("hardSkills", hard.pct, WEIGHTS.hardSkills, hard.missing.length),
+    lever("mustHaves", must.pct, WEIGHTS.mustHaves, must.missing.length),
+    lever("title", title, WEIGHTS.title),
+    lever("softSkills", soft.pct, WEIGHTS.softSkills, soft.missing.length),
+    lever("sections", sectionsPct, WEIGHTS.sections),
+  ].filter((l): l is GapLever => l !== null)
+
   return {
     score: clamp(score),
+    gapLevers,
     subScores: {
       hardSkills: hard.pct,
       softSkills: soft.pct,

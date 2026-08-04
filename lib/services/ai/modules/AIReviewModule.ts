@@ -19,11 +19,14 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import {
   AI_INPUT_LIMITS,
   ATSExtractionSchema,
+  CvAnalysisSchema,
+  type CvAnalysis,
   ReviewItemSchema,
   ReviewResponseSchema,
   type ATSScoreInput,
   type ATSScoreResult,
   type ATSRescoreInput,
+  type GapLever,
   type ReviewCVInput,
   type ReviewResult,
   type ReviewCVResult,
@@ -33,12 +36,149 @@ import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats
 import { findSemanticMatches } from "../shared/semantic-match"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
+import { findNearMisses } from "@/lib/ats/near-miss"
+
+/**
+ * The user's real question — "I'm at 63, what do I DO to reach 90/100?" — answered
+ * with a ranked, points-attributed plan. The matcher already computed the scored
+ * levers (`gapLevers`) from the exact score weights; this only adds the template
+ * layout lever (recoverable = the penalty the caution layout took) and ranks the
+ * whole set by impact. Deterministic, no LLM — flows through both atsScore and the
+ * live atsRescore, so the plan updates the instant a fix moves the score.
+ */
+function buildGapPlan(
+  gapLevers: GapLever[],
+  matchScore: number,
+  finalScore: number,
+  templateSafety: "safe" | "caution",
+): GapLever[] {
+  const levers = [...gapLevers]
+  if (templateSafety === "caution") {
+    const points = Math.max(0, matchScore - finalScore)
+    if (points > 0) levers.push({ key: "template", points, currentPct: null })
+  }
+  return levers.sort((a, b) => b.points - a.points)
+}
 
 export class AIReviewModule {
   constructor(
     private readonly aiClient: IAIClient,
     private readonly logger: ILogger,
   ) {}
+
+  /**
+   * The senior-recruiter analysis — the voice of the unified report. A keyword
+   * matcher scores; this JUDGES, the way a recruiter does in a 7-second screen and
+   * then a deeper read: is this CV a pass for THIS job, and what are the ranked,
+   * most-damaging problems (layout risk, weak metrics, a Spanish phrase left in an
+   * English CV, a missing summary heading, the same bullet pasted across roles).
+   *
+   * Runs on the SAME cheap model as the extraction (AI_MODEL): the lever is the
+   * PROMPT, not the model tier — the old ATS prompt literally told the model "do
+   * NOT analyze, only extract", which is why a bigger model changed nothing.
+   * Spelling typos (findNearMisses) and missing keywords (the deterministic match)
+   * are handled elsewhere and told to stay out of here, so the unified report never
+   * says the same thing twice. Fail-closed: any error returns null, score intact.
+   */
+  private async analyzeResume(
+    userId: string,
+    resumeText: string,
+    jobContext: string,
+    plan: string,
+    en: boolean,
+    langInstruction: string,
+  ): Promise<CvAnalysis | null> {
+    const prompt = en
+      ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you NEVER invent facts — every claim quotes the candidate's real text.
+
+Judge this RESUME for the JOB below the way you would in a 7-second screen, then a deeper read.
+
+=== JOB ===
+${jobContext}
+
+=== RESUME ===
+${resumeText}
+
+Return JSON with this exact shape:
+{
+  "verdict": "2 sentences: would this pass your screen for THIS job, and the single biggest risk.",
+  "passRisk": "low | medium | high",
+  "criticalFixes": [
+    { "issue": "<what is wrong — quote the real resume text>",
+      "why": "<why it costs the ATS match or the recruiter>",
+      "fix": "<the exact change to make>",
+      "severity": "high | medium" }
+  ],
+  "strengths": ["<a real, specific strength for THIS job>"]
+}
+
+Rules:
+- Ground EVERYTHING in the actual resume text — quote it.
+- Do NOT list spelling typos and do NOT list missing keywords: those are reported separately, and repeating them makes the report noisy. Focus on what a keyword matcher cannot see: layout/format parseability, metrics that are too weak to be credible, language mixed into the resume, structure (missing summary heading, too many pages, missing LinkedIn/GitHub, dates that contradict the stated years), and repeated content across roles.
+- No invented metrics, no fake percentages, no generic advice ("use action verbs").
+- Max 6 critical fixes, most damaging first. If there is genuinely nothing to fix, return an empty array.
+- Respond ONLY with the JSON, no markdown.`
+      : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA inventas datos — cada afirmación cita el texto real del candidato.
+
+Evalúa este CV para el PUESTO de abajo como lo harías en un escaneo de 7 segundos, y luego en una lectura a fondo.
+
+=== PUESTO ===
+${jobContext}
+
+=== CV ===
+${resumeText}
+
+Devuelve JSON con esta forma exacta:
+{
+  "verdict": "2 oraciones: pasaría tu filtro para ESTE puesto, y el mayor riesgo.",
+  "passRisk": "low | medium | high",
+  "criticalFixes": [
+    { "issue": "<qué está mal — cita el texto real del CV>",
+      "why": "<por qué le cuesta el match ATS o al reclutador>",
+      "fix": "<el cambio exacto a hacer>",
+      "severity": "high | medium" }
+  ],
+  "strengths": ["<una fuerza real y específica para ESTE puesto>"]
+}
+
+Reglas:
+- Ancla TODO en el texto real del CV — cítalo.
+- NO listes errores de ortografía y NO listes keywords faltantes: eso se reporta aparte, y repetirlo ensucia el informe. Enfócate en lo que un matcher de keywords NO puede ver: parseabilidad del layout/formato, métricas demasiado débiles para ser creíbles, idioma mezclado en el CV, estructura (sin encabezado de resumen, demasiadas páginas, falta LinkedIn/GitHub, fechas que contradicen los años declarados), y contenido repetido entre puestos.
+- Sin métricas inventadas, sin porcentajes falsos, sin consejos genéricos ("usa verbos de acción").
+- Máximo 6 arreglos críticos, el más dañino primero. Si genuinamente no hay nada que arreglar, devuelve un array vacío.
+- Responde ÚNICAMENTE con el JSON, sin markdown.`
+
+    try {
+      const response = await this.aiClient.chat({
+        model: AI_MODEL,
+        max_tokens: 900,
+        temperature: AI_TEMPERATURE_PRECISE,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "You are a senior technical recruiter and ATS specialist. You are blunt, specific, and only report problems grounded in the actual resume text — you never invent them. " + langInstruction },
+          { role: "user", content: prompt },
+        ],
+      })
+      const usage = response.usage
+      logAIUsage(userId, "ats-score", {
+        model: AI_MODEL,
+        plan,
+        promptTokens: usage?.prompt_tokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      })
+      const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(response.choices[0]?.message?.content ?? "{}"))
+      if (!parsed.success) return null
+      const a = parsed.data
+      a.criticalFixes = a.criticalFixes.filter((f) => f.issue.trim()).slice(0, 6)
+      // Nothing usable → null, so the UI shows no empty analysis.
+      if (!a.verdict.trim() && a.criticalFixes.length === 0 && a.strengths.length === 0) return null
+      return a
+    } catch (err) {
+      this.logger.warn("[AIService.atsScore] recruiter analysis failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
+      return null
+    }
+  }
 
   async atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
     await enforceAIQuota(userId, "ats-score", plan)
@@ -230,6 +370,17 @@ Reglas:
       throw new AppError("off_topic", 422)
     }
 
+    // Start the senior-recruiter analysis HERE — after the off-topic guard, so a
+    // non-job input never triggers it (no wasted call), but before the embedding
+    // recall pass + scoring below, so it overlaps that network work instead of
+    // adding a serial roundtrip. Fail-closed inside → never rejects; awaited at end.
+    const jobContext = useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated
+    // analyzeResume already swallows its own errors (returns null), and the only
+    // awaited work before we collect it (the embedding pass) fails closed too — so
+    // this promise can never dangle or reject. The .catch is a belt against a future
+    // edit adding a throwing call between here and the await.
+    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction).catch(() => null)
+
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)
     const recentTitles = buildRecentTitles(data)
@@ -279,6 +430,32 @@ Reglas:
     const label = localizedLabel(scoreLabel(finalScore), en)
     const summary = extraction.summary.trim() || defaultSummary(finalScore, en)
 
+    // Typos that break exact ATS matching, checked against the requirement set.
+    const typoWarnings = findNearMisses([...keywords.hardSkills, ...keywords.mustHaves], atsHaystack)
+
+    // Collect the recruiter analysis started in parallel above (null on failure).
+    const analysis = await analysisPromise
+    // ENFORCE (not just prompt) the no-redundancy rule: drop a critical fix ONLY
+    // when it is really a spelling note, OR an "add/missing" note about a SPECIFIC
+    // keyword the deterministic typo/keyword layer already shows. This is precise on
+    // purpose: a generic structural fix ("add a Professional Summary section") has no
+    // such keyword and survives; a layout fix that merely mentions a skill survives
+    // too, because it carries no add/missing verb about it.
+    if (analysis) {
+      const spelling = /\btypos?\b|\bmisspell\w*|\bspelling\b|ortograf/i
+      const addVerb = /\b(add|include|missing|list|falta|falt[ae]n|a[ñn]ad[ae]|incluye|agrega)\b/i
+      const dupTerms = [
+        ...typoWarnings.flatMap((w) => [w.typed.toLowerCase(), w.keyword.toLowerCase()]),
+        ...match.missingKeywords.map((k) => k.toLowerCase()),
+      ].filter((t) => t.length > 2)
+      analysis.criticalFixes = analysis.criticalFixes.filter((f) => {
+        const text = `${f.issue} ${f.fix}`.toLowerCase()
+        if (spelling.test(text)) return false
+        const namesDupTerm = dupTerms.some((t) => text.includes(t))
+        return !(namesDupTerm && addVerb.test(text))
+      })
+    }
+
     return {
       score: finalScore,
       label,
@@ -302,6 +479,9 @@ Reglas:
         mustHaves: extraction.mustHaves,
       },
       contentQuality: assessResumeContent(data),
+      gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
+      typoWarnings,
+      analysis,
       inferredFromRole: useRole,
     }
   }
@@ -347,6 +527,11 @@ Reglas:
       templateSafety,
       extractedKeywords: keywords,
       contentQuality: assessResumeContent(data),
+      gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
+      typoWarnings: findNearMisses([...keywords.hardSkills, ...keywords.mustHaves], atsHaystack),
+      // Live re-score is deterministic/no-LLM — the critique from the last full
+      // analyze still stands; the client preserves it (never overwrites with null).
+      analysis: null,
     }
   }
 

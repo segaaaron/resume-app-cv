@@ -25,6 +25,14 @@ export interface ATSSubScores {
   format?: number | null
 }
 
+/** One lever in the "path to your target score" (mirrors the server GapLever). */
+export interface GapLever {
+  key: "hardSkills" | "mustHaves" | "title" | "softSkills" | "sections" | "template"
+  points: number
+  currentPct: number | null
+  missingCount?: number
+}
+
 export interface ATSResult {
   score: number
   label: string
@@ -56,6 +64,17 @@ export interface ATSResult {
     weakOpenerBullets: number
     metriclessBullets: Array<{ text: string; targetId: string; jobTitle: string; index: number; weakOpener: boolean }>
   }
+  /** Ranked "path to your target score": each lever + the points it recovers. */
+  gapPlan?: GapLever[]
+  /** Probable typos breaking exact ATS match: {keyword wanted, typed in CV}. */
+  typoWarnings?: { keyword: string; typed: string }[]
+  /** Senior-recruiter analysis: verdict, pass risk, ranked critical fixes, strengths. */
+  analysis?: {
+    verdict: string
+    passRisk: "low" | "medium" | "high"
+    criticalFixes: { issue: string; why: string; fix: string; severity: "high" | "medium" }[]
+    strengths: string[]
+  } | null
 }
 
 export interface VerifyResult {
@@ -260,7 +279,10 @@ export function useATSScore() {
       })
       if (!res.ok) return null
       const data: ATSResult = await res.json()
-      setAtsResult((cur) => (cur ? { ...data, summary: cur.summary, suggestions: cur.suggestions } : data))
+      // Preserve the LLM-only fields the deterministic rescore doesn't produce:
+      // summary/suggestions (from the analyze) and analysis (the recruiter pass).
+      // gapPlan and typoWarnings ARE recomputed here, so they update live.
+      setAtsResult((cur) => (cur ? { ...data, summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis } : data))
       const d = data.score - (prev?.score ?? data.score)
       // Single owner of the delta badge: EVERY score movement updates it, whether
       // it came from applying a fix or from a plain edit picked up by the debounce.

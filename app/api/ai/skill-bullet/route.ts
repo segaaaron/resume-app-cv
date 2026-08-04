@@ -8,6 +8,8 @@ const schema = z.object({
   skill: z.string().min(1).max(AI_INPUT_LIMITS.skillName),
   sectionData: z.record(z.string(), z.unknown()),
   language: z.enum(["es", "en"]).optional(),
+  // Soft-skill mode: demonstrate the behavior in a bullet instead of naming the term.
+  soft: z.boolean().optional(),
 })
 
 export async function POST(req: Request) {

@@ -203,7 +203,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
   // Ask the model to weave a skill the candidate already has into ONE bullet of
   // the best-fit job, then open the same confirm-diff modal used for tailored
   // bullets — the user is the honesty gate before anything lands in the CV.
-  async function weaveBullet(skill: string) {
+  async function weaveBullet(skill: string, soft = false) {
     if (weavingSkill) return
     setWeavingSkill(skill)
     preCheck("skill-bullet")
@@ -211,7 +211,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
       const res = await apiFetch("/api/ai/skill-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill, sectionData, language: locale === "en" ? "en" : "es" }),
+        body: JSON.stringify({ skill, sectionData, language: locale === "en" ? "en" : "es", soft }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
@@ -463,15 +463,30 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
                   <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-1">{t("section_soft_skills")}</p>
                   <p className="text-[10px] text-dash-muted leading-snug mb-2">{t("soft_skills_hint")}</p>
                   <div className="flex flex-col gap-1.5">
-                    {result.softSkillSuggestions.map((s) => (
+                    {result.softSkillSuggestions.map((s) => {
+                      const weaving = weavingSkill === s.skill
+                      return (
                       <div key={s.skill} className="rounded-lg border border-violet-200/70 bg-violet-50/50 px-2.5 py-2">
                         <div className="flex items-center gap-1.5 mb-0.5">
                           <Sparkles size={10} className="text-violet-500 shrink-0" />
-                          <span className="text-[10.5px] font-bold text-violet-700 capitalize">{s.skill}</span>
+                          <span className="text-[10.5px] font-bold text-violet-700 capitalize flex-1">{s.skill}</span>
+                          {/* Not just a tip: weave the behavior into the best-fit bullet.
+                              Soft mode demonstrates it through an action (never names the
+                              word), then the same diff modal confirms before it lands. */}
+                          <button
+                            onClick={() => weaveBullet(s.skill, true)}
+                            disabled={!!weavingSkill}
+                            title={t("soft_skill_apply")}
+                            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-violet-300 bg-white/70 px-2 py-0.5 text-[9.5px] font-bold text-violet-700 transition-all hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {weaving ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}
+                            {weaving ? t("soft_skill_applying") : t("soft_skill_apply")}
+                          </button>
                         </div>
                         <p className="text-[10px] text-[#475569] leading-relaxed">{s.suggestion}</p>
                       </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
               )}

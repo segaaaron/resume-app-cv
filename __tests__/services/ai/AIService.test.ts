@@ -319,6 +319,79 @@ describe("AIService", () => {
       expect(result.label).toBeTruthy()
     })
 
+    // The recruiter analysis runs in parallel with extraction, so call order is not
+    // guaranteed. Route the mock by the prompt (system role) instead of by order.
+    function routedAIClient(analysisContent: string): IAIClient {
+      return {
+        chat: vi.fn((params: Parameters<IAIClient["chat"]>[0]) => {
+          const isAnalyst = params.messages.some(
+            (m) => typeof m.content === "string" && m.content.includes("senior technical recruiter"),
+          )
+          return Promise.resolve(makeCompletion(isAnalyst ? analysisContent : JSON.stringify(validExtraction)))
+        }),
+        embed: vi.fn().mockResolvedValue([]),
+      }
+    }
+
+    it("surfaces the senior-recruiter analysis (parallel call, order-independent)", async () => {
+      const analysis = {
+        verdict: "Solid experience, but the two-column layout hurts ATS parsing.",
+        passRisk: "high",
+        criticalFixes: [
+          { issue: "Two-column layout", why: "A strict ATS reorders it", fix: "Switch to single column", severity: "high" },
+          { issue: "enhancing performance by 3%", why: "Too small to be credible", fix: "Remove or strengthen", severity: "medium" },
+        ],
+        strengths: ["Deep Swift/SwiftUI experience"],
+      }
+      const aiClient = routedAIClient(JSON.stringify(analysis))
+      const result = await new AIService(aiClient, logger).atsScore(
+        "user-1",
+        { jobDescription: "We need a Developer with Kubernetes experience for our team.", sectionData: richSectionData },
+        "PRO",
+      )
+      expect(aiClient.chat).toHaveBeenCalledTimes(2)
+      expect(result.analysis?.passRisk).toBe("high")
+      expect(result.analysis?.verdict).toContain("two-column")
+      expect(result.analysis?.criticalFixes.map((f) => f.issue)).toContain("Two-column layout")
+    })
+
+    it("drops recruiter critical fixes that duplicate a typo or missing-keyword note", async () => {
+      const analysis = {
+        verdict: "Decent, but layout hurts parsing.",
+        passRisk: "medium",
+        criticalFixes: [
+          { issue: "Two-column layout", why: "reordered by ATS", fix: "Use single column", severity: "high" },
+          { issue: "Missing keyword: Kubernetes", why: "the job requires it", fix: "Add Kubernetes to your skills", severity: "medium" },
+          { issue: "Typo in a skill", why: "breaks exact match", fix: "Fix the spelling", severity: "medium" },
+          { issue: "No summary heading", why: "the ATS can't label the block", fix: "Add a Professional Summary section at the top", severity: "medium" },
+        ],
+        strengths: [],
+      }
+      const result = await new AIService(routedAIClient(JSON.stringify(analysis)), logger).atsScore(
+        "user-1",
+        { jobDescription: "We need a Developer with Kubernetes experience for our team.", sectionData: richSectionData },
+        "PRO",
+      )
+      const issues = result.analysis?.criticalFixes.map((f) => f.issue) ?? []
+      expect(issues).toContain("Two-column layout")
+      expect(issues).not.toContain("Missing keyword: Kubernetes") // handled by the keyword card
+      expect(issues).not.toContain("Typo in a skill") // handled by the typo card
+      // Precision: a generic structural "add a section" fix has no dup keyword → survives.
+      expect(issues).toContain("No summary heading")
+    })
+
+    it("fails closed to null analysis when the recruiter call returns malformed JSON", async () => {
+      const aiClient = routedAIClient("not json at all")
+      const result = await new AIService(aiClient, logger).atsScore(
+        "user-1",
+        { jobDescription: "We need a Developer with Kubernetes experience for our team.", sectionData: richSectionData },
+        "PRO",
+      )
+      // Score still computed; analysis simply absent.
+      expect(result.score).toBeGreaterThan(0)
+      expect(result.analysis).toBeNull()
+    })
+
     it("is template-aware: a caution (multi-column) template dings the score and reports safety", async () => {
       const jd = "We need a Developer with Kubernetes experience for our team."
       const safe = await new AIService(makeMockAIClient(JSON.stringify(validExtraction)), logger)

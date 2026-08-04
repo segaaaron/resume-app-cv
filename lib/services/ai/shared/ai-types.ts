@@ -66,6 +66,21 @@ export interface ATSSubScores {
   format?: number | null
 }
 
+/** One actionable lever in the "path to your target score". Each answers the
+ *  user's real question — "what do I do to reach 90/100?" — with a concrete
+ *  action AND the score points it can recover, derived from the SAME weights the
+ *  score uses (not invented). Structured, not localized: the UI writes the copy. */
+export interface GapLever {
+  /** Which score lever this is. `template` is the layout penalty, not a matcher category. */
+  key: "hardSkills" | "mustHaves" | "title" | "softSkills" | "sections" | "template"
+  /** Estimated score points recoverable by maxing this lever out (0-100). */
+  points: number
+  /** Current coverage of this lever (0-100); null when not applicable (e.g. template). */
+  currentPct: number | null
+  /** For keyword levers: how many concrete items are still missing (drives "add N…"). */
+  missingCount?: number
+}
+
 /** Deterministic content-quality signals over the work experience. REPORTED, not
  *  scored — a bullet without a figure is not automatically bad (see bullet-quality.ts).
  *  Surfaced so the user can act (add a metric, fix a weak opener), never to penalize. */
@@ -125,6 +140,17 @@ export interface ATSScoreResult {
   extractedKeywords: ATSExtractedKeywords
   /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
   contentQuality: ATSContentQuality
+  /** Ranked "path to your target": the levers that move THIS score, each with the
+   *  points it can recover. Empty when the score is already maxed. */
+  gapPlan: GapLever[]
+  /** Probable typos: a required keyword the CV spells wrong ("React Navite" for
+   *  "React Native"), so a real ATS misses it. `keyword` = what the job wants,
+   *  `typed` = what the CV says. Empty when nothing looks misspelled. */
+  typoWarnings: { keyword: string; typed: string }[]
+  /** The senior-recruiter analysis (verdict, pass risk, ranked critical fixes,
+   *  strengths) — the voice of the unified report. null when the call failed or
+   *  was skipped (e.g. the deterministic live re-score, which makes no LLM call). */
+  analysis: CvAnalysis | null
   /** True when the requirements were INFERRED from a role title (no real posting)
    *  → the UI must label the score as approximate. Absent/false = scored against a
    *  real job description. */
@@ -161,6 +187,34 @@ export const ATSExtractionSchema = z.object({
 })
 
 export type ATSExtraction = z.infer<typeof ATSExtractionSchema>
+
+/** The senior-recruiter analysis — the voice of the unified report. Judges the CV
+ *  against the job the way a recruiter would (a 7-second screen, then a deep read),
+ *  quoting real text. The deterministic layer (typos, missing keywords, layout)
+ *  handles the mechanical checks; this handles judgment a keyword matcher can't:
+ *  layout risk, weak metrics, language mix, structure, credibility, narrative. */
+export const CvAnalysisSchema = z.object({
+  /** Two sentences: would this pass the recruiter's screen for THIS job + the biggest risk. */
+  verdict: z.string().catch(""),
+  /** How likely this CV is to be filtered out for this job. */
+  passRisk: z.enum(["low", "medium", "high"]).catch("medium"),
+  /** Ranked, most-damaging first. Each names the real problem, why it costs the
+   *  candidate, and the exact fix. Spelling typos and missing keywords are excluded
+   *  (handled deterministically) so the report never says the same thing twice. */
+  criticalFixes: z
+    .array(
+      z.object({
+        issue: z.string().catch(""),
+        why: z.string().catch(""),
+        fix: z.string().catch(""),
+        severity: z.enum(["high", "medium"]).catch("medium"),
+      }),
+    )
+    .catch([]),
+  /** A few real, specific strengths for THIS job. */
+  strengths: cappedStringArray(4),
+})
+export type CvAnalysis = z.infer<typeof CvAnalysisSchema>
 
 export interface CoverLetterResult {
   body: string
@@ -339,6 +393,14 @@ export interface SkillBulletInput {
   skill: string
   sectionData: Record<string, unknown>
   language?: string
+  /**
+   * Soft-skill mode. A hard skill ("GraphQL") is woven by NAMING it in the
+   * bullet; a soft skill ("teamwork", "communication") is proven by DEMONSTRATING
+   * the behavior — the bullet need not contain the word. When true, the prompt
+   * asks for evidence of the behavior and the "bullet must contain the skill"
+   * output guard is skipped. All anti-invention guards stay on. Defaults to hard.
+   */
+  soft?: boolean
 }
 
 export type SkillBulletResult =

@@ -59,6 +59,36 @@ describe("computeATSMatch", () => {
     expect(res.subScores.hardSkills).toBe(67) // 2/3
   })
 
+  describe("gapLevers (path to target)", () => {
+    it("attributes recoverable points using the same weights as the score, so maxing every lever lands on 100", () => {
+      // A JD with hard skills only (no soft/must/title) + all sections present.
+      // Only hardSkills and sections are scored → the plan must sum to (100 - score).
+      const kw = keywords({ hardSkills: ["React", "AWS", "Docker"] })
+      const cv = "Built apps with React and Docker."
+      const res = computeATSMatch(kw, cv, "", FULL_SECTIONS)
+      const recoverable = res.gapLevers.reduce((a, l) => a + l.points, 0)
+      // Rounding across levers can drift by ±1; assert it reconstructs the score.
+      expect(Math.abs(res.score + recoverable - 100)).toBeLessThanOrEqual(1)
+    })
+
+    it("carries the missing count for keyword levers and drops maxed levers", () => {
+      const kw = keywords({ hardSkills: ["React", "AWS", "Docker"] })
+      const cv = "Built apps with React and Docker." // sections full → sections lever maxed
+      const res = computeATSMatch(kw, cv, "", FULL_SECTIONS)
+      const hard = res.gapLevers.find((l) => l.key === "hardSkills")
+      expect(hard?.missingCount).toBe(1) // only AWS missing
+      // A fully-covered lever recovers 0 points → it must not appear in the plan.
+      expect(res.gapLevers.some((l) => l.key === "sections")).toBe(false)
+    })
+
+    it("returns no levers when everything is already covered", () => {
+      const kw = keywords({ hardSkills: ["React"] })
+      const cv = "Shipped React apps."
+      const res = computeATSMatch(kw, cv, "React Developer", FULL_SECTIONS)
+      expect(res.gapLevers).toEqual([])
+    })
+  })
+
   it("does not flag a present keyword as missing (fixes false-missing bug)", () => {
     const kw = keywords({ hardSkills: ["JavaScript"] })
     const res = computeATSMatch(kw, "Strong JS background", "", FULL_SECTIONS)
