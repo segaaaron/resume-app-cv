@@ -7,19 +7,21 @@ import { useShallow } from "zustand/react/shallow"
 import SectionBlock, { SectionDropdownProvider } from "./SectionBlock"
 import DesignPanel from "./DesignPanel"
 import ATSScorePanel from "./ATSScorePanel"
-import CVReviewPanel from "./CVReviewPanel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
 import CVCompletenessWidget from "./CVCompletenessWidget"
 import EmploymentGapAdvisory from "./EmploymentGapAdvisory"
 import ProvenSkillsCard from "./ProvenSkillsCard"
 import TemplateSwitcher from "./template-switcher"
-import { LayoutTemplate, Settings2, Target, MessageSquare, Sparkles, Layers } from "lucide-react"
+import { LayoutTemplate, Settings2, Target, Sparkles, Layers } from "lucide-react"
 
 // Tokens (kept for sidebar container)
 const BORDER = "#E2E8F0"
 
-type TabKey = "content" | "design" | "ats" | "review" | "ai" | "planillas"
+// "review" (the standalone AI-Review tab) was folded into the ATS panel: its CV
+// health score, Q&A and strength/improvement cards all render there now, so there
+// is ONE place that judges the CV instead of two overlapping ones.
+type TabKey = "content" | "design" | "ats" | "ai" | "planillas"
 
 interface TabDef {
   key: TabKey
@@ -46,7 +48,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
 
   // Allow other editor panels (e.g. the ATS "change template" nudge) to switch tabs.
   useEffect(() => {
-    const VALID: TabKey[] = ["content", "design", "ats", "review", "ai", "planillas"]
+    const VALID: TabKey[] = ["content", "design", "ats", "ai", "planillas"]
     const onSwitch = (e: Event) => {
       const detail = (e as CustomEvent).detail
       if (typeof detail === "string" && (VALID as string[]).includes(detail)) {
@@ -72,11 +74,6 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
       key: "ats",
       label: t("form.ats_tab") || "ATS",
       icon: <Target className="h-[18px] w-[18px]" strokeWidth={1.8} />,
-    },
-    {
-      key: "review",
-      label: t("form.review_tab") || "AI Review",
-      icon: <MessageSquare className="h-[18px] w-[18px]" strokeWidth={1.8} />,
     },
     {
       key: "ai",
@@ -168,12 +165,11 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
       {/* Scrollable content.
           Every tab below stays MOUNTED and is toggled with display:none instead
           of being conditionally rendered. Unmounting wiped each panel's local
-          state on tab switch — the pasted job posting + ATS result, the CV-review
-          answer, the AI-fill suggestions and applied flags all vanished when the
-          user navigated away and back. Keep-alive preserves them. Safe: none of
-          these panels fetches on mount (DesignPanel/CVReviewPanel/AIProfileFill
-          only call APIs from user actions; the review cooldown ticker no-ops when
-          idle), and the gated ones don't mount their children for non-Pro users. */}
+          state on tab switch — the pasted job posting + ATS result, the AI-fill
+          suggestions and applied flags all vanished when the user navigated away
+          and back. Keep-alive preserves them. Safe: none of these panels fetches
+          on mount (DesignPanel/AIProfileFill only call APIs from user actions),
+          and the gated ones don't mount their children for non-Pro users. */}
       <div style={{ ...scrollAreaStyle, display: activeTab === "planillas" ? "none" : undefined }}>
         <div className="px-5 pt-4 pb-6" style={{ display: activeTab === "content" ? undefined : "none" }}>
             <CVCompletenessWidget />
@@ -213,12 +209,6 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
         <div style={{ ...otherPadStyle, display: activeTab === "ats" ? undefined : "none" }}>
           <AIProGate feature="ATS Checker" endpoint="ats-score">
             <ATSScorePanel />
-          </AIProGate>
-        </div>
-
-        <div style={{ ...otherPadStyle, display: activeTab === "review" ? undefined : "none" }}>
-          <AIProGate feature="CV Review" endpoint="review-cv">
-            <CVReviewPanel />
           </AIProGate>
         </div>
 

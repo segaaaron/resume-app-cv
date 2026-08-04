@@ -1,10 +1,10 @@
 // lib/services/ai/shared/apply-suggestion.ts
 // Single owner of "what does accepting an AI suggestion write into the CV".
 //
-// ATSScorePanel and CVReviewPanel both render review-cv suggestions — the ATS
-// textarea reroutes to review-cv when the user types a question — and each kept
-// its own copy of this logic. Two bugs were fixed in one copy and survived
-// untouched in the other for hours: a missing targetId silently rewrote
+// ATSScorePanel renders review-cv suggestions — its textarea reroutes to
+// review-cv when the user types a question. This logic used to be duplicated in a
+// second panel; two bugs were fixed in one copy and survived untouched in the
+// other for hours: a missing targetId silently rewrote
 // workExperience[0], and an append welded every existing bullet onto one line.
 // Duplicated write paths over user data are how that happens, so there is one
 // now. It is pure: callers own the toasts and the modal.

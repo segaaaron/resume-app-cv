@@ -270,37 +270,40 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
   }
 
   return (
-    <div className="rounded-2xl border border-dash-cyan-border/60 bg-white/70 backdrop-blur-sm overflow-hidden shadow-[0_2px_12px_rgba(0,212,255,0.06)]">
-      {/* Header + CTA. No textarea here: the job description is the one the user
-          already pasted for the ATS score, above. */}
-      <div className="px-4 py-3 flex items-center gap-2.5">
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 bg-gradient-to-br from-dash-cyan to-[#00A8CC] shadow-sm shadow-dash-cyan/40">
-          <Wand2 size={13} className="text-white" />
+    // De-branded: this is section ③ of the unified report (the "Rewrites" header
+    // above already names it), and it AUTO-RUNS on analyze. So no tool title/CTA —
+    // just a subtle control to re-run after CV edits, then the results inline.
+    <div className="rounded-2xl border border-slate-100 bg-white/50 overflow-hidden">
+      {(!result || loading || inCooldown) && (
+        <div className="px-4 py-2.5 flex items-center justify-between gap-2">
+          <p className="text-[10.5px] text-slate-400 leading-snug">{t("subtitle")}</p>
+          <button
+            onClick={handleTailor}
+            disabled={loading || jobDescription.trim().length < 20 || inCooldown}
+            className="shrink-0 inline-flex items-center gap-1 text-[10.5px] font-bold text-dash-cyan hover:text-[#00A8CC] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            {loading
+              ? <><Loader2 size={11} className="animate-spin" />{t("analyzing")}</>
+              : inCooldown
+                ? <><Clock size={11} />{t("cooldown_btn", { seconds: cooldownLabel })}</>
+                : <><Wand2 size={11} />{t("cta")}</>}
+          </button>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-[12.5px] font-bold text-dash-navy">{t("title")}</p>
-          <p className="text-[10.5px] text-dash-muted leading-snug">{t("subtitle")}</p>
-        </div>
-      </div>
-
-      <div className="px-4 pb-3">
-        <button
-          onClick={handleTailor}
-          disabled={loading || jobDescription.trim().length < 20 || inCooldown}
-          className="w-full flex items-center justify-center gap-2 min-h-[44px] rounded-xl text-[12.5px] font-bold text-white bg-gradient-to-r from-dash-cyan to-[#00A8CC] shadow-lg shadow-dash-cyan/30 transition-all duration-200 hover:shadow-dash-cyan/50 hover:-translate-y-px active:translate-y-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:translate-y-0 disabled:shadow-none"
-        >
-          {loading
-            ? <><Loader2 size={13} className="animate-spin" />{t("analyzing")}</>
-            : inCooldown
-              ? <><Clock size={13} />{t("cooldown_btn", { seconds: cooldownLabel })}</>
-              : <><Wand2 size={13} />{t("cta")}</>
-          }
-        </button>
-      </div>
+      )}
 
       {/* Results */}
       {result && (
-        <div className="px-4 pb-4">
+        <div className="px-4 pb-4 pt-3">
+          {/* Subtle re-run once results are in — for after CV edits. */}
+          <div className="flex justify-end -mt-1 mb-1">
+            <button
+              onClick={handleTailor}
+              disabled={loading || inCooldown}
+              className="inline-flex items-center gap-1 text-[10px] font-bold text-slate-400 hover:text-dash-cyan disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {inCooldown ? <><Clock size={10} />{t("cooldown_btn", { seconds: cooldownLabel })}</> : <><Wand2 size={10} />{t("re_tailor")}</>}
+            </button>
+          </div>
           <button
             onClick={() => setExpanded(!expanded)}
             className="w-full flex items-center justify-between py-2 text-[11.5px] font-semibold text-[#00A8CC]"

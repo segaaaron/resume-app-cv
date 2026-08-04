@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef } from "react"
+import { useState, useRef, useMemo } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
@@ -20,6 +20,7 @@ import { replaceWord } from "@/lib/ats/apply-spelling"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
+import { computeResumeScore, type ResumeScoreKey } from "@/lib/services/ai/shared/resume-score"
 
 function ScoreRing({ score, label }: { score: number; label: string }) {
   const r = 70
@@ -105,6 +106,86 @@ function ScoreBar({ label, pct }: { label: string; pct: number }) {
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${pct}%`, background: gradient }}
         />
+      </div>
+    </div>
+  )
+}
+
+// Deterministic CV-health verdict — the reliable "is my CV good or bad?" answer
+// that used to live only in the separate AI-Review tab. Computed in code (no LLM,
+// no job description needed), so it is honest and always available. This is what
+// the user sees first: a plain good/bad verdict, then the dimensions behind it.
+const HEALTH_VERDICT: { min: number; label: string; chip: string; ring: string }[] = [
+  { min: 80, label: "verdict_strong", chip: "bg-emerald-50 text-emerald-700 ring-emerald-200", ring: "#10B981" },
+  { min: 60, label: "verdict_good", chip: "bg-cyan-50 text-cyan-700 ring-cyan-200", ring: "#00D4FF" },
+  { min: 40, label: "verdict_fair", chip: "bg-amber-50 text-amber-700 ring-amber-200", ring: "#F59E0B" },
+  { min: 0, label: "verdict_weak", chip: "bg-rose-50 text-rose-700 ring-rose-200", ring: "#F43F5E" },
+]
+const HEALTH_DIM_LABEL: Record<ResumeScoreKey, string> = {
+  impact: "dim_impact",
+  actionVerbs: "dim_action_verbs",
+  completeness: "dim_completeness",
+  brevity: "dim_brevity",
+  recruiterScan: "dim_recruiter_scan",
+}
+
+function CVHealthCard({ data }: { data: ReturnType<typeof computeResumeScore> }) {
+  const t = useTranslations("editor.ats")
+  const v = HEALTH_VERDICT.find((x) => data.overall >= x.min) ?? HEALTH_VERDICT[HEALTH_VERDICT.length - 1]
+  const r = 26
+  const c = 2 * Math.PI * r
+  const offset = c - (data.overall / 100) * c
+  return (
+    <div className="@container rounded-2xl border border-cyan-100 bg-gradient-to-br from-white to-cyan-50/40 p-4 shadow-sm">
+      <div className="flex items-center gap-3.5">
+        {/* Compact ring — the health number at a glance */}
+        <div className="relative shrink-0" style={{ filter: "drop-shadow(0 0 10px rgba(0,212,255,0.2))" }}>
+          <svg width="64" height="64" viewBox="0 0 64 64">
+            <circle cx="32" cy="32" r={r} fill="none" stroke="rgba(0,212,255,0.1)" strokeWidth="6" />
+            <circle cx="32" cy="32" r={r} fill="none" stroke={v.ring} strokeWidth="6"
+              strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+              style={{ transform: "rotate(-90deg)", transformOrigin: "center", transition: "stroke-dashoffset 0.8s ease" }} />
+          </svg>
+          <div className="absolute inset-0 flex items-center justify-center">
+            <span className="text-lg font-black text-[#1a2e4a] leading-none">{data.overall}</span>
+          </div>
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[12px] font-black text-[#1a2e4a]">{t("health_title")}</span>
+            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ring-1 ${v.chip}`}>{t(`health_${v.label}`)}</span>
+          </div>
+          <p className="mt-0.5 text-[10.5px] text-slate-500 leading-relaxed">{t("health_subtitle")}</p>
+        </div>
+      </div>
+      {/* Dimensions behind the number — honest breakdown, N/A when not measurable */}
+      <div className="mt-3 grid grid-cols-1 gap-x-4 @sm:grid-cols-2">
+        {data.dimensions.map((d) => {
+          const label = t(`health_${HEALTH_DIM_LABEL[d.key]}`)
+          if (d.score === null) {
+            return (
+              <div key={d.key} className="mb-2">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-[10.5px] font-semibold text-slate-500">{label}</span>
+                  <span className="text-[9px] font-bold text-slate-400">{t("health_na")}</span>
+                </div>
+                <div className="h-1.5 bg-slate-100 rounded-full" />
+              </div>
+            )
+          }
+          const { color, gradient } = getBarStyle(d.score)
+          return (
+            <div key={d.key} className="mb-2">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-[10.5px] font-semibold text-slate-700">{label}</span>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: `${color}1A`, color }}>{d.score}%</span>
+              </div>
+              <div className="h-1.5 bg-cyan-50 rounded-full overflow-hidden">
+                <div className="h-full rounded-full transition-all duration-700" style={{ width: `${d.score}%`, background: gradient }} />
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )
@@ -284,6 +365,10 @@ export default function ATSScorePanel() {
   const workExp = (sectionData.workExperience as unknown[]) ?? []
   const skills = (sectionData.skills as unknown[]) ?? []
   const cvReady = summary.trim().length > 0 && workExp.length > 0 && skills.length > 0
+
+  // Deterministic health verdict (no LLM, no JD) — recomputes live as the CV is
+  // edited. This is the honest "is my CV good or bad?" answer, shown always.
+  const cvHealth = useMemo(() => computeResumeScore(sectionData as Record<string, unknown>), [sectionData])
 
   // Fusion: one "Analyze" = one full report. After a manual analysis against a
   // real job description, signal Tailor to run itself (rewrites appear inline in
@@ -501,6 +586,11 @@ export default function ATSScorePanel() {
             </div>
           </div>
         )}
+
+        {/* CV health — the deterministic good/bad verdict, always visible once the
+            CV has enough content. Answers "is my CV good?" without needing a job
+            posting; the ATS match below then answers "good FOR THIS job?". */}
+        {cvReady && <CVHealthCard data={cvHealth} />}
 
         {/* Job description is the ONLY input now. The role-title mode was removed:
             it inferred generic requirements and the real analysis needs the posting
@@ -1082,21 +1172,9 @@ export default function ATSScorePanel() {
         {/* Review Results */}
         {reviewResult && (
           <div className="space-y-3 pt-1">
-            {/* Deterministic resume score (JD-independent) — computed in code,
-                not guessed by the LLM. Shown only for a general review. */}
-            {reviewResult.resumeScore && !reviewResult.answer && (
-              <div className="flex flex-col items-center gap-1 py-1">
-                <ScoreRing score={reviewResult.resumeScore.overall} label={t("resume_score_label")} />
-                <div className="w-full rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/80 to-blue-50/60 p-4 mt-1">
-                  <p className="text-[10px] font-black tracking-widest uppercase text-cyan-600 mb-3">{t("resume_score_title")}</p>
-                  {reviewResult.resumeScore.dimensions
-                    .filter((d) => d.score !== null)
-                    .map((d) => (
-                      <ScoreBar key={d.key} label={t(`resume_score_dim_${d.key}`)} pct={d.score as number} />
-                    ))}
-                </div>
-              </div>
-            )}
+            {/* The deterministic resume score lives in the always-on "CV health"
+                card at the top of the panel now — not repeated here, so a general
+                review never shows a second, competing number. */}
             {reviewResult.answer && (
               <div className="rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50/80 to-cyan-50/60 backdrop-blur-sm p-4">
                 <p className="text-[10px] font-black tracking-widest uppercase text-blue-600 flex items-center gap-1.5 mb-2.5">
