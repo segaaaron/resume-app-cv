@@ -18,6 +18,13 @@ export function reportClientError(
   const msg = (message ?? "").trim()
   if (!msg) return
 
+  // Next.js control-flow signals (redirect() / notFound()) are THROWN internally and
+  // caught by Next to do their job — they are NOT errors. The server sink already
+  // filters them (instrumentation.ts); the client boundary can see them too (e.g. a
+  // redirect during render), so drop them here to keep the Service Errors panel showing
+  // only real client failures.
+  if (/NEXT_REDIRECT|NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK|NEXT_RSC/.test(msg) || (stack ? /NEXT_REDIRECT|NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK|NEXT_RSC/.test(stack) : false)) return
+
   const key = `${kind}:${msg}:${(stack ?? "").slice(0, 200)}`
   if (sent.has(key) || sent.size >= MAX_PER_LOAD) return
   sent.add(key)
