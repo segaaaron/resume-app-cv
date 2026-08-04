@@ -10,6 +10,7 @@ import EditorTopBar from "./EditorTopBar"
 import { EditorProvider } from "./EditorContext"
 import { isActive, isSuperAdmin, effectivePlan } from "@/lib/plans"
 import UpgradeBanner from "./UpgradeBanner"
+import NewResumeWelcome from "./NewResumeWelcome"
 import { FileText, Eye } from "lucide-react"
 
 interface Props {
@@ -30,9 +31,19 @@ interface Props {
 
 type MobileView = "form" | "preview"
 
-export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isManaged, managedBlocked, managedExpiresAt, isNew: _isNew = false }: Props) {
+export default function EditorLayout({ resumeId, title, sections, sectionData, config, plan, subscriptionStatus, subscriptionEndsAt, role, isManaged, managedBlocked, managedExpiresAt, isNew = false }: Props) {
   const init = useResumeStore((s) => s.init)
   const router = useRouter()
+
+  // First-run onboarding: activate the previously-dead `?new=1` — show the start
+  // screen only when the resume opens genuinely empty, so re-opening a filled CV
+  // never re-triggers it. Dismissed on either choice (AI fill or start blank).
+  const isEmptyResume =
+    !((sectionData.personalDetails as { firstName?: string } | undefined)?.firstName?.trim()) &&
+    (sectionData.workExperience?.length ?? 0) === 0 &&
+    (sectionData.skills?.length ?? 0) === 0 &&
+    !((sectionData.summary as string | undefined)?.trim())
+  const [showWelcome, setShowWelcome] = useState(isNew && isEmptyResume)
   const propsRef = useRef({ resumeId, title, sections, sectionData, config })
   useEffect(() => {
     propsRef.current = { resumeId, title, sections, sectionData, config }
@@ -83,6 +94,17 @@ export default function EditorLayout({ resumeId, title, sections, sectionData, c
   return (
     <EditorProvider isPro={hasAccess} plan={effPlan}>
       <div className="flex flex-col overflow-hidden h-dvh bg-[#FAFCFF] text-[#0F172A]">
+        {showWelcome && (
+          <NewResumeWelcome
+            onPickAI={() => {
+              setShowWelcome(false)
+              setMobileView("form")
+              // Land the user on the AI Fill tab; its own PRO gate handles free plans.
+              setTimeout(() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "ai" })), 0)
+            }}
+            onPickBlank={() => setShowWelcome(false)}
+          />
+        )}
         {!isSuperAdmin(role) && !isManaged && (
           <UpgradeBanner plan={effPlan} />
         )}

@@ -1256,6 +1256,18 @@
     }
   },
   "editor": {
+    "new_welcome": {
+      "title": "Empecemos tu CV",
+      "subtitle": "Arranca rápido, o llénalo vos mismo — como quieras.",
+      "close": "Cerrar",
+      "ai_title": "Rellenar con IA",
+      "ai_desc": "Pega tu info o LinkedIn y la IA lo estructura en tu CV.",
+      "ai_cta": "Empezar con IA",
+      "blank_title": "Empezar en blanco",
+      "blank_desc": "Abre el editor vacío y llena cada sección vos mismo.",
+      "blank_cta": "Empezar en blanco",
+      "import_hint": "¿Tienes un CV en archivo (PDF/DOCX)? Impórtalo desde tu dashboard."
+    },
     "nav": {
       "content": "Contenido",
       "design": "Diseño",
@@ -1609,7 +1621,6 @@
       "section_verdict": "Veredicto",
       "section_fixes": "Qué arreglar — por impacto",
       "section_rewrites": "Reescrituras listas para aplicar",
-      "section_verify": "Verifica contra tu PDF real",
       "verdict_title": "Veredicto del reclutador",
       "critical_fixes_title": "Arreglos críticos",
       "risk_low": "Riesgo bajo",
@@ -1666,7 +1677,6 @@
       "template_caution_desc": "Usa dos columnas — algunos ATS estrictos (Workday, Taleo) pueden reordenar tu contenido. Una plantilla de una columna parsea de forma más confiable.",
       "template_caution_action": "Cambiar plantilla",
       "score_delta": "+{delta} desde tu último ajuste",
-      "verify_title": "Verifica contra tu PDF real",
       "verify_button": "Verificar",
       "verify_loading": "Generando…",
       "verify_hint": "El score de arriba lee tus datos estructurados. Esto genera tu PDF real y lee lo que un ATS extrae de él.",
