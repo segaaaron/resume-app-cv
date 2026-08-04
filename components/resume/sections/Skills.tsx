@@ -7,27 +7,12 @@ import type { SkillItem } from "@/types/resume"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Plus, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
-import { ATS_SKILLS } from "@/lib/ats/skills-dictionary"
-
-// Autocomplete suggestions in the dictionary's canonical spelling. Offering the
-// right spelling as the user types kills mistyped skills at the source
-// ("React Navite" → "React Native"), which keeps dedup, ATS score and every
-// downstream consumer clean. A native <datalist> stays non-intrusive: it only
-// suggests — the field is still free-text, so nothing the user types is blocked.
-const CASE_OVERRIDE: Record<string, string> = {
-  javascript: "JavaScript", typescript: "TypeScript", "node.js": "Node.js", nodejs: "Node.js",
-  "ci/cd": "CI/CD", html: "HTML", css: "CSS", sql: "SQL", aws: "AWS", gcp: "GCP", ios: "iOS",
-  graphql: "GraphQL", github: "GitHub", gitlab: "GitLab", postgresql: "PostgreSQL", mongodb: "MongoDB",
-  php: "PHP", api: "API", rest: "REST", "rest api": "REST API", ui: "UI", ux: "UX", seo: "SEO",
-  "c#": "C#", "c++": "C++", devops: "DevOps", saas: "SaaS", "react native": "React Native",
-}
-function displayCase(term: string): string {
-  const o = CASE_OVERRIDE[term.toLowerCase()]
-  if (o) return o
-  return term.replace(/\b\w/g, (c) => c.toUpperCase())
-}
-const SKILL_SUGGESTIONS = Array.from(new Set(ATS_SKILLS.map((s) => displayCase(s.term)))).sort((a, b) => a.localeCompare(b))
-const SKILL_DATALIST_ID = "ats-skill-suggestions"
+import { toast } from "sonner"
+import { useMemo } from "react"
+import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
+import { categoryOfSkill } from "@/lib/ats/skill-catalog"
+import { inferFieldCategories } from "@/lib/ats/job-field"
+import SkillAutocompleteInput from "./SkillAutocompleteInput"
 
 export default function SkillsSection() {
   const t = useTranslations("editor.sections_form")
@@ -35,6 +20,15 @@ export default function SkillsSection() {
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
   const skills = sectionData.skills
+
+  // Boost suggestions toward the user's field, inferred from the job title they
+  // already entered (fallback: the dominant category of their current skills).
+  // A soft rank — nothing is hidden. Recomputed only when the title or skills change.
+  const jobTitle = ((sectionData.personalDetails as { jobTitle?: string } | undefined)?.jobTitle) ?? ""
+  const boost = useMemo(
+    () => inferFieldCategories(jobTitle, skills.map((s) => categoryOfSkill(s.name)).filter((c): c is string => !!c)),
+    [jobTitle, skills],
+  )
 
   const LEVELS = [
     { value: "beginner",     label: t("skills.beginner") },
@@ -56,30 +50,25 @@ export default function SkillsSection() {
     updateSectionData("skills", skills.filter((s) => s.id !== id))
   }
 
+  // "You already have this skill" — checked when the user leaves the field (not on
+  // every keystroke). Catches an exact/alias/spacing/~90%-similar match against the
+  // OTHER skills, and names the one they already have so it's easy to see.
+  function checkDuplicate(id: string, name: string) {
+    if (!name.trim()) return
+    const dup = findDuplicateSkill(name, skills.filter((s) => s.id !== id).map((s) => s.name))
+    if (dup) toast.info(t("skills.duplicate", { skill: dup }))
+  }
+
   return (
     <div className="space-y-2">
-      {/* Shared canonical-spelling suggestions for every skill input below. */}
-      <datalist id={SKILL_DATALIST_ID}>
-        {SKILL_SUGGESTIONS.map((s) => <option key={s} value={s} />)}
-      </datalist>
       {skills.map((skill) => (
         <div key={skill.id} className="flex items-center gap-1.5">
-          <input
+          <SkillAutocompleteInput
             value={skill.name}
-            onChange={(e) => update(skill.id, "name", e.target.value)}
+            onChange={(name) => update(skill.id, "name", name)}
+            onCommit={() => checkDuplicate(skill.id, skill.name)}
             placeholder={t("skills.placeholder")}
-            title={skill.name || undefined}
-            list={SKILL_DATALIST_ID}
-            autoComplete="off"
-            className="min-w-0 flex-1 outline-none text-[12.5px] font-medium transition-all duration-200"
-            style={{
-              height: 40, paddingLeft: 14, paddingRight: 14, borderRadius: 20,
-              background: "linear-gradient(135deg,rgba(240,248,255,0.85) 0%,rgba(232,244,251,0.65) 100%)",
-              border: "1.5px solid rgba(0,212,255,0.2)",
-              boxShadow: "inset 0 1px 3px rgba(0,0,0,0.03)", color: "#1a2e4a",
-            }}
-            onFocus={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.6)"; e.currentTarget.style.boxShadow = "0 0 0 3px rgba(0,212,255,0.1)" }}
-            onBlur={(e) => { e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)"; e.currentTarget.style.boxShadow = "inset 0 1px 3px rgba(0,0,0,0.03)" }}
+            boost={boost}
           />
           <Select value={skill.level} onValueChange={(v) => update(skill.id, "level", v ?? "intermediate")}>
             <SelectTrigger className="h-10 w-28 shrink-0 text-xs" style={{ borderRadius: 20 }}>

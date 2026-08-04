@@ -1889,7 +1889,9 @@
         "beginner": "Beginner",
         "intermediate": "Intermediate",
         "advanced": "Advanced",
-        "expert": "Expert"
+        "expert": "Expert",
+        "duplicate": "You already have this skill: \"{skill}\"",
+        "did_you_mean": "Did you mean…"
       },
       "languages": {
         "placeholder": "e.g. Spanish, English...",
