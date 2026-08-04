@@ -23,7 +23,7 @@ function highlight(display: string, query: string): ReactNode {
   return (
     <>
       {display.slice(0, i)}
-      <span className="font-bold text-[#00A8CC]">{display.slice(i, i + q.length)}</span>
+      <span className="font-bold text-[#0077B6]">{display.slice(i, i + q.length)}</span>
       {display.slice(i + q.length)}
     </>
   )
@@ -94,7 +94,7 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
         // (or groups), never a bare label li.
         <div className="absolute left-0 right-0 top-[44px] z-50 rounded-2xl border border-cyan-100 bg-white/95 backdrop-blur-sm py-1 shadow-[0_16px_40px_-12px_rgba(26,46,74,0.28)] overflow-hidden">
           {fuzzy && (
-            <p className="px-3 py-1.5 text-[9.5px] font-bold uppercase tracking-wide text-slate-400">{t("skills.did_you_mean")}</p>
+            <p className="px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-600">{t("skills.did_you_mean")}</p>
           )}
           <ul role="listbox" id={listId} className="max-h-[240px] overflow-auto">
             {matches.map((o, i) => (
@@ -105,10 +105,10 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
                 aria-selected={i === active}
                 onMouseDown={(e) => { e.preventDefault(); commitSelect(o) }}
                 onMouseEnter={() => setActive(i)}
-                className={`flex items-center justify-between gap-2 px-3 py-2 cursor-pointer transition-colors ${i === active ? "bg-cyan-50" : "hover:bg-slate-50"}`}
+                className={`flex items-center justify-between gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${i === active ? "bg-cyan-50" : "hover:bg-slate-50"}`}
               >
-                <span className="text-[12.5px] text-slate-700 truncate">{highlight(o.display, fuzzy ? "" : value)}</span>
-                <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide text-slate-400 bg-slate-100 rounded-full px-2 py-0.5">{o.categoryLabel}</span>
+                <span className="text-[13px] font-medium text-slate-800 truncate">{highlight(o.display, fuzzy ? "" : value)}</span>
+                <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-cyan-800 bg-cyan-50 ring-1 ring-cyan-100 rounded-full px-2 py-0.5">{o.categoryLabel}</span>
               </li>
             ))}
           </ul>
