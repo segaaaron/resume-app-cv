@@ -6,7 +6,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope } from "lucide-react"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope, Sparkles } from "lucide-react"
 import TailorCVPanel from "./TailorCVPanel"
 import AtsEngineMatrix from "./AtsEngineMatrix"
 import AtsSafeDownload from "./AtsSafeDownload"
@@ -272,6 +272,10 @@ export default function ATSScorePanel() {
   // rewrite to the exact bullet by index, then re-scores.
   const [bulletFix, setBulletFix] = useState<{ targetId: string; index: number; current: string; improved: string } | null>(null)
   const [improvingKey, setImprovingKey] = useState<string | null>(null)
+  // Soft skills the job asks for that the CV doesn't demonstrate yet — hoisted up
+  // from the Tailor run (§③) so ALL bullet work lives in the one list below (§②).
+  const [softSkills, setSoftSkills] = useState<{ skill: string; suggestion: string }[]>([])
+  const [weavingSoft, setWeavingSoft] = useState<string | null>(null)
 
   async function improveMetricless(
     b: { text: string; targetId: string; jobTitle: string; index: number },
@@ -334,6 +338,40 @@ export default function ATSScorePanel() {
       toast.error(t("metricless_improve_error"))
     } finally {
       setBulletFix(null)
+    }
+  }
+
+  // Soft-skill weave: ask the model to DEMONSTRATE the skill inside a real bullet
+  // of the best-fit job (never names the word), then confirm via the same diff
+  // modal before it lands — the user is the honesty gate. Appends a new bullet.
+  async function weaveSoftSkill(skill: string) {
+    if (weavingSoft) return
+    setWeavingSoft(skill)
+    try {
+      const res = await apiFetch("/api/ai/skill-bullet", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ skill, sectionData, language: locale === "en" ? "en" : "es", soft: true }),
+      })
+      if (!res.ok) { toast.error(t("soft_skill_error")); return }
+      const data = (await res.json().catch(() => null)) as
+        | { status: "written"; targetId: string; jobTitle: string; text: string }
+        | { status: "no_fit" }
+        | null
+      if (!data || data.status === "no_fit") { toast.info(t("soft_skill_no_fit")); return }
+      const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+      const job = work.find((j) => j.id === data.targetId)
+      if (!job) { toast.info(t("soft_skill_no_fit")); return }
+      const reason = softSkills.find((s) => s.skill === skill)?.suggestion ?? t("soft_skill_demonstrate")
+      setModal({
+        suggestion: { field: "workExperience.description", type: "append", preview: data.text, reason, targetId: data.targetId },
+        currentValue: job.description ?? "",
+        itemKey: `soft-${skill}`,
+      })
+    } catch {
+      toast.error(t("soft_skill_error"))
+    } finally {
+      setWeavingSoft(null)
     }
   }
 
@@ -973,7 +1011,8 @@ export default function ATSScorePanel() {
               weakVerb.forEach((w) => add(w.targetId, w.jobTitle, w.index, w.text, "weak_verb"))
               const bullets = [...byKey.values()].filter((b) => !appliedItems.has(`bullet-${b.targetId}-${b.index}`))
               const cq = atsResult.contentQuality
-              if (bullets.length === 0 && (!cq || cq.totalBullets === 0)) return null
+              const visibleSoft = softSkills.filter((s) => !appliedItems.has(`soft-${s.skill}`))
+              if (bullets.length === 0 && (!cq || cq.totalBullets === 0) && visibleSoft.length === 0) return null
               return (
               <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
                 <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
@@ -1025,6 +1064,41 @@ export default function ATSScorePanel() {
                       )
                     })}
                   </ul>
+                )}
+
+                {/* Soft skills → demonstrated in a bullet. Same list, because a soft
+                    skill is proven inside an achievement, not listed as a tag. The
+                    weave writes ONE bullet in the best-fit job and confirms first. */}
+                {visibleSoft.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-violet-100">
+                    <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-1">
+                      <Users className="h-3 w-3" /> {t("soft_skills_title")}
+                    </p>
+                    <p className="text-[10px] text-slate-500 leading-snug mb-2">{t("soft_skills_hint")}</p>
+                    <ul className="flex flex-col gap-1.5">
+                      {visibleSoft.map((s) => {
+                        const busy = weavingSoft === s.skill
+                        return (
+                          <li key={s.skill} className="rounded-lg bg-white/60 border border-violet-100 p-2">
+                            <div className="flex items-center gap-1.5 mb-0.5">
+                              <Sparkles className="h-2.5 w-2.5 text-violet-500 shrink-0" />
+                              <span className="text-[10.5px] font-bold text-violet-700 capitalize flex-1 min-w-0 truncate">{s.skill}</span>
+                              <button
+                                type="button"
+                                onClick={() => weaveSoftSkill(s.skill)}
+                                disabled={busy || !!weavingSoft}
+                                className="shrink-0 inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+                                {busy ? t("soft_skill_weaving") : t("soft_skill_demonstrate")}
+                              </button>
+                            </div>
+                            <p className="text-[10px] text-slate-500 leading-relaxed">{s.suggestion}</p>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </div>
                 )}
                 <p className="text-[10px] text-slate-500 leading-relaxed mt-2">{t("content_quality_hint")}</p>
               </div>
@@ -1164,7 +1238,7 @@ export default function ATSScorePanel() {
                 chained off the same job description. ─────────────────────────── */}
             <SectionHeader n={3} title={t("section_rewrites")} />
             <div id="ats-tailor" className="scroll-mt-4">
-              <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} autoRunSignal={autoTailorSignal} />
+              <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} autoRunSignal={autoTailorSignal} onSoftSkills={setSoftSkills} />
             </div>
           </div>
         )}

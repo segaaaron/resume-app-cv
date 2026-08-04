@@ -51,9 +51,15 @@ interface Props {
    * The button still exists for re-running after CV edits.
    */
   autoRunSignal?: number
+  /**
+   * Soft skills the job asks for that the CV doesn't demonstrate yet are hoisted
+   * to the parent so they render in the ONE "bullets to improve" list (§②),
+   * instead of a separate card at the bottom of this panel.
+   */
+  onSoftSkills?: (skills: { skill: string; suggestion: string }[]) => void
 }
 
-export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [], autoRunSignal = 0 }: Props) {
+export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [], autoRunSignal = 0, onSoftSkills }: Props) {
   const t = useTranslations("editor.tailor")
   const aiT = useTranslations("editor.ai")
   const locale = useLocale()
@@ -71,6 +77,10 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
   const [appliedBullets, setAppliedBullets] = useState<Map<string, Set<number>>>(new Map())
   const [addedSkills, setAddedSkills] = useState<Set<string>>(new Set())
   const [weavingSkill, setWeavingSkill] = useState<string | null>(null)
+
+  // Hoist soft-skill suggestions to the parent so they render in the one bullets
+  // list (§②). Fires on every result change (and clears on reset to null).
+  useEffect(() => { onSoftSkills?.(result?.softSkillSuggestions ?? []) }, [result, onSoftSkills])
   const [pendingBullet, setPendingBullet] = useState<{
     targetId: string
     bulletIndex: number
@@ -318,10 +328,11 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
             const bulletsDone = allChangedBullets.every(({ targetId, index }) => isBulletApplied(targetId, index))
             const summaryDone = !result.summary || appliedSummary
             const skillsDone = visibleMissingSkills.every((s) => addedSkills.has(s))
-            const softCount = result.softSkillSuggestions?.length ?? 0
-            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || visibleMissingSkills.length || softCount)
+            // Soft skills render in §② now, so they no longer count toward this
+            // panel's own "all applied" / "nothing to improve" banners.
+            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || visibleMissingSkills.length)
             const allDone = hasActionable && summaryDone && bulletsDone && skillsDone
-            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && visibleMissingSkills.length === 0 && softCount === 0
+            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && visibleMissingSkills.length === 0
             return (
               <>
                 {allDone && !nothingToImprove ? (
@@ -477,41 +488,9 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
                 )
               })()}
 
-              {/* Soft-skill advice — the job asks for soft skills the CV doesn't show yet.
-                  Soft skills are proven inside bullets, not listed as chips, so this is a
-                  comment the user reads and applies by hand — never auto-written. */}
-              {result.softSkillSuggestions && result.softSkillSuggestions.length > 0 && (
-                <div>
-                  <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-1">{t("section_soft_skills")}</p>
-                  <p className="text-[10px] text-dash-muted leading-snug mb-2">{t("soft_skills_hint")}</p>
-                  <div className="flex flex-col gap-1.5">
-                    {result.softSkillSuggestions.map((s) => {
-                      const weaving = weavingSkill === s.skill
-                      return (
-                      <div key={s.skill} className="rounded-lg border border-violet-200/70 bg-violet-50/50 px-2.5 py-2">
-                        <div className="flex items-center gap-1.5 mb-0.5">
-                          <Sparkles size={10} className="text-violet-500 shrink-0" />
-                          <span className="text-[10.5px] font-bold text-violet-700 capitalize flex-1">{s.skill}</span>
-                          {/* Not just a tip: weave the behavior into the best-fit bullet.
-                              Soft mode demonstrates it through an action (never names the
-                              word), then the same diff modal confirms before it lands. */}
-                          <button
-                            onClick={() => weaveBullet(s.skill, true)}
-                            disabled={!!weavingSkill}
-                            title={t("soft_skill_apply")}
-                            className="shrink-0 inline-flex items-center gap-1 rounded-full border border-violet-300 bg-white/70 px-2 py-0.5 text-[9.5px] font-bold text-violet-700 transition-all hover:bg-violet-100 disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            {weaving ? <Loader2 size={9} className="animate-spin" /> : <Wand2 size={9} />}
-                            {weaving ? t("soft_skill_applying") : t("soft_skill_apply")}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-[#475569] leading-relaxed">{s.suggestion}</p>
-                      </div>
-                      )
-                    })}
-                  </div>
-                </div>
-              )}
+              {/* Soft skills moved to §② (the one "bullets to improve" list) — a soft
+                  skill is demonstrated inside a bullet, so it belongs with the other
+                  bullet work, not in a separate card here. */}
 
               {/* No keywords chips here: the ATS score above already renders
                   missingKeywords for this same posting, verified against the CV.
