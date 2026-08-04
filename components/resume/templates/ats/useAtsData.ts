@@ -20,12 +20,16 @@ const LEVEL_LABEL: Record<string, string> = { a1: "A1", a2: "A2", b1: "B1", b2: 
 const LEVEL_PCT: Record<string, number> = { a1: 30, a2: 45, b1: 60, b2: 75, c1: 88, c2: 96, native: 100, nativo: 100 }
 
 /** Extract plain-text bullet lines from a description's HTML (list items or lines). */
-function htmlToBullets(html: string | undefined | null): string[] {
+export function htmlToBullets(html: string | undefined | null): string[] {
   if (!html) return []
   const li = [...html.matchAll(/<li[^>]*>([\s\S]*?)<\/li>/gi)].map((m) => m[1])
   const raw = li.length ? li : html.split(/<br\s*\/?>|\n/gi)
   return raw
     .map((s) => s.replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim())
+    // Strip any leading bullet glyph the content already carries ("• ", "-", "·"…):
+    // every ATS template draws its OWN marker (dash/dot/check via ABullets), so a
+    // stored "• " on top of it rendered a redundant double marker ("— • text").
+    .map((s) => s.replace(/^[\s•·▪◦‣∙●○*·•‣–—-]+\s*/, "").trim())
     .filter(Boolean)
 }
 

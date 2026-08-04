@@ -155,4 +155,17 @@ describe("dropsContentWithoutGain — lateral, lossy rewrites", () => {
   it("empty suggestion counts as no gain", () => {
     expect(dropsContentWithoutGain("Built the payments API", "  ")).toBe(true)
   })
+
+  it("flags a net-loss rewrite that swaps in one filler word ('ensuring'→'to maintain')", () => {
+    // The reported foto-1 case: drops "ensuring / enhancing / team / performance",
+    // adds only "maintain". A single added word must not launder a 4-word loss.
+    const current = "Integrated RESTful APIs and third-party libraries, ensuring seamless backend communication while mentoring junior developers on best practices, enhancing team performance and code quality."
+    const suggested = "• Integrated RESTful APIs and third-party libraries to maintain seamless backend communication, while mentoring junior developers on best practices and code quality."
+    expect(dropsContentWithoutGain(current, suggested)).toBe(true)
+  })
+
+  it("does NOT flag a net-neutral tightening (drops 1 filler, adds 1 clearer word)", () => {
+    // Only one word net difference → below the ≥2 net-loss bar → survives.
+    expect(dropsContentWithoutGain("Managed the whole payments module", "Owned the payments module")).toBe(false)
+  })
 })

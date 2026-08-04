@@ -184,6 +184,9 @@ export function dropsContentWithoutGain(original: string, suggested: string): bo
   // 1. Dropped a named keyword, replaced it with nothing concrete.
   const droppedNamed = removedReal.some((r) => isNamedToken(r, original))
   if (droppedNamed && !addedConcrete) return true
-  // 2. Lateral lossy: two-plus content words gone, nothing new in.
-  return removedReal.length >= 2 && addedReal.length === 0
+  // 2. Lateral lossy: the rewrite drops materially MORE content than it brings back
+  //    (net loss of two-plus real words) and adds nothing concrete — a new number or
+  //    named technology. A single swapped-in filler word ("ensuring"→"to maintain")
+  //    used to let a 4-words-lost rewrite through; the NET test closes that.
+  return removedReal.length - addedReal.length >= 2 && !addedConcrete
 }

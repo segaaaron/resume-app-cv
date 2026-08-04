@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useMemo } from "react"
+import { useState, useRef, useMemo, useEffect } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
@@ -44,9 +44,16 @@ interface Props {
    * same "add this keyword" chip twice across the two panels.
    */
   atsMissingKeywords?: string[]
+  /**
+   * Bumped by the parent each time the user runs a full ATS analysis with a real
+   * job description. When it changes, Tailor runs itself — so one "Analyze" is one
+   * report (score + recruiter review + rewrites), instead of a second manual click.
+   * The button still exists for re-running after CV edits.
+   */
+  autoRunSignal?: number
 }
 
-export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] }: Props) {
+export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [], autoRunSignal = 0 }: Props) {
   const t = useTranslations("editor.tailor")
   const aiT = useTranslations("editor.ai")
   const locale = useLocale()
@@ -145,6 +152,18 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
       setLoading(false)
     }
   }
+
+  // Fusion: when the parent signals a fresh full analysis (real JD), run Tailor
+  // once automatically so the report is a single action. handleTailor guards the
+  // rest (dedup, cooldown, plan gate), so this only kicks it off.
+  const lastAutoRef = useRef(0)
+  useEffect(() => {
+    if (autoRunSignal <= 0 || autoRunSignal === lastAutoRef.current) return
+    lastAutoRef.current = autoRunSignal
+    if (loading || inCooldown || jobDescription.trim().length < 20) return
+    void handleTailor()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRunSignal])
 
   // Open the diff modal instead of applying blind — the user asked to see the
   // current summary vs the suggested one before it overwrites their text (a

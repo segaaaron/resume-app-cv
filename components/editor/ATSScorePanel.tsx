@@ -16,6 +16,7 @@ import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./Su
 import type { ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion, type GapLever } from "./hooks/useATSScore"
 import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
+import { replaceWord } from "@/lib/ats/apply-spelling"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
@@ -162,7 +163,6 @@ export default function ATSScorePanel() {
   )
   const {
     input, setInput,
-    mode, setMode,
     loading,
     atsResult, reviewResult,
     offTopic,
@@ -257,17 +257,7 @@ export default function ATSScorePanel() {
   }
 
   const jobInputRef = useRef<HTMLTextAreaElement>(null)
-  // "Paste vacancy" (and any switch INTO jd mode) should land the user on the input,
-  // ready to paste — not leave them wondering where it went. Preserves whatever text
-  // is there (never clears), then focuses + scrolls it into view.
-  const focusJobInput = () => {
-    setMode("jd")
-    setTimeout(() => {
-      jobInputRef.current?.focus()
-      jobInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
-    }, 60)
-  }
-  const roleMode = mode === "role"
+  const roleMode = false // role-title mode removed — job description is the only input
   const inputIsQuestion = !roleMode && isQuestion(input)
 
   // Path-to-target: jump to the card that fixes a lever. title/sections have no
@@ -295,10 +285,68 @@ export default function ATSScorePanel() {
   const skills = (sectionData.skills as unknown[]) ?? []
   const cvReady = summary.trim().length > 0 && workExp.length > 0 && skills.length > 0
 
+  // Fusion: one "Analyze" = one full report. After a manual analysis against a
+  // real job description, signal Tailor to run itself (rewrites appear inline in
+  // ③ without a second click). Not fired for role-only or question inputs, nor on
+  // the live rescore — only on an explicit JD analyze.
+  const [autoTailorSignal, setAutoTailorSignal] = useState(0)
   async function handleSubmit() {
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
     await analyze()
+    if (!inputIsQuestion && input.trim().length >= 20) {
+      setAutoTailorSignal((n) => n + 1)
+    }
+  }
+
+  // Spelling FIX button — not just "you misspelled X", but one click that replaces
+  // the wrong spelling with the right one everywhere in the CV (skills, summary,
+  // work bullets), then re-scores. Deterministic word-boundary replace, case kept
+  // from the correct term. This is a real solution, not a note.
+  const [correctedTypos, setCorrectedTypos] = useState<Set<string>>(new Set())
+  function applyTypoFix(typed: string, correct: string) {
+    if (!typed.trim() || !correct.trim()) return
+    const sub = (s: string) => replaceWord(s, typed, correct)
+    let changed = false
+    const skills = (sectionData.skills ?? []) as SkillItem[]
+    const newSkills = skills.map((s) => { const n = sub(s.name); if (n !== s.name) changed = true; return { ...s, name: n } })
+    const summary = (sectionData.summary as string) ?? ""
+    const newSummary = sub(summary); if (newSummary !== summary) changed = true
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    const newWork = work.map((w) => { const d = sub(w.description ?? ""); if (d !== (w.description ?? "")) changed = true; return { ...w, description: d } })
+    if (!changed) { toast.info(t("typo_not_found")); return }
+    if (newSkills.some((s, i) => s.name !== skills[i]?.name)) updateSectionData("skills", newSkills)
+    if (newSummary !== summary) updateSectionData("summary", newSummary)
+    if (newWork.some((w, i) => w.description !== work[i]?.description)) updateSectionData("workExperience", newWork)
+    setCorrectedTypos((prev) => new Set(prev).add(typed))
+    toast.success(t("typo_fixed", { correct }))
+    void runRescore()
+  }
+
+  // Remove a bullet that doesn't earn its place — a real solution, not a tweak.
+  // Confirmed in a preview modal first (safety); the index is re-verified against
+  // the live text so an edit between analyze and remove never deletes the wrong line.
+  const [pendingRemove, setPendingRemove] = useState<{ targetId: string; index: number; text: string } | null>(null)
+  function confirmRemoveBullet() {
+    if (!pendingRemove) return
+    const { targetId, index, text } = pendingRemove
+    try {
+      const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+      const job = work.find((j) => j.id === targetId)
+      const bullets = parseBullets(job?.description ?? "")
+      if (!job || index < 0 || index >= bullets.length || bullets[index].trim() !== text.trim()) {
+        toast.error(t("toast_change_error")); return
+      }
+      const next = bullets.filter((_, i) => i !== index).map(formatBullet).join("\n")
+      updateSectionData("workExperience", work.map((j) => (j.id === targetId ? { ...j, description: next } : j)))
+      setAppliedItems((prev) => new Set(prev).add(`bullet-${targetId}-${index}`))
+      toast.success(t("bullet_removed"))
+      void runRescore()
+    } catch {
+      toast.error(t("toast_change_error"))
+    } finally {
+      setPendingRemove(null)
+    }
   }
 
   function openDiffModal(item: ReviewItem, itemKey: string) {
@@ -454,41 +502,9 @@ export default function ATSScorePanel() {
           </div>
         )}
 
-        {/* Mode toggle — paste full posting (precise) vs role title only (fast).
-            Premium segmented control: inset track (gradient + ring + inner shadow),
-            active pill fills with the brand cyan gradient + colored glow + lift,
-            matching the Analyze button's language instead of a flat gray pill. */}
-        <div className="grid grid-cols-2 gap-1.5 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-50/80 p-1 ring-1 ring-slate-200/70 shadow-[inset_0_1px_3px_rgba(15,23,42,0.06)]">
-          {([
-            { id: "jd" as const, label: t("mode_jd"), icon: <MessageSquare className="h-3 w-3" /> },
-            { id: "role" as const, label: t("mode_role"), icon: <Tag className="h-3 w-3" /> },
-          ]).map((m) => {
-            const active = mode === m.id
-            return (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMode(m.id)}
-                disabled={!cvReady}
-                aria-pressed={active}
-                className={`relative flex items-center justify-center gap-1.5 rounded-xl px-2.5 py-2 text-[11px] font-bold tracking-wide transition-all duration-200 ease-out disabled:opacity-50 disabled:cursor-not-allowed ${
-                  active
-                    ? "bg-gradient-to-r from-dash-cyan to-[#00A8CC] text-white shadow-md shadow-dash-cyan/30 scale-[1.02]"
-                    : "text-slate-500 hover:text-slate-700 hover:bg-white/60 active:scale-[0.98]"
-                }`}
-              >
-                <span className={active ? "drop-shadow-[0_1px_2px_rgba(0,0,0,0.15)]" : ""}>{m.icon}</span>
-                {m.label}
-              </button>
-            )
-          })}
-        </div>
-        {roleMode && (
-          <p className="text-[10px] text-slate-400 flex items-start gap-1.5 leading-relaxed -mt-1">
-            <AlertCircle className="h-3 w-3 text-amber-400 shrink-0 mt-0.5" />
-            {t("mode_role_hint")}
-          </p>
-        )}
+        {/* Job description is the ONLY input now. The role-title mode was removed:
+            it inferred generic requirements and the real analysis needs the posting
+            anyway, so it added a confusing half-answer. Paste the vacancy, period. */}
 
         {/* Textarea */}
         <div className="relative">
@@ -550,24 +566,6 @@ export default function ATSScorePanel() {
         {/* ATS Results */}
         {atsResult && (
           <div className="space-y-3 pt-1">
-            {/* Honesty banner: a role-title score infers STANDARD requirements —
-                approximate. Paste the real posting for an exact read. */}
-            {atsResult.inferredFromRole && (
-              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-gradient-to-br from-amber-50/80 to-orange-50/50 px-3 py-2.5">
-                <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
-                <div className="flex-1">
-                  <p className="text-[10.5px] font-bold text-amber-800 leading-tight">{t("inferred_role_title")}</p>
-                  <p className="text-[9.5px] text-amber-700/90 leading-snug mt-0.5">{t("inferred_role_desc")}</p>
-                  <button
-                    type="button"
-                    onClick={focusJobInput}
-                    className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full px-2.5 py-0.5 transition-all"
-                  >
-                    <MessageSquare className="h-2.5 w-2.5" /> {t("inferred_role_action")}
-                  </button>
-                </div>
-              </div>
-            )}
             {/* ── ① Verdict + score ────────────────────────────────────────── */}
             <SectionHeader n={1} title={t("section_verdict")} />
 
@@ -594,6 +592,72 @@ export default function ATSScorePanel() {
                   {t("score_target_below")}
                 </span>
               )}
+
+              {/* Verify against your real PDF — the SAME ATS metric, measured on the
+                  actual exported file instead of the structured estimate. Fused into
+                  the score so the user sees ONE metric (estimated → verified), never
+                  two competing numbers. The real parse is the truth of the file, and
+                  nothing is hidden: the engine matrix + extracted text stay expandable. */}
+              <div className="w-full mt-2.5 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/60 to-white p-3">
+                {!verifyResult ? (
+                  <div className="flex items-center gap-2">
+                    <FileSearch className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
+                    <p className="text-[10.5px] text-slate-600 leading-snug flex-1 text-left">{t("verify_hint")}</p>
+                    <button type="button" onClick={verifyReal} disabled={verifyLoading}
+                      className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border border-indigo-200 rounded-full px-2.5 py-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                      {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />}
+                      {verifyLoading ? t("verify_loading") : t("verify_button")}
+                    </button>
+                  </div>
+                ) : (() => {
+                  const delta = atsResult.score - verifyResult.realScore
+                  const faithful = delta < 8
+                  const email = ((sectionData.personalDetails as { email?: string })?.email ?? "").trim().toLowerCase()
+                  const contactLost = !!email && !!verifyResult.extractedText && !verifyResult.extractedText.toLowerCase().includes(email)
+                  return (
+                  <div className="space-y-2">
+                    {/* SAME metric, two ways: estimated (from your data) → verified (real file). */}
+                    <div className="flex items-center justify-center gap-3">
+                      <div className="text-center">
+                        <div className="text-[8.5px] font-bold uppercase tracking-wide text-slate-400">{t("score_estimated")}</div>
+                        <div className="text-[17px] font-black text-slate-400 tabular-nums leading-none mt-0.5">{atsResult.score}</div>
+                      </div>
+                      <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+                      <div className="text-center">
+                        <div className="text-[8.5px] font-bold uppercase tracking-wide text-indigo-500">{t("score_verified")}</div>
+                        <div className={`text-[22px] font-black tabular-nums leading-none mt-0.5 ${faithful ? "text-emerald-600" : "text-amber-600"}`}>{verifyResult.realScore}</div>
+                      </div>
+                    </div>
+                    <div className={`flex items-start gap-2 rounded-xl px-3 py-2 ${faithful ? "bg-emerald-50 ring-1 ring-emerald-200" : "bg-amber-50 ring-1 ring-amber-200"}`}>
+                      {faithful ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" /> : <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />}
+                      <p className={`text-[11px] leading-snug text-left ${faithful ? "text-emerald-800" : "text-amber-800"}`}>{faithful ? t("verify_faithful") : t("verify_loss", { delta })}</p>
+                    </div>
+                    {contactLost && (
+                      <div className="flex items-start gap-2 rounded-xl bg-rose-50 ring-1 ring-rose-200 px-3 py-2">
+                        <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0 mt-0.5" />
+                        <p className="text-[11px] text-rose-800 leading-snug text-left">{t("verify_contact_lost")}</p>
+                      </div>
+                    )}
+                    {/* Nothing hidden: per-engine parse + the exact extracted text, expandable. */}
+                    <details className="group">
+                      <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-800 select-none text-left">{t("verify_detail_label")}</summary>
+                      <div className="mt-2 space-y-2">
+                        {verifyResult.engines && <AtsEngineMatrix simulation={verifyResult.engines} />}
+                        <div>
+                          <p className="text-[9px] font-bold uppercase tracking-wide text-slate-400 mb-1 text-left">{t("verify_extracted_label")}</p>
+                          <pre className="text-[10px] leading-relaxed text-slate-600 bg-white/70 border border-indigo-100 rounded-lg p-2.5 max-h-52 overflow-auto whitespace-pre-wrap break-words text-left">{verifyResult.extractedText}</pre>
+                        </div>
+                        <AtsSafeDownload />
+                      </div>
+                    </details>
+                    <button type="button" onClick={verifyReal} disabled={verifyLoading}
+                      className="w-full inline-flex items-center justify-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-all disabled:opacity-50">
+                      {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />} {t("verify_reverify")}
+                    </button>
+                  </div>
+                  )
+                })()}
+              </div>
             </div>
 
             {/* ① Verdict — the recruiter's honest read: would this pass, and the
@@ -742,13 +806,29 @@ export default function ATSScorePanel() {
                 </div>
                 <p className="text-[11px] text-slate-600 leading-relaxed mb-2.5">{t("typo_subtitle")}</p>
                 <ul className="flex flex-col gap-1.5">
-                  {(atsResult.typoWarnings ?? []).map((w, i) => (
+                  {(atsResult.typoWarnings ?? []).map((w, i) => {
+                    const done = correctedTypos.has(w.typed)
+                    return (
                     <li key={i} className="flex items-center gap-2 rounded-xl border border-rose-100 bg-white/70 px-3 py-2 text-[11.5px]">
-                      <span className="font-semibold text-rose-700 line-through decoration-rose-300">{w.typed}</span>
+                      <span className={`font-semibold ${done ? "text-slate-400" : "text-rose-700 line-through decoration-rose-300"}`}>{w.typed}</span>
                       <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
-                      <span className="font-bold text-emerald-700">{w.keyword}</span>
+                      <span className="font-bold text-emerald-700 flex-1">{w.keyword}</span>
+                      {done ? (
+                        <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
+                          <Check className="h-2.5 w-2.5" /> {t("typo_corrected")}
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => applyTypoFix(w.typed, w.keyword)}
+                          className="shrink-0 inline-flex items-center gap-1 rounded-full border border-rose-300 bg-white/70 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 transition-all hover:bg-rose-100"
+                        >
+                          <Wand2 className="h-2.5 w-2.5" /> {t("typo_fix_button")}
+                        </button>
+                      )}
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
                 <p className="text-[10px] text-slate-400 leading-relaxed mt-2">{t("typo_hint")}</p>
               </div>
@@ -782,65 +862,106 @@ export default function ATSScorePanel() {
               </div>
             )}
 
-            {/* F2 — content quality (reported, not scored): reuses assessDescription.
-                A bullet without a figure is not penalized; the user is shown the
-                signal and given one click to strengthen it via improve-bullet. */}
-            {atsResult.contentQuality && atsResult.contentQuality.totalBullets > 0 && (
+            {/* Bullets to improve — ONE place. Merges the "no metric" signal
+                (contentQuality) with the deterministic cliché check (writingChecks),
+                deduped by bullet, each with a REAL action: Rewrite (improve-bullet)
+                or Remove (a bullet that doesn't earn its place). No longer split
+                across two cards that both talked about bullets. */}
+            {(() => {
+              const metricless = atsResult.contentQuality?.metriclessBullets ?? []
+              const cliche = atsResult.writingChecks?.clicheBullets ?? []
+              const byKey = new Map<string, { targetId: string; jobTitle: string; index: number; text: string; reasons: Set<string> }>()
+              const add = (targetId: string, jobTitle: string, index: number, text: string, reason: string) => {
+                const k = `${targetId}-${index}`
+                const ex = byKey.get(k)
+                if (ex) ex.reasons.add(reason)
+                else byKey.set(k, { targetId, jobTitle, index, text, reasons: new Set([reason]) })
+              }
+              const weakVerb = atsResult.writingChecks?.weakVerbBullets ?? []
+              metricless.forEach((b) => add(b.targetId, b.jobTitle, b.index, b.text, "metric"))
+              cliche.forEach((c) => add(c.targetId, c.jobTitle, c.index, c.text, "cliche"))
+              weakVerb.forEach((w) => add(w.targetId, w.jobTitle, w.index, w.text, "weak_verb"))
+              const bullets = [...byKey.values()].filter((b) => !appliedItems.has(`bullet-${b.targetId}-${b.index}`))
+              const cq = atsResult.contentQuality
+              if (bullets.length === 0 && (!cq || cq.totalBullets === 0)) return null
+              return (
               <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
                 <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
-                  <TrendingUp className="h-3 w-3" /> {t("content_quality_title")}
+                  <TrendingUp className="h-3 w-3" /> {t("bullets_to_improve_title")}
                 </p>
-                <p className="text-[11px] text-slate-700 leading-relaxed">
-                  {t("content_quality_metrics", {
-                    pct: atsResult.contentQuality.quantificationPct,
-                    quantified: atsResult.contentQuality.quantifiedBullets,
-                    total: atsResult.contentQuality.totalBullets,
-                  })}
-                </p>
-                {atsResult.contentQuality.weakOpenerBullets > 0 && (
-                  <p className="text-[11px] text-slate-700 leading-relaxed mt-1">
-                    {t("content_quality_weak", { count: atsResult.contentQuality.weakOpenerBullets })}
+                {cq && cq.totalBullets > 0 && (
+                  <p className="text-[11px] text-slate-700 leading-relaxed">
+                    {t("content_quality_metrics", { pct: cq.quantificationPct, quantified: cq.quantifiedBullets, total: cq.totalBullets })}
                   </p>
                 )}
-                {atsResult.contentQuality.metriclessBullets.length > 0 && (
-                  <div className="mt-2 rounded-lg bg-white/60 border border-violet-100 p-2">
-                    <p className="text-[9.5px] font-bold uppercase tracking-wide text-violet-500 mb-1.5">{t("content_quality_metricless_title")}</p>
-                    <ul className="flex flex-col gap-1.5">
-                      {atsResult.contentQuality.metriclessBullets.map((b) => {
-                        const key = `bullet-${b.targetId}-${b.index}`
-                        const applied = appliedItems.has(key)
-                        const busy = improvingKey === key
-                        return (
-                          <li key={key} className="text-[10.5px] text-slate-600 leading-snug flex items-start gap-1.5">
+                {bullets.length > 0 && (
+                  <ul className="flex flex-col gap-1.5 mt-2">
+                    {bullets.map((b) => {
+                      const key = `bullet-${b.targetId}-${b.index}`
+                      const busy = improvingKey === key
+                      return (
+                        <li key={key} className="rounded-lg bg-white/60 border border-violet-100 p-2">
+                          <div className="flex items-start gap-1.5">
                             <span className="text-violet-400 mt-0.5 shrink-0">•</span>
                             <div className="flex-1 min-w-0">
-                              <span className="line-clamp-2 block">{b.text}</span>
-                              {b.jobTitle && (
-                                <span className="text-[9px] text-violet-400/80">{t("metricless_in_job", { job: b.jobTitle })}</span>
-                              )}
+                              <span className="line-clamp-2 block text-[10.5px] text-slate-600 leading-snug">{b.text}</span>
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {b.jobTitle && <span className="text-[9px] text-violet-400/80">{t("metricless_in_job", { job: b.jobTitle })}</span>}
+                                {b.reasons.has("cliche") && <span className="text-[9px] font-bold rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200 px-1.5">{t("reason_cliche")}</span>}
+                                {b.reasons.has("weak_verb") && <span className="text-[9px] font-bold rounded-full bg-orange-50 text-orange-600 ring-1 ring-orange-200 px-1.5">{t("reason_weak_verb")}</span>}
+                                {b.reasons.has("metric") && <span className="text-[9px] font-bold rounded-full bg-amber-50 text-amber-600 ring-1 ring-amber-200 px-1.5">{t("reason_metric")}</span>}
+                              </div>
                             </div>
-                            {applied ? (
-                              <span className="shrink-0 flex items-center gap-1 text-[9.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full px-2 py-0.5">
-                                <Check className="h-2.5 w-2.5" /> {t("metricless_applied")}
-                              </span>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => improveMetricless(b, key)}
-                                disabled={busy || !!improvingKey}
-                                className="shrink-0 flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-                                {busy ? t("metricless_improving") : t("metricless_improve")}
-                              </button>
-                            )}
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
+                          </div>
+                          <div className="flex items-center justify-end gap-1.5 mt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => improveMetricless({ text: b.text, targetId: b.targetId, jobTitle: b.jobTitle, index: b.index }, key)}
+                              disabled={busy || !!improvingKey}
+                              className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+                              {busy ? t("metricless_improving") : t("bullet_rewrite")}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPendingRemove({ targetId: b.targetId, index: b.index, text: b.text })}
+                              className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-white text-slate-500 border border-slate-200 rounded-full px-2 py-0.5 transition-all hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200"
+                            >
+                              {t("bullet_remove")}
+                            </button>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 )}
                 <p className="text-[10px] text-slate-500 leading-relaxed mt-2">{t("content_quality_hint")}</p>
+              </div>
+              )
+            })()}
+
+            {/* Date consistency + bullet balance — deterministic writing checks. */}
+            {(atsResult.writingChecks?.dateInconsistency || (atsResult.writingChecks?.bulletBalance?.length ?? 0) > 0) && (
+              <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/70 to-white p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-sky-600 flex items-center gap-1.5 mb-2">
+                  <ListChecks className="h-3 w-3" /> {t("structure_checks_title")}
+                </p>
+                <ul className="flex flex-col gap-1.5">
+                  {atsResult.writingChecks?.dateInconsistency && (
+                    <li className="text-[11px] text-slate-700 leading-snug flex items-start gap-1.5">
+                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" /> {t("check_dates")}
+                    </li>
+                  )}
+                  {(atsResult.writingChecks?.bulletBalance ?? []).map((bb, i) => (
+                    <li key={i} className="text-[11px] text-slate-700 leading-snug flex items-start gap-1.5">
+                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
+                      {bb.kind === "too_many"
+                        ? t("check_bullets_many", { job: bb.jobTitle, count: bb.count })
+                        : t("check_bullets_none", { job: bb.jobTitle })}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -953,63 +1074,8 @@ export default function ATSScorePanel() {
                 chained off the same job description. ─────────────────────────── */}
             <SectionHeader n={3} title={t("section_rewrites")} />
             <div id="ats-tailor" className="scroll-mt-4">
-              <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} />
+              <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} autoRunSignal={autoTailorSignal} />
             </div>
-
-            {/* ── ④ Verify against your real PDF ───────────────────────────── */}
-            <SectionHeader n={4} title={t("section_verify")} />
-
-            {/* F4 — verify against the REAL exported PDF. The score above reads the
-                structured data; this renders the file and reads what an ATS extracts. */}
-            <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50/70 to-blue-50/50 p-3.5">
-              <div className="flex items-center justify-between gap-2 mb-1.5">
-                <p className="text-[10px] font-black tracking-widest uppercase text-indigo-600 flex items-center gap-1.5">
-                  <FileSearch className="h-3 w-3" /> {t("verify_title")}
-                </p>
-                <button
-                  type="button"
-                  onClick={verifyReal}
-                  disabled={verifyLoading}
-                  className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border border-indigo-200 rounded-full px-2.5 py-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />}
-                  {verifyLoading ? t("verify_loading") : t("verify_button")}
-                </button>
-              </div>
-              <p className="text-[10.5px] text-slate-600 leading-relaxed">{t("verify_hint")}</p>
-
-              {verifyResult && (
-                <div className="mt-2.5 space-y-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-[11px] text-slate-600">{t("verify_real_score")}</span>
-                    <span className="text-[15px] font-black text-[#1a2e4a]" style={{ fontFamily: "var(--mono,monospace)" }}>{verifyResult.realScore}</span>
-                    {atsResult.score - verifyResult.realScore >= 8 ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-200">
-                        <AlertCircle className="h-2.5 w-2.5" /> {t("verify_delta_warning", { delta: atsResult.score - verifyResult.realScore })}
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700 ring-1 ring-emerald-200">
-                        <CheckCircle2 className="h-2.5 w-2.5" /> {t("verify_delta_ok")}
-                      </span>
-                    )}
-                  </div>
-                  {/* Per-engine verdicts of the SAME extracted text — each real ATS
-                      parses differently, so one score hides the truth. */}
-                  {verifyResult.engines && <AtsEngineMatrix simulation={verifyResult.engines} />}
-                  <details className="group">
-                    <summary className="text-[10px] font-bold text-indigo-600 cursor-pointer hover:text-indigo-800 select-none">
-                      {t("verify_extracted_label")}
-                    </summary>
-                    <pre className="mt-1.5 text-[10px] leading-relaxed text-slate-600 bg-white/70 border border-indigo-100 rounded-lg p-2.5 max-h-52 overflow-auto whitespace-pre-wrap break-words">
-                      {verifyResult.extractedText}
-                    </pre>
-                  </details>
-                </div>
-              )}
-            </div>
-
-            {/* Machine-readable twin — one click, generated from the same resume. */}
-            <AtsSafeDownload />
           </div>
         )}
 
@@ -1111,6 +1177,22 @@ export default function ATSScorePanel() {
             reason: t("content_quality_hint"),
           }}
           currentValue={bulletFix.current}
+        />
+      )}
+
+      {/* Remove-bullet confirm — preview the exact line before it's deleted. */}
+      {pendingRemove && (
+        <SuggestionDiffModal
+          open={true}
+          onClose={() => setPendingRemove(null)}
+          onConfirm={confirmRemoveBullet}
+          suggestion={{
+            field: "workExperience.description",
+            type: "replace",
+            preview: t("bullet_remove_preview"),
+            reason: t("bullet_remove_reason"),
+          }}
+          currentValue={pendingRemove.text}
         />
       )}
     </>

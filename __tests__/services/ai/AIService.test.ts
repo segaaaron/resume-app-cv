@@ -355,14 +355,17 @@ describe("AIService", () => {
       expect(result.analysis?.criticalFixes.map((f) => f.issue)).toContain("Two-column layout")
     })
 
-    it("drops recruiter critical fixes that duplicate a typo or missing-keyword note", async () => {
+    it("drops keyword/typo notes that duplicate the deterministic layer, keeps prose spelling", async () => {
       const analysis = {
         verdict: "Decent, but layout hurts parsing.",
         passRisk: "medium",
         criticalFixes: [
           { issue: "Two-column layout", why: "reordered by ATS", fix: "Use single column", severity: "high" },
+          // Names a missing keyword + add verb → the keyword card already shows it → drop.
           { issue: "Missing keyword: Kubernetes", why: "the job requires it", fix: "Add Kubernetes to your skills", severity: "medium" },
-          { issue: "Typo in a skill", why: "breaks exact match", fix: "Fix the spelling", severity: "medium" },
+          // PROSE spelling — not a job keyword, so the typo detector never sees it → MUST survive.
+          { issue: "Spelling: 'more then'", why: "reads as careless", fix: "change to 'more than'", severity: "medium" },
+          // Generic structural add — no dup keyword → survives.
           { issue: "No summary heading", why: "the ATS can't label the block", fix: "Add a Professional Summary section at the top", severity: "medium" },
         ],
         strengths: [],
@@ -375,8 +378,7 @@ describe("AIService", () => {
       const issues = result.analysis?.criticalFixes.map((f) => f.issue) ?? []
       expect(issues).toContain("Two-column layout")
       expect(issues).not.toContain("Missing keyword: Kubernetes") // handled by the keyword card
-      expect(issues).not.toContain("Typo in a skill") // handled by the typo card
-      // Precision: a generic structural "add a section" fix has no dup keyword → survives.
+      expect(issues).toContain("Spelling: 'more then'") // prose spelling is NOT a keyword typo → kept
       expect(issues).toContain("No summary heading")
     })
 

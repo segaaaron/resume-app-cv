@@ -37,6 +37,7 @@ import { findSemanticMatches } from "../shared/semantic-match"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
 import { findNearMisses } from "@/lib/ats/near-miss"
+import { analyzeWriting } from "@/lib/ats/writing-checks"
 
 /**
  * The user's real question — "I'm at 63, what do I DO to reach 90/100?" — answered
@@ -112,11 +113,23 @@ Return JSON with this exact shape:
   "strengths": ["<a real, specific strength for THIS job>"]
 }
 
-Rules:
-- Ground EVERYTHING in the actual resume text — quote it.
-- Do NOT list spelling typos and do NOT list missing keywords: those are reported separately, and repeating them makes the report noisy. Focus on what a keyword matcher cannot see: layout/format parseability, metrics that are too weak to be credible, language mixed into the resume, structure (missing summary heading, too many pages, missing LinkedIn/GitHub, dates that contradict the stated years), and repeated content across roles.
-- No invented metrics, no fake percentages, no generic advice ("use action verbs").
-- Max 6 critical fixes, most damaging first. If there is genuinely nothing to fix, return an empty array.
+Review the resume against ALL of the following and report every real problem you find (quote the text):
+1. SPELLING & GRAMMAR in the prose — quote the exact error and the correction ("more then" → "more than", "Debeloper" → "Developer"). Never skip this.
+2. QUANTIFICATION — bullets that state a duty with no result; metrics too small to impress ("by 3%", "50 users"); or figures so large they read as invented ("by 50%") the candidate must be ready to defend.
+3. WEAK WRITING — bullets opening with a duty phrase ("Responsible for", "Helped with") or a weak/passive verb instead of a strong action verb.
+4. ATS PARSEABILITY — dates not in a machine-friendly format (prefer MM/YYYY over a bare year); non-standard section headings; a name/contact line a parser could garble; anything a layout hides from the parser.
+5. STRUCTURE — no explicit "Professional Summary" heading; more than 2 pages; missing LinkedIn/GitHub for a senior technical candidate; illogical section order.
+6. CONSISTENCY — a stated number of years that does not match the dates; mixed verb tense; first-person leakage ("I", "my").
+7. LANGUAGE — any phrase left in a different language than the rest of the resume; orphan/stray fragments.
+8. REPETITION — the same bullet or phrase reused across multiple roles.
+9. FIT FOR THIS JOB — whether the experience actually EVIDENCES the job's core requirements (not just lists the skill), and the single most important thing missing for THIS specific role.
+
+Hard rules:
+- Ground EVERYTHING in the real resume text — quote it. Never invent a fact, metric or percentage.
+- Do NOT list which job-description keywords are missing — that is reported separately.
+- No generic filler ("use action verbs" with no example) — always tie the advice to the candidate's actual line.
+- The verdict MUST plainly state whether the resume is strong enough for THIS job and name the single biggest thing holding it back.
+- Return up to 8 critical fixes, most damaging first. Empty array only if the resume is genuinely clean.
 - Respond ONLY with the JSON, no markdown.`
       : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA inventas datos — cada afirmación cita el texto real del candidato.
 
@@ -141,17 +154,29 @@ Devuelve JSON con esta forma exacta:
   "strengths": ["<una fuerza real y específica para ESTE puesto>"]
 }
 
-Reglas:
-- Ancla TODO en el texto real del CV — cítalo.
-- NO listes errores de ortografía y NO listes keywords faltantes: eso se reporta aparte, y repetirlo ensucia el informe. Enfócate en lo que un matcher de keywords NO puede ver: parseabilidad del layout/formato, métricas demasiado débiles para ser creíbles, idioma mezclado en el CV, estructura (sin encabezado de resumen, demasiadas páginas, falta LinkedIn/GitHub, fechas que contradicen los años declarados), y contenido repetido entre puestos.
-- Sin métricas inventadas, sin porcentajes falsos, sin consejos genéricos ("usa verbos de acción").
-- Máximo 6 arreglos críticos, el más dañino primero. Si genuinamente no hay nada que arreglar, devuelve un array vacío.
+Revisa el CV contra TODO lo siguiente y reporta cada problema real que encuentres (cita el texto):
+1. ORTOGRAFÍA Y GRAMÁTICA de la prosa — cita el error exacto y la corrección ("more then" → "more than", "Debeloper" → "Developer"). Nunca lo saltes.
+2. CUANTIFICACIÓN — bullets que expresan una tarea sin resultado; métricas demasiado chicas para impresionar ("by 3%", "50 users"); o cifras tan grandes que parecen inventadas ("by 50%") que el candidato debe poder defender.
+3. ESCRITURA DÉBIL — bullets que abren con una frase de tarea ("Responsible for", "Helped with") o un verbo débil/pasivo en vez de un verbo de acción fuerte.
+4. PARSEABILIDAD ATS — fechas no en formato máquina (prefiere MM/YYYY sobre solo el año); encabezados de sección no estándar; una línea de nombre/contacto que un parser pueda romper; cualquier cosa que el layout esconda del parser.
+5. ESTRUCTURA — sin encabezado explícito de "Resumen Profesional"; más de 2 páginas; falta LinkedIn/GitHub para un candidato técnico senior; orden de secciones ilógico.
+6. CONSISTENCIA — un número de años declarado que no cuadra con las fechas; tiempos verbales mezclados; primera persona ("yo", "mi").
+7. IDIOMA — cualquier frase en un idioma distinto al resto del CV; fragmentos huérfanos/sueltos.
+8. REPETICIÓN — el mismo bullet o frase reusado entre varios puestos.
+9. ENCAJE PARA ESTE PUESTO — si la experiencia realmente EVIDENCIA los requisitos centrales del puesto (no solo lista la skill), y lo único más importante que falta para ESTE rol.
+
+Reglas duras:
+- Ancla TODO en el texto real del CV — cítalo. Nunca inventes un dato, métrica ni porcentaje.
+- NO listes qué keywords de la vacante faltan — eso se reporta aparte.
+- Sin relleno genérico ("usa verbos de acción" sin ejemplo) — siempre atá el consejo a la línea real del candidato.
+- El veredicto DEBE decir claramente si el CV es lo bastante fuerte para ESTE puesto y nombrar lo único más grande que lo frena.
+- Devuelve hasta 8 arreglos críticos, el más dañino primero. Array vacío solo si el CV está genuinamente limpio.
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     try {
       const response = await this.aiClient.chat({
         model: AI_MODEL,
-        max_tokens: 900,
+        max_tokens: 1200,
         temperature: AI_TEMPERATURE_PRECISE,
         response_format: { type: "json_object" },
         messages: [
@@ -170,7 +195,7 @@ Reglas:
       const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(response.choices[0]?.message?.content ?? "{}"))
       if (!parsed.success) return null
       const a = parsed.data
-      a.criticalFixes = a.criticalFixes.filter((f) => f.issue.trim()).slice(0, 6)
+      a.criticalFixes = a.criticalFixes.filter((f) => f.issue.trim()).slice(0, 8)
       // Nothing usable → null, so the UI shows no empty analysis.
       if (!a.verdict.trim() && a.criticalFixes.length === 0 && a.strengths.length === 0) return null
       return a
@@ -435,24 +460,22 @@ Reglas:
 
     // Collect the recruiter analysis started in parallel above (null on failure).
     const analysis = await analysisPromise
-    // ENFORCE (not just prompt) the no-redundancy rule: drop a critical fix ONLY
-    // when it is really a spelling note, OR an "add/missing" note about a SPECIFIC
-    // keyword the deterministic typo/keyword layer already shows. This is precise on
-    // purpose: a generic structural fix ("add a Professional Summary section") has no
-    // such keyword and survives; a layout fix that merely mentions a skill survives
-    // too, because it carries no add/missing verb about it.
+    // ENFORCE (not just prompt) the no-redundancy rule — but ONLY against the
+    // specific keywords/typos the deterministic layer already shows. A fix is dropped
+    // only when it NAMES one of those exact terms AND is an add/missing/spelling note
+    // about it. Everything else survives — critically, a PROSE spelling fix like
+    // "'more then' → 'more than'" (which is not a job keyword, so the typo detector
+    // never sees it) stays, and so does a generic structural fix ("add a summary").
     if (analysis) {
-      const spelling = /\btypos?\b|\bmisspell\w*|\bspelling\b|ortograf/i
-      const addVerb = /\b(add|include|missing|list|falta|falt[ae]n|a[ñn]ad[ae]|incluye|agrega)\b/i
+      const dupContext = /\b(add|include|missing|list|falta|falt[ae]n|a[ñn]ad[ae]|incluye|agrega|typos?|misspell\w*|spelling|ortograf)\b/i
       const dupTerms = [
         ...typoWarnings.flatMap((w) => [w.typed.toLowerCase(), w.keyword.toLowerCase()]),
         ...match.missingKeywords.map((k) => k.toLowerCase()),
       ].filter((t) => t.length > 2)
       analysis.criticalFixes = analysis.criticalFixes.filter((f) => {
         const text = `${f.issue} ${f.fix}`.toLowerCase()
-        if (spelling.test(text)) return false
         const namesDupTerm = dupTerms.some((t) => text.includes(t))
-        return !(namesDupTerm && addVerb.test(text))
+        return !(namesDupTerm && dupContext.test(text))
       })
     }
 
@@ -482,6 +505,7 @@ Reglas:
       gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
       typoWarnings,
       analysis,
+      writingChecks: analyzeWriting(data),
       inferredFromRole: useRole,
     }
   }
@@ -532,6 +556,7 @@ Reglas:
       // Live re-score is deterministic/no-LLM — the critique from the last full
       // analyze still stands; the client preserves it (never overwrites with null).
       analysis: null,
+      writingChecks: analyzeWriting(data),
     }
   }
 

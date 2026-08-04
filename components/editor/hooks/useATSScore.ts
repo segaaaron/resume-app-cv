@@ -75,6 +75,13 @@ export interface ATSResult {
     criticalFixes: { issue: string; why: string; fix: string; severity: "high" | "medium" }[]
     strengths: string[]
   } | null
+  /** Deterministic writing checks: clichés, date inconsistency, bullet balance. */
+  writingChecks?: {
+    clicheBullets: { targetId: string; jobTitle: string; index: number; text: string; cliches: string[] }[]
+    weakVerbBullets: { targetId: string; jobTitle: string; index: number; text: string }[]
+    dateInconsistency: { formats: string[] } | null
+    bulletBalance: { targetId: string; jobTitle: string; count: number; kind: "too_many" | "none" }[]
+  }
 }
 
 export interface VerifyResult {
@@ -316,6 +323,15 @@ export function useATSScore() {
 
   const [verifyResult, setVerifyResult] = useState<VerifyResult | null>(null)
   const [verifyLoading, setVerifyLoading] = useState(false)
+
+  // A prior real-PDF verification is measured on the file AS IT WAS. Any CV edit
+  // makes it stale, so clear it — a stale "real" score shown next to a freshly
+  // rescored estimate would mislead (exactly the "two numbers that disagree" the
+  // fused score set out to kill). The user re-verifies with one click when ready.
+  useEffect(() => {
+    setVerifyResult(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sectionData])
 
   /**
    * The pioneer check: render the REAL exported PDF, read what a strict ATS would

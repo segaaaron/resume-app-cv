@@ -1,6 +1,7 @@
 // lib/services/ai/shared/ai-types.ts
 // Shared result and input types used across AI modules.
 import { z } from "zod"
+import type { WritingChecks } from "@/lib/ats/writing-checks"
 
 // ─── Shared Result Types ───────────────────────────────────────────────────────
 
@@ -151,6 +152,9 @@ export interface ATSScoreResult {
    *  strengths) — the voice of the unified report. null when the call failed or
    *  was skipped (e.g. the deterministic live re-score, which makes no LLM call). */
   analysis: CvAnalysis | null
+  /** Deterministic writing checks (clichés, date-format inconsistency, bullet
+   *  balance) — each maps to an actionable fix. Recomputed on the live re-score. */
+  writingChecks: WritingChecks
   /** True when the requirements were INFERRED from a role title (no real posting)
    *  → the UI must label the score as approximate. Absent/false = scored against a
    *  real job description. */
