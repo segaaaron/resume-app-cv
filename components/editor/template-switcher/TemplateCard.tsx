@@ -17,6 +17,21 @@ interface TemplateCardProps {
   onSelect: (templateId: TemplateId, locked: boolean) => void
 }
 
+// The nearest scrollable ancestor, or null (= viewport) if there is none. The editor
+// renders this grid inside an overflow-y-auto sidebar, so a viewport-rooted observer
+// never fires for cards scrolled inside that panel — they stay blank. Rooting the
+// observer on the real scroll parent makes lazy-mount work in the editor AND the
+// public gallery (where the scroll parent IS the viewport).
+function nearestScrollParent(el: HTMLElement): HTMLElement | null {
+  let node = el.parentElement
+  while (node) {
+    const { overflowY } = getComputedStyle(node)
+    if (overflowY === "auto" || overflowY === "scroll") return node
+    node = node.parentElement
+  }
+  return null
+}
+
 export const TemplateCard = memo(function TemplateCard({
   template,
   locked,
@@ -25,7 +40,15 @@ export const TemplateCard = memo(function TemplateCard({
   onSelect,
 }: TemplateCardProps) {
   const [hover, setHover] = useState(false)
-  const [visible, setVisible] = useState(false)
+  // A template with a pre-generated static WebP renders instantly: <img loading="lazy">
+  // is already native-lazy and cheap, so there is nothing heavy to defer. Only the live
+  // in-process render (MockTemplatePreview, the fallback used when no WebP exists) is
+  // worth lazy-mounting behind the observer. Seeding `visible` from this also fixes the
+  // editor blank-card bug — every card that already has a static thumb paints on mount
+  // instead of waiting for an observer that (rooted on the viewport) never fired inside
+  // the overflow-y-auto sidebar.
+  const hasStatic = hasStaticThumbnail(template.id)
+  const [visible, setVisible] = useState(hasStatic)
   // Thumbnail source ladder, fastest → most resilient:
   //   0 = pre-generated static WebP in /public (CDN, instant, zero runtime cost)
   //   1 = on-demand /api/thumbnails/[id] (only for templates not yet pre-generated)
@@ -36,7 +59,7 @@ export const TemplateCard = memo(function TemplateCard({
   // step 1 on a cold gallery is exactly the screenshot stampede the static files exist
   // to prevent (~27 concurrent shots → 503 → step 2 anyway). So with no manifest entry
   // we go straight to the live render: no network, no errors, always the real template.
-  const [imgStep, setImgStep] = useState<0 | 1 | 2>(hasStaticThumbnail(template.id) ? 0 : 2)
+  const [imgStep, setImgStep] = useState<0 | 1 | 2>(hasStatic ? 0 : 2)
   const cardRef = useRef<HTMLDivElement>(null)
   const active = isSelected && !locked
   const interactive = !locked
@@ -64,7 +87,7 @@ export const TemplateCard = memo(function TemplateCard({
           }
         }
       },
-      { rootMargin: "200px" }
+      { root: nearestScrollParent(node), rootMargin: "200px" }
     )
     observer.observe(node)
     return () => observer.disconnect()
