@@ -111,7 +111,15 @@ Rules:
 - ALWAYS use the exact ids from the section listing above. Never invent an id.
 - Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
 - Do not invent data (dates, companies, metrics) the candidate didn't mention.
-- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven".`
+- Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven".
+
+ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-second read):
+- Every bullet OPENS with a strong action verb (Built, Led, Reduced, Increased, Designed, Launched, Delivered, Automated, Migrated, Improved, Cut, Grew). NEVER open with a duty phrase ("Responsible for", "Helped with", "Worked on", "Involved in") or a pronoun.
+- Bullet shape: action → what you did → result. Include a metric ONLY if the candidate gave one; if they gave none, write a strong action-and-outcome bullet WITHOUT a number — never fabricate a figure.
+- Use the STANDARD, canonical spelling of technologies/tools/skills so an ATS matches them exactly ("React Native", "REST APIs", "PostgreSQL", "CI/CD", "Node.js") — never abbreviate, misspell or paraphrase a known tool's name.
+- Dates in MM/YYYY whenever the candidate provides one (ATS parse employment dates to compute tenure).
+- Plain "• " bullets only — no tables, columns, emojis or special characters.
+- Weave the candidate's real skills/keywords naturally into summary and bullets (not only the skills list), since ATS reward a keyword that appears in context.`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO inventes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
 2. NUNCA uses placeholders como [X%] o [N usuarios] en el output final — si el usuario no proporcionó una métrica, omítela.
@@ -160,7 +168,15 @@ Reglas:
 - Usa SIEMPRE los ids exactos del listado de secciones de arriba. Nunca inventes un id.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
 - No inventes datos (fechas, empresas, métricas) que el candidato no mencionó.
-- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados".`
+- Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados".
+
+ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundos de un reclutador):
+- Cada bullet ABRE con un verbo de acción fuerte (Desarrollé, Lideré, Reduje, Aumenté, Diseñé, Lancé, Entregué, Automaticé, Migré, Mejoré, Recorté). NUNCA abras con una frase de tarea ("Responsable de", "Ayudé con", "Trabajé en", "Encargado de") ni con un pronombre.
+- Forma del bullet: acción → qué hiciste → resultado. Incluye una métrica SOLO si el candidato la dio; si no la dio, escribe un bullet fuerte de acción-y-resultado SIN número — nunca fabriques una cifra.
+- Usa la ortografía ESTÁNDAR y canónica de tecnologías/herramientas/skills para que un ATS las matchee exacto ("React Native", "REST APIs", "PostgreSQL", "CI/CD", "Node.js") — nunca abrevies, escribas mal ni parafrasees el nombre de una herramienta conocida.
+- Fechas en MM/YYYY siempre que el candidato dé una (el ATS calcula la antigüedad desde las fechas).
+- Solo viñetas "• " simples — sin tablas, columnas, emojis ni caracteres especiales.
+- Teje los skills/keywords reales del candidato de forma natural en el resumen y los bullets (no solo en la lista de skills), porque el ATS premia una keyword que aparece en contexto.`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL,
