@@ -381,6 +381,11 @@ export interface TailorCVResultV2 {
   summary: string | null            // null = resumen ya está bien
   experiences: TailorExperienceResult[]
   missingSkills: string[]
+  /** Soft skills the job asks for that the CV doesn't yet evidence, each with a
+   *  grounded, one-line suggestion on HOW/WHERE to show it. Actionable advice the
+   *  user applies by hand — soft skills are proven inside bullets, not listed as
+   *  chips — and never invented. Max ~4. */
+  softSkillSuggestions?: { skill: string; suggestion: string }[]
   // No keywordsToAdd: it duplicated ats-score's missingKeywords, which is
   // computed deterministically and verified against the CV (ats-matcher.ts),
   // where this one was a raw substring match on the JD. With both panels now

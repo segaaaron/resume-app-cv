@@ -1520,6 +1520,8 @@
       "section_summary": "Resumen adaptado",
       "section_bullets": "Mejoras en experiencia",
       "section_skills": "Habilidades faltantes",
+      "section_soft_skills": "Habilidades blandas a demostrar",
+      "soft_skills_hint": "La oferta las pide y tu CV aún no las muestra. No se agregan como etiqueta — se demuestran en un bullet. Aplicá vos el consejo:",
       "apply": "Aplicar",
       "applied": "Aplicado",
       "summary_applied": "Resumen actualizado",

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useRef } from "react"
 import { useTranslations, useLocale } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
@@ -226,6 +226,17 @@ export default function ATSScorePanel() {
     }
   }
 
+  const jobInputRef = useRef<HTMLTextAreaElement>(null)
+  // "Paste vacancy" (and any switch INTO jd mode) should land the user on the input,
+  // ready to paste — not leave them wondering where it went. Preserves whatever text
+  // is there (never clears), then focuses + scrolls it into view.
+  const focusJobInput = () => {
+    setMode("jd")
+    setTimeout(() => {
+      jobInputRef.current?.focus()
+      jobInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+    }, 60)
+  }
   const roleMode = mode === "role"
   const inputIsQuestion = !roleMode && isQuestion(input)
 
@@ -432,6 +443,7 @@ export default function ATSScorePanel() {
         {/* Textarea */}
         <div className="relative">
           <textarea
+            ref={jobInputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={roleMode ? t("placeholder_role") : t("placeholder")}
@@ -498,7 +510,7 @@ export default function ATSScorePanel() {
                   <p className="text-[9.5px] text-amber-700/90 leading-snug mt-0.5">{t("inferred_role_desc")}</p>
                   <button
                     type="button"
-                    onClick={() => setMode("jd")}
+                    onClick={focusJobInput}
                     className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-full px-2.5 py-0.5 transition-all"
                   >
                     <MessageSquare className="h-2.5 w-2.5" /> {t("inferred_role_action")}

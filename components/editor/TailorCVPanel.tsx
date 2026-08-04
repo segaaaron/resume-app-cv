@@ -28,6 +28,7 @@ interface TailorResult {
     changedBullets: Array<{ index: number; text: string }>
   }>
   missingSkills: string[]
+  softSkillSuggestions?: { skill: string; suggestion: string }[]
 }
 
 interface Props {
@@ -295,9 +296,10 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
             const bulletsDone = allChangedBullets.every(({ targetId, index }) => isBulletApplied(targetId, index))
             const summaryDone = !result.summary || appliedSummary
             const skillsDone = visibleMissingSkills.every((s) => addedSkills.has(s))
-            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || visibleMissingSkills.length)
+            const softCount = result.softSkillSuggestions?.length ?? 0
+            const hasActionable = !!(result.summary || allChangedBullets.length > 0 || visibleMissingSkills.length || softCount)
             const allDone = hasActionable && summaryDone && bulletsDone && skillsDone
-            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && visibleMissingSkills.length === 0
+            const nothingToImprove = !result.summary && allChangedBullets.length === 0 && visibleMissingSkills.length === 0 && softCount === 0
             return (
               <>
                 {allDone && !nothingToImprove ? (
@@ -452,6 +454,27 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [] 
                 </div>
                 )
               })()}
+
+              {/* Soft-skill advice — the job asks for soft skills the CV doesn't show yet.
+                  Soft skills are proven inside bullets, not listed as chips, so this is a
+                  comment the user reads and applies by hand — never auto-written. */}
+              {result.softSkillSuggestions && result.softSkillSuggestions.length > 0 && (
+                <div>
+                  <p className="text-[10.5px] font-bold text-[#1a2e4a] uppercase tracking-wider mb-1">{t("section_soft_skills")}</p>
+                  <p className="text-[10px] text-dash-muted leading-snug mb-2">{t("soft_skills_hint")}</p>
+                  <div className="flex flex-col gap-1.5">
+                    {result.softSkillSuggestions.map((s) => (
+                      <div key={s.skill} className="rounded-lg border border-violet-200/70 bg-violet-50/50 px-2.5 py-2">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                          <Sparkles size={10} className="text-violet-500 shrink-0" />
+                          <span className="text-[10.5px] font-bold text-violet-700 capitalize">{s.skill}</span>
+                        </div>
+                        <p className="text-[10px] text-[#475569] leading-relaxed">{s.suggestion}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* No keywords chips here: the ATS score above already renders
                   missingKeywords for this same posting, verified against the CV.

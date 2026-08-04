@@ -117,7 +117,8 @@ Return a JSON object:
       ]
     }
   ],
-  "missingSkills": ["skill1"]
+  "missingSkills": ["skill1"],
+  "softSkillSuggestions": [{ "skill": "teamwork", "suggestion": "Show it in a bullet: name a project where you coordinated with other teams." }]
 }
 
 Rules:
@@ -128,6 +129,7 @@ Rules:
 - Human voice (avoid AI-detection): vary sentence length/structure across bullets, natural not press-release tone. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source
 - NEVER add new bullets that don't exist in the original — only replace existing ones by index
 - missingSkills: skills required by job not present in CV (max 5). Each MUST be a SHORT atomic skill or keyword (1-3 words, e.g. "GCD", "async/await", "App Store", "Kubernetes") — NEVER a full requirement sentence like "Knowledge of GCD, async/await, and concurrency concepts"
+- softSkillSuggestions: SOFT skills the job asks for (communication, teamwork, leadership, adaptability, problem-solving, ownership…) that the CV does NOT yet evidence. Max 4. For each, "skill" is the short soft skill and "suggestion" is ONE actionable line telling the user HOW/WHERE to show it, anchored to their real experience — never invent a fact, and never claim they have it; you are advising them to demonstrate it. If the CV already shows the soft skills the job needs, return an empty array.
 - If all bullets and summary are already well-optimized: return summary null, empty changedBullets for all experiences`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información presente en el CV DEL CANDIDATO. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el CV.
@@ -159,7 +161,8 @@ Devuelve un objeto JSON:
       ]
     }
   ],
-  "missingSkills": ["habilidad1"]
+  "missingSkills": ["habilidad1"],
+  "softSkillSuggestions": [{ "skill": "trabajo en equipo", "suggestion": "Mostralo en un bullet: nombrá un proyecto donde coordinaste con otros equipos." }]
 }
 
 Reglas:
@@ -170,39 +173,75 @@ Reglas:
 - Voz humana (evita detección de IA): varía el largo/estructura de las frases entre bullets, tono natural no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantén cada reescritura anclada a un dato concreto ya presente en el source
 - NUNCA agregar bullets nuevos que no existen en el original — solo reemplazar existentes por índice
 - missingSkills: habilidades requeridas por la oferta no presentes en el CV (máximo 5). Cada una DEBE ser una habilidad o keyword CORTA y atómica (1-3 palabras, ej.: "GCD", "async/await", "App Store", "Kubernetes") — NUNCA una frase de requisito completa como "Conocimiento de GCD, async/await y conceptos de concurrencia"
+- softSkillSuggestions: habilidades BLANDAS que pide la oferta (comunicación, trabajo en equipo, liderazgo, adaptabilidad, resolución de problemas, ownership…) que el CV AÚN no evidencia. Máximo 4. Para cada una, "skill" es la blanda corta y "suggestion" es UNA línea accionable de CÓMO/DÓNDE mostrarla, anclada a su experiencia real — nunca inventes un dato, y nunca afirmes que ya la tiene; le estás aconsejando cómo demostrarla. Si el CV ya muestra las blandas que pide la oferta, devolvé un array vacío.
 - Si todos los bullets y el resumen ya están bien optimizados: devolver summary null, changedBullets vacíos para todas las experiencias`
 
-    const response = await this.aiClient.chat({
+    const systemPrompt = `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summary": null, "experiences": [], "missingSkills": [] }. A bullet is already good if it has: (1) a strong action verb at the start, (2) the metric the source states, IF the source states one — a bullet the CV gives no figure for is still "already good" once it has a strong verb and relevant context, and asking for a number the CV never mentioned would only force you to invent one, (3) relevant context for this specific job. You never invent figures and never write bracket placeholders. Leaving a bullet untouched is a correct, expected outcome — omitting it from changedBullets is how you say so. ${langInstruction}`
+
+    // A rich CV (several jobs × several bullets) plus summary, skills and soft-skill
+    // advice easily exceeds 900 tokens of JSON — at 900 the response was TRUNCATED
+    // mid-object, so parseAIJson threw and the whole tailor 500'd (the "error when
+    // applying tailor" report). 3000 fits the worst realistic case; nano is cheap.
+    const doChat = () => this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 900,
+      max_tokens: 3000,
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
-        {
-          role: "system",
-          content: `You are an elite career coach and ATS optimization specialist. You tailor resumes to specific job postings with surgical precision, identifying keyword gaps, aligning professional summaries, and rewriting experience bullets to maximize recruiter and ATS impact. You only work on real job postings — if the input is off-topic or nonsensical, return { "summary": null, "experiences": [], "missingSkills": [] }. A bullet is already good if it has: (1) a strong action verb at the start, (2) the metric the source states, IF the source states one — a bullet the CV gives no figure for is still "already good" once it has a strong verb and relevant context, and asking for a number the CV never mentioned would only force you to invent one, (3) relevant context for this specific job. You never invent figures and never write bracket placeholders. Leaving a bullet untouched is a correct, expected outcome — omitting it from changedBullets is how you say so. ${langInstruction}`,
-        },
+        { role: "system", content: systemPrompt },
         { role: "user", content: prompt },
       ],
     })
 
-    const content = response.choices[0]?.message?.content ?? "{}"
-    const raw = parseAIJson<TailorCVResultV2>(content)
+    // Parse with ONE retry: even at 3000 a huge CV or a rare malformed emission can
+    // fail to parse. A fresh generation almost always completes cleanly; only a second
+    // failure surfaces as a clean handled error instead of an unguarded crash.
+    let response = await doChat()
+    const parseUsages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
+    let raw: TailorCVResultV2
+    try {
+      raw = parseAIJson<TailorCVResultV2>(response.choices[0]?.message?.content ?? "{}")
+    } catch {
+      this.logger.warn("[AIService.tailorCV] unparseable JSON (likely truncated), retrying once")
+      parseUsages.push(response.usage ?? {})
+      response = await doChat()
+      try {
+        raw = parseAIJson<TailorCVResultV2>(response.choices[0]?.message?.content ?? "{}")
+      } catch {
+        throw new AppError("invalid_response_format", 500)
+      }
+    }
 
-    // off_topic = model returned no experiences at all (system prompt returns [] for nonsense input)
-    // CV already optimized = experiences present but changedBullets empty → valid result, not off_topic
+    // The prompt tells the model to return null when the summary is already strong,
+    // but a JSON model frequently emits the literal STRING "null"/"none"/"" instead of
+    // a JSON null. Left as-is, the panel renders "null" as the adapted summary and — worse
+    // — the truthy string passes the apply guard, writing "null" into the user's résumé.
+    // Normalise here, once, so downstream only ever sees a real rewrite or a true null.
+    raw.summary = ((): string | null => {
+      if (typeof raw.summary !== "string") return null
+      const t = raw.summary.trim()
+      return !t || /^(null|none|n\/?a|undefined)$/i.test(t) ? null : t
+    })()
+
+    // off_topic ONLY when there is genuinely nothing to tailor: the CV itself has no
+    // work experience AND the model surfaced nothing. A real CV the model left untouched
+    // (already optimized) MUST return a valid "nothing to improve" result — never a 422.
+    // That spurious error, thrown whenever the model played it safe, is what made the
+    // first tailor attempt look broken. With real experience present, we never error.
     const hasExperiences = (raw.experiences?.length ?? 0) > 0
-    if (!raw.summary && !hasExperiences && !raw.missingSkills?.length) {
+    if (work.length === 0 && !raw.summary && !hasExperiences && !raw.missingSkills?.length) {
       throw new AppError("off_topic", 422)
     }
 
-    const usage = response.usage
+    // Bill every call, including a parse retry — never let a retry's tokens go unrecorded.
+    const promptTokens = (response.usage?.prompt_tokens ?? 0) + parseUsages.reduce((s, u) => s + (u.prompt_tokens ?? 0), 0)
+    const completionTokens = (response.usage?.completion_tokens ?? 0) + parseUsages.reduce((s, u) => s + (u.completion_tokens ?? 0), 0)
     logAIUsage(userId, "tailor-cv", {
       model: AI_MODEL,
       plan,
-      promptTokens: usage?.prompt_tokens ?? 0,
-      completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      promptTokens,
+      completionTokens,
+      costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
     })
     // Anti-hallucination sanitization: drop bullet rewrites that introduce
     // content not derivable from the resume context. Filter missingSkills so
@@ -310,10 +349,19 @@ Reglas:
       this.logger.warn("[AIService.tailorCV] dropped bullets", { droppedBullets, droppedTrivial })
     }
 
+    // Soft-skill advice: keep only well-formed {skill, suggestion} pairs — a short
+    // skill and a real one-line suggestion — capped at 4. This is guidance the user
+    // applies by hand, so there is nothing to write into the CV and nothing to invent.
+    const softSkillSuggestions = (Array.isArray(raw.softSkillSuggestions) ? raw.softSkillSuggestions : [])
+      .map((x) => ({ skill: typeof x?.skill === "string" ? x.skill.trim() : "", suggestion: typeof x?.suggestion === "string" ? x.suggestion.trim() : "" }))
+      .filter((x) => x.skill.length > 0 && x.skill.length <= 40 && x.suggestion.length >= 8)
+      .slice(0, 4)
+
     return {
       summary: summaryOut,
       experiences: sanitizedExperiences,
       missingSkills: dedupedMissingSkills,
+      softSkillSuggestions,
     } satisfies TailorCVResultV2
   }
 }

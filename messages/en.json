@@ -1520,6 +1520,8 @@
       "section_summary": "Tailored summary",
       "section_bullets": "Experience improvements",
       "section_skills": "Missing skills",
+      "section_soft_skills": "Soft skills to demonstrate",
+      "soft_skills_hint": "The job asks for these and your CV doesn't show them yet. They aren't added as a tag — you prove them in a bullet. Apply the advice yourself:",
       "apply": "Apply",
       "applied": "Applied",
       "summary_applied": "Summary updated",
