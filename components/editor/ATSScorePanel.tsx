@@ -17,6 +17,7 @@ import type { ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resu
 import { useATSScore, isQuestion, type GapLever } from "./hooks/useATSScore"
 import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { replaceWord } from "@/lib/ats/apply-spelling"
+import { findMisspellings } from "@/lib/ats/common-misspellings"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
@@ -384,9 +385,18 @@ export default function ATSScorePanel() {
   const scrollToFirst = (...ids: string[]) => {
     for (const id of ids) {
       const el = document.getElementById(id)
-      if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); return }
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" })
+        // Flash a ring on the card we landed on, so the jump isn't disorienting —
+        // the user sees exactly where the lever took them.
+        setHighlightId(id)
+        window.setTimeout(() => setHighlightId((cur) => (cur === id ? null : cur)), 1800)
+        return
+      }
     }
   }
+  // Class appended to a scroll-target card while it's the freshly-jumped-to one.
+  const hlRing = (id: string) => (highlightId === id ? " ring-2 ring-cyan-400 ring-offset-2 ring-offset-white" : "")
   function leverAction(key: GapLever["key"]): (() => void) | null {
     switch (key) {
       // Missing-keyword card can be deduped away when every missing keyword was a
@@ -427,6 +437,21 @@ export default function ATSScorePanel() {
   // work bullets), then re-scores. Deterministic word-boundary replace, case kept
   // from the correct term. This is a real solution, not a note.
   const [correctedTypos, setCorrectedTypos] = useState<Set<string>>(new Set())
+  // Id of the scroll-target card a gap-plan lever just jumped to (flash highlight).
+  const [highlightId, setHighlightId] = useState<string | null>(null)
+
+  // Common misspellings anywhere in the CV — deterministic, JD-independent, live.
+  // Scans all prose (summary + bullets + job titles + skill names). Fixed via the
+  // same applyTypoFix (whole-word replace across every field) as keyword typos.
+  const misspellings = useMemo(() => {
+    const parts: string[] = [(sectionData.summary as string) ?? ""]
+    for (const w of (sectionData.workExperience ?? []) as WorkExperienceItem[]) {
+      parts.push(w.description ?? "", w.jobTitle ?? "")
+    }
+    for (const s of (sectionData.skills ?? []) as SkillItem[]) parts.push(s.name ?? "")
+    return findMisspellings(parts.join("\n")).filter((m) => !correctedTypos.has(m.typed))
+  }, [sectionData, correctedTypos])
+
   function applyTypoFix(typed: string, correct: string) {
     if (!typed.trim() || !correct.trim()) return
     const sub = (s: string) => replaceWord(s, typed, correct)
@@ -629,6 +654,36 @@ export default function ATSScorePanel() {
             CV has enough content. Answers "is my CV good?" without needing a job
             posting; the ATS match below then answers "good FOR THIS job?". */}
         {cvReady && <CVHealthCard data={cvHealth} />}
+
+        {/* Spelling — misspelled words anywhere in the CV, deterministic and always
+            on (no job posting needed). One-click fix replaces the word across every
+            field. Only flags unambiguous misspellings, so no false positives on
+            names or tech terms. */}
+        {cvReady && misspellings.length > 0 && (
+          <div className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 to-orange-50/50 p-4">
+            <div className="flex items-center gap-1.5 mb-1">
+              <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+              <p className="text-[10px] font-black tracking-widest uppercase text-rose-600">{t("spelling_title")}</p>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed mb-2.5">{t("spelling_subtitle")}</p>
+            <ul className="flex flex-col gap-1.5">
+              {misspellings.map((m) => (
+                <li key={m.typed} className="flex items-center gap-2 rounded-xl border border-rose-100 bg-white/70 px-3 py-2 text-[11.5px]">
+                  <span className="font-semibold text-rose-700 line-through decoration-rose-300">{m.typed}</span>
+                  <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
+                  <span className="font-bold text-emerald-700 flex-1 min-w-0 truncate">{m.correct}</span>
+                  <button
+                    type="button"
+                    onClick={() => applyTypoFix(m.typed, m.correct)}
+                    className="shrink-0 inline-flex items-center gap-1 rounded-full border border-rose-300 bg-white/70 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 transition-all hover:bg-rose-100"
+                  >
+                    <Wand2 className="h-2.5 w-2.5" /> {t("typo_fix_button")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         {/* Job description is the ONLY input now. The role-title mode was removed:
             it inferred generic requirements and the real analysis needs the posting
@@ -927,7 +982,7 @@ export default function ATSScorePanel() {
                 there, one edit away from counting. Generic edit-distance, no word
                 list — works for any typo in any language. */}
             {(atsResult.typoWarnings?.length ?? 0) > 0 && (
-              <div id="ats-typos" className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 to-orange-50/50 p-4 scroll-mt-4">
+              <div id="ats-typos" className={`rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 to-orange-50/50 p-4 scroll-mt-4 transition-all duration-500${hlRing("ats-typos")}`}>
                 <div className="flex items-center gap-1.5 mb-1">
                   <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
                   <p className="text-[10px] font-black tracking-widest uppercase text-rose-600">{t("typo_title")}</p>
@@ -1169,7 +1224,7 @@ export default function ATSScorePanel() {
             )}
 
             {atsResult.gaps?.length > 0 && (
-              <div id="ats-gaps" className="rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5 scroll-mt-4">
+              <div id="ats-gaps" className={`rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-gaps")}`}>
                 <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
                   <AlertCircle className="h-3 w-3" /> {t("gaps")}
                 </p>
@@ -1191,7 +1246,7 @@ export default function ATSScorePanel() {
               const missingKw = (atsResult.missingKeywords ?? []).filter((kw) => !typos.has(kw.toLowerCase()))
               if (missingKw.length === 0) return null
               return (
-              <div id="ats-missing-keywords" className="rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4">
+              <div id="ats-missing-keywords" className={`rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-missing-keywords")}`}>
                 <div className="flex items-center justify-between mb-2.5">
                   <p className="text-[10px] font-black tracking-widest uppercase text-slate-600 flex items-center gap-1.5">
                     <Tag className="h-3 w-3" /> {t("missing_keywords")}
@@ -1237,7 +1292,7 @@ export default function ATSScorePanel() {
             {/* ── ③ Ready-to-apply rewrites (Tailor) — inline in the same report,
                 chained off the same job description. ─────────────────────────── */}
             <SectionHeader n={3} title={t("section_rewrites")} />
-            <div id="ats-tailor" className="scroll-mt-4">
+            <div id="ats-tailor" className={`scroll-mt-4 rounded-2xl transition-all duration-500${hlRing("ats-tailor")}`}>
               <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} autoRunSignal={autoTailorSignal} onSoftSkills={setSoftSkills} />
             </div>
           </div>
