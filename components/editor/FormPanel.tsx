@@ -10,6 +10,7 @@ import ATSScorePanel from "./ATSScorePanel"
 import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
 import CVCompletenessWidget from "./CVCompletenessWidget"
+import CVLanguageNotice from "./CVLanguageNotice"
 import EmploymentGapAdvisory from "./EmploymentGapAdvisory"
 import ProvenSkillsCard from "./ProvenSkillsCard"
 import TemplateSwitcher from "./template-switcher"
@@ -172,6 +173,7 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
           and the gated ones don't mount their children for non-Pro users. */}
       <div style={{ ...scrollAreaStyle, display: activeTab === "planillas" ? "none" : undefined }}>
         <div className="px-5 pt-4 pb-6" style={{ display: activeTab === "content" ? undefined : "none" }}>
+            <CVLanguageNotice />
             <CVCompletenessWidget />
             <EmploymentGapAdvisory />
             <ProvenSkillsCard />
