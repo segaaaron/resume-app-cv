@@ -104,3 +104,56 @@ export function applySuggestion(input: ApplyInput, sectionData: ResumeSections):
 
   return { status: "manual", field }
 }
+
+/**
+ * What the target field will literally read after the suggestion is applied,
+ * computed by RUNNING the write and reading the result back.
+ *
+ * The confirmation modal used to rebuild the "after" text itself. It joined an
+ * appended bullet with a space while applySuggestion joins with a newline, so
+ * the preview shown one click before writing was not the text that got written.
+ * Any second implementation of "what will this look like" drifts from the first
+ * one eventually — so there is no second implementation. If the write changes,
+ * the preview changes with it, for free.
+ *
+ * Returns null when there is nothing to show (nothing to write, or a field the
+ * user has to edit by hand).
+ */
+export function previewSuggestion(
+  input: ApplyInput,
+  sectionData: ResumeSections,
+): { before: string; after: string } | null {
+  const result = applySuggestion(input, sectionData)
+  if (result.status !== "applied") return null
+
+  if (result.section === "summary") {
+    return { before: (sectionData.summary as string) ?? "", after: result.value ?? "" }
+  }
+
+  if (result.section === "personalDetails") {
+    return {
+      before: (sectionData.personalDetails as PersonalDetails | undefined)?.jobTitle ?? "",
+      after: (result.value as PersonalDetails).jobTitle ?? "",
+    }
+  }
+
+  if (result.section === "skills") {
+    const names = (list: SkillItem[] | undefined) => (list ?? []).map((s) => s.name).join(", ")
+    return {
+      before: names(sectionData.skills as SkillItem[] | undefined),
+      after: names(result.value as SkillItem[]),
+    }
+  }
+
+  // workExperience: show only the job that changed, not the whole array.
+  const items = result.value as WorkExperienceItem[]
+  const updated = input.targetId ? items.find((i) => i.id === input.targetId) : undefined
+  const original = input.targetId
+    ? ((sectionData.workExperience ?? []) as WorkExperienceItem[]).find((i) => i.id === input.targetId)
+    : undefined
+  if (!updated) return null
+
+  return input.field === "workExperience.jobTitle"
+    ? { before: original?.jobTitle ?? "", after: updated.jobTitle ?? "" }
+    : { before: original?.description ?? "", after: updated.description ?? "" }
+}

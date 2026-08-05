@@ -5,7 +5,8 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog"
-import { ArrowDown } from "lucide-react"
+import { ArrowDown, Plus, Minus } from "lucide-react"
+import { diffLines } from "@/lib/services/ai/shared/line-diff"
 
 export type SuggestionField =
   | "summary"
@@ -30,6 +31,15 @@ interface SuggestionDiffModalProps {
   onConfirm: () => void
   suggestion: Suggestion | undefined
   currentValue: string
+  /**
+   * The resulting text, computed by the caller with `previewSuggestion` — i.e.
+   * by running the ACTUAL write and reading it back. Whenever the caller applies
+   * through applySuggestion it must pass this, so the preview can never drift
+   * from what gets written. Omitted only where the diff is already a single
+   * line replacing a single line (an inline bullet rewrite), and the local
+   * fallback below is exact by construction.
+   */
+  afterValue?: string
 }
 
 const FIELD_KEYS: Record<SuggestionField, string> = {
@@ -48,6 +58,7 @@ export default function SuggestionDiffModal({
   onConfirm,
   suggestion,
   currentValue,
+  afterValue: afterFromCaller,
 }: SuggestionDiffModalProps) {
   const t = useTranslations("editor.cv_review")
 
@@ -56,9 +67,19 @@ export default function SuggestionDiffModal({
   // but this keeps the component safe if invoked elsewhere.
   if (!suggestion) return null
 
-  const afterValue = suggestion.type === "append"
-    ? [currentValue, suggestion.preview].filter(Boolean).join(" ")
-    : suggestion.preview
+  // Mirrors applySuggestion exactly: a bullet list appends on a NEW LINE
+  // (serializeBullets), every other field appends with a space. A preview that
+  // joins differently from the write is a lie shown right before the user
+  // confirms it.
+  const appendSeparator = suggestion.field === "workExperience.description" ? "\n" : " "
+  const afterValue = afterFromCaller ?? (suggestion.type === "append"
+    ? [currentValue, suggestion.preview].filter(Boolean).join(appendSeparator)
+    : suggestion.preview)
+
+  const diff = diffLines(currentValue, afterValue)
+  // One-liner fields keep the classic before/after; multi-line ones (bullet
+  // lists) get the line diff, which is the only readable form at that size.
+  const isMultiLine = diff.length > 2
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
@@ -86,29 +107,70 @@ export default function SuggestionDiffModal({
           </div>
         </div>
 
-        {/* Diff content — vertical, scrollable */}
-        <div className="px-4 sm:px-7 py-4 sm:py-5 space-y-3 bg-white overflow-y-auto max-h-[55vh] sm:max-h-[60vh]">
-          {/* Before */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
-            <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
-              {currentValue || <span className="italic opacity-60">{t("diff_empty")}</span>}
-            </div>
-          </div>
+        {/* Diff content — only what changes, not the whole field again.
+            A work-experience description is seven bullets long; printing it
+            twice buried the one line that moved below the fold and the user
+            confirmed blind. Untouched lines are dimmed context. */}
+        <div className="px-4 sm:px-7 py-4 sm:py-5 bg-white overflow-y-auto max-h-[55vh] sm:max-h-[60vh]">
+          {isMultiLine ? (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-2">
+                {t("diff_changes")}
+              </p>
+              <ul className="flex flex-col gap-1.5">
+                {diff.map((line, i) => {
+                  if (line.op === "same") {
+                    return (
+                      <li key={`s-${i}`} className="flex items-start gap-2 rounded-lg px-2.5 py-1.5 text-[11.5px] leading-relaxed text-[#94A3B8]">
+                        <span className="w-3 shrink-0 text-center">·</span>
+                        <span className="flex-1 min-w-0 line-clamp-1">{line.text}</span>
+                      </li>
+                    )
+                  }
+                  const added = line.op === "added"
+                  return (
+                    <li
+                      key={`${line.op}-${i}`}
+                      className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[12px] leading-relaxed ${
+                        added
+                          ? "border-emerald-200 bg-emerald-50/70 text-[#1a2e4a]"
+                          : "border-rose-200 bg-rose-50/60 text-[#7f1d1d] line-through decoration-rose-300"
+                      }`}
+                    >
+                      <span className={`shrink-0 mt-0.5 ${added ? "text-emerald-600" : "text-rose-500"}`}>
+                        {added ? <Plus className="h-3 w-3" /> : <Minus className="h-3 w-3" />}
+                      </span>
+                      <span className="flex-1 min-w-0 whitespace-pre-wrap break-words font-medium">{line.text}</span>
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          ) : (
+            <div className="space-y-3">
+              {/* Single-line fields (a job title, a summary) read better as
+                  before → after than as a line diff. */}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#94A3B8] mb-1.5">{t("diff_before")}</p>
+                <div className="rounded-xl border border-[#E2E8F0] bg-[#F8FAFC] px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#6B7A8C] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
+                  {currentValue || <span className="italic opacity-60">{t("diff_empty")}</span>}
+                </div>
+              </div>
 
-          <div className="flex justify-center">
-            <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
-              <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
-            </div>
-          </div>
+              <div className="flex justify-center">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 border border-emerald-200">
+                  <ArrowDown className="h-3.5 w-3.5 text-emerald-600" />
+                </div>
+              </div>
 
-          {/* After */}
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{t("diff_after")}</p>
-            <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
-              {afterValue}
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-1.5">{t("diff_after")}</p>
+                <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/80 to-teal-50/40 px-3 sm:px-3.5 py-3 text-[12px] sm:text-[12.5px] text-[#1a2e4a] leading-relaxed min-h-[48px] whitespace-pre-wrap break-words">
+                  {afterValue}
+                </div>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Actions */}

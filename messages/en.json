@@ -1259,7 +1259,7 @@
     "lang_english": "English",
     "lang_spanish": "Spanish",
     "cv_language_title": "Your CV is in {cvLang}",
-    "cv_language_desc": "AI suggestions and rewrites will come out in {uiLang} (the app language). If you'd rather they match, switch the app language.",
+    "cv_language_desc": "AI rewrites and suggestions come out in {cvLang} to match your CV, even though the app is in {uiLang}.",
     "cv_language_dismiss": "Dismiss notice",
     "new_welcome": {
       "title": "Let's build your CV",
@@ -1559,7 +1559,8 @@
       "cooldown_btn": "Wait {seconds}",
       "all_applied_title": "Adaptations applied successfully!",
       "all_applied_desc": "Summary, experience and skills updated for this job posting.",
-      "no_improvements": "Your Resume bullets are already optimized for this job"
+      "no_improvements": "Your Resume bullets are already optimized for this job",
+      "bullet_moved": "That bullet changed since the analysis. Re-run it to get an updated suggestion."
     },
     "download_generating_pdf": "Generating PDF...",
     "download_preparing": "Preparing document...",
@@ -1661,10 +1662,6 @@
       "health_dim_brevity": "Brevity",
       "health_dim_recruiter_scan": "Recruiter scan",
       "health_na": "N/A",
-      "spelling_title": "Spelling",
-      "spelling_subtitle": "Misspelled words in your CV. Both an ATS and a recruiter count them against you — fix each with one click.",
-      "soft_skills_title": "Show these soft skills",
-      "soft_skills_hint": "The job asks for these and your CV doesn't show them yet. They're proven inside an achievement, not listed as a tag — let AI write the bullet.",
       "soft_skill_demonstrate": "Show in a bullet",
       "soft_skill_weaving": "Writing…",
       "soft_skill_error": "Couldn't write the bullet. Try again.",
@@ -1739,7 +1736,10 @@
       "metricless_applied": "Improved",
       "metricless_already_good": "This achievement is already well written.",
       "metricless_improve_error": "Could not improve the achievement. Try again.",
-      "metricless_in_job": "in {job}"
+      "metricless_in_job": "in {job}",
+      "reason_new_bullet": "new bullet",
+      "analysis_unavailable_title": "The recruiter analysis is missing",
+      "analysis_unavailable_desc": "The rest of the report is valid — the score, keywords and fixes are deterministic. Only this section failed to generate; re-analyze to try again."
     },
     "cv_review": {
       "title": "AI Resume Review",
@@ -1788,7 +1788,8 @@
       "advice_only_description": "Manual tip: review it and apply it yourself from the corresponding section.",
       "legend_strength": "Strength",
       "legend_action": "One-click fix",
-      "legend_tip": "Manual tip"
+      "legend_tip": "Manual tip",
+      "diff_changes": "Changes"
     },
     "ai_profile_fill": {
       "title": "AI Assistant",
@@ -1977,7 +1978,28 @@
       "start_now": "Start now",
       "best_price": "Best price",
       "footer_note": "Cancel anytime · Secure payment with Stripe"
-    }
+    },
+    "spellcheck": {
+      "title": "Spelling",
+      "subtitle": "Check your whole CV against a real Spanish and English dictionary.",
+      "run": "Check",
+      "rerun": "Check again",
+      "checking": "Checking",
+      "clean": "No spelling mistakes",
+      "empty": "Write some content before running the spell check.",
+      "error": "Could not run the spell check. Please try again.",
+      "not_found": "That word is no longer in your CV.",
+      "fixed": "Corrected to \\u201c{correct}\\u201d",
+      "fix": "Fix",
+      "rate_limited": "You have run the spell check many times in a row. Wait a moment and try again.",
+      "found": "{count, plural, one {# misspelled word} other {# misspelled words}} in your CV."
+    },
+    "save_failed_retry": "Not saved — retry",
+    "save_failed_fatal": "Can't save",
+    "save_error_network": "Lost connection to the server. Your changes are still here — click to retry.",
+    "save_error_server": "The server rejected the save. Your changes are still here — click to retry.",
+    "save_error_gone": "This CV no longer exists (deleted in another tab or device). Copy your changes before closing.",
+    "save_error_forbidden": "Your session can no longer edit this CV. Sign in again in another tab and copy your changes before closing."
   },
   "kanban": {
     "page_title": "My Applications",
@@ -2069,10 +2091,15 @@
     "ai_tone_formal": "Formal",
     "ai_tone_balanced": "Balanced",
     "ai_tone_creative": "Creative",
-    "ai_prompt_label": "Tell the AI about yourself and the position",
-    "ai_prompt_placeholder": "E.g.: I'm an iOS developer with 7 years of experience, specialized in SwiftUI. I'm applying for a senior position at a fintech startup looking to modernize their mobile app.",
-    "ai_prompt_hint": "Required — describe your role, years of experience and the position you're applying for, so the AI has enough to write a strong letter.",
-    "ai_prompt_required_alert": "Fill in the required field “Tell the AI about yourself and the position” — the text box just above the Generate button — with at least one sentence (your role, years of experience and the target position) before generating the letter.",
+    "ai_highlights_label": "Tell the AI the essentials",
+    "ai_hl_motivation_label": "Why this company or this role?",
+    "ai_hl_motivation_placeholder": "e.g. I've used your app for two years and want to work on the team building it; your approach to LATAM payments is what pulls me in.",
+    "ai_hl_achievement_label": "Your most relevant achievement for this role",
+    "ai_hl_achievement_placeholder": "e.g. Migrated the iOS app to SwiftUI in 4 months and cut crashes from 3% to 0.4%.",
+    "ai_hl_fit_label": "What do you bring to the role?",
+    "ai_hl_fit_placeholder": "e.g. 7 years on iOS, led a team of 3 developers, built the CI/CD pipeline from scratch.",
+    "ai_highlights_hint": "The first two are required — your motivation plus one real achievement is what turns a generic template into a specific letter.",
+    "ai_highlights_required_alert": "Fill in the generator's required questions — “Why this company or this role?” and “Your most relevant achievement for this role” — with at least one sentence each before generating the letter.",
     "ai_jd_label": "Job description",
     "ai_jd_optional": "(optional, improves tailoring)",
     "ai_jd_placeholder": "Paste the job posting here. The AI matches your real experience to what the role asks for — and never claims a skill you don't have.",

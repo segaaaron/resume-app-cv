@@ -8,6 +8,7 @@ import { useShallow } from "zustand/react/shallow"
 import { useTranslations, useLocale } from "next-intl"
 import { useAICooldown } from "./useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
+import { useCvLanguage } from "./useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
@@ -48,6 +49,7 @@ export function useAIProfileFill() {
   const { sectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData }))
   )
+  const cvLanguage = useCvLanguage()
 
   const [prompt, setPrompt] = useState("")
   const [loading, setLoading] = useState(false)
@@ -76,7 +78,9 @@ export function useAIProfileFill() {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: locale }),
+        // Everything this returns is written into the CV → CV's own language, not
+        // the app's (an English CV edited in the Spanish UI stays English).
+        body: JSON.stringify({ prompt: prompt.trim(), sectionData, language: cvLanguage }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
@@ -104,7 +108,7 @@ export function useAIProfileFill() {
     } finally {
       setLoading(false)
     }
-  }, [prompt, sectionData, locale, t, aiT, loading, cooldownUntil])
+  }, [prompt, sectionData, locale, cvLanguage, t, aiT, loading, cooldownUntil])
 
   const reset = useCallback(() => {
     setResult(null)

@@ -16,6 +16,8 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessCoverLetter } from "../shared/cover-letter-quality"
 import { buildCoverLetterBrief, type CoverLetterBrief } from "@/lib/ats/cover-letter-brief"
+import { detectCvLanguageOrNull } from "@/lib/resume/cv-language"
+import { detectLanguage } from "../shared/translate-fields"
 import { analyzeCoverLetterAts } from "@/lib/ats/cover-letter-ats"
 import { hasCliche, findCliches, clicheBanList, substituteCliches } from "../shared/cliches"
 import {
@@ -57,6 +59,13 @@ function plainToHtml(text: string): string {
     .join("")
 }
 
+/**
+ * Prose needed before the letter's own text is trusted to name its language.
+ * Under it (a two-line draft) the detector would be guessing, and it resolves
+ * ties to Spanish — so the caller's locale is the better answer.
+ */
+const COVER_LETTER_LANG_MIN_CHARS = 120
+
 /** HTML back to the plain text the model reads and the echo filter compares. */
 function htmlToPlain(html: string): string {
   return html
@@ -82,10 +91,12 @@ export class AICoverLetterModule {
   async generateCoverLetter(userId: string, input: GenerateCoverLetterInput, plan: string): Promise<CoverLetterResult> {
     await enforceAIQuota(userId, "generate-cover-letter", plan)
 
-    const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt, jobDescription } = input
-    const { language, langInstruction } = resolveLanguage(rawLanguage)
+    const { resumeId, recipientName, recipientTitle, company, jobTitle, tone, language: rawLanguage, userPrompt, jobDescription, highlights } = input
+    let { language, langInstruction } = resolveLanguage(rawLanguage)
 
-    const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt].filter(Boolean).join(" ")
+    const highlightValues = [highlights?.motivation, highlights?.achievement, highlights?.fit]
+      .map((v) => v?.trim() ?? "")
+    const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt, ...highlightValues].filter(Boolean).join(" ")
     const validation = validateAIInput(userText, AI_INPUT_LIMITS.userText)
     if (!validation.valid) throw new AppError("invalid_input", 400)
 
@@ -93,6 +104,11 @@ export class AICoverLetterModule {
     if (recipientName) { const v = validateAIInput(recipientName, AI_INPUT_LIMITS.recipientName); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (jobTitle) { const v = validateAIInput(jobTitle, AI_INPUT_LIMITS.jobTitle); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (userPrompt) { const v = validateAIInput(userPrompt, AI_INPUT_LIMITS.userPrompt); if (!v.valid) throw new AppError("invalid_input", 400) }
+    for (const h of highlightValues) {
+      if (!h) continue
+      const v = validateAIInput(h, AI_INPUT_LIMITS.coverLetterHighlight)
+      if (!v.valid) throw new AppError("invalid_input", 400)
+    }
     if (jobDescription) { const v = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription); if (!v.valid) throw new AppError("invalid_input", 400) }
 
     let resumeContext = ""
@@ -108,6 +124,16 @@ export class AICoverLetterModule {
       }
     }
 
+    // A letter goes out with the CV it was built from, so it follows the CV's
+    // language, not the app's — a Spanish UI generating from an English résumé
+    // used to produce a Spanish letter attached to an English CV. Only overrides
+    // when the résumé has enough prose to judge; otherwise the caller's locale
+    // stands.
+    const resumeLanguage = detectCvLanguageOrNull(sectionData)
+    if (resumeLanguage && resumeLanguage !== language) {
+      ({ language, langInstruction } = resolveLanguage(resumeLanguage))
+    }
+
     // Deterministic planning layer — "the algorithm detects, the AI writes". Given
     // the vacancy + the real résumé, it computes which of the JD's keywords the
     // résumé genuinely supports (feature these), which it lacks (never claim), and
@@ -115,6 +141,18 @@ export class AICoverLetterModule {
     // so the letter is tailored AND grounded by construction, not by hope.
     const brief = buildCoverLetterBrief({ jobDescription, sectionData, company, jobTitle })
     const briefBlock = this.renderBriefBlock(brief, language)
+
+    // The candidate's own input. The structured form wins when present: three
+    // labelled answers tell the model WHICH paragraph each fact belongs to,
+    // where a single free-text blob leaves it guessing. `userPrompt` stays as
+    // the fallback so older callers keep working unchanged.
+    const candidateBlock =
+      this.renderHighlightsBlock(highlights, language) ||
+      (userPrompt
+        ? language === "en"
+          ? `=== CANDIDATE DESCRIPTION (use this as primary context) ===\n${userPrompt}\n`
+          : `=== DESCRIPCIÓN DEL CANDIDATO (usa esto como contexto principal) ===\n${userPrompt}\n`
+        : "")
 
     const toneMap = {
       formal: language === "en" ? "formal and professional" : "formal y profesional",
@@ -128,7 +166,7 @@ export class AICoverLetterModule {
 
 Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
 
-${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${userPrompt ? `=== CANDIDATE DESCRIPTION (use this as primary context) ===\n${userPrompt}\n` : ""}${briefBlock}
+${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
 === TARGET POSITION ===
 ${company ? `Company: ${company}` : ""}
 ${jobTitle ? `Role: ${jobTitle}` : ""}
@@ -159,7 +197,7 @@ Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using 
 
 Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
 
-${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${userPrompt ? `=== DESCRIPCIÓN DEL CANDIDATO (usa esto como contexto principal) ===\n${userPrompt}\n` : ""}${briefBlock}
+${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
 === PUESTO OBJETIVO ===
 ${company ? `Empresa: ${company}` : ""}
 ${jobTitle ? `Puesto: ${jobTitle}` : ""}
@@ -240,7 +278,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // profile is exactly what got a user a letter about "XYZ Corp" and "+40%". The JD
     // counts as a grounding source too, so featuring a real vacancy term the brief
     // asked for is never flagged. On a trip, retry ONCE grounded harder.
-    const grounding = [resumeContext, userPrompt ?? "", jobDescription ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
+    const grounding = [resumeContext, userPrompt ?? "", ...highlightValues, jobDescription ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
     if (this.letterInventsContent(body, grounding)) {
       this.logger.warn("[AIService.generateCoverLetter] draft invented content, retrying grounded")
       const retry = await this.retryGroundedGeneration(prompt, langInstruction, language)
@@ -303,6 +341,42 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
   /** Render the deterministic brief into the prompt. Empty string when there is
    *  no JD or nothing the résumé supports — the letter then generates from the
    *  résumé context alone, exactly as before, so this is purely additive. */
+  /**
+   * The candidate's three answers, labelled and routed to the paragraph each one
+   * belongs in. A single free-text box produced letters that opened on a
+   * paraphrase of the job ad, because that is what people type into a blank box;
+   * asking "why this company", "which achievement", "what you bring" gets the
+   * two facts a letter is actually made of, and telling the model where each one
+   * goes stops it from dumping all three into the same paragraph.
+   *
+   * Returns "" when nothing was answered, so the caller falls back cleanly.
+   */
+  private renderHighlightsBlock(
+    highlights: GenerateCoverLetterInput["highlights"],
+    language: "es" | "en",
+  ): string {
+    const motivation = highlights?.motivation?.trim() ?? ""
+    const achievement = highlights?.achievement?.trim() ?? ""
+    const fit = highlights?.fit?.trim() ?? ""
+    if (!motivation && !achievement && !fit) return ""
+
+    const en = language === "en"
+    const lines: string[] = []
+    if (motivation) lines.push(en ? `Why this company/role: ${motivation}` : `Por qué esta empresa/puesto: ${motivation}`)
+    if (achievement) lines.push(en ? `Most relevant achievement: ${achievement}` : `Logro más relevante: ${achievement}`)
+    if (fit) lines.push(en ? `What they bring to the role: ${fit}` : `Qué aporta al puesto: ${fit}`)
+
+    return en
+      ? `=== CANDIDATE'S OWN WORDS (primary context — facts the candidate states about themselves) ===
+${lines.join("\n")}
+Use the motivation for paragraph 1 and the achievement + fit for paragraph 2. Rewrite them as prose in the candidate's voice — never copy these lines verbatim, and never add a figure they did not give.
+`
+      : `=== PALABRAS DEL PROPIO CANDIDATO (contexto principal — hechos que el candidato declara sobre sí mismo) ===
+${lines.join("\n")}
+Usa la motivación para el párrafo 1 y el logro + el encaje para el párrafo 2. Reescríbelos como prosa con la voz del candidato — nunca copies estas líneas textualmente, ni agregues una cifra que no haya dado.
+`
+  }
+
   private renderBriefBlock(brief: CoverLetterBrief, language: "es" | "en"): string {
     if (!brief.hasJd || brief.featureKeywords.length === 0) return ""
     const evidence = brief.supportingEvidence.map((e) => `- ${e.text}`).join("\n")
@@ -390,7 +464,7 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
 
   async improveCoverLetter(userId: string, input: ImproveCoverLetterInput, plan: string): Promise<VersionsResult> {
     const { body, company, jobTitle, recipientTitle, language: rawLanguage } = input
-    const { language, langInstruction } = resolveLanguage(rawLanguage)
+    let { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const validation = validateAIInput(body, AI_INPUT_LIMITS.body)
     if (!validation.valid) throw new AppError("invalid_input", 400)
@@ -408,6 +482,14 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     // rewordings sold as improvements.
     const plainBody = htmlToPlain(body)
     if (!plainBody) throw new AppError("missing_content", 400)
+
+    // The rewrite REPLACES this letter, so it must come back in the letter's own
+    // language. The body is the only evidence available here, and it is a strong
+    // one (300 words of prose); short drafts fall back to the caller's locale.
+    if (plainBody.length >= COVER_LETTER_LANG_MIN_CHARS) {
+      const bodyLanguage = detectLanguage([plainBody])
+      if (bodyLanguage !== language) ({ language, langInstruction } = resolveLanguage(bodyLanguage))
+    }
 
     // Decide in code whether there is anything to improve, before spending a
     // call. Rule 7 of the prompt below asks the model the same question and it

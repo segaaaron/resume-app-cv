@@ -39,9 +39,19 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  serverExternalPackages: ["pdf-parse", "mammoth", "geoip-lite"],
+  // nspell + the Hunspell dictionaries stay OUT of the server bundle: the
+  // dictionary packages read their .aff/.dic with `fs.readFile(new URL(...,
+  // import.meta.url))`, which resolves to the bundle path once webpack inlines
+  // them — the files are then not there and the spell check throws at runtime.
+  serverExternalPackages: ["pdf-parse", "mammoth", "geoip-lite", "nspell", "dictionary-en", "dictionary-es"],
   outputFileTracingIncludes: {
-    "/**/*": ["./node_modules/geoip-lite/data/**/*.dat"],
+    // Data files read at runtime, not imported — the tracer cannot see them, so
+    // a standalone build would ship without them.
+    "/**/*": [
+      "./node_modules/geoip-lite/data/**/*.dat",
+      "./node_modules/dictionary-en/index.{aff,dic}",
+      "./node_modules/dictionary-es/index.{aff,dic}",
+    ],
   },
   async redirects() {
     // "PRO diseños" merged into the unified /templates page (PRO group).

@@ -176,7 +176,13 @@ Reglas duras:
     try {
       const response = await this.aiClient.chat({
         model: AI_MODEL,
-        max_tokens: 1200,
+        // 1200 truncated the JSON mid-object on a rich CV — the prompt asks for
+        // up to 8 fixes, each with issue + why + fix, plus a verdict and
+        // strengths, and in Spanish that overruns easily. The parse then threw
+        // and the whole recruiter analysis vanished from the panel with only a
+        // warn line in the logs (observed in production, 2026-08-05). Same
+        // failure and same fix as tailor-cv in 4e0bed5.
+        max_tokens: 3000,
         temperature: AI_TEMPERATURE_PRECISE,
         response_format: { type: "json_object" },
         messages: [
@@ -192,8 +198,20 @@ Reglas duras:
         completionTokens: usage?.completion_tokens ?? 0,
         costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
       })
-      const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(response.choices[0]?.message?.content ?? "{}"))
-      if (!parsed.success) return null
+      const raw = response.choices[0]?.message?.content ?? "{}"
+      const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(raw))
+      if (!parsed.success) {
+        // Was a bare `return null`: the analysis disappeared from the panel with
+        // no log line anywhere, so the failure was invisible in production AND
+        // undiagnosable after the fact. Length is logged because truncation is
+        // the failure this call actually has.
+        this.logger.warn("[AIService.atsScore] recruiter analysis rejected by schema", {
+          issues: parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`),
+          rawLength: raw.length,
+          finishReason: response.choices[0]?.finish_reason ?? "unknown",
+        })
+        return null
+      }
       const a = parsed.data
       a.criticalFixes = a.criticalFixes.filter((f) => f.issue.trim()).slice(0, 8)
       // Nothing usable → null, so the UI shows no empty analysis.
@@ -505,6 +523,12 @@ Reglas:
       gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
       typoWarnings,
       analysis,
+      // Says out loud that a part of the report is missing. Before, a failed
+      // recruiter pass just left the section absent and the user read a shorter
+      // report as if it were the whole one — a silent downgrade of the product
+      // they paid for. Everything else in the response is deterministic, so the
+      // rest of the report is still valid; only this piece is gone.
+      analysisUnavailable: !analysis,
       writingChecks: analyzeWriting(data),
       inferredFromRole: useRole,
     }

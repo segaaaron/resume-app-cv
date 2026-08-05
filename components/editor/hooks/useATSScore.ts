@@ -9,6 +9,7 @@ import { useTranslations, useLocale } from "next-intl"
 import type { Suggestion } from "../SuggestionDiffModal"
 import { useAICooldown } from "./useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
+import { useCvLanguage } from "./useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
@@ -75,6 +76,8 @@ export interface ATSResult {
     criticalFixes: { issue: string; why: string; fix: string; severity: "high" | "medium" }[]
     strengths: string[]
   } | null
+  /** True when the recruiter pass failed — the report is missing that section. */
+  analysisUnavailable?: boolean
   /** Deterministic writing checks: clichés, date inconsistency, bullet balance. */
   writingChecks?: {
     clicheBullets: { targetId: string; jobTitle: string; index: number; text: string; cliches: string[] }[]
@@ -143,6 +146,9 @@ export function useATSScore() {
   const { sectionData, templateId } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, templateId: s.config?.templateId }))
   )
+  // The AI writes in the CV's language, not the app's. `locale` stays in use for
+  // UI-side concerns (upgrade-modal redirects, toasts).
+  const cvLanguage = useCvLanguage()
 
   const [input, setInput] = useState("")
   // "jd" = paste full posting (precise). "role" = just a job title → the engine
@@ -195,7 +201,9 @@ export function useATSScore() {
         const res = await apiFetch("/api/ai/review-cv", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ sectionData, question: text, language: locale }),
+          // review-cv returns suggestions that get APPLIED to CV fields, so its
+          // language is the CV's, not the app's.
+          body: JSON.stringify({ sectionData, question: text, language: cvLanguage }),
         })
         if (res.status === 429 || res.status === 403) {
           const handled = await handleApiError(res, {
@@ -220,8 +228,8 @@ export function useATSScore() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
             roleMode
-              ? { roleTitle: text, sectionData, language: locale, templateId }
-              : { jobDescription: text, sectionData, language: locale, templateId }
+              ? { roleTitle: text, sectionData, language: cvLanguage, templateId }
+              : { jobDescription: text, sectionData, language: cvLanguage, templateId }
           ),
         })
         if (res.status === 429 || res.status === 403) {
@@ -250,7 +258,7 @@ export function useATSScore() {
     } finally {
       setLoading(false)
     }
-  }, [input, mode, sectionData, locale, t, aiT, loading, cooldownUntil])
+  }, [input, mode, sectionData, locale, cvLanguage, t, aiT, loading, cooldownUntil])
 
   // Keep the latest result reachable from rescore() without stale-closure risk.
   const atsResultRef = useRef<ATSResult | null>(null)
@@ -280,7 +288,7 @@ export function useATSScore() {
         body: JSON.stringify({
           keywords,
           sectionData: state.sectionData,
-          language: locale,
+          language: cvLanguage,
           templateId: state.config?.templateId,
         }),
       })
@@ -289,7 +297,13 @@ export function useATSScore() {
       // Preserve the LLM-only fields the deterministic rescore doesn't produce:
       // summary/suggestions (from the analyze) and analysis (the recruiter pass).
       // gapPlan and typoWarnings ARE recomputed here, so they update live.
-      setAtsResult((cur) => (cur ? { ...data, summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis } : data))
+      // analysisUnavailable travels with `analysis`: the deterministic rescore
+      // does not produce either, so carrying one without the other would make the
+      // "analysis is missing" notice vanish on the next keystroke while it is
+      // still missing.
+      setAtsResult((cur) => (cur
+        ? { ...data, summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis, analysisUnavailable: cur.analysisUnavailable }
+        : data))
       const d = data.score - (prev?.score ?? data.score)
       // Single owner of the delta badge: EVERY score movement updates it, whether
       // it came from applying a fix or from a plain edit picked up by the debounce.
@@ -301,7 +315,7 @@ export function useATSScore() {
       // Silent — keep the prior score rather than surfacing a re-score failure.
       return null
     }
-  }, [locale])
+  }, [cvLanguage])
 
   // Real-time score: once an initial analyze() has landed a result, debounce
   // further CV edits into an automatic rescore(). rescore() is deterministic/

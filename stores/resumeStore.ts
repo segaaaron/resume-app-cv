@@ -73,6 +73,13 @@ interface ResumeState {
   isSaving: boolean
   lastSaved: Date | null
   isDirty: boolean
+  /**
+   * Why the last save failed, or null when the last attempt succeeded.
+   * `fatal` means retrying is pointless (the resume is gone, or this account
+   * cannot write to it) — autosave stops, but the user is TOLD, instead of the
+   * editor pretending everything is fine while their edits go nowhere.
+   */
+  saveError: { kind: "network" | "server" | "gone" | "forbidden"; fatal: boolean } | null
   lastThumbnailAt: number | null
 }
 
@@ -167,6 +174,7 @@ function makeResumeStore() {
       isSaving: false,
       lastSaved: null,
       isDirty: false,
+      saveError: null,
       lastThumbnailAt: null,
 
       init: (resumeId, title, sections, sectionData, config) => {
@@ -276,9 +284,13 @@ function makeResumeStore() {
       },
 
       save: async (opts) => {
-        const { resumeId, isSaving: alreadySaving } = get()
+        const { resumeId, isSaving: alreadySaving, saveError } = get()
         if (!resumeId) return
         if (alreadySaving) return
+        // A fatal failure (deleted / not ours) will fail identically every time.
+        // Autosave stops, but `saveError` stays set so the UI keeps saying so —
+        // it is not cleared behind the user's back.
+        if (saveError?.fatal) return
         const { title, sections, sectionData, config } = get()
         set((state) => { state.isSaving = true })
         try {
@@ -291,8 +303,15 @@ function makeResumeStore() {
             await res.json().catch(() => ({}))
             set((state) => {
               state.isSaving = false
-              // Resume deleted or forbidden — stop autosave loop
-              if (res.status === 404 || res.status === 403) state.isDirty = false
+              // This used to swallow the failure whole: nothing was recorded and,
+              // on 404/403, `isDirty` was cleared — which told the UI the work was
+              // saved when the server had rejected it. The user kept typing into a
+              // document that was no longer being written anywhere.
+              state.saveError =
+                res.status === 404 ? { kind: "gone", fatal: true }
+                : res.status === 403 ? { kind: "forbidden", fatal: true }
+                : { kind: "server", fatal: false }
+              // isDirty stays TRUE: there really are unsaved changes.
             })
             return
           }
@@ -300,12 +319,17 @@ function makeResumeStore() {
             state.isSaving = false
             state.lastSaved = new Date()
             state.isDirty = false
+            state.saveError = null
           })
           if (!opts?.skipThumbnail) {
             get().triggerThumbnail()
           }
         } catch {
-          set((state) => { state.isSaving = false })
+          // Network failure or timeout — retryable, and the changes are still here.
+          set((state) => {
+            state.isSaving = false
+            state.saveError = { kind: "network", fatal: false }
+          })
         }
       },
     })),

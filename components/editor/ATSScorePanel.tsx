@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
-import { useTranslations, useLocale } from "next-intl"
+import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
 import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
@@ -15,10 +15,10 @@ import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
 import type { ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion, type GapLever } from "./hooks/useATSScore"
-import { applySuggestion } from "@/lib/services/ai/shared/apply-suggestion"
-import { replaceWord } from "@/lib/ats/apply-spelling"
-import { findMisspellings } from "@/lib/ats/common-misspellings"
+import { applySuggestion, previewSuggestion } from "@/lib/services/ai/shared/apply-suggestion"
+import { applySpellingFix } from "@/lib/ats/apply-spelling"
 import { useCooldownLabel } from "./hooks/useAICooldown"
+import { useCvLanguage } from "./hooks/useCvLanguage"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 import { computeResumeScore, type ResumeScoreKey } from "@/lib/services/ai/shared/resume-score"
@@ -266,7 +266,8 @@ export default function ATSScorePanel() {
   }
   const [modal, setModal] = useState<{ suggestion: Suggestion; currentValue: string; itemKey: string } | null>(null)
   const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
-  const locale = useLocale()
+  // Everything the AI writes here is applied INTO the CV → the CV's language.
+  const cvLanguage = useCvLanguage()
 
   // Inline "improve this weak bullet" — reuses the honest improve-bullet engine
   // (stronger verb / tighter phrasing, NEVER invents a number) and applies the
@@ -288,7 +289,7 @@ export default function ATSScorePanel() {
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: b.text, jobTitle: b.jobTitle || undefined, language: locale === "en" ? "en" : "es" }),
+        body: JSON.stringify({ text: b.text, jobTitle: b.jobTitle || undefined, language: cvLanguage }),
       })
       if (!res.ok) {
         toast.error(t("metricless_improve_error"))
@@ -352,7 +353,7 @@ export default function ATSScorePanel() {
       const res = await apiFetch("/api/ai/skill-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill, sectionData, language: locale === "en" ? "en" : "es", soft: true }),
+        body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft: true }),
       })
       if (!res.ok) { toast.error(t("soft_skill_error")); return }
       const data = (await res.json().catch(() => null)) as
@@ -440,32 +441,22 @@ export default function ATSScorePanel() {
   // Id of the scroll-target card a gap-plan lever just jumped to (flash highlight).
   const [highlightId, setHighlightId] = useState<string | null>(null)
 
-  // Common misspellings anywhere in the CV — deterministic, JD-independent, live.
-  // Scans all prose (summary + bullets + job titles + skill names). Fixed via the
-  // same applyTypoFix (whole-word replace across every field) as keyword typos.
-  const misspellings = useMemo(() => {
-    const parts: string[] = [(sectionData.summary as string) ?? ""]
-    for (const w of (sectionData.workExperience ?? []) as WorkExperienceItem[]) {
-      parts.push(w.description ?? "", w.jobTitle ?? "")
-    }
-    for (const s of (sectionData.skills ?? []) as SkillItem[]) parts.push(s.name ?? "")
-    return findMisspellings(parts.join("\n")).filter((m) => !correctedTypos.has(m.typed))
-  }, [sectionData, correctedTypos])
-
   function applyTypoFix(typed: string, correct: string) {
-    if (!typed.trim() || !correct.trim()) return
-    const sub = (s: string) => replaceWord(s, typed, correct)
-    let changed = false
-    const skills = (sectionData.skills ?? []) as SkillItem[]
-    const newSkills = skills.map((s) => { const n = sub(s.name); if (n !== s.name) changed = true; return { ...s, name: n } })
-    const summary = (sectionData.summary as string) ?? ""
-    const newSummary = sub(summary); if (newSummary !== summary) changed = true
-    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
-    const newWork = work.map((w) => { const d = sub(w.description ?? ""); if (d !== (w.description ?? "")) changed = true; return { ...w, description: d } })
+    // Same writer as the spelling card — this used to be a second, narrower copy
+    // that only touched skills, summary and bullet descriptions, so the identical
+    // typo in an education or project line survived a fix that claimed to be
+    // applied everywhere. Two write paths over the same user data is how the
+    // pair drifts; there is one now.
+    const { patch, changed } = applySpellingFix(
+      sectionData as unknown as Record<string, unknown>,
+      typed,
+      correct,
+      { includeSkills: true },
+    )
     if (!changed) { toast.info(t("typo_not_found")); return }
-    if (newSkills.some((s, i) => s.name !== skills[i]?.name)) updateSectionData("skills", newSkills)
-    if (newSummary !== summary) updateSectionData("summary", newSummary)
-    if (newWork.some((w, i) => w.description !== work[i]?.description)) updateSectionData("workExperience", newWork)
+    for (const [key, value] of Object.entries(patch)) {
+      updateSectionData(key as Parameters<typeof updateSectionData>[0], value as never)
+    }
     setCorrectedTypos((prev) => new Set(prev).add(typed))
     toast.success(t("typo_fixed", { correct }))
     void runRescore()
@@ -655,36 +646,6 @@ export default function ATSScorePanel() {
             posting; the ATS match below then answers "good FOR THIS job?". */}
         {cvReady && <CVHealthCard data={cvHealth} />}
 
-        {/* Spelling — misspelled words anywhere in the CV, deterministic and always
-            on (no job posting needed). One-click fix replaces the word across every
-            field. Only flags unambiguous misspellings, so no false positives on
-            names or tech terms. */}
-        {cvReady && misspellings.length > 0 && (
-          <div className="rounded-2xl border border-rose-200 bg-gradient-to-br from-rose-50/80 to-orange-50/50 p-4">
-            <div className="flex items-center gap-1.5 mb-1">
-              <AlertCircle className="h-3.5 w-3.5 text-rose-600 shrink-0" />
-              <p className="text-[10px] font-black tracking-widest uppercase text-rose-600">{t("spelling_title")}</p>
-            </div>
-            <p className="text-[11px] text-slate-600 leading-relaxed mb-2.5">{t("spelling_subtitle")}</p>
-            <ul className="flex flex-col gap-1.5">
-              {misspellings.map((m) => (
-                <li key={m.typed} className="flex items-center gap-2 rounded-xl border border-rose-100 bg-white/70 px-3 py-2 text-[11.5px]">
-                  <span className="font-semibold text-rose-700 line-through decoration-rose-300">{m.typed}</span>
-                  <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
-                  <span className="font-bold text-emerald-700 flex-1 min-w-0 truncate">{m.correct}</span>
-                  <button
-                    type="button"
-                    onClick={() => applyTypoFix(m.typed, m.correct)}
-                    className="shrink-0 inline-flex items-center gap-1 rounded-full border border-rose-300 bg-white/70 px-2.5 py-0.5 text-[10px] font-bold text-rose-700 transition-all hover:bg-rose-100"
-                  >
-                    <Wand2 className="h-2.5 w-2.5" /> {t("typo_fix_button")}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Job description is the ONLY input now. The role-title mode was removed:
             it inferred generic requirements and the real analysis needs the posting
             anyway, so it added a confusing half-answer. Paste the vacancy, period. */}
@@ -842,6 +803,19 @@ export default function ATSScorePanel() {
                 })()}
               </div>
             </div>
+
+            {/* The recruiter pass failed. Said plainly, with a way out — the
+                alternative is a report that is quietly missing a section the
+                user has no way of knowing existed. */}
+            {atsResult.analysisUnavailable && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/70 p-3.5 flex items-start gap-2.5">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11.5px] font-bold text-amber-900 leading-tight">{t("analysis_unavailable_title")}</p>
+                  <p className="mt-0.5 text-[10.5px] text-amber-800/90 leading-relaxed">{t("analysis_unavailable_desc")}</p>
+                </div>
+              </div>
+            )}
 
             {/* ① Verdict — the recruiter's honest read: would this pass, and the
                 biggest risk. The voice that ties the whole report together. */}
@@ -1121,39 +1095,44 @@ export default function ATSScorePanel() {
                   </ul>
                 )}
 
-                {/* Soft skills → demonstrated in a bullet. Same list, because a soft
-                    skill is proven inside an achievement, not listed as a tag. The
-                    weave writes ONE bullet in the best-fit job and confirms first. */}
+                {/* Soft skills live in the SAME list as the bullets, with no heading
+                    of their own: a separate titled block read as a second, competing
+                    section ("why are there two bullet lists?"). A soft skill is not
+                    a tag to add — it is a bullet the CV is missing, so it belongs in
+                    the list of bullet work with a chip saying it creates a new one. */}
                 {visibleSoft.length > 0 && (
-                  <div className="mt-3 pt-3 border-t border-violet-100">
-                    <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-1">
-                      <Users className="h-3 w-3" /> {t("soft_skills_title")}
-                    </p>
-                    <p className="text-[10px] text-slate-500 leading-snug mb-2">{t("soft_skills_hint")}</p>
-                    <ul className="flex flex-col gap-1.5">
-                      {visibleSoft.map((s) => {
-                        const busy = weavingSoft === s.skill
-                        return (
-                          <li key={s.skill} className="rounded-lg bg-white/60 border border-violet-100 p-2">
-                            <div className="flex items-center gap-1.5 mb-0.5">
-                              <Sparkles className="h-2.5 w-2.5 text-violet-500 shrink-0" />
-                              <span className="text-[10.5px] font-bold text-violet-700 capitalize flex-1 min-w-0 truncate">{s.skill}</span>
-                              <button
-                                type="button"
-                                onClick={() => weaveSoftSkill(s.skill)}
-                                disabled={busy || !!weavingSoft}
-                                className="shrink-0 inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-                                {busy ? t("soft_skill_weaving") : t("soft_skill_demonstrate")}
-                              </button>
+                  <ul className="flex flex-col gap-1.5 mt-1.5">
+                    {visibleSoft.map((s) => {
+                      const busy = weavingSoft === s.skill
+                      return (
+                        <li key={s.skill} className="rounded-lg bg-white/60 border border-violet-100 p-2">
+                          <div className="flex items-start gap-1.5">
+                            <Sparkles className="h-2.5 w-2.5 text-violet-500 shrink-0 mt-1" />
+                            <div className="flex-1 min-w-0">
+                              <span className="block text-[10.5px] text-slate-600 leading-snug">{s.suggestion}</span>
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                <span className="text-[9px] font-bold rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-200 px-1.5">
+                                  {t("reason_new_bullet")}
+                                </span>
+                                <span className="text-[9px] text-violet-400/80 capitalize">{s.skill}</span>
+                              </div>
                             </div>
-                            <p className="text-[10px] text-slate-500 leading-relaxed">{s.suggestion}</p>
-                          </li>
-                        )
-                      })}
-                    </ul>
-                  </div>
+                          </div>
+                          <div className="flex items-center justify-end mt-1.5">
+                            <button
+                              type="button"
+                              onClick={() => weaveSoftSkill(s.skill)}
+                              disabled={busy || !!weavingSoft}
+                              className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+                              {busy ? t("soft_skill_weaving") : t("soft_skill_demonstrate")}
+                            </button>
+                          </div>
+                        </li>
+                      )
+                    })}
+                  </ul>
                 )}
                 <p className="text-[10px] text-slate-500 leading-relaxed mt-2">{t("content_quality_hint")}</p>
               </div>
@@ -1368,6 +1347,8 @@ export default function ATSScorePanel() {
           onConfirm={handleConfirmApply}
           suggestion={modal.suggestion}
           currentValue={modal.currentValue}
+          // Computed by running the real write — see previewSuggestion.
+          afterValue={previewSuggestion(modal.suggestion, sectionData as unknown as ResumeSections)?.after}
         />
       )}
 

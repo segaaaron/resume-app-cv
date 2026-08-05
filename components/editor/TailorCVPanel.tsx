@@ -13,6 +13,7 @@ import { filterVisibleMissingSkills } from "./tailor-dedupe"
 import SuggestionDiffModal from "./SuggestionDiffModal"
 import { useAICooldown, useCooldownLabel } from "./hooks/useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
+import { useCvLanguage } from "./hooks/useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
@@ -66,6 +67,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
   const router = useRouter()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
+  const cvLanguage = useCvLanguage()
   const { plan } = useEditorPro()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
@@ -135,7 +137,8 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
       const res = await apiFetch("/api/ai/tailor-cv", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sectionData, jobDescription: jd, language: locale === "en" ? "en" : "es", atsMissingKeywords }),
+        // Tailor rewrites bullets and names skills that land in the CV → CV's language.
+        body: JSON.stringify({ sectionData, jobDescription: jd, language: cvLanguage, atsMissingKeywords }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
@@ -194,14 +197,32 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
 
   function confirmApplyBullet() {
     if (!pendingBullet) return
-    const { targetId, bulletIndex, text, currentDescription } = pendingBullet
-    const lines = currentDescription.split("\n").map(l => l.trim()).filter(Boolean)
-    if (bulletIndex >= 0 && bulletIndex < lines.length) {
+    const { targetId, bulletIndex, text, currentBullet } = pendingBullet
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    // Re-read the description from the STORE at confirm time, never from the
+    // snapshot taken when the modal opened: anything the user typed in between
+    // (or another suggestion applied from this same panel) would be silently
+    // overwritten by the stale copy.
+    const liveDescription = work.find((j) => j.id === targetId)?.description ?? ""
+    const lines = liveDescription.split("\n").map(l => l.trim()).filter(Boolean)
+    // Match the original bullet by TEXT first. The index was computed when the
+    // tailor ran; by now the user may have added, removed or reordered lines, and
+    // writing to a stale index either rewrites the wrong bullet or appends a
+    // duplicate — reported as "some bullets don't get replaced".
+    const byText = currentBullet ? lines.findIndex((l) => l === currentBullet.trim()) : -1
+    if (byText !== -1) {
+      lines[byText] = text
+    } else if (currentBullet && bulletIndex >= 0 && bulletIndex < lines.length) {
+      // The original line is gone (edited or deleted). Do not guess — leave the
+      // CV untouched and say so, rather than overwriting an unrelated bullet.
+      toast.error(t("bullet_moved"))
+      setPendingBullet(null)
+      return
+    } else if (bulletIndex >= 0 && bulletIndex < lines.length) {
       lines[bulletIndex] = text
     } else {
       lines.push(text)
     }
-    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const updated = work.map((j) =>
       j.id === targetId ? { ...j, description: lines.join("\n") } : j
     )
@@ -240,7 +261,7 @@ export default function TailorCVPanel({ jobDescription, atsMissingKeywords = [],
       const res = await apiFetch("/api/ai/skill-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill, sectionData, language: locale === "en" ? "en" : "es", soft }),
+        body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {

@@ -152,6 +152,12 @@ export interface ATSScoreResult {
    *  strengths) — the voice of the unified report. null when the call failed or
    *  was skipped (e.g. the deterministic live re-score, which makes no LLM call). */
   analysis: CvAnalysis | null
+  /**
+   * True when the recruiter pass was attempted and produced nothing usable, so
+   * the UI can say the report is incomplete instead of silently rendering a
+   * shorter one. `analysis: null` alone could not carry that meaning.
+   */
+  analysisUnavailable?: boolean
   /** Deterministic writing checks (clichés, date-format inconsistency, bullet
    *  balance) — each maps to an actionable fix. Recomputed on the live re-score. */
   writingChecks: WritingChecks
@@ -353,6 +359,22 @@ export interface GenerateCoverLetterInput {
   tone?: string
   language?: string
   userPrompt?: string
+  /**
+   * The candidate's own words, asked as three focused questions instead of one
+   * blank textarea. Each answer maps to a paragraph of the letter (motivation →
+   * hook, achievement + fit → the middle), which is what a blank box never gets:
+   * people fill it with a job-description paraphrase, not with the two things a
+   * letter actually needs. Every field optional — the generator degrades to
+   * `userPrompt` (and then to the résumé alone) when they are empty.
+   */
+  highlights?: {
+    /** Why THIS company / role. */
+    motivation?: string
+    /** The single most relevant accomplishment, with the candidate's own figures. */
+    achievement?: string
+    /** What they bring that fits the role. */
+    fit?: string
+  }
   /** The vacancy text. Fed to the deterministic planner (buildCoverLetterBrief)
    *  so the letter is tailored to the role and grounded in the résumé. */
   jobDescription?: string
@@ -470,6 +492,8 @@ export const AI_INPUT_LIMITS = {
   body: 3000,
   userText: 3000,
   userPrompt: 500,
+  /** Per answer of the structured cover-letter input (3 of them). */
+  coverLetterHighlight: 400,
   userDescription: 500,
   company: 200,
   jobTitle: 200,

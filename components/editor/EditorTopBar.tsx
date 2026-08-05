@@ -28,12 +28,13 @@ interface Props {
 
 export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Props) {
   const router = useRouter()
-  const { title, setTitle, save, isSaving, lastSaved, isDirty, resumeId, triggerThumbnail, sectionData } = useResumeStore(
+  const { title, setTitle, save, isSaving, saveError, lastSaved, isDirty, resumeId, triggerThumbnail, sectionData } = useResumeStore(
     useShallow((s) => ({
       title: s.title,
       setTitle: s.setTitle,
       save: s.save,
       isSaving: s.isSaving,
+      saveError: s.saveError,
       lastSaved: s.lastSaved,
       isDirty: s.isDirty,
       resumeId: s.resumeId,
@@ -302,31 +303,44 @@ export default function EditorTopBar({ hasAccess, canDownloadFree = false }: Pro
       {/* ── Right: actions ── */}
       <div className="flex items-center gap-2 shrink-0 relative z-10">
 
-        {/* Save status pill */}
+        {/* Save status pill. A failed save used to look exactly like a pending
+            one — amber "unsaved" — so a server rejection was indistinguishable
+            from "you typed a second ago". Failure now has its own red state with
+            its own words, and the label is always visible in that state (never
+            hidden behind sm:) because it is the one thing the user must not miss. */}
         {hasAccess ? (
           <button
             onClick={() => { if (!isSaving) save().catch(() => {}) }}
             disabled={isSaving}
+            title={saveError ? t(`save_error_${saveError.kind}`) : undefined}
+            aria-live="polite"
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11.5px] font-medium cursor-pointer border transition-all duration-200 disabled:cursor-default"
             style={{
-              background: isSaving
+              background: saveError
+                ? "rgba(225,29,72,0.1)"
+                : isSaving
                 ? "rgba(148,163,184,0.1)"
                 : isDirty
                 ? "rgba(245,158,11,0.1)"
                 : lastSaved
                 ? "rgba(16,185,129,0.1)"
                 : "rgba(255,255,255,0.7)",
-              borderColor: isSaving
+              borderColor: saveError
+                ? "rgba(225,29,72,0.35)"
+                : isSaving
                 ? "rgba(148,163,184,0.2)"
                 : isDirty
                 ? "rgba(245,158,11,0.25)"
                 : lastSaved
                 ? "rgba(16,185,129,0.25)"
                 : "rgba(0,212,255,0.2)",
-              color: isSaving ? "#94A3B8" : isDirty ? "#F59E0B" : lastSaved ? "#10B981" : "#1a2e4a",
+              // #9F1239 on that tint clears 4.5:1 — a lighter rose would not.
+              color: saveError ? "#9F1239" : isSaving ? "#94A3B8" : isDirty ? "#F59E0B" : lastSaved ? "#10B981" : "#1a2e4a",
             }}
           >
-            {isSaving ? (
+            {saveError ? (
+              <><AlertCircle size={11} /><span>{saveError.fatal ? t("save_failed_fatal") : t("save_failed_retry")}</span></>
+            ) : isSaving ? (
               <><Loader2 size={11} className="animate-spin" /><span className="hidden sm:inline">{t("saving")}</span></>
             ) : isDirty ? (
               <><AlertCircle size={11} /><span className="hidden sm:inline">{t("unsaved")}</span></>

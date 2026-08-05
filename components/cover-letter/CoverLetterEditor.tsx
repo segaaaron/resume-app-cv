@@ -120,6 +120,11 @@ interface Props {
 // at least one substantive sentence, so a thin prompt never reaches the endpoint.
 const AI_PROMPT_MIN = 40
 
+// Per-answer cap of the three structured questions. Mirrors the server limit
+// (AI_INPUT_LIMITS.coverLetterHighlight) — a longer answer would be rejected
+// with a 400 the user cannot see the cause of.
+const HIGHLIGHT_MAX = 400
+
 // Alphabetical by `id`. `elegant` (free) kept at top for prominence; the rest
 // of the PRO templates follow in strict alpha order for predictable browsing.
 const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
@@ -222,6 +227,8 @@ export default function CoverLetterEditor({
   )
   const photoInputRef = useRef<HTMLInputElement>(null)
   const aiPromptRef = useRef<HTMLTextAreaElement>(null)
+  const aiAchievementRef = useRef<HTMLTextAreaElement>(null)
+  const aiFitRef = useRef<HTMLTextAreaElement>(null)
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -244,7 +251,13 @@ export default function CoverLetterEditor({
   const [resumes, setResumes] = useState<{ id: string; title: string }[]>([])
   const [selectedResumeId, setSelectedResumeId] = useState("")
   const [aiTone, setAiTone] = useState<"formal" | "balanced" | "creative">("balanced")
-  const [aiUserPrompt, setAiUserPrompt] = useState("")
+  // The candidate's own words, asked as three focused questions instead of one
+  // blank box. A blank box gets a paraphrase of the job ad; these get the two
+  // things a letter is made of — why this company, and the proof they can do it.
+  const [hlMotivation, setHlMotivation] = useState("")
+  const [hlAchievement, setHlAchievement] = useState("")
+  const [hlFit, setHlFit] = useState("")
+  const highlightsFilled = [hlMotivation, hlAchievement, hlFit].map((v) => v.trim()).filter(Boolean).join(" ")
   // ONE job description for the whole editor: it targets the AI generation (the
   // tailoring brief) AND the ATS panel. Lifted here so the two are never out of sync.
   const [jobDescription, setJobDescription] = useState("")
@@ -302,10 +315,21 @@ export default function CoverLetterEditor({
     // the user a SPECIFIC alert (which field, where it is) instead of a dead greyed
     // button that leaves them wondering why nothing happens. Also focus the field so
     // they land exactly on it.
-    if (aiUserPrompt.trim().length < AI_PROMPT_MIN) {
-      toast.error(t("ai_prompt_required_alert"), { duration: 6000 })
-      aiPromptRef.current?.focus()
-      aiPromptRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })
+    // Both required questions must be answered, AND the answers together must
+    // carry enough substance for the model to write from — the copy promises
+    // exactly this, so the check has to mean it. A thin prompt is what produced
+    // the off_topic 422, and one filled box does not make a letter.
+    const missingRequired = !hlMotivation.trim()
+      ? aiPromptRef.current
+      : !hlAchievement.trim()
+        ? aiAchievementRef.current
+        : null
+    if (missingRequired || highlightsFilled.length < AI_PROMPT_MIN) {
+      toast.error(t("ai_highlights_required_alert"), { duration: 6000 })
+      // Land them on the first question still empty, not just on the top field.
+      const target = missingRequired ?? aiPromptRef.current
+      target?.focus()
+      target?.scrollIntoView({ behavior: "smooth", block: "center" })
       return
     }
     setGenerating(true)
@@ -322,7 +346,11 @@ export default function CoverLetterEditor({
           jobTitle: content.subject || undefined,
           tone: aiTone,
           language: locale,
-          userPrompt: aiUserPrompt.trim() || undefined,
+          highlights: {
+            motivation: hlMotivation.trim() || undefined,
+            achievement: hlAchievement.trim() || undefined,
+            fit: hlFit.trim() || undefined,
+          },
           jobDescription: jobDescription.trim() || undefined,
         }),
       })
@@ -521,6 +549,16 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     ["formal", t("ai_tone_formal")],
     ["balanced", t("ai_tone_balanced")],
     ["creative", t("ai_tone_creative")],
+  ] as const
+
+  // One row per question, rendered by map — the three inputs differ only in
+  // their copy and their state, so they are data, not three copy-pasted blocks.
+  // `fit` is optional: motivation + achievement already carry a letter, and a
+  // third mandatory box is where people start typing filler.
+  const highlightFields = [
+    { key: "motivation", value: hlMotivation, set: setHlMotivation, ref: aiPromptRef, label: t("ai_hl_motivation_label"), placeholder: t("ai_hl_motivation_placeholder"), optional: false },
+    { key: "achievement", value: hlAchievement, set: setHlAchievement, ref: aiAchievementRef, label: t("ai_hl_achievement_label"), placeholder: t("ai_hl_achievement_placeholder"), optional: false },
+    { key: "fit", value: hlFit, set: setHlFit, ref: aiFitRef, label: t("ai_hl_fit_label"), placeholder: t("ai_hl_fit_placeholder"), optional: true },
   ] as const
 
 
@@ -900,7 +938,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                         <div className="bg-white border border-[#C8DCF0] rounded-[10px] p-1">
                           <RichTextEditor value={content.body} onChange={(html) => updateContent("body", html)} placeholder={t("body_placeholder")} />
                         </div>
-                        <button type="button" onClick={() => { updateContent("body", ""); setAiUserPrompt(""); setAiGenerated(false); setSidebarTab("ai") }} disabled={generating}
+                        <button type="button" onClick={() => { updateContent("body", ""); setHlMotivation(""); setHlAchievement(""); setHlFit(""); setAiGenerated(false); setSidebarTab("ai") }} disabled={generating}
                           className={`text-[11px] text-dash-muted flex items-center gap-[5px] ${generating ? "opacity-40" : ""}`}>
                           <X className="w-[11px] h-[11px]" />{t("ai_regenerate")}
                         </button>
@@ -953,7 +991,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                       <p className="text-[11px] text-white/60 leading-[1.5] mb-[10px]">{t("body_complete_desc")}</p>
                       <button
                         type="button"
-                        onClick={() => { updateContent("body", ""); setAiUserPrompt(""); setAiGenerated(false) }}
+                        onClick={() => { updateContent("body", ""); setHlMotivation(""); setHlAchievement(""); setHlFit(""); setAiGenerated(false) }}
                         className="w-full inline-flex items-center justify-center gap-1.5 transition-all text-[11px] font-semibold text-white/70 bg-white/[0.08] border border-white/15 rounded-lg px-3 py-2">
                         <X className="w-3 h-3" />
                         {t("body_complete_clear")}
@@ -995,27 +1033,49 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                       </div>
                     </div>
 
-                    {/* Prompt */}
+                    {/* The candidate's own words — three focused questions instead of one
+                        blank box. Each answer is routed to a specific paragraph of the
+                        letter server-side (motivation → hook, achievement + fit → body),
+                        which is what a single textarea could never tell the model. */}
                     <div className="mb-3">
-                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] capitalize mb-[6px] flex items-center gap-[6px]">
-                        {t("ai_prompt_label")}
+                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] mb-[6px] flex items-center gap-[6px]">
+                        {t("ai_highlights_label")}
                         <span className="text-[#00D4FF] not-italic normal-case" aria-hidden>*</span>
                       </div>
-                      <div className="relative">
-                        <textarea ref={aiPromptRef} value={aiUserPrompt} onChange={(e) => setAiUserPrompt(e.target.value)}
-                          placeholder={t("ai_prompt_placeholder")} rows={4} maxLength={500} required aria-required="true"
-                          className="w-full bg-white/[0.05] border border-white/[0.12] rounded-lg pt-[10px] px-3 pb-6 text-[12px] text-white outline-none resize-none"
-                          onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.3)" }}
-                          onBlur={(e) => { e.currentTarget.style.boxShadow = "none" }} />
-                        <span className={`absolute tabular-nums bottom-[6px] right-[10px] text-[10px] ${aiUserPrompt.length >= 450 ? "text-[#fbbf24]" : "text-white/40"}`}>
-                          {aiUserPrompt.length}/500
-                        </span>
+                      <div className="flex flex-col gap-2.5">
+                        {highlightFields.map((f) => (
+                          <div key={f.key}>
+                            <label htmlFor={`ai-hl-${f.key}`} className="block text-[10.5px] font-semibold text-white/50 mb-[5px] leading-[1.3]">
+                              {f.label}
+                              {f.optional && (
+                                <span className="ml-1 text-white/30 font-normal">{t("ai_jd_optional")}</span>
+                              )}
+                            </label>
+                            <div className="relative">
+                              <textarea
+                                id={`ai-hl-${f.key}`}
+                                ref={f.ref}
+                                value={f.value}
+                                onChange={(e) => f.set(e.target.value)}
+                                placeholder={f.placeholder}
+                                rows={2}
+                                maxLength={HIGHLIGHT_MAX}
+                                aria-required={!f.optional}
+                                className="w-full bg-white/[0.05] border border-white/[0.12] rounded-lg pt-[10px] px-3 pb-6 text-[12px] text-white outline-none resize-none transition-shadow"
+                                onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.3)" }}
+                                onBlur={(e) => { e.currentTarget.style.boxShadow = "none" }} />
+                              <span className={`absolute tabular-nums bottom-[6px] right-[10px] text-[10px] ${f.value.length >= HIGHLIGHT_MAX - 50 ? "text-[#fbbf24]" : "text-white/40"}`}>
+                                {f.value.length}/{HIGHLIGHT_MAX}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                       {/* Required-field guard: the model needs real context to write a letter.
                           A thin prompt (a bare role, a few words) is what produced the
                           off_topic 422 — so block generation until there is enough to work with. */}
-                      {aiUserPrompt.trim().length < AI_PROMPT_MIN && (
-                        <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4]">{t("ai_prompt_hint")}</p>
+                      {(!hlMotivation.trim() || !hlAchievement.trim() || highlightsFilled.length < AI_PROMPT_MIN) && (
+                        <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4]">{t("ai_highlights_hint")}</p>
                       )}
                     </div>
 
@@ -1054,7 +1114,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                         </div>
                         <button
                           type="button"
-                          onClick={() => { updateContent("body", ""); setAiUserPrompt(""); setAiGenerated(false) }}
+                          onClick={() => { updateContent("body", ""); setHlMotivation(""); setHlAchievement(""); setHlFit(""); setAiGenerated(false) }}
                           className="w-full inline-flex items-center justify-center gap-1.5 transition-all text-[11px] font-semibold text-white/70 bg-white/[0.08] border border-white/15 rounded-lg px-3 py-2">
                           <X className="w-3 h-3" />
                           {t("ai_regenerate_clear")}

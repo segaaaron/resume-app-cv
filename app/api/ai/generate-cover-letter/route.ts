@@ -13,6 +13,19 @@ const schema = z.object({
   tone: z.enum(["formal", "creative", "balanced"]).optional(),
   language: z.enum(["es", "en"]).optional(),
   userPrompt: z.string().max(AI_INPUT_LIMITS.userPrompt).optional(),
+  // The candidate's three answers — motivation / achievement / fit.
+  highlights: z
+    .object({
+      motivation: z.string().max(AI_INPUT_LIMITS.coverLetterHighlight).optional(),
+      achievement: z.string().max(AI_INPUT_LIMITS.coverLetterHighlight).optional(),
+      fit: z.string().max(AI_INPUT_LIMITS.coverLetterHighlight).optional(),
+    })
+    .optional(),
+  // The vacancy text. It was MISSING from this schema while the editor sent it
+  // and the module read it: zod strips unknown keys, so the tailoring brief was
+  // silently built with no job description at all — every letter came out
+  // untailored no matter what the user pasted.
+  jobDescription: z.string().max(AI_INPUT_LIMITS.jobDescription).optional(),
 })
 
 export async function POST(req: Request) {

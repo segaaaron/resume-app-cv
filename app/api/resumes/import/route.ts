@@ -141,6 +141,16 @@ export async function POST(req: Request) {
 
   // ── 4. Fallback + validate/fill defaults ─────────────────────────────────
   if (!sectionData) {
+    // The import still succeeds, but with the weaker heuristic parser — the user
+    // gets a worse extraction and never knows. The throw path above was logged
+    // and this one was not, so a model returning "nothing usable" (the common
+    // case: not-a-resume detection, or a parse the schema rejected) degraded
+    // every import in silence, with no way to see how often it happens.
+    createLogger("import").warn("[import] AI extraction returned nothing, using heuristic parser", {
+      language: lang,
+      rawTextChars: rawText.length,
+      truncated,
+    })
     const extracted = parseResumeText(rawText.slice(0, PARSE_LIMITS.rawTextChars))
     sectionData = ResumeSectionsSchema.parse(extracted)
   }

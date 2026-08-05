@@ -1259,7 +1259,7 @@
     "lang_english": "inglés",
     "lang_spanish": "español",
     "cv_language_title": "Tu CV está en {cvLang}",
-    "cv_language_desc": "Las sugerencias y mejoras de IA saldrán en {uiLang} (el idioma de la app). Si prefieres que coincidan, cambia el idioma de la app.",
+    "cv_language_desc": "Las mejoras y sugerencias de IA salen en {cvLang} para coincidir con tu CV, aunque la app esté en {uiLang}.",
     "cv_language_dismiss": "Cerrar aviso",
     "new_welcome": {
       "title": "Empecemos tu CV",
@@ -1559,7 +1559,8 @@
       "cooldown_btn": "Espera {seconds}",
       "all_applied_title": "¡Adaptaciones aplicadas con éxito!",
       "all_applied_desc": "Resumen, experiencia y habilidades actualizados para esta oferta.",
-      "no_improvements": "Tus bullets ya están optimizados para esta oferta"
+      "no_improvements": "Tus bullets ya están optimizados para esta oferta",
+      "bullet_moved": "Ese bullet cambió desde el análisis. Vuelve a analizar para obtener una sugerencia actualizada."
     },
     "download_generating_pdf": "Generando PDF...",
     "download_preparing": "Preparando documento...",
@@ -1661,10 +1662,6 @@
       "health_dim_brevity": "Concisión",
       "health_dim_recruiter_scan": "Escaneo del reclutador",
       "health_na": "N/D",
-      "spelling_title": "Ortografía",
-      "spelling_subtitle": "Palabras mal escritas en tu CV. Un ATS y un reclutador las penalizan — corrígelas con un clic.",
-      "soft_skills_title": "Demuestra estas habilidades blandas",
-      "soft_skills_hint": "El puesto las pide y tu CV aún no las muestra. Se prueban dentro de un logro, no como etiqueta — deja que la IA escriba el bullet.",
       "soft_skill_demonstrate": "Demostrar en un bullet",
       "soft_skill_weaving": "Escribiendo…",
       "soft_skill_error": "No se pudo escribir el bullet. Intenta de nuevo.",
@@ -1739,7 +1736,10 @@
       "metricless_applied": "Mejorado",
       "metricless_already_good": "Este logro ya está bien redactado.",
       "metricless_improve_error": "No se pudo mejorar el logro. Intenta de nuevo.",
-      "metricless_in_job": "en {job}"
+      "metricless_in_job": "en {job}",
+      "reason_new_bullet": "bullet nuevo",
+      "analysis_unavailable_title": "Falta el análisis del reclutador",
+      "analysis_unavailable_desc": "El resto del informe es válido: el score, las keywords y los arreglos son deterministas. Solo esta parte no se pudo generar — vuelve a analizar para intentarlo otra vez."
     },
     "cv_review": {
       "title": "Revisión IA del CV",
@@ -1788,7 +1788,8 @@
       "advice_only_description": "Consejo manual: revísalo y aplícalo tú mismo desde la sección correspondiente.",
       "legend_strength": "Fortaleza",
       "legend_action": "Arreglo en un clic",
-      "legend_tip": "Consejo manual"
+      "legend_tip": "Consejo manual",
+      "diff_changes": "Cambios"
     },
     "ai_profile_fill": {
       "title": "Ayúdate con la IA",
@@ -1977,7 +1978,28 @@
       "start_now": "Empezar ahora",
       "best_price": "Mejor precio",
       "footer_note": "Cancela en cualquier momento · Pago seguro con Stripe"
-    }
+    },
+    "spellcheck": {
+      "title": "Ortografía",
+      "subtitle": "Revisa todo tu CV con un diccionario real de español e inglés.",
+      "run": "Revisar",
+      "rerun": "Revisar de nuevo",
+      "checking": "Revisando",
+      "clean": "Sin errores de ortografía",
+      "empty": "Escribe algo de contenido antes de revisar la ortografía.",
+      "error": "No se pudo revisar la ortografía. Inténtalo de nuevo.",
+      "not_found": "Esa palabra ya no está en tu CV.",
+      "fixed": "Corregido a «{correct}»",
+      "fix": "Corregir",
+      "rate_limited": "Revisaste la ortografía muchas veces seguidas. Espera un momento e inténtalo de nuevo.",
+      "found": "{count, plural, one {# palabra mal escrita} other {# palabras mal escritas}} en tu CV."
+    },
+    "save_failed_retry": "No se guardó — reintentar",
+    "save_failed_fatal": "No se puede guardar",
+    "save_error_network": "Se perdió la conexión con el servidor. Tus cambios siguen aquí: haz clic para reintentar.",
+    "save_error_server": "El servidor rechazó el guardado. Tus cambios siguen aquí: haz clic para reintentar.",
+    "save_error_gone": "Este CV ya no existe (se eliminó en otra pestaña o dispositivo). Copia tus cambios antes de cerrar.",
+    "save_error_forbidden": "Tu sesión ya no tiene permiso para editar este CV. Vuelve a iniciar sesión en otra pestaña y copia tus cambios antes de cerrar."
   },
   "kanban": {
     "page_title": "Mis Candidaturas",
@@ -2069,10 +2091,15 @@
     "ai_tone_formal": "Formal",
     "ai_tone_balanced": "Equilibrado",
     "ai_tone_creative": "Creativo",
-    "ai_prompt_label": "Cuéntale a la IA sobre ti y el puesto",
-    "ai_prompt_placeholder": "Ej: Soy desarrollador iOS con 7 años de experiencia, especializado en SwiftUI. Aplico para una posición senior en una startup fintech que busca modernizar su app móvil.",
-    "ai_prompt_hint": "Obligatorio — describe tu rol, años de experiencia y el puesto al que aplicas, para que la IA tenga con qué escribir una carta sólida.",
-    "ai_prompt_required_alert": "Completa el campo obligatorio «Cuéntale a la IA sobre ti y el puesto» —el recuadro de texto justo encima del botón Generar— con al menos una frase (tu rol, años de experiencia y el puesto al que aplicas) antes de generar la carta.",
+    "ai_highlights_label": "Cuéntale a la IA lo esencial",
+    "ai_hl_motivation_label": "¿Por qué esta empresa o este puesto?",
+    "ai_hl_motivation_placeholder": "Ej: Llevo dos años usando su app y quiero trabajar en el equipo que la construye; me interesa su enfoque de pagos en LATAM.",
+    "ai_hl_achievement_label": "Tu logro más relevante para este puesto",
+    "ai_hl_achievement_placeholder": "Ej: Migré la app iOS a SwiftUI en 4 meses y bajé los crashes de 3% a 0,4%.",
+    "ai_hl_fit_label": "¿Qué aportas al puesto?",
+    "ai_hl_fit_placeholder": "Ej: 7 años en iOS, experiencia liderando a 3 desarrolladores y montando CI/CD desde cero.",
+    "ai_highlights_hint": "Obligatorias las dos primeras — con tu motivación y un logro real la IA escribe una carta específica en vez de una plantilla genérica.",
+    "ai_highlights_required_alert": "Completa las preguntas obligatorias del generador —«¿Por qué esta empresa o este puesto?» y «Tu logro más relevante para este puesto»— con al menos una frase cada una antes de generar la carta.",
     "ai_jd_label": "Descripción de la vacante",
     "ai_jd_optional": "(opcional, mejora el ajuste)",
     "ai_jd_placeholder": "Pega aquí la oferta. La IA casa tu experiencia real con lo que pide el puesto — y nunca reclama una habilidad que no tienes.",

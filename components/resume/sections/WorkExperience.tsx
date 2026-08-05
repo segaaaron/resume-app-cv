@@ -20,6 +20,7 @@ import { track } from "@/lib/analytics/track"
 import { useEditorPro } from "@/components/editor/EditorContext"
 import BulletsImprovementModal, { type BulletPair } from "./BulletsImprovementModal"
 import { useAICall } from "@/hooks/useAICall"
+import { useCvLanguage } from "@/components/editor/hooks/useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
@@ -31,7 +32,9 @@ import { formatBullet, parseBullets, serializeBullets } from "@/lib/services/ai/
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
   const { isPro, plan, openUpgrade } = useEditorPro()
-  const locale = useLocale()
+  // Detected once here and passed down: every card would otherwise re-run the
+  // detector over the whole CV on each keystroke.
+  const cvLanguage = useCvLanguage()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
@@ -74,7 +77,7 @@ export default function WorkExperienceSection() {
           isPro={isPro}
           plan={plan}
           openUpgrade={openUpgrade}
-          locale={locale}
+          cvLanguage={cvLanguage}
         />
       ))}
       <button onClick={addJob} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
@@ -84,7 +87,7 @@ export default function WorkExperienceSection() {
   )
 }
 
-function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPro, plan, openUpgrade, locale }: {
+function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPro, plan, openUpgrade, cvLanguage }: {
   job: WorkExperienceItem
   isOpen: boolean
   onToggle: () => void
@@ -93,7 +96,8 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
   isPro: boolean
   plan: string
   openUpgrade: () => void
-  locale: string
+  /** Language the AI must write this bullet in — the CV's, not the app's. */
+  cvLanguage: "es" | "en"
 }) {
   const t = useTranslations("editor.sections_form")
   const ai = useTranslations("editor.ai")
@@ -148,7 +152,9 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: locale }),
+        // The rewrite is welded straight into this bullet, so it must come back in
+        // the CV's own language — not the app's. See useCvLanguage.
+        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: cvLanguage }),
       })
       if (res.status === 429 || res.status === 403) {
         const handled = await handleApiError(res, {
