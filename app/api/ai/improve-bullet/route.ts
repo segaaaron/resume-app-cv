@@ -10,6 +10,7 @@ const schema = z.object({
   employer: z.string().max(AI_INPUT_LIMITS.jobTitle).optional(),
   industry: z.string().max(AI_INPUT_LIMITS.industry).optional(),
   language: z.enum(["es", "en"]).optional(),
+  focus: z.array(z.enum(["metric", "weak_verb", "cliche"])).max(3).optional(),
 })
 
 export async function POST(req: Request) {

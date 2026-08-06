@@ -10,6 +10,8 @@ const schema = z.object({
   language: z.enum(["es", "en"]).optional(),
   // Soft-skill mode: demonstrate the behavior in a bullet instead of naming the term.
   soft: z.boolean().optional(),
+  // Role the user picked after the model found no natural home for the skill.
+  targetId: z.string().max(64).optional(),
 })
 
 export async function POST(req: Request) {

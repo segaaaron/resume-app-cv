@@ -28,7 +28,7 @@ export class AIBulletModule {
   async improveBullet(userId: string, input: ImproveBulletInput, plan: string): Promise<BulletResult> {
     await enforceAIQuota(userId, "improve-bullet", plan)
 
-    const { text, jobTitle, employer, industry, language: rawLanguage } = input
+    const { text, jobTitle, employer, industry, language: rawLanguage, focus = [] } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const validation = validateAIInput(text, AI_INPUT_LIMITS.bulletText)
@@ -43,6 +43,41 @@ export class AIBulletModule {
     const originalBullets = parseBullets(text)
     const indexedBullets = renderBulletsForPrompt(originalBullets, { indent: "  " })
 
+    /**
+     * The caller-declared defect, spelled out for the model.
+     *
+     * Without it the request was generic ("improve these bullets"), rule 8 told
+     * the model to leave anything decent alone, and the panel's own verdict —
+     * "weak opening", "no metric" — never reached the prompt. The user then saw
+     * a bullet tagged WEAK come back as "this achievement is already well
+     * written", and pressing again sometimes worked and sometimes did not,
+     * because nothing but sampling luck separated the two runs.
+     */
+    const FOCUS_TEXT: Record<string, { en: string; es: string }> = {
+      weak_verb: {
+        en: "opens with a duty phrase / weak verb instead of a strong action verb — the rewrite MUST start with a strong action verb and keep every fact",
+        es: "abre con una frase de tarea / verbo débil en vez de un verbo de acción fuerte — la reescritura DEBE empezar con un verbo de acción fuerte y conservar todos los datos",
+      },
+      cliche: {
+        en: "contains a recruiter cliché / empty buzzword — the rewrite MUST drop it and state the concrete work instead",
+        es: "contiene un cliché de reclutador / muletilla vacía — la reescritura DEBE quitarlo y decir el trabajo concreto en su lugar",
+      },
+      metric: {
+        en: "states no result — sharpen the action and the outcome the source already contains. NEVER invent a number and never ask for one; if the source has no figure, improve the wording",
+        es: "no expresa resultado — afila la acción y el resultado que el source YA contiene. NUNCA inventes una cifra ni la pidas; si el source no tiene número, mejora la redacción",
+      },
+    }
+    const focusLines = focus.map((f) => FOCUS_TEXT[f]).filter(Boolean)
+    const focusBlock = focusLines.length === 0
+      ? ""
+      : language === "en"
+        ? `\n=== ALREADY DIAGNOSED — THIS IS NOT A JUDGEMENT CALL ===
+This bullet was flagged by the resume analyzer for: \n${focusLines.map((l) => `- ${l.en}`).join("\n")}
+You MUST return a rewrite for it. "already_optimized" is NOT an acceptable answer here — the defect above is real and the user asked for it to be fixed. Rule 8 ("leave strong bullets alone") does NOT apply to this bullet. Keep every fact, tool and number the original states.\n`
+        : `\n=== YA DIAGNOSTICADO — ESTO NO ES OPINABLE ===
+El analizador de CV marcó este bullet por: \n${focusLines.map((l) => `- ${l.es}`).join("\n")}
+DEBES devolver una reescritura. "already_optimized" NO es una respuesta aceptable aquí — el defecto de arriba es real y el usuario pidió arreglarlo. La regla 8 ("deja en paz los bullets ya fuertes") NO aplica a este bullet. Conserva todos los datos, herramientas y cifras del original.\n`
+
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information present in the original bullets and the context above. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, dates, or any metric not explicitly provided.
@@ -55,7 +90,7 @@ ${context ? `Position context: ${context}` : ""}
 
 Original bullets (each addressed by its index):
 ${indexedBullets}
-
+${focusBlock}
 TRANSFORMATION RULES:
 1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Result stated in the source.
 2. Verb first, always. PROHIBITED openers/clichés: "Responsible for", "In charge of", "Assisted with", "Helped with", "Worked on", "Duties included", and empty buzzwords ("team player", "detail-oriented", "hard-working", "results-driven", "go-getter"). No personal pronouns (I, my).
@@ -89,7 +124,7 @@ ${context ? `Contexto del puesto: ${context}` : ""}
 
 Bullets originales (cada uno con su índice):
 ${indexedBullets}
-
+${focusBlock}
 REGLAS DE TRANSFORMACIÓN:
 1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado presente en el source.
 2. Verbo primero, siempre. PROHIBIDO aperturas/clichés: "Responsable de", "Encargado de", "Apoyé en", "Ayudé con", "Trabajé en", "Mis funciones incluían", y muletillas vacías ("trabajo en equipo", "orientado al detalle", "proactivo", "orientado a resultados"). Sin pronombres (yo, mi, mis).
@@ -113,7 +148,7 @@ Incluye una entrada en "improvements" SOLO para un bullet que puedas mejorar MAT
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"status": "improved", "improvements": [{"index": 0, "text": "• bullet mejorado"}]}`
 
-    const response = await this.aiClient.chat({
+    const callModel = async (userContent: string) => await this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 1200,
       // improve-bullet uses low temperature (0.3) to reduce hallucinations.
@@ -131,9 +166,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             "Devolver menos sugerencias de las que te piden es correcto: solo sugieres lo que mejora de verdad. " +
             langInstruction,
         },
-        { role: "user", content: prompt },
+        { role: "user", content: userContent },
       ],
     })
+
+    const response = await callModel(prompt)
 
     const usage = response.usage
     logAIUsage(userId, "improve-bullet", {
@@ -144,64 +181,97 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ improvements?: unknown; status?: unknown; metricQuestions?: unknown }>(raw)
-
-    if (parsed.status === "off_topic") throw new AppError("off_topic", 422)
-    if (!Array.isArray(parsed.improvements)) throw new AppError("invalid_response_format", 500)
-
     const source = [text, jobTitle ?? "", employer ?? "", industry ?? ""].join("\n")
-    const improvements: BulletImprovement[] = []
-    const seenIndices = new Set<number>()
-    let droppedHallucinated = 0
-    let droppedTrivial = 0
-    let droppedDuplicate = 0
 
-    // Every entry is addressed by index, so a rejected entry is simply absent —
-    // no "" padding to keep positions aligned, and no way for a drop to shift
-    // another bullet onto the wrong original.
-    for (const entry of (parsed.improvements as unknown[]).slice(0, 15)) {
-      const candidate = BulletImprovementSchema.safeParse(entry)
-      if (!candidate.success) continue
+    /** Model output → the improvements we are willing to show. Reused by the retry. */
+    const harvest = (raw: string): BulletImprovement[] => {
+      const parsed = parseAIJson<{ improvements?: unknown; status?: unknown }>(raw)
+      if (parsed.status === "off_topic") throw new AppError("off_topic", 422)
+      if (!Array.isArray(parsed.improvements)) throw new AppError("invalid_response_format", 500)
 
-      const { index, text: suggested } = candidate.data
-      const original = originalBullets[index]
-      if (original === undefined) continue  // model addressed a bullet that isn't there
+      const improvements: BulletImprovement[] = []
+      const seenIndices = new Set<number>()
+      let droppedHallucinated = 0
+      let droppedTrivial = 0
+      let droppedDuplicate = 0
 
-      // One suggestion per bullet. A repeated index would render as two rows
-      // both labelled with the same bullet number, inflate the "N improvements"
-      // count, and let apply-all silently pick whichever came last.
-      if (seenIndices.has(index)) { droppedDuplicate++; continue }
+      // Every entry is addressed by index, so a rejected entry is simply absent —
+      // no "" padding to keep positions aligned, and no way for a drop to shift
+      // another bullet onto the wrong original.
+      for (const entry of (parsed.improvements as unknown[]).slice(0, 15)) {
+        const candidate = BulletImprovementSchema.safeParse(entry)
+        if (!candidate.success) continue
 
-      // Placeholders are now banned outright, so allowPlaceholders is off: a
-      // suggestion carrying "[N users]" is a hallucination like any other.
-      if (detectHallucination(suggested, source)) { droppedHallucinated++; continue }
-      if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
-      // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
-      // otherwise-identical bullet reads the same on both sides — drop it rather
-      // than sell a reword as an improvement. Spares spelling fixes + enrichments.
-      if (isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
-      // Lateral-rewrite guard: when the ORIGINAL is already strong (opens with a
-      // verb — no weak "responsible for" opener — and carries no cliché), a rewrite
-      // that STRIPS content it stated and adds nothing concrete is different, not
-      // better ("…to enhance iOS app functionality" → "…into the iOS app"). Leave
-      // the good bullet alone. Gated on "already strong" so a WEAK bullet still gets
-      // fixed even when the fix drops filler.
-      const originalIsStrong = assessDescription(original).weakOpenerIndices.length === 0 && !hasCliche(original)
-      if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
+        const { index, text: suggested } = candidate.data
+        const original = originalBullets[index]
+        if (original === undefined) continue  // model addressed a bullet that isn't there
 
-      seenIndices.add(index)
-      improvements.push({ index, text: suggested })
+        // One suggestion per bullet. A repeated index would render as two rows
+        // both labelled with the same bullet number, inflate the "N improvements"
+        // count, and let apply-all silently pick whichever came last.
+        if (seenIndices.has(index)) { droppedDuplicate++; continue }
+
+        // Placeholders are now banned outright, so allowPlaceholders is off: a
+        // suggestion carrying "[N users]" is a hallucination like any other.
+        if (detectHallucination(suggested, source)) { droppedHallucinated++; continue }
+        if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
+        // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
+        // otherwise-identical bullet reads the same on both sides — drop it rather
+        // than sell a reword as an improvement. Spares spelling fixes + enrichments.
+        //
+        // Skipped when the caller named a defect: replacing a weak opener
+        // ("Participé en…" → "Coordiné…") is a small textual change by every
+        // similarity measure, and dropping it is exactly why the panel could flag
+        // a bullet as weak and then refuse to fix it.
+        if (focus.length === 0 && isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
+        // Lateral-rewrite guard: when the ORIGINAL is already strong (opens with a
+        // verb — no weak "responsible for" opener — and carries no cliché), a rewrite
+        // that STRIPS content it stated and adds nothing concrete is different, not
+        // better ("…to enhance iOS app functionality" → "…into the iOS app"). Leave
+        // the good bullet alone. A bullet the caller diagnosed is by definition not
+        // "already strong", so the guard does not apply to it either.
+        const originalIsStrong = focus.length === 0
+          && assessDescription(original).weakOpenerIndices.length === 0
+          && !hasCliche(original)
+        if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
+
+        seenIndices.add(index)
+        improvements.push({ index, text: suggested })
+      }
+
+      if (droppedHallucinated > 0 || droppedTrivial > 0 || droppedDuplicate > 0) {
+        this.logger.warn("[AIService.improveBullet] dropped suggestions", {
+          droppedHallucinated,
+          droppedTrivial,
+          droppedDuplicate,
+          kept: improvements.length,
+          returnedByModel: (parsed.improvements as unknown[]).length,
+        })
+      }
+      return improvements
     }
 
-    if (droppedHallucinated > 0 || droppedTrivial > 0 || droppedDuplicate > 0) {
-      this.logger.warn("[AIService.improveBullet] dropped suggestions", {
-        droppedHallucinated,
-        droppedTrivial,
-        droppedDuplicate,
-        kept: improvements.length,
-        returnedByModel: (parsed.improvements as unknown[]).length,
+    let improvements = harvest(response.choices[0]?.message?.content ?? "")
+
+    // One retry, ONLY when the caller named a defect and the first pass came back
+    // empty. The bullet is known-defective, so "nothing to improve" is a refusal,
+    // not an answer — and the user pressing the same button twice and getting a
+    // different result was exactly the reported behaviour. Costs a second call on
+    // the rare path instead of leaving a labelled bullet unfixable.
+    if (improvements.length === 0 && focus.length > 0) {
+      const insist = language === "en"
+        ? `${prompt}\n\nYOUR PREVIOUS ANSWER WAS EMPTY AND IS REJECTED. The bullet has the diagnosed defect above. Return exactly one entry for index 0 that fixes it, preserving every fact. Do not answer "already_optimized".`
+        : `${prompt}\n\nTU RESPUESTA ANTERIOR VINO VACÍA Y SE RECHAZA. El bullet tiene el defecto diagnosticado arriba. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos. No respondas "already_optimized".`
+      const retry = await callModel(insist)
+      const retryUsage = retry.usage
+      logAIUsage(userId, "improve-bullet", {
+        model: AI_MODEL_PROSE,
+        plan,
+        promptTokens: retryUsage?.prompt_tokens ?? 0,
+        completionTokens: retryUsage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL_PROSE, retryUsage?.prompt_tokens ?? 0, retryUsage?.completion_tokens ?? 0),
       })
+      improvements = harvest(retry.choices[0]?.message?.content ?? "")
     }
 
     // Nothing survived — or the model itself declined. Both mean the same thing

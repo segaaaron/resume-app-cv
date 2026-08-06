@@ -106,7 +106,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   async weaveSkillBullet(userId: string, input: SkillBulletInput, plan: string): Promise<SkillBulletResult> {
     await enforceAIQuota(userId, "skill-bullet", plan)
 
-    const { skill: rawSkill, sectionData, language: rawLanguage, soft = false } = input
+    const { skill: rawSkill, sectionData, language: rawLanguage, soft = false, targetId: chosenId } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const skill = rawSkill.trim()
@@ -119,7 +119,12 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // FULL bullets, indexed by targetId — the model needs to see each job's real
     // work to judge where the skill plausibly belongs. Bounded by job count (6),
     // never by bullet text (a truncated bullet reads as a different job).
-    const jobs = work.slice(0, 6)
+    // When the user picked the role themselves (after the model found no natural
+    // home), that role is the ONLY candidate: the choice is theirs to make, and
+    // the model's job shrinks to writing the bullet for it.
+    const chosenJob = chosenId ? work.find((j) => j.id === chosenId) : undefined
+    if (chosenId && !chosenJob) return { status: "no_fit" }
+    const jobs = chosenJob ? [chosenJob] : work.slice(0, 6)
     const workList = jobs.map((j) => {
       const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
         emptyLabel: "  (no bullets yet)",
@@ -187,6 +192,12 @@ REGLAS:
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"targetId": "ID", "text": "• bullet que use ${skill}"}`
 
+    const forcedTarget = chosenJob
+      ? (language === "en"
+        ? `\n\nTHE JOB IS ALREADY CHOSEN BY THE USER: ID:${chosenJob.id}. Write the bullet for THAT job and return its ID. Do NOT return {"targetId": null} — the user decided where this belongs.`
+        : `\n\nEL PUESTO YA LO ELIGIÓ EL USUARIO: ID:${chosenJob.id}. Escribe el bullet para ESE puesto y devuelve su ID. NO devuelvas {"targetId": null} — el usuario ya decidió dónde va.`)
+      : ""
+
     const response = await this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 300,
@@ -201,7 +212,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             "Returning {\"targetId\": null} when no job is a credible fit is a correct, expected answer. " +
             langInstruction,
         },
-        { role: "user", content: prompt },
+        { role: "user", content: prompt + forcedTarget },
       ],
     })
 
@@ -215,7 +226,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     })
 
     const raw = parseAIJson<{ targetId?: unknown; text?: unknown }>(response.choices[0]?.message?.content ?? "{}")
-    const targetId = typeof raw.targetId === "string" ? raw.targetId : ""
+    const targetId = chosenJob?.id ?? (typeof raw.targetId === "string" ? raw.targetId : "")
     const text = typeof raw.text === "string" ? raw.text.trim() : ""
     if (!targetId || !text) return { status: "no_fit" }
 

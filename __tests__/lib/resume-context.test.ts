@@ -32,7 +32,7 @@ describe("buildResumeContext — work experience", () => {
   it("shows every bullet of a normal job", () => {
     const ctx = buildResumeContext({ workExperience: [job(1, 5)] }, "en")
     expect(bulletsShown(ctx)).toBe(5)
-    expect(ctx).not.toContain("more not shown")
+    expect(ctx).not.toContain("further bullets omitted")
   })
 
   it("shows every bullet across several jobs", () => {
@@ -58,7 +58,7 @@ describe("buildResumeContext — work experience", () => {
 
   it("discloses truncation rather than silently dropping bullets", () => {
     const ctx = buildResumeContext({ workExperience: Array.from({ length: 10 }, (_, i) => job(i, 30)) }, "en")
-    expect(ctx).toContain("more not shown")
+    expect(ctx).toContain("further bullets omitted")
   })
 
   it("omits work experience when the caller renders its own view of the jobs", () => {

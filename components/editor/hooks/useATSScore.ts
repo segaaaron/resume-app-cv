@@ -18,6 +18,14 @@ import { track } from "@/lib/analytics/track"
 import { scoreBucket } from "@/lib/analytics/user-type"
 import { useEditorPro } from "../EditorContext"
 
+/** The engine that repairs a finding — mirrors CvFixAction on the server. */
+export interface FixAction {
+  kind: "rewrite_bullet" | "rewrite_summary" | "add_skill" | "fix_dates" | "remove_duplicates" | "manual"
+  targetId?: string
+  index?: number
+  value?: string
+}
+
 export interface ATSSubScores {
   hardSkills: number | null
   softSkills: number | null
@@ -44,7 +52,8 @@ export interface ATSResult {
   missingKeywords: string[]
   /** Matched, but with nothing in the work experience behind them. */
   listedOnlyKeywords?: string[]
-  suggestions: string[]
+  /** Each suggestion with the one-click action that performs it (may be manual). */
+  suggestions: { text: string; action?: FixAction }[]
   subScores?: ATSSubScores
   /** True when the target came from a role TITLE (standard requirements inferred), not a pasted posting. Result is approximate. */
   inferredFromRole?: boolean
@@ -73,7 +82,14 @@ export interface ATSResult {
   analysis?: {
     verdict: string
     passRisk: "low" | "medium" | "high"
-    criticalFixes: { issue: string; why: string; fix: string; severity: "high" | "medium" }[]
+    criticalFixes: {
+      issue: string
+      why: string
+      fix: string
+      severity: "high" | "medium"
+      /** The engine that repairs this finding — rendered as a real button. */
+      action?: FixAction
+    }[]
     strengths: string[]
   } | null
   /** True when the recruiter pass failed — the report is missing that section. */
@@ -82,6 +98,7 @@ export interface ATSResult {
   writingChecks?: {
     clicheBullets: { targetId: string; jobTitle: string; index: number; text: string; cliches: string[] }[]
     weakVerbBullets: { targetId: string; jobTitle: string; index: number; text: string }[]
+    duplicateBullets: { targetId: string; jobTitle: string; index: number; text: string; duplicateOfJobTitle: string }[]
     dateInconsistency: { formats: string[] } | null
     bulletBalance: { targetId: string; jobTitle: string; count: number; kind: "too_many" | "none" }[]
   }

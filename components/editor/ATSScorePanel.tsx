@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
-import { parseBullets, formatBullet } from "@/lib/services/ai/shared/bullets"
+import { parseBullets, formatBullet, serializeBullets } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope, Sparkles } from "lucide-react"
@@ -13,10 +13,13 @@ import AtsSafeDownload from "./AtsSafeDownload"
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import SuggestionDiffModal, { type Suggestion, type SuggestionField } from "./SuggestionDiffModal"
+import JobPickerModal from "./JobPickerModal"
 import type { ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resume"
 import { useATSScore, isQuestion, type GapLever } from "./hooks/useATSScore"
 import { applySuggestion, previewSuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { applySpellingFix } from "@/lib/ats/apply-spelling"
+import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
+import { normalizeDates } from "@/lib/ats/normalize-dates"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import { useCvLanguage } from "./hooks/useCvLanguage"
 import type { ReviewItem } from "./hooks/useATSScore"
@@ -278,18 +281,33 @@ export default function ATSScorePanel() {
   // from the Tailor run (§③) so ALL bullet work lives in the one list below (§②).
   const [softSkills, setSoftSkills] = useState<{ skill: string; suggestion: string }[]>([])
   const [weavingSoft, setWeavingSoft] = useState<string | null>(null)
+  /**
+   * The "where does this go?" step of weaving a soft skill.
+   *
+   * The analysis picks the role it finds most credible, but the candidate is the
+   * one who knows where the behaviour actually happened — so the choice is always
+   * theirs, with ours marked as the recommendation. `draft` is the bullet already
+   * written for the recommended role: accepting that role costs no second call.
+   */
+  const [softPick, setSoftPick] = useState<
+    { skill: string; recommendedId: string | null; draft: string | null; soft: boolean }
+  | null>(null)
 
   async function improveMetricless(
-    b: { text: string; targetId: string; jobTitle: string; index: number },
+    b: { text: string; targetId: string; jobTitle: string; index: number; reasons?: string[] },
     key: string,
   ) {
     if (improvingKey) return
     setImprovingKey(key)
     try {
+      // The panel already KNOWS what is wrong with this bullet (weak opener,
+      // cliché, no metric) — sending that with the request is what stops the
+      // model from answering "already fine" to a bullet we just labelled weak.
+      const focus = (b.reasons ?? []).filter((r) => r !== "duplicate")
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: b.text, jobTitle: b.jobTitle || undefined, language: cvLanguage }),
+        body: JSON.stringify({ text: b.text, jobTitle: b.jobTitle || undefined, language: cvLanguage, focus }),
       })
       if (!res.ok) {
         toast.error(t("metricless_improve_error"))
@@ -300,7 +318,9 @@ export default function ATSScorePanel() {
       if (!parsed.success) { toast.error(t("metricless_improve_error")); return }
       const first = parsed.data.improvements[0]
       if (parsed.data.status === "already_optimized" || !first || first.text.trim() === b.text.trim()) {
-        toast.info(t("metricless_already_good"))
+        // Never claim "already well written" about a bullet this very panel
+        // labelled weak — that contradiction is what made the button look broken.
+        toast.info(focus.length > 0 ? t("metricless_no_rewrite") : t("metricless_already_good"))
         return
       }
       setBulletFix({ targetId: b.targetId, index: b.index, current: b.text, improved: first.text })
@@ -309,6 +329,150 @@ export default function ATSScorePanel() {
     } finally {
       setImprovingKey(null)
     }
+  }
+
+  /**
+   * Collapses every repeated bullet in the CV, in one action.
+   *
+   * serializeBullets already makes a duplicate impossible to CREATE; this clears
+   * the ones a CV arrived with. Offering "Remove" once per duplicated line was
+   * the same chore the report was complaining about — the user should press one
+   * button and have the CV be clean.
+   */
+  function removeDuplicateBullets() {
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    let removed = 0
+    const updated = work.map((j) => {
+      const bullets = parseBullets(j.description ?? "")
+      if (bullets.length === 0) return j
+      const deduped = serializeBullets(bullets)
+      const after = parseBullets(deduped)
+      if (after.length === bullets.length) return j
+      removed += bullets.length - after.length
+      return { ...j, description: deduped }
+    })
+    if (removed === 0) { toast.info(t("dedupe_none")); return }
+    updateSectionData("workExperience", updated)
+    toast.success(t("dedupe_done", { count: removed }))
+    void runRescore()
+  }
+
+  /**
+   * One date format across the CV (MM/YYYY), in one action.
+   *
+   * Mixed formats confuse ATS tenure parsing — the check already said so and
+   * then asked the user to retype every field by hand. Dates it cannot read with
+   * certainty are left untouched; a wrong date is worse than a mixed one.
+   */
+  function fixDates() {
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    const edu = (sectionData.education ?? []) as { startDate?: string; endDate?: string }[]
+    const w = normalizeDates(work)
+    const e = normalizeDates(edu)
+    if (w.changed + e.changed === 0) { toast.info(t("dates_none")); return }
+    if (w.changed > 0) updateSectionData("workExperience", w.rows)
+    if (e.changed > 0) updateSectionData("education", e.rows as never)
+    toast.success(t("dates_done", { count: w.changed + e.changed }))
+    void runRescore()
+  }
+
+  /** Rewrites the summary through the same improve-summary engine the editor uses. */
+  const [fixingSummary, setFixingSummary] = useState(false)
+  async function rewriteSummary() {
+    if (fixingSummary) return
+    const current = (sectionData.summary as string) ?? ""
+    if (!current.trim()) { toast.info(t("summary_empty")); return }
+    setFixingSummary(true)
+    try {
+      const res = await apiFetch("/api/ai/improve-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary: current, language: cvLanguage, sectionData }),
+      })
+      if (!res.ok) { toast.error(t("summary_error")); return }
+      const data = await res.json().catch(() => null)
+      const first = Array.isArray(data?.versions) ? data.versions[0] : null
+      const text = typeof first === "string" ? first : null
+      // The engine says so itself when there is nothing to gain; the text check
+      // covers the case where it returns the user's own summary back.
+      if (data?.status === "already_optimized" || !text || text.trim() === current.trim()) {
+        toast.info(t("summary_already_good"))
+        return
+      }
+      setModal({
+        suggestion: { field: "summary", type: "replace", preview: text, reason: t("summary_fix_reason") },
+        currentValue: current,
+        itemKey: "fix-summary",
+      })
+    } catch {
+      toast.error(t("summary_error"))
+    } finally {
+      setFixingSummary(false)
+    }
+  }
+
+  /**
+   * Turns one recruiter finding into the button that repairs it.
+   *
+   * Every action was validated server-side against the real CV (a bullet index
+   * that does not exist arrives as "manual"), so a rendered button always does
+   * something. "manual" renders nothing — advice with no false promise.
+   */
+  function renderFixAction(action?: { kind: string; targetId?: string; index?: number; value?: string }) {
+    if (!action || action.kind === "manual") return null
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+
+    let label = ""
+    let run: (() => void) | null = null
+    let busy = false
+
+    if (action.kind === "rewrite_bullet" && action.targetId && action.index !== undefined) {
+      const job = work.find((j) => j.id === action.targetId)
+      const bullet = parseBullets(job?.description ?? "")[action.index]
+      if (job && bullet) {
+        // SAME key the bullets list uses: applying from here marks the bullet
+        // applied everywhere, instead of leaving a second live button on a line
+        // that has already been rewritten.
+        const key = `bullet-${action.targetId}-${action.index}`
+        if (appliedItems.has(key)) return null
+        busy = improvingKey === key
+        label = t("fix_action_rewrite_bullet")
+        run = () => improveMetricless(
+          { text: bullet, targetId: action.targetId as string, jobTitle: job.jobTitle ?? "", index: action.index as number, reasons: ["weak_verb", "metric"] },
+          key,
+        )
+      }
+    } else if (action.kind === "rewrite_summary") {
+      label = t("fix_action_rewrite_summary")
+      busy = fixingSummary
+      run = () => void rewriteSummary()
+    } else if (action.kind === "add_skill" && action.value?.trim()) {
+      const skill = action.value.trim()
+      const already = ((sectionData.skills ?? []) as SkillItem[]).some((sk) => sk.name.toLowerCase() === skill.toLowerCase())
+      if (!already) {
+        label = t("fix_action_add_skill", { skill })
+        run = () => addKeywordToSkills(skill)
+      }
+    } else if (action.kind === "fix_dates") {
+      label = t("fix_action_fix_dates")
+      run = fixDates
+    } else if (action.kind === "remove_duplicates") {
+      label = t("dedupe_action")
+      run = removeDuplicateBullets
+    }
+
+    if (!run || !label) return null
+    return (
+      <button
+        type="button"
+        onClick={run}
+        disabled={busy}
+        className="mt-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#0077B6] to-[#00D4FF] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm transition-all hover:shadow disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+      >
+        {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+        {label}
+      </button>
+    )
   }
 
   function confirmBulletFix() {
@@ -346,29 +510,56 @@ export default function ATSScorePanel() {
   // Soft-skill weave: ask the model to DEMONSTRATE the skill inside a real bullet
   // of the best-fit job (never names the word), then confirm via the same diff
   // modal before it lands — the user is the honesty gate. Appends a new bullet.
-  async function weaveSoftSkill(skill: string) {
+  /** Hard-skill variant: the CV LISTS the skill but nothing shows it. */
+  function proveSkill(skill: string) {
+    return weaveSkill(skill, undefined, false)
+  }
+  function weaveSoftSkill(skill: string, targetId?: string) {
+    return weaveSkill(skill, targetId, true)
+  }
+
+  async function weaveSkill(skill: string, targetId?: string, soft = true) {
     if (weavingSoft) return
     setWeavingSoft(skill)
     try {
       const res = await apiFetch("/api/ai/skill-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft: true }),
+        body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft, targetId }),
       })
       if (!res.ok) { toast.error(t("soft_skill_error")); return }
       const data = (await res.json().catch(() => null)) as
         | { status: "written"; targetId: string; jobTitle: string; text: string }
         | { status: "no_fit" }
         | null
-      if (!data || data.status === "no_fit") { toast.info(t("soft_skill_no_fit")); return }
       const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+      // No natural home — the model's call, not the last word. The candidate is
+      // the only one who knows where this actually happened, so ask them instead
+      // of ending on a toast with nothing to press.
+      if (!data || data.status === "no_fit") {
+        if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
+        else toast.info(t("soft_skill_no_fit"))
+        return
+      }
       const job = work.find((j) => j.id === data.targetId)
-      if (!job) { toast.info(t("soft_skill_no_fit")); return }
-      const reason = softSkills.find((s) => s.skill === skill)?.suggestion ?? t("soft_skill_demonstrate")
+      if (!job) {
+        if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
+        else toast.info(t("soft_skill_no_fit"))
+        return
+      }
+      // First pass: show WHERE it would go and let the user move it. Only the
+      // user's confirmed role reaches the CV.
+      if (!targetId) {
+        setSoftPick({ skill, recommendedId: data.targetId, draft: data.text, soft })
+        return
+      }
+      const reason = soft
+        ? (softSkills.find((s) => s.skill === skill)?.suggestion ?? t("soft_skill_demonstrate"))
+        : t("prove_skill_reason", { skill })
       setModal({
         suggestion: { field: "workExperience.description", type: "append", preview: data.text, reason, targetId: data.targetId },
         currentValue: job.description ?? "",
-        itemKey: `soft-${skill}`,
+        itemKey: soft ? `soft-${skill}` : `prove-${skill}`,
       })
     } catch {
       toast.error(t("soft_skill_error"))
@@ -895,6 +1086,9 @@ export default function ATSScorePanel() {
                               <Wand2 className="h-3 w-3 shrink-0 mt-0.5" /> <span>{f.fix}</span>
                             </p>
                           )}
+                          {/* The button the finding earns. Absent on purpose when
+                              nothing in the editor can do it in one click. */}
+                          {renderFixAction(f.action)}
                         </div>
                       </div>
                     </li>
@@ -1035,13 +1229,20 @@ export default function ATSScorePanel() {
                 else byKey.set(k, { targetId, jobTitle, index, text, reasons: new Set([reason]) })
               }
               const weakVerb = atsResult.writingChecks?.weakVerbBullets ?? []
+              // A bullet the CV states twice. The recruiter pass reports the
+              // repetition in prose but cannot point at a line; this names the
+              // exact twin, so "Remove" below is a real one-click fix.
+              const dupes = atsResult.writingChecks?.duplicateBullets ?? []
               metricless.forEach((b) => add(b.targetId, b.jobTitle, b.index, b.text, "metric"))
               cliche.forEach((c) => add(c.targetId, c.jobTitle, c.index, c.text, "cliche"))
               weakVerb.forEach((w) => add(w.targetId, w.jobTitle, w.index, w.text, "weak_verb"))
+              // NOT added to the list: a duplicate is not "a bullet to improve",
+              // it is a line that should not be there twice. It gets one banner
+              // and one button that cleans the whole CV — see the block below.
               const bullets = [...byKey.values()].filter((b) => !appliedItems.has(`bullet-${b.targetId}-${b.index}`))
               const cq = atsResult.contentQuality
               const visibleSoft = softSkills.filter((s) => !appliedItems.has(`soft-${s.skill}`))
-              if (bullets.length === 0 && (!cq || cq.totalBullets === 0) && visibleSoft.length === 0) return null
+              if (bullets.length === 0 && (!cq || cq.totalBullets === 0) && visibleSoft.length === 0 && dupes.length === 0) return null
               return (
               <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
                 <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
@@ -1052,6 +1253,30 @@ export default function ATSScorePanel() {
                     {t("content_quality_metrics", { pct: cq.quantificationPct, quantified: cq.quantifiedBullets, total: cq.totalBullets })}
                   </p>
                 )}
+                {/* Repeated lines — one banner, one click, whole CV clean. */}
+                {dupes.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50/70 p-2.5">
+                    <p className="text-[11px] font-bold text-rose-700 leading-snug">
+                      {t("dedupe_title", { count: dupes.length })}
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-rose-600/90 leading-relaxed">{t("dedupe_hint")}</p>
+                    <ul className="mt-1.5 flex flex-col gap-0.5">
+                      {dupes.slice(0, 4).map((d) => (
+                        <li key={`${d.targetId}-${d.index}`} className="text-[10px] text-slate-600 leading-snug line-clamp-1">
+                          • {d.text}
+                        </li>
+                      ))}
+                    </ul>
+                    <button
+                      type="button"
+                      onClick={removeDuplicateBullets}
+                      className="mt-2 inline-flex items-center gap-1 rounded-full bg-rose-600 px-2.5 py-1 text-[10px] font-bold text-white transition-all hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-300"
+                    >
+                      <Wand2 className="h-2.5 w-2.5" /> {t("dedupe_action")}
+                    </button>
+                  </div>
+                )}
+
                 {bullets.length > 0 && (
                   <ul className="flex flex-col gap-1.5 mt-2">
                     {bullets.map((b) => {
@@ -1074,7 +1299,7 @@ export default function ATSScorePanel() {
                           <div className="flex items-center justify-end gap-1.5 mt-1.5">
                             <button
                               type="button"
-                              onClick={() => improveMetricless({ text: b.text, targetId: b.targetId, jobTitle: b.jobTitle, index: b.index }, key)}
+                              onClick={() => improveMetricless({ text: b.text, targetId: b.targetId, jobTitle: b.jobTitle, index: b.index, reasons: [...b.reasons] }, key)}
                               disabled={busy || !!improvingKey}
                               className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                             >
@@ -1147,8 +1372,17 @@ export default function ATSScorePanel() {
                 </p>
                 <ul className="flex flex-col gap-1.5">
                   {atsResult.writingChecks?.dateInconsistency && (
-                    <li className="text-[11px] text-slate-700 leading-snug flex items-start gap-1.5">
-                      <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" /> {t("check_dates")}
+                    <li className="text-[11px] text-slate-700 leading-snug flex flex-col items-start gap-1">
+                      <span className="flex items-start gap-1.5">
+                        <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" /> {t("check_dates")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={fixDates}
+                        className="ml-4 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#0077B6] to-[#00D4FF] px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm transition-all hover:shadow focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                      >
+                        <Wand2 className="h-2.5 w-2.5" /> {t("fix_action_fix_dates")}
+                      </button>
                     </li>
                   )}
                   {(atsResult.writingChecks?.bulletBalance ?? []).map((bb, i) => (
@@ -1189,16 +1423,24 @@ export default function ATSScorePanel() {
                   <AlertCircle className="h-3 w-3" /> {t("listed_only")}
                 </p>
                 <p className="text-[10.5px] text-slate-600 leading-relaxed mb-2.5">{t("listed_only_hint")}</p>
+                {/* Each one gets the fix it needs: not "remove the claim" but
+                    "show where you did it". Same weaver as the soft skills, hard
+                    mode (the bullet names the skill), user picks the role. */}
                 <div className="flex flex-wrap gap-1.5">
-                  {(atsResult.listedOnlyKeywords ?? []).map((kw: string) => (
-                    <span
+                  {(atsResult.listedOnlyKeywords ?? []).filter((kw) => !appliedItems.has(`prove-${kw}`)).map((kw: string) => (
+                    <button
                       key={kw}
-                      className="flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 bg-white/70 text-amber-700 ring-1 ring-amber-200"
+                      type="button"
+                      onClick={() => proveSkill(kw)}
+                      disabled={!!weavingSoft}
+                      className="flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 bg-white/70 text-amber-700 ring-1 ring-amber-200 transition-all hover:bg-amber-100 hover:ring-amber-300 disabled:opacity-50"
                     >
+                      {weavingSoft === kw ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
                       {kw}
-                    </span>
+                    </button>
                   ))}
                 </div>
+                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">{t("listed_only_action_hint")}</p>
               </div>
             )}
 
@@ -1222,7 +1464,14 @@ export default function ATSScorePanel() {
                 the same thing twice. */}
             {(() => {
               const typos = new Set((atsResult.typoWarnings ?? []).map((w) => w.keyword.toLowerCase()))
-              const missingKw = (atsResult.missingKeywords ?? []).filter((kw) => !typos.has(kw.toLowerCase()))
+              // Last line of defence against offering a skill the CV already
+              // states under another spelling or in the other language ("code
+              // review" next to "Revisión de código"). Two entries for one skill
+              // is the duplication a recruiter reads as machine-written.
+              const ownSkills = ((sectionData.skills ?? []) as SkillItem[]).map((sk) => sk.name)
+              const missingKw = (atsResult.missingKeywords ?? [])
+                .filter((kw) => !typos.has(kw.toLowerCase()))
+                .filter((kw) => !findDuplicateSkill(kw, ownSkills))
               if (missingKw.length === 0) return null
               return (
               <div id="ats-missing-keywords" className={`rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-missing-keywords")}`}>
@@ -1257,11 +1506,14 @@ export default function ATSScorePanel() {
                 <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
                   <Lightbulb className="h-3 w-3" /> {t("suggestions")}
                 </p>
-                <ul className="space-y-1.5">
+                <ul className="space-y-2">
                   {atsResult.suggestions.map((s, i) => (
                     <li key={i} className="text-xs text-slate-700 flex items-start gap-2 leading-relaxed">
                       <span className="text-amber-400 shrink-0 mt-0.5 font-bold">→</span>
-                      <span>{s}</span>
+                      <span className="min-w-0 flex-1">
+                        {s.text}
+                        {renderFixAction(s.action)}
+                      </span>
                     </li>
                   ))}
                 </ul>
@@ -1271,6 +1523,33 @@ export default function ATSScorePanel() {
             {/* ── ③ Ready-to-apply rewrites (Tailor) — inline in the same report,
                 chained off the same job description. ─────────────────────────── */}
             <SectionHeader n={3} title={t("section_rewrites")} />
+            {/* Soft skills the posting asks for and the CV does not show yet.
+                The list itself lives in §② (one place for all bullet work), but
+                the entry point belongs here too — this is where the user is when
+                they think about what the posting still wants. One button per
+                skill; pressing it asks WHICH role it goes in. */}
+            {softSkills.filter((sk) => !appliedItems.has(`soft-${sk.skill}`)).length > 0 && (
+              <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
+                <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-1.5">
+                  <Sparkles className="h-3 w-3" /> {t("soft_entry_title")}
+                </p>
+                <p className="text-[10.5px] text-slate-600 leading-relaxed mb-2">{t("soft_entry_hint")}</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {softSkills.filter((sk) => !appliedItems.has(`soft-${sk.skill}`)).map((sk) => (
+                    <button
+                      key={sk.skill}
+                      type="button"
+                      onClick={() => weaveSoftSkill(sk.skill)}
+                      disabled={!!weavingSoft}
+                      className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[10.5px] font-bold capitalize text-violet-700 transition-all hover:bg-violet-50 disabled:opacity-50"
+                    >
+                      {weavingSoft === sk.skill ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Plus className="h-2.5 w-2.5" />}
+                      {sk.skill}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div id="ats-tailor" className={`scroll-mt-4 rounded-2xl transition-all duration-500${hlRing("ats-tailor")}`}>
               <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} autoRunSignal={autoTailorSignal} onSoftSkills={setSoftSkills} />
             </div>
@@ -1365,6 +1644,52 @@ export default function ATSScorePanel() {
             reason: t("content_quality_hint"),
           }}
           currentValue={bulletFix.current}
+        />
+      )}
+
+      {/* Which role does this belong to? Always asked, with our pick marked. */}
+      {softPick && (
+        <JobPickerModal
+          title={t("job_picker_title")}
+          subtitle={softPick.recommendedId
+            ? t("job_picker_subtitle_recommended", { skill: softPick.skill })
+            : t("job_picker_subtitle", { skill: softPick.skill })}
+          recommendedId={softPick.recommendedId ?? undefined}
+          recommendedLabel={t("job_picker_recommended")}
+          jobs={((sectionData.workExperience ?? []) as WorkExperienceItem[])
+            .filter((j) => j.id)
+            .map((j) => ({
+              id: j.id as string,
+              jobTitle: j.jobTitle ?? "",
+              employer: j.employer ?? "",
+              startDate: j.startDate ?? undefined,
+              endDate: j.endDate ?? undefined,
+            }))}
+          onClose={() => setSoftPick(null)}
+          onPick={(id) => {
+            const picked = softPick
+            setSoftPick(null)
+            // Chose the recommended role → the bullet is already written; show the
+            // diff straight away instead of paying for an identical second call.
+            if (picked.recommendedId === id && picked.draft) {
+              const job = ((sectionData.workExperience ?? []) as WorkExperienceItem[]).find((j) => j.id === id)
+              if (job) {
+                setModal({
+                  suggestion: {
+                    field: "workExperience.description",
+                    type: "append",
+                    preview: picked.draft,
+                    reason: softSkills.find((sk) => sk.skill === picked.skill)?.suggestion ?? t("soft_skill_demonstrate"),
+                    targetId: id,
+                  },
+                  currentValue: job.description ?? "",
+                  itemKey: `soft-${picked.skill}`,
+                })
+                return
+              }
+            }
+            void weaveSkill(picked.skill, id, picked.soft)
+          }}
         />
       )}
 

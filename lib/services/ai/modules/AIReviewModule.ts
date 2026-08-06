@@ -3,6 +3,7 @@ import { z } from "zod"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
+  AI_MODEL_PROSE,
   AI_TEMPERATURE_PRECISE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
@@ -37,7 +38,9 @@ import { findSemanticMatches } from "../shared/semantic-match"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
 import { findNearMisses } from "@/lib/ats/near-miss"
+import { dropSatisfiedYearRequirements } from "@/lib/ats/experience-years"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
+import { groundFixAction } from "@/lib/ats/fix-actions"
 
 /**
  * The user's real question — "I'm at 63, what do I DO to reach 90/100?" — answered
@@ -74,9 +77,14 @@ export class AIReviewModule {
    * most-damaging problems (layout risk, weak metrics, a Spanish phrase left in an
    * English CV, a missing summary heading, the same bullet pasted across roles).
    *
-   * Runs on the SAME cheap model as the extraction (AI_MODEL): the lever is the
-   * PROMPT, not the model tier — the old ATS prompt literally told the model "do
-   * NOT analyze, only extract", which is why a bigger model changed nothing.
+   * Runs on AI_MODEL_PROSE, not the cheap extraction model. That was a wrong
+   * call, held for months on the theory that "the lever is the prompt, not the
+   * model tier": the prompt fix was real, but a nano-class model still returns
+   * shallow, generic judgement next to what a mid-tier model writes about the
+   * same CV — which is exactly the gap users see when they paste their CV into a
+   * frontier chat model and get a sharper read than this panel gave them.
+   * Extraction (pulling keyword lists out of a posting) stays on the cheap model:
+   * that is mechanical, and a bigger model buys nothing there.
    * Spelling typos (findNearMisses) and missing keywords (the deterministic match)
    * are handled elsewhere and told to stay out of here, so the unified report never
    * says the same thing twice. Fail-closed: any error returns null, score intact.
@@ -88,6 +96,7 @@ export class AIReviewModule {
     plan: string,
     en: boolean,
     langInstruction: string,
+    sectionData: Record<string, unknown> = {},
   ): Promise<CvAnalysis | null> {
     const prompt = en
       ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you NEVER invent facts — every claim quotes the candidate's real text.
@@ -108,7 +117,11 @@ Return JSON with this exact shape:
     { "issue": "<what is wrong — quote the real resume text>",
       "why": "<why it costs the ATS match or the recruiter>",
       "fix": "<the exact change to make>",
-      "severity": "high | medium" }
+      "severity": "high | medium",
+      "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+                  "targetId": "<job ID, rewrite_bullet only>",
+                  "index": 0,
+                  "value": "<skill, add_skill only>" } }
   ],
   "strengths": ["<a real, specific strength for THIS job>"]
 }
@@ -125,11 +138,19 @@ Review the resume against ALL of the following and report every real problem you
 9. FIT FOR THIS JOB — whether the experience actually EVIDENCES the job's core requirements (not just lists the skill), and the single most important thing missing for THIS specific role.
 
 Hard rules:
+- DEPTH IS THE POINT. "issue" quotes the candidate's actual line. "why" names the concrete consequence for THIS posting (which requirement goes unmatched, what the recruiter concludes) — never a generic platitude. "fix" is the REPLACEMENT TEXT, ready to paste, written in the candidate's voice — not a description of what they should do. A fix the user cannot copy straight into their CV is a wasted fix.
 - Ground EVERYTHING in the real resume text — quote it. Never invent a fact, metric or percentage.
 - Do NOT list which job-description keywords are missing — that is reported separately.
 - No generic filler ("use action verbs" with no example) — always tie the advice to the candidate's actual line.
 - The verdict MUST plainly state whether the resume is strong enough for THIS job and name the single biggest thing holding it back.
 - Return up to 8 critical fixes, most damaging first. Empty array only if the resume is genuinely clean.
+- EVERY fix carries an "action" naming the tool that repairs it, because the user gets a working button from it:
+  · rewrite_bullet — one specific bullet is weak/duty-phrased/unquantified. Give the job's ID (shown as "ID:x" in the resume above) and the bullet's 0-based index within that job. Only use an ID and index that actually exist above.
+  · rewrite_summary — the professional summary is the problem.
+  · add_skill — a skill the candidate demonstrates in their experience but never lists. Put the exact skill in "value".
+  · fix_dates — dates are in inconsistent or non-machine-readable formats.
+  · remove_duplicates — the same bullet text appears more than once.
+  · manual — anything else (missing LinkedIn, an unexplained gap, a claim only the candidate can verify). Use it freely; a wrong action is worse than none.
 - Respond ONLY with the JSON, no markdown.`
       : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA inventas datos — cada afirmación cita el texto real del candidato.
 
@@ -149,7 +170,11 @@ Devuelve JSON con esta forma exacta:
     { "issue": "<qué está mal — cita el texto real del CV>",
       "why": "<por qué le cuesta el match ATS o al reclutador>",
       "fix": "<el cambio exacto a hacer>",
-      "severity": "high | medium" }
+      "severity": "high | medium",
+      "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+                  "targetId": "<ID del puesto, solo rewrite_bullet>",
+                  "index": 0,
+                  "value": "<habilidad, solo add_skill>" } }
   ],
   "strengths": ["<una fuerza real y específica para ESTE puesto>"]
 }
@@ -166,23 +191,34 @@ Revisa el CV contra TODO lo siguiente y reporta cada problema real que encuentre
 9. ENCAJE PARA ESTE PUESTO — si la experiencia realmente EVIDENCIA los requisitos centrales del puesto (no solo lista la skill), y lo único más importante que falta para ESTE rol.
 
 Reglas duras:
+- LA PROFUNDIDAD ES EL PUNTO. "issue" cita la línea real del candidato. "why" nombra la consecuencia concreta para ESTA vacante (qué requisito queda sin cubrir, qué concluye el reclutador) — nunca una generalidad. "fix" es el TEXTO DE REEMPLAZO, listo para pegar, escrito en la voz del candidato — no una descripción de lo que debería hacer. Un arreglo que el usuario no puede copiar tal cual a su CV es un arreglo desperdiciado.
 - Ancla TODO en el texto real del CV — cítalo. Nunca inventes un dato, métrica ni porcentaje.
 - NO listes qué keywords de la vacante faltan — eso se reporta aparte.
 - Sin relleno genérico ("usa verbos de acción" sin ejemplo) — siempre atá el consejo a la línea real del candidato.
 - El veredicto DEBE decir claramente si el CV es lo bastante fuerte para ESTE puesto y nombrar lo único más grande que lo frena.
 - Devuelve hasta 8 arreglos críticos, el más dañino primero. Array vacío solo si el CV está genuinamente limpio.
+- CADA arreglo lleva una "action" que nombra la herramienta que lo repara, porque de ahí sale un botón real para el usuario:
+  · rewrite_bullet — un bullet concreto es débil / lista funciones / no tiene resultado. Da el ID del puesto (aparece como "ID:x" en el CV de arriba) y el índice 0-based del bullet dentro de ese puesto. Usa solo IDs e índices que existan arriba.
+  · rewrite_summary — el problema está en el resumen profesional.
+  · add_skill — una habilidad que el candidato demuestra en su experiencia pero nunca lista. Pon la habilidad exacta en "value".
+  · fix_dates — las fechas están en formatos inconsistentes o poco legibles por máquina.
+  · remove_duplicates — el mismo bullet aparece más de una vez.
+  · manual — cualquier otra cosa (falta LinkedIn, un hueco sin explicar, algo que solo el candidato puede verificar). Úsalo sin miedo; una acción equivocada es peor que ninguna.
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     try {
       const response = await this.aiClient.chat({
-        model: AI_MODEL,
+        model: AI_MODEL_PROSE,
         // 1200 truncated the JSON mid-object on a rich CV — the prompt asks for
         // up to 8 fixes, each with issue + why + fix, plus a verdict and
         // strengths, and in Spanish that overruns easily. The parse then threw
         // and the whole recruiter analysis vanished from the panel with only a
         // warn line in the logs (observed in production, 2026-08-05). Same
         // failure and same fix as tailor-cv in 4e0bed5.
-        max_tokens: 3000,
+        // 8 fixes, each with a quoted issue, a concrete why and a ready-to-paste
+        // fix, plus verdict and strengths — in Spanish. At 3000 the model wrote
+        // telegraphically to fit, which read as shallow advice.
+        max_tokens: 4500,
         temperature: AI_TEMPERATURE_PRECISE,
         response_format: { type: "json_object" },
         messages: [
@@ -192,11 +228,11 @@ Reglas duras:
       })
       const usage = response.usage
       logAIUsage(userId, "ats-score", {
-        model: AI_MODEL,
+        model: AI_MODEL_PROSE,
         plan,
         promptTokens: usage?.prompt_tokens ?? 0,
         completionTokens: usage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+        costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
       })
       const raw = response.choices[0]?.message?.content ?? "{}"
       const parsed = CvAnalysisSchema.safeParse(parseAIJson<unknown>(raw))
@@ -214,6 +250,11 @@ Reglas duras:
       }
       const a = parsed.data
       a.criticalFixes = a.criticalFixes.filter((f) => f.issue.trim()).slice(0, 8)
+      // Every button is verified against the real CV before the user can press
+      // it. A rewrite_bullet pointing at a job that isn't there, or past the end
+      // of its bullets, would silently do nothing or edit the wrong line — so it
+      // degrades to advice-only. add_skill without a skill is the same story.
+      for (const f of a.criticalFixes) f.action = groundFixAction(f.action, sectionData)
       // Nothing usable → null, so the UI shows no empty analysis.
       if (!a.verdict.trim() && a.criticalFixes.length === 0 && a.strengths.length === 0) return null
       return a
@@ -276,13 +317,17 @@ Return JSON with this exact shape:
   "jobTitle": "<the role title from the job description>",
   "mustHaves": ["<hard requirement: years of experience, degree, certification, license>", ...],
   "summary": "<1-2 sentence qualitative summary of how the resume fits — do NOT state a numeric score>",
-  "suggestions": ["<concrete action to improve fit>", "<action 2>", "<action 3>"]
+  "suggestions": [ { "text": "<concrete action to improve fit>",
+                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+                                 "targetId": "<job ID, rewrite_bullet only>", "index": 0, "value": "<skill, add_skill only>" } } ]
 }
 
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
 - Extract ONLY what the job description actually asks for. Do not invent requirements.
+- WRITE EVERY ITEM IN THE RESUME'S LANGUAGE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
 - suggestions: EXACTLY 3, imperative, each naming the CV section to change. Example: "ADD 'Kubernetes' to your Skills section if you have used it".
+- Every suggestion carries an "action" — the tool that performs it, which the user gets as a working button: add_skill (put the exact skill in "value"), rewrite_bullet (give the job ID shown as "ID:x" in the resume and the bullet's 0-based index), rewrite_summary, fix_dates, remove_duplicates, or manual when nothing in the editor can do it in one click. A wrong action is worse than manual.
 - If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Extrae los requisitos de contratación de esta descripción de puesto. NO puntúes ni califiques nada — solo extrae y aconseja.
@@ -300,13 +345,17 @@ Devuelve JSON con esta forma exacta:
   "jobTitle": "<el título del puesto según la descripción>",
   "mustHaves": ["<requisito duro: años de experiencia, título, certificación, licencia>", ...],
   "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV — NO indiques un número de score>",
-  "suggestions": ["<acción concreta para mejorar el encaje>", "<acción 2>", "<acción 3>"]
+  "suggestions": [ { "text": "<acción concreta para mejorar el encaje>",
+                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+                                 "targetId": "<ID del puesto, solo rewrite_bullet>", "index": 0, "value": "<habilidad, solo add_skill>" } } ]
 }
 
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
 - Extrae SOLO lo que la descripción realmente pide. No inventes requisitos.
+- ESCRIBE CADA ÍTEM EN EL IDIOMA DEL CV, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
 - suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar. Ejemplo: "AÑADE 'Kubernetes' a tu sección de Habilidades si lo has usado".
+- Cada sugerencia lleva una "action" — la herramienta que la ejecuta, que el usuario recibe como botón real: add_skill (pon la habilidad exacta en "value"), rewrite_bullet (da el ID del puesto que aparece como "ID:x" en el CV y el índice 0-based del bullet), rewrite_summary, fix_dates, remove_duplicates, o manual cuando nada en el editor pueda hacerlo en un clic. Una acción equivocada es peor que manual.
 - Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
@@ -329,13 +378,15 @@ Return JSON with this exact shape:
   "jobTitle": "<canonical title for this role>",
   "mustHaves": ["<standard hard requirement: typical years, degree, certification, license>", ...],
   "summary": "<1-2 sentence qualitative summary of how the resume fits this role — do NOT state a numeric score>",
-  "suggestions": ["<concrete action to improve fit>", "<action 2>", "<action 3>"]
+  "suggestions": [ { "text": "<concrete action to improve fit>",
+                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+                                 "targetId": "<job ID, rewrite_bullet only>", "index": 0, "value": "<skill, add_skill only>" } } ]
 }
 
 Rules:
 - Only STANDARD requirements for this role. Max ~12 hard skills.
 - Do NOT invent niche/company-specific requirements — only what a typical posting for this role lists.
-- suggestions: EXACTLY 3, imperative, each naming the CV section to change.
+- suggestions: EXACTLY 3, imperative, each naming the CV section to change, each with its "action" (see the shape above; use "manual" when no button applies).
 - If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Infiere los requisitos ESTÁNDAR de contratación para el rol objetivo de abajo — las habilidades técnicas, blandas, requisitos duros y el título canónico que una oferta típica de este rol listaría. Básate SOLO en expectativas comunes y bien establecidas de este rol. NO inventes requisitos de nicho, específicos de una empresa ni inusuales. Si el rol es demasiado vago o no es un rol real, devuelve off_topic.
@@ -353,13 +404,15 @@ Devuelve JSON con esta forma exacta:
   "jobTitle": "<título canónico de este rol>",
   "mustHaves": ["<requisito duro estándar: años típicos, título, certificación, licencia>", ...],
   "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV con este rol — NO indiques un número de score>",
-  "suggestions": ["<acción concreta para mejorar el encaje>", "<acción 2>", "<acción 3>"]
+  "suggestions": [ { "text": "<acción concreta para mejorar el encaje>",
+                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+                                 "targetId": "<ID del puesto, solo rewrite_bullet>", "index": 0, "value": "<habilidad, solo add_skill>" } } ]
 }
 
 Reglas:
 - Solo requisitos ESTÁNDAR de este rol. Máx ~12 hard skills.
 - NO inventes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
-- suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar.
+- suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar, cada una con su "action" (ver la forma de arriba; usa "manual" cuando ningún botón aplique).
 - Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
@@ -422,7 +475,7 @@ Reglas:
     // awaited work before we collect it (the embedding pass) fails closed too — so
     // this promise can never dangle or reject. The .catch is a belt against a future
     // edit adding a throwing call between here and the await.
-    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction).catch(() => null)
+    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}).catch(() => null)
 
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)
@@ -506,11 +559,20 @@ Reglas:
       // one that only appears in a list is a claim, and listing it does not make
       // it a strength — that is what let a bare keyword dump look strong.
       strengths: match.demonstratedKeywords,
-      gaps: match.missingMustHaves,
+      // A years-of-experience requirement the CV already clears is not a gap.
+      // The matcher can only look for the requirement's words, and no CV writes
+      // "5+ years of experience as an iOS developer" — so a 7-year candidate was
+      // told 5 years was missing.
+      gaps: dropSatisfiedYearRequirements(match.missingMustHaves, sectionData ?? {}),
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
-      suggestions: extraction.suggestions,
+      // Same grounding as the critical fixes: a suggestion's button is only
+      // rendered when it points at something that exists in this CV.
+      suggestions: extraction.suggestions.map((sg) => ({
+        ...sg,
+        action: groundFixAction(sg.action, sectionData ?? {}),
+      })),
       subScores: { ...match.subScores, format: formatScore },
       templateSafety,
       extractedKeywords: {
@@ -566,7 +628,11 @@ Reglas:
       label: localizedLabel(scoreLabel(finalScore), en),
       summary: defaultSummary(finalScore, en),
       strengths: match.demonstratedKeywords,
-      gaps: match.missingMustHaves,
+      // A years-of-experience requirement the CV already clears is not a gap.
+      // The matcher can only look for the requirement's words, and no CV writes
+      // "5+ years of experience as an iOS developer" — so a 7-year candidate was
+      // told 5 years was missing.
+      gaps: dropSatisfiedYearRequirements(match.missingMustHaves, sectionData ?? {}),
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
@@ -733,7 +799,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 }`
 
     const response = await this.aiClient.chat({
-      model: AI_MODEL,
+      // Same reasoning as analyzeResume: this one writes the rewrite the user
+      // applies to their CV, so it belongs on the prose model, not the extractor.
+      model: AI_MODEL_PROSE,
       // Raised from 900: the review now also proof-reads for spelling/grammar and
       // returns per-error corrections, so the JSON is larger. Sized to the worst
       // case (5 strengths + 5 improvements, each with a full-field preview).
@@ -844,11 +912,11 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const reviewUsage = response.usage
     const reviewLogOpts = {
-      model: AI_MODEL,
+      model: AI_MODEL_PROSE,
       plan,
       promptTokens: reviewUsage?.prompt_tokens ?? 0,
       completionTokens: reviewUsage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, reviewUsage?.prompt_tokens ?? 0, reviewUsage?.completion_tokens ?? 0),
+      costUsd: computeCostUsd(AI_MODEL_PROSE, reviewUsage?.prompt_tokens ?? 0, reviewUsage?.completion_tokens ?? 0),
     }
 
     const validated = ReviewResponseSchema.safeParse(parsed)

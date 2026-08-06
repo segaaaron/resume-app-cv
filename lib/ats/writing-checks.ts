@@ -47,9 +47,27 @@ export interface WeakVerbBullet {
   text: string
 }
 
+/**
+ * A bullet whose text already appears earlier in the CV, word for word.
+ *
+ * The recruiter analysis reports these in prose ("the same bullet appears twice
+ * in Rappi") but had nothing to act on. Detecting them in code names the exact
+ * duplicate — index and all — so the report can offer the one fix that applies:
+ * delete this line. `duplicateOfJobTitle` is set when the twin lives in another
+ * role, which reads very differently to a recruiter (copy-paste across jobs).
+ */
+export interface DuplicateBullet {
+  targetId: string
+  jobTitle: string
+  index: number
+  text: string
+  duplicateOfJobTitle: string
+}
+
 export interface WritingChecks {
   clicheBullets: ClicheBullet[]
   weakVerbBullets: WeakVerbBullet[]
+  duplicateBullets: DuplicateBullet[]
   /** Non-null when the CV mixes date formats (confuses ATS tenure parsing). */
   dateInconsistency: { formats: string[] } | null
   bulletBalance: BulletBalance[]
@@ -83,14 +101,36 @@ function dateFormatClass(raw: string): string | null {
 
 const MAX_CLICHE = 8
 const MAX_BALANCE = 6
+const MAX_DUPLICATE = 8
 const BULLET_MAX = 6 // more than this on one role reads as noise
+
+/**
+ * Comparison key for "is this the same bullet". Case, accents, punctuation and
+ * whitespace are stripped: a duplicate that survived a re-typing is still a
+ * duplicate to a recruiter. Short lines are skipped by the caller — two bullets
+ * reading "Code reviews" are not a copy-paste defect.
+ */
+function duplicateKey(bullet: string): string {
+  return bullet
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+}
+/** Below this a repeated line is a heading-like fragment, not a duplicated achievement. */
+const MIN_DUPLICATE_CHARS = 25
 
 export function analyzeWriting(sectionData: Record<string, unknown>): WritingChecks {
   const work = (sectionData.workExperience ?? []) as WorkRow[]
   const clicheBullets: ClicheBullet[] = []
   const weakVerbBullets: WeakVerbBullet[] = []
   const bulletBalance: BulletBalance[] = []
+  const duplicateBullets: DuplicateBullet[] = []
   const formats = new Set<string>()
+  // First occurrence wins: the twin is what gets flagged, so applying the fix
+  // (delete) always leaves the CV with exactly one copy.
+  const firstSeen = new Map<string, { jobTitle: string }>()
 
   for (const j of work) {
     const id = j.id ?? ""
@@ -104,6 +144,20 @@ export function analyzeWriting(sectionData: Record<string, unknown>): WritingChe
       }
       if (id && opensWeak(b) && weakVerbBullets.length < MAX_CLICHE) {
         weakVerbBullets.push({ targetId: id, jobTitle: j.jobTitle ?? "", index, text: b })
+      }
+      if (id && b.length >= MIN_DUPLICATE_CHARS) {
+        const key = duplicateKey(b)
+        const first = firstSeen.get(key)
+        if (!first) firstSeen.set(key, { jobTitle: j.jobTitle ?? "" })
+        else if (duplicateBullets.length < MAX_DUPLICATE) {
+          duplicateBullets.push({
+            targetId: id,
+            jobTitle: j.jobTitle ?? "",
+            index,
+            text: b,
+            duplicateOfJobTitle: first.jobTitle,
+          })
+        }
       }
     })
 
@@ -124,6 +178,7 @@ export function analyzeWriting(sectionData: Record<string, unknown>): WritingChe
   return {
     clicheBullets,
     weakVerbBullets,
+    duplicateBullets,
     dateInconsistency: formats.size > 1 ? { formats: [...formats] } : null,
     bulletBalance,
   }

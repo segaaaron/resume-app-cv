@@ -77,3 +77,48 @@ describe("analyzeWriting", () => {
     expect(r.bulletBalance).toEqual([])
   })
 })
+
+describe("analyzeWriting — duplicate bullets", () => {
+  it("flags the second copy of a bullet, never the first", () => {
+    const r = analyzeWriting({
+      workExperience: [{
+        id: "w1",
+        jobTitle: "iOS Developer",
+        description: "• Escribí pruebas unitarias exhaustivas para asegurar la fiabilidad del código.\n• Optimicé la pila Core Data y la gestión de memoria en Swift.\n• Escribí pruebas unitarias exhaustivas para asegurar la fiabilidad del código.",
+      }],
+    })
+    expect(r.duplicateBullets).toEqual([
+      expect.objectContaining({ targetId: "w1", index: 2, duplicateOfJobTitle: "iOS Developer" }),
+    ])
+  })
+
+  it("catches a bullet copy-pasted into another role", () => {
+    const line = "• Lideré sesiones de intercambio de conocimientos con el equipo de producto."
+    const r = analyzeWriting({
+      workExperience: [
+        { id: "w1", jobTitle: "iOS Developer", description: line },
+        { id: "w2", jobTitle: "Senior iOS Developer", description: line },
+      ],
+    })
+    expect(r.duplicateBullets).toEqual([
+      expect.objectContaining({ targetId: "w2", index: 0, duplicateOfJobTitle: "iOS Developer" }),
+    ])
+  })
+
+  it("ignores casing, accents and punctuation differences", () => {
+    const r = analyzeWriting({
+      workExperience: [{
+        id: "w1",
+        description: "• Implementé la arquitectura TCA y patrones de diseño.\n• implemente la arquitectura tca y patrones de diseno",
+      }],
+    })
+    expect(r.duplicateBullets).toHaveLength(1)
+  })
+
+  it("does not flag two short, generic lines", () => {
+    const r = analyzeWriting({
+      workExperience: [{ id: "w1", description: "• Code reviews\n• Code reviews" }],
+    })
+    expect(r.duplicateBullets).toEqual([])
+  })
+})

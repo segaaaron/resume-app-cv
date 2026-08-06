@@ -142,7 +142,7 @@ describe("renderBulletsForPrompt", () => {
   it("drops whole bullets past maxTotalLength and says so", () => {
     const out = renderBulletsForPrompt(["aaaa", "bbbb", "cccc"], { maxTotalLength: 20 })
     expect(out).toContain("[0] aaaa")
-    expect(out).toContain("more not shown")
+    expect(out).toContain("further bullets omitted")
     expect(out).not.toContain("[2] cccc")
   })
 
@@ -166,8 +166,8 @@ describe("renderBulletsForPrompt", () => {
       indent: "    ",
       maxTotalLength: 500,
     })
-    expect(out.length).toBeLessThanOrEqual(500 + 40) // + the "more not shown" notice
-    expect(out).toContain("more not shown")
+    expect(out.length).toBeLessThanOrEqual(500 + 160) // + the system omission notice
+    expect(out).toContain("further bullets omitted")
   })
 
   it("keeps indices aligned with parseBullets after blank lines are dropped", () => {
@@ -176,5 +176,32 @@ describe("renderBulletsForPrompt", () => {
     const bullets = parseBullets("• A\n\n• B")
     expect(renderBulletsForPrompt(bullets)).toBe("  [0] A\n  [1] B")
     expect(bullets[1]).toBe("B")
+  })
+})
+
+describe("serializeBullets — a CV cannot state the same line twice", () => {
+  it("collapses byte-identical bullets, keeping the first", () => {
+    const out = serializeBullets([
+      "Escribí pruebas unitarias exhaustivas para asegurar la fiabilidad del código.",
+      "Optimicé la pila Core Data.",
+      "Escribí pruebas unitarias exhaustivas para asegurar la fiabilidad del código.",
+    ])
+    expect(parseBullets(out)).toEqual([
+      "Escribí pruebas unitarias exhaustivas para asegurar la fiabilidad del código.",
+      "Optimicé la pila Core Data.",
+    ])
+  })
+
+  it("collapses across casing, accents and punctuation", () => {
+    const out = serializeBullets(["Implementé la arquitectura TCA.", "implemente la arquitectura tca"])
+    expect(parseBullets(out)).toHaveLength(1)
+  })
+
+  it("keeps bullets that merely start alike", () => {
+    const out = serializeBullets([
+      "Desarrollé capas de red para sincronizar datos.",
+      "Desarrollé capas de red para sincronizar imágenes.",
+    ])
+    expect(parseBullets(out)).toHaveLength(2)
   })
 })

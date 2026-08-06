@@ -132,7 +132,7 @@ export function buildResumeContext(
     // Per-job budget alone is not a cap: 10 jobs x 1400 would blow past
     // AI_INPUT_LIMITS.resumeContext (12000) and hand the user a 400. Spend from
     // one shared pool so the ceiling holds no matter how long the CV is.
-    let workBudget = 8000
+    let workBudget = 8400
     workExperience.slice(0, 10).forEach((j) => {
       const present = en ? "Present" : "Presente"
       const at = en ? "at" : "en"
@@ -156,7 +156,10 @@ export function buildResumeContext(
       if (bullets.length && workBudget > 0) {
         const rendered = renderBulletsForPrompt(bullets, {
           indent: "    ",
-          maxTotalLength: Math.min(1400, workBudget),
+          // 2200 ≈ 14 typical bullets. At 1400 a 10-bullet role was cut, and the
+          // omission notice then became a fake "critical fix" in the recruiter
+          // analysis. AI_INPUT_LIMITS.resumeContext (12000) still caps the whole.
+          maxTotalLength: Math.min(2200, workBudget),
         })
         lines.push(rendered)
         workBudget -= rendered.length
@@ -173,7 +176,10 @@ export function buildResumeContext(
   }
 
   if (skills?.length) {
-    const skillList = skills.slice(0, 12).map((s) => s.name).filter(Boolean).join(", ")
+    // 40, not 12. At 12 the analyst never saw most of a real CV's skills and
+    // told the candidate to "add" things already listed — the same truncation
+    // that used to break the keyword matcher (fixed separately in the haystack).
+    const skillList = skills.slice(0, 40).map((s) => s.name).filter(Boolean).join(", ")
     if (skillList) lines.push(`${en ? "Skills" : "Habilidades"}: ${skillList}`)
   }
 

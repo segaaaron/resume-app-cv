@@ -47,6 +47,44 @@ const EXTRA_ALIAS_GROUPS: readonly string[][] = [
   ["data analysis", "analisis de datos"],
   ["customer service", "atencion al cliente", "servicio al cliente"],
   ["quality assurance", "qa", "aseguramiento de calidad"],
+  // Bilingual engineering vocabulary. A Spanish CV writes "Revisión de código"
+  // and an English posting asks for "code review": without these the matcher
+  // reported a skill the candidate demonstrably has as MISSING, and then offered
+  // to add the English spelling next to the Spanish one — two entries for one
+  // skill, which reads as machine-written and is exactly what gets a CV binned.
+  ["code review", "code reviews", "revision de codigo", "revisiones de codigo"],
+  ["memory management", "gestion de memoria", "manejo de memoria"],
+  ["debugging", "depuracion"],
+  ["unit testing", "unit tests", "pruebas unitarias", "tests unitarios"],
+  ["testing", "pruebas", "qa testing"],
+  ["networking", "redes"],
+  ["performance optimization", "optimizacion de rendimiento", "optimizacion del rendimiento"],
+  ["application lifecycle", "ciclo de vida de la aplicacion", "ciclo de vida"],
+  ["crash reporting", "reporte de fallos", "reportes de fallos"],
+  ["dependency injection", "inyeccion de dependencias"],
+  ["design patterns", "patrones de diseno"],
+  ["software architecture", "arquitectura de software"],
+  ["modular architecture", "arquitectura modular"],
+  ["functional programming", "programacion funcional"],
+  ["reactive programming", "programacion reactiva"],
+  ["concurrency", "concurrencia", "multi-threading", "multithreading", "hilos"],
+  ["mobile development", "desarrollo movil"],
+  ["web development", "desarrollo web"],
+  ["backend", "back-end", "back end", "servicios backend"],
+  ["frontend", "front-end", "front end"],
+  ["accessibility", "accesibilidad"],
+  ["usability", "usabilidad"],
+  ["maintainability", "mantenibilidad"],
+  ["scalability", "escalabilidad"],
+  ["technical debt", "deuda tecnica"],
+  ["mentoring", "mentoria", "mentoring junior developers"],
+  ["agile", "agil", "metodologias agiles", "metodologia agil"],
+  ["code quality", "calidad de codigo", "calidad del codigo"],
+  ["release management", "gestion de releases", "gestion de versiones"],
+  ["offline capabilities", "capacidades offline", "modo offline"],
+  ["local storage", "almacenamiento local"],
+  ["data synchronization", "sincronizacion de datos"],
+  ["api integration", "integracion de apis", "integracion de api"],
 ]
 
 /**

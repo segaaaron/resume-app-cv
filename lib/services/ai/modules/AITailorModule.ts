@@ -256,8 +256,16 @@ Reglas:
     // dropped with the same 90% threshold (isTrivialEdit) used by bullets/summary/cover.
     const origBulletsByJob = new Map(work.map((j) => [j.id ?? "?", parseBullets(j.description ?? "")]))
 
+    // Identical rewrites, collapsed. A CV that states the same bullet twice (a
+    // real and common copy-paste) makes the model return the same improved line
+    // for both indexes, and the panel then listed "Reduje regresiones…" twice
+    // with two Apply buttons. One rewrite per distinct text, first index wins.
+    const rewriteKey = (s: string) =>
+      s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "").replace(/[^\p{L}\p{N}]+/gu, " ").trim()
+
     const sanitizedExperiences = (raw.experiences ?? []).map((e) => {
       const origBullets = origBulletsByJob.get(e.targetId ?? "") ?? []
+      const seenRewrites = new Set<string>()
       const cleanedBullets = (e.changedBullets ?? [])
         .map((b) => ({
           index: typeof b.index === "number" ? b.index : 0,
@@ -290,6 +298,9 @@ Reglas:
               return false
             }
           }
+          const key = rewriteKey(b.text)
+          if (key && seenRewrites.has(key)) { droppedTrivial++; return false }
+          if (key) seenRewrites.add(key)
           return true
         })
       return {

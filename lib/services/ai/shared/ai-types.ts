@@ -119,6 +119,12 @@ export interface ATSExtractedKeywords {
   mustHaves: string[]
 }
 
+/** A suggestion plus the one-click action that carries it out. */
+export interface ATSSuggestion {
+  text: string
+  action: CvFixAction
+}
+
 export interface ATSScoreResult {
   score: number
   label: string
@@ -133,7 +139,7 @@ export interface ATSScoreResult {
    * a score that rewards listing a skill exactly as much as having done it.
    */
   listedOnlyKeywords: string[]
-  suggestions: string[]
+  suggestions: ATSSuggestion[]
   subScores: ATSSubScores
   /** Parseability tier of the chosen template. "caution" = multi-column, a strict ATS may reorder it. */
   templateSafety: "safe" | "caution"
@@ -186,13 +192,64 @@ export interface ATSRescoreInput {
 const cappedStringArray = (limit: number) =>
   z.array(z.string()).catch([]).transform((a) => a.slice(0, limit))
 
+/**
+ * The button a finding earns.
+ *
+ * Every ATS tool on the market tells the candidate what is wrong and leaves the
+ * fixing to them — that is the single loudest complaint about the category, and
+ * it was true here too: the recruiter analysis produced eight paragraphs of
+ * diagnosis with nothing to press. So the model must say WHICH of our existing
+ * engines fixes each finding, and the panel renders that engine's button.
+ *
+ * `kind: "manual"` is a first-class answer. A finding nothing can fix in one
+ * click (add a LinkedIn URL, explain a gap) shows the advice with no button —
+ * which is honest, and better than a button that does something adjacent.
+ *
+ * The server VALIDATES every reference before it ships: a targetId that names no
+ * job, or an index past the end of that job's bullets, is downgraded to manual
+ * rather than handed to the UI, where it would either do nothing or edit the
+ * wrong line.
+ */
+export const CvFixActionSchema = z
+  .object({
+    kind: z
+      .enum(["rewrite_bullet", "rewrite_summary", "add_skill", "fix_dates", "remove_duplicates", "manual"])
+      .catch("manual"),
+    /** rewrite_bullet: the job the bullet belongs to. */
+    targetId: z.string().max(64).optional(),
+    /** rewrite_bullet: 0-based bullet index inside that job. */
+    index: z.number().int().min(0).max(60).optional(),
+    /** add_skill: the exact skill to add. */
+    value: z.string().max(80).optional(),
+  })
+  .catch({ kind: "manual" as const })
+export type CvFixAction = z.infer<typeof CvFixActionSchema>
+
 export const ATSExtractionSchema = z.object({
   hardSkills: cappedStringArray(30),
   softSkills: cappedStringArray(20),
   jobTitle: z.string().catch(""),
   mustHaves: cappedStringArray(20),
   summary: z.string().catch(""),
-  suggestions: cappedStringArray(3),
+  /**
+   * Each suggestion carries the action that performs it, exactly like a critical
+   * fix — advice with no button is what every competing ATS tool ships, and it
+   * is what the user reads as "you told me the problem, now do it yourself".
+   * `manual` is legitimate; a wrong button is not.
+   */
+  suggestions: z
+    // A bare string is still accepted: the model drops the wrapper often enough
+    // that rejecting it would throw away all three suggestions (the array-level
+    // .catch would fire) over a formatting slip. A plain string simply has no
+    // button.
+    .array(
+      z.union([
+        z.string().transform((text) => ({ text, action: { kind: "manual" as const } })),
+        z.object({ text: z.string().catch(""), action: CvFixActionSchema }),
+      ]),
+    )
+    .catch([])
+    .transform((a) => a.filter((x) => x.text.trim()).slice(0, 3)),
   label: z.string().optional(), // only used to detect the off_topic guard
 })
 
@@ -203,6 +260,7 @@ export type ATSExtraction = z.infer<typeof ATSExtractionSchema>
  *  quoting real text. The deterministic layer (typos, missing keywords, layout)
  *  handles the mechanical checks; this handles judgment a keyword matcher can't:
  *  layout risk, weak metrics, language mix, structure, credibility, narrative. */
+
 export const CvAnalysisSchema = z.object({
   /** Two sentences: would this pass the recruiter's screen for THIS job + the biggest risk. */
   verdict: z.string().catch(""),
@@ -218,6 +276,7 @@ export const CvAnalysisSchema = z.object({
         why: z.string().catch(""),
         fix: z.string().catch(""),
         severity: z.enum(["high", "medium"]).catch("medium"),
+        action: CvFixActionSchema,
       }),
     )
     .catch([]),
@@ -317,12 +376,22 @@ export type FillProfileResult = z.infer<typeof FillProfileResponseSchema>
 
 // ─── Input types ──────────────────────────────────────────────────────────────
 
+/** Defects the panel already detected on this bullet — see BULLET_FOCUS. */
+export type BulletFocus = "metric" | "weak_verb" | "cliche"
+
 export interface ImproveBulletInput {
   text: string
   jobTitle?: string
   employer?: string
   industry?: string
   language?: string
+  /**
+   * What the caller wants fixed. When present the model is told the bullet was
+   * already judged defective and MUST return a rewrite addressing it — without
+   * this, the generic "leave strong bullets alone" rule made the model answer
+   * "already optimized" to a bullet the panel had just labelled weak.
+   */
+  focus?: BulletFocus[]
 }
 
 export interface GenerateSummaryInput {
@@ -427,6 +496,13 @@ export interface SkillBulletInput {
    * output guard is skipped. All anti-invention guards stay on. Defaults to hard.
    */
   soft?: boolean
+  /**
+   * Role the USER picked. Set only after the model reported no natural home for
+   * the skill: instead of a dead end ("I couldn't find a role that fits"), the
+   * editor lists the candidate's roles and lets them decide. When present, this
+   * role is the only one considered.
+   */
+  targetId?: string
 }
 
 export type SkillBulletResult =

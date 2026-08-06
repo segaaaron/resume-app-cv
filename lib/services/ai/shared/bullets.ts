@@ -37,17 +37,49 @@ export function parseBullets(description: string): string[] {
 }
 
 /**
+ * Comparison key for "this is the same bullet": case, accents, punctuation and
+ * whitespace removed. A duplicate that came back through an AI rewrite or a
+ * re-import is still the same line to a recruiter and to a parser.
+ */
+function sameBulletKey(bullet: string): string {
+  return bullet
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+}
+
+/**
  * Serializes bullet texts back into a `description`, one per line, each marked.
  * Empty entries are dropped. Round-trips with parseBullets, and normalizes
  * unmarked lines to marked ones — matching the marker the AI prompts already
  * emit and the editor already renders.
+ *
+ * IDENTICAL LINES COLLAPSE, first occurrence wins. Every programmatic write to a
+ * description goes through here — applying an AI suggestion, appending a woven
+ * bullet, importing a parsed CV, tailoring to a posting — so this is the one
+ * place that can guarantee the CV never ends up stating the same achievement
+ * twice. It used to be possible, and it showed: the same line appeared twice in
+ * one role, the ATS report called it out as damage to credibility, the tailor
+ * then returned the same rewrite twice, and the fix on offer was to delete the
+ * copies by hand. No caller wants two byte-identical bullets, so none get them.
+ *
+ * Free typing in the editor does NOT pass through here — the user's keyboard is
+ * theirs, and collapsing a line mid-edit would fight them.
  */
 export function serializeBullets(bullets: string[]): string {
-  return bullets
-    .map(stripMarker)
-    .filter((b) => b.length > 0)
-    .map((b) => `${BULLET_MARKER} ${b}`)
-    .join("\n")
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (const bullet of bullets) {
+    const clean = stripMarker(bullet)
+    if (!clean) continue
+    const key = sameBulletKey(clean)
+    if (key && seen.has(key)) continue
+    if (key) seen.add(key)
+    out.push(`${BULLET_MARKER} ${clean}`)
+  }
+  return out.join("\n")
 }
 
 /**
@@ -99,7 +131,12 @@ export function renderBulletsForPrompt(bullets: string[], opts: RenderBulletsOpt
 
     if (maxTotalLength > 0 && total + line.length > maxTotalLength) {
       if (rendered.length > 0) {
-        rendered.push(`${indent}[… ${bullets.length - i} more not shown]`)
+        // Explicitly marked as OURS, not the candidate's text. The old wording
+        // ("… 3 more not shown") read like content the CV itself truncated, and
+        // the recruiter analysis duly reported "bullets are being cut off in the
+        // PDF" as a critical fix — a defect the user could never find, because
+        // it only ever existed inside this prompt.
+        rendered.push(`${indent}[SYSTEM: ${bullets.length - i} further bullets omitted from this prompt to save space — they ARE present in the CV. Never report this as a resume defect.]`)
         break
       }
       // A single bullet over budget — a prose description parses to exactly one.
