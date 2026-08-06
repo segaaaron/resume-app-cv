@@ -943,7 +943,7 @@ export default function ATSScorePanel() {
                   <div className="flex items-center gap-2">
                     <FileSearch className="h-3.5 w-3.5 text-indigo-500 shrink-0" />
                     <p className="text-[10.5px] text-slate-600 leading-snug flex-1 text-left">{t("verify_hint")}</p>
-                    <button type="button" onClick={verifyReal} disabled={verifyLoading}
+                    <button type="button" onClick={() => void verifyReal()} disabled={verifyLoading}
                       className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-100 hover:bg-indigo-200 border border-indigo-200 rounded-full px-2.5 py-1 transition-all disabled:opacity-50 disabled:cursor-not-allowed">
                       {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />}
                       {verifyLoading ? t("verify_loading") : t("verify_button")}
@@ -990,7 +990,7 @@ export default function ATSScorePanel() {
                         <AtsSafeDownload />
                       </div>
                     </details>
-                    <button type="button" onClick={verifyReal} disabled={verifyLoading}
+                    <button type="button" onClick={() => void verifyReal()} disabled={verifyLoading}
                       className="w-full inline-flex items-center justify-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-800 transition-all disabled:opacity-50">
                       {verifyLoading ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <FileSearch className="h-2.5 w-2.5" />} {t("verify_reverify")}
                     </button>

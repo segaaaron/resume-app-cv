@@ -206,6 +206,9 @@ export function useATSScore() {
   const [analyzedInputKey, setAnalyzedInputKey] = useState<string | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ats")
   const lastKeyRef = useRef<string | null>(null)
+  // verifyReal is declared below (it depends on state analyze does not need), so
+  // analyze reaches it through a ref instead of forcing a circular useCallback.
+  const verifyRealRef = useRef<((auto?: boolean) => Promise<void>) | null>(null)
 
   const analyze = useCallback(async () => {
     if (loading) return
@@ -288,6 +291,13 @@ export function useATSScore() {
         setAtsResult(normalizeAtsResult(data))
         await onSuccess()
         track("ai_ats_scored", { plan, score_bucket: scoreBucket(typeof data?.score === "number" ? data.score : 0) })
+        // Then show what an ATS literally extracts from the exported PDF. It is
+        // the only number here that is not our estimate of a parser, so it runs
+        // as part of the report rather than behind a button the user has to
+        // find. Fire-and-forget: the score is already on screen, this fills in
+        // when the render comes back, and a failure stays silent (the manual
+        // button remains for a retry).
+        void verifyRealRef.current?.(true)
       }
       lastKeyRef.current = key
       setAnalyzedInputKey(`${mode}:${text}`)
@@ -391,12 +401,22 @@ export function useATSScore() {
    * extract, and score that. Reveals content a two-column template reorders/loses
    * — the structured score can't see it because it never renders the file.
    */
-  const verifyReal = useCallback(async () => {
+  /**
+   * What an ATS actually reads out of the exported PDF.
+   *
+   * `auto` runs it as part of an analysis instead of waiting for the user to
+   * find the button. It is the one honest signal in this whole category — every
+   * other number is our estimate of a parser's behaviour, this one IS the
+   * parser's output — so it should not be optional homework. In automatic mode
+   * every toast is suppressed: a failure there is ours to absorb, and the panel
+   * simply keeps the button for a manual retry.
+   */
+  const verifyReal = useCallback(async (auto = false) => {
     if (verifyLoading) return
     const state = useResumeStore.getState()
     const text = input.trim()
     if (!state.resumeId || text.length < 15) {
-      toast.error(t("verify_needs_jd"))
+      if (!auto) toast.error(t("verify_needs_jd"))
       return
     }
     setVerifyLoading(true)
@@ -412,18 +432,20 @@ export function useATSScore() {
       })
       if (res.status === 422) {
         const d = await res.json().catch(() => ({}))
-        toast.error(d.error === "not_extractable" ? t("verify_not_extractable") : t("verify_error"))
+        if (!auto) toast.error(d.error === "not_extractable" ? t("verify_not_extractable") : t("verify_error"))
         return
       }
-      if (!res.ok) { toast.error(t("verify_error")); return }
+      if (!res.ok) { if (!auto) toast.error(t("verify_error")); return }
       setVerifyResult(await res.json())
       track("ats_verified_real", { plan })
     } catch {
-      toast.error(t("verify_error"))
+      if (!auto) toast.error(t("verify_error"))
     } finally {
       setVerifyLoading(false)
     }
   }, [input, locale, t, verifyLoading])
+
+  useEffect(() => { verifyRealRef.current = verifyReal }, [verifyReal])
 
   const hasResult = atsResult !== null || reviewResult !== null
   // True when a result is on screen AND the job input is unchanged since it was
