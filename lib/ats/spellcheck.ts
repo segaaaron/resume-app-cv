@@ -79,6 +79,92 @@ function editDistance(a: string, b: string): number {
   return prev[b.length]
 }
 
+/**
+ * Is `b` reachable from `a` by swapping two adjacent letters? ("recieved" →
+ * "received"). Two edits by Levenshtein, one slip by hand — the only distance-2
+ * shape we trust.
+ */
+function isTransposition(a: string, b: string): boolean {
+  if (a.length !== b.length) return false
+  const diff: number[] = []
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) diff.push(i)
+  return diff.length === 2 && diff[1] === diff[0] + 1 && a[diff[0]] === b[diff[1]] && a[diff[1]] === b[diff[0]]
+}
+
+/**
+ * Would a human read this "correction" as a fix, or as a different word?
+ *
+ * One edit is a typo. Two arbitrary edits is a substitution: "reutilizables" →
+ * "fertilizables" and "mentorando" → "centonando" are both distance 2, and both
+ * are the checker inventing a word the candidate never meant. Distance 2 is only
+ * accepted as an adjacent swap, which is a real and common slip.
+ */
+function isPlausibleCorrection(typed: string, suggestion: string): boolean {
+  const d = editDistance(typed, suggestion)
+  if (d === 0 || d > MAX_EDIT_DISTANCE) return false
+  if (d === 1) return true
+  return isTransposition(typed, suggestion)
+}
+
+/**
+ * Spanish derivational morphology the bundled dictionary does not carry.
+ *
+ * `dictionary-es` knows "monitor" but not "monitoreo", knows "utilizable" but
+ * not "reutilizable", knows "mentor" but not "mentorando" — all real words the
+ * checker was reporting with a confident, wrong fix. If stripping a productive
+ * affix leaves a word either dictionary knows, the word is real and we stay
+ * quiet.
+ *
+ * ENGLISH SUFFIXES ARE DELIBERATELY ABSENT. `dictionary-en` is comprehensive, so
+ * there is nothing to rescue — and stripping "-ed"/"-ing"/"-s" would silence the
+ * doubled-consonant misspellings we most want to catch ("occured" → "occur",
+ * "refered" → "refer").
+ */
+const ES_SUFFIXES = [
+  // Accented forms only: "-cion" without its accent IS the misspelling
+  // ("produccion"), so accepting it as a suffix would silence the typo.
+  "ización", "aciones", "ación", "ciones", "ción", "mente",
+  "izados", "izadas", "izado", "izada", "izar", "eando", "eados", "eado", "ear", "eos", "eo",
+  "ando", "endo", "ados", "adas", "ado", "ada", "ables", "able", "ibles", "ible",
+  "dores", "doras", "dor", "dora", "istas", "ista", "es", "s",
+]
+const ES_PREFIXES = [
+  "re", "des", "pre", "pro", "anti", "auto", "multi", "sub", "inter", "super",
+  "micro", "macro", "semi", "contra", "sobre", "co",
+]
+/** Shortest stem we will accept — below this the "root" is a fragment, not a word. */
+const MIN_STEM = 4
+
+function isDerivedFromKnownWord(lower: string, known: (w: string) => boolean): boolean {
+  for (const suffix of ES_SUFFIXES) {
+    if (!lower.endsWith(suffix) || lower.length - suffix.length < MIN_STEM) continue
+    const stem = lower.slice(0, -suffix.length)
+    // The bare stem, or the stem restored to a citation form ("pagin" → "pagina",
+    // "monitor" → "monitorar"). Spanish drops the theme vowel before a suffix.
+    if (["", "o", "a", "e", "ar", "er", "ir"].some((tail) => known(stem + tail))) return true
+  }
+  for (const prefix of ES_PREFIXES) {
+    if (!lower.startsWith(prefix) || lower.length - prefix.length < MIN_STEM) continue
+    if (known(lower.slice(prefix.length))) return true
+  }
+  return false
+}
+
+/** Shortest half of a compound. "back" + "end" is the tightest real case. */
+const MIN_COMPOUND_PART = 3
+
+/**
+ * Closed compounds neither dictionary lists: "backend", "frontend", "fullstack",
+ * "roadmap". Both halves must be real words, which is strict enough that no
+ * misspelling in the test corpus reaches it.
+ */
+function isCompoundOfKnownWords(lower: string, known: (w: string) => boolean): boolean {
+  for (let i = MIN_COMPOUND_PART; i <= lower.length - MIN_COMPOUND_PART; i++) {
+    if (known(lower.slice(0, i)) && known(lower.slice(i))) return true
+  }
+  return false
+}
+
 /** Copy the case pattern of `sample` (UPPER / Titlecase / lower) onto `correct`. */
 function matchCase(correct: string, sample: string): string {
   if (sample.length > 1 && sample === sample.toUpperCase() && sample !== sample.toLowerCase()) {
@@ -137,6 +223,9 @@ export async function checkSpelling(
     getSpeller(language === "es" ? "en" : "es"),
   ])
 
+  /** Known to EITHER dictionary — a CV mixes languages in every other sentence. */
+  const known = (w: string) => primary.correct(w) || secondary.correct(w)
+
   const out: SpellIssue[] = []
   const seen = new Set<string>()
 
@@ -154,9 +243,15 @@ export async function checkSpelling(
     // Loan words: "software" in a Spanish CV, "currículum" in an English one.
     if (secondary.correct(token) || secondary.correct(lower)) continue
 
+    // Real words the bundled dictionaries simply do not carry. Reporting these
+    // is worse than missing a typo: the user is told a correct word is wrong,
+    // and handed a word that does not belong in the sentence.
+    if (isDerivedFromKnownWord(lower, known)) continue
+    if (isCompoundOfKnownWords(lower, known)) continue
+
     const suggestions = primary
       .suggest(lower)
-      .filter((s) => editDistance(lower, s.toLowerCase()) <= MAX_EDIT_DISTANCE)
+      .filter((s) => isPlausibleCorrection(lower, s.toLowerCase()))
       .slice(0, 3)
     if (suggestions.length === 0) continue
 

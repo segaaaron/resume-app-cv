@@ -67,6 +67,36 @@ describe("checkSpelling — never cries wolf", () => {
     expect(en).toEqual([])
   })
 
+  // Reported from a real CV: every one of these is a correct word the bundled
+  // Spanish dictionary does not carry, and each came back with an invented fix
+  // ("backend → bachead", "reutilizables → fertilizables").
+  it("leaves real words the dictionary lacks alone", async () => {
+    const issues = await checkSpelling(
+      [
+        "Desarrollé capas de red entre apps iOS y servicios backend.",
+        "Integré herramientas de depuración y monitoreo de rendimiento.",
+        "Construí componentes modulares reutilizables en Swift.",
+        "Integré APIs RESTful, mentorando a desarrolladores junior.",
+        "Trabajé en el frontend con testeo automatizado y microservicios.",
+      ],
+      "es"
+    )
+    expect(issues).toEqual([])
+  })
+
+  it("never offers a correction that is a different word", async () => {
+    const issues = await checkSpelling(
+      ["Apliqué versionado, dockerizado y refactorización con mentoría del equipo."],
+      "es"
+    )
+    expect(issues).toEqual([])
+  })
+
+  it("still catches the doubled-consonant slips English morphology could hide", async () => {
+    const issues = await checkSpelling(["The failure occured after the refered request."], "en")
+    expect(typed(issues)).toEqual(["occured", "refered"])
+  })
+
   it("returns nothing for empty input", async () => {
     expect(await checkSpelling([], "es")).toEqual([])
     expect(await checkSpelling(["", "   "], "en")).toEqual([])
