@@ -3,7 +3,7 @@
 import { useState, useRef, useMemo } from "react"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
-import { parseBullets, formatBullet, serializeBullets } from "@/lib/services/ai/shared/bullets"
+import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope, Sparkles } from "lucide-react"
@@ -491,14 +491,15 @@ export default function ATSScorePanel() {
       }
       // Replace the one bullet; re-mark every bullet uniformly so the stored
       // description stays consistent (formatBullet strips then re-adds "• ").
-      const nextDescription = bullets
-        .map((line, i) => (i === index ? improved : line))
-        .map(formatBullet)
-        .join("\n")
+      // Through the one owner of the convention, so this path cannot reintroduce
+      // a duplicate the rest of the app has made impossible.
+      const written = serializeBulletsReporting(bullets.map((line, i) => (i === index ? improved : line)))
+      const nextDescription = written.text
       const updated = work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j))
       updateSectionData("workExperience", updated)
       setAppliedItems((prev) => new Set(prev).add(`bullet-${targetId}-${index}`))
       toast.success(t("toast_change_applied"))
+      if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
       void runRescore()
     } catch {
       toast.error(t("metricless_improve_error"))
@@ -713,6 +714,10 @@ export default function ATSScorePanel() {
 
       setAppliedItems((prev) => new Set(prev).add(itemKey))
       toast.success(t("toast_change_applied"))
+      // The same write also collapses a line the CV stated twice; say it.
+      if (result.section === "workExperience" && (result.duplicatesRemoved ?? 0) > 0) {
+        toast.info(t("dedupe_done", { count: result.duplicatesRemoved ?? 0 }))
+      }
       void runRescore()
     } catch {
       toast.error(t("toast_change_error"))

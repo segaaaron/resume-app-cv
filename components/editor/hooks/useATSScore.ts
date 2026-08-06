@@ -152,6 +152,28 @@ export function isQuestion(text: string): boolean {
   return false
 }
 
+/**
+ * The single point where a server ATS result becomes the shape the UI relies on.
+ *
+ * `suggestions` gained a per-item action, so a result produced by an older
+ * deploy (or held in a tab across one) carries plain strings. Normalizing HERE —
+ * where the result enters the client — is what keeps every consumer working
+ * against one shape; the alternative is a defensive check in each place that
+ * renders a suggestion, which is how a component ends up knowing about the
+ * history of an API.
+ */
+function normalizeAtsResult(data: ATSResult): ATSResult {
+  const raw = (data.suggestions ?? []) as unknown[]
+  return {
+    ...data,
+    suggestions: raw
+      .map((s) => (typeof s === "string"
+        ? { text: s, action: { kind: "manual" as const } }
+        : (s as { text?: string; action?: FixAction })))
+      .filter((s): s is { text: string; action?: FixAction } => !!s?.text?.trim()),
+  }
+}
+
 export function useATSScore() {
   const t = useTranslations("editor.ats")
   const aiT = useTranslations("editor.ai")
@@ -263,7 +285,7 @@ export function useATSScore() {
         if (res.status === 422) { track("ai_error_shown", { endpoint: "ats-score", error_type: "offtopic" }); setOffTopic(true); return }
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
-        setAtsResult(data)
+        setAtsResult(normalizeAtsResult(data))
         await onSuccess()
         track("ai_ats_scored", { plan, score_bucket: scoreBucket(typeof data?.score === "number" ? data.score : 0) })
       }
@@ -319,8 +341,8 @@ export function useATSScore() {
       // "analysis is missing" notice vanish on the next keystroke while it is
       // still missing.
       setAtsResult((cur) => (cur
-        ? { ...data, summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis, analysisUnavailable: cur.analysisUnavailable }
-        : data))
+        ? { ...normalizeAtsResult(data), summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis, analysisUnavailable: cur.analysisUnavailable }
+        : normalizeAtsResult(data)))
       const d = data.score - (prev?.score ?? data.score)
       // Single owner of the delta badge: EVERY score movement updates it, whether
       // it came from applying a fix or from a plain edit picked up by the debounce.

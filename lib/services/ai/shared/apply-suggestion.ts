@@ -10,7 +10,7 @@
 // now. It is pure: callers own the toasts and the modal.
 import { nanoid } from "nanoid"
 import type { PersonalDetails, ResumeSections, SkillItem, WorkExperienceItem } from "@/types/resume"
-import { parseBullets, serializeBullets } from "./bullets"
+import { parseBullets, serializeBulletsReporting } from "./bullets"
 
 export type SuggestionField =
   | "summary"
@@ -37,7 +37,13 @@ export type ApplyResult =
   | { status: "applied"; section: "summary"; value: ResumeSections["summary"] }
   | { status: "applied"; section: "personalDetails"; value: ResumeSections["personalDetails"] }
   | { status: "applied"; section: "skills"; value: ResumeSections["skills"] }
-  | { status: "applied"; section: "workExperience"; value: ResumeSections["workExperience"] }
+  | {
+      status: "applied"
+      section: "workExperience"
+      value: ResumeSections["workExperience"]
+      /** Repeated lines this write collapsed — surfaced, never silent. */
+      duplicatesRemoved?: number
+    }
   /** Nothing to write — the user has to do this one by hand. */
   | { status: "manual"; field: "languages" | "certifications" }
   /** The suggestion names no job we can find. Never guess with user data. */
@@ -49,6 +55,9 @@ export type ApplyResult =
  * practice, and guessing rewrites whichever job happens to be first.
  */
 export function applySuggestion(input: ApplyInput, sectionData: ResumeSections): ApplyResult {
+  // Reported back so the caller can tell the user a repeated line was collapsed
+  // by this write, instead of it vanishing silently.
+  let duplicatesRemoved = 0
   const { field, type, preview, targetId } = input
 
   if (field === "summary") {
@@ -88,18 +97,20 @@ export function applySuggestion(input: ApplyInput, sectionData: ResumeSections):
     if (field === "workExperience.description") {
       // Bullets are newline-separated lines inside one string. Appending with a
       // space turns the whole block into a single run-on line.
-      updated.description = serializeBullets(
+      const written = serializeBulletsReporting(
         type === "append"
           ? [...parseBullets(updated.description), ...parseBullets(preview)]
           : parseBullets(preview),
       )
+      updated.description = written.text
+      duplicatesRemoved = written.removed
     } else {
       updated.jobTitle = type === "append"
         ? [updated.jobTitle, preview].filter(Boolean).join(" ")
         : preview
     }
     items[idx] = updated
-    return { status: "applied", section: "workExperience", value: items }
+    return { status: "applied", section: "workExperience", value: items, duplicatesRemoved }
   }
 
   return { status: "manual", field }

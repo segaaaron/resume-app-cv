@@ -27,7 +27,7 @@ import { useRouter } from "next/navigation"
 import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
 import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
-import { formatBullet, parseBullets, serializeBullets } from "@/lib/services/ai/shared/bullets"
+import { formatBullet, parseBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
@@ -216,7 +216,12 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     if (!pair) return
     const newWorking = [...bulletModal.working]
     newWorking[index] = pair.improved
-    onUpdate("description", serializeBullets(newWorking))
+    // The write collapses any line this role states twice. Saying so is the
+    // point: a bullet disappearing from the CV without a word is not acceptable,
+    // even when removing it is the right call.
+    const { text, removed } = serializeBulletsReporting(newWorking)
+    onUpdate("description", text)
+    if (removed > 0) toast.info(ai("duplicates_removed", { count: removed }))
     track("ai_suggestion_applied", { type: "bullet" })
     setBulletModal({ ...bulletModal, working: newWorking })
   }
@@ -228,8 +233,9 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     // must survive untouched.
     const merged = [...bulletModal.working]
     for (const pair of bulletModal.pairs) merged[pair.index] = pair.improved
-    const mergedText = serializeBullets(merged)
+    const { text: mergedText, removed } = serializeBulletsReporting(merged)
     onUpdate("description", mergedText)
+    if (removed > 0) toast.info(ai("duplicates_removed", { count: removed }))
     setBulletModal(null)
     setImproved(true)
     // The applied result is now the optimized content — lock it so re-running the

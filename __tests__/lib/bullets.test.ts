@@ -1,11 +1,5 @@
 import { describe, it, expect } from "vitest"
-import {
-  parseBullets,
-  serializeBullets,
-  renderBulletsForPrompt,
-  formatBullet,
-  BULLET_MARKER,
-} from "@/lib/services/ai/shared/bullets"
+import { parseBullets, serializeBullets, renderBulletsForPrompt, formatBullet, BULLET_MARKER, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
 
 describe("formatBullet", () => {
   it("adds the marker", () => {
@@ -203,5 +197,25 @@ describe("serializeBullets — a CV cannot state the same line twice", () => {
       "Desarrollé capas de red para sincronizar imágenes.",
     ])
     expect(parseBullets(out)).toHaveLength(2)
+  })
+})
+
+describe("serializeBulletsReporting — collapsing is never silent", () => {
+  it("reports how many repeated lines it removed", () => {
+    const { text, removed } = serializeBulletsReporting([
+      "Escribí pruebas unitarias exhaustivas.",
+      "Optimicé la pila Core Data.",
+      "Escribí pruebas unitarias exhaustivas.",
+      "escribi pruebas unitarias exhaustivas",
+    ])
+    expect(removed).toBe(2)
+    expect(parseBullets(text)).toHaveLength(2)
+  })
+
+  it("reports zero on a clean list, and matches serializeBullets exactly", () => {
+    const input = ["Uno bien largo para pasar el mínimo.", "Dos bien largo para pasar el mínimo."]
+    const reported = serializeBulletsReporting(input)
+    expect(reported.removed).toBe(0)
+    expect(reported.text).toBe(serializeBullets(input))
   })
 })

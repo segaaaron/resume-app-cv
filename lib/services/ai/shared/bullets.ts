@@ -69,17 +69,31 @@ function sameBulletKey(bullet: string): string {
  * theirs, and collapsing a line mid-edit would fight them.
  */
 export function serializeBullets(bullets: string[]): string {
+  return serializeBulletsReporting(bullets).text
+}
+
+/**
+ * Same write, plus what it collapsed.
+ *
+ * Deduplication removes a line the user can see, so any surface that writes on
+ * their behalf has to be able to SAY so — a line vanishing silently from a CV is
+ * not acceptable even when removing it is right. Callers that have no UI to
+ * report through use serializeBullets above; there is one implementation, not
+ * two behaviours.
+ */
+export function serializeBulletsReporting(bullets: string[]): { text: string; removed: number } {
   const seen = new Set<string>()
   const out: string[] = []
+  let removed = 0
   for (const bullet of bullets) {
     const clean = stripMarker(bullet)
     if (!clean) continue
     const key = sameBulletKey(clean)
-    if (key && seen.has(key)) continue
+    if (key && seen.has(key)) { removed++; continue }
     if (key) seen.add(key)
     out.push(`${BULLET_MARKER} ${clean}`)
   }
-  return out.join("\n")
+  return { text: out.join("\n"), removed }
 }
 
 /**
