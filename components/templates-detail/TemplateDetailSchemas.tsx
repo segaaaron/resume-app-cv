@@ -1,5 +1,5 @@
 import Script from "next/script"
-import type { TemplateSEO } from "@/lib/templates-seo"
+import { templateName, type TemplateSEO } from "@/lib/templates-seo"
 
 interface Props {
   template: TemplateSEO
@@ -33,10 +33,12 @@ export default function TemplateDetailSchemas({
     .toISOString()
     .split("T")[0]
 
+  const name = templateName(template, locale)
+
   const productLd = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: isEs ? `Plantilla CV ${template.name}` : `${template.name} Resume Template`,
+    name: isEs ? `Plantilla CV ${name}` : `${name} Resume Template`,
     description: desc,
     image: ogImage,
     brand: { "@type": "Brand", name: "Valhalla Resume" },
@@ -55,7 +57,7 @@ export default function TemplateDetailSchemas({
   const softwareLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: `Valhalla Resume ${template.name}`,
+    name: `Valhalla Resume ${name}`,
     operatingSystem: "Web",
     applicationCategory: "BusinessApplication",
     description: desc,
@@ -77,7 +79,7 @@ export default function TemplateDetailSchemas({
         name: breadcrumbTemplatesLabel,
         item: `${baseUrl}/${locale}/templates`,
       },
-      { "@type": "ListItem", position: 3, name: template.name, item: url },
+      { "@type": "ListItem", position: 3, name, item: url },
     ],
   }
 

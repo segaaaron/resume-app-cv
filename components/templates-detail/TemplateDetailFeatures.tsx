@@ -1,15 +1,16 @@
 import { Sparkles, Award, Layout, FileText, Zap, Palette, CheckCircle2, ImageIcon } from "lucide-react"
-import type { TemplateSEO } from "@/lib/templates-seo"
+import { templateName, type TemplateSEO } from "@/lib/templates-seo"
 
 const FEATURE_ICONS = [Sparkles, Layout, Palette, Award, FileText, Zap, CheckCircle2, ImageIcon] as const
 
 interface Props {
   template: TemplateSEO
+  locale: "en" | "es"
   features: string[]
   t: (k: string) => string
 }
 
-export default function TemplateDetailFeatures({ template, features, t }: Props) {
+export default function TemplateDetailFeatures({ template, locale, features, t }: Props) {
   return (
     <section className="py-20 px-4 sm:px-6 bg-slate-50">
       <div className="max-w-6xl mx-auto">
@@ -17,7 +18,7 @@ export default function TemplateDetailFeatures({ template, features, t }: Props)
           <span className="inline-block text-xs font-bold uppercase tracking-widest text-[#1a2e4a] bg-[#1a2e4a]/5 px-3 py-1 rounded-full mb-4">
             {t("features_title")}
           </span>
-          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1a2e4a]">{template.name}</h2>
+          <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-[#1a2e4a]">{templateName(template, locale)}</h2>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {features.map((feature, i) => {

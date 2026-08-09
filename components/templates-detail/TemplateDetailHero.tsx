@@ -3,7 +3,7 @@ import { CheckCircle2, Sparkles, Award } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
 import TemplateUseButton from "@/components/templates-detail/TemplateUseButton"
-import type { TemplateSEO } from "@/lib/templates-seo"
+import { templateName, type TemplateSEO } from "@/lib/templates-seo"
 
 interface Props {
   template: TemplateSEO
@@ -53,7 +53,7 @@ export default function TemplateDetailHero({
               {t("breadcrumb_templates")}
             </Link>
             <span>/</span>
-            <span className="text-white/90">{template.name}</span>
+            <span className="text-white/90">{templateName(template, locale)}</span>
           </nav>
 
           <div className="flex flex-wrap items-center gap-2 mb-5">
@@ -84,7 +84,7 @@ export default function TemplateDetailHero({
                 backgroundImage: "linear-gradient(135deg, #ffffff 0%, #00D4FF 100%)",
               }}
             >
-              {template.name}
+              {templateName(template, locale)}
             </span>
             {!isEs ? " Resume Template" : ""}
           </h1>

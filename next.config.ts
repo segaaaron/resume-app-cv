@@ -30,6 +30,59 @@ const securityHeaders = [
   },
 ]
 
+// ── Blog: single-locale posts ───────────────────────────────────────────────
+// Not every article exists in both languages. Hitting a post under the wrong
+// locale prefix used to render a 404 (Search Console: "No encontrado (404)",
+// 17 URLs). Google reaches those URLs by swapping the locale segment on its
+// own — nothing on the site links them — so the honest answer is a 301 to the
+// page that does exist, not a dead end. Two shapes:
+//   1. Cross-translated pairs → send to the counterpart IN the requested locale
+//      (/en/blog/habilidades-para-cv → /en/blog/resume-skills-by-industry).
+//   2. Posts with no counterpart → send to the post in ITS OWN locale
+//      (/en/blog/cv-en-ingles → /es/blog/cv-en-ingles).
+// Keep in sync with app/sitemap.ts (`crossTranslatedPosts` / `localeBlogSlugs`)
+// and app/[locale]/blog/page.tsx.
+
+// [enSlug, esSlug] — same topic published under a distinct slug per language.
+const CROSS_TRANSLATED: [string, string][] = [
+  ["resume-skills-by-industry", "habilidades-para-cv"],
+  ["action-verbs-resume", "verbos-de-accion-cv"],
+  ["resume-mistakes-to-avoid", "errores-comunes-cv"],
+  ["how-to-tailor-resume", "adaptar-cv-oferta-trabajo"],
+]
+
+// Posts that exist in one language only.
+const EN_ONLY = [
+  "how-to-write-resume-summary",
+  "cv-vs-resume-differences",
+  "chronological-vs-functional-resume",
+  "resume-length-guide",
+]
+const ES_ONLY = [
+  "cv-en-ingles",
+  "objetivo-profesional-ejemplos",
+  "cv-recien-graduado",
+  "cv-cambio-carrera",
+  "cv-sin-experiencia",
+]
+
+const blogLocaleRedirects = [
+  ...CROSS_TRANSLATED.flatMap(([en, es]) => [
+    { source: `/en/blog/${es}`, destination: `/en/blog/${en}`, permanent: true },
+    { source: `/es/blog/${en}`, destination: `/es/blog/${es}`, permanent: true },
+  ]),
+  ...EN_ONLY.map((slug) => ({
+    source: `/es/blog/${slug}`,
+    destination: `/en/blog/${slug}`,
+    permanent: true,
+  })),
+  ...ES_ONLY.map((slug) => ({
+    source: `/en/blog/${slug}`,
+    destination: `/es/blog/${slug}`,
+    permanent: true,
+  })),
+]
+
 const nextConfig: NextConfig = {
   output: "standalone",
   compress: true,
@@ -54,9 +107,10 @@ const nextConfig: NextConfig = {
     ],
   },
   async redirects() {
-    // "PRO diseños" merged into the unified /templates page (PRO group).
     return [
+      // "PRO diseños" merged into the unified /templates page (PRO group).
       { source: "/:locale/pro-disenos", destination: "/:locale/templates#pro", permanent: true },
+      ...blogLocaleRedirects,
     ]
   },
   async rewrites() {

@@ -34,7 +34,10 @@ export type TemplateLayout =
 export type TemplateSEO = {
   id: string
   slug: string
+  /** Registry name — Spanish, the language the catalog was authored in. */
   name: string
+  /** Same template, English display name. Equal to `name` for the proper nouns. */
+  nameEn: string
   category: TemplateCategory
   tags: string[]
   bestFor: { en: string[]; es: string[] }
@@ -282,7 +285,10 @@ const CURATED: Record<string, CuratedEntry> = {
 
 function inferCategory(t: TemplateInfo): TemplateCategory {
   const id = t.id.toLowerCase()
-  if (id === "ats") return "ats"
+  // The 15 `ats*` templates (AtsMeridian, AtsVerdant, …) were falling through to
+  // "classic": only the exact id "ats" was matched. That mislabelled their tags,
+  // colors and generated copy ("ATS Meridian … classic design").
+  if (id === "ats" || id.startsWith("ats")) return "ats"
   if (/(code|tech|terminal|carbon|blueprint|cyber|helix|prism|finance)/.test(id)) return "tech"
   if (/(executive|lumiere|navyexecutive|consul|windsor|exec-|elite-|luxe-)/.test(id)) return "executive"
   if (/(creative|aurora|neon|bauhaus|risodesigner|magazinespread|vogue|frontpage|callsheet|vinylcv|copywritermag|animatorcv|chalkboard|herbariumcv|campaignposter)/.test(id)) return "creative"
@@ -342,6 +348,42 @@ const CATEGORY_BEST_FOR: Record<TemplateCategory, { en: string[]; es: string[] }
   creative:     { en: ["Designers", "Creative Directors", "Content Creators"], es: ["Diseñadores", "Directores Creativos", "Creadores de Contenido"] },
 }
 
+const CATEGORY_EN: Record<TemplateCategory, string> = {
+  ats:          "ATS-safe",
+  classic:      "classic",
+  modern:       "modern",
+  minimal:      "minimal",
+  professional: "professional",
+  executive:    "executive",
+  tech:         "technical",
+  creative:     "creative",
+}
+
+const CATEGORY_ES: Record<TemplateCategory, string> = {
+  ats:          "compatible con ATS",
+  classic:      "clásica",
+  modern:       "moderna",
+  minimal:      "minimalista",
+  professional: "profesional",
+  executive:    "ejecutiva",
+  tech:         "técnica",
+  creative:     "creativa",
+}
+
+const LAYOUT_EN: Record<TemplateLayout, string> = {
+  "single-column": "a single-column layout",
+  "two-column":    "a two-column layout",
+  "sidebar-left":  "a left-sidebar layout",
+  "sidebar-right": "a right-sidebar layout",
+}
+
+const LAYOUT_ES: Record<TemplateLayout, string> = {
+  "single-column": "layout de una columna",
+  "two-column":    "layout de dos columnas",
+  "sidebar-left":  "layout con sidebar izquierdo",
+  "sidebar-right": "layout con sidebar derecho",
+}
+
 function slugify(id: string): string {
   return id
     .replace(/([a-z])([A-Z])/g, "$1-$2")
@@ -355,6 +397,34 @@ function cleanName(name: string): string {
   return name.replace(/[⭐✦⚡]/g, "").trim()
 }
 
+// ─── English display names ───────────────────────────────────────────────────
+// The registry (`TEMPLATES` in types/resume.ts) was authored in Spanish, so a
+// handful of templates carry a translated common word or a Spanish exonym for a
+// city. Rendering those on /en produced titles like "Clásico Resume Template"
+// and "Estocolmo Resume Template". Only the entries that actually differ are
+// listed; every other name is a proper noun and is identical in both languages.
+const EN_NAMES: Record<string, string> = {
+  classic: "Classic",
+  modern: "Modern",
+  professional: "Professional",
+  elegant: "Elegant",
+  luxurious: "Luxurious",
+  milan: "Milan",
+  zurich: "Zurich",
+  vienna: "Vienna",
+  berlin: "Berlin",
+  stockholm: "Stockholm",
+  dublin: "Dublin",
+  seoul: "Seoul",
+  copenhagen: "Copenhagen",
+  reykjavik: "Reykjavik",
+}
+
+/** Display name for a template in the requested locale. */
+export function templateName(t: Pick<TemplateSEO, "name" | "nameEn">, locale: string): string {
+  return locale === "es" ? t.name : t.nameEn
+}
+
 function buildTemplateSEO(t: TemplateInfo): TemplateSEO {
   const curated = CURATED[t.id]
   const category = curated?.category ?? inferCategory(t)
@@ -363,31 +433,42 @@ function buildTemplateSEO(t: TemplateInfo): TemplateSEO {
   const tags = curated?.tags ?? CATEGORY_TAGS[category]
   const bestFor = curated?.bestFor ?? CATEGORY_BEST_FOR[category]
   const name = cleanName(t.name)
+  const nameEn = EN_NAMES[t.id] ?? name
+
+  // `t.description` is Spanish (the registry's authoring language). Interpolating
+  // it into the English fallback shipped 133 /en pages with a half-Spanish meta
+  // description ("ATS Meridian resume template — ATS-safe con banda de color…").
+  // The English copy is derived from facts we already hold in English instead:
+  // category, layout and whether the header carries a photo.
+  const layoutEn = LAYOUT_EN[layout]
+  const layoutEs = LAYOUT_ES[layout]
+  const headerEn = t.hasPhoto ? "a photo header" : "a text-only header"
 
   const description = curated?.description ?? {
-    en: `${name} resume template — ${t.description}. ATS-friendly and fully editable in Valhalla Resume.`,
+    en: `${nameEn} resume template — ${CATEGORY_EN[category]} design on ${layoutEn} with ${headerEn}. ATS-friendly and fully editable in Valhalla Resume.`,
     es: `Plantilla de CV ${name} — ${t.description}. Compatible con ATS y totalmente editable en Valhalla Resume.`,
   }
 
   const longDescription = curated?.longDescription ?? {
-    en: `The ${name} template combines a ${category} aesthetic with practical recruiter-ready structure. ${t.description}. Build your CV in Valhalla Resume's editor, customize colors and typography, then export to PDF — ready to send to recruiters in minutes.`,
-    es: `La plantilla ${name} combina una estética ${category} con estructura práctica lista para reclutadores. ${t.description}. Construye tu CV en el editor de Valhalla Resume, personaliza colores y tipografía, luego exporta a PDF — listo para enviar en minutos.`,
+    en: `The ${nameEn} template pairs a ${CATEGORY_EN[category]} aesthetic with a recruiter-ready ${layoutEn} and ${headerEn}. Build your CV in Valhalla Resume's editor, customize colors and typography, then export to PDF — ready to send to recruiters in minutes.`,
+    es: `La plantilla ${name} combina una estética ${CATEGORY_ES[category]} con estructura práctica lista para reclutadores. ${t.description}. Construye tu CV en el editor de Valhalla Resume, personaliza colores y tipografía, luego exporta a PDF — listo para enviar en minutos.`,
   }
 
   const features = curated?.features ?? {
     en: [
-      `${layout === "single-column" ? "Single-column" : "Two-column"} layout`,
+      `${layoutEn.charAt(0).toUpperCase()}${layoutEn.slice(1)}`,
       t.hasPhoto ? "Photo-enabled header" : "Text-first header",
       "Editable in real time",
-      "Export to PDF and Word",
-      "ATS-tested structure",
+      // Word export was removed from the product — do not advertise it.
+      "Export to PDF",
+      "ATS-friendly structure",
     ],
     es: [
-      `Layout de ${layout === "single-column" ? "una columna" : "dos columnas"}`,
+      `${layoutEs.charAt(0).toUpperCase()}${layoutEs.slice(1)}`,
       t.hasPhoto ? "Header con foto" : "Header text-first",
       "Editable en tiempo real",
-      "Exporta a PDF y Word",
-      "Estructura probada con ATS",
+      "Exporta a PDF",
+      "Estructura compatible con ATS",
     ],
   }
 
@@ -395,6 +476,7 @@ function buildTemplateSEO(t: TemplateInfo): TemplateSEO {
     id: t.id,
     slug: slugify(t.id),
     name,
+    nameEn,
     category,
     tags,
     bestFor,

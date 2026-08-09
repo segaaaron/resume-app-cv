@@ -27,7 +27,9 @@ export async function generateMetadata({
   const t = await getTranslations({ locale, namespace: "metadata.home" })
 
   return {
-    title: t("title"),
+    // `absolute` on purpose: this title already opens with the brand, so letting the
+    // root layout's `title.template` append "| Valhalla Resume" printed it twice.
+    title: { absolute: t("title") },
     description: t("description"),
     alternates: {
       canonical: `https://www.valhallaresume.com/${locale}`,

@@ -34,6 +34,7 @@ import {
   templatesSEO,
   getTemplateSEO,
   getRelatedTemplates,
+  templateName,
   type TemplateSEO,
 } from "@/lib/templates-seo"
 
@@ -61,9 +62,12 @@ export async function generateMetadata({
   if (!template) return {}
 
   const isEs = locale === "es"
+  // The brand suffix is owned by the root layout's `title.template` — repeating it
+  // here produced "… | Valhalla Resume | Valhalla Resume" in the SERP.
+  const name = templateName(template, locale)
   const title = isEs
-    ? `Plantilla CV ${template.name} | ATS-Friendly | Valhalla Resume`
-    : `${template.name} Resume Template | ATS-Friendly | Valhalla Resume`
+    ? `Plantilla CV ${name} | ATS-Friendly`
+    : `${name} Resume Template | ATS-Friendly`
   const description = template.description[locale]
   const url = `${BASE_URL}/${locale}/templates/design/${templateId}`
 
@@ -72,16 +76,16 @@ export async function generateMetadata({
     description,
     keywords: isEs
       ? [
-          `plantilla cv ${template.name.toLowerCase()}`,
-          `plantilla curriculum vitae ${template.name.toLowerCase()}`,
+          `plantilla cv ${name.toLowerCase()}`,
+          `plantilla curriculum vitae ${name.toLowerCase()}`,
           `cv ${template.category}`,
           "plantilla cv ats",
           "diseño cv profesional",
           ...template.bestFor.es.map((p) => `cv para ${p.toLowerCase()}`),
         ]
       : [
-          `${template.name.toLowerCase()} resume template`,
-          `${template.name.toLowerCase()} cv template`,
+          `${name.toLowerCase()} resume template`,
+          `${name.toLowerCase()} cv template`,
           `${template.category} resume`,
           "ats resume template",
           "professional resume design",
@@ -102,10 +106,10 @@ export async function generateMetadata({
       type: "website",
       images: [
         {
-          url: `${BASE_URL}/api/og?title=${encodeURIComponent(template.name)}&type=template&locale=${locale}`,
+          url: `${BASE_URL}/api/og?title=${encodeURIComponent(name)}&type=template&locale=${locale}`,
           width: 1200,
           height: 630,
-          alt: `${template.name} CV template preview`,
+          alt: `${name} CV template preview`,
         },
       ],
     },
@@ -114,7 +118,7 @@ export async function generateMetadata({
       title,
       description,
       images: [
-        `${BASE_URL}/api/og?title=${encodeURIComponent(template.name)}&type=template&locale=${locale}`,
+        `${BASE_URL}/api/og?title=${encodeURIComponent(name)}&type=template&locale=${locale}`,
       ],
     },
   }
@@ -146,12 +150,13 @@ export default async function TemplateDetailPage({
 
   const t = await getTranslations({ locale, namespace: "templates_detail" })
   const isEs = locale === "es"
+  const name = templateName(template, locale)
   const desc = template.description[locale]
   const longDesc = template.longDescription[locale]
   const features = template.features[locale]
   const bestFor = template.bestFor[locale]
   const url = `${BASE_URL}/${locale}/templates/design/${templateId}`
-  const ogImage = `${BASE_URL}/api/og?title=${encodeURIComponent(template.name)}&type=template&locale=${locale}`
+  const ogImage = `${BASE_URL}/api/og?title=${encodeURIComponent(name)}&type=template&locale=${locale}`
 
   const related = getRelatedTemplates(templateId, 6)
 
@@ -191,7 +196,7 @@ export default async function TemplateDetailPage({
           t={t}
         />
 
-        <TemplateDetailFeatures template={template} features={features} t={t} />
+        <TemplateDetailFeatures template={template} locale={locale} features={features} t={t} />
 
         <TemplateDetailDescription longDesc={longDesc} t={t} />
 

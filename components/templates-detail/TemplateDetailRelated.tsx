@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { Lock } from "lucide-react"
 import MockTemplatePreview from "@/components/templates-detail/MockTemplatePreview"
-import type { TemplateSEO } from "@/lib/templates-seo"
+import { templateName, type TemplateSEO } from "@/lib/templates-seo"
 
 interface Props {
   related: TemplateSEO[]
@@ -27,7 +27,7 @@ export default function TemplateDetailRelated({ related, locale, categoryLabelFo
               </div>
               <div className="px-1">
                 <h3 className="font-bold text-sm text-[#1a2e4a] leading-tight group-hover:text-[#00D4FF] transition-colors flex items-center gap-1.5">
-                  {rel.name}
+                  {templateName(rel, locale)}
                   {rel.isPro && <Lock className="h-3 w-3 text-amber-500" aria-label={t("pro_required")} />}
                 </h3>
                 <p className="text-[11px] text-slate-500 mt-0.5">{categoryLabelFor(rel.category)}</p>

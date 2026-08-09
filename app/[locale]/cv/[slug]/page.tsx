@@ -20,8 +20,8 @@ export async function generateMetadata({
   if (!resume) return {}
 
   const title = resume.title
-    ? `${resume.title} — CV | Valhalla Resume`
-    : "CV profesional | Valhalla Resume"
+    ? `${resume.title} — CV`
+    : "CV profesional"
   const description =
     locale === "es"
       ? `Mira el CV profesional creado con Valhalla Resume. Crea el tuyo con IA en minutos.`

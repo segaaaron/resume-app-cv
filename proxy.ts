@@ -150,6 +150,11 @@ export async function proxy(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = `/${detectedLocale}${pathname === "/" ? "" : pathname}`
     const response = NextResponse.redirect(url, { status: 302 })
+    // This redirect's target depends on Accept-Language, so it must not be cached
+    // as if it were the same for everyone: without `Vary`, a shared cache (CDN,
+    // corporate proxy) can hand the Spanish redirect to an English visitor and
+    // vice versa. It also tells crawlers the language choice is negotiated.
+    response.headers.set("Vary", "Accept-Language")
     response.cookies.set("NEXT_LOCALE", detectedLocale, {
       path: "/",
       maxAge: 60 * 60 * 24 * 365,

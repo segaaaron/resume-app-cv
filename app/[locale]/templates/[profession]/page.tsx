@@ -39,7 +39,7 @@ const PROFESSIONS: ProfessionData[] = [
     slug: "software-engineer",
     relatedBlogSlug: "cv-para-desarrolladores-de-software",
     en: {
-      title: "Software Engineer Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Software Engineer Resume Template 2026 | ATS-Optimized",
       h1: "Software Engineer Resume Templates",
       description: "Download a free ATS-optimized software engineer resume template. Built for developers, engineers and tech professionals. Highlight your stack, projects and impact. Export to PDF in minutes.",
       intro: "Landing a software engineering role means beating two gatekeepers: the ATS algorithm and the hiring manager's 6-second scan. Your resume needs to pass both. Valhalla Resume's templates are built specifically for technical roles — clean structure, keyword-optimized sections, and modern layouts that highlight your stack and your impact.",
@@ -59,7 +59,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Desarrollador de Software 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Desarrollador de Software 2026 | ATS",
       h1: "Plantillas de CV para Desarrolladores de Software",
       description: "Descarga una plantilla de CV para desarrollador optimizada para ATS. Ideal para ingenieros, programadores y perfiles tech. Resalta tu stack, proyectos e impacto. Exporta a PDF en minutos.",
       intro: "Conseguir un rol de desarrollo de software significa superar dos filtros: el algoritmo ATS y el escaneo de 6 segundos del reclutador. Tu CV necesita pasar ambos. Las plantillas de Valhalla Resume están diseñadas para roles técnicos — estructura limpia, secciones optimizadas para palabras clave y layouts modernos que destacan tu stack y tu impacto.",
@@ -83,7 +83,7 @@ const PROFESSIONS: ProfessionData[] = [
     slug: "marketing",
     relatedBlogSlug: "cv-para-marketing",
     en: {
-      title: "Marketing Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Marketing Resume Template 2026 | ATS-Optimized",
       h1: "Marketing Resume Templates",
       description: "Free ATS-optimized marketing resume templates for digital marketers, content strategists, SEO specialists and marketing managers. Show your metrics and get more interviews.",
       intro: "Marketing resumes live and die by metrics. Recruiters in this field want to see numbers: growth percentages, ROAS, follower counts, conversion rates. Valhalla Resume's templates give you the structure to lead with impact, and our AI bullet improver helps you transform vague duties into measurable achievements.",
@@ -102,7 +102,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Marketing 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Marketing 2026 | ATS",
       h1: "Plantillas de CV para Marketing",
       description: "Plantillas de CV para marketing digital, content marketing, SEO, SEM y gerentes de marketing. Optimizadas para ATS. Muestra tus métricas y consigue más entrevistas.",
       intro: "Los CVs de marketing se ganan o se pierden por las métricas. Los reclutadores en este campo quieren ver números: porcentajes de crecimiento, ROAS, seguidores, tasas de conversión. Las plantillas de Valhalla Resume te dan la estructura para liderar con impacto, y el mejorador de bullets IA te ayuda a transformar responsabilidades vagas en logros medibles.",
@@ -124,7 +124,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "data-scientist",
     en: {
-      title: "Data Scientist Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Data Scientist Resume Template 2026 | ATS-Optimized",
       h1: "Data Scientist Resume Templates",
       description: "ATS-optimized data scientist resume templates. Showcase your Python, SQL, ML skills and research impact. Used by analysts, ML engineers and data professionals. Download in PDF.",
       intro: "Data science hiring is highly technical. Recruiters scan for specific tools, methodologies, and — critically — business impact. Your resume must speak to both the technical reviewer and the business stakeholder. Valhalla Resume's templates help you structure this dual narrative clearly.",
@@ -143,7 +143,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Científico de Datos 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Científico de Datos 2026 | ATS",
       h1: "Plantillas de CV para Científicos de Datos",
       description: "Plantillas de CV para data scientists, analistas de datos e ingenieros ML. Muestra tus habilidades en Python, SQL y machine learning. Exporta a PDF en minutos.",
       intro: "La contratación en ciencia de datos es altamente técnica. Los reclutadores buscan herramientas específicas, metodologías y — de forma crítica — impacto en el negocio. Tu CV debe hablarle tanto al revisor técnico como al stakeholder de negocio. Las plantillas de Valhalla Resume te ayudan a estructurar esta narrativa dual con claridad.",
@@ -165,7 +165,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "nurse",
     en: {
-      title: "Nurse Resume Template 2026 | Healthcare | ATS-Optimized | Valhalla Resume",
+      title: "Nurse Resume Template 2026 | Healthcare | ATS-Optimized",
       h1: "Nurse Resume Templates",
       description: "Free ATS-optimized nurse and healthcare resume templates. Designed for RNs, LPNs, nurse practitioners and healthcare professionals. Highlight certifications, specializations and patient care experience.",
       intro: "Healthcare hiring is credential-driven. Nurse recruiters scan resumes in seconds for licensure (RN, LPN, NP), certifications (BLS, ACLS, PALS), and clinical specialization. Your resume structure must make these credentials instantly visible — not buried in paragraphs of job descriptions.",
@@ -184,7 +184,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Enfermero/a 2026 | Salud | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Enfermero/a 2026 | Salud | ATS",
       h1: "Plantillas de CV para Enfermería",
       description: "Plantillas de CV para enfermeros, enfermeras y profesionales de la salud. Optimizadas para ATS. Destaca tus certificaciones, especializaciones y experiencia clínica. Descarga en PDF.",
       intro: "La contratación en salud se basa en credenciales. Los reclutadores de enfermería escanean CVs en segundos buscando licencias, certificaciones y especialización clínica. La estructura de tu CV debe hacer que estas credenciales sean inmediatamente visibles — no enterradas en párrafos de descripciones de trabajo.",
@@ -206,7 +206,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "project-manager",
     en: {
-      title: "Project Manager Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Project Manager Resume Template 2026 | ATS-Optimized",
       h1: "Project Manager Resume Templates",
       description: "ATS-optimized project manager resume templates for PMs, Scrum Masters and program managers. Showcase certifications (PMP, CAPM), project scope, budget management and team leadership.",
       intro: "Project management resumes need to demonstrate one thing above all else: delivery. Recruiters want to see projects you've shipped, budgets you've managed, teams you've led, and methodologies you've mastered. Valhalla Resume's templates give you the structure to present this evidence convincingly.",
@@ -225,7 +225,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Gerente de Proyectos 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Gerente de Proyectos 2026 | ATS",
       h1: "Plantillas de CV para Gerentes de Proyectos",
       description: "Plantillas de CV para Project Managers, Scrum Masters y gerentes de programa. Muestra certificaciones PMP, alcance de proyectos, gestión de presupuesto y liderazgo de equipos.",
       intro: "Los CVs de gestión de proyectos necesitan demostrar una cosa por encima de todo: entrega. Los reclutadores quieren ver proyectos que hayas completado, presupuestos que hayas gestionado, equipos que hayas liderado y metodologías que domines. Las plantillas de Valhalla Resume te dan la estructura para presentar esta evidencia de manera convincente.",
@@ -247,7 +247,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "accountant",
     en: {
-      title: "Accountant Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Accountant Resume Template 2026 | ATS-Optimized",
       h1: "Accountant Resume Templates",
       description: "ATS-optimized resume templates for accountants, CPAs, financial analysts and bookkeepers. Showcase your certifications, software skills and financial impact. Download to PDF in minutes.",
       intro: "Accounting resumes are evaluated on precision, credentials, and software proficiency. Hiring managers scan for CPA licensure, ERP systems, and audit or tax specialization. Your resume must communicate technical accuracy and measurable financial impact — two traits that define every strong accounting hire.",
@@ -266,7 +266,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Contador 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Contador 2026 | ATS",
       h1: "Plantillas de CV para Contadores",
       description: "Plantillas de CV para contadores, CPAs, analistas financieros y tenedores de libros. Optimizadas para ATS. Destaca tus certificaciones, software y logros financieros.",
       intro: "Los CVs de contabilidad se evalúan por precisión, credenciales y dominio de software. Los reclutadores buscan licencias CPA, sistemas ERP y especialización en auditoría o impuestos. Tu CV debe comunicar precisión técnica e impacto financiero medible — dos rasgos que definen a toda contratación de contabilidad exitosa.",
@@ -288,7 +288,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "teacher",
     en: {
-      title: "Teacher Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Teacher Resume Template 2026 | ATS-Optimized",
       h1: "Teacher Resume Templates",
       description: "ATS-optimized resume templates for teachers, educators and school administrators. Highlight certifications, grade levels, curriculum development and student outcomes. Download to PDF.",
       intro: "Teaching resumes must convey two things: credentials and classroom impact. Administrators scan for state licensure, subject area endorsements, grade level experience, and evidence of student achievement. Valhalla Resume's templates help you present this information clearly and pass the automated screening systems many school districts now use.",
@@ -307,7 +307,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Maestro/Docente 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Maestro/Docente 2026 | ATS",
       h1: "Plantillas de CV para Docentes",
       description: "Plantillas de CV para maestros, docentes y directivos escolares. Optimizadas para ATS. Destaca certificaciones, niveles educativos, desarrollo curricular y logros estudiantiles.",
       intro: "Los CVs de docentes deben transmitir dos cosas: credenciales e impacto en el aula. Los directivos buscan licencias estatales, habilitaciones por asignatura, experiencia por nivel y evidencias de logro estudiantil. Las plantillas de Valhalla Resume te ayudan a presentar esta información con claridad y a superar los sistemas de selección automatizada que muchos distritos escolares ya utilizan.",
@@ -329,7 +329,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "lawyer",
     en: {
-      title: "Lawyer Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Lawyer Resume Template 2026 | ATS-Optimized",
       h1: "Lawyer Resume Templates",
       description: "ATS-optimized resume templates for lawyers, attorneys and legal professionals. Showcase bar admissions, practice areas, case outcomes and publications. Download to PDF in minutes.",
       intro: "Legal resumes operate in a highly credential-driven market. Partners and HR at law firms scan for bar admissions, law school prestige, practice area depth, and specific transaction or litigation experience. Your resume must be impeccably formatted — typos or inconsistencies signal the same carelessness that would concern a client.",
@@ -348,7 +348,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Abogado 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Abogado 2026 | ATS",
       h1: "Plantillas de CV para Abogados",
       description: "Plantillas de CV para abogados y profesionales del derecho. Optimizadas para ATS. Destaca admisiones al colegio, áreas de práctica, resultados de casos y publicaciones.",
       intro: "Los CVs jurídicos operan en un mercado altamente orientado a credenciales. Los socios y RR.HH. en despachos de abogados buscan admisiones al colegio, prestigio de la facultad de derecho, profundidad en el área de práctica y experiencia específica en transacciones o litigios. Tu CV debe estar impecablemente formateado — los errores tipográficos o inconsistencias señalan el mismo descuido que preocuparía a un cliente.",
@@ -370,7 +370,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "sales",
     en: {
-      title: "Sales Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Sales Resume Template 2026 | ATS-Optimized",
       h1: "Sales Resume Templates",
       description: "ATS-optimized resume templates for sales representatives, account executives and sales managers. Showcase quotas, revenue generated, pipeline managed and sales methodology.",
       intro: "Sales resumes are judged on one thing: numbers. Hiring managers in sales want evidence that you can close. Quota attainment, revenue generated, deal sizes, and ramp time — these are the metrics that decide whether your resume goes to the top of the pile or the bottom. Valhalla Resume's templates give you the structure to lead with proof.",
@@ -389,7 +389,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Ventas 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Ventas 2026 | ATS",
       h1: "Plantillas de CV para Ventas",
       description: "Plantillas de CV para ejecutivos de ventas, representantes comerciales y gerentes de ventas. Muestra tus cuotas, ingresos generados, pipeline gestionado y metodología de ventas.",
       intro: "Los CVs de ventas se juzgan por una cosa: los números. Los gerentes de contratación en ventas quieren evidencia de que puedes cerrar. Cumplimiento de cuota, ingresos generados, tamaños de deals y tiempo de ramp — estas son las métricas que deciden si tu CV va al tope o al fondo. Las plantillas de Valhalla Resume te dan la estructura para liderar con pruebas.",
@@ -411,7 +411,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "hr",
     en: {
-      title: "HR Resume Template 2026 | Human Resources | ATS-Optimized | Valhalla Resume",
+      title: "HR Resume Template 2026 | Human Resources | ATS-Optimized",
       h1: "HR & Human Resources Resume Templates",
       description: "ATS-optimized resume templates for HR professionals, recruiters, HR business partners and talent managers. Highlight certifications, HRIS platforms and workforce metrics.",
       intro: "HR professionals face the irony of writing a resume that will be screened by systems they know well. The advantage: you understand exactly what recruiters and ATS systems look for. Use that knowledge. Lead with certifications, HRIS proficiency, and the specific metrics that demonstrate your impact on hiring quality, retention, and workforce performance.",
@@ -430,7 +430,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para RRHH 2026 | Recursos Humanos | ATS | Valhalla Resume",
+      title: "Plantilla de CV para RRHH 2026 | Recursos Humanos | ATS",
       h1: "Plantillas de CV para Recursos Humanos",
       description: "Plantillas de CV para profesionales de RRHH, reclutadores, HR business partners y gestores de talento. Optimizadas para ATS. Destaca certificaciones, plataformas HRIS y métricas de fuerza laboral.",
       intro: "Los profesionales de RRHH enfrentan la ironía de escribir un CV que será evaluado por sistemas que conocen bien. La ventaja: sabes exactamente qué buscan los reclutadores y los sistemas ATS. Usa ese conocimiento. Empieza con certificaciones, dominio de HRIS y las métricas específicas que demuestran tu impacto en la calidad de contratación, la retención y el rendimiento de la fuerza laboral.",
@@ -452,7 +452,7 @@ const PROFESSIONS: ProfessionData[] = [
   {
     slug: "designer",
     en: {
-      title: "Graphic Designer Resume Template 2026 | ATS-Optimized | Valhalla Resume",
+      title: "Graphic Designer Resume Template 2026 | ATS-Optimized",
       h1: "Graphic Designer Resume Templates",
       description: "ATS-optimized resume templates for graphic designers, UX/UI designers and creative professionals. Show your tools, portfolio and design impact. Download to PDF in minutes.",
       intro: "Designers face a unique challenge: your resume is also a design artifact. It signals your aesthetic judgment before anyone reads a word. But beauty without ATS-compatibility is invisible. Valhalla Resume's templates balance visual appeal with the structured formatting that automated screening systems require.",
@@ -471,7 +471,7 @@ const PROFESSIONS: ProfessionData[] = [
       ],
     },
     es: {
-      title: "Plantilla de CV para Diseñador Gráfico 2026 | ATS | Valhalla Resume",
+      title: "Plantilla de CV para Diseñador Gráfico 2026 | ATS",
       h1: "Plantillas de CV para Diseñadores",
       description: "Plantillas de CV para diseñadores gráficos, UX/UI y creativos. Optimizadas para ATS. Muestra tus herramientas, portafolio e impacto del diseño. Descarga en PDF.",
       intro: "Los diseñadores enfrentan un desafío único: tu CV también es un artefacto de diseño. Señala tu juicio estético antes de que alguien lea una sola palabra. Pero la belleza sin compatibilidad con ATS es invisible. Las plantillas de Valhalla Resume equilibran el atractivo visual con el formato estructurado que requieren los sistemas de selección automatizada.",
