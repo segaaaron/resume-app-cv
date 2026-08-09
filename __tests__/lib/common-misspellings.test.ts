@@ -45,3 +45,37 @@ describe("findMisspellings", () => {
     expect(findMisspellings("A clean sentence with no errors.")).toEqual([])
   })
 })
+
+describe("findMisspellings — short transpositions", () => {
+  it("catches the 3-letter typo the nspell layer cannot see", () => {
+    // Reported from a real CV: "iOS Developer with moe then 7 years…". The
+    // dictionary layer skips anything under 4 letters, so this read as clean.
+    const r = findMisspellings("iOS Developer with moe then 7 years of experience")
+    expect(r).toEqual([{ typed: "moe", correct: "more" }])
+  })
+
+  it("catches the usual transpositions", () => {
+    expect(findMisspellings("teh taht wiht thsi jsut waht").map((m) => m.correct))
+      .toEqual(["the", "that", "with", "this", "just", "what"])
+  })
+
+  it("leaves a capitalised proper noun alone", () => {
+    // "Moe" mid-sentence is a surname, not a typo.
+    expect(findMisspellings("Reported to Moe Johnson at Acme.")).toEqual([])
+    expect(findMisspellings("Worked with Woh Industries.")).toEqual([])
+  })
+
+  it("still reports a capitalised misspelling that is not a name", () => {
+    // The proper-noun guard is narrow on purpose: it must not silence a real
+    // misspelling that happens to start a bullet.
+    expect(findMisspellings("Managment of a team of 8.")).toEqual([
+      { typed: "Managment", correct: "Management" },
+    ])
+  })
+
+  it("does not flag tech abbreviations the dictionaries also fail", () => {
+    // The reason the nspell threshold stays at 4: these are unknown to both
+    // dictionaries and one edit from a real word.
+    expect(findMisspellings("aws dev api npm ios sql css git jwt crm")).toEqual([])
+  })
+})
