@@ -111,7 +111,12 @@ export function buildResumeContext(
     education?: Array<{ degree?: string; institution?: string; school?: string; startDate?: string; endDate?: string }>
     skills?: Array<{ name?: string; level?: string }>
     summary?: string
-    languages?: Array<{ language?: string; level?: string }>
+    // `name`, not `language` — that is the field LanguageItemSchema actually has.
+    // The old shape declared an optional `language` that never exists, so every
+    // entry rendered as " (native), (b2)" and the recruiter analysis reported the
+    // section as garbled parser noise. Optional fields make this class of typo
+    // silent: it type-checks and yields undefined forever.
+    languages?: Array<{ name?: string; level?: string }>
     certifications?: Array<{ name?: string; issuer?: string; date?: string }>
     projects?: Array<{ name?: string; description?: string }>
   }
@@ -184,7 +189,14 @@ export function buildResumeContext(
   }
 
   if (languages?.length) {
-    const langList = languages.map((l) => `${l.language ?? ""}${l.level ? ` (${l.level})` : ""}`).filter(Boolean).join(", ")
+    // Filter on the NAME, not on the rendered string: a level with no language
+    // ("(b2)") is truthy, which is exactly how the empty entries survived the
+    // old `.filter(Boolean)` and reached the prompt.
+    const langList = languages
+      .map((l) => ({ name: (l.name ?? "").trim(), level: l.level }))
+      .filter((l) => l.name)
+      .map((l) => `${l.name}${l.level ? ` (${l.level})` : ""}`)
+      .join(", ")
     if (langList) lines.push(`${en ? "Languages" : "Idiomas"}: ${langList}`)
   }
 

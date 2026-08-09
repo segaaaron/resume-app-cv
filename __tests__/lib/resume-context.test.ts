@@ -79,3 +79,37 @@ describe("buildResumeContext — work experience", () => {
     expect(ctx).toContain("Swift")
   })
 })
+
+describe("buildResumeContext — languages", () => {
+  it("renders the language name, not just the level", () => {
+    // The context declared an optional `language` field that LanguageItemSchema
+    // does not have (it is `name`), so every entry came out as " (native)" and
+    // the recruiter analysis reported the whole section as garbled parser noise.
+    const ctx = buildResumeContext(
+      { languages: [{ id: "l1", name: "Spanish", level: "native" }, { id: "l2", name: "English", level: "b2" }] },
+      "en",
+    )
+    expect(ctx).toContain("Languages: Spanish (native), English (b2)")
+    expect(ctx).not.toMatch(/Languages:\s*\(/)
+  })
+
+  it("drops an entry with a level but no language instead of emitting a bare level", () => {
+    // `.filter(Boolean)` on the rendered string kept " (b2)" — it is truthy.
+    const ctx = buildResumeContext(
+      { languages: [{ id: "l1", name: "Spanish", level: "native" }, { id: "l2", name: "  ", level: "b2" }] },
+      "en",
+    )
+    expect(ctx).toContain("Languages: Spanish (native)")
+    expect(ctx).not.toContain("(b2)")
+  })
+
+  it("omits the section when no language has a name", () => {
+    const ctx = buildResumeContext({ languages: [{ id: "l1", name: "", level: "b2" }] }, "en")
+    expect(ctx).not.toContain("Languages")
+  })
+
+  it("renders in Spanish under the Spanish label", () => {
+    const ctx = buildResumeContext({ languages: [{ id: "l1", name: "Inglés", level: "c1" }] }, "es")
+    expect(ctx).toContain("Idiomas: Inglés (c1)")
+  })
+})
