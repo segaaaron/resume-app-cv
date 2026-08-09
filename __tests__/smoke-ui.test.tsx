@@ -47,7 +47,6 @@ vi.mock("zustand/react/shallow", () => ({ useShallow: (f: unknown) => f }))
 vi.mock("@/components/editor/EditorContext", () => ({ useEditorPro: () => ({ isPro: true, openUpgrade: () => {} }) }))
 
 import BulletsImprovementModal, { type BulletPair } from "@/components/resume/sections/BulletsImprovementModal"
-import TailorCVPanel from "@/components/editor/TailorCVPanel"
 import ATSScorePanel from "@/components/editor/ATSScorePanel"
 import WorkExperienceSection from "@/components/resume/sections/WorkExperience"
 
@@ -79,21 +78,16 @@ describe("UI smoke", () => {
     expect(html).not.toContain("bullets_untouched")
   })
 
-  it("TailorCVPanel renders chained, with no textarea of its own", () => {
-    const html = renderToString(<TailorCVPanel jobDescription={"x".repeat(60)} />)
-    expect(html).not.toContain("<textarea")
-    expect(html).toContain("cta")
-  })
+  // Tailor no longer has a panel of its own: it is a hook whose results are
+  // merged into the ONE list of fixes (§②). The two tests that mounted
+  // TailorCVPanel in isolation went with it — what they guarded (no second
+  // textarea, nothing shown before a score) is asserted on the whole panel below,
+  // which is the only place the behaviour is now observable.
 
-  it("TailorCVPanel disables its CTA when the shared job description is too short", () => {
-    const html = renderToString(<TailorCVPanel jobDescription="short" />)
-    expect(html).toContain("disabled")
-  })
-
-  // ATSScorePanel is the whole chained flow: one job-description textarea, the
-  // score, and TailorCVPanel nested inside it. Every other test here mounts a
-  // leaf in isolation; this is the only one that proves the composition itself
-  // renders — which is exactly where the duplicated apply logic hid.
+  // ATSScorePanel is the whole chained flow: one job-description textarea and the
+  // score. Every other test here mounts a leaf in isolation; this is the only one
+  // that proves the composition itself renders — which is exactly where the
+  // duplicated apply logic hid.
   it("ATSScorePanel mounts the whole chained flow", () => {
     const html = mount(<ATSScorePanel />)
     expect(html).toContain("placeholder")          // the single JD textarea
@@ -101,10 +95,12 @@ describe("UI smoke", () => {
     expect(html).toContain("pro_badge")
   })
 
-  it("ATSScorePanel does not render the tailor step before there is a score", () => {
-    // TailorCVPanel is step 2: it only appears once the ATS result exists.
+  it("ATSScorePanel shows no tailor section before there is a score", () => {
+    // Tailor's output is part of the report, not a step the user drives: with no
+    // result there is nothing of it to show, and there is no §③ header any more.
     const html = mount(<ATSScorePanel />)
     expect(html).not.toContain("cta")
+    expect(html).not.toContain("section_rewrites")
   })
 
   // The AI card lives inside a non-exported item component, so it only mounts

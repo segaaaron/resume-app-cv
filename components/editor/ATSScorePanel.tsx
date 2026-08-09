@@ -7,7 +7,7 @@ import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope, Sparkles } from "lucide-react"
-import TailorCVPanel from "./TailorCVPanel"
+import { useTailorCV } from "./hooks/useTailorCV"
 import AtsEngineMatrix from "./AtsEngineMatrix"
 import AtsSafeDownload from "./AtsSafeDownload"
 import { toast } from "sonner"
@@ -261,6 +261,23 @@ export default function ATSScorePanel() {
   } = useATSScore()
   const [addedKeywords, setAddedKeywords] = useState<Set<string>>(new Set())
   const [appliedItems, setAppliedItems] = useState<Set<string>>(new Set())
+  /**
+   * True once the user has applied any fix from this report.
+   *
+   * The findings below are a snapshot of the CV at analysis time, so the moment
+   * one is applied the rest may describe text that no longer exists — that is
+   * how a already-corrected typo kept being reported as a critical fix. The
+   * score keeps updating live (runRescore is deterministic and free); the
+   * recruiter findings need a new analysis, so we say so instead of pretending
+   * they are current.
+   */
+  const [reportStale, setReportStale] = useState(false)
+
+  /** The ONLY writer of applied-state, so nothing can mark a fix done silently. */
+  function markFixApplied(key: string) {
+    setAppliedItems((prev) => new Set(prev).add(key))
+    setReportStale(true)
+  }
 
   // Re-score deterministically after a fix. The hook owns the delta badge now,
   // so a plain edit that moves the score keeps it truthful too.
@@ -279,7 +296,7 @@ export default function ATSScorePanel() {
   const [improvingKey, setImprovingKey] = useState<string | null>(null)
   // Soft skills the job asks for that the CV doesn't demonstrate yet — hoisted up
   // from the Tailor run (§③) so ALL bullet work lives in the one list below (§②).
-  const [softSkills, setSoftSkills] = useState<{ skill: string; suggestion: string }[]>([])
+
   const [weavingSoft, setWeavingSoft] = useState<string | null>(null)
   /**
    * The "where does this go?" step of weaving a soft skill.
@@ -425,6 +442,12 @@ export default function ATSScorePanel() {
     let label = ""
     let run: (() => void) | null = null
     let busy = false
+    // Every action carries a key so the finding can show "applied" instead of an
+    // eternally live button. Before this, only rewrite_bullet tracked state: the
+    // summary, dates and duplicate actions could be run over and over on a CV
+    // that was already fixed.
+    let key: string | null = null
+    let done = false
 
     if (action.kind === "rewrite_bullet" && action.targetId && action.index !== undefined) {
       const job = work.find((j) => j.id === action.targetId)
@@ -433,32 +456,57 @@ export default function ATSScorePanel() {
         // SAME key the bullets list uses: applying from here marks the bullet
         // applied everywhere, instead of leaving a second live button on a line
         // that has already been rewritten.
-        const key = `bullet-${action.targetId}-${action.index}`
-        if (appliedItems.has(key)) return null
+        key = `bullet-${action.targetId}-${action.index}`
         busy = improvingKey === key
         label = t("fix_action_rewrite_bullet")
         run = () => improveMetricless(
           { text: bullet, targetId: action.targetId as string, jobTitle: job.jobTitle ?? "", index: action.index as number, reasons: ["weak_verb", "metric"] },
-          key,
+          key as string,
         )
       }
     } else if (action.kind === "rewrite_summary") {
+      // The key rewriteSummary() already hands the confirm modal — it was being
+      // written on confirm and never read back here.
+      key = "fix-summary"
       label = t("fix_action_rewrite_summary")
       busy = fixingSummary
-      run = () => void rewriteSummary()
+      // Tailor already wrote a summary for THIS posting during the analysis.
+      // Spending a second LLM call to write a generic one — and offering both in
+      // the same report — was the duplication this section had. Prefer the text
+      // that exists; fall back to the generic rewrite when tailor had nothing.
+      const tailored = tailor.tailoredSummary?.trim()
+      const currentSummary = ((sectionData.summary as string) ?? "").trim()
+      run = tailored && tailored !== currentSummary
+        ? () => setModal({
+            suggestion: { field: "summary", type: "replace", preview: tailored, reason: t("summary_fix_reason") },
+            currentValue: currentSummary,
+            itemKey: "fix-summary",
+          })
+        : () => void rewriteSummary()
     } else if (action.kind === "add_skill" && action.value?.trim()) {
       const skill = action.value.trim()
-      const already = ((sectionData.skills ?? []) as SkillItem[]).some((sk) => sk.name.toLowerCase() === skill.toLowerCase())
-      if (!already) {
-        label = t("fix_action_add_skill", { skill })
-        run = () => addKeywordToSkills(skill)
-      }
+      key = `fix-skill-${skill.toLowerCase()}`
+      // The skill already being in the CV IS the applied state, whether this
+      // button put it there or the user typed it.
+      done = ((sectionData.skills ?? []) as SkillItem[]).some((sk) => sk.name.toLowerCase() === skill.toLowerCase())
+      label = t("fix_action_add_skill", { skill })
+      run = () => { addKeywordToSkills(skill); markFixApplied(key as string) }
     } else if (action.kind === "fix_dates") {
+      key = "fix-dates"
       label = t("fix_action_fix_dates")
-      run = fixDates
+      run = () => { fixDates(); markFixApplied(key as string) }
     } else if (action.kind === "remove_duplicates") {
+      key = "fix-dupes"
       label = t("dedupe_action")
-      run = removeDuplicateBullets
+      run = () => { removeDuplicateBullets(); markFixApplied(key as string) }
+    }
+
+    if (key && (done || appliedItems.has(key))) {
+      return (
+        <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 text-[10px] font-bold">
+          <Check className="h-2.5 w-2.5" /> {t("applied")}
+        </span>
+      )
     }
 
     if (!run || !label) return null
@@ -497,7 +545,7 @@ export default function ATSScorePanel() {
       const nextDescription = written.text
       const updated = work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j))
       updateSectionData("workExperience", updated)
-      setAppliedItems((prev) => new Set(prev).add(`bullet-${targetId}-${index}`))
+      markFixApplied(`bullet-${targetId}-${index}`)
       toast.success(t("toast_change_applied"))
       if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
       void runRescore()
@@ -555,7 +603,7 @@ export default function ATSScorePanel() {
         return
       }
       const reason = soft
-        ? (softSkills.find((s) => s.skill === skill)?.suggestion ?? t("soft_skill_demonstrate"))
+        ? (tailor.softSkillSuggestions.find((s) => s.skill === skill)?.suggestion ?? t("soft_skill_demonstrate"))
         : t("prove_skill_reason", { skill })
       setModal({
         suggestion: { field: "workExperience.description", type: "append", preview: data.text, reason, targetId: data.targetId },
@@ -596,7 +644,9 @@ export default function ATSScorePanel() {
       // typo — fall back to the typo card, which is where the real fix lives then.
       case "hardSkills": return () => scrollToFirst("ats-missing-keywords", "ats-typos")
       case "mustHaves": return () => scrollToFirst("ats-gaps")
-      case "softSkills": return () => scrollToFirst("ats-tailor")
+      // Soft skills live in the §② list only; the Tailor card that used to
+      // mirror them here is gone, so jumping to Tailor would land on nothing.
+      case "softSkills": return () => scrollToFirst("ats-bullets")
       case "template": return () => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "planillas" }))
       default: return null
     }
@@ -616,9 +666,23 @@ export default function ATSScorePanel() {
   // ③ without a second click). Not fired for role-only or question inputs, nor on
   // the live rescore — only on an explicit JD analyze.
   const [autoTailorSignal, setAutoTailorSignal] = useState(0)
+
+  /**
+   * Tailor-to-posting, folded into this report instead of living in its own
+   * section. It auto-runs after a full analysis and its output is merged into
+   * the ONE list of fixes below: the rewritten summary reuses the summary
+   * action, the rewritten bullets join the bullets list, and the missing skills
+   * join the missing-keyword card. No second header, no second "apply" flow.
+   */
+  const tailor = useTailorCV({
+    jobDescription: input,
+    atsMissingKeywords: atsResult?.missingKeywords ?? [],
+    autoRunSignal: autoTailorSignal,
+  })
   async function handleSubmit() {
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
+    setReportStale(false)
     await analyze()
     if (!inputIsQuestion && input.trim().length >= 20) {
       setAutoTailorSignal((n) => n + 1)
@@ -670,7 +734,7 @@ export default function ATSScorePanel() {
       }
       const next = bullets.filter((_, i) => i !== index).map(formatBullet).join("\n")
       updateSectionData("workExperience", work.map((j) => (j.id === targetId ? { ...j, description: next } : j)))
-      setAppliedItems((prev) => new Set(prev).add(`bullet-${targetId}-${index}`))
+      markFixApplied(`bullet-${targetId}-${index}`)
       toast.success(t("bullet_removed"))
       void runRescore()
     } catch {
@@ -705,14 +769,14 @@ export default function ATSScorePanel() {
 
       if (result.status === "manual") {
         toast.info(t(result.field === "languages" ? "toast_update_languages" : "toast_update_certifications"))
-        setAppliedItems((prev) => new Set(prev).add(itemKey))
+        markFixApplied(itemKey)
         setModal(null)
         return
       }
 
       updateSectionData(result.section, result.value)
 
-      setAppliedItems((prev) => new Set(prev).add(itemKey))
+      markFixApplied(itemKey)
       toast.success(t("toast_change_applied"))
       // The same write also collapses a line the CV stated twice; say it.
       if (result.section === "workExperience" && (result.duplicatesRemoved ?? 0) > 0) {
@@ -1069,6 +1133,30 @@ export default function ATSScorePanel() {
               return hasFixes ? <SectionHeader n={2} title={t("section_fixes")} /> : null
             })()}
 
+            {/* The findings are a snapshot of the CV as it was when analyzed. Once a
+                fix lands, the untouched ones may be describing text that no longer
+                exists — saying so beats letting the user chase a defect they already
+                repaired. The score above stays live; only these need a new pass. */}
+            {/* Tailor runs behind the analysis, so its rewrites land a few seconds
+                after the rest of the report. Without this the list looks final
+                while more fixes are still on their way. */}
+            {tailor.loading && (
+              <div className="flex items-center gap-2 rounded-xl border border-cyan-100 bg-cyan-50/60 px-3 py-2">
+                <Loader2 className="h-3 w-3 animate-spin text-cyan-600 shrink-0" />
+                <p className="text-[10.5px] text-cyan-800 leading-snug">{t("tailoring_in_progress")}</p>
+              </div>
+            )}
+
+            {reportStale && (atsResult.analysis?.criticalFixes?.length ?? 0) > 0 && (
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2.5">
+                <AlertCircle className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-semibold text-amber-900 leading-snug">{t("report_stale_title")}</p>
+                  <p className="text-[10.5px] text-amber-800/80 leading-snug mt-0.5">{t("report_stale_body")}</p>
+                </div>
+              </div>
+            )}
+
             {/* Recruiter critical fixes — what a keyword matcher can't see (layout,
                 weak metrics, language mix, structure), ranked, each: issue → why →
                 fix. Typos and missing keywords live in their own cards below, deduped. */}
@@ -1241,15 +1329,21 @@ export default function ATSScorePanel() {
               metricless.forEach((b) => add(b.targetId, b.jobTitle, b.index, b.text, "metric"))
               cliche.forEach((c) => add(c.targetId, c.jobTitle, c.index, c.text, "cliche"))
               weakVerb.forEach((w) => add(w.targetId, w.jobTitle, w.index, w.text, "weak_verb"))
+              // Tailor's rewrites join the SAME list instead of a second section
+              // that said "improve these bullets" all over again. Where a line is
+              // already flagged here, the ready-made text just turns "Rewrite"
+              // (an LLM call) into "Apply" (free) below.
+              const tailored = new Map(tailor.bulletRewrites.map((r) => [`${r.targetId}-${r.index}`, r]))
+              tailor.bulletRewrites.forEach((r) => add(r.targetId, r.jobTitle, r.index, r.currentBullet || r.text, "tailored"))
               // NOT added to the list: a duplicate is not "a bullet to improve",
               // it is a line that should not be there twice. It gets one banner
               // and one button that cleans the whole CV — see the block below.
               const bullets = [...byKey.values()].filter((b) => !appliedItems.has(`bullet-${b.targetId}-${b.index}`))
               const cq = atsResult.contentQuality
-              const visibleSoft = softSkills.filter((s) => !appliedItems.has(`soft-${s.skill}`))
+              const visibleSoft = tailor.softSkillSuggestions.filter((s) => !appliedItems.has(`soft-${s.skill}`))
               if (bullets.length === 0 && (!cq || cq.totalBullets === 0) && visibleSoft.length === 0 && dupes.length === 0) return null
               return (
-              <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
+              <div id="ats-bullets" className={`rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-bullets")}`}>
                 <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
                   <TrendingUp className="h-3 w-3" /> {t("bullets_to_improve_title")}
                 </p>
@@ -1287,6 +1381,8 @@ export default function ATSScorePanel() {
                     {bullets.map((b) => {
                       const key = `bullet-${b.targetId}-${b.index}`
                       const busy = improvingKey === key
+                      // A rewrite tailor already produced for this exact line.
+                      const ready = tailored.get(`${b.targetId}-${b.index}`)
                       return (
                         <li key={key} className="rounded-lg bg-white/60 border border-violet-100 p-2">
                           <div className="flex items-start gap-1.5">
@@ -1298,19 +1394,30 @@ export default function ATSScorePanel() {
                                 {b.reasons.has("cliche") && <span className="text-[9px] font-bold rounded-full bg-rose-50 text-rose-600 ring-1 ring-rose-200 px-1.5">{t("reason_cliche")}</span>}
                                 {b.reasons.has("weak_verb") && <span className="text-[9px] font-bold rounded-full bg-orange-50 text-orange-600 ring-1 ring-orange-200 px-1.5">{t("reason_weak_verb")}</span>}
                                 {b.reasons.has("metric") && <span className="text-[9px] font-bold rounded-full bg-amber-50 text-amber-600 ring-1 ring-amber-200 px-1.5">{t("reason_metric")}</span>}
+                                {b.reasons.has("tailored") && <span className="text-[9px] font-bold rounded-full bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200 px-1.5">{t("reason_tailored")}</span>}
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center justify-end gap-1.5 mt-1.5">
-                            <button
-                              type="button"
-                              onClick={() => improveMetricless({ text: b.text, targetId: b.targetId, jobTitle: b.jobTitle, index: b.index, reasons: [...b.reasons] }, key)}
-                              disabled={busy || !!improvingKey}
-                              className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-                              {busy ? t("metricless_improving") : t("bullet_rewrite")}
-                            </button>
+                            {ready ? (
+                              <button
+                                type="button"
+                                onClick={() => setBulletFix({ targetId: b.targetId, index: b.index, current: b.text, improved: ready.text })}
+                                className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-cyan-100 to-sky-100 hover:from-cyan-200 hover:to-sky-200 text-cyan-800 border border-cyan-200 rounded-full px-2 py-0.5 transition-all"
+                              >
+                                <Check className="h-2.5 w-2.5" /> {t("bullet_apply_ready")}
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => improveMetricless({ text: b.text, targetId: b.targetId, jobTitle: b.jobTitle, index: b.index, reasons: [...b.reasons] }, key)}
+                                disabled={busy || !!improvingKey}
+                                className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                              >
+                                {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+                                {busy ? t("metricless_improving") : t("bullet_rewrite")}
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => setPendingRemove({ targetId: b.targetId, index: b.index, text: b.text })}
@@ -1474,9 +1581,15 @@ export default function ATSScorePanel() {
               // review" next to "Revisión de código"). Two entries for one skill
               // is the duplication a recruiter reads as machine-written.
               const ownSkills = ((sectionData.skills ?? []) as SkillItem[]).map((sk) => sk.name)
-              const missingKw = (atsResult.missingKeywords ?? [])
+              // Skills tailor found for THIS posting join the same chip row. The
+              // hook already dropped anything the ATS score lists (matched through
+              // the shared vocabulary, so React ≡ React.js), so this concat cannot
+              // reintroduce a duplicate — it just stops the CV needing two cards
+              // to say "you are missing these".
+              const missingKw = [...(atsResult.missingKeywords ?? []), ...tailor.missingSkills]
                 .filter((kw) => !typos.has(kw.toLowerCase()))
                 .filter((kw) => !findDuplicateSkill(kw, ownSkills))
+                .filter((kw, i, arr) => arr.findIndex((o) => o.toLowerCase() === kw.toLowerCase()) === i)
               if (missingKw.length === 0) return null
               return (
               <div id="ats-missing-keywords" className={`rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-missing-keywords")}`}>
@@ -1493,11 +1606,23 @@ export default function ATSScorePanel() {
                   {missingKw.map((kw, i) => {
                     const added = addedKeywords.has(kw)
                     return (
-                      <button key={i} type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
-                        className={`flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 transition-all ${added ? "bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200 cursor-default" : "bg-slate-100 text-slate-700 ring-1 ring-slate-200 hover:bg-cyan-100 hover:text-cyan-700 hover:ring-cyan-200 cursor-pointer"}`}>
-                        {added ? <Check className="h-2.5 w-2.5" /> : <Plus className="h-2.5 w-2.5" />}
-                        {kw}
-                      </button>
+                      <span key={i} className={`inline-flex items-stretch rounded-full overflow-hidden ring-1 ${added ? "ring-emerald-200 bg-emerald-100" : "ring-slate-200 bg-slate-100"}`}>
+                        <button type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
+                          className={`flex items-center gap-1 text-[10px] font-semibold pl-2.5 pr-2 py-1 transition-all ${added ? "text-emerald-700 cursor-default" : "text-slate-700 hover:bg-cyan-100 hover:text-cyan-700 cursor-pointer"}`}>
+                          {added ? <Check className="h-2.5 w-2.5" /> : <Plus className="h-2.5 w-2.5" />}
+                          {kw}
+                        </button>
+                        {/* Listing a skill is a claim; this writes the bullet that
+                            backs it. Tailor used to own this button — it comes back
+                            here on the panel's version, which asks WHICH role it
+                            goes in instead of picking one silently. */}
+                        <button type="button" onClick={() => void weaveSkill(kw, undefined, false)}
+                          disabled={!!weavingSoft}
+                          title={t("prove_action")} aria-label={t("prove_action")}
+                          className="flex items-center justify-center px-2 border-l border-slate-200 text-cyan-700 transition-all hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                          {weavingSoft === kw ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
+                        </button>
+                      </span>
                     )
                   })}
                 </div>
@@ -1525,39 +1650,6 @@ export default function ATSScorePanel() {
               </div>
             )}
 
-            {/* ── ③ Ready-to-apply rewrites (Tailor) — inline in the same report,
-                chained off the same job description. ─────────────────────────── */}
-            <SectionHeader n={3} title={t("section_rewrites")} />
-            {/* Soft skills the posting asks for and the CV does not show yet.
-                The list itself lives in §② (one place for all bullet work), but
-                the entry point belongs here too — this is where the user is when
-                they think about what the posting still wants. One button per
-                skill; pressing it asks WHICH role it goes in. */}
-            {softSkills.filter((sk) => !appliedItems.has(`soft-${sk.skill}`)).length > 0 && (
-              <div className="rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5">
-                <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-1.5">
-                  <Sparkles className="h-3 w-3" /> {t("soft_entry_title")}
-                </p>
-                <p className="text-[10.5px] text-slate-600 leading-relaxed mb-2">{t("soft_entry_hint")}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {softSkills.filter((sk) => !appliedItems.has(`soft-${sk.skill}`)).map((sk) => (
-                    <button
-                      key={sk.skill}
-                      type="button"
-                      onClick={() => weaveSoftSkill(sk.skill)}
-                      disabled={!!weavingSoft}
-                      className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-white px-2.5 py-1 text-[10.5px] font-bold capitalize text-violet-700 transition-all hover:bg-violet-50 disabled:opacity-50"
-                    >
-                      {weavingSoft === sk.skill ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Plus className="h-2.5 w-2.5" />}
-                      {sk.skill}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div id="ats-tailor" className={`scroll-mt-4 rounded-2xl transition-all duration-500${hlRing("ats-tailor")}`}>
-              <TailorCVPanel jobDescription={input} atsMissingKeywords={atsResult.missingKeywords ?? []} autoRunSignal={autoTailorSignal} onSoftSkills={setSoftSkills} />
-            </div>
           </div>
         )}
 
@@ -1684,7 +1776,7 @@ export default function ATSScorePanel() {
                     field: "workExperience.description",
                     type: "append",
                     preview: picked.draft,
-                    reason: softSkills.find((sk) => sk.skill === picked.skill)?.suggestion ?? t("soft_skill_demonstrate"),
+                    reason: tailor.softSkillSuggestions.find((sk) => sk.skill === picked.skill)?.suggestion ?? t("soft_skill_demonstrate"),
                     targetId: id,
                   },
                   currentValue: job.description ?? "",
