@@ -16,6 +16,12 @@ export default function robots(): MetadataRoute.Robots {
           "/resume/",
           "/cover-letter/",
           "/checkout/",
+          // Shared-by-link resumes. They carry the candidate's name, email and
+          // phone; a share link is not a publication, and the page says noindex
+          // too. Belt and braces, because this one is somebody's personal data.
+          "/cv/",
+          "/es/cv/",
+          "/en/cv/",
           // Locale-prefixed authenticated routes
           "/es/dashboard/",
           "/en/dashboard/",

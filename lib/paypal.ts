@@ -30,6 +30,17 @@ export function paypalConfig(): PayPalConfig | null {
   const secret = process.env.PAYPAL_SECRET
   const webhookId = process.env.PAYPAL_WEBHOOK_ID
   if (!clientId || !secret || !webhookId) return null
+  /**
+   * Sandbox credentials never enable PayPal in production.
+   *
+   * Production was running with PAYPAL_ENV=sandbox and full credentials set, so
+   * every /api/paypal/* route answered — against PayPal's test environment, on a
+   * checkout the UI deliberately hides. No real money could move, but live
+   * payment endpoints that nobody uses and nobody watches are surface for
+   * nothing. Presence of credentials is no longer enough: production also has to
+   * say "live". Sandbox keeps working everywhere else, which is the point of it.
+   */
+  if (process.env.NODE_ENV === "production" && (process.env.PAYPAL_ENV ?? "sandbox") !== "live") return null
   return {
     clientId,
     secret,

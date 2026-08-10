@@ -45,7 +45,18 @@ export async function generateMetadata({
       description,
       images: ["https://www.valhallaresume.com/og-image.png"],
     },
-    robots: { index: true, follow: false },
+    /**
+     * Shared by link, not published to the world.
+     *
+     * This page exists because the candidate pressed "share" to send it to a
+     * recruiter. Indexing it turns that into something else: their name, email,
+     * phone and employer history answering a public search, forever, and a dead
+     * URL in Google the day they stop sharing. Nobody warned them of either.
+     *
+     * The link keeps working for anyone who has it — that is what they asked
+     * for — it simply does not enter search results.
+     */
+    robots: { index: false, follow: false },
   }
 }
 
