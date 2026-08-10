@@ -18,6 +18,9 @@ const schema = z.object({
   sectionData: z.record(z.string(), z.unknown()).optional(),
   language: z.enum(["es", "en"]).optional(),
   templateId: z.string().max(64).optional(),
+  // Echoed from the full analysis so the instant re-score credits the same
+  // synonym matches instead of silently scoring exact-match only.
+  semanticMatches: z.array(z.string().max(120)).max(80).optional(),
 })
 
 export async function POST(req: Request) {

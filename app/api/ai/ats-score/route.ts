@@ -11,6 +11,18 @@ const schema = z
     sectionData: z.record(z.string(), z.unknown()).optional(),
     language: z.enum(["es", "en"]).optional(),
     templateId: z.string().max(64).optional(),
+    // Echoed back from a previous run over the SAME posting so the extraction is
+    // not re-sampled (see ATSScoreInput.cachedKeywords). Bounded and validated
+    // like any other input — a client sending nonsense only skews its own score.
+    cachedKeywords: z
+      .object({
+        hardSkills: z.array(z.string().max(80)).max(40),
+        softSkills: z.array(z.string().max(80)).max(40),
+        jobTitle: z.string().max(120),
+        mustHaves: z.array(z.string().max(160)).max(40),
+        summary: z.string().max(600).optional(),
+      })
+      .optional(),
   })
   .refine(
     (d) => (d.jobDescription?.trim().length ?? 0) >= 20 || (d.roleTitle?.trim().length ?? 0) >= 3,

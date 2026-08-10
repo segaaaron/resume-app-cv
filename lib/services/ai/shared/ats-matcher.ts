@@ -52,6 +52,15 @@ export interface ATSMatchResult {
   matchedKeywords: string[]   // hard skills found in the CV
   missingKeywords: string[]   // hard skills NOT in the CV (verified set-diff)
   missingMustHaves: string[]  // requirements/qualifications NOT in the CV
+  /**
+   * Soft skills the posting asks for that the CV does not demonstrate.
+   *
+   * These used to reach the panel only as a by-product of the tailor call, which
+   * is rate-limited — so running two analyses in a row left the soft-skill list
+   * silently empty. They come from the same deterministic pass as everything
+   * else here, so they are always present.
+   */
+  missingSoftSkills: string[]
   /** Found in the work experience — the CV backs the claim up. */
   demonstratedKeywords: string[]
   /** Found only in a list, with nothing in the work experience behind it. */
@@ -260,6 +269,7 @@ export function computeATSMatch(
     matchedKeywords: hard.matched.slice(0, 12),
     missingKeywords: hard.missing.slice(0, 8),
     missingMustHaves: must.missing.slice(0, 6),
+    missingSoftSkills: soft.missing.slice(0, 6),
     // The stuffing answer. Dumping every missing keyword into Skills still
     // moves the score — coverage only asks whether the word is there — but now
     // all of them come back listed-only, and the user sees exactly which

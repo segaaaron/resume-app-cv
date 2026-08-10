@@ -49,6 +49,9 @@ export async function findSemanticMatches(
   cvTerms: string[],
   embed: (texts: string[]) => Promise<number[][]>,
   threshold = SEMANTIC_MATCH_THRESHOLD,
+  /** Called when the embedding pass could not run. Optional so existing callers
+   *  keep working; the ATS score passes one so the failure reaches the panel. */
+  onFailure?: (err: Error) => void,
 ): Promise<Set<string>> {
   const matched = new Set<string>()
   // Dedupe + drop blanks to keep the embed call small.
@@ -58,7 +61,10 @@ export async function findSemanticMatches(
 
   try {
     const vectors = await embed([...missing, ...terms])
-    if (vectors.length !== missing.length + terms.length) return matched
+    if (vectors.length !== missing.length + terms.length) {
+      onFailure?.(new Error(`embed returned ${vectors.length} vectors, expected ${missing.length + terms.length}`))
+      return matched
+    }
     const missVecs = vectors.slice(0, missing.length)
     const termVecs = vectors.slice(missing.length)
 
@@ -70,8 +76,14 @@ export async function findSemanticMatches(
       }
       if (best >= threshold) matched.add(normalizeTerm(missing[i]))
     }
-  } catch {
-    return new Set() // fail closed: the exact-match score stands
+  } catch (err) {
+    // Fail closed — the exact-match score stands. But NOT silently: without the
+    // synonym pass ("REST APIs" ≡ "APIs REST") those requirements count as
+    // missing, so a transient embedding failure drops the score hard and used to
+    // leave no trace anywhere. The caller reports it, and the panel can say the
+    // number is understated instead of the user seeing 70 become 33.
+    onFailure?.(err instanceof Error ? err : new Error(String(err)))
+    return new Set()
   }
   return matched
 }

@@ -52,6 +52,13 @@ export interface ATSResult {
   missingKeywords: string[]
   /** Matched, but with nothing in the work experience behind them. */
   listedOnlyKeywords?: string[]
+  /** Requirements the CV states in other words — carried into every re-score. */
+  semanticMatches?: string[]
+  /** The synonym pass could not run, so the score is understated. Belongs to the
+   *  analysis, so it survives a re-score rather than vanishing on a keystroke. */
+  semanticRecallFailed?: boolean
+  /** Soft skills the posting wants that the CV does not demonstrate yet. */
+  missingSoftSkills?: string[]
   /** Each suggestion with the one-click action that performs it (may be manual). */
   suggestions: { text: string; action?: FixAction }[]
   subScores?: ATSSubScores
@@ -204,6 +211,17 @@ export function useATSScore() {
   // debounced rescore() below, so re-running the LLM on the same posting adds
   // nothing. This lets the UI say "up to date" instead of inviting a dead click.
   const [analyzedInputKey, setAnalyzedInputKey] = useState<string | null>(null)
+  /**
+   * Keywords extracted from the posting currently in the box, kept so a re-run
+   * over the SAME posting reuses them instead of re-sampling the model.
+   *
+   * This is what makes two runs comparable. The scoring engine is deterministic,
+   * but the model that reads the posting is not (temperature is dropped for
+   * reasoning models), so the same CV could score differently twice and the
+   * number could not answer "did my edit help?". Pinned to the posting text, so
+   * changing the posting correctly throws it away.
+   */
+  const keywordCacheRef = useRef<{ postingKey: string; keywords: unknown } | null>(null)
   const { cooldownUntil, setCooldownUntil } = useAICooldown("cooldown_ats")
   const lastKeyRef = useRef<string | null>(null)
   // verifyReal is declared below (it depends on state analyze does not need), so
@@ -268,11 +286,17 @@ export function useATSScore() {
         const res = await apiFetch("/api/ai/ats-score", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(
-            roleMode
-              ? { roleTitle: text, sectionData, language: cvLanguage, templateId }
-              : { jobDescription: text, sectionData, language: cvLanguage, templateId }
-          ),
+          body: JSON.stringify({
+            ...(roleMode ? { roleTitle: text } : { jobDescription: text }),
+            sectionData,
+            language: cvLanguage,
+            templateId,
+            // Same posting as last time → reuse its keywords so the score moves
+            // only because the CV moved.
+            ...(keywordCacheRef.current?.postingKey === `${mode}:${text}`
+              ? { cachedKeywords: keywordCacheRef.current.keywords }
+              : {}),
+          }),
         })
         if (res.status === 429 || res.status === 403) {
           const handled = await handleApiError(res, {
@@ -289,6 +313,12 @@ export function useATSScore() {
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
         setAtsResult(normalizeAtsResult(data))
+        // Pin this posting's keywords so the next run scores against the SAME
+        // requirements — any movement then comes from the CV, not from the model
+        // reading the posting slightly differently.
+        if (data?.extractedKeywords) {
+          keywordCacheRef.current = { postingKey: `${mode}:${text}`, keywords: data.extractedKeywords }
+        }
         await onSuccess()
         track("ai_ats_scored", { plan, score_bucket: scoreBucket(typeof data?.score === "number" ? data.score : 0) })
         // Then show what an ATS literally extracts from the exported PDF. It is
@@ -339,6 +369,10 @@ export function useATSScore() {
           sectionData: state.sectionData,
           language: cvLanguage,
           templateId: state.config?.templateId,
+          // The synonym matches the full analysis found. Without them this
+          // re-score ran exact-match only while the analysis had run WITH
+          // synonyms, so the number collapsed the moment the CV was edited.
+          semanticMatches: prev?.semanticMatches ?? [],
         }),
       })
       if (!res.ok) return null
@@ -351,7 +385,7 @@ export function useATSScore() {
       // "analysis is missing" notice vanish on the next keystroke while it is
       // still missing.
       setAtsResult((cur) => (cur
-        ? { ...normalizeAtsResult(data), summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis, analysisUnavailable: cur.analysisUnavailable }
+        ? { ...normalizeAtsResult(data), summary: cur.summary, suggestions: cur.suggestions, analysis: cur.analysis, analysisUnavailable: cur.analysisUnavailable, semanticRecallFailed: cur.semanticRecallFailed }
         : normalizeAtsResult(data)))
       const d = data.score - (prev?.score ?? data.score)
       // Single owner of the delta badge: EVERY score movement updates it, whether
