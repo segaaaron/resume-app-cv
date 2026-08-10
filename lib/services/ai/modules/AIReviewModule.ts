@@ -99,6 +99,32 @@ export class AIReviewModule {
     langInstruction: string,
     sectionData: Record<string, unknown> = {},
   ): Promise<CvAnalysis | null> {
+    /**
+     * The achievement gap, measured in code and handed to the analyst.
+     *
+     * Reviewed by hand, the single most useful thing to tell this candidate was
+     * "your CV says which technologies you used, never what you achieved with
+     * them" — and the panel never said it. It reported typos, missing keywords
+     * and bullets without a figure, all true and all smaller. The model will not
+     * reliably surface it on its own, so the ratio is computed here and the
+     * prompt is told to lead with it when it is bad.
+     */
+    const cq = assessResumeContent(sectionData)
+    const outcomeBlock = cq.totalBullets === 0 ? "" : (() => {
+      const withOutcome = cq.quantifiedBullets
+      const pct = cq.quantificationPct
+      // Framed as a fact FOR the analyst, never as text to echo: the first
+      // version handed the model a "MEASURED: …" line and it published that
+      // verbatim as the finding, which reads like internal tooling.
+      const line = en
+        ? `[fact for you, do not quote this line] ${withOutcome} of ${cq.totalBullets} bullets state a measurable result (${pct}%).`
+        : `[dato para ti, no cites esta línea] ${withOutcome} de ${cq.totalBullets} bullets declaran un resultado medible (${pct}%).`
+      if (pct >= 50) return line
+      return en
+        ? `${line}\nThis is the candidate's BIGGEST problem and it must be criticalFixes[0]. Write it in YOUR OWN words, addressed to the candidate — never repeat the bracketed line above. The resume lists what they DID, not what it ACHIEVED. Quote ONE real bullet as the example, explain that a recruiter cannot tell a good iOS developer from an average one without outcomes, and name exactly what to add (scale, impact, time saved, people led). Do NOT invent a number — ask for theirs.`
+        : `${line}\nEste es el problema MÁS GRANDE del candidato y debe ser criticalFixes[0]. Escríbelo con TUS palabras, dirigido al candidato — nunca repitas la línea entre corchetes de arriba. El CV enumera lo que HIZO, no lo que LOGRÓ. Cita UN bullet real como ejemplo, explica que un reclutador no puede distinguir a un buen desarrollador de uno promedio sin resultados, y dile exactamente qué agregar (escala, impacto, tiempo ahorrado, personas a cargo). NO inventes una cifra — pídele la suya.`
+    })()
+
     const prompt = en
       ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you NEVER invent facts — every claim quotes the candidate's real text.
 
@@ -109,6 +135,8 @@ ${jobContext}
 
 === RESUME ===
 ${resumeText}
+
+${outcomeBlock}
 
 Return JSON with this exact shape:
 {
@@ -163,6 +191,8 @@ ${jobContext}
 
 === CV ===
 ${resumeText}
+
+${outcomeBlock}
 
 Devuelve JSON con esta forma exacta:
 {

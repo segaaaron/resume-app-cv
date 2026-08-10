@@ -5,6 +5,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
+import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
@@ -347,6 +348,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // a number is improved by wording, never by nagging the user for a figure.
     if (improvements.length === 0) return { status: "already_optimized", improvements: [] }
 
-    return { status: "improved", improvements }
+    // Our own words, spell-checked before they reach the CV. Handing the user a
+    // rewritten bullet and then flagging a typo in it — in text they never
+    // typed — is the fastest way to make the whole feature feel unreliable.
+    const cleaned = await cleanGeneratedText(improvements.map((i) => i.text), language)
+    return { status: "improved", improvements: improvements.map((i, idx) => ({ ...i, text: cleaned[idx] ?? i.text })) }
   }
 }

@@ -11,6 +11,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
+import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
@@ -667,7 +668,9 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     const flawed = rewritten.filter(hasCliche)
     if (flawed.length === 0) {
       this.logSummaryUsage(userId, plan, response.usage, undefined)
-      return { versions: rewritten.map(plainToHtml) }
+      // Same rule as bullets and summaries: our own words, spell-checked.
+      const cleanBody = await cleanGeneratedText(rewritten, language)
+      return { versions: cleanBody.map(plainToHtml) }
     }
 
     this.logger.warn("[AIService.improveCoverLetter] retrying once", {

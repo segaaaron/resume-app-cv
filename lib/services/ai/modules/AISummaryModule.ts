@@ -11,6 +11,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
+import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { computeCostUsd } from "../shared/cost-tracker"
@@ -198,7 +199,10 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     if (gated.versions.length === 0) {
       return { versions: [], status: "already_optimized" }
     }
-    return toVersionsResult(gated.versions)
+    // Spell-checked before it reaches the CV: this is our text, not the
+    // user's, so a typo here is ours to fix rather than to report back at them.
+    const cleanText = await cleanGeneratedText(gated.versions.map((v) => v.text), language)
+    return toVersionsResult(gated.versions.map((v, i) => ({ ...v, text: cleanText[i] ?? v.text })))
   }
 
   /**
@@ -490,6 +494,9 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
       }
       return toVersionsResult(meaningful)
     }
-    return toVersionsResult(gated.versions)
+    // Spell-checked before it reaches the CV: this is our text, not the
+    // user's, so a typo here is ours to fix rather than to report back at them.
+    const cleanText = await cleanGeneratedText(gated.versions.map((v) => v.text), language)
+    return toVersionsResult(gated.versions.map((v, i) => ({ ...v, text: cleanText[i] ?? v.text })))
   }
 }
