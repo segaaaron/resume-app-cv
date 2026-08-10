@@ -9,7 +9,7 @@ import { Plus, Trash2 } from "lucide-react"
 import { nanoid } from "nanoid"
 import { toast } from "sonner"
 import { useMemo } from "react"
-import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
+import { findDuplicateSkill, containsSkill } from "@/lib/ats/skill-dedup"
 import { categoryOfSkill } from "@/lib/ats/skill-catalog"
 import { inferFieldCategories } from "@/lib/ats/job-field"
 import SkillAutocompleteInput from "./SkillAutocompleteInput"
@@ -50,13 +50,27 @@ export default function SkillsSection() {
     updateSectionData("skills", skills.filter((s) => s.id !== id))
   }
 
-  // "You already have this skill" — checked when the user leaves the field (not on
-  // every keystroke). Catches an exact/alias/spacing/~90%-similar match against the
-  // OTHER skills, and names the one they already have so it's easy to see.
+  /**
+   * A duplicate does not get to stay.
+   *
+   * This used to only warn — the row kept the repeated skill, so the CV ended up
+   * with "React" next to "React.js" and the ATS section read as padded. Checked
+   * on blur (not per keystroke) through the shared dedup engine, so an alias, a
+   * different spacing or a ~90% match all count, and the message names the skill
+   * they already have.
+   *
+   * The field is cleared rather than the row deleted: an empty row is visible,
+   * reusable and undoable, while a row vanishing under the cursor is not.
+   */
   function checkDuplicate(id: string, name: string) {
     if (!name.trim()) return
-    const dup = findDuplicateSkill(name, skills.filter((s) => s.id !== id).map((s) => s.name))
-    if (dup) toast.info(t("skills.duplicate", { skill: dup }))
+    const others = skills.filter((s) => s.id !== id).map((s) => s.name).filter(Boolean)
+    // Same two engines as the dropdown: aliases/near-spellings AND containment,
+    // so "communication" is caught by an existing "Teamwork and communication".
+    const dup = findDuplicateSkill(name, others) ?? others.find((o) => containsSkill(name, o))
+    if (!dup) return
+    update(id, "name", "")
+    toast.info(t("skills.duplicate", { skill: dup }))
   }
 
   return (
@@ -69,6 +83,7 @@ export default function SkillsSection() {
             onCommit={() => checkDuplicate(skill.id, skill.name)}
             placeholder={t("skills.placeholder")}
             boost={boost}
+            alreadyListed={skills.filter((s) => s.id !== skill.id).map((s) => s.name).filter(Boolean)}
           />
           <Select value={skill.level} onValueChange={(v) => update(skill.id, "level", v ?? "intermediate")}>
             <SelectTrigger className="h-10 w-28 shrink-0 text-xs" style={{ borderRadius: 20 }}>

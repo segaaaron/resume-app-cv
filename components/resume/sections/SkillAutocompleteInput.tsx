@@ -3,6 +3,7 @@
 import { useState, useRef, useMemo, useId, type ReactNode } from "react"
 import { useTranslations } from "next-intl"
 import { filterSkills, type SkillOption } from "@/lib/ats/skill-catalog"
+import { findDuplicateSkill, containsSkill } from "@/lib/ats/skill-dedup"
 
 interface Props {
   value: string
@@ -12,6 +13,12 @@ interface Props {
   placeholder?: string
   /** Categories (from the user's field) to float to the top of suggestions. */
   boost?: readonly string[]
+  /**
+   * Skills the CV already lists. Suggesting one of these is offering the user a
+   * duplicate — matched through the shared dedup engine, so "React.js" already
+   * listed also hides "React", not just the identical string.
+   */
+  alreadyListed?: readonly string[]
 }
 
 /** Bold the part of `display` that matches `query` (case-insensitive). */
@@ -34,7 +41,7 @@ function highlight(display: string, query: string): ReactNode {
  * (≤8 results), highlights the match, shows a category badge, offers a fuzzy
  * "did you mean" for typos, and is fully keyboard/screen-reader accessible.
  */
-export default function SkillAutocompleteInput({ value, onChange, onCommit, placeholder, boost }: Props) {
+export default function SkillAutocompleteInput({ value, onChange, onCommit, placeholder, boost, alreadyListed }: Props) {
   const t = useTranslations("editor.sections_form")
   const [open, setOpen] = useState(false)
   const [active, setActive] = useState(-1)
@@ -42,7 +49,25 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
   const blurTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const boostKey = (boost ?? []).join(",")
 
-  const { matches, fuzzy } = useMemo(() => filterSkills(value, 8, boostKey ? boostKey.split(",") : []), [value, boostKey])
+  const listedKey = (alreadyListed ?? []).join(",")
+  const { matches, fuzzy } = useMemo(() => {
+    // Ask for more than we show: dropping the already-listed ones from a list of
+    // 8 could leave 2, and the user would think the catalog has nothing for them.
+    const res = filterSkills(value, 16, boostKey ? boostKey.split(",") : [])
+    const listed = listedKey ? listedKey.split(",").filter(Boolean) : []
+    if (listed.length === 0) return { ...res, matches: res.matches.slice(0, 8) }
+    // TWO engines, because neither covers the other. findDuplicateSkill knows
+    // aliases, spacing and near-spellings ("React.js" hides "React"), while
+    // termPresent reads the listed skills as text and catches a term contained
+    // in a longer one — "Teamwork and communication" already covers
+    // "communication", which the dedup alone returns as not-a-duplicate.
+    return {
+      ...res,
+      matches: res.matches
+        .filter((o) => !findDuplicateSkill(o.display, listed) && !listed.some((l) => containsSkill(o.display, l)))
+        .slice(0, 8),
+    }
+  }, [value, boostKey, listedKey])
   const showList = open && matches.length > 0
 
   function commitSelect(o: SkillOption) {

@@ -35,3 +35,19 @@ export function findDuplicateSkill(name: string, existing: readonly string[]): s
   }
   return null
 }
+
+/**
+ * Is `candidate` already contained in `listed` as whole words?
+ *
+ * Deliberately NOT termPresent: that expands aliases, so "JavaScript" (alias
+ * "js") matched inside "React.js" and blocked a legitimate skill. This compares
+ * the normalized word sequence only — "communication" is inside "teamwork and
+ * communication", while "javascript" is not inside "react.js".
+ */
+export function containsSkill(candidate: string, listed: string): boolean {
+  const c = normalizeTerm(candidate).trim()
+  const l = normalizeTerm(listed).trim()
+  if (!c || !l || c === l) return c === l && c.length > 0
+  // Word-boundary containment on the normalized form.
+  return new RegExp(`(^|\\s)${c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(l)
+}
