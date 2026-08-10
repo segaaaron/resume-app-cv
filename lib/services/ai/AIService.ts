@@ -126,6 +126,10 @@ export class AIService {
     return this.coverLetterModule.improveCoverLetter(userId, input, plan)
   }
 
+  proofread(userId: string, texts: string[], language: "es" | "en", plan: string) {
+    return this.reviewModule.proofread(userId, texts, language, plan)
+  }
+
   reviewCV(userId: string, input: ReviewCVInput, plan: string): Promise<ReviewCVResult> {
     return this.reviewModule.reviewCV(userId, input, plan)
   }

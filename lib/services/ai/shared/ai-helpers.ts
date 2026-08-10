@@ -12,6 +12,21 @@ export function parseAIJson<T>(raw: string): T {
   }
 }
 
+/**
+ * Same parse, but a bad body is a value instead of a 500.
+ *
+ * Callers that can retry need to SEE the failure rather than have the whole
+ * request die on it: a truncated extraction is a sampling accident, and turning
+ * it into "something went wrong" for the user is worse than asking again.
+ */
+export function safeParseAIJson<T>(raw: string): T | null {
+  try {
+    return JSON.parse(raw || "{}") as T
+  } catch {
+    return null
+  }
+}
+
 export interface BuildSectionContextOptions {
   /**
    * Render `description` as indexed bullet lines via the shared bullets

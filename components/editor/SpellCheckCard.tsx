@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { toast } from "sonner"
 import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
@@ -8,7 +8,6 @@ import { useShallow } from "zustand/react/shallow"
 import { apiFetch } from "@/lib/apiFetch"
 import { collectSpellcheckText, collectProperNouns } from "@/lib/ats/spellcheck-collect"
 import { applySpellingFix } from "@/lib/ats/apply-spelling"
-import { findMisspellings } from "@/lib/ats/common-misspellings"
 import { useCvLanguage } from "./hooks/useCvLanguage"
 import { SpellCheck2, Check, Wand2, Loader2, ChevronRight } from "lucide-react"
 
@@ -28,6 +27,8 @@ const AUTO_CHECK_DELAY_MS = 4000
  * Manual checks ignore this: the user pressing the button means now.
  */
 const AUTO_CHECK_MIN_INTERVAL_MS = 90_000
+/** Findings per page — the rest are one click away. */
+const PAGE_SIZE = 5
 
 /**
  * Spelling for the whole CV, in the Content tab where the writing happens.
@@ -54,20 +55,26 @@ export default function SpellCheckCard() {
   const [loading, setLoading] = useState(false)
   const [issues, setIssues] = useState<Issue[] | null>(null)
   const [fixed, setFixed] = useState<Set<string>>(new Set())
+  /**
+   * Rows shown at once. A CV can come back with a dozen findings, and a wall of
+   * them reads as "your CV is broken" instead of a list to work through — the
+   * user fixes a few, the list shrinks, the next batch appears.
+   */
+  const [shown, setShown] = useState(PAGE_SIZE)
 
-  // Instant layer: the curated list of unambiguous slips runs locally on every
-  // edit, so the obvious ones surface with zero latency and zero requests. The
-  // server pass then covers everything the list never knew about.
-  const instant = useMemo<Issue[]>(
-    () => findMisspellings(collectSpellcheckText(sectionData).join("\n"))
-      .map((m) => ({ typed: m.typed, suggestions: [m.correct] })),
-    [sectionData]
-  )
 
   /** Prose already sent — stops the auto-run from re-checking an unchanged CV. */
   const lastCheckedRef = useRef<string | null>(null)
   const lastAutoRunAtRef = useRef(0)
   const loadingRef = useRef(false)
+  /**
+   * The grammar pass costs a model call, so it does NOT ride the automatic
+   * re-check the way the dictionary does: that fires every ~90s of editing, and
+   * a half-hour session would spend twenty calls nobody asked for. It runs once
+   * automatically — enough to surface a "more then" without the user knowing to
+   * look — and then only when they press the button.
+   */
+  const grammarRanRef = useRef(false)
 
   const runCheck = useCallback(async (auto = false) => {
     if (loadingRef.current) return
@@ -99,9 +106,38 @@ export default function SpellCheckCard() {
       if (!res.ok) { if (!auto) toast.error(t("error")); return }
       const data = await res.json().catch(() => null)
       const found = Array.isArray(data?.issues) ? (data.issues as Issue[]) : []
-      setIssues(found)
+
+      // Second pass: GRAMMAR. The dictionary can only ask "is this a word?", so
+      // "more then 7 years" reads as clean — both are words. Checking the words
+      // is not checking the writing, and no list of curated pairs covers the
+      // ways a sentence goes wrong. Runs after the free pass and never blocks
+      // it: if the model call fails, the user still gets the dictionary result.
+      let grammar: Issue[] = []
+      // Manual press = always. Automatic = only the very first time, so a "more
+      // then" surfaces without the user knowing to look, but a long editing
+      // session does not bill a call every 90 seconds.
+      if (!auto || !grammarRanRef.current) try {
+        const gres = await apiFetch("/api/ai/proofread", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ texts, language }),
+          silent: true,
+        })
+        if (gres.ok) {
+          const gdata = await gres.json().catch(() => null)
+          const list = Array.isArray(gdata?.corrections) ? gdata.corrections : []
+          grammar = list.map((c: { wrong: string; correct: string }) => ({ typed: c.wrong, suggestions: [c.correct] }))
+          grammarRanRef.current = true
+        }
+      } catch { /* dictionary result stands */ }
+
+      // The dictionary wins on a tie: it is exact where the model is a judgement.
+      const byTyped = new Set(found.map((i) => i.typed.toLowerCase()))
+      const merged = [...found, ...grammar.filter((g) => !byTyped.has(g.typed.toLowerCase()))]
+      setIssues(merged)
       setFixed(new Set())
-      if (found.length === 0 && !auto) toast.success(t("clean"))
+      setShown(PAGE_SIZE)
+      if (merged.length === 0 && !auto) toast.success(t("clean"))
     } catch {
       if (!auto) toast.error(t("error"))
     } finally {
@@ -129,8 +165,10 @@ export default function SpellCheckCard() {
     toast.success(t("fixed", { correct }))
   }
 
-  // Server findings win on duplicates — same word, one row.
-  const merged = [...instant, ...(issues ?? [])].filter(
+  // Everything comes from the server now: a real dictionary for spelling and a
+  // model for grammar. There is no local list to merge — a curated list of
+  // "known" mistakes only ever finds the mistakes someone thought of first.
+  const merged = (issues ?? []).filter(
     (issue, i, all) => all.findIndex((o) => o.typed.toLowerCase() === issue.typed.toLowerCase()) === i
   )
   const pending = merged.filter((i) => !fixed.has(i.typed))
@@ -182,22 +220,39 @@ export default function SpellCheckCard() {
       )}
 
       {pending.length > 0 && (
-        <ul className="mt-2.5 flex flex-col gap-1.5">
-          {pending.map((issue) => (
-            <li key={issue.typed} className="flex items-center gap-2 rounded-xl border border-rose-100 bg-white px-3 py-2 text-[11.5px]">
-              <span className="font-semibold text-rose-700 line-through decoration-rose-300 shrink-0">{issue.typed}</span>
-              <ChevronRight className="h-3 w-3 text-slate-300 shrink-0" />
-              <span className="font-bold text-emerald-700 flex-1 min-w-0 truncate">{issue.suggestions[0]}</span>
-              <button
-                type="button"
-                onClick={() => applyFix(issue.typed, issue.suggestions[0])}
-                className="shrink-0 inline-flex items-center gap-1 rounded-full border border-rose-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-rose-700 transition-all hover:bg-rose-100"
-              >
-                <Wand2 className="h-2.5 w-2.5" /> {t("fix")}
-              </button>
-            </li>
-          ))}
-        </ul>
+        <>
+          <ul className="mt-2.5 flex flex-col gap-1.5">
+            {pending.slice(0, shown).map((issue) => (
+              <li key={issue.typed} className="rounded-xl border border-rose-100 bg-white px-3 py-2 text-[11.5px]">
+                {/* Wraps instead of truncating: a correction the user cannot read
+                    is a button they cannot judge, and these are edits to their CV. */}
+                <div className="flex items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <span className="font-semibold text-rose-700 line-through decoration-rose-300 break-words">{issue.typed}</span>
+                    <ChevronRight className="inline h-3 w-3 text-slate-300 mx-1 align-[-1px]" />
+                    <span className="font-bold text-emerald-700 break-words">{issue.suggestions[0]}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => applyFix(issue.typed, issue.suggestions[0])}
+                    className="shrink-0 inline-flex items-center gap-1 rounded-full border border-rose-300 bg-white px-2.5 py-0.5 text-[10px] font-bold text-rose-700 transition-all hover:bg-rose-100"
+                  >
+                    <Wand2 className="h-2.5 w-2.5" /> {t("fix")}
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          {pending.length > shown && (
+            <button
+              type="button"
+              onClick={() => setShown((n) => n + PAGE_SIZE)}
+              className="mt-2 w-full rounded-xl border border-rose-200 bg-white/70 py-1.5 text-[10.5px] font-bold text-rose-700 transition-all hover:bg-rose-50"
+            >
+              {t("show_more", { count: pending.length - shown })}
+            </button>
+          )}
+        </>
       )}
     </div>
   )

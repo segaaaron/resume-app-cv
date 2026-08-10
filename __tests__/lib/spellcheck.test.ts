@@ -20,7 +20,7 @@ describe("checkSpelling — catches real typos", () => {
   })
 
   it("catches a typo the old hand-written list never had", async () => {
-    // "liderasgo" was not in common-misspellings.ts — the whole point of a dictionary.
+    // A real dictionary finds this; no curated list of "known" mistakes would.
     const issues = await checkSpelling(["Demostré liderasgo en cada proyecto."], "es")
     expect(typed(issues)).toContain("liderasgo")
     expect(issues[0].suggestions[0]).toBe("liderazgo")
