@@ -22,6 +22,19 @@ function write(key: string, v: string): void {
 }
 
 /**
+ * Mark content as AI-optimized from OUTSIDE React.
+ *
+ * The guard is per-surface, but the CV is not: a bullet can be rewritten from
+ * the Content tab OR from the ATS report, and both write the same field. If only
+ * the surface that owns the hook marks the result, the other one sees changed
+ * content, self-invalidates, and offers to improve text the AI just produced.
+ * Any writer of AI output calls this with the same key the surface uses.
+ */
+export function markContentOptimized(storageKey: string, content: string): void {
+  write(storageKey, contentHash(content))
+}
+
+/**
  * "This exact content already went through the AI — don't spend another call on
  * it." One persistent, content-anchored guard shared by every AI-improve surface
  * (bullets, summary, cover letter, tailor, ATS).

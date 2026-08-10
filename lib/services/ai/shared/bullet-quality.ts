@@ -10,6 +10,7 @@
 // only writes.
 import { ANY_METRIC_REGEX } from "./ai-helpers"
 import { parseBullets } from "./bullets"
+import { hasCliche } from "./cliches"
 import type { ATSContentQuality } from "./ai-types"
 
 /** Openers that describe a duty instead of an achievement. */
@@ -115,4 +116,68 @@ export function assessResumeContent(sectionData: Record<string, unknown>): ATSCo
     weakOpenerBullets,
     metriclessBullets,
   }
+}
+
+
+/**
+ * Is there anything here an AI rewrite can actually fix?
+ *
+ * The improvement loop is not a UI problem, it is a stopping problem: asked to
+ * improve text, a model always returns another variant, because "leave it alone"
+ * is the one answer it will not volunteer. So the decision to stop cannot be the
+ * model's — it has to be made in code, before the call.
+ *
+ * "Actionable" is deliberately narrow, and excludes a missing figure. We refuse
+ * to invent numbers, so a bullet with no metric is not something the AI can
+ * repair; treating it as a defect is what kept the button alive forever on
+ * bullets that were already fine.
+ *
+ * @returns the 0-based indices worth rewriting. Empty means: do not call.
+ */
+export function actionableBulletIndices(description: string): number[] {
+  const { bullets } = assessDescription(description)
+  return bullets
+    .filter((b) => {
+      if (b.weakOpener) return true                 // opens with a duty, not an achievement
+      if (hasCliche(b.text)) return true            // "team player", "results-driven"
+      const words = b.text.trim().split(/\s+/).length
+      if (words < 6) return true                    // too thin to say anything
+      if (words > 45) return true                   // a paragraph pretending to be a bullet
+      return false
+    })
+    .map((b) => b.index)
+}
+
+/** Nothing an AI rewrite can fix — the honest answer is "this is already fine". */
+export function isDescriptionOptimized(description: string): boolean {
+  return parseBullets(description).length > 0 && actionableBulletIndices(description).length === 0
+}
+
+/**
+ * Three outcomes, because "we will not rewrite this" has two very different
+ * reasons and telling them apart is the difference between help and a lie.
+ *
+ *   improvable   a defect a rewrite can repair (weak opener, cliché, length)
+ *   needs_input  well-formed but says only WHAT you did, never what it achieved.
+ *                A rewrite cannot add the result — only the candidate knows it,
+ *                and inventing one is the line this product does not cross.
+ *   optimized    verb-first, states an outcome, nothing left to do
+ *
+ * Measured on real bullets across fields: 8 of 12 weak ones ("Handled customer
+ * inquiries and processed refunds daily") have no formal defect at all. Calling
+ * those "already optimized" is false — they are the ones that most need work,
+ * just not work an AI can do alone.
+ */
+export type Improvability = "improvable" | "needs_input" | "optimized"
+
+export function assessImprovability(description: string): Improvability {
+  const bullets = parseBullets(description)
+  if (bullets.length === 0) return "needs_input"
+  if (actionableBulletIndices(description).length > 0) return "improvable"
+
+  // No formal defect left. Does the CV actually state an outcome anywhere here?
+  // A figure is the clearest signal; without one there is nothing to rewrite
+  // around, and asking the model produces a synonym swap our own guards drop.
+  const statesOutcome = bullets.some((b) => ANY_METRIC_REGEX.test(b))
+  return statesOutcome ? "optimized" : "needs_input"
 }

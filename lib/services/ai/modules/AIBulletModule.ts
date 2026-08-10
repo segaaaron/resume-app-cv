@@ -9,7 +9,7 @@ import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
-import { assessDescription } from "../shared/bullet-quality"
+import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
 import { hasCliche } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
@@ -18,6 +18,33 @@ import {
   type BulletResult,
   type ImproveBulletInput,
 } from "../shared/ai-types"
+
+
+/**
+ * Is the defect the caller declared actually still in this text?
+ *
+ * The panel's focus is a snapshot: it was true when the CV was analysed, and it
+ * may have been repaired since — by us, on the previous press. Verifying it
+ * turns "the user asked" into "the user asked and it is still broken".
+ *
+ * `metric` deliberately never counts: we refuse to invent figures, so a missing
+ * number is not a defect an AI rewrite can repair, and treating it as one is
+ * what kept the rewrite button live forever.
+ */
+function defectStillPresent(focus: string, text: string): boolean {
+  const { bullets } = assessDescription(text)
+  switch (focus) {
+    case "weak_verb":
+      return bullets.some((b) => b.weakOpener)
+    case "cliche":
+      return bullets.some((b) => hasCliche(b.text))
+    case "metric":
+      return false
+    default:
+      // An unknown focus is not evidence of anything.
+      return false
+  }
+}
 
 export class AIBulletModule {
   constructor(
@@ -33,6 +60,47 @@ export class AIBulletModule {
 
     const validation = validateAIInput(text, AI_INPUT_LIMITS.bulletText)
     if (!validation.valid) throw new AppError("invalid_input", 400)
+
+    /**
+     * Stop BEFORE the call when there is nothing to fix.
+     *
+     * "already_optimized" used to be the model's decision, and a model asked to
+     * improve text always finds another variant — it will not volunteer "leave
+     * it alone". So the user improved a bullet, waited out the cooldown, pressed
+     * again and got a fresh rewrite of our own output, forever.
+     *
+     * The judgement is deterministic and made here: weak opener, cliché, too
+     * thin, too long. A missing figure is NOT in that list — we refuse to invent
+     * numbers, so it is not something a rewrite can repair.
+     *
+     * `focus` is the exception: the panel diagnosed a specific defect and the
+     * user pressed that button, so the request is honoured.
+     */
+    /**
+     * "Nothing to do" has two reasons and the user deserves the right one.
+     *
+     * `needs_input` is the bullet that is well formed but never says what it
+     * achieved ("Handled customer inquiries daily"). Measured across fields, 8
+     * of 12 genuinely weak bullets look like this — telling them "already
+     * optimized" is false, and rewriting them means inventing the result. The
+     * honest answer names what is missing and hands it back.
+     */
+    if (assessImprovability(text) === "needs_input" && focus.length === 0) {
+      return { status: "needs_your_input", improvements: [] }
+    }
+
+    if (isDescriptionOptimized(text)) {
+      // `focus` is NOT a bypass. The panel sends one on every rewrite button —
+      // sometimes a hardcoded pair rather than the real defect — so honouring it
+      // blindly meant the ATS panel always reached the model, even on a bullet
+      // it had just rewritten. That is the loop the user kept hitting.
+      //
+      // A focus is a CLAIM about this text, and it is checked against the same
+      // deterministic signals: if the declared defect is no longer there, it was
+      // already fixed and there is nothing to do.
+      const stillTrue = focus.some((f) => defectStillPresent(f, text))
+      if (!stillTrue) return { status: "already_optimized", improvements: [] }
+    }
 
     const context = [
       jobTitle ? `Puesto: ${jobTitle}` : "",

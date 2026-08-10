@@ -12,7 +12,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
-import { assessDescription } from "../shared/bullet-quality"
+import { assessDescription, isDescriptionOptimized } from "../shared/bullet-quality"
 import { hasCliche } from "../shared/cliches"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
@@ -60,6 +60,31 @@ export class AITailorModule {
 
     const jdValidation = validateAIInput(jobDescription, AI_INPUT_LIMITS.jobDescription)
     if (!jdValidation.valid) throw new AppError(jdValidation.error ?? "invalid_input", 400)
+
+    /**
+     * Nothing left to tailor → say so instead of calling the model.
+     *
+     * Same stopping problem as the other improve surfaces, with one difference:
+     * tailoring is about a POSTING, so "the CV is well written" is not enough —
+     * what matters is whether this CV still misses anything the posting asks
+     * for. Two conditions, both already computed elsewhere:
+     *
+     *   · the ATS score found no missing keyword for this posting, AND
+     *   · no bullet carries a defect a rewrite could fix
+     *
+     * Without this, applying a tailor result changed the CV, which invalidated
+     * the client's "same input" guard, so the next run re-tailored our own
+     * output — and a model always finds another phrasing.
+     */
+    // `undefined` means the caller did not run the ATS pass — that is "unknown",
+    // NOT "nothing is missing". Only an actual empty array is evidence that this
+    // CV already covers the posting.
+    const nothingMissing = Array.isArray(atsMissingKeywords) && atsMissingKeywords.length === 0
+    const jobs = (sectionData?.workExperience ?? []) as Array<{ description?: string }>
+    const everyBulletClean = jobs.every((j) => !j.description?.trim() || isDescriptionOptimized(j.description))
+    if (nothingMissing && everyBulletClean && jobs.length > 0) {
+      return { summary: null, experiences: [], missingSkills: [], softSkillSuggestions: [] }
+    }
 
     // WORK EXPERIENCE DETAILS below is this prompt's source of truth for jobs —
     // full bullets, indexed. Letting buildResumeContext also emit its own,

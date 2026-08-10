@@ -26,12 +26,16 @@ describe("cosmetic-reword guard — improve-bullet", () => {
   beforeEach(() => vi.clearAllMocks())
 
   it("drops a synonym-only bullet rewrite (enhance→improve)", async () => {
+    // Opens with a duty phrase, so it is genuinely improvable and DOES reach the
+    // model — which is the only way this guard can be exercised. (A bullet with
+    // no formal defect is answered before the call now: `already_optimized` when
+    // it states a result, `needs_your_input` when it does not.)
     const chat = chatReturning({
       status: "improved",
-      improvements: [{ index: 0, text: "• Improved app performance and user experience." }],
+      improvements: [{ index: 0, text: "• Responsible for improving app performance by 20%." }],
     })
     const mod = new AIBulletModule({ chat } as never, logger as never)
-    const res = await mod.improveBullet("u1", { text: "• Enhanced app performance and user experience.", language: "en" }, "PRO")
+    const res = await mod.improveBullet("u1", { text: "• Responsible for enhancing app performance by 20%.", language: "en" }, "PRO")
     expect(res.status).toBe("already_optimized")
     expect(res.improvements).toHaveLength(0)
   })

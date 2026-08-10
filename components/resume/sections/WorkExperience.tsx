@@ -181,6 +181,15 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
 
       const { status, improvements } = contract.data
 
+      // Well formed, but it never says what the work achieved. A rewrite cannot
+      // add that — only the candidate knows the result — so we name what is
+      // missing instead of claiming the bullet is fine or inventing a number.
+      if (status === "needs_your_input") {
+        toast.info(ai("bullets_need_your_input"), { duration: 8000 })
+        markBulletsOptimized(job.description)
+        return
+      }
+
       if (status === "already_optimized" || improvements.length === 0) {
         // The AI is allowed to return nothing, and nothing is a real answer:
         // the content is already good. No metric interrogation.
@@ -223,6 +232,12 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
     onUpdate("description", text)
     if (removed > 0) toast.info(ai("duplicates_removed", { count: removed }))
     track("ai_suggestion_applied", { type: "bullet" })
+    // Text the AI just wrote is optimized text — applying ONE bullet used to
+    // leave the guard unset, so the content changed, the mark self-invalidated,
+    // and after the cooldown the button offered to "improve" its own output.
+    // That loop has no end: a model always returns another variant. Only a HUMAN
+    // edit should reopen it, and that still works — the mark is a content hash.
+    markBulletsOptimized(text)
     setBulletModal({ ...bulletModal, working: newWorking })
   }
 

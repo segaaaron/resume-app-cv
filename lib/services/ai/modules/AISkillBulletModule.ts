@@ -18,6 +18,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
+import { normalizeTerm, termPresent } from "@/lib/ats/vocabulary"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
@@ -115,6 +116,24 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     const work = ((sectionData.workExperience ?? []) as WorkRow[]).filter((j) => j.id)
     if (work.length === 0) return { status: "no_fit" }
+
+    /**
+     * The experience already shows this skill → nothing to write.
+     *
+     * Without this, pressing the button twice wrote a SECOND bullet about the
+     * same skill: the first press proved it, and the second had no way to know.
+     * The same stop rule as every other surface — do not spend a call producing
+     * something the CV already says — and here it also prevents a duplicate the
+     * user would have to delete by hand.
+     *
+     * Matched through the shared ATS vocabulary, so "k8s" counts as Kubernetes.
+     * Only the work experience counts: a skill listed in the Skills section is a
+     * claim, and proving it in a bullet is exactly the point of this endpoint.
+     */
+    const experienceText = normalizeTerm(work.map((j) => j.description ?? "").join(" \n "))
+    if (termPresent(skill, experienceText)) {
+      return { status: "already_demonstrated" }
+    }
 
     // FULL bullets, indexed by targetId — the model needs to see each job's real
     // work to judge where the skill plausibly belongs. Bounded by job count (6),

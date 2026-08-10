@@ -183,8 +183,11 @@ describe("AIService", () => {
       const aiClient = makeMockAIClient(JSON.stringify({ status: "off_topic", improvements: [] }))
       const service = new AIService(aiClient, logger)
 
+      // Opens with a duty phrase, so it gets past the deterministic "nothing to
+      // fix here" gate and actually reaches the model — which is where the
+      // off-topic verdict is made.
       await expect(
-        service.improveBullet("user-1", { text: "my favourite pizza recipe with cheese" }, "PRO")
+        service.improveBullet("user-1", { text: "Responsible for my favourite pizza recipe with cheese" }, "PRO")
       ).rejects.toMatchObject({ code: "off_topic", status: 422 })
     })
 
@@ -234,7 +237,9 @@ describe("AIService", () => {
     })
 
     it("processes at most 15 improvements", async () => {
-      const original = Array.from({ length: 16 }, (_, i) => `• Original bullet number ${i + 1} describing routine duties`).join("\n")
+      // "Responsible for" is a weak opener — a real defect, so the request is not
+      // short-circuited by the gate that refuses to re-improve clean bullets.
+      const original = Array.from({ length: 16 }, (_, i) => `• Responsible for bullet number ${i + 1} describing routine duties`).join("\n")
       const improvements = Array.from({ length: 16 }, (_, i) => ({
         index: i,
         text: `• Delivered measurable impact on workstream ${i + 1} across the quarter`,
@@ -269,7 +274,7 @@ describe("AIService", () => {
       const service = new AIService(aiClient, logger)
 
       await expect(
-        service.improveBullet("user-1", { text: "tell me a joke" }, "PRO")
+        service.improveBullet("user-1", { text: "Responsible for telling jokes to the team" }, "PRO")
       ).rejects.toMatchObject({ code: "invalid_response_format", status: 500 })
     })
   })

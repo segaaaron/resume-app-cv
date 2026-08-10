@@ -23,6 +23,7 @@ export type AiEndpointName =
   | "improve-cover-letter"
   | "ats-score"
   | "review-cv"
+  | "proofread"
   | "translate-cv"
 
 export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
@@ -36,6 +37,7 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "improve-cover-letter",
   "ats-score",
   "review-cv",
+  "proofread",
   "translate-cv",
 ] as const
 
@@ -57,6 +59,11 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "skill-bullet": 15,
   "ats-score": 10,
   "review-cv": 10,
+  // Its own bucket, not review-cv's. The spelling card fires this by itself when
+  // the panel opens, and charging that to review-cv spent a review the user
+  // never asked for — ten editor sessions and the feature was gone. Higher cap
+  // because the call is small and cheap, and one per opened CV is normal.
+  "proofread": 40,
   // 3/day: translation is idempotent (a CV is translated once and the copy is
   // reused); this cap only bites the re-do case (user deleted the copy).
   "translate-cv": 3,
@@ -252,6 +259,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": -1,
       "review-cv": -1,
+      "proofread": -1,
       "translate-cv": -1,
     },
   },
@@ -271,6 +279,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": 0,
       "ats-score": 0,
       "review-cv": 0,
+      "proofread": 0,
       "translate-cv": 0,
     },
   },
@@ -291,6 +300,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": 0,
       "ats-score": 0,
       "review-cv": 0,
+      "proofread": 0,
       "translate-cv": 0,
     },
   },
@@ -309,6 +319,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": 0,
       "review-cv": 0,
+      "proofread": 0,
       "translate-cv": 0,
     },
   },
@@ -326,6 +337,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-cover-letter": -1,
       "ats-score": -1,
       "review-cv": -1,
+      "proofread": -1,
       "translate-cv": -1,
     },
   },

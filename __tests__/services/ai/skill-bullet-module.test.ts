@@ -85,13 +85,19 @@ describe("AISkillBulletModule.weaveSkillBullet", () => {
     expect(chat).not.toHaveBeenCalled()
   })
 
-  it("no_fit when the job already showcases the skill", async () => {
+  it("already_demonstrated — and without calling the model", async () => {
+    // Used to answer no_fit AFTER a model call: the draft was written and then
+    // thrown away by the guards. Both the answer and the cost were wrong —
+    // nothing is unfit here, the CV simply already proves the skill, and asking
+    // again wrote a second bullet about the same thing.
     const sd = {
       workExperience: [{ id: "w1", jobTitle: "Dev", employer: "Acme", description: "• Shipped a GraphQL API for partners" }],
     }
-    const mod = moduleWith(async () => reply({ targetId: "w1", text: "• Added another GraphQL endpoint" }))
+    const chat = vi.fn(async () => reply({ targetId: "w1", text: "• Added another GraphQL endpoint" }))
+    const mod = moduleWith(chat as never)
     const res = await mod.weaveSkillBullet("u1", { skill: "GraphQL", sectionData: sd, language: "en" }, "PRO")
-    expect(res.status).toBe("no_fit")
+    expect(res.status).toBe("already_demonstrated")
+    expect(chat).not.toHaveBeenCalled()
   })
 
   describe("soft mode", () => {
