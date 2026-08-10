@@ -45,14 +45,22 @@ export type BulletImprovement = z.infer<typeof BulletImprovementSchema>
  */
 export interface BulletResult {
   improvements: BulletImprovement[]
-  status: "improved" | "already_optimized"
+  /**
+   * `needs_your_input`: the bullet is well formed but never states what it
+   * achieved. A rewrite cannot supply that — only the candidate knows the
+   * result, and inventing one is the line this product does not cross. Distinct
+   * from `already_optimized`, which means there is genuinely nothing to fix.
+   */
+  status: "improved" | "already_optimized" | "needs_your_input"
 }
 
 // Shared API↔UI contract for /api/ai/improve-bullet — the client must parse
 // the response with this schema instead of trusting the shape blindly.
 export const ImproveBulletResponseSchema = z.object({
   improvements: z.array(BulletImprovementSchema),
-  status: z.enum(["improved", "already_optimized"]),
+  // `needs_your_input`: well formed, but it never states a result. Only the
+  // candidate can supply that, so the UI asks instead of inventing or lying.
+  status: z.enum(["improved", "already_optimized", "needs_your_input"]),
 })
 
 // Per-category coverage sub-scores (0-100), computed deterministically in code.
@@ -117,6 +125,12 @@ export interface ATSExtractedKeywords {
   softSkills: string[]
   jobTitle: string
   mustHaves: string[]
+  /**
+   * The model's one-line read on the fit. Carried with the keywords so a cached
+   * re-run shows the SAME sentence — without it the first run showed the
+   * model's summary and every re-run silently fell back to the generic one.
+   */
+  summary?: string
 }
 
 /** A suggestion plus the one-click action that carries it out. */
@@ -139,12 +153,26 @@ export interface ATSScoreResult {
    * a score that rewards listing a skill exactly as much as having done it.
    */
   listedOnlyKeywords: string[]
+  /** Soft skills this posting asks for that the CV does not demonstrate yet. */
+  missingSoftSkills: string[]
+  /**
+   * True when the synonym pass could not run (embedding call failed).
+   *
+   * Without it, a requirement the CV phrases differently ("APIs REST" vs "REST
+   * APIs") counts as missing, so the score is understated — by a lot on a CV
+   * written in the other language. Surfaced so the panel can say so instead of
+   * showing a number the user cannot reconcile with the one they saw before.
+   */
+  semanticRecallFailed?: boolean
   suggestions: ATSSuggestion[]
   subScores: ATSSubScores
   /** Parseability tier of the chosen template. "caution" = multi-column, a strict ATS may reorder it. */
   templateSafety: "safe" | "caution"
   /** JD keywords, echoed so the client can re-score deterministically after a fix (no LLM call). */
   extractedKeywords: ATSExtractedKeywords
+  /** Requirements the CV states in other words, echoed so the instant re-score
+   *  scores the same way this analysis did. */
+  semanticMatches: string[]
   /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
   contentQuality: ATSContentQuality
   /** Ranked "path to your target": the levers that move THIS score, each with the
@@ -179,6 +207,17 @@ export interface ATSRescoreInput {
   sectionData?: Record<string, unknown>
   language?: string
   templateId?: string
+  /**
+   * Requirements the embedding pass proved the CV states differently, echoed
+   * back from the full analysis.
+   *
+   * Without them the instant re-score runs exact-match only while the full
+   * analysis ran with synonyms — so editing anything made a 70 drop to the
+   * 30s with the CV barely changed. Re-embedding on every keystroke is not an
+   * option, so the full analysis publishes what it found and the re-score
+   * credits the same set.
+   */
+  semanticMatches?: string[]
 }
 
 // LLM call #1 for ats-score: extract the requirements from the job description
@@ -213,14 +252,23 @@ const cappedStringArray = (limit: number) =>
 export const CvFixActionSchema = z
   .object({
     kind: z
-      .enum(["rewrite_bullet", "rewrite_summary", "add_skill", "fix_dates", "remove_duplicates", "manual"])
+      .enum(["rewrite_bullet", "rewrite_summary", "replace_text", "add_skill", "fix_dates", "remove_duplicates", "manual"])
       .catch("manual"),
     /** rewrite_bullet: the job the bullet belongs to. */
     targetId: z.string().max(64).optional(),
     /** rewrite_bullet: 0-based bullet index inside that job. */
     index: z.number().int().min(0).max(60).optional(),
-    /** add_skill: the exact skill to add. */
-    value: z.string().max(80).optional(),
+    /** add_skill: the exact skill to add. replace_text: the wrong wording. */
+    value: z.string().max(200).optional(),
+    /**
+     * replace_text: what `value` should say instead.
+     *
+     * A one-word slip ("more then") used to arrive as rewrite_summary, which
+     * rewrote the entire paragraph — changing sentences that were fine and
+     * making the user re-read everything to accept a three-letter correction.
+     * The repair should be the size of the defect.
+     */
+    replacement: z.string().max(200).optional(),
   })
   .catch({ kind: "manual" as const })
 export type CvFixAction = z.infer<typeof CvFixActionSchema>
@@ -232,24 +280,15 @@ export const ATSExtractionSchema = z.object({
   mustHaves: cappedStringArray(20),
   summary: z.string().catch(""),
   /**
-   * Each suggestion carries the action that performs it, exactly like a critical
-   * fix — advice with no button is what every competing ATS tool ships, and it
-   * is what the user reads as "you told me the problem, now do it yourself".
-   * `manual` is legitimate; a wrong button is not.
+   * The extractor no longer writes suggestions.
+   *
+   * It produced exactly 3 ("ADD X to your Skills", "REWRITE the summary…") next
+   * to the recruiter analysis, which already reports the same problems against
+   * the real CV text — two lists, in one report, telling the user to do the same
+   * work twice. The recruiter pass is the one that reads the CV, so it keeps the
+   * findings; this call is now pure extraction, which also makes its output
+   * small enough to stop truncating and cheap enough to cache per posting.
    */
-  suggestions: z
-    // A bare string is still accepted: the model drops the wrapper often enough
-    // that rejecting it would throw away all three suggestions (the array-level
-    // .catch would fire) over a formatting slip. A plain string simply has no
-    // button.
-    .array(
-      z.union([
-        z.string().transform((text) => ({ text, action: { kind: "manual" as const } })),
-        z.object({ text: z.string().catch(""), action: CvFixActionSchema }),
-      ]),
-    )
-    .catch([])
-    .transform((a) => a.filter((x) => x.text.trim()).slice(0, 3)),
   label: z.string().optional(), // only used to detect the off_topic guard
 })
 
@@ -417,6 +456,19 @@ export interface ATSScoreInput {
   language?: string
   /** The template the CV will export as — its layout affects ATS parseability. */
   templateId?: string
+  /**
+   * Keywords extracted from THIS posting on a previous run, echoed back by the
+   * client so the extraction is not re-sampled.
+   *
+   * The scoring engine is deterministic, but its input was not: the model that
+   * reads the posting is, and `temperature` is dropped for reasoning models
+   * (see model-params), so two runs over an unchanged CV and posting returned
+   * different keyword sets and therefore different scores. That made the number
+   * useless for the one question it exists to answer — "did my edit help?".
+   * Reusing the keywords pins the posting side, so any movement in the score is
+   * attributable to the CV. Also saves one LLM call per re-run.
+   */
+  cachedKeywords?: ATSExtractedKeywords
 }
 
 export interface GenerateCoverLetterInput {
@@ -510,6 +562,10 @@ export type SkillBulletResult =
   // No job in the CV is a reasonable home for the skill, or the draft failed the
   // anti-invention guards — either way there is nothing safe to insert.
   | { status: "no_fit" }
+  // The work experience ALREADY shows this skill. Distinct from no_fit: nothing
+  // is wrong, the job is simply done, and writing another bullet about it would
+  // duplicate what the CV already says.
+  | { status: "already_demonstrated" }
 
 export interface TranslateCVInput {
   /** Full ResumeSections object (the resume's `personalDetails` JSON column). */
@@ -581,3 +637,14 @@ export const AI_INPUT_LIMITS = {
   prompt: 500,
   skillName: 100,
 } as const
+
+/** Targeted grammar corrections — each one must be findable in the CV. */
+export const ProofreadSchema = z.object({
+  corrections: z
+    .array(z.object({
+      wrong: z.string().max(200).catch(""),
+      correct: z.string().max(200).catch(""),
+      why: z.string().max(120).catch(""),
+    }))
+    .catch([]),
+})

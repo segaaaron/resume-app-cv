@@ -92,7 +92,7 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
         // Wrapper holds the (optional) "did you mean" heading OUTSIDE the listbox —
         // per the WAI-ARIA combobox pattern, a listbox's children must be options
         // (or groups), never a bare label li.
-        <div className="absolute left-0 right-0 top-[44px] z-50 rounded-2xl border border-cyan-100 bg-white/95 backdrop-blur-sm py-1 shadow-[0_16px_40px_-12px_rgba(26,46,74,0.28)] overflow-hidden">
+        <div className="absolute left-0 right-0 top-[44px] z-50 rounded-2xl border border-slate-200 bg-white py-1 shadow-[0_20px_48px_-12px_rgba(26,46,74,0.35)] overflow-hidden">
           {fuzzy && (
             <p className="px-3 py-1.5 text-[10.5px] font-bold uppercase tracking-wide text-slate-600">{t("skills.did_you_mean")}</p>
           )}
@@ -105,10 +105,19 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
                 aria-selected={i === active}
                 onMouseDown={(e) => { e.preventDefault(); commitSelect(o) }}
                 onMouseEnter={() => setActive(i)}
-                className={`flex items-center justify-between gap-2.5 px-3 py-2.5 cursor-pointer transition-colors ${i === active ? "bg-cyan-50" : "hover:bg-slate-50"}`}
+                className={`flex flex-col gap-0.5 px-3 py-2.5 cursor-pointer transition-colors ${i === active ? "bg-cyan-50" : "hover:bg-slate-50"}`}
               >
-                <span className="text-[13px] font-medium text-slate-800 truncate">{highlight(o.display, fuzzy ? "" : value)}</span>
-                <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-cyan-800 bg-cyan-50 ring-1 ring-cyan-100 rounded-full px-2 py-0.5">{o.categoryLabel}</span>
+                {/* The skill NAME owns the full width and wraps. It used to sit
+                    next to a shrink-0 category pill, so in a ~340px panel the
+                    pill kept its size and the name truncated to a letter ("T…").
+                    The name is the thing being chosen; the category is context,
+                    so it moves to a quiet second line and never competes. */}
+                <span className="text-[13px] font-medium text-slate-800 leading-snug break-words">
+                  {highlight(o.display, fuzzy ? "" : value)}
+                </span>
+                <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
+                  {o.categoryLabel}
+                </span>
               </li>
             ))}
           </ul>

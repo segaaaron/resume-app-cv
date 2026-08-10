@@ -112,6 +112,17 @@ const SectionBlock = memo(function SectionBlock({ section }: { section: ResumeSe
     background: open || hovered ? EXPANDED_GRADIENT : COLLAPSED_BG,
     transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     position: "relative",
+    /**
+     * The OPEN section sits above its siblings.
+     *
+     * Every card is `position: relative` with no z-index, so painting order was
+     * pure DOM order: a popover inside one section (the skills autocomplete) was
+     * covered by the cards that happen to come after it, no matter how high its
+     * own z-index went — z-index only competes inside the same stacking context.
+     * Only one section is open at a time, so lifting it is unambiguous, and
+     * hover gets a smaller lift because `transform` already creates a context.
+     */
+    zIndex: open ? 20 : hovered ? 1 : undefined,
     boxShadow: open
       ? "0 0 0 2px #93C5E8, 0 12px 32px rgba(59,130,180,0.12)"
       : hovered

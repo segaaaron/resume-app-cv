@@ -13,7 +13,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
@@ -21,6 +21,7 @@ import {
   AI_INPUT_LIMITS,
   ATSExtractionSchema,
   CvAnalysisSchema,
+  ProofreadSchema,
   type CvAnalysis,
   ReviewItemSchema,
   ReviewResponseSchema,
@@ -118,7 +119,7 @@ Return JSON with this exact shape:
       "why": "<why it costs the ATS match or the recruiter>",
       "fix": "<the exact change to make>",
       "severity": "high | medium",
-      "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+      "action": { "kind": "rewrite_bullet | rewrite_summary | replace_text | add_skill | fix_dates | remove_duplicates | manual",
                   "targetId": "<job ID, rewrite_bullet only>",
                   "index": 0,
                   "value": "<skill, add_skill only>" } }
@@ -146,7 +147,8 @@ Hard rules:
 - Return up to 8 critical fixes, most damaging first. Empty array only if the resume is genuinely clean.
 - EVERY fix carries an "action" naming the tool that repairs it, because the user gets a working button from it:
   · rewrite_bullet — one specific bullet is weak/duty-phrased/unquantified. Give the job's ID (shown as "ID:x" in the resume above) and the bullet's 0-based index within that job. Only use an ID and index that actually exist above.
-  · rewrite_summary — the professional summary is the problem.
+  · rewrite_summary — the summary's CONTENT is weak and the whole paragraph should be rewritten.
+  · replace_text — a wording slip: a typo, a grammar error, a wrong word. Put the exact wrong text in "value" (copied verbatim from the resume above) and the corrected text in "replacement". PREFER THIS over rewrite_summary/rewrite_bullet whenever the defect is a few words: rewriting a whole paragraph to fix "more then" changes sentences that were fine.
   · add_skill — a skill the candidate demonstrates in their experience but never lists. Put the exact skill in "value".
   · fix_dates — dates are in inconsistent or non-machine-readable formats.
   · remove_duplicates — the same bullet text appears more than once.
@@ -171,7 +173,7 @@ Devuelve JSON con esta forma exacta:
       "why": "<por qué le cuesta el match ATS o al reclutador>",
       "fix": "<el cambio exacto a hacer>",
       "severity": "high | medium",
-      "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
+      "action": { "kind": "rewrite_bullet | rewrite_summary | replace_text | add_skill | fix_dates | remove_duplicates | manual",
                   "targetId": "<ID del puesto, solo rewrite_bullet>",
                   "index": 0,
                   "value": "<habilidad, solo add_skill>" } }
@@ -199,7 +201,8 @@ Reglas duras:
 - Devuelve hasta 8 arreglos críticos, el más dañino primero. Array vacío solo si el CV está genuinamente limpio.
 - CADA arreglo lleva una "action" que nombra la herramienta que lo repara, porque de ahí sale un botón real para el usuario:
   · rewrite_bullet — un bullet concreto es débil / lista funciones / no tiene resultado. Da el ID del puesto (aparece como "ID:x" en el CV de arriba) y el índice 0-based del bullet dentro de ese puesto. Usa solo IDs e índices que existan arriba.
-  · rewrite_summary — el problema está en el resumen profesional.
+  · rewrite_summary — el CONTENIDO del resumen es débil y hay que reescribir el párrafo entero.
+  · replace_text — un desliz de redacción: un typo, un error de gramática, una palabra equivocada. Pon el texto exacto equivocado en "value" (copiado literal del CV de arriba) y el corregido en "replacement". PREFIERE ESTA sobre rewrite_summary/rewrite_bullet cuando el defecto son unas pocas palabras: reescribir un párrafo entero para arreglar "more then" cambia frases que estaban bien.
   · add_skill — una habilidad que el candidato demuestra en su experiencia pero nunca lista. Pon la habilidad exacta en "value".
   · fix_dates — las fechas están en formatos inconsistentes o poco legibles por máquina.
   · remove_duplicates — el mismo bullet aparece más de una vez.
@@ -307,7 +310,7 @@ Reglas duras:
 === JOB DESCRIPTION ===
 ${jobDescriptionTruncated}
 
-=== CANDIDATE RESUME (context for suggestions only) ===
+=== CANDIDATE RESUME (context only) ===
 ${resumeText}
 
 Return JSON with this exact shape:
@@ -317,18 +320,14 @@ Return JSON with this exact shape:
   "jobTitle": "<the role title from the job description>",
   "mustHaves": ["<hard requirement: years of experience, degree, certification, license>", ...],
   "summary": "<1-2 sentence qualitative summary of how the resume fits — do NOT state a numeric score>",
-  "suggestions": [ { "text": "<concrete action to improve fit>",
-                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
-                                 "targetId": "<job ID, rewrite_bullet only>", "index": 0, "value": "<skill, add_skill only>" } } ]
 }
 
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
 - Extract ONLY what the job description actually asks for. Do not invent requirements.
 - WRITE EVERY ITEM IN THE RESUME'S LANGUAGE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
-- suggestions: EXACTLY 3, imperative, each naming the CV section to change. Example: "ADD 'Kubernetes' to your Skills section if you have used it".
 - Every suggestion carries an "action" — the tool that performs it, which the user gets as a working button: add_skill (put the exact skill in "value"), rewrite_bullet (give the job ID shown as "ID:x" in the resume and the bullet's 0-based index), rewrite_summary, fix_dates, remove_duplicates, or manual when nothing in the editor can do it in one click. A wrong action is worse than manual.
-- If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Extrae los requisitos de contratación de esta descripción de puesto. NO puntúes ni califiques nada — solo extrae y aconseja.
 
@@ -345,18 +344,14 @@ Devuelve JSON con esta forma exacta:
   "jobTitle": "<el título del puesto según la descripción>",
   "mustHaves": ["<requisito duro: años de experiencia, título, certificación, licencia>", ...],
   "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV — NO indiques un número de score>",
-  "suggestions": [ { "text": "<acción concreta para mejorar el encaje>",
-                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
-                                 "targetId": "<ID del puesto, solo rewrite_bullet>", "index": 0, "value": "<habilidad, solo add_skill>" } } ]
 }
 
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
 - Extrae SOLO lo que la descripción realmente pide. No inventes requisitos.
 - ESCRIBE CADA ÍTEM EN EL IDIOMA DEL CV, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
-- suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar. Ejemplo: "AÑADE 'Kubernetes' a tu sección de Habilidades si lo has usado".
 - Cada sugerencia lleva una "action" — la herramienta que la ejecuta, que el usuario recibe como botón real: add_skill (pon la habilidad exacta en "value"), rewrite_bullet (da el ID del puesto que aparece como "ID:x" en el CV y el índice 0-based del bullet), rewrite_summary, fix_dates, remove_duplicates, o manual cuando nada en el editor pueda hacerlo en un clic. Una acción equivocada es peor que manual.
-- Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     // Role-only mode: infer the STANDARD requirements for the target role (no
@@ -368,7 +363,7 @@ Reglas:
 === TARGET ROLE ===
 ${roleTitle ?? ""}
 
-=== CANDIDATE RESUME (context for suggestions only) ===
+=== CANDIDATE RESUME (context only) ===
 ${resumeText}
 
 Return JSON with this exact shape:
@@ -378,16 +373,12 @@ Return JSON with this exact shape:
   "jobTitle": "<canonical title for this role>",
   "mustHaves": ["<standard hard requirement: typical years, degree, certification, license>", ...],
   "summary": "<1-2 sentence qualitative summary of how the resume fits this role — do NOT state a numeric score>",
-  "suggestions": [ { "text": "<concrete action to improve fit>",
-                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
-                                 "targetId": "<job ID, rewrite_bullet only>", "index": 0, "value": "<skill, add_skill only>" } } ]
 }
 
 Rules:
 - Only STANDARD requirements for this role. Max ~12 hard skills.
 - Do NOT invent niche/company-specific requirements — only what a typical posting for this role lists.
-- suggestions: EXACTLY 3, imperative, each naming the CV section to change, each with its "action" (see the shape above; use "manual" when no button applies).
-- If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Infiere los requisitos ESTÁNDAR de contratación para el rol objetivo de abajo — las habilidades técnicas, blandas, requisitos duros y el título canónico que una oferta típica de este rol listaría. Básate SOLO en expectativas comunes y bien establecidas de este rol. NO inventes requisitos de nicho, específicos de una empresa ni inusuales. Si el rol es demasiado vago o no es un rol real, devuelve off_topic.
 
@@ -404,23 +395,43 @@ Devuelve JSON con esta forma exacta:
   "jobTitle": "<título canónico de este rol>",
   "mustHaves": ["<requisito duro estándar: años típicos, título, certificación, licencia>", ...],
   "summary": "<resumen cualitativo de 1-2 oraciones sobre el encaje del CV con este rol — NO indiques un número de score>",
-  "suggestions": [ { "text": "<acción concreta para mejorar el encaje>",
-                     "action": { "kind": "rewrite_bullet | rewrite_summary | add_skill | fix_dates | remove_duplicates | manual",
-                                 "targetId": "<ID del puesto, solo rewrite_bullet>", "index": 0, "value": "<habilidad, solo add_skill>" } } ]
 }
 
 Reglas:
 - Solo requisitos ESTÁNDAR de este rol. Máx ~12 hard skills.
 - NO inventes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
-- suggestions: EXACTAMENTE 3, en imperativo, cada una nombrando la sección del CV a cambiar, cada una con su "action" (ver la forma de arriba; usa "manual" cuando ningún botón aplique).
-- Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","suggestions":[],"label":"off_topic"}
+- Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
     const prompt = useRole ? rolePrompt : jdPrompt
 
-    const response = await this.aiClient.chat({
+    // Same posting as the last run → reuse its keywords instead of asking the
+    // model again. The scoring engine was always deterministic; the extraction
+    // was not (temperature is dropped for reasoning models, see model-params),
+    // so an unchanged CV could score differently twice in a row and the number
+    // could not answer "did my edit help?". Pinning the posting side makes any
+    // movement attributable to the CV — and saves one LLM call per re-run.
+    let extraction: z.infer<typeof ATSExtractionSchema> | null = null
+    const cached = input.cachedKeywords
+    if (cached && (cached.hardSkills.length > 0 || cached.mustHaves.length > 0 || cached.jobTitle.trim())) {
+      extraction = {
+        jobTitle: cached.jobTitle,
+        hardSkills: cached.hardSkills,
+        softSkills: cached.softSkills,
+        mustHaves: cached.mustHaves,
+        summary: cached.summary ?? "",
+        label: "ok",
+      }
+    }
+
+    const response = extraction ? null : await this.aiClient.chat({
       model: AI_MODEL,
-      max_tokens: 700,
+      // 700 truncated the JSON and surfaced as "Error analyzing ATS
+      // compatibility" (parse_error 500, seen in production 2026-08-09): the
+      // body carries a title, up to 12 hard skills, soft skills, must-haves and
+      // a summary, in Spanish. Dropping the suggestions block shrank it further;
+      // the headroom stays so a long posting cannot cut the JSON again.
+      max_tokens: 1600,
       temperature: AI_TEMPERATURE_PRECISE,
       response_format: { type: "json_object" },
       messages: [
@@ -441,20 +452,47 @@ Reglas:
       ],
     })
 
-    const atsUsage = response.usage
-    logAIUsage(userId, "ats-score", {
-      model: AI_MODEL,
-      plan,
-      promptTokens: atsUsage?.prompt_tokens ?? 0,
-      completionTokens: atsUsage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL, atsUsage?.prompt_tokens ?? 0, atsUsage?.completion_tokens ?? 0),
-    })
+    if (response) {
+      const atsUsage = response.usage
+      logAIUsage(userId, "ats-score", {
+        model: AI_MODEL,
+        plan,
+        promptTokens: atsUsage?.prompt_tokens ?? 0,
+        completionTokens: atsUsage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL, atsUsage?.prompt_tokens ?? 0, atsUsage?.completion_tokens ?? 0),
+      })
+    }
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsedRaw = parseAIJson<unknown>(raw)
-    const parsed = ATSExtractionSchema.safeParse(parsedRaw)
-    if (!parsed.success) throw new AppError("invalid_response_format", 500)
-    const extraction = parsed.data
+    const raw = response?.choices[0]?.message?.content ?? ""
+    // One retry before failing the whole analysis. Extraction is mechanical, so
+    // a bad body is a sampling accident, not a wrong request — and the user
+    // getting "something went wrong" on a valid posting is the worst outcome.
+    const firstParse = ATSExtractionSchema.safeParse(safeParseAIJson<unknown>(raw))
+    if (extraction) {
+      // reused — nothing to parse
+    } else if (firstParse.success) {
+      extraction = firstParse.data
+    } else {
+      this.logger.warn("[AIService.atsScore] extraction unparseable, retrying once", {
+        rawLength: raw.length,
+        finishReason: response?.choices[0]?.finish_reason ?? "unknown",
+      })
+      const retry = await this.aiClient.chat({
+        model: AI_MODEL,
+        max_tokens: 1600,
+        temperature: AI_TEMPERATURE_PRECISE,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: "Return ONLY valid, complete JSON matching the requested shape. No markdown." },
+          { role: "user", content: prompt },
+        ],
+      })
+      const retryParsed = ATSExtractionSchema.safeParse(
+        safeParseAIJson<unknown>(retry.choices[0]?.message?.content ?? ""),
+      )
+      if (!retryParsed.success) throw new AppError("invalid_response_format", 500)
+      extraction = retryParsed.data
+    }
 
     // Off-topic guard: explicit label, or the model extracted nothing usable.
     const nothingExtracted =
@@ -505,13 +543,24 @@ Reglas:
       ...((data.workExperience as { jobTitle?: string }[] | undefined)?.map((w) => w.jobTitle ?? "") ?? []),
       (data.personalDetails as { jobTitle?: string } | undefined)?.jobTitle ?? "",
     ].filter(Boolean).slice(0, 60)
+    let semanticRecallFailed = false
+    let semanticMatched = new Set<string>()
     if (match.missingKeywords.length > 0 && cvTerms.length > 0) {
       const semanticMatches = await findSemanticMatches(
         match.missingKeywords,
         cvTerms,
         (texts) => this.aiClient.embed(texts),
+        undefined,
+        (err) => {
+          semanticRecallFailed = true
+          // Loud on purpose: this silently subtracts points. A user re-running
+          // the same CV saw the score fall by tens of points with nothing in
+          // the logs to explain it.
+          this.logger.error("[AIService.atsScore] semantic recall failed — score is exact-match only", { missing: match.missingKeywords.length }, err)
+        },
       )
       if (semanticMatches.size > 0) {
+        semanticMatched = semanticMatches
         match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles)
       }
     }
@@ -567,17 +616,20 @@ Reglas:
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
-      // Same grounding as the critical fixes: a suggestion's button is only
-      // rendered when it points at something that exists in this CV.
-      suggestions: extraction.suggestions.map((sg) => ({
-        ...sg,
-        action: groundFixAction(sg.action, sectionData ?? {}),
-      })),
+      missingSoftSkills: match.missingSoftSkills,
+      semanticRecallFailed,
+      // Published so the instant re-score credits the same synonym matches.
+      semanticMatches: [...semanticMatched],
+      // Always empty: the findings live in ONE list now (the recruiter analysis).
+      // Kept on the result shape so a tab left open across the deploy does not
+      // crash on a missing field.
+      suggestions: [],
       subScores: { ...match.subScores, format: formatScore },
       templateSafety,
       extractedKeywords: {
         hardSkills: extraction.hardSkills,
         softSkills: extraction.softSkills,
+        summary: extraction.summary,
         jobTitle: extraction.jobTitle,
         mustHaves: extraction.mustHaves,
       },
@@ -617,7 +669,13 @@ Reglas:
     // Recency weight here too, so the instant re-score stays identical to atsScore.
     // Same full-skills haystack as atsScore so a skill past the 12th is not falsely "missing".
     const atsHaystack = buildAtsHaystack(data, resumeText)
-    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, buildRecentTitles(data))
+    // The synonym matches the full analysis found, carried in. Passing `undefined`
+    // here scored exact-match-only while the analysis had scored WITH synonyms,
+    // so the number fell off a cliff the moment the user edited anything —
+    // reported as "same CV, 70 became 33". Re-embedding per keystroke is not an
+    // option; reusing the set is exact and free.
+    const carried = input.semanticMatches?.length ? new Set(input.semanticMatches) : undefined
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data))
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
@@ -636,6 +694,9 @@ Reglas:
       matchedKeywords: match.matchedKeywords,
       missingKeywords: match.missingKeywords,
       listedOnlyKeywords: match.listedOnlyKeywords,
+      missingSoftSkills: match.missingSoftSkills,
+      // Carried through so successive re-scores keep crediting the same set.
+      semanticMatches: input.semanticMatches ?? [],
       suggestions: [],
       subScores: { ...match.subScores, format: formatScore },
       templateSafety,
@@ -647,6 +708,135 @@ Reglas:
       // analyze still stands; the client preserves it (never overwrites with null).
       analysis: null,
       writingChecks: analyzeWriting(data),
+    }
+  }
+
+  /**
+   * Grammar and wording pass over the CV's prose.
+   *
+   * A dictionary can only ask "is this a word?". It cannot see "more then 7
+   * years": `more` and `then` are both real words, and no amount of curated
+   * pairs will cover the ways a sentence can be wrong. Checking the WORDS is
+   * not checking the WRITING, so this reads the actual sentences.
+   *
+   * Every correction is verified against the CV before it is returned: the
+   * wrong text must appear verbatim, or it is dropped. A proofreader that
+   * "corrects" a line the user never wrote is worse than no proofreader — and
+   * a model asked for corrections will always find some.
+   */
+  async proofread(userId: string, texts: string[], language: "es" | "en", plan: string): Promise<Array<{ wrong: string; correct: string; why: string }>> {
+    // Its OWN quota, not review-cv's: the spelling card fires this by itself when
+    // the panel opens, so charging it to review-cv silently spent a CV review the
+    // user never asked for.
+    await enforceAIQuota(userId, "proofread", plan)
+    // Kept as separate units: joining them and validating against the join let
+    // the model "correct" text that spans two bullets or two fields ("…processes
+    // with" + "CocoaPods." → "with CocoaPods."). That text exists in the join and
+    // nowhere in the CV, so the button could never apply it.
+    const units = texts.map((t) => t.trim()).filter(Boolean)
+    const corpus = units.join("\n")
+    if (corpus.trim().length < 40) return []
+    const en = language === "en"
+
+    const prompt = `${en ? "Proofread this resume text" : "Corrige la redacción de este CV"}:
+
+=== TEXT (each line is a SEPARATE field or bullet — never correct across two lines) ===
+${corpus.slice(0, 8000)}
+=== END ===
+
+${en ? `Return JSON: {"corrections":[{"wrong":"<exact text copied verbatim from above>","correct":"<the fix>","why":"<max 8 words>"}]}
+
+Rules:
+- Report ONLY real errors: grammar, agreement, wrong preposition, wrong verb tense, a wrong word that is still a real word ("more then" → "more than", "advices" → "advice").
+- "wrong" MUST be copied character-for-character from the text above, and must be SHORT — the few words that are wrong, never a whole sentence.
+- NEVER rewrite for style, tone or impact. If it is grammatically correct, LEAVE IT. A stylistic "improvement" here is a false positive and worse than missing an error.
+- "wrong" is at most 4 words. If the fix needs more, the sentence is not broken — skip it.
+- "correct" must have the SAME number of words as "wrong". Never add a word, never drop one — fix the words that are there.
+- Do NOT change singular/plural or add articles because it "reads better": "with different teams" is correct English.
+- Do NOT touch commas. Serial/Oxford commas are house style, not errors.
+- Do NOT touch proper nouns, product names, technologies or acronyms.
+- Max 12 corrections. If the text is clean, return {"corrections":[]}.` : `Devuelve JSON: {"corrections":[{"wrong":"<texto exacto copiado literal de arriba>","correct":"<la corrección>","why":"<máx 8 palabras>"}]}
+
+Reglas:
+- Reporta SOLO errores reales: gramática, concordancia, preposición equivocada, tiempo verbal incorrecto, una palabra equivocada que igual existe ("mas" por "más", "haber" por "a ver").
+- "wrong" DEBE estar copiado carácter por carácter del texto de arriba, y debe ser CORTO — las pocas palabras que están mal, nunca una oración entera.
+- NUNCA reescribas por estilo, tono o impacto. Si es correcto, DÉJALO. Una "mejora" estilística acá es un falso positivo y es peor que no encontrar el error.
+- "wrong" son 4 palabras como máximo. Si la corrección necesita más, la oración no está rota — sáltala.
+- "correct" debe tener la MISMA cantidad de palabras que "wrong". Nunca agregues ni quites palabras — corrige las que están.
+- NO cambies singular/plural ni agregues artículos porque "suena mejor".
+- NO toques las comas. Son estilo, no errores.
+- NO toques nombres propios, productos, tecnologías ni siglas.
+- Máx 12 correcciones. Si el texto está limpio, devuelve {"corrections":[]}.`}
+
+${en ? "Respond with JSON only." : "Responde solo con el JSON."}`
+
+    try {
+      const response = await this.aiClient.chat({
+        model: AI_MODEL_PROSE,
+        max_tokens: 1200,
+        temperature: AI_TEMPERATURE_PRECISE,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: en ? "You are a meticulous proofreader. You only report errors you can point at." : "Eres un corrector meticuloso. Solo reportas errores que puedes señalar." },
+          { role: "user", content: prompt },
+        ],
+      })
+      const usage = response.usage
+      logAIUsage(userId, "proofread", {
+        model: AI_MODEL_PROSE,
+        plan,
+        promptTokens: usage?.prompt_tokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      })
+      const parsed = ProofreadSchema.safeParse(safeParseAIJson<unknown>(response.choices[0]?.message?.content ?? ""))
+      if (!parsed.success) {
+        this.logger.warn("[AIService.proofread] rejected by schema")
+        return []
+      }
+      const seen = new Set<string>()
+      return parsed.data.corrections
+        .map((c) => ({ wrong: c.wrong.trim(), correct: c.correct.trim(), why: c.why.trim() }))
+        // Grounding: the text must actually be in the CV, and the fix must differ.
+        .filter((c) => c.wrong && c.correct && c.wrong !== c.correct)
+        // A correction may not span a line break: bullets live in one field
+        // separated by newlines, and a fix stitching two of them together is not
+        // a spelling fix — it is an edit the user never asked for.
+        .filter((c) => !/[\n\r]/.test(c.wrong) && !/[\n\r]/.test(c.correct))
+        // Must exist verbatim inside ONE field. Checking the concatenation is
+        // what let cross-field fragments through.
+        .filter((c) => units.some((u) => u.includes(c.wrong)))
+        // Whitespace-only differences are not corrections either.
+        .filter((c) => c.wrong.replace(/\s+/g, " ").trim() !== c.correct.replace(/\s+/g, " ").trim())
+        // A correction FIXES words. It never adds or removes them.
+        //
+        // This is a proofreader, not an editor: "with" → "with CocoaPods." adds
+        // text the user never wrote, and "lunch box" → "launch" deletes half a
+        // module name. Both were produced by the model and both change what the
+        // CV says. The only allowed change in word count is re-spacing the same
+        // letters — "Swift UI" → "SwiftUI", "alot" → "a lot".
+        .filter((c) => {
+          const squash = (x: string) => x.toLowerCase().replace(/\s+/g, "")
+          if (squash(c.wrong) === squash(c.correct)) return true
+          return c.wrong.trim().split(/\s+/).length === c.correct.trim().split(/\s+/).length
+        })
+        // A real grammar fix is a few words: "more then", "would of", "usados",
+        // "Swift UI". Anything longer is the model rewriting a sentence that was
+        // already correct — measured: at 8 words it "fixed" a valid sentence
+        // ("Worked on many projects with different teams." → "with a different
+        // team."). Four is the width of the error itself.
+        .filter((c) => c.wrong.split(/\s+/).length <= 4)
+        // A correction that ends a sentence is aimed at the sentence, not a slip.
+        .filter((c) => !/[.!?]$/.test(c.wrong))
+        // Comma-only edits are house style, not errors — the model wanted to add
+        // a serial comma to "gRPC and Objective-C". Apostrophes are NOT stripped
+        // here: "Its" → "It's" changes the word, and that one is a real error.
+        .filter((c) => c.wrong.replace(/[,;:]/g, "").trim() !== c.correct.replace(/[,;:]/g, "").trim())
+        .filter((c) => (seen.has(c.wrong.toLowerCase()) ? false : (seen.add(c.wrong.toLowerCase()), true)))
+        .slice(0, 12)
+    } catch (err) {
+      this.logger.warn("[AIService.proofread] failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
+      return []
     }
   }
 

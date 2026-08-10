@@ -11,7 +11,6 @@ import AIProGate from "./AIProGate"
 import AIProfileFillPanel from "./AIProfileFillPanel"
 import CVCompletenessWidget from "./CVCompletenessWidget"
 import CVLanguageNotice from "./CVLanguageNotice"
-import SpellCheckCard from "./SpellCheckCard"
 import EmploymentGapAdvisory from "./EmploymentGapAdvisory"
 import ProvenSkillsCard from "./ProvenSkillsCard"
 import TemplateSwitcher from "./template-switcher"
@@ -175,7 +174,6 @@ export default function FormPanel({ plan = "", subscriptionStatus, subscriptionE
       <div style={{ ...scrollAreaStyle, display: activeTab === "planillas" ? "none" : undefined }}>
         <div className="px-5 pt-4 pb-6" style={{ display: activeTab === "content" ? undefined : "none" }}>
             <CVLanguageNotice />
-            <SpellCheckCard />
             <CVCompletenessWidget />
             <EmploymentGapAdvisory />
             <ProvenSkillsCard />

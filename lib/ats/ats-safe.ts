@@ -199,7 +199,11 @@ export function toAtsSafeResumeText(data: ResumeSections, locale: Locale): strin
   if (volunteer.length) section(L.volunteer, volunteer);
 
   // ── Languages ────────────────────────────────────────────────────────────
-  const langs = (data.languages ?? []).map((l) => l.name).filter(Boolean);
+  // Level included: "Spanish (native)" tells a recruiter something "Spanish"
+  // does not, and it is data the CV already holds.
+  const langs = (data.languages ?? [])
+    .filter((l) => l.name?.trim())
+    .map((l) => (l.level ? `${l.name} (${l.level.toUpperCase()})` : l.name));
   if (langs.length) section(L.languages, [langs.join(SKILL_SEP)]);
 
   // ── Hobbies (free text, one line) ────────────────────────────────────────

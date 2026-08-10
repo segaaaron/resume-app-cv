@@ -19,6 +19,11 @@ import { useATSScore, isQuestion, type GapLever } from "./hooks/useATSScore"
 import { applySuggestion, previewSuggestion } from "@/lib/services/ai/shared/apply-suggestion"
 import { applySpellingFix } from "@/lib/ats/apply-spelling"
 import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
+import { displaySkill } from "@/lib/ats/skill-catalog"
+import { isPlausibleSkill } from "@/lib/ats/skill-validation"
+import { markContentOptimized } from "./hooks/useOptimizedGuard"
+import { assessDescription } from "@/lib/services/ai/shared/bullet-quality"
+import SpellCheckCard from "./SpellCheckCard"
 import { normalizeDates } from "@/lib/ats/normalize-dates"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import { useCvLanguage } from "./hooks/useCvLanguage"
@@ -238,6 +243,20 @@ function getCurrentValue(field: SuggestionField, targetId: string | undefined, s
   }
 }
 
+
+/**
+ * What is actually wrong with this one bullet, from the same deterministic
+ * signals the server checks. Sending a guessed defect made the request
+ * unstoppable and pointed the prompt at a problem that was not there.
+ */
+function bulletDefects(text: string): string[] {
+  const out: string[] = []
+  const a = assessDescription(text)
+  if (a.weakOpenerIndices.length > 0) out.push("weak_verb")
+  if (a.missingMetricIndices.length > 0) out.push("metric")
+  return out
+}
+
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
   const { sectionData, updateSectionData } = useResumeStore(
@@ -356,7 +375,8 @@ export default function ATSScorePanel() {
    * the same chore the report was complaining about — the user should press one
    * button and have the CV be clean.
    */
-  function removeDuplicateBullets() {
+  /** @returns true when a repeated line was actually removed. */
+  function removeDuplicateBullets(): boolean {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     let removed = 0
     const updated = work.map((j) => {
@@ -368,10 +388,11 @@ export default function ATSScorePanel() {
       removed += bullets.length - after.length
       return { ...j, description: deduped }
     })
-    if (removed === 0) { toast.info(t("dedupe_none")); return }
+    if (removed === 0) { toast.info(t("dedupe_none")); return false }
     updateSectionData("workExperience", updated)
     toast.success(t("dedupe_done", { count: removed }))
     void runRescore()
+    return true
   }
 
   /**
@@ -381,16 +402,18 @@ export default function ATSScorePanel() {
    * then asked the user to retype every field by hand. Dates it cannot read with
    * certainty are left untouched; a wrong date is worse than a mixed one.
    */
-  function fixDates() {
+  /** @returns true when at least one date was rewritten. */
+  function fixDates(): boolean {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const edu = (sectionData.education ?? []) as { startDate?: string; endDate?: string }[]
     const w = normalizeDates(work)
     const e = normalizeDates(edu)
-    if (w.changed + e.changed === 0) { toast.info(t("dates_none")); return }
+    if (w.changed + e.changed === 0) { toast.info(t("dates_none")); return false }
     if (w.changed > 0) updateSectionData("workExperience", w.rows)
     if (e.changed > 0) updateSectionData("education", e.rows as never)
     toast.success(t("dates_done", { count: w.changed + e.changed }))
     void runRescore()
+    return true
   }
 
   /** Rewrites the summary through the same improve-summary engine the editor uses. */
@@ -435,7 +458,7 @@ export default function ATSScorePanel() {
    * that does not exist arrives as "manual"), so a rendered button always does
    * something. "manual" renders nothing — advice with no false promise.
    */
-  function renderFixAction(action?: { kind: string; targetId?: string; index?: number; value?: string }) {
+  function renderFixAction(action?: { kind: string; targetId?: string; index?: number; value?: string; replacement?: string }) {
     if (!action || action.kind === "manual") return null
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
 
@@ -447,7 +470,6 @@ export default function ATSScorePanel() {
     // summary, dates and duplicate actions could be run over and over on a CV
     // that was already fixed.
     let key: string | null = null
-    let done = false
 
     if (action.kind === "rewrite_bullet" && action.targetId && action.index !== undefined) {
       const job = work.find((j) => j.id === action.targetId)
@@ -459,8 +481,13 @@ export default function ATSScorePanel() {
         key = `bullet-${action.targetId}-${action.index}`
         busy = improvingKey === key
         label = t("fix_action_rewrite_bullet")
+        // The REAL defect, not a hardcoded pair. This used to send
+        // ["weak_verb","metric"] on every rewrite regardless of what was wrong,
+        // which both misled the prompt and made the request unstoppable — the
+        // server treats a focus as a claim and now verifies it.
+        const defects = bulletDefects(bullet)
         run = () => improveMetricless(
-          { text: bullet, targetId: action.targetId as string, jobTitle: job.jobTitle ?? "", index: action.index as number, reasons: ["weak_verb", "metric"] },
+          { text: bullet, targetId: action.targetId as string, jobTitle: job.jobTitle ?? "", index: action.index as number, reasons: defects },
           key as string,
         )
       }
@@ -483,25 +510,47 @@ export default function ATSScorePanel() {
             itemKey: "fix-summary",
           })
         : () => void rewriteSummary()
+    } else if (action.kind === "replace_text" && action.value?.trim() && action.replacement?.trim()) {
+      // A wording slip gets a wording-sized repair. The whole-paragraph rewrite
+      // that used to handle these changed sentences that were already fine, and
+      // made the user re-read everything to accept a three-word correction.
+      const from = action.value.trim()
+      const to = action.replacement.trim()
+      key = `fix-text-${from.toLowerCase()}`
+      label = t("fix_action_replace_text")
+      run = () => {
+        const { patch, changed } = applySpellingFix(sectionData, from, to)
+        if (!changed) { toast.info(t("typo_not_found")); return }
+        for (const [k, v] of Object.entries(patch)) {
+          updateSectionData(k as Parameters<typeof updateSectionData>[0], v as never)
+        }
+        markFixApplied(key as string)
+        toast.success(t("typo_fixed", { correct: to }))
+        void runRescore()
+      }
     } else if (action.kind === "add_skill" && action.value?.trim()) {
       const skill = action.value.trim()
       key = `fix-skill-${skill.toLowerCase()}`
-      // The skill already being in the CV IS the applied state, whether this
-      // button put it there or the user typed it.
-      done = ((sectionData.skills ?? []) as SkillItem[]).some((sk) => sk.name.toLowerCase() === skill.toLowerCase())
+      // If the CV ALREADY has this skill there is nothing to press — but do not
+      // call that "applied": the user did not do it, and a finding that says
+      // "Applied" about work nobody did destroys trust in every other badge.
+      // No button, no badge; the stale-report banner explains the leftover.
+      if (((sectionData.skills ?? []) as SkillItem[]).some((sk) => sk.name.toLowerCase() === skill.toLowerCase())) return null
       label = t("fix_action_add_skill", { skill })
-      run = () => { addKeywordToSkills(skill); markFixApplied(key as string) }
+      run = () => { if (addKeywordToSkills(skill)) markFixApplied(key as string) }
     } else if (action.kind === "fix_dates") {
       key = "fix-dates"
       label = t("fix_action_fix_dates")
-      run = () => { fixDates(); markFixApplied(key as string) }
+      // Mark applied only when a date actually changed. Pressing a button that
+      // finds nothing to do and then reports "Applied" is the same lie.
+      run = () => { if (fixDates()) markFixApplied(key as string) }
     } else if (action.kind === "remove_duplicates") {
       key = "fix-dupes"
       label = t("dedupe_action")
-      run = () => { removeDuplicateBullets(); markFixApplied(key as string) }
+      run = () => { if (removeDuplicateBullets()) markFixApplied(key as string) }
     }
 
-    if (key && (done || appliedItems.has(key))) {
+    if (key && appliedItems.has(key)) {
       return (
         <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 text-[10px] font-bold">
           <Check className="h-2.5 w-2.5" /> {t("applied")}
@@ -545,6 +594,9 @@ export default function ATSScorePanel() {
       const nextDescription = written.text
       const updated = work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j))
       updateSectionData("workExperience", updated)
+      // Same key the Content tab's guard uses: this write IS AI output, so the
+      // "improve" button over there must not come back offering to improve it.
+      markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
       markFixApplied(`bullet-${targetId}-${index}`)
       toast.success(t("toast_change_applied"))
       if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
@@ -580,11 +632,19 @@ export default function ATSScorePanel() {
       const data = (await res.json().catch(() => null)) as
         | { status: "written"; targetId: string; jobTitle: string; text: string }
         | { status: "no_fit" }
+        | { status: "already_demonstrated" }
         | null
       const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
       // No natural home — the model's call, not the last word. The candidate is
       // the only one who knows where this actually happened, so ask them instead
       // of ending on a toast with nothing to press.
+      // The CV already proves this skill in a bullet. Say so and mark it done —
+      // pressing again used to write a second bullet about the same thing.
+      if (data?.status === "already_demonstrated") {
+        markFixApplied(soft ? `soft-${skill}` : `prove-${skill}`)
+        toast.info(t("skill_already_demonstrated", { skill }))
+        return
+      }
       if (!data || data.status === "no_fit") {
         if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
         else toast.info(t("soft_skill_no_fit"))
@@ -642,7 +702,7 @@ export default function ATSScorePanel() {
     switch (key) {
       // Missing-keyword card can be deduped away when every missing keyword was a
       // typo — fall back to the typo card, which is where the real fix lives then.
-      case "hardSkills": return () => scrollToFirst("ats-missing-keywords", "ats-typos")
+      case "hardSkills": return () => scrollToFirst("ats-skills", "ats-typos")
       case "mustHaves": return () => scrollToFirst("ats-gaps")
       // Soft skills live in the §② list only; the Tailor card that used to
       // mirror them here is gone, so jumping to Tailor would land on nothing.
@@ -790,37 +850,66 @@ export default function ATSScorePanel() {
     }
   }
 
-  function addKeywordToSkills(keyword: string) {
-    const existing = sectionData.skills ?? []
-    const alreadyExists = (existing as { name: string }[]).some(
-      (s) => s.name.toLowerCase() === keyword.toLowerCase()
-    )
-    if (alreadyExists) {
-      toast.info(t("keyword_already_added", { keyword }))
+  /**
+   * Writes ONE skill into the skills section, in the shape the section uses.
+   *
+   * The analyst can phrase a suggestion as a sentence ("Crash Reporting and/or
+   * the specific analytics tools you have used"); pasting that verbatim puts a
+   * paragraph in a chip row. A skill is 1-4 words, and its casing comes from the
+   * shared catalog so "objective-c" lands as "Objective-C" like the rest.
+   *
+   * @returns true when the CV actually gained a skill.
+   */
+  function addKeywordToSkills(keyword: string): boolean {
+    const cleaned = keyword.trim().replace(/^["'“”]+|["'“”.,;:]+$/g, "").trim()
+    // Validated against the skills engine, not just by length: a known skill is
+    // accepted outright, and anything else has to look like a skill and not be
+    // the user's own employer, city or job title.
+    if (!isPlausibleSkill(cleaned, sectionData as Record<string, unknown>)) {
+      toast.info(t("keyword_not_a_skill"))
+      return false
+    }
+    const name = displaySkill(cleaned)
+    const existing = (sectionData.skills ?? []) as SkillItem[]
+    // Same spelling, or the same skill under another spelling / the other
+    // language — the row must not gain a twin of what is already there.
+    if (existing.some((s) => s.name.toLowerCase() === name.toLowerCase()) ||
+        findDuplicateSkill(name, existing.map((s) => s.name))) {
+      toast.info(t("keyword_already_added", { keyword: name }))
       setAddedKeywords((prev) => new Set(prev).add(keyword))
-      return
+      return false
     }
     updateSectionData("skills", [
-      ...(existing as SkillItem[]),
-      { id: nanoid(), name: keyword, level: "intermediate" as const },
+      ...existing,
+      { id: nanoid(), name, level: "intermediate" as const },
     ])
     setAddedKeywords((prev) => new Set(prev).add(keyword))
-    toast.success(t("keyword_added", { keyword }))
+    toast.success(t("keyword_added", { keyword: name }))
     void runRescore()
+    return true
   }
 
+  /**
+   * Adds every missing keyword at once — through the SAME normalization the
+   * one-by-one button uses. It used to write the raw strings straight into the
+   * section, so "Add all" could land casing and near-duplicates that the single
+   * add would have cleaned ("objective-c" beside "Objective-C").
+   */
   function addAllKeywords() {
-    const existing = (sectionData.skills ?? []) as { name: string }[]
-    const missing = (atsResult?.missingKeywords ?? []).filter(
-      (kw) => !existing.some((s) => s.name.toLowerCase() === kw.toLowerCase())
-    )
-    if (missing.length === 0) { toast.info(t("toast_keywords_already")); return }
-    updateSectionData("skills", [
-      ...(existing as SkillItem[]),
-      ...missing.map((kw): SkillItem => ({ id: nanoid(), name: kw, level: "intermediate" })),
-    ])
-    setAddedKeywords((prev) => { const next = new Set(prev); missing.forEach((kw) => next.add(kw)); return next })
-    toast.success(t("keywords_added", { count: missing.length }))
+    const existing = (sectionData.skills ?? []) as SkillItem[]
+    const candidates = (atsResult?.missingKeywords ?? []).filter((kw) => isPlausibleSkill(kw, sectionData as Record<string, unknown>))
+    const added: SkillItem[] = []
+    const seen = existing.map((s) => s.name)
+    for (const kw of candidates) {
+      const name = displaySkill(kw.trim())
+      if (seen.some((n) => n.toLowerCase() === name.toLowerCase()) || findDuplicateSkill(name, seen)) continue
+      added.push({ id: nanoid(), name, level: "intermediate" as const })
+      seen.push(name)
+    }
+    if (added.length === 0) { toast.info(t("toast_keywords_already")); return }
+    updateSectionData("skills", [...existing, ...added])
+    setAddedKeywords((prev) => { const next = new Set(prev); candidates.forEach((kw) => next.add(kw)); return next })
+    toast.success(t("keywords_added", { count: added.length }))
     void runRescore()
   }
 
@@ -905,6 +994,11 @@ export default function ATSScorePanel() {
             CV has enough content. Answers "is my CV good?" without needing a job
             posting; the ATS match below then answers "good FOR THIS job?". */}
         {cvReady && <CVHealthCard data={cvHealth} />}
+        {/* Spelling belongs to the report, not to the writing tab: it is part of
+            reviewing the CV, and this is where the user comes to be told what is
+            wrong with it. Sits beside the health card — both are automatic and
+            need no job posting, so they show before any analysis is run. */}
+        {cvReady && <SpellCheckCard />}
 
         {/* Job description is the ONLY input now. The role-title mode was removed:
             it inferred generic requirements and the real analysis needs the posting
@@ -1128,8 +1222,7 @@ export default function ATSScorePanel() {
                 atsResult.templateSafety === "caution" ||
                 (atsResult.contentQuality?.totalBullets ?? 0) > 0 ||
                 (atsResult.gaps?.length ?? 0) > 0 ||
-                missingKwLeft.length > 0 ||
-                (atsResult.suggestions?.length ?? 0) > 0
+                missingKwLeft.length > 0
               return hasFixes ? <SectionHeader n={2} title={t("section_fixes")} /> : null
             })()}
 
@@ -1340,8 +1433,7 @@ export default function ATSScorePanel() {
               // and one button that cleans the whole CV — see the block below.
               const bullets = [...byKey.values()].filter((b) => !appliedItems.has(`bullet-${b.targetId}-${b.index}`))
               const cq = atsResult.contentQuality
-              const visibleSoft = tailor.softSkillSuggestions.filter((s) => !appliedItems.has(`soft-${s.skill}`))
-              if (bullets.length === 0 && (!cq || cq.totalBullets === 0) && visibleSoft.length === 0 && dupes.length === 0) return null
+              if (bullets.length === 0 && (!cq || cq.totalBullets === 0) && dupes.length === 0) return null
               return (
               <div id="ats-bullets" className={`rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-bullets")}`}>
                 <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
@@ -1432,45 +1524,6 @@ export default function ATSScorePanel() {
                   </ul>
                 )}
 
-                {/* Soft skills live in the SAME list as the bullets, with no heading
-                    of their own: a separate titled block read as a second, competing
-                    section ("why are there two bullet lists?"). A soft skill is not
-                    a tag to add — it is a bullet the CV is missing, so it belongs in
-                    the list of bullet work with a chip saying it creates a new one. */}
-                {visibleSoft.length > 0 && (
-                  <ul className="flex flex-col gap-1.5 mt-1.5">
-                    {visibleSoft.map((s) => {
-                      const busy = weavingSoft === s.skill
-                      return (
-                        <li key={s.skill} className="rounded-lg bg-white/60 border border-violet-100 p-2">
-                          <div className="flex items-start gap-1.5">
-                            <Sparkles className="h-2.5 w-2.5 text-violet-500 shrink-0 mt-1" />
-                            <div className="flex-1 min-w-0">
-                              <span className="block text-[10.5px] text-slate-600 leading-snug">{s.suggestion}</span>
-                              <div className="flex flex-wrap items-center gap-1 mt-1">
-                                <span className="text-[9px] font-bold rounded-full bg-violet-50 text-violet-600 ring-1 ring-violet-200 px-1.5">
-                                  {t("reason_new_bullet")}
-                                </span>
-                                <span className="text-[9px] text-violet-400/80 capitalize">{s.skill}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-end mt-1.5">
-                            <button
-                              type="button"
-                              onClick={() => weaveSoftSkill(s.skill)}
-                              disabled={busy || !!weavingSoft}
-                              className="inline-flex items-center gap-1 text-[9.5px] font-bold bg-gradient-to-r from-violet-100 to-fuchsia-100 hover:from-violet-200 hover:to-fuchsia-200 text-violet-700 border border-violet-200 rounded-full px-2 py-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-                              {busy ? t("soft_skill_weaving") : t("soft_skill_demonstrate")}
-                            </button>
-                          </div>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
                 <p className="text-[10px] text-slate-500 leading-relaxed mt-2">{t("content_quality_hint")}</p>
               </div>
               )
@@ -1524,131 +1577,120 @@ export default function ATSScorePanel() {
               </div>
             )}
 
-            {/* The stuffing answer. Dumping every missing keyword into Skills still
-                moves the coverage score — the word IS in the CV — but each one
-                lands here, unbacked, where the user can see it. No invented
-                penalty: whether the work experience mentions the skill is a fact,
-                and it is exactly what a recruiter checks after reading the claim. */}
-            {(atsResult.listedOnlyKeywords?.length ?? 0) > 0 && (
-              <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/70 to-orange-50/50 p-3.5">
-                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-1.5">
-                  <AlertCircle className="h-3 w-3" /> {t("listed_only")}
-                </p>
-                <p className="text-[10.5px] text-slate-600 leading-relaxed mb-2.5">{t("listed_only_hint")}</p>
-                {/* Each one gets the fix it needs: not "remove the claim" but
-                    "show where you did it". Same weaver as the soft skills, hard
-                    mode (the bullet names the skill), user picks the role. */}
-                <div className="flex flex-wrap gap-1.5">
-                  {(atsResult.listedOnlyKeywords ?? []).filter((kw) => !appliedItems.has(`prove-${kw}`)).map((kw: string) => (
-                    <button
-                      key={kw}
-                      type="button"
-                      onClick={() => proveSkill(kw)}
-                      disabled={!!weavingSoft}
-                      className="flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 bg-white/70 text-amber-700 ring-1 ring-amber-200 transition-all hover:bg-amber-100 hover:ring-amber-300 disabled:opacity-50"
-                    >
-                      {weavingSoft === kw ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-                      {kw}
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">{t("listed_only_action_hint")}</p>
-              </div>
-            )}
-
-            {atsResult.gaps?.length > 0 && (
-              <div id="ats-gaps" className={`rounded-2xl border border-amber-100 bg-amber-50/60 p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-gaps")}`}>
-                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
-                  <AlertCircle className="h-3 w-3" /> {t("gaps")}
-                </p>
-                <ul className="space-y-1.5">
-                  {atsResult.gaps.map((g, i) => (
-                    <li key={i} className="text-xs text-slate-700 flex items-start gap-2">
-                      <span className="text-amber-500 mt-0.5 shrink-0 font-bold">!</span> {g}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Dedup: a keyword the CV misspells is shown ONCE, as a typo above —
-                never also here as "missing". Keeps the unified report from saying
-                the same thing twice. */}
+            {/* ── Skills — ONE card ────────────────────────────────────────
+                Three separate cards used to ask for skills: "missing keywords",
+                "listed without evidence", and soft skills buried in the bullets
+                list. Same subject, three places, and the user had to work out
+                that they were different questions about one section. One card,
+                three groups, each with the action that actually fits it. ── */}
             {(() => {
               const typos = new Set((atsResult.typoWarnings ?? []).map((w) => w.keyword.toLowerCase()))
-              // Last line of defence against offering a skill the CV already
-              // states under another spelling or in the other language ("code
-              // review" next to "Revisión de código"). Two entries for one skill
-              // is the duplication a recruiter reads as machine-written.
               const ownSkills = ((sectionData.skills ?? []) as SkillItem[]).map((sk) => sk.name)
-              // Skills tailor found for THIS posting join the same chip row. The
-              // hook already dropped anything the ATS score lists (matched through
-              // the shared vocabulary, so React ≡ React.js), so this concat cannot
-              // reintroduce a duplicate — it just stops the CV needing two cards
-              // to say "you are missing these".
+              // A keyword the CV misspells shows ONCE, as a typo above — never
+              // also here as "missing". findDuplicateSkill is the last defence
+              // against offering a skill the CV already states under another
+              // spelling or in the other language.
               const missingKw = [...(atsResult.missingKeywords ?? []), ...tailor.missingSkills]
                 .filter((kw) => !typos.has(kw.toLowerCase()))
                 .filter((kw) => !findDuplicateSkill(kw, ownSkills))
                 .filter((kw, i, arr) => arr.findIndex((o) => o.toLowerCase() === kw.toLowerCase()) === i)
-              if (missingKw.length === 0) return null
+              const listedOnly = (atsResult.listedOnlyKeywords ?? []).filter((kw) => !appliedItems.has(`prove-${kw}`))
+              // Tailor's soft skills carry a written suggestion so they win on a
+              // tie; the matcher's list is there even when tailor is in cooldown.
+              const softFromTailor = new Map(tailor.softSkillSuggestions.map((x) => [x.skill.toLowerCase(), x]))
+              const softSkills = [
+                ...tailor.softSkillSuggestions,
+                ...(atsResult.missingSoftSkills ?? [])
+                  .filter((sk) => !softFromTailor.has(sk.toLowerCase()))
+                  .map((skill) => ({ skill, suggestion: "" })),
+              ].filter((x) => !appliedItems.has(`soft-${x.skill}`))
+
+              if (missingKw.length === 0 && listedOnly.length === 0 && softSkills.length === 0) return null
               return (
-              <div id="ats-missing-keywords" className={`rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-missing-keywords")}`}>
+              <div id="ats-skills" className={`rounded-2xl border border-slate-100 bg-white/70 backdrop-blur-sm p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-skills")}`}>
                 <div className="flex items-center justify-between mb-2.5">
                   <p className="text-[10px] font-black tracking-widest uppercase text-slate-600 flex items-center gap-1.5">
-                    <Tag className="h-3 w-3" /> {t("missing_keywords")}
+                    <Tag className="h-3 w-3" /> {t("skills_card_title")}
                   </p>
-                  <button type="button" onClick={addAllKeywords}
-                    className="text-[10px] font-bold text-cyan-600 hover:text-cyan-800 transition-colors bg-cyan-50 hover:bg-cyan-100 px-2 py-0.5 rounded-full">
-                    + {t("button_add_all")}
-                  </button>
+                  {missingKw.length > 0 && (
+                    <button type="button" onClick={addAllKeywords}
+                      className="text-[10px] font-bold text-cyan-600 hover:text-cyan-800 transition-colors bg-cyan-50 hover:bg-cyan-100 px-2 py-0.5 rounded-full">
+                      + {t("button_add_all")}
+                    </button>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {missingKw.map((kw, i) => {
-                    const added = addedKeywords.has(kw)
-                    return (
-                      <span key={i} className={`inline-flex items-stretch rounded-full overflow-hidden ring-1 ${added ? "ring-emerald-200 bg-emerald-100" : "ring-slate-200 bg-slate-100"}`}>
-                        <button type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
-                          className={`flex items-center gap-1 text-[10px] font-semibold pl-2.5 pr-2 py-1 transition-all ${added ? "text-emerald-700 cursor-default" : "text-slate-700 hover:bg-cyan-100 hover:text-cyan-700 cursor-pointer"}`}>
-                          {added ? <Check className="h-2.5 w-2.5" /> : <Plus className="h-2.5 w-2.5" />}
+
+                {missingKw.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[10px] font-bold text-slate-500 mb-1.5">{t("skills_group_missing")}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {missingKw.map((kw, i) => {
+                        const added = addedKeywords.has(kw)
+                        return (
+                          <span key={i} className={`inline-flex items-stretch rounded-full overflow-hidden ring-1 ${added ? "ring-emerald-200 bg-emerald-100" : "ring-slate-200 bg-slate-100"}`}>
+                            <button type="button" onClick={() => addKeywordToSkills(kw)} disabled={added}
+                              className={`flex items-center gap-1 text-[10px] font-semibold pl-2.5 pr-2 py-1 transition-all ${added ? "text-emerald-700 cursor-default" : "text-slate-700 hover:bg-cyan-100 hover:text-cyan-700 cursor-pointer"}`}>
+                              {added ? <Check className="h-2.5 w-2.5" /> : <Plus className="h-2.5 w-2.5" />}
+                              {kw}
+                            </button>
+                            <button type="button" onClick={() => void weaveSkill(kw, undefined, false)}
+                              disabled={!!weavingSoft}
+                              title={t("prove_action")} aria-label={t("prove_action")}
+                              className="flex items-center justify-center px-2 border-l border-slate-200 text-cyan-700 transition-all hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed">
+                              {weavingSoft === kw ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
+                            </button>
+                          </span>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Listed, but nothing in the experience backs them. Dumping every
+                    keyword into Skills still moves coverage — the word IS in the CV
+                    — so each one lands here, unbacked, where the user can see it.
+                    No invented penalty: whether the experience mentions the skill is
+                    a fact, and it is what a recruiter checks after the claim. */}
+                {listedOnly.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[10px] font-bold text-amber-700 mb-1">{t("skills_group_unproven")}</p>
+                    <p className="text-[10px] text-slate-500 leading-snug mb-1.5">{t("listed_only_hint")}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {listedOnly.map((kw: string) => (
+                        <button key={kw} type="button" onClick={() => proveSkill(kw)} disabled={!!weavingSoft}
+                          className="flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 bg-amber-50 text-amber-700 ring-1 ring-amber-200 transition-all hover:bg-amber-100 hover:ring-amber-300 disabled:opacity-50">
+                          {weavingSoft === kw ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
                           {kw}
                         </button>
-                        {/* Listing a skill is a claim; this writes the bullet that
-                            backs it. Tailor used to own this button — it comes back
-                            here on the panel's version, which asks WHICH role it
-                            goes in instead of picking one silently. */}
-                        <button type="button" onClick={() => void weaveSkill(kw, undefined, false)}
-                          disabled={!!weavingSoft}
-                          title={t("prove_action")} aria-label={t("prove_action")}
-                          className="flex items-center justify-center px-2 border-l border-slate-200 text-cyan-700 transition-all hover:bg-cyan-100 disabled:opacity-50 disabled:cursor-not-allowed">
-                          {weavingSoft === kw ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* A soft skill is never a tag to add — it only counts if a bullet
+                    shows the behaviour, so its only action writes that bullet. */}
+                {softSkills.length > 0 && (
+                  <div>
+                    <p className="text-[10px] font-bold text-violet-700 mb-1">{t("skills_group_soft")}</p>
+                    <p className="text-[10px] text-slate-500 leading-snug mb-1.5">{t("skills_group_soft_hint")}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {softSkills.map((sk) => (
+                        <button key={sk.skill} type="button" onClick={() => weaveSoftSkill(sk.skill)} disabled={!!weavingSoft}
+                          title={sk.suggestion || undefined}
+                          className="flex items-center gap-1 text-[10px] font-semibold rounded-full px-2.5 py-1 bg-violet-50 text-violet-700 ring-1 ring-violet-200 capitalize transition-all hover:bg-violet-100 disabled:opacity-50">
+                          {weavingSoft === sk.skill ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Sparkles className="h-2.5 w-2.5" />}
+                          {sk.skill}
                         </button>
-                      </span>
-                    )
-                  })}
-                </div>
-                <p className="text-[10px] text-slate-400 mt-2 leading-relaxed">{t("keyword_hint")}</p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <p className="text-[10px] text-slate-400 mt-2.5 leading-relaxed">{t("keyword_hint")}</p>
               </div>
               )
             })()}
 
-            {atsResult.suggestions?.length > 0 && (
-              <div className="rounded-2xl border border-amber-100 bg-gradient-to-br from-amber-50/80 to-orange-50/60 p-3.5">
-                <p className="text-[10px] font-black tracking-widest uppercase text-amber-600 flex items-center gap-1.5 mb-2.5">
-                  <Lightbulb className="h-3 w-3" /> {t("suggestions")}
-                </p>
-                <ul className="space-y-2">
-                  {atsResult.suggestions.map((s, i) => (
-                    <li key={i} className="text-xs text-slate-700 flex items-start gap-2 leading-relaxed">
-                      <span className="text-amber-400 shrink-0 mt-0.5 font-bold">→</span>
-                      <span className="min-w-0 flex-1">
-                        {s.text}
-                        {renderFixAction(s.action)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
 
           </div>
         )}
