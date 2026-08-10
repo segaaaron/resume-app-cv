@@ -101,3 +101,40 @@ describe("termPresent", () => {
     expect(termPresent("XCTest", "coverage via xctests")).toBe(true)
   })
 })
+
+describe("bilingual vocabulary beyond engineering", () => {
+  // Measured before adding these: 10 of 16 common pairs were unknown, and the
+  // gaps were almost all non-tech. A nurse listing "Atención al paciente"
+  // against an English posting was told "patient care" was missing — real ATS
+  // points lost, and a duplicate offered as the fix. These serve every surface
+  // at once: the matcher, the dedup, the proven-skills card and tailor.
+  const PAIRS: Array<[string, string]> = [
+    ["team leadership", "Liderazgo de equipos"],
+    ["risk management", "Gestión de riesgos"],
+    ["inventory management", "Control de inventarios"],
+    ["patient care", "Atención al paciente"],
+    ["lesson planning", "Planificación curricular"],
+    ["contract drafting", "Redacción de contratos"],
+    ["blueprint reading", "Lectura de planos"],
+    ["food safety", "Manipulación de alimentos"],
+    ["cost control", "Control de costos"],
+    ["occupational safety", "Seguridad industrial"],
+    ["medication administration", "Administración de medicamentos"],
+    ["vital signs", "Signos vitales"],
+    ["classroom management", "Manejo de aula"],
+    ["labor law", "Derecho laboral"],
+  ]
+
+  it.each(PAIRS)("matches %s against its Spanish form", (en, es) => {
+    expect(termPresent(en, normalizeTerm(es))).toBe(true)
+  })
+
+  it("does not collapse skills that merely look similar", () => {
+    // The risk of adding equivalences is over-matching: two different skills
+    // treated as one would silently inflate the score.
+    expect(termPresent("patient care", normalizeTerm("Atención al cliente"))).toBe(false)
+    expect(termPresent("team leadership", normalizeTerm("Gestión del tiempo"))).toBe(false)
+    expect(termPresent("food safety", normalizeTerm("Seguridad industrial"))).toBe(false)
+    expect(termPresent("cost control", normalizeTerm("Control de inventarios"))).toBe(false)
+  })
+})

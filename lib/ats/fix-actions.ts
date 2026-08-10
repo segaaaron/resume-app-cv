@@ -7,6 +7,7 @@
 // the wire and be tested directly.
 import type { CvFixAction } from "@/lib/services/ai/shared/ai-types"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
+import { isPlausibleSkill } from "./skill-validation"
 
 /**
  * Verifies a model-proposed action against the REAL CV before the UI can render
@@ -29,9 +30,26 @@ export function groundFixAction(action: CvFixAction, sectionData: Record<string,
       return action.index < parseBullets(job.description ?? "").length ? action : MANUAL
     }
     case "add_skill":
-      return action.value?.trim() ? action : MANUAL
+      // Not just "is it non-empty": the model has returned whole sentences here
+      // ("the specific analytics tools you have used"). Validated against the
+      // skills engine, so a button that would write prose into Skills is never
+      // drawn at all.
+      return action.value && isPlausibleSkill(action.value, sectionData) ? action : MANUAL
     case "rewrite_summary":
       return typeof sectionData.summary === "string" && sectionData.summary.trim() ? action : MANUAL
+    case "replace_text": {
+      // The wrong wording must EXIST in the CV, verbatim, and differ from the
+      // replacement. A find-and-replace whose target is not there would either
+      // do nothing or — worse — be applied somewhere it does not belong.
+      const from = action.value?.trim()
+      const to = action.replacement?.trim()
+      if (!from || !to || from === to) return MANUAL
+      const haystack = [
+        typeof sectionData.summary === "string" ? sectionData.summary : "",
+        ...jobs.map((j) => j.description ?? ""),
+      ].join("\n")
+      return haystack.includes(from) ? action : MANUAL
+    }
     case "fix_dates":
     case "remove_duplicates":
       // Both operate on whatever the CV holds and are no-ops on a clean CV; the

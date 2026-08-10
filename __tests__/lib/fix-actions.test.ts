@@ -46,26 +46,14 @@ describe("groundFixAction", () => {
 })
 
 describe("schemas tolerate what the model actually returns", () => {
-  it("accepts a suggestion written as a plain string — it just gets no button", () => {
+  it("no longer carries suggestions — the recruiter analysis owns the findings", () => {
+    // Two lists telling the user to do the same work is what this removed.
     const parsed = ATSExtractionSchema.parse({
-      hardSkills: [], softSkills: [], jobTitle: "", mustHaves: [], summary: "",
+      hardSkills: ["Swift"], softSkills: [], jobTitle: "iOS Developer", mustHaves: [], summary: "",
       suggestions: ["ADD 'Kubernetes' to your Skills section"],
     })
-    expect(parsed.suggestions).toEqual([
-      { text: "ADD 'Kubernetes' to your Skills section", action: { kind: "manual" } },
-    ])
-  })
-
-  it("keeps the other suggestions when one action is malformed", () => {
-    const parsed = ATSExtractionSchema.parse({
-      hardSkills: [], softSkills: [], jobTitle: "", mustHaves: [], summary: "",
-      suggestions: [
-        { text: "Add GraphQL", action: { kind: "add_skill", value: "GraphQL" } },
-        { text: "Something", action: { kind: "not_a_kind" } },
-      ],
-    })
-    expect(parsed.suggestions).toHaveLength(2)
-    expect(parsed.suggestions[1].action.kind).toBe("manual")
+    expect("suggestions" in parsed).toBe(false)
+    expect(parsed.hardSkills).toEqual(["Swift"])
   })
 
   it("defaults a critical fix with no action at all to manual", () => {

@@ -47,6 +47,33 @@ const EXTRA_ALIAS_GROUPS: readonly string[][] = [
   ["data analysis", "analisis de datos"],
   ["customer service", "atencion al cliente", "servicio al cliente"],
   ["quality assurance", "qa", "aseguramiento de calidad"],
+  // Bilingual vocabulary OUTSIDE engineering. Measured: 10 of 16 common pairs
+  // were unknown, and almost all of the gaps were non-tech — healthcare,
+  // education, legal, construction, hospitality, operations. A nurse listing
+  // "Atención al paciente" against an English posting was told "patient care"
+  // was missing, which cost real ATS points and offered a duplicate to add.
+  // These serve every surface at once: the ATS matcher, the dedup, the
+  // proven-skills card and tailor.
+  ["team leadership", "liderazgo de equipos", "team management", "gestion de equipos", "direccion de equipos"],
+  ["risk management", "gestion de riesgos", "administracion de riesgos"],
+  ["inventory management", "control de inventarios", "gestion de inventarios", "manejo de inventarios"],
+  ["patient care", "atencion al paciente", "cuidado del paciente", "cuidados del paciente"],
+  ["lesson planning", "planificacion curricular", "planificacion de clases", "diseño curricular"],
+  ["contract drafting", "redaccion de contratos", "elaboracion de contratos"],
+  ["blueprint reading", "lectura de planos", "interpretacion de planos"],
+  ["food safety", "manipulacion de alimentos", "seguridad alimentaria", "inocuidad alimentaria"],
+  ["cost control", "control de costos", "gestion de costos", "control de gastos"],
+  ["time management", "gestion del tiempo", "administracion del tiempo"],
+  ["critical thinking", "pensamiento critico"],
+  ["decision making", "toma de decisiones"],
+  ["conflict resolution", "resolucion de conflictos", "manejo de conflictos"],
+  ["public speaking", "oratoria", "hablar en publico", "presentaciones en publico"],
+  ["occupational safety", "seguridad industrial", "seguridad ocupacional", "salud ocupacional"],
+  ["medication administration", "administracion de medicamentos"],
+  ["vital signs", "signos vitales", "toma de signos vitales"],
+  ["classroom management", "manejo de aula", "gestion del aula"],
+  ["labor law", "derecho laboral"],
+  ["site supervision", "supervision de obra", "supervision de obras"],
   // Bilingual engineering vocabulary. A Spanish CV writes "Revisión de código"
   // and an English posting asks for "code review": without these the matcher
   // reported a skill the candidate demonstrably has as MISSING, and then offered
