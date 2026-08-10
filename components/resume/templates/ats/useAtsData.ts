@@ -15,6 +15,7 @@ import { ATS_SKILLS } from "@/lib/ats/skills-dictionary"
 import { normalizeTerm } from "@/lib/ats/vocabulary"
 import { designAccent } from "@/lib/resume/template-accent"
 import type { IconKey } from "./atoms"
+import { atsDate, atsPeriod } from "./dates"
 
 const LEVEL_LABEL: Record<string, string> = { a1: "A1", a2: "A2", b1: "B1", b2: "B2", c1: "C1", c2: "C2", native: "Native", nativo: "Native" }
 const LEVEL_PCT: Record<string, number> = { a1: 30, a2: 45, b1: 60, b2: 75, c1: 88, c2: 96, native: 100, nativo: 100 }
@@ -80,6 +81,7 @@ function deriveGroups(skillNames: string[]): Array<{ label: string; items: strin
     .map(([cat, items]) => ({ label: CATEGORY_LABEL[cat] ?? cat, items: items.slice(0, 6) }))
 }
 
+
 export function useAtsData(): AtsView {
   const { config, sections } = useResumeStore(useShallow((s) => ({ config: s.config, sections: s.sections })))
   const data = useTemplateSectionData()
@@ -116,17 +118,17 @@ export function useAtsData(): AtsView {
       experience: workExperience.map((e) => ({
         role: e.jobTitle,
         company: e.employer,
-        period: `${e.startDate}${e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}`,
+        period: atsPeriod(e.startDate, e.endDate, !!e.currentlyWorking, present),
         loc: e.city || "",
         bullets: htmlToBullets(e.description),
       })),
       skills: skillNames,
       skillBars,
-      certs: certifications.map((c) => `${c.name}${c.issuer ? ` — ${c.issuer}` : ""}${c.date ? ` (${c.date})` : ""}`),
+      certs: certifications.map((c) => `${c.name}${c.issuer ? ` — ${c.issuer}` : ""}${c.date ? ` (${atsDate(c.date)})` : ""}`),
       education: education.map((ed) => ({
         degree: `${ed.degree}${ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}`,
         school: ed.institution,
-        period: `${ed.startDate}${ed.currentlyStudying ? ` — ${present}` : ed.endDate ? ` — ${ed.endDate}` : ""}`,
+        period: atsPeriod(ed.startDate, ed.endDate, !!ed.currentlyStudying, present),
       })),
       languages: languages.map((l) => ({ name: l.name, level: LEVEL_LABEL[l.level] ?? l.level.toUpperCase(), pct: LEVEL_PCT[l.level] ?? 70 })),
       skillGroups: deriveGroups(skillNames),

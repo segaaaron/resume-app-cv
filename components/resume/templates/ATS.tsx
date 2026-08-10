@@ -8,6 +8,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { atsDate, atsPeriod } from "./ats/dates"
 
 export default function ATSTemplate() {
   const { config, sections } = useResumeStore(
@@ -53,7 +54,7 @@ export default function ATSTemplate() {
               <div className="flex justify-between items-baseline gap-2">
                 <strong className="text-sm font-bold text-gray-900">{job.jobTitle}</strong>
                 <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">
-                  {job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
+                  {atsPeriod(job.startDate, job.endDate, !!job.currentlyWorking, present, "–")}
                 </span>
               </div>
               <p className="text-xs font-semibold mb-1" style={{ color }}>{job.employer}{job.city ? `, ${job.city}` : ""}</p>
@@ -75,7 +76,7 @@ export default function ATSTemplate() {
               <div className="flex justify-between items-baseline gap-2">
                 <strong className="text-sm font-bold text-gray-900">{edu.degree}{edu.fieldOfStudy ? ` en ${edu.fieldOfStudy}` : ""}</strong>
                 <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">
-                  {edu.startDate}{edu.currentlyStudying ? ` – ${present}` : edu.endDate ? ` – ${edu.endDate}` : ""}
+                  {atsPeriod(edu.startDate, edu.endDate, !!edu.currentlyStudying, present, "–")}
                 </span>
               </div>
               <p className="text-xs font-semibold" style={{ color }}>{edu.institution}{edu.city ? ` · ${edu.city}` : ""}</p>
@@ -103,7 +104,7 @@ export default function ATSTemplate() {
           {certifications.map((cert) => (
             <div key={cert.id} className="flex justify-between items-baseline text-sm mb-1">
               <strong className="text-gray-900">{cert.name}</strong>
-              <span className="text-xs text-gray-500 shrink-0 ml-2">{cert.issuer ? `${cert.issuer}` : ""}{cert.date ? ` (${cert.date})` : ""}</span>
+              <span className="text-xs text-gray-500 shrink-0 ml-2">{cert.issuer ? `${cert.issuer}` : ""}{cert.date ? ` (${atsDate(cert.date)})` : ""}</span>
             </div>
           ))}
         </ATSSection>
@@ -129,7 +130,7 @@ export default function ATSTemplate() {
             <div key={vol.id} className="mb-2">
               <div className="flex justify-between items-baseline gap-2">
                 <strong className="text-sm text-gray-900">{vol.role} — {vol.organization}</strong>
-                <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">{vol.startDate}{vol.endDate ? ` – ${vol.endDate}` : ""}</span>
+                <span className="text-xs text-gray-500 whitespace-nowrap shrink-0">{atsPeriod(vol.startDate, vol.endDate, false, present, "–")}</span>
               </div>
               {vol.description && <p className="text-xs text-gray-700 mt-0.5">{vol.description}</p>}
             </div>
