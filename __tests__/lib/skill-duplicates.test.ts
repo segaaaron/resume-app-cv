@@ -42,9 +42,36 @@ describe("skills that only look similar", () => {
     expect(isDuplicate("JavaScript")).toBe(false)
   })
 
+  it("allows the head word of a compound skill the CV lists", () => {
+    // Reported from a real iOS CV: with "Swift Package Manager" listed, typing
+    // "Swift" cleared the field and the dropdown hid it, so the user concluded
+    // the dictionary had no Swift. Both ARE separate dictionary entries.
+    const ios = ["Swift Package Manager", "Crash Reporting", "SwiftUI"]
+    expect(containsSkill("Swift", "Swift Package Manager")).toBe(false)
+    expect(findDuplicateSkill("Swift", ios)).toBeNull()
+    expect(containsSkill("React", "React Native")).toBe(false)
+    expect(containsSkill("Data", "Core Data")).toBe(false)
+    // Still on where it belongs: a phrase the user wrote is not a skill entry,
+    // so what it enumerates still counts as already listed.
+    expect(containsSkill("Communication", "Teamwork and communication")).toBe(true)
+  })
+
   it("does not treat a longer skill as already covered by a shorter one", () => {
     // "communication" is listed inside a longer skill, but that does not make
     // "Communication skills training" a duplicate — containment is one-way.
     expect(isDuplicate("Communication skills training")).toBe(false)
+  })
+})
+
+describe("accent-blind recognition", () => {
+  it("knows a Spanish skill typed without accents", async () => {
+    // The lookup used to key on the raw string, so the dictionary's own
+    // "gestión de proyectos" was unknown when typed "gestion de proyectos" —
+    // the spelling most people use.
+    const { isKnownSkill } = await import("@/lib/ats/skills-dictionary")
+    expect(isKnownSkill("gestion de proyectos")).toBe(true)
+    expect(isKnownSkill("gestión de proyectos")).toBe(true)
+    expect(isKnownSkill("comunicacion")).toBe(true)
+    expect(isKnownSkill("Atención al Paciente")).toBe(true)
   })
 })

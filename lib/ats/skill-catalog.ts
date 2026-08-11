@@ -46,6 +46,23 @@ const CASE_OVERRIDE: Record<string, string> = {
   "android sdk": "Android SDK", livedata: "LiveData", viewmodel: "ViewModel",
   workmanager: "WorkManager", exoplayer: "ExoPlayer", mvi: "MVI", sqlalchemy: "SQLAlchemy",
   typeorm: "TypeORM", ktor: "Ktor", npm: "npm", pnpm: "pnpm", cmake: "CMake", protobuf: "Protobuf",
+  // 2026-08 coverage batch casing (iOS/Android/web/cloud/security/QA)
+  healthkit: "HealthKit", homekit: "HomeKit", sirikit: "SiriKit", watchkit: "WatchKit",
+  swiftdata: "SwiftData", xcuitest: "XCUITest", xcframework: "XCFramework",
+  tvos: "tvOS", ipados: "iPadOS", visionos: "visionOS", urlsession: "URLSession",
+  "metal api": "Metal API", "in-app purchases": "In-App Purchases",
+  "room database": "Room Database", okhttp: "OkHttp",
+  rxjava: "RxJava", proguard: "ProGuard", "android ndk": "Android NDK", gson: "Gson",
+  moshi: "Moshi", leakcanary: "LeakCanary", "model view presenter": "Model View Presenter (MVP)", mvc: "MVC",
+  ".net maui": ".NET MAUI", solidjs: "SolidJS", "rollup.js": "Rollup.js", trpc: "tRPC",
+  "styled-components": "styled-components", esbuild: "esbuild",
+  "apollo graphql": "Apollo GraphQL", webassembly: "WebAssembly", wcag: "WCAG",
+  "progressive web apps": "Progressive Web Apps", "asp.net core": "ASP.NET Core",
+  "amazon rds": "Amazon RDS", "gitlab ci": "GitLab CI", clickhouse: "ClickHouse",
+  "amazon redshift": "Amazon Redshift", "large language models": "Large Language Models",
+  owasp: "OWASP", siem: "SIEM", gdpr: "GDPR", "iso 27001": "ISO 27001", "ssl/tls": "SSL/TLS",
+  k6: "k6", jmeter: "JMeter", tdd: "TDD", bdd: "BDD", testrail: "TestRail",
+  "grand central dispatch": "Grand Central Dispatch",
   // Healthcare / education / legal / trades casing
   ehr: "EHR", emr: "EMR", cpr: "CPR", bls: "BLS", acls: "ACLS", pals: "PALS", hipaa: "HIPAA",
   ekg: "EKG", ecg: "ECG", "icd-10": "ICD-10", "cpt coding": "CPT Coding", "iv therapy": "IV Therapy",
@@ -58,7 +75,16 @@ const CASE_OVERRIDE: Record<string, string> = {
 export function displaySkill(term: string): string {
   const o = CASE_OVERRIDE[term.toLowerCase().trim()]
   if (o) return o
-  return term.replace(/\b\w/g, (c) => c.toUpperCase())
+  // Unicode-aware: \b\w treats "ó" as a non-word character, so the ASCII regex
+  // title-cased the letter AFTER the accent — "atención al paciente" came back
+  // as "AtencióN Al Paciente", and the ATS "add skill" button wrote that into
+  // the CV. Only the first letter of each word is touched.
+  const SMALL = new Set(["de", "del", "al", "la", "el", "los", "las", "y", "en", "por", "para", "con",
+    "of", "and", "the", "a", "an", "for", "in", "on", "to", "as", "with"])
+  return term
+    .split(" ")
+    .map((w, i) => (i > 0 && SMALL.has(w.toLowerCase()) ? w.toLowerCase() : w.replace(/(^|[\-/(])(\p{L})/gu, (_m, sep: string, ch: string) => sep + ch.toUpperCase())))
+    .join(" ")
 }
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -74,6 +100,13 @@ export interface SkillOption {
   norm: string
   category: string
   categoryLabel: string
+  /**
+   * The entry's other spellings, normalized. Searchable but never shown: a user
+   * types the acronym far more often than the canonical name ("PWA", "GCD",
+   * "SRE", "pentesting"), and without this the dropdown answered nothing and
+   * the skill looked absent from the catalog.
+   */
+  aliases: readonly string[]
 }
 
 /** All dictionary skills as display-cased, categorised, alphabetically-sorted options. */
@@ -84,12 +117,17 @@ export const SKILL_CATALOG: SkillOption[] = (() => {
     const norm = normalizeTerm(s.term)
     if (!norm || seen.has(norm)) continue
     seen.add(norm)
-    out.push({ display: displaySkill(s.term), norm, category: s.category, categoryLabel: CATEGORY_LABEL[s.category] ?? s.category })
+    const aliases = (s.aliases ?? []).map(normalizeTerm).filter((a) => a && a !== norm)
+    out.push({ display: displaySkill(s.term), norm, category: s.category, categoryLabel: CATEGORY_LABEL[s.category] ?? s.category, aliases })
   }
   return out.sort((a, b) => a.display.localeCompare(b.display))
 })()
 
-const NORM_TO_CATEGORY = new Map(SKILL_CATALOG.map((o) => [o.norm, o.category]))
+// Aliases included: a CV written in Spanish lists "atención al paciente", and a
+// category of null there left the field-boost blind to that user's whole field.
+const NORM_TO_CATEGORY = new Map(
+  SKILL_CATALOG.flatMap((o) => [o.norm, ...o.aliases].map((f) => [f, o.category] as const)),
+)
 
 /** The dictionary category of a skill name, or null if not recognised. */
 export function categoryOfSkill(name: string): string | null {
@@ -125,19 +163,27 @@ export function filterSkills(query: string, limit = 8, boost: readonly string[] 
   const q = normalizeTerm(query)
   if (!q) return { matches: [], fuzzy: false }
 
+  // The exact match leads, and it is NOT dropped as redundant: typing "swift"
+  // used to return only "Swift Package Manager"/"SwiftUI", which reads as "Swift
+  // itself is not in this list". It is also where the canonical casing comes
+  // from — "uikit" typed, "UIKit" offered.
+  let exact: SkillOption | null = null
   const prefix: SkillOption[] = []
   const contains: SkillOption[] = []
   for (const o of SKILL_CATALOG) {
-    if (o.norm === q) continue // already have it exactly — no point suggesting itself
-    if (o.norm.startsWith(q)) prefix.push(o)
+    const forms = [o.norm, ...o.aliases]
+    // Aliases answer exact/prefix only. Mid-string on an alias is noise —
+    // "ios" sits inside "microservicios" and would offer Microservices.
+    if (forms.some((f) => f === q)) exact = exact ?? o
+    else if (forms.some((f) => f.startsWith(q))) prefix.push(o)
     else if (o.norm.includes(q)) contains.push(o)
   }
-  const direct = [...applyBoost(prefix, boost), ...applyBoost(contains, boost)].slice(0, limit)
+  const direct = [...(exact ? [exact] : []), ...applyBoost(prefix, boost), ...applyBoost(contains, boost)].slice(0, limit)
   if (direct.length > 0) return { matches: direct, fuzzy: false }
 
   // No substring hit → fuzzy "did you mean" for typos.
   const scored = SKILL_CATALOG
-    .map((o) => ({ o, s: normalizedSimilarity(q, o.norm) }))
+    .map((o) => ({ o, s: Math.max(...[o.norm, ...o.aliases].map((f) => normalizedSimilarity(q, f))) }))
     .filter((x) => x.s >= FUZZY_THRESHOLD)
     .sort((a, b) => b.s - a.s)
     .slice(0, Math.min(limit, 4))

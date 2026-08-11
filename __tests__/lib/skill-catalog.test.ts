@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { displaySkill, filterSkills, SKILL_CATALOG } from "@/lib/ats/skill-catalog"
+import { categoryOfSkill, displaySkill, filterSkills, SKILL_CATALOG } from "@/lib/ats/skill-catalog"
 
 describe("displaySkill — casing", () => {
   it("fixes acronyms/brands the title-case fallback gets wrong", () => {
@@ -84,5 +84,89 @@ describe("filterSkills — autocomplete search", () => {
     for (const w of ["room", "gin", "fiber", "bun", "coil", "glide", "expo", "vault", "epic"]) {
       expect(byNorm.has(w)).toBe(false)
     }
+  })
+})
+
+describe("filterSkills — the entry you typed is IN the catalog", () => {
+  it("offers the exact match first instead of hiding it", () => {
+    // Reported from a real iOS CV: typing "swift" answered only "Swift Package
+    // Manager"/"SwiftUI", which reads as "Swift itself is not in your base".
+    const { matches } = filterSkills("swift")
+    expect(matches[0]?.display).toBe("Swift")
+    expect(filterSkills("uikit").matches[0]?.display).toBe("UIKit")
+  })
+
+  it("finds an entry by the acronym the user actually types", () => {
+    // The acronym lives in `aliases`, which the search used to ignore, so "PWA"
+    // and "GCD" returned nothing at all.
+    expect(filterSkills("pwa").matches[0]?.display).toBe("Progressive Web Apps")
+    expect(filterSkills("gcd").matches[0]?.display).toBe("Grand Central Dispatch")
+    expect(filterSkills("kmp").matches[0]?.display).toBe("Kotlin Multiplatform")
+  })
+
+  it("does not let a mid-string alias hit leak in", () => {
+    // "ios" sits inside the alias "microservicios" — prefix/exact only on aliases.
+    expect(filterSkills("ios").matches.map((m) => m.display)).not.toContain("Microservices")
+  })
+})
+
+describe("dictionary coverage — what a real CV names", () => {
+  const known = (t: string) => SKILL_CATALOG.some((o) => o.norm === t || o.aliases.includes(t))
+  it.each([
+    "uikit", "swiftui", "core data", "core location", "grand central dispatch", "urlsession",
+    "xcuitest", "app store connect", "in-app purchases", "swift concurrency", "tvos",
+    "room database", "okhttp", "kotlin flow", "rxjava", "proguard", "kotlin multiplatform",
+    "webassembly", "service workers", "core web vitals", "trpc",
+    "penetration testing", "owasp", "iso 27001", "zero trust",
+    "test automation", "appium", "jmeter", "load testing",
+    "site reliability engineering", "pulumi", "observability",
+  ])("knows %s", (t) => expect(known(t)).toBe(true))
+
+  it.each(["room", "glide", "expo", "less", "recoil", "unity", "metal", "vault", "epic"])(
+    "keeps the ordinary word %s OUT of the dictionary",
+    // These are scanned against the CV's own prose by proven-skills, so an
+    // ordinary word here produces "you already proved this" about a meeting
+    // room or a trade fair. They enter only in an unambiguous form.
+    (t) => expect(SKILL_CATALOG.some((o) => o.norm === t)).toBe(false),
+  )
+})
+
+describe("dictionary coverage — the CV is not always in English, or about tech", () => {
+  const known = (t: string) => SKILL_CATALOG.some((o) => o.norm === t || o.aliases.includes(t))
+
+  it.each([
+    "patient education", "venipuncture", "discharge planning", "intensive care",
+    "curriculum design", "early childhood education", "montessori",
+    "accounts payable", "reconciliation", "tax preparation", "cash flow management",
+    "plumbing", "carpentry", "preventive maintenance", "heavy machinery",
+    "bartending", "catering", "front desk", "menu planning",
+    "employee relations", "data entry", "calendar management", "minute taking",
+    "ux research", "user testing",
+  ])("knows the non-tech skill %s", (t) => expect(known(t)).toBe(true))
+
+  it.each([
+    "signos vitales", "cuidado de heridas", "atencion al paciente", "historia clinica",
+    "planificacion de clases", "gestion del aula", "gestion de inventario",
+    "servicio al cliente", "atencion al cliente", "soldadura", "primeros auxilios",
+    "manejo de caja", "facturacion", "cobranzas", "docencia", "seguridad industrial",
+    "atencion telefonica", "nomina", "auditoria",
+  ])("finds %s written in Spanish, with or without accents", (t) => expect(known(t)).toBe(true))
+})
+
+describe("QA regressions — accents in the display layer", () => {
+  it("does not upper-case the letter after an accent", () => {
+    // \b\w treats "ó" as a non-word char, so the old regex produced
+    // "AtencióN Al Paciente" — and the ATS add-skill button wrote it INTO the CV.
+    expect(displaySkill("atención al paciente")).toBe("Atención al Paciente")
+    expect(displaySkill("gestión de proyectos")).toBe("Gestión de Proyectos")
+    expect(displaySkill("comunicación")).toBe("Comunicación")
+  })
+
+  it("keeps the field category for a skill written in Spanish", () => {
+    // categoryOfSkill only knew canonical terms, so a CV listed entirely in
+    // Spanish gave the autocomplete no field signal at all.
+    expect(categoryOfSkill("atención al paciente")).toBe("healthcare")
+    expect(categoryOfSkill("gestion de inventario")).toBe("operations")
+    expect(categoryOfSkill("soldadura")).toBe("operations")
   })
 })
