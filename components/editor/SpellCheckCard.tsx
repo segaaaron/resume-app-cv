@@ -8,13 +8,58 @@ import { useShallow } from "zustand/react/shallow"
 import { apiFetch } from "@/lib/apiFetch"
 import { collectSpellcheckText, collectProperNouns } from "@/lib/ats/spellcheck-collect"
 import { applySpellingFix } from "@/lib/ats/apply-spelling"
+import {
+  dedupeFindings,
+  mergeFindings,
+  shouldAutoRun,
+  stillPresent,
+  verdictFor,
+  type Finding,
+  type RunMode,
+  type Verdict,
+} from "@/lib/ats/spellcheck-runs"
 import { useCvLanguage } from "./hooks/useCvLanguage"
-import { SpellCheck2, Check, Wand2, Loader2, ChevronRight } from "lucide-react"
+import { SpellCheck2, Check, Wand2, Loader2, ChevronRight, AlertTriangle } from "lucide-react"
 
-interface Issue {
-  typed: string
-  suggestions: string[]
+type Issue = Finding
+
+/**
+ * Grammar pass — a model call, so the caller decides when it is worth one.
+ *
+ * Reports whether it ran, not just what it found, because those are different
+ * facts and the card is only allowed to say "clean" on the strength of the first.
+ * The endpoint is PRO-gated (403) and metered (429), so "no findings" and "never
+ * checked" arrive looking identical unless this distinction is kept.
+ */
+type GrammarResult = { ran: true; findings: Issue[] } | { ran: false }
+
+async function fetchGrammar(texts: string[], language: string): Promise<GrammarResult> {
+  try {
+    const res = await apiFetch("/api/ai/proofread", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ texts, language }),
+      silent: true,
+    })
+    if (!res.ok) return { ran: false }
+    const data = await res.json().catch(() => null)
+    if (!Array.isArray(data?.corrections)) return { ran: false }
+    return {
+      ran: true,
+      findings: data.corrections.map(
+        // `why` is the model's own justification, capped at 8 words server-side.
+        // It was being discarded, which left the user staring at "architecture →
+        // architectural" with no way to judge whether to trust it. A correction
+        // you cannot evaluate is a correction you should not be asked to apply.
+        (c: { wrong: string; correct: string; why?: string }) =>
+          ({ typed: c.wrong, suggestions: [c.correct], why: c.why }),
+      ),
+    }
+  } catch {
+    return { ran: false }
+  }
 }
+
 
 /** Below this the CV has nothing worth checking yet. */
 const MIN_CHARS = 20
@@ -27,6 +72,12 @@ const AUTO_CHECK_DELAY_MS = 4000
  * Manual checks ignore this: the user pressing the button means now.
  */
 const AUTO_CHECK_MIN_INTERVAL_MS = 90_000
+/**
+ * How soon the confirming run fires after the last finding is fixed, and how
+ * often it retries while the verdict is still owed. Short: the user is looking at
+ * the card waiting to be told their CV is clean.
+ */
+const VERIFY_RETRY_MS = 1500
 /** Findings per page — the rest are one click away. */
 const PAGE_SIZE = 5
 
@@ -61,7 +112,14 @@ export default function SpellCheckCard() {
    * user fixes a few, the list shrinks, the next batch appears.
    */
   const [shown, setShown] = useState(PAGE_SIZE)
-
+  /**
+   * The last finding was fixed and the confirming run has not come back yet. The
+   * card says nothing during this gap: "no known mistakes" is a claim about the
+   * CV, and clicking Fix on every visible row is not evidence for it.
+   */
+  const [awaitingVerify, setAwaitingVerify] = useState(false)
+  /** What the last completed run entitles the card to say — see verdictFor. */
+  const [verdict, setVerdict] = useState<Verdict>("unknown")
 
   /** Prose already sent — stops the auto-run from re-checking an unchanged CV. */
   const lastCheckedRef = useRef<string | null>(null)
@@ -72,12 +130,20 @@ export default function SpellCheckCard() {
    * re-check the way the dictionary does: that fires every ~90s of editing, and
    * a half-hour session would spend twenty calls nobody asked for. It runs once
    * automatically — enough to surface a "more then" without the user knowing to
-   * look — and then only when they press the button.
+   * look — and then on a manual press or a verify run.
    */
   const grammarRanRef = useRef(false)
+  /**
+   * How many rows are on screen right now, readable from inside a timer that was
+   * scheduled before the user started clicking Fix.
+   */
+  const pendingRef = useRef(0)
+  /** Grammar findings the user has not resolved yet — see stillPresent. */
+  const grammarKeptRef = useRef<Issue[]>([])
 
-  const runCheck = useCallback(async (auto = false) => {
+  const runCheck = useCallback(async (mode: RunMode = "auto") => {
     if (loadingRef.current) return
+    const auto = mode !== "manual"
     const texts = collectSpellcheckText(sectionData)
     const joined = texts.join("\n")
     if (joined.trim().length < MIN_CHARS) {
@@ -86,8 +152,17 @@ export default function SpellCheckCard() {
       if (!auto) toast.info(t("empty"))
       return
     }
-    if (auto && joined === lastCheckedRef.current) return
-    if (auto && Date.now() - lastAutoRunAtRef.current < AUTO_CHECK_MIN_INTERVAL_MS) return
+    // Guarded in lib/ats/spellcheck-runs so the rule is testable: while the user
+    // has rows left to work through, nothing automatic replaces the list.
+    const allowed = shouldAutoRun(mode, {
+      pending: pendingRef.current,
+      joined,
+      lastChecked: lastCheckedRef.current,
+      now: Date.now(),
+      lastRunAt: lastAutoRunAtRef.current,
+      minIntervalMs: AUTO_CHECK_MIN_INTERVAL_MS,
+    })
+    if (!allowed) return
     if (auto) lastAutoRunAtRef.current = Date.now()
     lastCheckedRef.current = joined
     loadingRef.current = true
@@ -112,48 +187,88 @@ export default function SpellCheckCard() {
       // is not checking the writing, and no list of curated pairs covers the
       // ways a sentence goes wrong. Runs after the free pass and never blocks
       // it: if the model call fails, the user still gets the dictionary result.
-      let grammar: Issue[] = []
-      // Manual press = always. Automatic = only the very first time, so a "more
-      // then" surfaces without the user knowing to look, but a long editing
-      // session does not bill a call every 90 seconds.
-      if (!auto || !grammarRanRef.current) try {
-        const gres = await apiFetch("/api/ai/proofread", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ texts, language }),
-          silent: true,
-        })
-        if (gres.ok) {
-          const gdata = await gres.json().catch(() => null)
-          const list = Array.isArray(gdata?.corrections) ? gdata.corrections : []
-          grammar = list.map((c: { wrong: string; correct: string }) => ({ typed: c.wrong, suggestions: [c.correct] }))
-          grammarRanRef.current = true
-        }
-      } catch { /* dictionary result stands */ }
+      //
+      // Manual press and verify runs = always. A plain automatic re-check = only
+      // the very first time, so a "more then" surfaces without the user knowing
+      // to look, but a long editing session does not bill a call every 90s.
+      const wantsGrammar = mode !== "auto" || !grammarRanRef.current
+      let grammar = grammarKeptRef.current
+      if (wantsGrammar) {
+        const res = await fetchGrammar(texts, language)
+        if (res.ran) { grammar = res.findings; grammarRanRef.current = true }
+      }
+      // Whether this result may be called clean. Either the pass just ran, or an
+      // earlier one did and its unresolved findings have been carried forward
+      // ever since — so an empty grammar list means fixed, not unchecked. When
+      // neither holds (PRO gate, spent quota, failed call) the verdict below says
+      // spelling only, because nothing has ever read this CV's grammar.
+      const grammarKnown = grammarRanRef.current
+      // Whether the model ran or not, a grammar finding survives while its words
+      // are still in the CV. Skipping the pass must never mean discarding what it
+      // found: that is how an unfixed "more then" used to disappear from the list
+      // on the next automatic run, leaving a shorter list that looked finished.
+      grammar = stillPresent(grammar, joined)
+      grammarKeptRef.current = grammar
 
-      // The dictionary wins on a tie: it is exact where the model is a judgement.
-      const byTyped = new Set(found.map((i) => i.typed.toLowerCase()))
-      const merged = [...found, ...grammar.filter((g) => !byTyped.has(g.typed.toLowerCase()))]
+      const merged = mergeFindings(found, grammar)
       setIssues(merged)
+      setVerdict(verdictFor(merged, grammarKnown))
+      // The server result is the truth about what is left, so the per-row "you
+      // already fixed this" marks start over against it. A fix that silently did
+      // not reach every field comes back as a row instead of staying hidden.
       setFixed(new Set())
-      setShown(PAGE_SIZE)
-      if (merged.length === 0 && !auto) toast.success(t("clean"))
+      // Pagination is the user's place in the list, not part of the result. Only
+      // a run they asked for is allowed to send them back to the first page.
+      if (mode === "manual") setShown(PAGE_SIZE)
+      if (merged.length === 0 && !auto) {
+        if (grammarKnown) toast.success(t("clean"))
+        else toast.info(t("clean_spelling_only"))
+      }
     } catch {
       if (!auto) toast.error(t("error"))
     } finally {
+      // Cleared even when the run failed: leaving it on would hide both the
+      // verdict and the reason it is missing.
+      if (mode === "verify") setAwaitingVerify(false)
       loadingRef.current = false
       setLoading(false)
     }
   }, [sectionData, language, t])
 
+  // Everything comes from the server now: a real dictionary for spelling and a
+  // model for grammar. There is no local list to merge — a curated list of
+  // "known" mistakes only ever finds the mistakes someone thought of first.
+  const merged = dedupeFindings(issues ?? [])
+  const pending = merged.filter((i) => !fixed.has(i.typed))
+  // A verdict is shown only once the list is empty AND a run has confirmed it:
+  // fixing the visible rows empties the list, which is not the same claim, and
+  // that gap is what awaitingVerify holds open.
+  const settled = pending.length === 0 && !awaitingVerify
+  const allClean = settled && verdict === "clean"
+  const spellingOnly = settled && verdict === "spelling-only"
+
+  useEffect(() => { pendingRef.current = pending.length })
+
   // Auto-run: once on open, then a few seconds after the user stops editing.
-  // Deterministic and server-side, so re-running is cheap — but the debounce and
-  // the unchanged-text guard above keep it to roughly one request per real edit
-  // session, well inside the endpoint's hourly cap.
+  // Rescheduled on every edit, so it only ever fires on a pause. Stands down
+  // while a verdict is owed — that run is stricter and about to happen anyway.
   useEffect(() => {
-    const id = setTimeout(() => { void runCheck(true) }, AUTO_CHECK_DELAY_MS)
+    if (awaitingVerify) return
+    const id = setTimeout(() => { void runCheck("auto") }, AUTO_CHECK_DELAY_MS)
     return () => clearTimeout(id)
-  }, [runCheck])
+  }, [runCheck, awaitingVerify])
+
+  // The confirming run, owned by its own timer because the user has stopped
+  // editing: nothing else is going to reschedule it. It keeps trying while the
+  // verdict is owed, so a run that collided with one already in flight is not
+  // silently dropped — that would leave the card claiming to be checking forever.
+  useEffect(() => {
+    if (!awaitingVerify) return
+    const id = setInterval(() => {
+      if (!loadingRef.current) void runCheck("verify")
+    }, VERIFY_RETRY_MS)
+    return () => clearInterval(id)
+  }, [runCheck, awaitingVerify])
 
   function applyFix(typed: string, correct: string) {
     const { patch, changed } = applySpellingFix(sectionData, typed, correct)
@@ -161,18 +276,13 @@ export default function SpellCheckCard() {
     for (const [key, value] of Object.entries(patch)) {
       updateSectionData(key as Parameters<typeof updateSectionData>[0], value as never)
     }
-    setFixed((prev) => new Set(prev).add(typed))
+    const nextFixed = new Set(fixed).add(typed)
+    setFixed(nextFixed)
+    // Last row gone: ask for a run that actually looks again, grammar included,
+    // before the card tells the user their CV is clean.
+    if (merged.every((i) => nextFixed.has(i.typed))) setAwaitingVerify(true)
     toast.success(t("fixed", { correct }))
   }
-
-  // Everything comes from the server now: a real dictionary for spelling and a
-  // model for grammar. There is no local list to merge — a curated list of
-  // "known" mistakes only ever finds the mistakes someone thought of first.
-  const merged = (issues ?? []).filter(
-    (issue, i, all) => all.findIndex((o) => o.typed.toLowerCase() === issue.typed.toLowerCase()) === i
-  )
-  const pending = merged.filter((i) => !fixed.has(i.typed))
-  const allClean = issues !== null && pending.length === 0
 
   return (
     <div className={`mb-3 rounded-2xl border px-3.5 py-3 shadow-sm transition-colors ${
@@ -203,7 +313,7 @@ export default function SpellCheckCard() {
         </div>
         <button
           type="button"
-          onClick={() => void runCheck(false)}
+          onClick={() => void runCheck("manual")}
           disabled={loading}
           className="shrink-0 inline-flex items-center gap-1.5 rounded-full border border-[#0077B6]/30 bg-white px-3 py-1 text-[10.5px] font-bold text-[#0077B6] shadow-sm transition-all hover:bg-cyan-50 hover:shadow disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cyan-300"
         >
@@ -213,9 +323,24 @@ export default function SpellCheckCard() {
         </button>
       </div>
 
+      {awaitingVerify && (
+        <p className="mt-2.5 flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-[11px] font-semibold text-slate-600">
+          <Loader2 className="h-3 w-3 shrink-0 animate-spin" /> {t("verifying")}
+        </p>
+      )}
+
       {allClean && (
         <p className="mt-2.5 flex items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-[11px] font-semibold text-emerald-700">
           <Check className="h-3 w-3 shrink-0" /> {t("clean")}
+        </p>
+      )}
+
+      {/* The dictionary came back empty but nothing read the grammar — the plan
+          does not include it, the quota is spent, or the call failed. Saying so
+          costs a line; saying "no known mistakes" costs the user an interview. */}
+      {spellingOnly && (
+        <p className="mt-2.5 flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50/70 px-3 py-2 text-[11px] font-semibold text-amber-800">
+          <AlertTriangle className="h-3 w-3 shrink-0" /> {t("clean_spelling_only")}
         </p>
       )}
 
@@ -231,6 +356,12 @@ export default function SpellCheckCard() {
                     <span className="font-semibold text-rose-700 line-through decoration-rose-300 break-words">{issue.typed}</span>
                     <ChevronRight className="inline h-3 w-3 text-slate-300 mx-1 align-[-1px]" />
                     <span className="font-bold text-emerald-700 break-words">{issue.suggestions[0]}</span>
+                    {/* Grammar findings carry the reason; a dictionary typo is
+                        its own reason. Without it, "architecture →
+                        architectural" is a change the user cannot judge. */}
+                    {issue.why && (
+                      <span className="mt-0.5 block text-[10px] font-medium text-slate-400 break-words">{issue.why}</span>
+                    )}
                   </div>
                   <button
                     type="button"

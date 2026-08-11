@@ -642,6 +642,10 @@ export const AI_INPUT_LIMITS = {
 export const ProofreadSchema = z.object({
   corrections: z
     .array(z.object({
+      // The line the model says the error is on, 1-based, matching the numbering
+      // the prompt shows it. Optional so a response without it still parses —
+      // grounding then falls back to a search, as it did before.
+      line: z.number().int().positive().optional().catch(undefined),
       wrong: z.string().max(200).catch(""),
       correct: z.string().max(200).catch(""),
       why: z.string().max(120).catch(""),

@@ -9,6 +9,7 @@ import { z } from "zod"
 import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { checkAndIncrementRateLimit } from "@/lib/rate-limit"
 import { checkSpelling } from "@/lib/ats/spellcheck"
+import { findGrammarIssues } from "@/lib/ats/grammar-rules"
 
 const schema = z.object({
   // Prose only — the client collects it with collectSpellcheckText so names,
@@ -35,7 +36,16 @@ export async function POST(req: Request) {
   if (!parsed.success) return apiError(422, "invalid_data", { req })
 
   try {
-    const issues = await checkSpelling(parsed.data.texts, parsed.data.language, parsed.data.properNouns ?? [])
+    const { texts, language } = parsed.data
+    const spelling = await checkSpelling(texts, language, parsed.data.properNouns ?? [])
+    // Enumerable grammar rides the FREE endpoint, not the PRO-gated model: a
+    // repeated word and a missing contraction are rules, and a rule costs nothing
+    // to run. Before this, "resulting in in" was only ever found by a model call
+    // that three of five plans are not allowed to make.
+    const grammar = findGrammarIssues(texts, language)
+    // The dictionary wins a tie: it is exact where a rule is a pattern.
+    const taken = new Set(spelling.map((i) => i.typed.toLowerCase()))
+    const issues = [...spelling, ...grammar.filter((g) => !taken.has(g.typed.toLowerCase()))]
     return NextResponse.json({ issues })
   } catch (err) {
     return handleError(err, { req, userId: authResult.userId, userEmail: authResult.user.email })

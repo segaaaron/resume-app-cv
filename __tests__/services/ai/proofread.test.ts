@@ -6,7 +6,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL: "gpt-4o-mini", AI_MODEL_PROSE: "gpt-4o-mini",
   AI_TEMPERATURE: 0.4, AI_TEMPERATURE_CREATIVE: 0.7, AI_TEMPERATURE_PRECISE: 0.1,
-  AI_TEMPERATURE_STRUCTURED: 0.3, AI_TEMPERATURE_GENERATIVE: 0.6,
+  AI_TEMPERATURE_STRUCTURED: 0.3, AI_TEMPERATURE_GENERATIVE: 0.6, AI_TEMPERATURE_EXACT: 0,
   checkRateLimit: vi.fn().mockResolvedValue(true),
   checkAndIncrementRateLimit: vi.fn().mockResolvedValue(true),
   checkAndIncrementAIQuota: vi.fn().mockResolvedValue({ allowed: true }),
@@ -71,6 +71,38 @@ describe("proofread", () => {
   it("returns nothing on malformed JSON instead of throwing", async () => {
     const out = await svc("not json at all", logger).proofread("u1", CV, "en", "PRO")
     expect(out).toEqual([])
+  })
+
+  it("numbers the lines and shows the model the JSON it must return", async () => {
+    // The prompt is example-first by design: the version made of prohibitions
+    // ("NEVER rewrite for style") steered weakly, so the model proposed style
+    // edits that the filters then deleted — output we paid to generate and threw
+    // away. Numbering exists so grounding is a lookup, not a search.
+    const client = { chat: vi.fn().mockResolvedValue(completion('{"corrections":[]}')), embed: vi.fn() } as IAIClient
+    await new AIService(client, logger).proofread("u1", ["Built APIs and architecture", ...CV], "en", "PRO")
+    const prompt = (client.chat as ReturnType<typeof vi.fn>).mock.calls[0][0].messages[1].content as string
+    expect(prompt).toContain("[1] Built APIs and architecture")
+    expect(prompt).toContain("[2] iOS Developer with more then")
+    expect(prompt).toContain('"line":1')
+    // The counter-example from production, shown as a rejection rather than a rule.
+    expect(prompt).toContain("increased sprint completion")
+  })
+
+  it("drops a correction attributed to the wrong line", async () => {
+    // It exists in the CV, but not where the model said it was — so the model was
+    // not reading the text it claimed to read, and a lucky substring match
+    // elsewhere is not grounding.
+    const out = await svc(JSON.stringify({ corrections: [
+      { line: 1, wrong: "more then", correct: "more than", why: "comparative" },
+    ] }), logger).proofread("u1", ["Built APIs and architecture", ...CV], "en", "PRO")
+    expect(out).toEqual([])
+  })
+
+  it("keeps it when the line is right", async () => {
+    const out = await svc(JSON.stringify({ corrections: [
+      { line: 2, wrong: "more then", correct: "more than", why: "comparative" },
+    ] }), logger).proofread("u1", ["Built APIs and architecture", ...CV], "en", "PRO")
+    expect(out).toEqual([{ wrong: "more then", correct: "more than", why: "comparative" }])
   })
 
   it("skips the call on a CV too short to judge", async () => {

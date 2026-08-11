@@ -55,6 +55,10 @@ export const AI_MODEL_PROSE = (process.env.AI_MODEL_PROSE ?? "gpt-5.4-mini") as 
 export const AI_TEMPERATURE = 0.4 as const
 export const AI_TEMPERATURE_CREATIVE = 0.7 as const  // cover letters — needs variety
 export const AI_TEMPERATURE_PRECISE = 0.1 as const   // scoring/lookup — reproducible results (ats-score)
+// Proofreading. There is no upside to variety when the task is "point at the
+// error": at 0.1 the same CV checked twice returned three findings, then four,
+// then none, and a checker that contradicts itself teaches the user to ignore it.
+export const AI_TEMPERATURE_EXACT = 0 as const
 export const AI_TEMPERATURE_STRUCTURED = 0.3 as const // profile fill — faithful to user input, minimal creative drift
 export const AI_TEMPERATURE_GENERATIVE = 0.6 as const  // summary generation — needs variety across 3 versions but bounded
 

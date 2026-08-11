@@ -1,9 +1,11 @@
 // lib/services/ai/modules/AIReviewModule.ts
+import { createHash } from "node:crypto"
 import { z } from "zod"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
   AI_MODEL_PROSE,
+  AI_TEMPERATURE_EXACT,
   AI_TEMPERATURE_PRECISE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
@@ -17,6 +19,7 @@ import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination } fr
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { groundedLineIndex, isInPlaceCorrection, rejectOverlapping } from "../shared/proofread-guards"
 import {
   AI_INPUT_LIMITS,
   ATSExtractionSchema,
@@ -65,7 +68,23 @@ function buildGapPlan(
   return levers.sort((a, b) => b.points - a.points)
 }
 
+/** Cap on remembered proofread results — see AIReviewModule.proofreadCache. */
+const PROOFREAD_CACHE_MAX = 200
+/** Prose sent to the proofreader per call, in characters. Whole lines only. */
+const PROOFREAD_CORPUS_CHARS = 8000
+
 export class AIReviewModule {
+  /**
+   * Proofread results by (language, prose hash), so unchanged prose gets the same
+   * answer without a second call.
+   *
+   * Per INSTANCE, not per module: module-level mutable state is shared by every
+   * caller in the process, which in tests means one case's result answering the
+   * next one's question. The service is a singleton in production, so the cache
+   * still spans the process where it matters.
+   */
+  private readonly proofreadCache = new Map<string, Array<{ wrong: string; correct: string; why: string }>>()
+
   constructor(
     private readonly aiClient: IAIClient,
     private readonly logger: ILogger,
@@ -755,56 +774,128 @@ Reglas:
    * a model asked for corrections will always find some.
    */
   async proofread(userId: string, texts: string[], language: "es" | "en", plan: string): Promise<Array<{ wrong: string; correct: string; why: string }>> {
-    // Its OWN quota, not review-cv's: the spelling card fires this by itself when
-    // the panel opens, so charging it to review-cv silently spent a CV review the
-    // user never asked for.
-    await enforceAIQuota(userId, "proofread", plan)
     // Kept as separate units: joining them and validating against the join let
     // the model "correct" text that spans two bullets or two fields ("…processes
     // with" + "CocoaPods." → "with CocoaPods."). That text exists in the join and
     // nowhere in the CV, so the button could never apply it.
     const units = texts.map((t) => t.trim()).filter(Boolean)
-    const corpus = units.join("\n")
-    if (corpus.trim().length < 40) return []
+    if (units.join("\n").trim().length < 40) return []
+
+    // Whole lines only, up to the budget. Slicing the joined corpus mid-line used
+    // to leave the model a truncated last field and half a word to reason about.
+    const sent: string[] = []
+    let budget = PROOFREAD_CORPUS_CHARS
+    for (const u of units) {
+      if (u.length + 1 > budget) break
+      sent.push(u)
+      budget -= u.length + 1
+    }
+    if (!sent.length) return []
+    const corpus = sent.join("\n")
+
+    // Unchanged prose gets the same answer, without a call and without spending
+    // quota. Determinism is the point, not the saving: the card re-checks on its
+    // own and after every fix, and a model that returns three findings, then
+    // four, then none over identical text is a checker nobody can act on.
+    const cacheKey = `${language}:${createHash("sha256").update(corpus).digest("hex")}`
+    const cached = this.proofreadCache.get(cacheKey)
+    if (cached) return cached
+
+    // Its OWN quota, not review-cv's: the spelling card fires this by itself when
+    // the panel opens, so charging it to review-cv silently spent a CV review the
+    // user never asked for.
+    await enforceAIQuota(userId, "proofread", plan)
     const en = language === "en"
 
-    const prompt = `${en ? "Proofread this resume text" : "Corrige la redacción de este CV"}:
+    // The prompt is EXAMPLE-FIRST on purpose. The previous one was nine rules, of
+    // which seven were prohibitions ("NEVER rewrite for style", "Do NOT touch
+    // commas"…). Negative instructions steer weakly: the model proposed the style
+    // edit anyway and the code below deleted it, so we paid to generate output we
+    // threw away. Showing the exact JSON we want, plus the real rejections from
+    // production as counter-examples, is what actually narrows the output.
+    //
+    // What is deliberately ABSENT: any licence to "improve the flow if a sentence
+    // reads unnaturally". That single clause is what produced "increased in
+    // sprint" → "increased sprint completion" — a style rewrite dressed as a
+    // correction. In a chat the human reads the result and judges it; here the
+    // output populates Fix buttons that edit the CV on one click, so fluency is
+    // out of scope by construction. Weak writing is improve-bullet's job.
+    //
+    // Also absent: verb tense (past for previous roles, present for the current
+    // one). It is a real and common CV error, but collectSpellcheckText sends
+    // plain strings with no marker for which role is current, so the model would
+    // have to guess — and a wrong guess rewrites verbs across the whole CV.
+    // Enabling it means sending that fact, not adding the rule.
+    //
+    // Lines are NUMBERED and the model must name the line. Asking it to copy a
+    // fragment verbatim out of an unnumbered blob was asking a language model to
+    // be an archivist — the job it is worst at, and where every production failure
+    // came from. With a line number, grounding is a lookup instead of a search.
+    const numbered = sent.map((u, i) => `[${i + 1}] ${u}`).join("\n")
 
-=== TEXT (each line is a SEPARATE field or bullet — never correct across two lines) ===
-${corpus.slice(0, 8000)}
+    const prompt = en ? `You are proofreading a résumé. Each numbered line is ONE field or bullet — a correction never spans two lines.
+
+=== TEXT ===
+${numbered}
 === END ===
 
-${en ? `Return JSON: {"corrections":[{"wrong":"<exact text copied verbatim from above>","correct":"<the fix>","why":"<max 8 words>"}]}
+Report only what a grammar teacher would mark as wrong, using US spelling: subject-verb agreement, wrong preposition for the context, wrong verb form after a preposition ("responsible for manage" → "responsible for managing"), a real word used in place of another ("more then", "advices", "its"/"it's"), a repeated word.
 
-Rules:
-- Report ONLY real errors: grammar, agreement, wrong preposition, wrong verb tense, a wrong word that is still a real word ("more then" → "more than", "advices" → "advice").
-- "wrong" MUST be copied character-for-character from the text above, and must be SHORT — the few words that are wrong, never a whole sentence.
-- NEVER rewrite for style, tone or impact. If it is grammatically correct, LEAVE IT. A stylistic "improvement" here is a false positive and worse than missing an error.
-- "wrong" is at most 4 words. If the fix needs more, the sentence is not broken — skip it.
-- "correct" must have the SAME number of words as "wrong". Never add a word, never drop one — fix the words that are there.
-- Do NOT change singular/plural or add articles because it "reads better": "with different teams" is correct English.
-- Do NOT touch commas. Serial/Oxford commas are house style, not errors.
-- Do NOT touch proper nouns, product names, technologies or acronyms.
-- Max 12 corrections. If the text is clean, return {"corrections":[]}.` : `Devuelve JSON: {"corrections":[{"wrong":"<texto exacto copiado literal de arriba>","correct":"<la corrección>","why":"<máx 8 palabras>"}]}
+Copy the wrong words exactly as written, and name the line they are on.
 
-Reglas:
-- Reporta SOLO errores reales: gramática, concordancia, preposición equivocada, tiempo verbal incorrecto, una palabra equivocada que igual existe ("mas" por "más", "haber" por "a ver").
-- "wrong" DEBE estar copiado carácter por carácter del texto de arriba, y debe ser CORTO — las pocas palabras que están mal, nunca una oración entera.
-- NUNCA reescribas por estilo, tono o impacto. Si es correcto, DÉJALO. Una "mejora" estilística acá es un falso positivo y es peor que no encontrar el error.
-- "wrong" son 4 palabras como máximo. Si la corrección necesita más, la oración no está rota — sáltala.
-- "correct" debe tener la MISMA cantidad de palabras que "wrong". Nunca agregues ni quites palabras — corrige las que están.
-- NO cambies singular/plural ni agregues artículos porque "suena mejor".
-- NO toques las comas. Son estilo, no errores.
-- NO toques nombres propios, productos, tecnologías ni siglas.
-- Máx 12 correcciones. Si el texto está limpio, devuelve {"corrections":[]}.`}
+REPORT things like these:
+{"line":1,"wrong":"more then","correct":"more than","why":"comparative takes than"}
+{"line":2,"wrong":"an increased in","correct":"an increase in","why":"noun after article"}
+{"line":3,"wrong":"resulting in in","correct":"resulting in","why":"repeated word"}
+{"line":4,"wrong":"Swift UI","correct":"SwiftUI","why":"product name is one word"}
 
-${en ? "Respond with JSON only." : "Responde solo con el JSON."}`
+DO NOT report these, and here is why:
+· "increased in sprint" → "increased sprint completion" — invents "completion" and deletes "in". You may only repair words that are already there.
+· "with different teams" → "with a different team" — already correct. Style is not an error.
+· "APIs and architecture" → "APIs and architectural" — only if a noun actually follows it on that same line.
+· "gRPC and Objective-C" → "gRPC, and Objective-C" — commas are house style.
+· "processes with" → "with CocoaPods." — text from another line. Never combine lines.
+
+A correction is valid only when:
+· exactly ONE word changes, and "wrong" and "correct" have the same number of words — the sole exception is respacing the same letters ("alot" → "a lot");
+· "wrong" is at most 4 words, taken from the single line you named;
+· proper nouns, product names, technologies and acronyms are left alone.
+
+Return JSON only: {"corrections":[…]} — at most 12. If the writing is correct, return {"corrections":[]}. An empty list is a good answer.` : `Estás corrigiendo la redacción de un CV. Cada línea numerada es UN campo o viñeta — una corrección nunca abarca dos líneas.
+
+=== TEXTO ===
+${numbered}
+=== FIN ===
+
+Reporta solo lo que un profesor de lengua marcaría como error: tildes que faltan o sobran, incluidas las diacríticas ("mas"/"más", "aun"/"aún", "el"/"él"); concordancia de género y de número; contracciones ("a el" → "al", "de el" → "del"); preposición equivocada para el contexto; tiempo o forma verbal incorrecta; una palabra real usada en lugar de otra ("haber"/"a ver"); palabra repetida.
+
+Copia las palabras equivocadas exactamente como están escritas, e indica en qué línea están.
+
+REPORTA cosas como estas:
+{"line":1,"wrong":"mas de 7 años","correct":"más de 7 años","why":"cantidad lleva tilde"}
+{"line":2,"wrong":"fue enviados","correct":"fueron enviados","why":"concordancia de número"}
+{"line":3,"wrong":"resultando en en","correct":"resultando en","why":"palabra repetida"}
+{"line":4,"wrong":"a el cliente","correct":"al cliente","why":"contracción"}
+
+NO reportes estas, y este es el motivo:
+· "aumenté en sprint" → "aumenté la finalización de sprint" — inventa palabras y borra otras. Solo puedes reparar las palabras que ya están.
+· "trabajé con distintos equipos" → "trabajé con un equipo distinto" — ya está correcto. El estilo no es un error.
+· "APIs y arquitectura" → "APIs y arquitectural" — solo si de verdad le sigue un sustantivo en esa misma línea.
+· "gRPC y Objective-C" → "gRPC, y Objective-C" — las comas son estilo.
+· "procesos con" → "con CocoaPods." — texto de otra línea. Nunca combines líneas.
+
+Una corrección es válida solo cuando:
+· cambia UNA sola palabra, y "wrong" y "correct" tienen la misma cantidad de palabras — la única excepción es reespaciar las mismas letras ("aveces" → "a veces");
+· "wrong" tiene 4 palabras como máximo y sale de la línea que indicaste;
+· los nombres propios, productos, tecnologías y siglas no se tocan.
+
+Devuelve solo JSON: {"corrections":[…]} — máximo 12. Si la redacción está correcta, devuelve {"corrections":[]}. Una lista vacía es una buena respuesta.`
 
     try {
       const response = await this.aiClient.chat({
         model: AI_MODEL_PROSE,
         max_tokens: 1200,
-        temperature: AI_TEMPERATURE_PRECISE,
+        temperature: AI_TEMPERATURE_EXACT,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: en ? "You are a meticulous proofreader. You only report errors you can point at." : "Eres un corrector meticuloso. Solo reportas errores que puedes señalar." },
@@ -825,31 +916,28 @@ ${en ? "Respond with JSON only." : "Responde solo con el JSON."}`
         return []
       }
       const seen = new Set<string>()
-      return parsed.data.corrections
-        .map((c) => ({ wrong: c.wrong.trim(), correct: c.correct.trim(), why: c.why.trim() }))
+      const clean = parsed.data.corrections
+        .map((c) => ({ line: c.line, wrong: c.wrong.trim(), correct: c.correct.trim(), why: c.why.trim() }))
         // Grounding: the text must actually be in the CV, and the fix must differ.
         .filter((c) => c.wrong && c.correct && c.wrong !== c.correct)
         // A correction may not span a line break: bullets live in one field
         // separated by newlines, and a fix stitching two of them together is not
         // a spelling fix — it is an edit the user never asked for.
         .filter((c) => !/[\n\r]/.test(c.wrong) && !/[\n\r]/.test(c.correct))
-        // Must exist verbatim inside ONE field. Checking the concatenation is
-        // what let cross-field fragments through.
-        .filter((c) => units.some((u) => u.includes(c.wrong)))
+        // Must exist verbatim inside the ONE line the model named. Checking the
+        // concatenation is what let cross-field fragments through; checking any
+        // line let a model that misread the text still land a lucky match.
+        .filter((c) => groundedLineIndex(c.wrong, sent, c.line) >= 0)
         // Whitespace-only differences are not corrections either.
         .filter((c) => c.wrong.replace(/\s+/g, " ").trim() !== c.correct.replace(/\s+/g, " ").trim())
-        // A correction FIXES words. It never adds or removes them.
+        // A correction FIXES one word. It never adds, removes or swaps them.
         //
         // This is a proofreader, not an editor: "with" → "with CocoaPods." adds
         // text the user never wrote, and "lunch box" → "launch" deletes half a
-        // module name. Both were produced by the model and both change what the
-        // CV says. The only allowed change in word count is re-spacing the same
-        // letters — "Swift UI" → "SwiftUI", "alot" → "a lot".
-        .filter((c) => {
-          const squash = (x: string) => x.toLowerCase().replace(/\s+/g, "")
-          if (squash(c.wrong) === squash(c.correct)) return true
-          return c.wrong.trim().split(/\s+/).length === c.correct.trim().split(/\s+/).length
-        })
+        // module name. Counting words was not enough — "increased in sprint" →
+        // "increased sprint completion" keeps the count while deleting "in" and
+        // inventing "completion". See isInPlaceCorrection.
+        .filter((c) => isInPlaceCorrection(c.wrong, c.correct))
         // A real grammar fix is a few words: "more then", "would of", "usados",
         // "Swift UI". Anything longer is the model rewriting a sentence that was
         // already correct — measured: at 8 words it "fixed" a valid sentence
@@ -864,6 +952,21 @@ ${en ? "Respond with JSON only." : "Responde solo con el JSON."}`
         .filter((c) => c.wrong.replace(/[,;:]/g, "").trim() !== c.correct.replace(/[,;:]/g, "").trim())
         .filter((c) => (seen.has(c.wrong.toLowerCase()) ? false : (seen.add(c.wrong.toLowerCase()), true)))
         .slice(0, 12)
+
+      // Two findings over the same words are one error described twice, and only
+      // one of them can be applied — the other's Fix button then reports the word
+      // is gone. "an increased in" and "increased in sprint" were both returned
+      // for the same six characters.
+      // `line` was a transport detail for grounding — callers get the same shape
+      // they always got.
+      const grounded = rejectOverlapping(clean, sent)
+        .map(({ wrong, correct, why }) => ({ wrong, correct, why }))
+      this.proofreadCache.set(cacheKey, grounded)
+      if (this.proofreadCache.size > PROOFREAD_CACHE_MAX) {
+        // Oldest first — Map preserves insertion order.
+        this.proofreadCache.delete(this.proofreadCache.keys().next().value as string)
+      }
+      return grounded
     } catch (err) {
       this.logger.warn("[AIService.proofread] failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
       return []
