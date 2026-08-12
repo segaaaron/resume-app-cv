@@ -8,6 +8,7 @@
 // that a real parser mangles. This module lets the score reflect the actual
 // template the user will export.
 
+import { MULTI_COLUMN_PENALTY } from "@/lib/ats/scoring-config"
 import { TEMPLATES } from "@/types/resume"
 
 export type AtsSafety = "safe" | "caution"
@@ -43,7 +44,7 @@ export function templateFormatScore(safety: AtsSafety): number {
 // overall score takes a modest, proportional ding — NOT a hard penalty. 5%
 // acknowledges the real (but not universal) parse risk without over-punishing
 // premium two-column designs. Single source so atsScore and atsRescore never drift.
-export const CAUTION_SCORE_FACTOR = 0.95
+export const CAUTION_SCORE_FACTOR = MULTI_COLUMN_PENALTY.value
 
 /** Apply the template parseability ding to an overall score. "safe" is untouched. */
 export function applyTemplatePenalty(score: number, safety: AtsSafety): number {

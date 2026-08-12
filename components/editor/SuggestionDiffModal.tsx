@@ -40,6 +40,15 @@ interface SuggestionDiffModalProps {
    * fallback below is exact by construction.
    */
   afterValue?: string
+  /**
+   * Other ways to say the same thing, when the model offered them.
+   *
+   * A single rewrite leaves the user a yes/no, and "no" used to mean asking the
+   * model again — the loop this whole panel kept producing. Picking one here
+   * swaps what the diff shows, so the decision ends inside this dialog instead of
+   * turning into another call.
+   */
+  options?: Array<{ text: string; label: string; why: string; active: boolean; onPick: () => void }>
 }
 
 const FIELD_KEYS: Record<SuggestionField, string> = {
@@ -59,6 +68,7 @@ export default function SuggestionDiffModal({
   suggestion,
   currentValue,
   afterValue: afterFromCaller,
+  options,
 }: SuggestionDiffModalProps) {
   const t = useTranslations("editor.cv_review")
 
@@ -106,6 +116,34 @@ export default function SuggestionDiffModal({
             </div>
           </div>
         </div>
+
+        {/* Other angles on the same work, when the model offered them. Above the
+            diff on purpose: choose the version first, then read what it changes.
+            Every option cleared the same anti-invention guards as the main one. */}
+        {options && options.length > 0 && (
+          <div className="border-b border-slate-100 bg-slate-50/60 px-4 sm:px-7 py-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{t("options_title")}</p>
+            <div className="mt-2 flex flex-col gap-1.5">
+              {options.map((o) => (
+                <button
+                  key={o.text}
+                  type="button"
+                  onClick={o.onPick}
+                  aria-pressed={o.active}
+                  className={`rounded-xl border px-3 py-2 text-left transition-all ${
+                    o.active
+                      ? "border-[#00D4FF] bg-cyan-50/70 ring-1 ring-[#00D4FF]"
+                      : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
+                  }`}
+                >
+                  <span className="text-[9.5px] font-black uppercase tracking-wider text-[#0077B6]">{o.label}</span>
+                  <span className="mt-0.5 block text-[11.5px] leading-snug text-slate-700">{o.text}</span>
+                  {o.why && <span className="mt-0.5 block text-[10px] leading-snug text-slate-400">{o.why}</span>}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Diff content — only what changes, not the whole field again.
             A work-experience description is seven bullets long; printing it

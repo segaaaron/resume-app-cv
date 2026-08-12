@@ -1,5 +1,6 @@
 "use client"
 
+import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import { useState, useCallback, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -83,6 +84,14 @@ export interface ATSResult {
   }
   /** Ranked "path to your target score": each lever + the points it recovers. */
   gapPlan?: GapLever[]
+  /**
+   * How the score was reached, per category.
+   *
+   * Shown on demand so the number stops being an assertion: the weights behind it
+   * are ours — chosen, not measured against any ATS — and the honest response to
+   * that is to publish the sum rather than to dress it up.
+   */
+  scoreBreakdown?: ScoreBreakdown
   /** Probable typos breaking exact ATS match: {keyword wanted, typed in CV}. */
   typoWarnings?: { keyword: string; typed: string }[]
   /** Senior-recruiter analysis: verdict, pass risk, ranked critical fixes, strengths. */

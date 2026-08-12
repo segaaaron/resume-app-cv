@@ -20,6 +20,8 @@
 // sets would force each engine to score inputs it cannot see. See TITLE_CONNECTORS
 // below for why the two word lists must stay separate too.
 
+import { SCORE_WEIGHTS, OLD_TITLE_CREDIT } from "@/lib/ats/scoring-config"
+import { computeScoreBreakdown, type ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import type { ATSSubScores, GapLever } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
 import { dedupe, partitionByPresence } from "@/lib/ats/core/matching"
@@ -70,13 +72,30 @@ export interface ATSMatchResult {
    *  so the "path to your target" can never contradict the number. Template layout
    *  is added by the caller (the matcher does not know the template). */
   gapLevers: GapLever[]
+  /**
+   * How the score was reached, category by category.
+   *
+   * Published so the panel can show the arithmetic instead of asking the user to
+   * trust a number whose weights are, honestly, ours. Every row states what it
+   * covered, what it was worth, what it contributed and what backs that weight.
+   */
+  breakdown: ScoreBreakdown
 }
 
 // Weighting of each category toward the overall score. Hard skills dominate
 // because that is what real ATS keyword filters reward most. Categories with no
 // extracted keywords are dropped and the remaining weights are renormalized, so
 // a JD that lists no soft skills never penalizes the candidate for it.
-const WEIGHTS = { hardSkills: 0.45, mustHaves: 0.2, title: 0.15, softSkills: 0.1, sections: 0.1 }
+// Sourced from lib/ats/scoring-config, where every tunable states what backs it.
+// They used to be literals here, which made "why is this an 89?" unanswerable
+// without reading the engine.
+const WEIGHTS = {
+  hardSkills: SCORE_WEIGHTS.hardSkills.value,
+  mustHaves: SCORE_WEIGHTS.mustHaves.value,
+  title: SCORE_WEIGHTS.title.value,
+  softSkills: SCORE_WEIGHTS.softSkills.value,
+  sections: SCORE_WEIGHTS.sections.value,
+}
 
 /**
  * Function words that glue a JOB TITLE together — "Head OF Design", "Ingeniero DE
@@ -159,7 +178,7 @@ function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string
 // and real ATS (Workday/Taleo) weight the current title heavily. When
 // `recentTitlesNorm` is omitted, behavior is unchanged (every title full credit),
 // so existing callers and any non-recency path score exactly as before.
-const RECENCY_OLD_TITLE_CREDIT = 0.6
+const RECENCY_OLD_TITLE_CREDIT = OLD_TITLE_CREDIT.value
 
 function titleScore(jdTitle: string, cvTitlesNorm: string, recentTitlesNorm?: string): number | null {
   const norm = normalize(jdTitle)
@@ -220,46 +239,42 @@ export function computeATSMatch(
   const title = titleScore(keywords.jobTitle, titlesNorm, recentTitles ? normalize(recentTitles) : undefined)
   const sectionsPct = sectionsScore(sections)
 
-  const parts: Array<{ pct: number; w: number }> = []
-  if (hard.pct !== null) parts.push({ pct: hard.pct, w: WEIGHTS.hardSkills })
-  if (must.pct !== null) parts.push({ pct: must.pct, w: WEIGHTS.mustHaves })
-  if (title !== null) parts.push({ pct: title, w: WEIGHTS.title })
-  if (soft.pct !== null) parts.push({ pct: soft.pct, w: WEIGHTS.softSkills })
-  parts.push({ pct: sectionsPct, w: WEIGHTS.sections })
-
-  const totalW = parts.reduce((acc, p) => acc + p.w, 0)
-  const score = totalW === 0
-    ? 0
-    : Math.round(parts.reduce((acc, p) => acc + p.pct * p.w, 0) / totalW)
+  // The arithmetic has ONE owner (lib/ats/score-breakdown): the number and the
+  // "path to your target" below are the same renormalization, computed once, so
+  // they cannot drift apart. It also returns the breakdown the panel shows, which
+  // is what turns "trust the 89" into "here is where the 89 comes from".
+  const breakdown = computeScoreBreakdown({
+    hardSkills: hard.pct,
+    mustHaves: must.pct,
+    title,
+    softSkills: soft.pct,
+    sections: sectionsPct,
+  })
+  const score = breakdown.score
 
   // Path to target. Each lever's recoverable points = its share of the score
   // (w / totalW, the exact renormalization the score uses) times the gap it has
   // left to 100. Same math as `score`, so maxing every lever here lands on 100 —
   // the number and the plan can never disagree. Template layout is NOT here; the
   // caller adds it because only it knows the template.
-  const share = (w: number) => (totalW === 0 ? 0 : w / totalW)
-  const lever = (
-    key: GapLever["key"],
-    pct: number | null,
-    w: number,
-    missingCount?: number,
-  ): GapLever | null => {
-    if (pct === null) return null
-    const points = Math.round(share(w) * (100 - pct))
-    if (points <= 0) return null
-    return { key, points, currentPct: pct, ...(missingCount !== undefined ? { missingCount } : {}) }
+  const missingCounts: Partial<Record<GapLever["key"], number>> = {
+    hardSkills: hard.missing.length,
+    mustHaves: must.missing.length,
+    softSkills: soft.missing.length,
   }
-  const gapLevers = [
-    lever("hardSkills", hard.pct, WEIGHTS.hardSkills, hard.missing.length),
-    lever("mustHaves", must.pct, WEIGHTS.mustHaves, must.missing.length),
-    lever("title", title, WEIGHTS.title),
-    lever("softSkills", soft.pct, WEIGHTS.softSkills, soft.missing.length),
-    lever("sections", sectionsPct, WEIGHTS.sections),
-  ].filter((l): l is GapLever => l !== null)
+  const gapLevers: GapLever[] = breakdown.categories
+    .filter((c) => c.recoverable > 0)
+    .map((c) => ({
+      key: c.category,
+      points: c.recoverable,
+      currentPct: c.coveragePct,
+      ...(missingCounts[c.category] !== undefined ? { missingCount: missingCounts[c.category] } : {}),
+    }))
 
   return {
     score: clamp(score),
     gapLevers,
+    breakdown,
     subScores: {
       hardSkills: hard.pct,
       softSkills: soft.pct,

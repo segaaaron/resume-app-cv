@@ -1,5 +1,6 @@
 // lib/services/ai/shared/ai-types.ts
 // Shared result and input types used across AI modules.
+import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import { z } from "zod"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
 
@@ -31,6 +32,34 @@ export interface VersionsResult {
 export const BulletImprovementSchema = z.object({
   index: z.number().int().min(0),
   text: z.string().min(1),
+  /**
+   * Why this reads better than what the candidate wrote.
+   *
+   * The rewrite used to arrive bare, so the only way to judge it was to trust it
+   * — on their own resume. The proofreader already learned this: a correction you
+   * cannot evaluate is one you should not be asked to apply. Optional, because a
+   * response without it is still usable.
+   */
+  why: z.string().max(160).optional().catch(undefined),
+  /**
+   * The same bullet argued from a different angle — the technical work, the
+   * business outcome, or the leadership in it.
+   *
+   * One rewrite leaves the user a single yes/no: dislike it and the only way
+   * forward is to ask again, which is the loop this panel kept producing. Two or
+   * three angles turn that into a choice that ends. Only ever populated for a
+   * single-bullet request; improving a whole role stays one line each, because
+   * three variants per bullet across ten bullets is a wall and a bill.
+   */
+  alternatives: z
+    .array(z.object({
+      text: z.string().min(1),
+      angle: z.enum(["technical", "business", "leadership"]).catch("technical"),
+      why: z.string().max(160).catch(""),
+    }))
+    .max(2)
+    .optional()
+    .catch(undefined),
 })
 
 export type BulletImprovement = z.infer<typeof BulletImprovementSchema>
@@ -178,6 +207,16 @@ export interface ATSScoreResult {
   /** Ranked "path to your target": the levers that move THIS score, each with the
    *  points it can recover. Empty when the score is already maxed. */
   gapPlan: GapLever[]
+  /**
+   * The arithmetic behind the score, published so the panel can show it.
+   *
+   * A score whose weights nobody can question reads as invented — and the weights
+   * ARE ours, chosen not measured. The honest answer is not a better-sounding
+   * number, it is showing the sum: what each category covered, what it was worth,
+   * and what backs that weight. Optional so a cached result from before this
+   * still renders.
+   */
+  scoreBreakdown?: ScoreBreakdown
   /** Probable typos: a required keyword the CV spells wrong ("React Navite" for
    *  "React Native"), so a real ATS misses it. `keyword` = what the job wants,
    *  `typed` = what the CV says. Empty when nothing looks misspelled. */
@@ -638,17 +677,3 @@ export const AI_INPUT_LIMITS = {
   skillName: 100,
 } as const
 
-/** Targeted grammar corrections — each one must be findable in the CV. */
-export const ProofreadSchema = z.object({
-  corrections: z
-    .array(z.object({
-      // The line the model says the error is on, 1-based, matching the numbering
-      // the prompt shows it. Optional so a response without it still parses —
-      // grounding then falls back to a search, as it did before.
-      line: z.number().int().positive().optional().catch(undefined),
-      wrong: z.string().max(200).catch(""),
-      correct: z.string().max(200).catch(""),
-      why: z.string().max(120).catch(""),
-    }))
-    .catch([]),
-})
