@@ -44,8 +44,16 @@ function startsWithImpact(text: string): boolean {
   if (IMPACT_VERBS.includes(first)) return true
   // A role title is an equally strong opener ("Senior iOS engineer who…").
   // Capitalised and not a pronoun is the cheapest reliable signal.
+  //
+  // "Capitalised" has to mean a capital ANYWHERE in the word, not just first:
+  // the products people title themselves after are written lowercase-first on
+  // purpose — iOS, iPadOS, macOS, eBay — so a leading-letter test called every
+  // "iOS Developer with 7 years…" a weak opener. That summary can never be
+  // repaired, since the fix is to misspell the platform, so the panel kept
+  // offering a rewrite of prose that was already right.
   const raw = text.trim().split(/\s+/)[0] ?? ""
-  return /^\p{Lu}/u.test(raw) && !PRONOUN_REGEX.test(first)
+  const capitalisedSomewhere = /\p{Lu}/u.test(raw)
+  return capitalisedSomewhere && !PRONOUN_REGEX.test(first)
 }
 
 /**

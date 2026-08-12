@@ -35,6 +35,18 @@ export function markContentOptimized(storageKey: string, content: string): void 
 }
 
 /**
+ * Has this exact content already been through the AI?
+ *
+ * The read half of the mark, callable outside React so a panel can decide whether
+ * to DRAW a button rather than discover on click that there was nothing to do.
+ * The ATS report only ever wrote the mark; it never asked, which is how a bullet
+ * the AI had just rewritten could be sent back for rewriting from the other tab.
+ */
+export function isContentOptimized(storageKey: string, content: string): boolean {
+  return !!content.trim() && read(storageKey) === contentHash(content)
+}
+
+/**
  * "This exact content already went through the AI — don't spend another call on
  * it." One persistent, content-anchored guard shared by every AI-improve surface
  * (bullets, summary, cover letter, tailor, ATS).

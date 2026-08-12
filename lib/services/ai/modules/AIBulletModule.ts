@@ -19,33 +19,9 @@ import {
   type BulletResult,
   type ImproveBulletInput,
 } from "../shared/ai-types"
+import { defectStillPresent } from "../shared/repairable-defects"
 
 
-/**
- * Is the defect the caller declared actually still in this text?
- *
- * The panel's focus is a snapshot: it was true when the CV was analysed, and it
- * may have been repaired since — by us, on the previous press. Verifying it
- * turns "the user asked" into "the user asked and it is still broken".
- *
- * `metric` deliberately never counts: we refuse to invent figures, so a missing
- * number is not a defect an AI rewrite can repair, and treating it as one is
- * what kept the rewrite button live forever.
- */
-function defectStillPresent(focus: string, text: string): boolean {
-  const { bullets } = assessDescription(text)
-  switch (focus) {
-    case "weak_verb":
-      return bullets.some((b) => b.weakOpener)
-    case "cliche":
-      return bullets.some((b) => hasCliche(b.text))
-    case "metric":
-      return false
-    default:
-      // An unknown focus is not evidence of anything.
-      return false
-  }
-}
 
 export class AIBulletModule {
   constructor(
@@ -111,6 +87,7 @@ export class AIBulletModule {
 
     const originalBullets = parseBullets(text)
     const indexedBullets = renderBulletsForPrompt(originalBullets, { indent: "  " })
+    const bulletCount = originalBullets.length
 
     /**
      * The caller-declared defect, spelled out for the model.
@@ -147,6 +124,36 @@ You MUST return a rewrite for it. "already_optimized" is NOT an acceptable answe
 El analizador de CV marcó este bullet por: \n${focusLines.map((l) => `- ${l.es}`).join("\n")}
 DEBES devolver una reescritura. "already_optimized" NO es una respuesta aceptable aquí — el defecto de arriba es real y el usuario pidió arreglarlo. La regla 8 ("deja en paz los bullets ya fuertes") NO aplica a este bullet. Conserva todos los datos, herramientas y cifras del original.\n`
 
+    /**
+     * Angles, and the reason they exist.
+     *
+     * One rewrite leaves a yes/no: dislike it and the only way forward is to ask
+     * again — the loop this panel kept producing. Two more, argued differently,
+     * turn that into a choice that ENDS.
+     *
+     * Only for a single-bullet request. Improving a whole role stays one line
+     * each: three variants across ten bullets is a wall to read and a bill to pay,
+     * and there the user wants a pass over the section, not a menu per line.
+     */
+    const wantsVariants = bulletCount === 1
+    const variantsBlock = !wantsVariants
+      ? ""
+      : language === "en"
+        ? `\n=== GIVE THE CANDIDATE A CHOICE ===
+Return the strongest rewrite as "text", plus up to 2 "alternatives" that argue the SAME work from a different angle:
+- "technical": the engineering — systems, tools, architecture, how it was built.
+- "business": what it was worth — users, revenue, cost, risk, time.
+- "leadership": people and process — who was aligned, what practice changed.
+Every angle obeys the anti-hallucination rules above: an angle the source does not support is simply omitted. Two honest options beat three where one is invented.
+Add "why" to each (max 20 words): what the candidate gains over their original wording. Name the concrete change, never "more impactful".\n`
+        : `\n=== DALE A ELEGIR AL CANDIDATO ===
+Devuelve la mejor reescritura en "text", más hasta 2 "alternatives" que defiendan el MISMO trabajo desde otro ángulo:
+- "technical": la ingeniería — sistemas, herramientas, arquitectura, cómo se construyó.
+- "business": cuánto valió — usuarios, ingresos, costo, riesgo, tiempo.
+- "leadership": personas y proceso — a quién se alineó, qué práctica cambió.
+Cada ángulo cumple las reglas anti-alucinación de arriba: un ángulo que el source no respalda simplemente se omite. Dos opciones honestas valen más que tres con una inventada.
+Agrega "why" a cada una (máx 20 palabras): qué gana el candidato frente a su redacción original. Nombra el cambio concreto, nunca "más impactante".\n`
+
     const prompt = language === "en"
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY rewrite using information present in the original bullets and the context above. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, dates, or any metric not explicitly provided.
@@ -159,7 +166,7 @@ ${context ? `Position context: ${context}` : ""}
 
 Original bullets (each addressed by its index):
 ${indexedBullets}
-${focusBlock}
+${focusBlock}${variantsBlock}
 TRANSFORMATION RULES:
 1. CAR method per bullet: Action (strong verb) → Brief context (if applicable) → Result stated in the source.
 2. Verb first, always. PROHIBITED openers/clichés: "Responsible for", "In charge of", "Assisted with", "Helped with", "Worked on", "Duties included", and empty buzzwords ("team player", "detail-oriented", "hard-working", "results-driven", "go-getter"). No personal pronouns (I, my).
@@ -181,7 +188,7 @@ Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve 
 - The text is not real professional work experience → {"status": "off_topic", "improvements": []}.
 
 Respond ONLY with valid JSON (no markdown):
-{"status": "improved", "improvements": [{"index": 0, "text": "• improved bullet"}]}`
+{"status": "improved", "improvements": [{"index": 0, "text": "• improved bullet", "why": "names the system instead of the duty", "alternatives": [{"text": "• same work, business angle", "angle": "business", "why": "leads with what it was worth"}]}]}`
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO reescribe usando información presente en los bullets originales y el contexto de arriba. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales, fechas, ni métricas no proporcionadas.
 2. NUNCA escribas un placeholder. Ni [X%], ni [N usuarios], ni [$Z], ni <número>, ni nada entre corchetes que sustituya a una cifra. Lo que devuelves se escribe directo en el CV del candidato, y un corchete olvidado ahí hace que le rechacen el CV. Si un bullet no tiene cifra en el source, igual mejóralo por redacción e impacto SIN una cifra — verbo más fuerte, acción y resultado más claros. NUNCA inventes un número y NUNCA le pidas uno al usuario.
@@ -193,7 +200,7 @@ ${context ? `Contexto del puesto: ${context}` : ""}
 
 Bullets originales (cada uno con su índice):
 ${indexedBullets}
-${focusBlock}
+${focusBlock}${variantsBlock}
 REGLAS DE TRANSFORMACIÓN:
 1. Método CAR por bullet: Acción (verbo fuerte) → Contexto breve (si aplica) → Resultado presente en el source.
 2. Verbo primero, siempre. PROHIBIDO aperturas/clichés: "Responsable de", "Encargado de", "Apoyé en", "Ayudé con", "Trabajé en", "Mis funciones incluían", y muletillas vacías ("trabajo en equipo", "orientado al detalle", "proactivo", "orientado a resultados"). Sin pronombres (yo, mi, mis).
@@ -215,11 +222,14 @@ Incluye una entrada en "improvements" SOLO para un bullet que puedas mejorar MAT
 - El texto no es experiencia laboral profesional real → {"status": "off_topic", "improvements": []}.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
-{"status": "improved", "improvements": [{"index": 0, "text": "• bullet mejorado"}]}`
+{"status": "improved", "improvements": [{"index": 0, "text": "• bullet mejorado", "why": "nombra el sistema en vez de la función", "alternatives": [{"text": "• el mismo trabajo, ángulo de negocio", "angle": "business", "why": "abre con cuánto valió"}]}]}`
 
     const callModel = async (userContent: string) => await this.aiClient.chat({
       model: AI_MODEL_PROSE,
-      max_tokens: 1200,
+      // Three worded options plus their reasons do not fit the one-line budget,
+      // and a truncated JSON is a parse error, not a shorter answer. Raised only
+      // for the single-bullet request that asks for them.
+      max_tokens: wantsVariants ? 1800 : 1200,
       // improve-bullet uses low temperature (0.3) to reduce hallucinations.
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
@@ -271,7 +281,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         const candidate = BulletImprovementSchema.safeParse(entry)
         if (!candidate.success) continue
 
-        const { index, text: suggested } = candidate.data
+        const { index, text: suggested, why, alternatives: rawAlts } = candidate.data
         const original = originalBullets[index]
         if (original === undefined) continue  // model addressed a bullet that isn't there
 
@@ -305,7 +315,27 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
 
         seenIndices.add(index)
-        improvements.push({ index, text: suggested })
+
+        // Alternatives face the SAME gauntlet as the main rewrite. Offering a
+        // second angle must not become a side door for an invented figure or a
+        // lossy reword: the user picks one of these with a click, so a variant
+        // that fails a guard is worse than having no choice at all. Anything that
+        // does not survive is simply not offered — fewer honest options beat more.
+        const alternatives = (rawAlts ?? [])
+          .map((a) => ({ ...a, text: a.text.trim() }))
+          .filter((a) => a.text
+            && a.text !== suggested
+            && !detectHallucination(a.text, source)
+            && !isTrivialEdit(original, a.text)
+            && !(originalIsStrong && dropsContentWithoutGain(original, a.text)))
+          .slice(0, 2)
+
+        improvements.push({
+          index,
+          text: suggested,
+          why: why?.trim() || undefined,
+          alternatives: alternatives.length > 0 ? alternatives : undefined,
+        })
       }
 
       if (droppedHallucinated > 0 || droppedTrivial > 0 || droppedDuplicate > 0) {
