@@ -10,6 +10,7 @@
 // No LLM, no randomness: the same CV always yields the same findings, so they can
 // flow through the live re-score. Cliché detection reuses the shared list
 // (lib/services/ai/shared/cliches.ts) — one source of truth, never a parallel list.
+import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { findCliches } from "@/lib/services/ai/shared/cliches"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
 
@@ -102,7 +103,16 @@ function dateFormatClass(raw: string): string | null {
 const MAX_CLICHE = 8
 const MAX_BALANCE = 6
 const MAX_DUPLICATE = 8
-const BULLET_MAX = 6 // more than this on one role reads as noise
+/**
+ * Bullets on one role before the list starts working against itself.
+ *
+ * Six, and the copy the user sees says six. It used to warn past 6 while the
+ * message asked them to trim to "3-5, what recruiters skim" — two numbers from
+ * two places, and a claim about recruiter behaviour we have never measured. The
+ * defensible statement is the one about the resume itself: past this, the strong
+ * lines compete with the weak ones for the same glance.
+ */
+const BULLET_MAX = BULLETS_PER_ROLE_MAX.value
 
 /**
  * Comparison key for "is this the same bullet". Case, accents, punctuation and
