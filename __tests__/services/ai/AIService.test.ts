@@ -782,6 +782,30 @@ describe("AIService", () => {
       expect((res.improvements[0] as { location?: { field: string } }).location?.field).toBe("summary")
     })
 
+    it("never shows the user our own job-ID marker", async () => {
+      // buildResumeContext labels each job "ID:<uuid> | " so the model can address
+      // it in the action. The model copies that prefix into the prose, and the
+      // panel rendered a report starting with a raw UUID — seen in production.
+      const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
+      vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Solid resume.",
+        strengths: [],
+        improvements: [
+          {
+            text: 'ID:b5287d56-892f-42f9-bf46-6faee106cb12 [0] "Developed hybrid mobile applications using Ionic."',
+            location: { field: "skills" },
+          },
+        ],
+        answer: "",
+      }))
+      const service = new AIService(aiClient, logger)
+      const res = await service.reviewCV("u1", { sectionData: { summary: "x" } }, "PRO")
+      expect(res.improvements[0].text).toBe('"Developed hybrid mobile applications using Ionic."')
+      expect(res.improvements[0].text).not.toContain("ID:")
+      expect(res.improvements[0].text).not.toContain("b5287d56")
+    })
+
     it("keeps the model-provided location on an advice-only item", async () => {
       const { checkAndIncrementAIQuota } = await import("@/lib/ai-client")
       vi.mocked(checkAndIncrementAIQuota).mockResolvedValue({ allowed: true })

@@ -1,11 +1,11 @@
 // lib/services/ai/modules/AIReviewModule.ts
 import { createHash } from "node:crypto"
+import { stripJobMarkers, stripJobMarkersDeep } from "../shared/strip-markers"
 import { z } from "zod"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
   AI_MODEL_PROSE,
-  AI_TEMPERATURE_EXACT,
   AI_TEMPERATURE_PRECISE,
   AI_TEMPERATURE_STRUCTURED,
   buildResumeContext,
@@ -19,12 +19,10 @@ import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination } fr
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
-import { groundedLineIndex, isInPlaceCorrection, rejectOverlapping } from "../shared/proofread-guards"
 import {
   AI_INPUT_LIMITS,
   ATSExtractionSchema,
   CvAnalysisSchema,
-  ProofreadSchema,
   type CvAnalysis,
   ReviewItemSchema,
   ReviewResponseSchema,
@@ -68,27 +66,32 @@ function buildGapPlan(
   return levers.sort((a, b) => b.points - a.points)
 }
 
-/** Cap on remembered proofread results — see AIReviewModule.proofreadCache. */
-const PROOFREAD_CACHE_MAX = 200
-/** Prose sent to the proofreader per call, in characters. Whole lines only. */
-const PROOFREAD_CORPUS_CHARS = 8000
+
+/** Analyses remembered per process — a CV is re-read a handful of times. */
+const ANALYSIS_CACHE_MAX = 100
 
 export class AIReviewModule {
-  /**
-   * Proofread results by (language, prose hash), so unchanged prose gets the same
-   * answer without a second call.
-   *
-   * Per INSTANCE, not per module: module-level mutable state is shared by every
-   * caller in the process, which in tests means one case's result answering the
-   * next one's question. The service is a singleton in production, so the cache
-   * still spans the process where it matters.
-   */
-  private readonly proofreadCache = new Map<string, Array<{ wrong: string; correct: string; why: string }>>()
-
   constructor(
     private readonly aiClient: IAIClient,
     private readonly logger: ILogger,
   ) {}
+
+  /**
+   * The recruiter analysis for a (resume, posting) pair, so re-running over
+   * unchanged text returns the SAME findings.
+   *
+   * The number was already pinned — the posting's keywords are cached for exactly
+   * this reason — but the written half was not, and that is the half the user
+   * reads. Pressing Analyze twice on an untouched CV produced a different set of
+   * critical fixes each time, which makes the report impossible to work through:
+   * you cannot tell "I fixed that" from "it stopped mentioning it". `temperature`
+   * cannot solve it either — reasoning models drop the parameter (see
+   * model-params), so the request the code thinks it is sending never arrives.
+   *
+   * Keyed by content, so any edit invalidates it by construction: the user gets a
+   * fresh read the moment the CV changes, and the same read when it does not.
+   */
+  private readonly analysisCache = new Map<string, CvAnalysis>()
 
   /**
    * The senior-recruiter analysis — the voice of the unified report. A keyword
@@ -118,6 +121,15 @@ export class AIReviewModule {
     langInstruction: string,
     sectionData: Record<string, unknown> = {},
   ): Promise<CvAnalysis | null> {
+    // Same resume, same posting, same language → the answer we already gave.
+    // No call, no tokens, no quota: it is the identical question.
+    const cacheKey = `${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}`).digest("hex")}`
+    const cachedAnalysis = this.analysisCache.get(cacheKey)
+    if (cachedAnalysis) {
+      this.logger.info("[AIService.analyzeResume] cache hit")
+      return cachedAnalysis
+    }
+
     /**
      * The achievement gap, measured in code and handed to the analyst.
      *
@@ -300,7 +312,9 @@ Reglas duras:
         })
         return null
       }
-      const a = parsed.data
+      // Our own job marker, out of every string the user will read — before any
+      // other processing, so nothing downstream sees or stores it.
+      const a = stripJobMarkersDeep(parsed.data)
       a.criticalFixes = a.criticalFixes.filter((f) => f.issue.trim()).slice(0, 8)
       // Every button is verified against the real CV before the user can press
       // it. A rewrite_bullet pointing at a job that isn't there, or past the end
@@ -309,6 +323,13 @@ Reglas duras:
       for (const f of a.criticalFixes) f.action = groundFixAction(f.action, sectionData)
       // Nothing usable → null, so the UI shows no empty analysis.
       if (!a.verdict.trim() && a.criticalFixes.length === 0 && a.strengths.length === 0) return null
+      // Remembered only once it survived every guard: a failed or empty read must
+      // never freeze into "this is what your CV says".
+      this.analysisCache.set(cacheKey, a)
+      if (this.analysisCache.size > ANALYSIS_CACHE_MAX) {
+        // Oldest first — Map preserves insertion order.
+        this.analysisCache.delete(this.analysisCache.keys().next().value as string)
+      }
       return a
     } catch (err) {
       this.logger.warn("[AIService.atsScore] recruiter analysis failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
@@ -684,6 +705,7 @@ Reglas:
       },
       contentQuality: assessResumeContent(data),
       gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
+      scoreBreakdown: match.breakdown,
       typoWarnings,
       analysis,
       // Says out loud that a part of the report is missing. Before, a failed
@@ -752,224 +774,12 @@ Reglas:
       extractedKeywords: keywords,
       contentQuality: assessResumeContent(data),
       gapPlan: buildGapPlan(match.gapLevers, match.score, finalScore, templateSafety),
+      scoreBreakdown: match.breakdown,
       typoWarnings: findNearMisses([...keywords.hardSkills, ...keywords.mustHaves], atsHaystack),
       // Live re-score is deterministic/no-LLM — the critique from the last full
       // analyze still stands; the client preserves it (never overwrites with null).
       analysis: null,
       writingChecks: analyzeWriting(data),
-    }
-  }
-
-  /**
-   * Grammar and wording pass over the CV's prose.
-   *
-   * A dictionary can only ask "is this a word?". It cannot see "more then 7
-   * years": `more` and `then` are both real words, and no amount of curated
-   * pairs will cover the ways a sentence can be wrong. Checking the WORDS is
-   * not checking the WRITING, so this reads the actual sentences.
-   *
-   * Every correction is verified against the CV before it is returned: the
-   * wrong text must appear verbatim, or it is dropped. A proofreader that
-   * "corrects" a line the user never wrote is worse than no proofreader — and
-   * a model asked for corrections will always find some.
-   */
-  async proofread(userId: string, texts: string[], language: "es" | "en", plan: string): Promise<Array<{ wrong: string; correct: string; why: string }>> {
-    // Kept as separate units: joining them and validating against the join let
-    // the model "correct" text that spans two bullets or two fields ("…processes
-    // with" + "CocoaPods." → "with CocoaPods."). That text exists in the join and
-    // nowhere in the CV, so the button could never apply it.
-    const units = texts.map((t) => t.trim()).filter(Boolean)
-    if (units.join("\n").trim().length < 40) return []
-
-    // Whole lines only, up to the budget. Slicing the joined corpus mid-line used
-    // to leave the model a truncated last field and half a word to reason about.
-    const sent: string[] = []
-    let budget = PROOFREAD_CORPUS_CHARS
-    for (const u of units) {
-      if (u.length + 1 > budget) break
-      sent.push(u)
-      budget -= u.length + 1
-    }
-    if (!sent.length) return []
-    const corpus = sent.join("\n")
-
-    // Unchanged prose gets the same answer, without a call and without spending
-    // quota. Determinism is the point, not the saving: the card re-checks on its
-    // own and after every fix, and a model that returns three findings, then
-    // four, then none over identical text is a checker nobody can act on.
-    const cacheKey = `${language}:${createHash("sha256").update(corpus).digest("hex")}`
-    const cached = this.proofreadCache.get(cacheKey)
-    if (cached) return cached
-
-    // Its OWN quota, not review-cv's: the spelling card fires this by itself when
-    // the panel opens, so charging it to review-cv silently spent a CV review the
-    // user never asked for.
-    await enforceAIQuota(userId, "proofread", plan)
-    const en = language === "en"
-
-    // The prompt is EXAMPLE-FIRST on purpose. The previous one was nine rules, of
-    // which seven were prohibitions ("NEVER rewrite for style", "Do NOT touch
-    // commas"…). Negative instructions steer weakly: the model proposed the style
-    // edit anyway and the code below deleted it, so we paid to generate output we
-    // threw away. Showing the exact JSON we want, plus the real rejections from
-    // production as counter-examples, is what actually narrows the output.
-    //
-    // What is deliberately ABSENT: any licence to "improve the flow if a sentence
-    // reads unnaturally". That single clause is what produced "increased in
-    // sprint" → "increased sprint completion" — a style rewrite dressed as a
-    // correction. In a chat the human reads the result and judges it; here the
-    // output populates Fix buttons that edit the CV on one click, so fluency is
-    // out of scope by construction. Weak writing is improve-bullet's job.
-    //
-    // Also absent: verb tense (past for previous roles, present for the current
-    // one). It is a real and common CV error, but collectSpellcheckText sends
-    // plain strings with no marker for which role is current, so the model would
-    // have to guess — and a wrong guess rewrites verbs across the whole CV.
-    // Enabling it means sending that fact, not adding the rule.
-    //
-    // Lines are NUMBERED and the model must name the line. Asking it to copy a
-    // fragment verbatim out of an unnumbered blob was asking a language model to
-    // be an archivist — the job it is worst at, and where every production failure
-    // came from. With a line number, grounding is a lookup instead of a search.
-    const numbered = sent.map((u, i) => `[${i + 1}] ${u}`).join("\n")
-
-    const prompt = en ? `You are proofreading a résumé. Each numbered line is ONE field or bullet — a correction never spans two lines.
-
-=== TEXT ===
-${numbered}
-=== END ===
-
-Report only what a grammar teacher would mark as wrong, using US spelling: subject-verb agreement, wrong preposition for the context, wrong verb form after a preposition ("responsible for manage" → "responsible for managing"), a real word used in place of another ("more then", "advices", "its"/"it's"), a repeated word.
-
-Copy the wrong words exactly as written, and name the line they are on.
-
-REPORT things like these:
-{"line":1,"wrong":"more then","correct":"more than","why":"comparative takes than"}
-{"line":2,"wrong":"an increased in","correct":"an increase in","why":"noun after article"}
-{"line":3,"wrong":"resulting in in","correct":"resulting in","why":"repeated word"}
-{"line":4,"wrong":"Swift UI","correct":"SwiftUI","why":"product name is one word"}
-
-DO NOT report these, and here is why:
-· "increased in sprint" → "increased sprint completion" — invents "completion" and deletes "in". You may only repair words that are already there.
-· "with different teams" → "with a different team" — already correct. Style is not an error.
-· "APIs and architecture" → "APIs and architectural" — only if a noun actually follows it on that same line.
-· "gRPC and Objective-C" → "gRPC, and Objective-C" — commas are house style.
-· "processes with" → "with CocoaPods." — text from another line. Never combine lines.
-
-A correction is valid only when:
-· exactly ONE word changes, and "wrong" and "correct" have the same number of words — the sole exception is respacing the same letters ("alot" → "a lot");
-· "wrong" is at most 4 words, taken from the single line you named;
-· proper nouns, product names, technologies and acronyms are left alone.
-
-Return JSON only: {"corrections":[…]} — at most 12. If the writing is correct, return {"corrections":[]}. An empty list is a good answer.` : `Estás corrigiendo la redacción de un CV. Cada línea numerada es UN campo o viñeta — una corrección nunca abarca dos líneas.
-
-=== TEXTO ===
-${numbered}
-=== FIN ===
-
-Reporta solo lo que un profesor de lengua marcaría como error: tildes que faltan o sobran, incluidas las diacríticas ("mas"/"más", "aun"/"aún", "el"/"él"); concordancia de género y de número; contracciones ("a el" → "al", "de el" → "del"); preposición equivocada para el contexto; tiempo o forma verbal incorrecta; una palabra real usada en lugar de otra ("haber"/"a ver"); palabra repetida.
-
-Copia las palabras equivocadas exactamente como están escritas, e indica en qué línea están.
-
-REPORTA cosas como estas:
-{"line":1,"wrong":"mas de 7 años","correct":"más de 7 años","why":"cantidad lleva tilde"}
-{"line":2,"wrong":"fue enviados","correct":"fueron enviados","why":"concordancia de número"}
-{"line":3,"wrong":"resultando en en","correct":"resultando en","why":"palabra repetida"}
-{"line":4,"wrong":"a el cliente","correct":"al cliente","why":"contracción"}
-
-NO reportes estas, y este es el motivo:
-· "aumenté en sprint" → "aumenté la finalización de sprint" — inventa palabras y borra otras. Solo puedes reparar las palabras que ya están.
-· "trabajé con distintos equipos" → "trabajé con un equipo distinto" — ya está correcto. El estilo no es un error.
-· "APIs y arquitectura" → "APIs y arquitectural" — solo si de verdad le sigue un sustantivo en esa misma línea.
-· "gRPC y Objective-C" → "gRPC, y Objective-C" — las comas son estilo.
-· "procesos con" → "con CocoaPods." — texto de otra línea. Nunca combines líneas.
-
-Una corrección es válida solo cuando:
-· cambia UNA sola palabra, y "wrong" y "correct" tienen la misma cantidad de palabras — la única excepción es reespaciar las mismas letras ("aveces" → "a veces");
-· "wrong" tiene 4 palabras como máximo y sale de la línea que indicaste;
-· los nombres propios, productos, tecnologías y siglas no se tocan.
-
-Devuelve solo JSON: {"corrections":[…]} — máximo 12. Si la redacción está correcta, devuelve {"corrections":[]}. Una lista vacía es una buena respuesta.`
-
-    try {
-      const response = await this.aiClient.chat({
-        model: AI_MODEL_PROSE,
-        max_tokens: 1200,
-        temperature: AI_TEMPERATURE_EXACT,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: en ? "You are a meticulous proofreader. You only report errors you can point at." : "Eres un corrector meticuloso. Solo reportas errores que puedes señalar." },
-          { role: "user", content: prompt },
-        ],
-      })
-      const usage = response.usage
-      logAIUsage(userId, "proofread", {
-        model: AI_MODEL_PROSE,
-        plan,
-        promptTokens: usage?.prompt_tokens ?? 0,
-        completionTokens: usage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-      })
-      const parsed = ProofreadSchema.safeParse(safeParseAIJson<unknown>(response.choices[0]?.message?.content ?? ""))
-      if (!parsed.success) {
-        this.logger.warn("[AIService.proofread] rejected by schema")
-        return []
-      }
-      const seen = new Set<string>()
-      const clean = parsed.data.corrections
-        .map((c) => ({ line: c.line, wrong: c.wrong.trim(), correct: c.correct.trim(), why: c.why.trim() }))
-        // Grounding: the text must actually be in the CV, and the fix must differ.
-        .filter((c) => c.wrong && c.correct && c.wrong !== c.correct)
-        // A correction may not span a line break: bullets live in one field
-        // separated by newlines, and a fix stitching two of them together is not
-        // a spelling fix — it is an edit the user never asked for.
-        .filter((c) => !/[\n\r]/.test(c.wrong) && !/[\n\r]/.test(c.correct))
-        // Must exist verbatim inside the ONE line the model named. Checking the
-        // concatenation is what let cross-field fragments through; checking any
-        // line let a model that misread the text still land a lucky match.
-        .filter((c) => groundedLineIndex(c.wrong, sent, c.line) >= 0)
-        // Whitespace-only differences are not corrections either.
-        .filter((c) => c.wrong.replace(/\s+/g, " ").trim() !== c.correct.replace(/\s+/g, " ").trim())
-        // A correction FIXES one word. It never adds, removes or swaps them.
-        //
-        // This is a proofreader, not an editor: "with" → "with CocoaPods." adds
-        // text the user never wrote, and "lunch box" → "launch" deletes half a
-        // module name. Counting words was not enough — "increased in sprint" →
-        // "increased sprint completion" keeps the count while deleting "in" and
-        // inventing "completion". See isInPlaceCorrection.
-        .filter((c) => isInPlaceCorrection(c.wrong, c.correct))
-        // A real grammar fix is a few words: "more then", "would of", "usados",
-        // "Swift UI". Anything longer is the model rewriting a sentence that was
-        // already correct — measured: at 8 words it "fixed" a valid sentence
-        // ("Worked on many projects with different teams." → "with a different
-        // team."). Four is the width of the error itself.
-        .filter((c) => c.wrong.split(/\s+/).length <= 4)
-        // A correction that ends a sentence is aimed at the sentence, not a slip.
-        .filter((c) => !/[.!?]$/.test(c.wrong))
-        // Comma-only edits are house style, not errors — the model wanted to add
-        // a serial comma to "gRPC and Objective-C". Apostrophes are NOT stripped
-        // here: "Its" → "It's" changes the word, and that one is a real error.
-        .filter((c) => c.wrong.replace(/[,;:]/g, "").trim() !== c.correct.replace(/[,;:]/g, "").trim())
-        .filter((c) => (seen.has(c.wrong.toLowerCase()) ? false : (seen.add(c.wrong.toLowerCase()), true)))
-        .slice(0, 12)
-
-      // Two findings over the same words are one error described twice, and only
-      // one of them can be applied — the other's Fix button then reports the word
-      // is gone. "an increased in" and "increased in sprint" were both returned
-      // for the same six characters.
-      // `line` was a transport detail for grounding — callers get the same shape
-      // they always got.
-      const grounded = rejectOverlapping(clean, sent)
-        .map(({ wrong, correct, why }) => ({ wrong, correct, why }))
-      this.proofreadCache.set(cacheKey, grounded)
-      if (this.proofreadCache.size > PROOFREAD_CACHE_MAX) {
-        // Oldest first — Map preserves insertion order.
-        this.proofreadCache.delete(this.proofreadCache.keys().next().value as string)
-      }
-      return grounded
-    } catch (err) {
-      this.logger.warn("[AIService.proofread] failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
-      return []
     }
   }
 
@@ -1161,6 +971,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       text.replace(/[_`#>]/g, "").replace(/^\s*\*\s+/gm, "• ").replace(/\n{3,}/g, "\n\n").trim()
 
     const sanitizeItem = (item: z.infer<typeof ReviewItemSchema>) => {
+      item = { ...item, text: stripJobMarkers(item.text) }
       if (!item.suggestion) return { ...item, suggestion: undefined }
       const cleanedPreview = sanitizePreview(item.suggestion.preview)
       const { field, targetId } = item.suggestion
