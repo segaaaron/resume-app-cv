@@ -126,3 +126,93 @@ export const ALL_TUNABLES: Record<string, Tunable> = {
   semanticThreshold: SEMANTIC_THRESHOLD,
   bulletsPerRoleMax: BULLETS_PER_ROLE_MAX,
 }
+
+/**
+ * CREDIBILITY PENALTIES — the second number.
+ *
+ * The keyword score answers "will a filter pass this?". It cannot answer the
+ * question that decides the interview: "does a person believe this document?" A
+ * résumé listed oldest-first, claiming seven years over dates spanning eleven,
+ * with the same achievement written twice, scores well on keywords and loses the
+ * seven-second screen. Our own writing score rated exactly that CV 81, because its
+ * five dimensions measure craft — impact, verbs, sections, brevity, scan — and
+ * none of them measures whether the reader trusts you.
+ *
+ * These are penalties off 100, and their ORDER is what matters and what is
+ * defensible: a contradiction the reader can catch against LinkedIn costs more
+ * than an untidy date format, because one ends the application and the other
+ * costs a frown. The exact figures are ours and unmeasured — the same honest
+ * caveat as SCORE_WEIGHTS, stated rather than hidden.
+ *
+ * Grouped by what the reader concludes:
+ *   · "this is not true"        → the document is over
+ *   · "a machine wrote this"    → every other line is now suspect
+ *   · "this is careless"        → a deduction, not a rejection
+ */
+export const CREDIBILITY_PENALTIES = {
+  /** Roles oldest-first: the seven-second scan lands on the wrong job. */
+  reverseOrder: {
+    value: 18,
+    basis: "convention" as Basis,
+    why: "Reverse-chronological is the most universal résumé convention there is. Breaking it means the reader's first impression is a job the candidate may have left a decade ago.",
+  },
+  /** An end date that has not happened. */
+  futureDate: {
+    value: 15,
+    basis: "convention" as Basis,
+    why: "A date in the future is checked against LinkedIn immediately. It reads as carelessness at best and as editing at worst — and it is the cheapest possible thing to have got right.",
+  },
+  /** The summary claims years the dates contradict. */
+  yearsContradiction: {
+    value: 15,
+    basis: "convention" as Basis,
+    why: "Two numbers in the same document that disagree. A reader who notices stops taking the rest at face value, and this one is visible without effort.",
+  },
+  /** Each pair of lines saying the same thing. Machine-written tell. */
+  duplicatePair: {
+    value: 8,
+    basis: "convention" as Basis,
+    why: "One achievement written twice is the clearest signal that nobody re-read the document. It compounds: two pairs read as a pattern, not a slip.",
+  },
+  /** Cap so a long CV with many repeats cannot zero the score by itself. */
+  duplicateCap: {
+    value: 24,
+    basis: "chosen" as Basis,
+    why: "Three pairs already establish the impression; further ones tell the reader nothing new and should not drive the number to zero on their own.",
+  },
+  /** A role carrying more lines than a recruiter reads. */
+  overloadedRole: {
+    value: 5,
+    basis: "convention" as Basis,
+    why: "Above the recruiter norm the strong lines get diluted. It costs attention, not trust — a deduction, never a rejection.",
+  },
+  /** Mixed date formats across roles. */
+  mixedDates: {
+    value: 5,
+    basis: "convention" as Basis,
+    why: "Inconsistent formats make the timeline harder to trust at a glance and give strict parsers two shapes to reconcile.",
+  },
+  /** Empty phrasing / clichés, per affected line, capped. */
+  emptyLine: {
+    value: 3,
+    basis: "convention" as Basis,
+    why: "A line that would fit any candidate spends a slot without making a claim. Individually minor, collectively the reason a CV feels generic.",
+  },
+  /** Every figure is an unanchored percentage — the document reads manufactured. */
+  metricSaturation: {
+    value: 12,
+    basis: "convention" as Basis,
+    why: "No career produces a clean percentage for every task. A reader who sees fifteen consecutive 'by N%' endings stops believing all fifteen, including the true ones — and the candidate finds out in the interview, when asked forty percent of what.",
+  },
+  /** The candidate's degree sitting in the Skills list. */
+  degreeAsSkill: {
+    value: 4,
+    basis: "convention" as Basis,
+    why: "It is what they studied, not something they can do, and it dilutes the one section an ATS indexes most heavily. Small, but free to fix.",
+  },
+  emptyLineCap: {
+    value: 12,
+    basis: "chosen" as Basis,
+    why: "Past this the message is already delivered; the fix belongs in the bullet list, not in driving the headline number down further.",
+  },
+} as const

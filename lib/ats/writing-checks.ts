@@ -12,6 +12,23 @@
 // (lib/services/ai/shared/cliches.ts) — one source of truth, never a parallel list.
 import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { findCliches } from "@/lib/services/ai/shared/cliches"
+import { findMergeCandidates, type MergeCandidate } from "./merge-candidates"
+import { assessMetricCredibility, findDegreeInSkills, hasVerifiableLink, type MetricCredibility } from "./metric-credibility"
+import { rankRoleBullets, type RoleBulletRanking } from "./bullet-strength"
+import {
+  checkChronology,
+  checkFutureDates,
+  checkYearsClaim,
+  findNearDuplicateBullets,
+  findOrphanFragments,
+  findIncompleteEducation,
+  type ChronologyIssue,
+  type FutureDateIssue,
+  type YearsClaimIssue,
+  type NearDuplicate,
+  type OrphanFragment,
+  type IncompleteEducation,
+} from "./resume-integrity"
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
 
 interface WorkRow {
@@ -20,6 +37,8 @@ interface WorkRow {
   description?: string
   startDate?: string
   endDate?: string
+  /** Needed by the chronology and future-date checks: an ongoing role has no end. */
+  currentlyWorking?: boolean
 }
 
 /** A bullet that opens with / contains a recruiter cliché — quote it, rewrite it. */
@@ -72,6 +91,28 @@ export interface WritingChecks {
   /** Non-null when the CV mixes date formats (confuses ATS tenure parsing). */
   dateInconsistency: { formats: string[] } | null
   bulletBalance: BulletBalance[]
+  /** Pairs of thin bullets in one role that would read better as a single line. */
+  mergeCandidates: MergeCandidate[]
+  /** Roles listed oldest-first — invisible to a keyword matcher, glaring to a person. */
+  chronology: ChronologyIssue | null
+  /** End dates that have not happened yet. */
+  futureDates: FutureDateIssue[]
+  /** The summary claims more (or fewer) years than the dates support. */
+  yearsClaim: YearsClaimIssue | null
+  /** The same achievement written twice in different words. */
+  nearDuplicates: NearDuplicate[]
+  /** For each overloaded role: which lines carry it and which dilute it. */
+  bulletRanking: RoleBulletRanking[]
+  /** Education entries with a school but no degree or no dates. */
+  incompleteEducation: IncompleteEducation[]
+  /** Bullets that are the tail of the line above, split by a page break on import. */
+  orphanFragments: OrphanFragment[]
+  /** Whether the figures in this CV can be defended in an interview. */
+  metrics: MetricCredibility
+  /** Skill entries that are really the candidate's degree. */
+  degreeInSkills: string[]
+  /** Somewhere a reader can verify the claims — a link of any kind. */
+  hasLink: boolean
 }
 
 // Duty-phrase openers that read as a task list, not achievements. High-signal
@@ -191,5 +232,44 @@ export function analyzeWriting(sectionData: Record<string, unknown>): WritingChe
     duplicateBullets,
     dateInconsistency: formats.size > 1 ? { formats: [...formats] } : null,
     bulletBalance,
+    // Two thin lines telling one story. Deliberately computed here, with the other
+    // deterministic checks, so the panel can offer the merge without a model call
+    // deciding that a merge is warranted — see merge-candidates.ts.
+    mergeCandidates: findMergeCandidates(
+      work.map((j) => ({ targetId: j.id ?? "", jobTitle: j.jobTitle ?? "", bullets: parseBullets(j.description ?? "") })),
+    ),
+    // What a recruiter catches in seven seconds and a keyword matcher never can.
+    // The year is read here, at the single call site, so the checks themselves stay
+    // pure and their tests do not expire.
+    chronology: checkChronology(work),
+    futureDates: checkFutureDates(work, new Date().getFullYear()),
+    yearsClaim: checkYearsClaim(
+      typeof sectionData.summary === "string" ? sectionData.summary : "",
+      work,
+      new Date().getFullYear(),
+    ),
+    nearDuplicates: findNearDuplicateBullets(
+      work.map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
+    ),
+    // The structure check names the problem; this names the instances. Same source
+    // of truth for "how many is too many", so the two can never disagree.
+    bulletRanking: rankRoleBullets(
+      work.map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
+    ),
+    incompleteEducation: findIncompleteEducation(
+      (sectionData.education ?? []) as { school?: string; degree?: string }[],
+    ),
+    orphanFragments: findOrphanFragments(
+      work.map((j) => ({ id: j.id, jobTitle: j.jobTitle, bullets: parseBullets(j.description ?? "") })),
+    ),
+    // Judged as a pattern across the whole history, never line by line: whether a
+    // single figure is impressive needs context we do not have, whether EVERY
+    // figure is an unanchored percentage does not.
+    metrics: assessMetricCredibility(work.flatMap((j) => parseBullets(j.description ?? ""))),
+    degreeInSkills: findDegreeInSkills(
+      ((sectionData.skills ?? []) as { name?: string }[]).map((sk) => sk?.name ?? "").filter(Boolean),
+      (sectionData.education ?? []) as { degree?: string; fieldOfStudy?: string }[],
+    ),
+    hasLink: hasVerifiableLink(sectionData),
   }
 }
