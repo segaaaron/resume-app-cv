@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { replaceWord } from "@/lib/ats/apply-spelling"
+import { applySpellingFix, replaceWord } from "@/lib/ats/apply-spelling"
 
 describe("replaceWord — the 'Fix typo' engine", () => {
   it("corrects real-world resume typos", () => {
@@ -28,5 +28,53 @@ describe("replaceWord — the 'Fix typo' engine", () => {
   it("no-ops on empty input", () => {
     expect(replaceWord("", "a", "b")).toBe("")
     expect(replaceWord("text", "  ", "b")).toBe("text")
+  })
+})
+
+describe("reach — the writer must cover everything the analyst may cite", () => {
+  // Reported from the panel: the finding named a certification, the button was
+  // drawn, and pressing it said the word was not in the CV. The validator walks
+  // every string; this must not stop short of it.
+  it("fixes a typo inside a certification name", () => {
+    const { patch, changed } = applySpellingFix(
+      { certifications: [{ id: "c1", name: "Concurrency IOS swith Swift (2025)", issuer: "" }] },
+      "swith",
+      "with",
+    )
+    expect(changed).toBe(true)
+    expect((patch.certifications as { name: string }[])[0].name).toBe("Concurrency IOS with Swift (2025)")
+  })
+
+  it("reaches the issuer, a project name and a language", () => {
+    const { patch } = applySpellingFix(
+      {
+        certifications: [{ id: "c1", name: "Scrum", issuer: "Scrum Aliance" }],
+        projects: [{ id: "p1", name: "Inventory Managment Tool", role: "", description: "" }],
+        languages: [{ id: "l1", name: "Portugese" }],
+      },
+      "Aliance",
+      "Alliance",
+    )
+    expect((patch.certifications as { issuer: string }[])[0].issuer).toBe("Scrum Alliance")
+
+    const two = applySpellingFix(
+      { projects: [{ id: "p1", name: "Inventory Managment Tool", role: "", description: "" }] },
+      "Managment",
+      "Management",
+    )
+    expect((two.patch.projects as { name: string }[])[0].name).toBe("Inventory Management Tool")
+  })
+
+  it("still refuses to touch what nothing checks", () => {
+    const { changed } = applySpellingFix(
+      {
+        workExperience: [{ id: "w1", employer: "Xiobit Solucions", jobTitle: "", description: "" }],
+        personalDetails: { email: "mi@solucions.com" },
+      },
+      "Solucions",
+      "Solutions",
+    )
+    // An employer name and an email address are the user's data, not our spelling.
+    expect(changed).toBe(false)
   })
 })

@@ -65,3 +65,28 @@ describe("schemas tolerate what the model actually returns", () => {
     expect(parsed.criticalFixes[0].action).toEqual({ kind: "manual" })
   })
 })
+
+describe("fix_dates — the calendar is code's job, not the model's", () => {
+  const clean = {
+    workExperience: [
+      { id: "w1", jobTitle: "iOS Developer", employer: "IA interactive", startDate: "01/2023", endDate: "06/2026", description: "- Shipped the payments flow" },
+      { id: "w2", jobTitle: "Developer", employer: "Xiobit", startDate: "01/2015", endDate: "12/2016", description: "- Built the sync layer" },
+    ],
+  }
+
+  it("draws no button when the dates are consistent and in the past", () => {
+    // Reported: "(2023 – 2026)" raised as a future date, in August 2026, with a
+    // proposed rewrite to "Present" that the button could never have produced.
+    expect(groundFixAction({ kind: "fix_dates" }, clean)).toEqual({ kind: "manual" })
+  })
+
+  it("keeps the button when formats really are mixed", () => {
+    const mixed = {
+      workExperience: [
+        { ...clean.workExperience[0], endDate: "June 2026" },
+        clean.workExperience[1],
+      ],
+    }
+    expect(groundFixAction({ kind: "fix_dates" }, mixed)).toEqual({ kind: "fix_dates" })
+  })
+})

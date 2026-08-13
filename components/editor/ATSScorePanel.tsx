@@ -1,12 +1,22 @@
 "use client"
 
 import { useState, useRef, useMemo } from "react"
-import { useTranslations } from "next-intl"
+import { useLocale, useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
+import { cutReason } from "@/lib/ats/bullet-strength"
+import { suggestFigureSlot } from "@/lib/ats/figure-slot"
+import { toMachineDate } from "@/lib/ats/normalize-dates"
 import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
-import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope, Sparkles, Pencil } from "lucide-react"
+import { isApplicableFix, detectWordCorrections } from "@/lib/ats/fix-text"
+// Same normalization the matcher used to decide "demonstrated", so an accented
+// Spanish skill matches the stored verdict instead of silently missing it.
+import { normalizeTerm } from "@/lib/ats/vocabulary"
+import { computeCredibility, credibilityVerdict } from "@/lib/ats/credibility"
+import { fixAxis, type FixAxis } from "@/lib/ats/fix-impact"
+import { sameSoftRequirement } from "@/lib/ats/skill-dedup"
+import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Users, Layers, Stethoscope, Sparkles, Pencil, PenLine } from "lucide-react"
 import { useTailorCV } from "./hooks/useTailorCV"
 import AtsEngineMatrix from "./AtsEngineMatrix"
 import AtsSafeDownload from "./AtsSafeDownload"
@@ -32,6 +42,13 @@ import { useCvLanguage } from "./hooks/useCvLanguage"
 import type { ReviewItem } from "./hooks/useATSScore"
 import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 import { computeResumeScore, type ResumeScoreKey } from "@/lib/services/ai/shared/resume-score"
+
+/** One colour per number, so the badge and the figure it refers to read as a pair. */
+const AXIS_STYLE: Record<FixAxis, string> = {
+  match: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
+  content: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
+  trust: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+}
 
 function ScoreRing({ score, label }: { score: number; label: string }) {
   const r = 70
@@ -317,6 +334,11 @@ function canAskAI(jobId: string, description: string, bullet: string): boolean {
 
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
+  /** Shared AI error copy — quota messages already live there, in both locales. */
+  const tAi = useTranslations("editor.ai")
+  // The figure hint rewrites the candidate's own sentence, so it has to agree
+  // with the language the interface is speaking.
+  const locale = useLocale()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({
       sectionData: s.sectionData,
@@ -332,6 +354,7 @@ export default function ATSScorePanel() {
     upToDate,
     analyze,
     rescore,
+    creditSoftSkill,
     scoreDelta: delta,
     verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
@@ -381,8 +404,85 @@ export default function ATSScorePanel() {
     recommendedWhy?: string
     /** The same work argued from another angle, so disliking one ends in a choice, not another call. */
     options?: Array<{ text: string; angle: string; why: string }>
+    /**
+     * A merge: the second line this replacement absorbs, deleted on confirm.
+     *
+     * Rides the SAME confirm path as every other bullet write rather than getting
+     * its own — one owner of the serialization is what makes a duplicate
+     * impossible to reintroduce, and a second writer would be a second chance to
+     * get it wrong.
+     */
+    removeIndex?: number
+    removeCurrent?: string
+    /** Marked applied on confirm, so the same offer cannot appear twice. */
+    appliedKey?: string
   } | null>(null)
   const [improvingKey, setImprovingKey] = useState<string | null>(null)
+
+  /**
+   * Fuse two thin bullets of one role into one solid line.
+   *
+   * WHICH two was decided in code before the button was drawn — a model asked to
+   * pick a pair always picks one. This only pays for the writing, and the result
+   * still goes through the same confirm modal: a merge deletes a line the user
+   * wrote, so it is never applied without them seeing exactly what replaces both.
+   */
+  /**
+   * The critical fix the user is completing right now.
+   *
+   * The analyst writes the sentence and then says what is missing from it — the
+   * scale, the figure, the outcome. Applying the text as-is leaves a bullet that
+   * still does not say what changed, and the panel used to send the user off to
+   * another tab to add it, which nobody does. The field is here, with the sentence
+   * already written: we supply the wording, the candidate supplies the number.
+   */
+  const [fixDraft, setFixDraft] = useState<
+    | { key: string; field: "bullet"; targetId: string; index: number; current: string; draft: string }
+    | { key: string; field: "summary"; current: string; draft: string }
+    | null
+  >(null)
+  const [mergingKey, setMergingKey] = useState<string | null>(null)
+  async function runMerge(c: { targetId: string; indexes: [number, number]; texts: [string, string] }) {
+    const key = `merge-${c.targetId}-${c.indexes[0]}-${c.indexes[1]}`
+    setMergingKey(key)
+    try {
+      const res = await apiFetch("/api/ai/merge-bullets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          targetId: c.targetId,
+          indexes: c.indexes,
+          sectionData,
+          language: cvLanguage,
+        }),
+      })
+      if (!res.ok) return
+      const data: { status: "ok"; text: string } | { status: "not_mergeable" } = await res.json()
+      if (data.status !== "ok") {
+        // An honest no. The two lines turned out to be about different work, and
+        // forcing them together would have distorted one of them.
+        toast.info(t("merge_not_mergeable"))
+        markFixApplied(key)
+        return
+      }
+      setBulletFix({
+        targetId: c.targetId,
+        index: c.indexes[0],
+        current: c.texts[0],
+        improved: data.text,
+        recommended: data.text,
+        why: t("merge_why"),
+        removeIndex: c.indexes[1],
+        removeCurrent: c.texts[1],
+        // Carried into the confirm modal so ACCEPTING is what retires the pair —
+        // not merely asking for it. Cancelling must leave the offer standing.
+        appliedKey: key,
+      })
+    } finally {
+      setMergingKey(null)
+    }
+  }
+
   // Soft skills the job asks for that the CV doesn't demonstrate yet — hoisted up
   // from the Tailor run (§③) so ALL bullet work lives in the one list below (§②).
 
@@ -482,6 +582,22 @@ export default function ATSScorePanel() {
    * certainty are left untouched; a wrong date is worse than a mixed one.
    */
   /** @returns true when at least one date was rewritten. */
+  /**
+   * How many dates the unify action could actually rewrite, right now.
+   *
+   * A bare year is left alone on purpose — writing "01/2015" over "2015" invents a
+   * month, and inventing tenure is worse than a mixed format. But that is exactly
+   * the case the finding complains about most, so on a CV whose dates are all bare
+   * years the panel offered "Unify dates to MM/YYYY", the user pressed it, and
+   * nothing happened. This product already ruled on that shape: a button that
+   * cannot do anything is not drawn.
+   */
+  const fixableDates = useMemo(() => {
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    const edu = (sectionData.education ?? []) as { startDate?: string; endDate?: string }[]
+    return normalizeDates(work).changed + normalizeDates(edu).changed
+  }, [sectionData])
+
   function fixDates(): boolean {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const edu = (sectionData.education ?? []) as { startDate?: string; endDate?: string }[]
@@ -575,7 +691,11 @@ export default function ATSScorePanel() {
       // rather than sending the user to a toast that says it was fine all along.
       const defects = canAskAI(action.targetId, job?.description ?? "", bullet) ? bulletDefects(bullet) : []
       const proposed = proposedText?.trim()
-      if (job && bullet && proposed && proposed.length > 25 && proposed !== bullet) {
+      // isApplicableFix, not a bare length check: once the instruction tail is
+      // split off server-side, what remains can be a stub, and replacing a full
+      // bullet with half a sentence leaves the CV worse than before the user
+      // asked for help. No usable text → no button, same rule as groundFixAction.
+      if (job && bullet && proposed && isApplicableFix(proposed, bullet)) {
         // The analyst already wrote the replacement. Offering "Rewrite" here would
         // pay the model to write it a second time; offering nothing — which is
         // what a metric-only defect used to get — left a critical finding dead.
@@ -656,7 +776,10 @@ export default function ATSScorePanel() {
       key = `fix-text-${from.toLowerCase()}`
       label = t("fix_action_replace_text")
       run = () => {
-        const { patch, changed } = applySpellingFix(sectionData, from, to)
+        // includeSkills: the other half of the same bug. The validator could not
+        // see a skill, and the writer would not have written one either — so
+        // "Objetive-C" was unfixable from both ends at once.
+        const { patch, changed } = applySpellingFix(sectionData, from, to, { includeSkills: true })
         if (!changed) { toast.info(t("typo_not_found")); return }
         for (const [k, v] of Object.entries(patch)) {
           updateSectionData(k as Parameters<typeof updateSectionData>[0], v as never)
@@ -676,6 +799,8 @@ export default function ATSScorePanel() {
       label = t("fix_action_add_skill", { skill })
       run = () => { if (addKeywordToSkills(skill)) markFixApplied(key as string) }
     } else if (action.kind === "fix_dates") {
+      // Nothing this button could change → advice only. See fixableDates.
+      if (fixableDates === 0) return null
       key = "fix-dates"
       label = t("fix_action_fix_dates")
       // Mark applied only when a date actually changed. Pressing a button that
@@ -696,16 +821,28 @@ export default function ATSScorePanel() {
     }
 
     if (!run || !label) return null
+    // Which of the two numbers this repair will move, said BEFORE it is pressed.
+    // Every fix moves something measurable, but only add_skill touches the ring —
+    // and a list headed "critical fixes" whose buttons leave the headline figure
+    // untouched reads as a broken product, not as a scoring decision.
+    const axis = fixAxis(action.kind)
     return (
-      <button
-        type="button"
-        onClick={run}
-        disabled={busy}
-        className="mt-2 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#0077B6] to-[#00D4FF] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm transition-all hover:shadow disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cyan-300"
-      >
-        {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
-        {label}
-      </button>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+        <button
+          type="button"
+          onClick={run}
+          disabled={busy}
+          className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#0077B6] to-[#00D4FF] px-2.5 py-1 text-[10px] font-bold text-white shadow-sm transition-all hover:shadow disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+        >
+          {busy ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Wand2 className="h-2.5 w-2.5" />}
+          {label}
+        </button>
+        {axis && (
+          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-bold ${AXIS_STYLE[axis]}`}>
+            {t(`axis_moves_${axis}` as "axis_moves_match")}
+          </span>
+        )}
+      </div>
     )
   }
 
@@ -764,11 +901,22 @@ export default function ATSScorePanel() {
         toast.error(t("metricless_improve_error"))
         return
       }
+      // A merge deletes a second line, so BOTH have to still be the lines that
+      // were merged. If either moved, dropping one would destroy work the user
+      // never agreed to lose.
+      const rm = bulletFix.removeIndex
+      if (rm !== undefined && (rm < 0 || rm >= bullets.length || bullets[rm].trim() !== (bulletFix.removeCurrent ?? "").trim())) {
+        toast.error(t("metricless_improve_error"))
+        return
+      }
       // Replace the one bullet; re-mark every bullet uniformly so the stored
       // description stays consistent (formatBullet strips then re-adds "• ").
       // Through the one owner of the convention, so this path cannot reintroduce
       // a duplicate the rest of the app has made impossible.
-      const written = serializeBulletsReporting(bullets.map((line, i) => (i === index ? improved : line)))
+      const merged = bullets.map((line, i) => (i === index ? improved : line))
+      const written = serializeBulletsReporting(
+        bulletFix.removeIndex !== undefined ? merged.filter((_, i) => i !== bulletFix.removeIndex) : merged,
+      )
       const nextDescription = written.text
       const updated = work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j))
       updateSectionData("workExperience", updated)
@@ -776,6 +924,7 @@ export default function ATSScorePanel() {
       // "improve" button over there must not come back offering to improve it.
       markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
       markFixApplied(`bullet-${targetId}-${index}`)
+      if (bulletFix.appliedKey) markFixApplied(bulletFix.appliedKey)
       toast.success(t("toast_change_applied"))
       if (written.removed > 0) toast.info(t("dedupe_done", { count: written.removed }))
       void runRescore()
@@ -806,7 +955,21 @@ export default function ATSScorePanel() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ skill, sectionData, language: cvLanguage, soft, targetId }),
       })
-      if (!res.ok) { toast.error(t("soft_skill_error")); return }
+      if (!res.ok) {
+        // "Try again" is the wrong advice when the answer is "not today". The
+        // daily cap is a 429 with a code, and repeating the generic failure
+        // message sent the user pressing every skill in the list — measured in
+        // the error log: seven identical 429s in three seconds, each one
+        // reported to them as if the write had simply glitched.
+        const body = (await res.json().catch(() => null)) as { error?: string } | null
+        const code = body?.error ?? ""
+        toast.error(
+          code === "daily_cap_reached" || code === "quota_exceeded" || res.status === 429
+            ? tAi("daily_cap_reached")
+            : t("soft_skill_error"),
+        )
+        return
+      }
       const data = (await res.json().catch(() => null)) as
         | { status: "written"; targetId: string; jobTitle: string; text: string }
         | { status: "no_fit" }
@@ -922,6 +1085,16 @@ export default function ATSScorePanel() {
     () => analyzeWriting(sectionData as Record<string, unknown>),
     [sectionData],
   )
+  /**
+   * One computation, two readers.
+   *
+   * The card and the ranked plan both need it, and each was calling it on every
+   * render — twice per keystroke, and two call sites that could drift apart the
+   * day someone passes a different input to one of them. The credibility number
+   * the user reads and the one the plan ranks by have to be the same number by
+   * construction, not by coincidence.
+   */
+  const credibility = useMemo(() => computeCredibility(liveWritingChecks), [liveWritingChecks])
 
 
   // Fusion: one "Analyze" = one full report. After a manual analysis against a
@@ -956,13 +1129,28 @@ export default function ATSScorePanel() {
    */
   const softSkills = useMemo(() => {
     const fromTailor = new Map(tailor.softSkillSuggestions.map((x) => [x.skill.toLowerCase(), x]))
+    // Skills the bullets were judged to demonstrate are OFF this list, whichever
+    // side proposed them. missingSoftSkills already excludes them — tailor's own
+    // suggestions did not, so a behaviour the user had just written a bullet for
+    // kept being asked for. That is the "the list only ever grows" report: it
+    // could not shrink, because nothing subtracted from it.
+    const proven = new Set((atsResult?.demonstratedSoftSkills ?? []).map(normalizeTerm))
+    const provenList = atsResult?.demonstratedSoftSkills ?? []
     return [
       ...tailor.softSkillSuggestions,
       ...(atsResult?.missingSoftSkills ?? [])
         .filter((sk) => !fromTailor.has(sk.toLowerCase()))
         .map((skill) => ({ skill, suggestion: "" })),
-    ].filter((x) => !appliedItems.has(`soft-${x.skill}`))
-  }, [tailor.softSkillSuggestions, atsResult?.missingSoftSkills, appliedItems])
+    ].filter(
+      (x) =>
+        !appliedItems.has(`soft-${x.skill}`) &&
+        !proven.has(normalizeTerm(x.skill)) &&
+        // Tailor rewords the requirement, so an exact comparison let the same one
+        // return under a new phrasing — the growth report surviving in the corner
+        // the first filter did not reach.
+        !provenList.some((p) => sameSoftRequirement(p, x.skill)),
+    )
+  }, [tailor.softSkillSuggestions, atsResult?.missingSoftSkills, atsResult?.demonstratedSoftSkills, appliedItems])
   async function handleSubmit() {
     setAddedKeywords(new Set())
     setAppliedItems(new Set())
@@ -1061,6 +1249,10 @@ export default function ATSScorePanel() {
       updateSectionData(result.section, result.value)
 
       markFixApplied(itemKey)
+      // The bullet we just wrote demonstrates the skill we asked it to
+      // demonstrate. Credit it now; waiting for the next full analysis meant the
+      // number ignored the work the panel had just talked the user into.
+      if (itemKey.startsWith("soft-")) creditSoftSkill(itemKey.slice("soft-".length))
       toast.success(t("toast_change_applied"))
       // The same write also collapses a line the CV stated twice; say it.
       if (result.section === "workExperience" && (result.duplicatesRemoved ?? 0) > 0) {
@@ -1134,6 +1326,52 @@ export default function ATSScorePanel() {
     updateSectionData("skills", [...existing, ...added])
     setAddedKeywords((prev) => { const next = new Set(prev); candidates.forEach((kw) => next.add(kw)); return next })
     toast.success(t("keywords_added", { count: added.length }))
+    void runRescore()
+  }
+
+  /**
+   * Reorder the work history, most recent first.
+   *
+   * Deterministic: the end date decides, an ongoing role outranks a finished one,
+   * and a role with no readable date KEEPS ITS POSITION rather than being guessed
+   * into place — inventing an order is the same class of harm as inventing a date.
+   * Nothing is deleted and no text is touched; only the sequence changes.
+   */
+  function reorderRoles() {
+    const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+    if (work.length < 2) return
+    const rank = (j: WorkExperienceItem): number | null => {
+      if (j.currentlyWorking) return Number.MAX_SAFE_INTEGER
+      const machine = toMachineDate(j.endDate) ?? toMachineDate(j.startDate)
+      if (!machine) return null
+      const [mm, yyyy] = machine.split("/")
+      return Number(yyyy) * 12 + Number(mm)
+    }
+    // Undated rows keep their index; dated rows sort among the positions dated
+    // rows already occupy. So a partially dated history is improved, never
+    // scrambled.
+    const dated = work.map((j, i) => ({ j, i, r: rank(j) })).filter((x) => x.r !== null)
+    const slots = dated.map((x) => x.i)
+    const sorted = [...dated].sort((a, b) => (b.r as number) - (a.r as number) || a.i - b.i)
+    if (sorted.every((x, k) => x.i === slots[k])) {
+      toast.info(t("cred_order_already"))
+      return
+    }
+    const next = [...work]
+    slots.forEach((slot, k) => { next[slot] = sorted[k].j })
+    updateSectionData("workExperience", next)
+    toast.success(t("cred_order_done"))
+    void runRescore()
+  }
+
+  /** Drop one or more entries from Skills. Nothing else in the CV is touched. */
+  function removeSkills(names: string[]) {
+    const skills = (sectionData.skills ?? []) as { id?: string; name?: string }[]
+    const drop = new Set(names.map((n) => n.trim().toLowerCase()))
+    const next = skills.filter((sk) => !drop.has((sk.name ?? "").trim().toLowerCase()))
+    if (next.length === skills.length) { toast.info(t("typo_not_found")); return }
+    updateSectionData("skills", next as never)
+    toast.success(t("cred_degree_removed", { count: skills.length - next.length }))
     void runRescore()
   }
 
@@ -1289,6 +1527,29 @@ export default function ATSScorePanel() {
             {/* Score section */}
             <div className="flex flex-col items-center gap-1 py-2">
               <ScoreRing score={atsResult.score} label={t("score_label")} />
+              {/* The second number, next to the first, because the first one alone
+                  taught the wrong lesson.
+                  The ring is coverage against THIS posting: it moves when a skill
+                  the posting asked for appears, and by design it cannot move when
+                  a bullet is rewritten. A candidate who quantified three bullets
+                  and watched 53 stay 53 concluded the tool was broken — and the
+                  only lever they could see rewarded stuffing the skills list,
+                  which is the behaviour this product argues against.
+                  Content strength is computed live from the CV, no model and no
+                  posting involved, so the work that the ring ignores lands
+                  somewhere visible the moment it is typed. */}
+              <div className="mt-1 grid w-full max-w-[280px] grid-cols-2 gap-2">
+                <div className="rounded-xl border border-cyan-100 bg-cyan-50/50 px-2.5 py-2 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-cyan-700">{t("axis_match")}</p>
+                  <p className="text-lg font-black leading-none text-[#1a2e4a] tabular-nums">{atsResult.score}</p>
+                  <p className="mt-0.5 text-[9px] leading-snug text-slate-500">{t("axis_match_moves")}</p>
+                </div>
+                <div className="rounded-xl border border-violet-100 bg-violet-50/50 px-2.5 py-2 text-center">
+                  <p className="text-[9px] font-black uppercase tracking-wide text-violet-700">{t("axis_content")}</p>
+                  <p className="text-lg font-black leading-none text-[#1a2e4a] tabular-nums">{cvHealth.overall}</p>
+                  <p className="mt-0.5 text-[9px] leading-snug text-slate-500">{t("axis_content_moves")}</p>
+                </div>
+              </div>
               {delta !== null && delta > 0 && (
                 <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10.5px] font-bold text-emerald-700 ring-1 ring-emerald-200">
                   <TrendingUp className="h-3 w-3 shrink-0" /> {t("score_delta", { delta })}
@@ -1551,9 +1812,187 @@ export default function ATSScorePanel() {
                           <Wand2 className="h-3 w-3 shrink-0 mt-0.5" /> <span>{f.fix}</span>
                         </p>
                       )}
+                      {/* What only the candidate knows, kept OUT of the text above.
+                          It used to be the tail of the same sentence, so "Apply this
+                          text" wrote "add the release volume you can defend" into the
+                          resume. Named with a label and an icon rather than by colour
+                          alone, so the split is legible without relying on hue. */}
+                      {f.needsFromYou?.trim() && (
+                        <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50/70 px-2 py-1.5">
+                          <p className="text-[9.5px] font-bold uppercase tracking-wide text-amber-700 flex items-center gap-1">
+                            <PenLine className="h-2.5 w-2.5 shrink-0" /> {t("fix_needs_from_you")}
+                          </p>
+                          <p className="text-[10.5px] text-amber-900 leading-snug mt-0.5">{f.needsFromYou}</p>
+                        </div>
+                      )}
                       {/* The button the finding earns. Absent on purpose when
                           nothing in the editor can do it in one click. */}
-                      {renderFixAction(f.action, f.fix)}
+                      {(() => {
+                        const a = f.action as { kind?: string; targetId?: string; index?: number } | undefined
+                        const needs = f.needsFromYou?.trim()
+                        const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+                        const job = a?.targetId ? work.find((j) => j.id === a.targetId) : undefined
+                        const currentBullet =
+                          job && a?.kind === "rewrite_bullet" && a.index !== undefined
+                            ? (parseBullets(job.description ?? "")[a.index] ?? "")
+                            : ""
+                        /* The summary needs the same door as a bullet. It was left out
+                           of the first version and that is exactly the hole reported:
+                           a finding that asks for a figure, on the one field where the
+                           only offer was to paste text that still lacks it. */
+                        const currentSummary = a?.kind === "rewrite_summary" ? ((sectionData.summary as string) ?? "") : ""
+                        const editTarget: { key: string; current: string } | null =
+                          needs && f.fix?.trim()
+                            ? currentBullet
+                              ? { key: `fixdraft-${a!.targetId}-${a!.index}`, current: currentBullet }
+                              : currentSummary.trim()
+                                ? { key: "fixdraft-summary", current: currentSummary }
+                                : null
+                            : null
+                        // Only when there is real text to replace AND something only
+                        // the candidate knows. Otherwise the normal button stands.
+                        if (!editTarget) {
+                          const drawn = renderFixAction(f.action, f.fix)
+                          if (drawn) return drawn
+                          /* A finding with no engine behind it, that is nevertheless
+                             the most certain fix in the report: a typo, with the
+                             corrected word already written. It had no button at all
+                             — the panel named the defect, showed the answer, and
+                             sent the user off to find the word by hand. Only drawn
+                             when the misspelling is really in the CV. */
+                          const corrections = f.fix?.trim() ? detectWordCorrections(f.issue, f.fix) : []
+                          /* Presence checked with the SAME reader that will do the
+                             writing, not a regex over the serialized state: that
+                             matched field names and any string anywhere, so the
+                             button could appear for a word the writer would then
+                             fail to find. One reader, one answer. */
+                          const present = corrections.filter(
+                            (c) =>
+                              applySpellingFix(sectionData as unknown as Record<string, unknown>, c.from, c.to, {
+                                includeSkills: true,
+                              }).changed,
+                          )
+                          if (present.length === 0) return null
+                          const cKey = `typo-${present.map((c) => c.from).join("-")}`
+                          if (appliedItems.has(cKey)) {
+                            return (
+                              <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 text-[10px] font-bold">
+                                <Check className="h-2.5 w-2.5" /> {t("applied")}
+                              </span>
+                            )
+                          }
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                for (const c of present) applyTypoFix(c.from, c.to)
+                                markFixApplied(cKey)
+                              }}
+                              className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#1a2e4a] px-2.5 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] cursor-pointer"
+                            >
+                              <Wand2 className="h-2.5 w-2.5" />
+                              {t("fix_action_correct_word", { from: present[0].from, to: present[0].to })}
+                            </button>
+                          )
+                        }
+                        const key = editTarget.key
+                        /**
+                         * Applied stays applied.
+                         *
+                         * This path bypassed renderFixAction, which is where the
+                         * "Applied" badge lives — so after writing the figure the
+                         * button still read "Add your figure and apply", and
+                         * pressing it re-opened the bullet the user had just fixed.
+                         * The finding is a snapshot of the CV as it was; the badge
+                         * is what tells the user which snapshots they have already
+                         * dealt with.
+                         */
+                        if (appliedItems.has(key)) {
+                          return (
+                            <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 px-2.5 py-1 text-[10px] font-bold">
+                              <Check className="h-2.5 w-2.5" /> {t("applied")}
+                            </span>
+                          )
+                        }
+                        // The line may already carry a figure — either this fix was
+                        // applied from elsewhere or the user typed it by hand. Either
+                        // way there is nothing left to ask for.
+                        if (currentBullet && /\d/.test(currentBullet) && !/\d/.test(editTarget.current)) {
+                          return null
+                        }
+                        if (fixDraft?.key !== key) {
+                          return (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setFixDraft(
+                                  currentBullet
+                                    ? { key, field: "bullet", targetId: a!.targetId!, index: a!.index!, current: currentBullet, draft: f.fix }
+                                    : { key, field: "summary", current: currentSummary, draft: f.fix },
+                                )
+                              }
+                              className="mt-2 inline-flex items-center gap-1 rounded-full bg-[#1a2e4a] px-2.5 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] cursor-pointer"
+                            >
+                              <PenLine className="h-2.5 w-2.5" /> {t("fix_complete_and_apply")}
+                            </button>
+                          )
+                        }
+                        return (
+                          <div className="mt-2">
+                            <label htmlFor={key} className="block text-[9.5px] font-bold uppercase tracking-wide text-slate-600">
+                              {t("fix_complete_label")}
+                            </label>
+                            <textarea
+                              id={key}
+                              value={fixDraft.draft}
+                              onChange={(e) => setFixDraft({ ...fixDraft, draft: e.target.value })}
+                              rows={4}
+                              autoFocus
+                              className="mt-1 w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-[11px] leading-snug text-slate-800 focus:border-[#00D4FF] focus:outline-none focus:ring-2 focus:ring-[#00D4FF]/40"
+                            />
+                            <p className="mt-1 text-[9.5px] text-slate-500 leading-snug">{needs}</p>
+                            <div className="mt-1.5 flex gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setFixDraft(null)}
+                                className="rounded-full border border-slate-300 px-2.5 py-1.5 text-[10px] font-bold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+                              >
+                                {t("bullet_edit_cancel")}
+                              </button>
+                              <button
+                                type="button"
+                                disabled={!fixDraft.draft.trim() || fixDraft.draft.trim() === fixDraft.current.trim()}
+                                onClick={() => {
+                                  if (fixDraft.field === "bullet") {
+                                    if (writeBullet(fixDraft.targetId, fixDraft.index, fixDraft.current, fixDraft.draft.trim(), false)) {
+                                      markFixApplied(fixDraft.key)
+                                      setFixDraft(null)
+                                    }
+                                    return
+                                  }
+                                  // Same stale guard as the bullet path: if the summary
+                                  // moved between the analysis and this click, writing
+                                  // over it would destroy an edit the user just made.
+                                  if (((sectionData.summary as string) ?? "").trim() !== fixDraft.current.trim()) {
+                                    toast.error(t("metricless_improve_error"))
+                                    return
+                                  }
+                                  updateSectionData("summary", fixDraft.draft.trim() as never)
+                                  markContentOptimized("opt_summary", fixDraft.draft.trim())
+                                  markFixApplied("fix-summary")
+                                  markFixApplied(fixDraft.key)
+                                  toast.success(t("toast_change_applied"))
+                                  void runRescore()
+                                  setFixDraft(null)
+                                }}
+                                className="rounded-full bg-[#1a2e4a] px-2.5 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] disabled:opacity-50 cursor-pointer"
+                              >
+                                {t("apply_button")}
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })()}
                     </div>
                   </div>
                 </li>
@@ -1609,6 +2048,30 @@ export default function ATSScorePanel() {
                     })}
                   </p>
                   <ul className="flex flex-col gap-1.5">
+                    {/* ONE plan, ordered by what gets the interview — not by what
+                        moves the score. Credibility comes first and always: the
+                        highest-value fix on a real CV (roles listed backwards) is
+                        worth exactly zero points, so a plan ranked by points can
+                        never put it where it belongs. The two are different
+                        currencies and the row says which one it spends, because
+                        adding them into one "potential" number would be the false
+                        precision this product refuses. Detail stays in the card
+                        above; these are the ranked actions. */}
+                    {credibility.findings.map((f) => (
+                      <li
+                        key={`cred-${f.key}`}
+                        onClick={() => scrollToFirst("ats-credibility")}
+                        className="flex items-center gap-2.5 rounded-xl border border-rose-100 bg-rose-50/40 px-3 py-2.5 transition-all hover:border-rose-200 cursor-pointer"
+                      >
+                        <AlertCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                        <span className="flex-1 text-[11px] text-slate-700 leading-snug">
+                          {t(`cred_${f.key}` as "cred_reverse_order", { count: f.count })}
+                        </span>
+                        <span className="shrink-0 text-[9.5px] font-black uppercase tracking-wide text-rose-500">
+                          {t("path_credibility_badge")}
+                        </span>
+                      </li>
+                    ))}
                     {plan.map((lever) => {
                       const Icon = LEVER_ICON[lever.key]
                       const action = leverAction(lever.key)
@@ -1685,6 +2148,28 @@ export default function ATSScorePanel() {
                 <div className="flex-1">
                   <p className="text-[10.5px] font-bold text-amber-800 leading-tight">{t("template_caution_title")}</p>
                   <p className="text-[9.5px] text-amber-700/90 leading-snug mt-0.5">{t("template_caution_desc")}</p>
+                  {/* The cost, named. Without a figure the warning is either ignored
+                      or blamed for the whole gap, and it is neither: the layout is a
+                      5% ding, while 45% of the score is keyword coverage. Telling
+                      the user "your score is low because of the template" would send
+                      them to change designs instead of fixing what actually moves. */}
+                  {!!atsResult.templatePenaltyPoints && (
+                    <p className="text-[10px] font-bold text-amber-900 leading-snug mt-1">
+                      {t("template_cost", {
+                        points: atsResult.templatePenaltyPoints,
+                        raw: atsResult.score + atsResult.templatePenaltyPoints,
+                      })}
+                    </p>
+                  )}
+                  {/* And the part that is evidence rather than a claim: what a parser
+                      actually pulled out of the exported PDF. A two-column layout
+                      fails HERE, not in the 5% — and this is measured, not asserted.
+                      Only shown once the real check has run and really lost ground. */}
+                  {verifyResult && atsResult.score - verifyResult.realScore >= 8 && (
+                    <p className="text-[10px] text-amber-800 leading-snug mt-1">
+                      {t("template_real_loss", { delta: atsResult.score - verifyResult.realScore })}
+                    </p>
+                  )}
                   <button
                     type="button"
                     onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "planillas" }))}
@@ -1703,6 +2188,162 @@ export default function ATSScorePanel() {
                 </div>
               </div>
             )}
+
+            {/* THE SECOND NUMBER.
+                The keyword score answers whether a filter passes the document.
+                This answers whether a person believes it — and the gap between
+                them is the diagnosis. A CV listed oldest-first, claiming seven
+                years over dates spanning eleven, with the same achievement written
+                twice, passes the filter and loses the seven-second screen; our own
+                writing score rated exactly that CV 81, because it measures craft
+                and not trust. Ranked by what the reader CONCLUDES, so a reason to
+                disbelieve outranks a reason to frown however the points land. */}
+            {(() => {
+              const cred = credibility
+              if (cred.findings.length === 0) return null
+              const verdict = credibilityVerdict(atsResult.score, cred.score)
+              const detail: Partial<Record<string, string>> = {
+                reverse_order: liveWritingChecks.chronology
+                  ? t("integrity_order_desc", {
+                      first: liveWritingChecks.chronology.firstShown,
+                      recent: liveWritingChecks.chronology.mostRecent,
+                    })
+                  : "",
+                future_date: liveWritingChecks.futureDates[0]
+                  ? t("integrity_future_desc", {
+                      jobTitle: liveWritingChecks.futureDates[0].jobTitle,
+                      value: liveWritingChecks.futureDates[0].value,
+                    })
+                  : "",
+                incomplete_education: liveWritingChecks.incompleteEducation[0]
+                  ? t("cred_incomplete_education_desc", {
+                      school: liveWritingChecks.incompleteEducation[0].school,
+                      missing: liveWritingChecks.incompleteEducation[0].missingDegree
+                        ? t("cred_missing_degree")
+                        : t("cred_missing_dates"),
+                    })
+                  : "",
+                // Name the entry. "Your degree is listed as a skill" with nothing
+                // pointing at WHICH chip sent the user hunting through their own
+                // resume and concluding the finding was invented — reported in
+                // those words. The chip is right there in the data we measured.
+                degree_as_skill: liveWritingChecks.degreeInSkills.length > 0
+                  ? t("cred_degree_as_skill_desc", { skill: liveWritingChecks.degreeInSkills.join(", ") })
+                  : "",
+                years_contradiction: liveWritingChecks.yearsClaim
+                  ? t("integrity_years_desc", {
+                      claimed: liveWritingChecks.yearsClaim.claimed,
+                      actual: liveWritingChecks.yearsClaim.actual,
+                    })
+                  : "",
+              }
+              return (
+                <div id="ats-credibility" className="rounded-2xl border border-rose-100 bg-gradient-to-br from-rose-50/70 to-orange-50/40 p-3.5 scroll-mt-4">
+                  <p className="text-[10px] font-black tracking-widest uppercase text-rose-600 flex items-center gap-1.5 mb-2">
+                    <AlertCircle className="h-3 w-3" /> {t("integrity_title")}
+                  </p>
+                  <div className="flex items-center justify-center gap-3 mb-2">
+                    <div className="text-center">
+                      <div className="text-[8.5px] font-bold uppercase tracking-wide text-slate-400">{t("cred_bar_ats")}</div>
+                      <div className="text-[17px] font-black text-slate-400 tabular-nums leading-none mt-0.5">{atsResult.score}</div>
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-slate-300 shrink-0" />
+                    <div className="text-center">
+                      <div className="text-[8.5px] font-bold uppercase tracking-wide text-rose-500">{t("cred_bar_recruiter")}</div>
+                      <div className="text-[22px] font-black tabular-nums leading-none mt-0.5 text-rose-600">{cred.score}</div>
+                    </div>
+                  </div>
+                  <p className="text-[10.5px] text-rose-800 leading-snug mb-2 text-center">
+                    {verdict.kind === "keywords_ahead" ? t("cred_gap_keywords_ahead") : t("integrity_hint")}
+                  </p>
+                  <ul className="space-y-2">
+                    {cred.findings.map((f) => (
+                      <li key={f.key} className="rounded-xl border border-rose-200 bg-white/70 p-2.5">
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-[11px] font-bold text-slate-800 leading-snug">
+                            {t(`cred_${f.key}` as "cred_reverse_order", { count: f.count })}
+                          </p>
+                          {/* The unit, because "−18" next to a big score reads as
+                              eighteen points off the match — which it is not, and
+                              was asked about in exactly those words. These are
+                              credibility points; the two numbers never mix. */}
+                          <span className="shrink-0 text-right">
+                            <span className="block text-[10px] font-black tabular-nums text-rose-500">−{f.cost}</span>
+                            <span className="block text-[8px] font-bold uppercase tracking-wide text-rose-400">{t("cred_points_unit")}</span>
+                          </span>
+                        </div>
+                        {detail[f.key] ? (
+                          <p className="text-[10.5px] text-slate-600 leading-snug mt-0.5">{detail[f.key]}</p>
+                        ) : null}
+                        {/* The one finding here we cannot repair FOR the user: only
+                            they know their degree. So the button does the next
+                            honest thing — it opens the section instead of leaving
+                            them to hunt for it. A tab switch that points at nothing
+                            was removed from this panel once, and rightly; this one
+                            names the section it is taking you to. */}
+                        {/* Roles in the wrong order is the highest-value fix on a
+                            real resume and it was pure diagnosis: the card said
+                            "put the most recent first" and left the user to drag
+                            rows in another tab. Sorting by date is arithmetic, so
+                            we do it — most recent first, ongoing roles above
+                            finished ones, and anything undated keeps its place
+                            rather than being guessed at. */}
+                        {f.key === "reverse_order" && (
+                          <button
+                            type="button"
+                            onClick={reorderRoles}
+                            className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#1a2e4a] px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] cursor-pointer"
+                          >
+                            <ListChecks className="h-2.5 w-2.5" /> {t("cred_fix_order")}
+                          </button>
+                        )}
+                        {/* The credential sits in Skills; removing it is one write
+                            and cannot lose anything — the education entry it was
+                            copied from stays exactly where it is. */}
+                        {f.key === "degree_as_skill" && liveWritingChecks.degreeInSkills.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => removeSkills(liveWritingChecks.degreeInSkills)}
+                            className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#1a2e4a] px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] cursor-pointer"
+                          >
+                            <Pencil className="h-2.5 w-2.5" /> {t("cred_fix_degree", { skill: liveWritingChecks.degreeInSkills[0] })}
+                          </button>
+                        )}
+                        {/* Which of the two numbers is true is not ours to decide —
+                            only the candidate knows. The button takes them to the
+                            summary with the contradiction still on screen. */}
+                        {f.key === "years_contradiction" && (
+                          <button
+                            type="button"
+                            onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "content" }))}
+                            className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#1a2e4a] px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] cursor-pointer"
+                          >
+                            <Pencil className="h-2.5 w-2.5" /> {t("cred_fix_years")}
+                          </button>
+                        )}
+                        {f.key === "incomplete_education" && (
+                          <button
+                            type="button"
+                            onClick={() => window.dispatchEvent(new CustomEvent("editor-switch-tab", { detail: "content" }))}
+                            className="mt-1.5 inline-flex items-center gap-1 rounded-full bg-[#1a2e4a] px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-[#24405f] cursor-pointer"
+                          >
+                            <Pencil className="h-2.5 w-2.5" /> {t("cred_fix_education")}
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                  {/* Reported, never scored. A link is the cheapest proof there is
+                      and its absence is invisible to every keyword matcher — but
+                      plenty of honest careers have nothing to link, and docking a
+                      nurse for having no GitHub would be exactly the tech-shaped
+                      blindness the rest of this file works to avoid. */}
+                  {!liveWritingChecks.hasLink && (
+                    <p className="mt-2 text-[10px] text-slate-500 leading-snug">{t("cred_no_link_hint")}</p>
+                  )}
+                </div>
+              )
+            })()}
 
             {/* Bullets to improve — ONE place. Merges the "no metric" signal
                 (contentQuality) with the deterministic cliché check (writingChecks),
@@ -1723,6 +2364,20 @@ export default function ATSScorePanel() {
               // A bullet the CV states twice. The recruiter pass reports the
               // repetition in prose but cannot point at a line; this names the
               // exact twin, so "Remove" below is a real one-click fix.
+              // Exact copies AND the same achievement rewritten. The near-duplicate
+              // pass is what catches a real CV: "Wrote comprehensive unit tests and
+              // coordinated with backend engineers…" next to "Coordinated unit and
+              // UI testing with backend engineers…" — not identical, unmistakably
+              // one thing said twice, and invisible to the exact-match check.
+              // EXACT copies only. The one-click button collapses identical lines,
+              // so anything it cannot remove must not be counted here — the banner
+              // said "1 repeated line" while the button answered "no repeated lines
+              // left", which is the panel arguing with itself in front of the user.
+              //
+              // A near-duplicate is a different problem with a different answer:
+              // the two lines are NOT identical, so deleting one loses words the
+              // candidate wrote. Those go to the review list below, where the user
+              // reads both and decides.
               const dupes = liveWritingChecks.duplicateBullets
               metricless.forEach((b) => add(b.targetId, b.jobTitle, b.index, b.text, "metric"))
               cliche.forEach((c) => add(c.targetId, c.jobTitle, c.index, c.text, "cliche"))
@@ -1731,7 +2386,27 @@ export default function ATSScorePanel() {
               // that said "improve these bullets" all over again. Where a line is
               // already flagged here, the ready-made text just turns "Rewrite"
               // (an LLM call) into "Apply" (free) below.
-              const tailored = new Map(tailor.bulletRewrites.map((r) => [`${r.targetId}-${r.index}`, r]))
+              /**
+               * A rewrite is only offered when it actually rewrites something.
+               *
+               * Reported with a screenshot of the confirm modal showing CURRENT and
+               * SUGGESTED word for word identical — "cuál es la mejora ahí". It
+               * happens when the user has already applied the change (the rewrite
+               * is now the bullet) or when the model returned the line unchanged.
+               * Either way, asking someone to confirm a change to nothing is the
+               * panel wasting their attention and their trust.
+               *
+               * Compared on the normalised text so a difference in spacing or a
+               * trailing period does not count as an improvement either.
+               */
+              const sameLine = (a: string, b: string) =>
+                a.trim().replace(/\s+/g, " ").replace(/[.;,]+$/, "").toLowerCase() ===
+                b.trim().replace(/\s+/g, " ").replace(/[.;,]+$/, "").toLowerCase()
+              const tailored = new Map(
+                tailor.bulletRewrites
+                  .filter((r) => !sameLine(r.text ?? "", r.currentBullet ?? ""))
+                  .map((r) => [`${r.targetId}-${r.index}`, r]),
+              )
               tailor.bulletRewrites.forEach((r) => add(r.targetId, r.jobTitle, r.index, r.currentBullet || r.text, "tailored"))
               // NOT added to the list: a duplicate is not "a bullet to improve",
               // it is a line that should not be there twice. It gets one banner
@@ -1745,12 +2420,16 @@ export default function ATSScorePanel() {
               // overloaded role the cheaper win is the opposite: keep the best
               // lines, drop the weakest — the metric share rises by subtraction,
               // and deleting is a decision the candidate can make in a second.
-              const perRole = new Map<string, number>()
-              for (const b of allBullets) perRole.set(b.targetId, (perRole.get(b.targetId) ?? 0) + 1)
-              const overloaded = new Set(
-                liveWritingChecks.bulletBalance
-                  .filter((bb) => bb.kind === "too_many")
-                  .map((bb) => bb.targetId),
+              // WHICH lines are expendable, not merely which ROLE is crowded.
+              // The badge used to mean "this role has too many and this line has no
+              // repairable defect" — which could label a quantified achievement as
+              // cuttable while the ranking below listed the same line among the six
+              // worth keeping. Two opinions about one line on one screen. Now both
+              // read the same ranking.
+              const cuttable = new Set(
+                liveWritingChecks.bulletRanking.flatMap((r) =>
+                  r.weakest.map((w) => `${r.targetId}-${w.index}`),
+                ),
               )
 
               // Most useful first. A ready rewrite costs nothing to apply; a real
@@ -1767,31 +2446,105 @@ export default function ATSScorePanel() {
               if (bullets.length === 0 && softSkills.length === 0 && (!cq || cq.totalBullets === 0) && dupes.length === 0) return null
               return (
               <div id="ats-bullets" className={`rounded-2xl border border-violet-100 bg-gradient-to-br from-violet-50/70 to-fuchsia-50/40 p-3.5 scroll-mt-4 transition-all duration-500${hlRing("ats-bullets")}`}>
-                <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-2">
+                <p className="text-[10px] font-black tracking-widest uppercase text-violet-600 flex items-center gap-1.5 mb-1">
                   <TrendingUp className="h-3 w-3" /> {t("bullets_to_improve_title")}
                 </p>
+                {/* Says out loud what the score does NOT do. Quantifying a bullet
+                    moves no lever — that is deliberate (a figure the algorithm
+                    cannot verify must not inflate a number), but the section above
+                    is ranked "by impact", so a user fixed ten bullets, watched the
+                    score sit still, and concluded the panel was lying. It was not
+                    lying; it was silent about which kind of win this is. */}
+                <p className="text-[10px] text-violet-700/80 leading-snug mb-2">{t("bullets_not_score_note")}</p>
+
+                {/* A line that is the tail of the one above it, cut off by a page
+                    break when the CV was imported. Import repairs these now, but a
+                    document imported before that fix still carries them — and a
+                    bullet reading "5%." on its own is the most obviously broken
+                    thing a recruiter can see. One click puts the sentence back
+                    together; the user reads both halves first. */}
+                {liveWritingChecks.orphanFragments
+                  .filter((f) => !appliedItems.has(`orphan-${f.targetId}-${f.index}`))
+                  .map((f) => {
+                    const key = `orphan-${f.targetId}-${f.index}`
+                    return (
+                      <div key={key} className="rounded-xl border border-amber-200 bg-amber-50/50 p-2.5 mb-2">
+                        <p className="text-[9.5px] font-bold uppercase tracking-wide text-amber-700 flex items-center gap-1">
+                          <AlertCircle className="h-2.5 w-2.5 shrink-0" /> {t("orphan_title")}
+                        </p>
+                        <p className="text-[10px] text-slate-500 leading-snug mt-0.5">{t("orphan_hint", { jobTitle: f.jobTitle })}</p>
+                        <p className="text-[10.5px] text-slate-700 leading-snug mt-1.5">
+                          {f.previousText} <span className="bg-amber-200/70 rounded px-1">{f.text}</span>
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (writeBullet(f.targetId, f.index - 1, f.previousText, `${f.previousText} ${f.text}`, false)) {
+                              // The tail is now inside the line above; drop the leftover.
+                              const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+                              const job = work.find((j) => j.id === f.targetId)
+                              if (job) {
+                                const lines = parseBullets(job.description ?? "")
+                                const idx = lines.findIndex((l) => l.trim() === f.text)
+                                if (idx >= 0) {
+                                  const written = serializeBulletsReporting(lines.filter((_, i) => i !== idx))
+                                  updateSectionData(
+                                    "workExperience",
+                                    work.map((j) => (j.id === f.targetId ? { ...j, description: written.text } : j)),
+                                  )
+                                }
+                              }
+                              markFixApplied(key)
+                            }
+                          }}
+                          className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-600 px-2.5 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-amber-700 cursor-pointer"
+                        >
+                          <Layers className="h-2.5 w-2.5" /> {t("orphan_action")}
+                        </button>
+                      </div>
+                    )
+                  })}
+
+                {/* Two thin lines telling one story. Offered only on a role already
+                    carrying more lines than a recruiter reads, and only when BOTH
+                    lines are short and neither carries a figure — see
+                    merge-candidates.ts. Deleting loses what the candidate earned;
+                    rewriting one cannot reach the other. This is the third option. */}
+                {liveWritingChecks.mergeCandidates
+                  .filter((c) => !appliedItems.has(`merge-${c.targetId}-${c.indexes[0]}-${c.indexes[1]}`))
+                  .map((c) => {
+                    const key = `merge-${c.targetId}-${c.indexes[0]}-${c.indexes[1]}`
+                    return (
+                      <div key={key} className="rounded-xl border border-violet-200 bg-white/70 p-2.5 mb-2">
+                        <p className="text-[9.5px] font-bold uppercase tracking-wide text-violet-700 flex items-center gap-1">
+                          <Layers className="h-2.5 w-2.5 shrink-0" /> {t("merge_title")}
+                        </p>
+                        <p className="text-[10px] text-slate-500 leading-snug mt-0.5">{t("merge_hint", { jobTitle: c.jobTitle })}</p>
+                        <ul className="mt-1.5 space-y-1">
+                          {c.texts.map((line, i) => (
+                            <li key={i} className="text-[10.5px] text-slate-700 leading-snug flex gap-1.5">
+                              <span className="text-violet-400 shrink-0">•</span>
+                              <span>{line}</span>
+                            </li>
+                          ))}
+                        </ul>
+                        <button
+                          type="button"
+                          onClick={() => void runMerge(c)}
+                          disabled={mergingKey === key}
+                          aria-label={t("merge_action")}
+                          className="mt-2 inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1.5 text-[10px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-50 cursor-pointer"
+                        >
+                          {mergingKey === key ? <Loader2 className="h-2.5 w-2.5 animate-spin" /> : <Layers className="h-2.5 w-2.5" />}
+                          {t("merge_action")}
+                        </button>
+                      </div>
+                    )
+                  })}
                 {cq && cq.totalBullets > 0 && (
                   <p className="text-[11px] text-slate-700 leading-relaxed">
                     {t("content_quality_metrics", { pct: cq.quantificationPct, quantified: cq.quantifiedBullets, total: cq.totalBullets })}
                   </p>
-                )}
-                {/* An overloaded role, said where the work happens. Our own rule
-                    already knew this and only mentioned it in a card further down,
-                    while this list asked for a figure on every one of those lines.
-                    On a role carrying more than a recruiter reads, cutting the
-                    weakest lines raises the metric share faster than writing new
-                    numbers — and it is a decision the candidate can make at once.
-                    We rank and explain; we never delete for them. */}
-                {overloaded.size > 0 && (
-                  <div className="mt-2 rounded-lg border border-violet-200 bg-white/70 p-2.5">
-                    <p className="text-[11px] font-bold leading-snug text-[#1a2e4a]">{t("bullets_overloaded_title")}</p>
-                    <p className="mt-0.5 text-[10px] leading-relaxed text-slate-500">
-                      {t("bullets_overloaded_hint", {
-                        roles: [...overloaded].map((id) => perRole.get(id) ?? 0).length,
-                        max: 6,
-                      })}
-                    </p>
-                  </div>
                 )}
 
                 {/* Soft skills the posting asks for that no bullet demonstrates.
@@ -1851,13 +2604,60 @@ export default function ATSScorePanel() {
                   </div>
                 )}
 
+                {/* Near-duplicates: the same achievement written twice in different
+                    words. No auto-remove — the lines differ, so a machine cannot
+                    know which wording the candidate wants to keep. Both are shown
+                    and the user removes one, or merges them from the card above. */}
+                {liveWritingChecks.nearDuplicates
+                  .filter((n) => !appliedItems.has(`neardup-${n.targetId}-${n.index}`))
+                  .slice(0, 3)
+                  .map((n) => {
+                    const key = `neardup-${n.targetId}-${n.index}`
+                    return (
+                      <div key={key} className="mt-2 rounded-lg border border-amber-200 bg-amber-50/60 p-2.5">
+                        <p className="text-[11px] font-bold text-amber-800 leading-snug">{t("neardup_title")}</p>
+                        <p className="mt-0.5 text-[10px] text-amber-700/90 leading-relaxed">{t("neardup_hint")}</p>
+                        <ul className="mt-1.5 flex flex-col gap-1">
+                          <li className="text-[10.5px] text-slate-600 leading-snug">• {n.otherText}</li>
+                          <li className="text-[10.5px] text-slate-800 leading-snug">• {n.text}</li>
+                        </ul>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
+                            const job = work.find((j) => j.id === n.targetId)
+                            if (!job) return
+                            const lines = parseBullets(job.description ?? "")
+                            const idx = lines.findIndex((l) => l.trim() === n.text.trim())
+                            if (idx < 0) { toast.error(t("metricless_improve_error")); return }
+                            const written = serializeBulletsReporting(lines.filter((_, i) => i !== idx))
+                            updateSectionData(
+                              "workExperience",
+                              work.map((j) => (j.id === n.targetId ? { ...j, description: written.text } : j)),
+                            )
+                            markFixApplied(key)
+                            toast.success(t("toast_change_applied"))
+                            void runRescore()
+                          }}
+                          className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-600 px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-amber-700 cursor-pointer"
+                        >
+                          <Wand2 className="h-2.5 w-2.5" /> {t("neardup_action")}
+                        </button>
+                      </div>
+                    )
+                  })}
+
                 {bullets.length > 0 && (
                   <ul className="flex flex-col gap-1.5 mt-2">
                     {bullets.slice(0, shownBullets).map((b) => {
                       const key = `bullet-${b.targetId}-${b.index}`
                       const busy = improvingKey === key
                       // A rewrite tailor already produced for this exact line.
-                      const ready = tailored.get(`${b.targetId}-${b.index}`)
+                      const readyRaw = tailored.get(`${b.targetId}-${b.index}`)
+                      // The stored bullet may have moved on since the analysis: if
+                      // it already reads like the suggestion, there is nothing to
+                      // apply and no button.
+                      const ready = readyRaw && !sameLine(readyRaw.text ?? "", b.text) ? readyRaw : undefined
                       // Same rule the endpoint applies, plus the "already AI
                       // written" mark: the button is drawn only when pressing it
                       // can change the bullet AND the model has not already
@@ -1880,7 +2680,7 @@ export default function ATSScorePanel() {
                                 {/* A weak line inside a role that already carries
                                     too many. Named so "Remove" stops being a
                                     guess: this is the one worth losing. */}
-                                {overloaded.has(b.targetId) && !b.reasons.has("tailored") && repairableDefects(b.text).length === 0 && (
+                                {cuttable.has(`${b.targetId}-${b.index}`) && !b.reasons.has("tailored") && (
                                   <span className="rounded-full bg-slate-100 px-1.5 text-[9px] font-bold text-slate-600 ring-1 ring-slate-300">{t("reason_cuttable")}</span>
                                 )}
                               </div>
@@ -1904,6 +2704,36 @@ export default function ATSScorePanel() {
                                   count leaves them guessing; writing a [X%] into
                                   their CV for them is the placeholder we refuse to
                                   ship. Examples, not a template to fill. */}
+                              {/* Their own sentence, with the slot where the
+                                  number belongs. Shown, never written: the slot
+                                  is a pointer for the eye, and the textarea above
+                                  still holds only what the candidate types. */}
+                              {(() => {
+                                const slot = suggestFigureSlot(b.text, locale === "es" ? "es" : "en")
+                                if (!slot) return null
+                                return (
+                                  <div className="mt-1 rounded-lg bg-amber-50/70 px-2 py-1.5 ring-1 ring-amber-100">
+                                    <p className="text-[9px] font-bold uppercase tracking-wide text-amber-700">
+                                      {t(`figure_kind_${slot.kind}` as "figure_kind_scale")}
+                                    </p>
+                                    <p className="mt-0.5 text-[10px] leading-snug text-slate-600">{slot.example}</p>
+                                    {/* More than one placement fits most lines,
+                                        and only the candidate knows which figure
+                                        they can defend in an interview. Showing
+                                        one slot and calling it the answer was
+                                        reported as unclear; showing the options
+                                        is the honest version. */}
+                                    {slot.alternatives?.length ? (
+                                      <>
+                                        <p className="mt-1 text-[9px] font-bold uppercase tracking-wide text-amber-600/80">{t("figure_or")}</p>
+                                        {slot.alternatives.map((alt) => (
+                                          <p key={alt} className="text-[10px] leading-snug text-slate-500">{alt}</p>
+                                        ))}
+                                      </>
+                                    ) : null}
+                                  </div>
+                                )
+                              })()}
                               <p className="mt-1 text-[9.5px] leading-relaxed text-slate-500">
                                 {t("bullet_number_hint")}
                               </p>
@@ -2007,16 +2837,87 @@ export default function ATSScorePanel() {
                       <span className="flex items-start gap-1.5">
                         <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" /> {t("check_dates")}
                       </span>
-                      <button
-                        type="button"
-                        onClick={fixDates}
-                        className="ml-4 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#0077B6] to-[#00D4FF] px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm transition-all hover:shadow focus:outline-none focus:ring-2 focus:ring-cyan-300"
-                      >
-                        <Wand2 className="h-2.5 w-2.5" /> {t("fix_action_fix_dates")}
-                      </button>
+                      {/* Same rule as the fix-action button: with nothing to
+                          rewrite (a CV whose dates are all bare years) this is a
+                          button that can only answer "nothing to do". */}
+                      {fixableDates > 0 ? (
+                        <button
+                          type="button"
+                          onClick={fixDates}
+                          className="ml-4 inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-[#0077B6] to-[#00D4FF] px-2.5 py-0.5 text-[10px] font-bold text-white shadow-sm transition-all hover:shadow focus:outline-none focus:ring-2 focus:ring-cyan-300"
+                        >
+                          <Wand2 className="h-2.5 w-2.5" /> {t("fix_action_fix_dates")}
+                        </button>
+                      ) : (
+                        <span className="ml-4 text-[10px] text-slate-500 leading-snug">{t("dates_month_needed")}</span>
+                      )}
                     </li>
                   )}
-                  {liveWritingChecks.bulletBalance.map((bb, i) => (
+                  {/* The structure check named the problem and left the candidate to
+                      work out WHICH lines — the hard part, and the part a person is
+                      worst at on their own writing. Now it names them: the ones
+                      carrying the role, and the ones diluting it, each with the
+                      action that fits. Nothing is deleted for them; two weak lines
+                      about one thing offer a merge instead, so cutting the role
+                      down does not mean throwing information away. */}
+                  {liveWritingChecks.bulletRanking.map((r) => {
+                    // The same pair is offered in two places — here and in the
+                    // "two lines, one story" card. One applied-key for both, so
+                    // merging in either makes it disappear from the other instead
+                    // of leaving the user with a button for work already done.
+                    const mergeHere = liveWritingChecks.mergeCandidates.find(
+                      (m) =>
+                        m.targetId === r.targetId &&
+                        !appliedItems.has(`merge-${m.targetId}-${m.indexes[0]}-${m.indexes[1]}`),
+                    )
+                    return (
+                      <li key={`rank-${r.targetId}`} className="rounded-xl border border-violet-200 bg-white/70 p-2.5">
+                        <p className="text-[11px] font-bold text-slate-800 leading-snug">
+                          {t("rank_title", { jobTitle: r.jobTitle, keep: r.strongest.length, cut: r.weakest.length })}
+                        </p>
+                        <p className="mt-1 text-[9.5px] font-bold uppercase tracking-wide text-emerald-700">{t("rank_keep")}</p>
+                        <ul className="mt-0.5 space-y-0.5">
+                          {r.strongest.map((b) => (
+                            <li key={`k-${b.index}`} className="text-[10px] text-slate-600 leading-snug line-clamp-1">• {b.text}</li>
+                          ))}
+                        </ul>
+                        <p className="mt-1.5 text-[9.5px] font-bold uppercase tracking-wide text-rose-600">{t("rank_cut")}</p>
+                        <ul className="mt-0.5 space-y-1">
+                          {r.weakest.map((b) => (
+                            <li key={`w-${b.index}`} className="rounded-lg bg-rose-50/60 px-2 py-1.5">
+                              <p className="text-[10.5px] text-slate-700 leading-snug">• {b.text}</p>
+                              <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                                <span className="text-[9px] text-rose-600/90">
+                                  {t(`rank_why_${cutReason(b)}` as "rank_why_outranked")}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => setPendingRemove({ targetId: r.targetId, index: b.index, text: b.text })}
+                                  className="ml-auto rounded-full border border-slate-300 px-2 py-0.5 text-[9.5px] font-bold text-slate-600 transition-colors hover:bg-slate-50 cursor-pointer"
+                                >
+                                  {t("bullet_remove")}
+                                </button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                        {r.weakestHidden > 0 && (
+                          <p className="mt-1 text-[9px] text-slate-400">{t("rank_more_weak", { count: r.weakestHidden })}</p>
+                        )}
+                        {mergeHere && (
+                          <button
+                            type="button"
+                            onClick={() => void runMerge(mergeHere)}
+                            disabled={mergingKey === `merge-${mergeHere.targetId}-${mergeHere.indexes[0]}-${mergeHere.indexes[1]}`}
+                            className="mt-2 inline-flex items-center gap-1 rounded-full bg-violet-600 px-2.5 py-1 text-[10px] font-bold text-white transition-colors hover:bg-violet-700 disabled:opacity-50 cursor-pointer"
+                          >
+                            <Layers className="h-2.5 w-2.5" /> {t("rank_merge_instead")}
+                          </button>
+                        )}
+                      </li>
+                    )
+                  })}
+                  {liveWritingChecks.bulletBalance.filter((bb) => bb.kind !== "too_many").map((bb, i) => (
                     <li key={i} className="text-[11px] text-slate-700 leading-snug flex items-start gap-1.5">
                       <AlertCircle className="h-3 w-3 text-amber-500 shrink-0 mt-0.5" />
                       {bb.kind === "too_many"

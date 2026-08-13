@@ -36,13 +36,20 @@ import {
 } from "../shared/ai-types"
 import { computeResumeScore } from "../shared/resume-score"
 import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
-import { findSemanticMatches } from "../shared/semantic-match"
+import { findSemanticCandidates } from "../shared/semantic-match"
+import { confirmEquivalences } from "../shared/skill-equivalence"
+import { findDemonstratedSoftSkills } from "../shared/soft-skill-evidence"
+import { answerHash, readAnswer, writeAnswer } from "../shared/answer-cache"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
 import { findNearMisses } from "@/lib/ats/near-miss"
 import { dropSatisfiedYearRequirements } from "@/lib/ats/experience-years"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { groundFixAction } from "@/lib/ats/fix-actions"
+import { splitFixText } from "@/lib/ats/fix-text"
+
+/** A bracketed blank, or several — the shape of a form, not of an example. */
+const PLACEHOLDER_MENU = /\[[^\]]{0,80}\]|\{[^}]{0,80}\}/
 
 /**
  * The user's real question — "I'm at 63, what do I DO to reach 90/100?" — answered
@@ -69,6 +76,13 @@ function buildGapPlan(
 
 /** Analyses remembered per process — a CV is re-read a handful of times. */
 const ANALYSIS_CACHE_MAX = 100
+
+/**
+ * Version of the ANALYSIS QUESTION: the prompt, the action catalogue and the
+ * schema the model answers with. Not the model id — answerHash already carries
+ * that. Bump on any change to what we ask.
+ */
+const ANALYSIS_REVISION = "v2-dates"
 
 export class AIReviewModule {
   constructor(
@@ -112,6 +126,30 @@ export class AIReviewModule {
    * are handled elsewhere and told to stay out of here, so the unified report never
    * says the same thing twice. Fail-closed: any error returns null, score intact.
    */
+
+  /**
+   * Binds a cached analysis to the resume in front of us, on a COPY.
+   *
+   * Two defects made this necessary, and both were found by asking what a cache
+   * keyed on TEXT means when two resumes can share it:
+   *
+   * 1. Duplicating a CV is a feature of this product, and a duplicate has the same
+   *    text with different job ids. The stored actions carried the ORIGINAL
+   *    resume's ids, so on the copy every "Apply" button silently failed to draw —
+   *    the finding was there, the fix was not. Grounding is per-resume, so it
+   *    cannot be done once and stored; it has to run on every read.
+   *
+   * 2. The caller prunes criticalFixes to avoid repeating what the deterministic
+   *    layer already shows, and it was pruning the object held IN the cache. Each
+   *    read therefore returned fewer findings than the last, on a CV nobody had
+   *    touched. Handing out a copy ends that whole class of bug.
+   */
+  private groundForThisResume(analysis: CvAnalysis, sectionData: Record<string, unknown>): CvAnalysis {
+    const copy = structuredClone(analysis)
+    for (const f of copy.criticalFixes) f.action = groundFixAction(f.action, sectionData)
+    return copy
+  }
+
   private async analyzeResume(
     userId: string,
     resumeText: string,
@@ -123,11 +161,32 @@ export class AIReviewModule {
   ): Promise<CvAnalysis | null> {
     // Same resume, same posting, same language → the answer we already gave.
     // No call, no tokens, no quota: it is the identical question.
-    const cacheKey = `${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}`).digest("hex")}`
+    // ANALYSIS_REVISION is part of the key on purpose. The cache answers "same
+    // resume, same posting → same answer", and that is exactly right until the
+    // QUESTION changes. When the prompt was corrected to stop the model inventing
+    // date problems, every CV already analysed kept serving the old verdict from
+    // the database — the fix shipped and the user still saw the bug, with no way
+    // to tell which. Bump this whenever the prompt or the schema changes; the old
+    // rows stay for audit and are simply never read again.
+    const cacheKey = `${ANALYSIS_REVISION}:${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}`).digest("hex")}`
     const cachedAnalysis = this.analysisCache.get(cacheKey)
     if (cachedAnalysis) {
-      this.logger.info("[AIService.analyzeResume] cache hit")
-      return cachedAnalysis
+      this.logger.info("[AIService.analyzeResume] cache hit (memory)")
+      return this.groundForThisResume(cachedAnalysis, sectionData)
+    }
+    // Then the durable one. The in-memory map held only until the page was
+    // reloaded or the container restarted, so re-running the analysis on an
+    // untouched CV produced a DIFFERENT set of critical fixes — and the user
+    // could not tell "I fixed that" from "it stopped mentioning it". The question
+    // is identical, so the answer has to be.
+    const storedAnalysis = await readAnswer("analysis", cacheKey)
+    if (storedAnalysis) {
+      const restored = CvAnalysisSchema.safeParse(storedAnalysis)
+      if (restored.success) {
+        this.logger.info("[AIService.analyzeResume] cache hit (stored)")
+        this.analysisCache.set(cacheKey, restored.data)
+        return this.groundForThisResume(restored.data, sectionData)
+      }
     }
 
     /**
@@ -177,6 +236,7 @@ Return JSON with this exact shape:
     { "issue": "<what is wrong — quote the real resume text>",
       "why": "<why it costs the ATS match or the recruiter>",
       "fix": "<the exact change to make>",
+      "needsFromYou": "<optional: ONE example sentence showing the finished line with an illustrative figure — never a bracket placeholder, never a menu of options>",
       "severity": "high | medium",
       "action": { "kind": "rewrite_bullet | rewrite_summary | replace_text | add_skill | fix_dates | remove_duplicates | manual",
                   "targetId": "<job ID, rewrite_bullet only>",
@@ -199,6 +259,7 @@ Review the resume against ALL of the following and report every real problem you
 
 Hard rules:
 - DEPTH IS THE POINT. "issue" quotes the candidate's actual line. "why" names the concrete consequence for THIS posting (which requirement goes unmatched, what the recruiter concludes) — never a generic platitude. "fix" is the REPLACEMENT TEXT, ready to paste, written in the candidate's voice — not a description of what they should do. A fix the user cannot copy straight into their CV is a wasted fix.
+- WHEN THE LINE NEEDS A NUMBER THE CANDIDATE HAS NOT GIVEN: write "fix" as the sentence WITHOUT the number, ending naturally, and put the request in "needsFromYou" as ONE concrete example sentence showing what a finished version looks like — using an obviously illustrative figure. Write it as a single example, never as a menu: "e.g. 'reducing crash rate from 2.1% to 0.4% across 50k users'". NEVER emit bracket placeholders like [insert metric] or [timeframe] anywhere: a list of options inside brackets is not an example, it is homework, and if it reaches the CV a recruiter reads it verbatim.
 - Ground EVERYTHING in the real resume text — quote it. Never invent a fact, metric or percentage.
 - Do NOT list which job-description keywords are missing — that is reported separately.
 - No generic filler ("use action verbs" with no example) — always tie the advice to the candidate's actual line.
@@ -209,7 +270,7 @@ Hard rules:
   · rewrite_summary — the summary's CONTENT is weak and the whole paragraph should be rewritten.
   · replace_text — a wording slip: a typo, a grammar error, a wrong word. Put the exact wrong text in "value" (copied verbatim from the resume above) and the corrected text in "replacement". PREFER THIS over rewrite_summary/rewrite_bullet whenever the defect is a few words: rewriting a whole paragraph to fix "more then" changes sentences that were fine.
   · add_skill — a skill the candidate demonstrates in their experience but never lists. Put the exact skill in "value".
-  · fix_dates — dates are in inconsistent or non-machine-readable formats.
+  · fix_dates — dates are in inconsistent or non-machine-readable FORMATS (e.g. "Jan 2023" next to "03/2024"). Nothing else. Never raise a finding about a date being in the future, a role's end year, a gap between roles or how long a tenure is: a deterministic check with the real calendar already reports those, and it is right where you are guessing. In particular NEVER propose changing an end date to "Present" — whether someone still works somewhere is a fact only they know.
   · remove_duplicates — the same bullet text appears more than once.
   · manual — anything else (missing LinkedIn, an unexplained gap, a claim only the candidate can verify). Use it freely; a wrong action is worse than none.
 - Respond ONLY with the JSON, no markdown.`
@@ -233,6 +294,7 @@ Devuelve JSON con esta forma exacta:
     { "issue": "<qué está mal — cita el texto real del CV>",
       "why": "<por qué le cuesta el match ATS o al reclutador>",
       "fix": "<el cambio exacto a hacer>",
+      "needsFromYou": "<opcional: UN ejemplo concreto de cómo queda la línea terminada con una cifra ilustrativa — nunca un marcador entre corchetes, nunca un menú de opciones>",
       "severity": "high | medium",
       "action": { "kind": "rewrite_bullet | rewrite_summary | replace_text | add_skill | fix_dates | remove_duplicates | manual",
                   "targetId": "<ID del puesto, solo rewrite_bullet>",
@@ -255,6 +317,7 @@ Revisa el CV contra TODO lo siguiente y reporta cada problema real que encuentre
 
 Reglas duras:
 - LA PROFUNDIDAD ES EL PUNTO. "issue" cita la línea real del candidato. "why" nombra la consecuencia concreta para ESTA vacante (qué requisito queda sin cubrir, qué concluye el reclutador) — nunca una generalidad. "fix" es el TEXTO DE REEMPLAZO, listo para pegar, escrito en la voz del candidato — no una descripción de lo que debería hacer. Un arreglo que el usuario no puede copiar tal cual a su CV es un arreglo desperdiciado.
+- CUANDO LA LÍNEA NECESITA UN NÚMERO QUE EL CANDIDATO NO DIO: escribe "fix" como la oración SIN el número, terminada de forma natural, y pon el pedido en "needsFromYou" como UN ejemplo concreto que muestre cómo se ve la versión terminada, con una cifra obviamente ilustrativa. Escríbelo como un solo ejemplo, nunca como un menú: "ej.: 'reduciendo los crashes de 2,1% a 0,4% en 50.000 usuarios'". NUNCA uses marcadores entre corchetes como [inserta métrica] o [plazo]: una lista de opciones entre corchetes no es un ejemplo, es tarea, y si llega al CV el reclutador la lee tal cual.
 - Ancla TODO en el texto real del CV — cítalo. Nunca inventes un dato, métrica ni porcentaje.
 - NO listes qué keywords de la vacante faltan — eso se reporta aparte.
 - Sin relleno genérico ("usa verbos de acción" sin ejemplo) — siempre atá el consejo a la línea real del candidato.
@@ -265,7 +328,7 @@ Reglas duras:
   · rewrite_summary — el CONTENIDO del resumen es débil y hay que reescribir el párrafo entero.
   · replace_text — un desliz de redacción: un typo, un error de gramática, una palabra equivocada. Pon el texto exacto equivocado en "value" (copiado literal del CV de arriba) y el corregido en "replacement". PREFIERE ESTA sobre rewrite_summary/rewrite_bullet cuando el defecto son unas pocas palabras: reescribir un párrafo entero para arreglar "more then" cambia frases que estaban bien.
   · add_skill — una habilidad que el candidato demuestra en su experiencia pero nunca lista. Pon la habilidad exacta en "value".
-  · fix_dates — las fechas están en formatos inconsistentes o poco legibles por máquina.
+  · fix_dates — las fechas están en FORMATOS inconsistentes o poco legibles por máquina (ej. "ene 2023" junto a "03/2024"). Nada más. Nunca plantees un hallazgo sobre una fecha futura, el año de fin de un puesto, un hueco entre puestos o la duración de una antigüedad: una verificación determinista con el calendario real ya reporta eso, y acierta donde tú adivinas. En particular NUNCA propongas cambiar una fecha de fin a "Actualidad" — si alguien sigue trabajando ahí es un dato que solo esa persona conoce.
   · remove_duplicates — el mismo bullet aparece más de una vez.
   · manual — cualquier otra cosa (falta LinkedIn, un hueco sin explicar, algo que solo el candidato puede verificar). Úsalo sin miedo; una acción equivocada es peor que ninguna.
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
@@ -320,7 +383,54 @@ Reglas duras:
       // it. A rewrite_bullet pointing at a job that isn't there, or past the end
       // of its bullets, would silently do nothing or edit the wrong line — so it
       // degrades to advice-only. add_skill without a skill is the same story.
-      for (const f of a.criticalFixes) f.action = groundFixAction(f.action, sectionData)
+      // The analyst hinges from replacement text into an order to the candidate in
+      // the same string ("…improving reliability; add the release volume you can
+      // defend"). Pressing "Apply this text" wrote that order into the resume. Split
+      // here, once, server-side: `fix` keeps only what may be pasted, and the order
+      // moves to `needsFromYou`, which the panel shows and never applies.
+      for (const f of a.criticalFixes) {
+        const { replacement, instruction } = splitFixText(f.fix)
+        if (instruction) {
+          f.fix = replacement
+          f.needsFromYou = instruction
+        }
+        /**
+         * A bracket menu is not an example.
+         *
+         * The model answers the "what is missing" slot with a list of options —
+         * "improving [insert your actual metric: crash rate, conversion,
+         * retention, latency, or adoption] for [insert scale: users/orders/
+         * markets] in [insert timeframe]" — and the user is left decoding a form
+         * instead of reading a sentence. Reported verbatim: "pones muchas cosas,
+         * las cuales suelen ser confusas".
+         *
+         * Stripping the brackets leaves "improving for in", so the text is
+         * REPLACED rather than cleaned. Ours is one plain sentence, and it never
+         * invents a figure — that is still the candidate's to supply.
+         */
+        /**
+         * A rewrite with no figure in it always owes the candidate a figure.
+         *
+         * The loop this closes: the analyst rewrites a metric-less bullet into
+         * another metric-less bullet without saying anything is missing, the user
+         * presses Apply, and the deterministic content check immediately flags the
+         * same line again — the report asking for the exact thing it just wrote.
+         * Nothing in the model's reply is required to admit this, so it is decided
+         * here, in code: no digit in the replacement means the number is still
+         * outstanding, and the panel says so instead of pretending the fix is done.
+         */
+        if (f.action?.kind === "rewrite_bullet" && f.fix?.trim() && !/\d/.test(f.fix) && !f.needsFromYou?.trim()) {
+          f.needsFromYou = en
+            ? "This still has no number. Add the result you can defend: what changed, by how much, and over what."
+            : "Esto todavía no tiene número. Agregá el resultado que puedas defender: qué cambió, cuánto y sobre qué."
+        }
+
+        if (f.needsFromYou && PLACEHOLDER_MENU.test(f.needsFromYou)) {
+          f.needsFromYou = en
+            ? "Add the result you can defend: what changed, by how much, and over what — e.g. \"cutting crash rate from 2.1% to 0.4% across 50k users\"."
+            : "Agregá el resultado que puedas defender: qué cambió, cuánto y sobre qué — ej.: \"bajando los crashes de 2,1% a 0,4% en 50.000 usuarios\"."
+        }
+      }
       // Nothing usable → null, so the UI shows no empty analysis.
       if (!a.verdict.trim() && a.criticalFixes.length === 0 && a.strengths.length === 0) return null
       // Remembered only once it survived every guard: a failed or empty read must
@@ -330,7 +440,10 @@ Reglas duras:
         // Oldest first — Map preserves insertion order.
         this.analysisCache.delete(this.analysisCache.keys().next().value as string)
       }
-      return a
+      // Stored AFTER every guard, so a reload re-serves the answer the user
+      // actually saw — not the raw model reply a guard had already rejected.
+      await writeAnswer("analysis", cacheKey, a, AI_MODEL_PROSE)
+      return this.groundForThisResume(a, sectionData)
     } catch (err) {
       this.logger.warn("[AIService.atsScore] recruiter analysis failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
       return null
@@ -482,6 +595,17 @@ Reglas:
     // could not answer "did my edit help?". Pinning the posting side makes any
     // movement attributable to the CV — and saves one LLM call per re-run.
     let extraction: z.infer<typeof ATSExtractionSchema> | null = null
+    /**
+     * True when the requirement list did not come from us.
+     *
+     * `cachedKeywords` is whatever the client sent. Reusing it for THIS request is
+     * the point — it pins the posting side within a session. Writing it to a store
+     * keyed by the posting TEXT is a different matter entirely: the next person who
+     * pastes the same posting would be scored against a list a stranger supplied.
+     * Only an extraction this server produced is allowed to become the shared
+     * answer.
+     */
+    let extractionFromClient = false
     const cached = input.cachedKeywords
     if (cached && (cached.hardSkills.length > 0 || cached.mustHaves.length > 0 || cached.jobTitle.trim())) {
       extraction = {
@@ -491,6 +615,33 @@ Reglas:
         mustHaves: cached.mustHaves,
         summary: cached.summary ?? "",
         label: "ok",
+      }
+      extractionFromClient = true
+    }
+
+    /**
+     * The posting side, pinned across reloads — not just within one page.
+     *
+     * The client already reuses the keywords while the panel stays mounted, and
+     * that ref dies on reload. So a user who re-opened the editor got the posting
+     * RE-EXTRACTED by a model, came back with a slightly different requirement
+     * list, and watched the same resume score 80 and then 71 with soft skills
+     * falling from 100% to 80%. Nothing they did explained it. The posting has not
+     * changed, so the requirements must not either: the answer is stored against
+     * the posting text itself, and only editing the posting buys a fresh read.
+     */
+    const keywordsKey = answerHash(
+      AI_MODEL,
+      en ? "en" : "es",
+      useRole ? "role" : "jd",
+      useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated,
+    )
+    let keywordsFromStore = false
+    if (!extraction) {
+      const storedKeywords = await readAnswer("job-keywords", keywordsKey)
+      if (storedKeywords) {
+        const parsed = ATSExtractionSchema.safeParse(storedKeywords)
+        if (parsed.success) { extraction = parsed.data; keywordsFromStore = true }
       }
     }
 
@@ -574,6 +725,14 @@ Reglas:
       throw new AppError("off_topic", 422)
     }
 
+    // Remembered only once it survived the off-topic guard: storing an empty or
+    // rejected extraction would pin the failure and every later run would inherit
+    // it without ever calling the model again. Skipped when it came from the store
+    // — the row is already there, and a duplicate insert per analysis is noise.
+    if (!keywordsFromStore && !extractionFromClient) {
+      await writeAnswer("job-keywords", keywordsKey, extraction, AI_MODEL)
+    }
+
     // Start the senior-recruiter analysis HERE — after the off-topic guard, so a
     // non-job input never triggers it (no wasted call), but before the embedding
     // recall pass + scoring below, so it overlaps that network work instead of
@@ -599,7 +758,23 @@ Reglas:
     // Match against a haystack carrying ALL listed skills, not the 12 the LLM prompt
     // caps — see buildAtsHaystack. resumeText itself keeps feeding the LLM prompt above.
     const atsHaystack = buildAtsHaystack(data, resumeText)
-    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles)
+
+    // ── Soft skills, measured as behaviour instead of as a string ──────────────
+    // A posting asks for "comfortable working with ambiguity"; no CV contains that
+    // sentence, so string presence held this sub-score at 0% for every user no
+    // matter what they wrote — while the panel told them a bullet would count.
+    // The bullets are read and judged instead. Fails closed: no evidence found
+    // scores exactly as it does today.
+    const bulletLines = collectBulletLines(data)
+    const softDemonstrated = keywords.softSkills.length > 0 && bulletLines.length > 0
+      ? await findDemonstratedSoftSkills(keywords.softSkills, bulletLines, {
+          aiClient: this.aiClient,
+          onFailure: (err: Error) =>
+            this.logger.error("[AIService.atsScore] soft-skill evidence pass failed — soft score is literal-match only", {}, err),
+        })
+      : new Set<string>()
+
+    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated)
 
     // ── Semantic recall pass (embeddings) ──────────────────────────────────────
     // The exact matcher misses a required skill the CV phrases differently
@@ -616,22 +791,35 @@ Reglas:
     let semanticRecallFailed = false
     let semanticMatched = new Set<string>()
     if (match.missingKeywords.length > 0 && cvTerms.length > 0) {
-      const semanticMatches = await findSemanticMatches(
+      const onFailure = (err: Error) => {
+        semanticRecallFailed = true
+        // Loud on purpose: this silently subtracts points. A user re-running
+        // the same CV saw the score fall by tens of points with nothing in
+        // the logs to explain it.
+        this.logger.error("[AIService.atsScore] semantic recall failed — score is exact-match only", { missing: match.missingKeywords.length }, err)
+      }
+      // Cosine proposes, the judge disposes. Cosine alone credited "backend" to a
+      // CV that only says "frontend" (0.684) while missing "cuentas por cobrar" ↔
+      // "accounts receivable" (0.516) — measured, and no threshold separates the
+      // two. The pre-filter now only decides what is worth ASKING about; the
+      // verdict comes from skill-equivalence.ts and is stored, so the same CV
+      // scores the same tomorrow.
+      const candidates = await findSemanticCandidates(
         match.missingKeywords,
         cvTerms,
         (texts) => this.aiClient.embed(texts),
         undefined,
-        (err) => {
-          semanticRecallFailed = true
-          // Loud on purpose: this silently subtracts points. A user re-running
-          // the same CV saw the score fall by tens of points with nothing in
-          // the logs to explain it.
-          this.logger.error("[AIService.atsScore] semantic recall failed — score is exact-match only", { missing: match.missingKeywords.length }, err)
-        },
+        onFailure,
       )
-      if (semanticMatches.size > 0) {
-        semanticMatched = semanticMatches
-        match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles)
+      if (candidates.length > 0) {
+        const semanticMatches = await confirmEquivalences(candidates, {
+          aiClient: this.aiClient,
+          onFailure,
+        })
+        if (semanticMatches.size > 0) {
+          semanticMatched = semanticMatches
+          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated)
+        }
       }
     }
 
@@ -690,6 +878,12 @@ Reglas:
       semanticRecallFailed,
       // Published so the instant re-score credits the same synonym matches.
       semanticMatches: [...semanticMatched],
+      // The cost of the layout, in the same units as the score the user is reading.
+      templatePenaltyPoints: match.score - finalScore,
+      // Published for the same reason the synonym set is: the live re-score has no
+      // model call, so without carrying this the soft lever would collapse back to
+      // 0% the moment the user typed a character.
+      demonstratedSoftSkills: [...softDemonstrated],
       // Always empty: the findings live in ONE list now (the recruiter analysis).
       // Kept on the result shape so a tab left open across the deploy does not
       // crash on a missing field.
@@ -746,7 +940,10 @@ Reglas:
     // reported as "same CV, 70 became 33". Re-embedding per keystroke is not an
     // option; reusing the set is exact and free.
     const carried = input.semanticMatches?.length ? new Set(input.semanticMatches) : undefined
-    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data))
+    // Same carry for the soft-skill evidence: judging bullets needs a model call,
+    // which cannot run per keystroke. The analysis published what it found.
+    const carriedSoft = input.demonstratedSoftSkills?.length ? new Set(input.demonstratedSoftSkills) : undefined
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft)
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
@@ -768,6 +965,8 @@ Reglas:
       missingSoftSkills: match.missingSoftSkills,
       // Carried through so successive re-scores keep crediting the same set.
       semanticMatches: input.semanticMatches ?? [],
+      demonstratedSoftSkills: input.demonstratedSoftSkills ?? [],
+      templatePenaltyPoints: match.score - finalScore,
       suggestions: [],
       subScores: { ...match.subScores, format: formatScore },
       templateSafety,
@@ -1098,6 +1297,24 @@ function buildEvidenceText(data: Record<string, unknown>): string {
     .join("\n")
 }
 
+/**
+ * The work-history bullets as separate lines — the evidence a soft-skill judgement
+ * is made from.
+ *
+ * Separate from buildEvidenceText on purpose: that one joins everything into one
+ * haystack for string matching, and a judgement needs to point at WHICH bullet
+ * shows the behaviour. Titles and employers are excluded deliberately — "Senior
+ * Engineer at Xiobit" is not evidence of collaboration, and letting a title count
+ * is how a soft-skill score turns into a participation trophy.
+ */
+function collectBulletLines(data: Record<string, unknown>): string[] {
+  const work = (data.workExperience as Array<{ description?: string }> | undefined) ?? []
+  return work
+    .flatMap((w) => (w?.description ?? "").split(/\r?\n/))
+    .map((line) => line.replace(/^\s*[•·▪‣*\-–—]\s*/, "").trim())
+    .filter((line) => line.length > 10)
+}
+
 function buildCVTitles(data: Record<string, unknown>): string {
   const pd = data.personalDetails as { jobTitle?: string } | undefined
   const work = (data.workExperience as Array<{ jobTitle?: string }> | undefined) ?? []
@@ -1105,19 +1322,64 @@ function buildCVTitles(data: Record<string, unknown>): string {
 }
 
 /**
- * The presence haystack for the exact keyword matcher. buildResumeContext caps the
- * Skills list at 12 (a token budget for the LLM prompt), but the matcher must see
- * EVERY listed skill — otherwise a skill past the 12th is invisible to termPresent
- * and gets reported as "missing" though the user already has it (the reported bug:
- * "tenía skills ya aplicadas y igual me lo sugirió"). Appending the full, deduped
- * skill list is free here: this string feeds computeATSMatch only, never the LLM.
+ * The presence haystack for the exact keyword matcher.
+ *
+ * buildResumeContext truncates EVERY section to fit the LLM's token budget — ten
+ * roles, forty skills, six certifications, six projects, six education entries —
+ * and that same truncated string was being reused to answer a completely different
+ * question: does the candidate have this keyword? Anything past a cap was invisible
+ * to termPresent and got reported as MISSING although the user had already written
+ * it. That bug was found and fixed once, for skills alone ("tenía skills ya
+ * aplicadas y igual me lo sugirió"), and the fix was never generalised — so the
+ * same defect stayed alive in every other section.
+ *
+ * It bites hardest where it hurts most: a nurse, an accountant, an electrician —
+ * professions where the CERTIFICATION is the credential — with more than six of
+ * them would be told the seventh was missing.
+ *
+ * The full lists are appended here and nowhere else: this string feeds
+ * computeATSMatch only, never a prompt, so completeness costs nothing. The prompt
+ * keeps its caps, which is what they were for.
  */
 function buildAtsHaystack(data: Record<string, unknown>, resumeText: string): string {
-  const names = ((data.skills as Array<{ name?: string }> | undefined) ?? [])
-    .map((s) => (s?.name ?? "").trim())
-    .filter(Boolean)
-  if (names.length === 0) return resumeText
-  return `${resumeText}\nSkills: ${[...new Set(names)].join(", ")}`
+  const parts: string[] = [resumeText]
+
+  const push = (label: string, values: string[]) => {
+    const clean = [...new Set(values.map((v) => v.trim()).filter(Boolean))]
+    if (clean.length > 0) parts.push(`${label}: ${clean.join(", ")}`)
+  }
+
+  push("Skills", ((data.skills as Array<{ name?: string }> | undefined) ?? []).map((s) => s?.name ?? ""))
+  push(
+    "Certifications",
+    ((data.certifications as Array<{ name?: string; issuer?: string }> | undefined) ?? []).flatMap((c) => [
+      c?.name ?? "",
+      c?.issuer ?? "",
+    ]),
+  )
+  push(
+    "Projects",
+    ((data.projects as Array<{ name?: string; description?: string }> | undefined) ?? []).flatMap((p) => [
+      p?.name ?? "",
+      p?.description ?? "",
+    ]),
+  )
+  push(
+    "Education",
+    ((data.education as Array<{ degree?: string; fieldOfStudy?: string; school?: string }> | undefined) ?? []).flatMap(
+      (e) => [e?.degree ?? "", e?.fieldOfStudy ?? "", e?.school ?? ""],
+    ),
+  )
+  push("Languages", ((data.languages as Array<{ name?: string }> | undefined) ?? []).map((l) => l?.name ?? ""))
+  // Roles past the prompt's tenth are still the candidate's experience.
+  push(
+    "Experience",
+    ((data.workExperience as Array<{ jobTitle?: string; employer?: string; description?: string }> | undefined) ?? []).flatMap(
+      (w) => [w?.jobTitle ?? "", w?.employer ?? "", w?.description ?? ""],
+    ),
+  )
+
+  return parts.join("\n")
 }
 
 /** Current value of a suggestion's target field, so a no-op "improvement"

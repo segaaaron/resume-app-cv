@@ -30,12 +30,32 @@ export function replaceWord(text: string, typed: string, correct: string): strin
   })
 }
 
-/** Sections the corrector may rewrite, paired with the fields inside each. */
+/**
+ * Sections the corrector may rewrite, paired with the fields inside each.
+ *
+ * This list has to cover everything the ANALYST is allowed to cite, or the panel
+ * draws a button that cannot work. Reported: a certification reading "Concurrency
+ * IOS swith Swift (2025)" was found, "Fix the wording" was offered, and pressing
+ * it answered "couldn't find that word to replace" — because groundFixAction
+ * validates a replacement against the WHOLE CV (a deep string walk) while this
+ * list stopped at prose. The validator said yes to a surface the writer could not
+ * reach: the same two-lists-disagreeing failure this file was already refactored
+ * once to remove, reappearing between two files instead of within one.
+ *
+ * Named fields (certification names, issuers, language names, project titles) are
+ * included deliberately. They are safe to touch here because replaceWord only
+ * matches whole, boundary-delimited words and the correction is grounded — it had
+ * to appear literally in the CV before any button was drawn. Contact details,
+ * URLs, employers and institutions stay out: nothing checks them, so nothing may
+ * rewrite them.
+ */
 const PROSE_FIELDS: Record<string, string[]> = {
   workExperience: ["jobTitle", "description"],
   education: ["degree", "fieldOfStudy", "description"],
-  projects: ["role", "description"],
+  projects: ["name", "role", "description"],
   volunteer: ["role", "description"],
+  certifications: ["name", "issuer"],
+  languages: ["name"],
 }
 
 type Unknown = Record<string, unknown>
@@ -49,8 +69,9 @@ type Unknown = Record<string, unknown>
  * user made once in the summary is usually made again in a bullet, and fixing
  * "the one the panel showed me" leaves the other behind.
  *
- * Mirrors collectSpellcheckText: fields that hold names (employer, institution,
- * skills, certifications) are never rewritten, since they were never checked.
+ * Covers every field the analyst may cite (see PROSE_FIELDS), so a correction the
+ * panel offers is always one this can carry out. Employers, institutions, contact
+ * details and URLs stay untouched — nothing reads them, so nothing rewrites them.
  */
 export function applySpellingFix(
   sectionData: Unknown,

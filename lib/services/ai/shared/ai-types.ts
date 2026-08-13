@@ -202,6 +202,20 @@ export interface ATSScoreResult {
   /** Requirements the CV states in other words, echoed so the instant re-score
    *  scores the same way this analysis did. */
   semanticMatches: string[]
+  /**
+   * Points the template's layout cost this score, already applied.
+   *
+   * Published rather than recomputed in the UI so the panel can never state a
+   * different number than the one in the score. It is small on purpose — a
+   * multi-column layout MAY be reordered by a strict parser, not always — and
+   * naming the exact figure is what stops the user blaming the template for a gap
+   * that is really missing keywords, which is where 45% of the score lives.
+   */
+  templatePenaltyPoints: number
+  /** Soft skills the work-history bullets were judged to DEMONSTRATE. Echoed for
+   *  the same reason as semanticMatches: the live re-score has no model call, and
+   *  without carrying this the soft lever would fall back to 0% on every keystroke. */
+  demonstratedSoftSkills: string[]
   /** Reported content-quality signals (metrics, weak openers). Not part of the score. */
   contentQuality: ATSContentQuality
   /** Ranked "path to your target": the levers that move THIS score, each with the
@@ -257,6 +271,9 @@ export interface ATSRescoreInput {
    * credits the same set.
    */
   semanticMatches?: string[]
+  /** Soft skills the full analysis judged demonstrated, carried in for the same
+   *  reason — judging bullets needs a model call and cannot run per keystroke. */
+  demonstratedSoftSkills?: string[]
 }
 
 // LLM call #1 for ats-score: extract the requirements from the job description
@@ -353,6 +370,17 @@ export const CvAnalysisSchema = z.object({
         issue: z.string().catch(""),
         why: z.string().catch(""),
         fix: z.string().catch(""),
+        /**
+         * The part of `fix` that is an order to the candidate rather than CV text
+         * ("add the release volume you can defend"), split off server-side.
+         *
+         * It exists because `fix` was doing two jobs at once: it was printed as
+         * the explanation AND pasted into the resume when the user pressed
+         * "Apply this text" — so the instruction went out to recruiters as part
+         * of the bullet. Now the appliable half is `fix` and the half that must
+         * only ever be read is here.
+         */
+        needsFromYou: z.string().catch("").optional(),
         severity: z.enum(["high", "medium"]).catch("medium"),
         action: CvFixActionSchema,
       }),

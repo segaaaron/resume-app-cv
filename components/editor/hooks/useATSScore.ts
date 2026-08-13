@@ -55,6 +55,12 @@ export interface ATSResult {
   listedOnlyKeywords?: string[]
   /** Requirements the CV states in other words — carried into every re-score. */
   semanticMatches?: string[]
+  /** Points the chosen template cost this score. Published by the scorer so the
+   *  panel cannot state a different figure than the one actually applied. */
+  templatePenaltyPoints?: number
+  /** Soft skills the bullets were judged to demonstrate — carried the same way,
+   *  because judging a bullet needs a model call and a keystroke cannot pay for one. */
+  demonstratedSoftSkills?: string[]
   /** The synonym pass could not run, so the score is understated. Belongs to the
    *  analysis, so it survives a re-score rather than vanishing on a keystroke. */
   semanticRecallFailed?: boolean
@@ -101,7 +107,12 @@ export interface ATSResult {
     criticalFixes: {
       issue: string
       why: string
+      /** Only what may be pasted into the CV — the instruction half is split off
+       *  server-side into needsFromYou, because applying it wrote an order to the
+       *  candidate into their own resume. */
       fix: string
+      /** What only the candidate knows. Shown, never applied. */
+      needsFromYou?: string
       severity: "high" | "medium"
       /** The engine that repairs this finding — rendered as a real button. */
       action?: FixAction
@@ -118,6 +129,20 @@ export interface ATSResult {
     dateInconsistency: { formats: string[] } | null
     bulletBalance: { targetId: string; jobTitle: string; count: number; kind: "too_many" | "none" }[]
   }
+}
+
+/**
+ * A cheap, stable fingerprint of the parts of the CV the recruiter analysis reads.
+ *
+ * Deliberately not the whole object: template, colours and ordering of unrelated
+ * sections must not make an analysis look stale. What the analyst reads is the
+ * summary, the work history, the skills and the education — change any of those
+ * and its findings are about a document that no longer exists.
+ */
+function cvFingerprint(data: Record<string, unknown> | undefined): string {
+  if (!data) return ""
+  const pick = ["summary", "workExperience", "skills", "education", "certifications", "projects"]
+  return pick.map((k) => JSON.stringify(data[k] ?? null)).join("|")
 }
 
 export interface VerifyResult {
@@ -220,6 +245,23 @@ export function useATSScore() {
   // debounced rescore() below, so re-running the LLM on the same posting adds
   // nothing. This lets the UI say "up to date" instead of inviting a dead click.
   const [analyzedInputKey, setAnalyzedInputKey] = useState<string | null>(null)
+  /**
+   * The CV as it was when the recruiter analysis ran.
+   *
+   * "Up to date" used to mean only "the posting has not changed", on the reasoning
+   * that a CV edit is already covered by the live re-score. Half of that is true:
+   * the NUMBER updates on every keystroke, but the FINDINGS do not — they were
+   * written about the CV as it stood, and after fixing ten bullets the user is
+   * reading a list of defects they already repaired, with the button telling them
+   * the analysis is current. Reported exactly that way: "arreglé varias cosas y el
+   * score no se actualizó, debería dejarme re-analizar".
+   *
+   * The old objection was cost — a re-analysis meant a fresh LLM call. It does not
+   * any more: the posting's keywords are pinned and the analysis is cached by
+   * content, so re-running an UNCHANGED CV returns the same answer for free, and
+   * re-running a changed one is exactly what the user is asking for.
+   */
+  const [analyzedCvKey, setAnalyzedCvKey] = useState<string | null>(null)
   /**
    * Keywords extracted from the posting currently in the box, kept so a re-run
    * over the SAME posting reuses them instead of re-sampling the model.
@@ -340,6 +382,7 @@ export function useATSScore() {
       }
       lastKeyRef.current = key
       setAnalyzedInputKey(`${mode}:${text}`)
+      setAnalyzedCvKey(cvFingerprint(sectionData))
       setCooldownUntil(Date.now() + 120_000)
     } catch {
       toast.error(t("error"))
@@ -351,6 +394,17 @@ export function useATSScore() {
   // Keep the latest result reachable from rescore() without stale-closure risk.
   const atsResultRef = useRef<ATSResult | null>(null)
   atsResultRef.current = atsResult
+  /**
+   * Soft skills demonstrated by a bullet this session wrote, credited without a
+   * model call. A ref rather than state: it must be readable by the debounced
+   * rescore without re-creating it, and it never renders anything on its own.
+   */
+  const locallyProvenRef = useRef<string[]>([])
+  const creditSoftSkill = useCallback((skill: string) => {
+    const s = skill.trim()
+    if (s && !locallyProvenRef.current.includes(s)) locallyProvenRef.current.push(s)
+  }, [])
+
   /** sectionData already sent for scoring — dedupes manual vs debounced rescore. */
   const lastScoredRef = useRef<unknown>(null)
 
@@ -382,6 +436,24 @@ export function useATSScore() {
           // re-score ran exact-match only while the analysis had run WITH
           // synonyms, so the number collapsed the moment the CV was edited.
           semanticMatches: prev?.semanticMatches ?? [],
+          // Soft-skill credit is decided by a model reading the bullets, and this
+          // re-score is deterministic — it cannot re-run that pass on every
+          // keystroke, so it carries the last verdict forward.
+          //
+          // That left a real hole: a bullet the panel ITSELF just wrote to
+          // demonstrate a skill was not credited until the next full analysis.
+          // The candidate pressed our button, accepted our sentence, and the
+          // number stayed where it was. We do not need a model to know what that
+          // bullet demonstrates — we asked for it by name.
+          // Deduped and capped to the schema's limit. The server rejects an array
+          // over 40 entries, and a rejected re-score returns null in silence —
+          // the number would simply stop responding to edits with nothing on
+          // screen to explain it. The two sources overlap by design (a full
+          // analysis re-reports what this session already credited), so without
+          // the dedupe the cap arrives much sooner than 40 real skills.
+          demonstratedSoftSkills: [
+            ...new Set([...(prev?.demonstratedSoftSkills ?? []), ...locallyProvenRef.current]),
+          ].slice(0, 40),
         }),
       })
       if (!res.ok) return null
@@ -493,7 +565,14 @@ export function useATSScore() {
   const hasResult = atsResult !== null || reviewResult !== null
   // True when a result is on screen AND the job input is unchanged since it was
   // produced. The Analyze button reflects this: "up to date" vs "Re-analyze".
-  const upToDate = hasResult && analyzedInputKey !== null && `${mode}:${input.trim()}` === analyzedInputKey
+  // Current means BOTH sides are unchanged: the posting it was scored against and
+  // the CV it was written about.
+  const upToDate =
+    hasResult &&
+    analyzedInputKey !== null &&
+    `${mode}:${input.trim()}` === analyzedInputKey &&
+    analyzedCvKey !== null &&
+    cvFingerprint(sectionData) === analyzedCvKey
 
   return {
     input, setInput,
@@ -505,6 +584,7 @@ export function useATSScore() {
     upToDate,
     analyze,
     rescore,
+    creditSoftSkill,
     scoreDelta,
     verifyReal, verifyResult, verifyLoading,
     cooldownUntil,
