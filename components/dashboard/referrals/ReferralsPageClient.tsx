@@ -13,6 +13,7 @@ import ReferralStats from "./ReferralStats"
 import ReferralHowItWorks from "./ReferralHowItWorks"
 import ReferralHistory from "./ReferralHistory"
 import ReferralFAQ from "./ReferralFAQ"
+import { apiFetch } from "@/lib/apiFetch"
 
 export interface ReferralStatusData {
   referralCode: string
@@ -51,7 +52,7 @@ export default function ReferralsPageClient({ locale, origin, initialStatus }: P
   // Light revalidation hook (in case user just got a new conversion)
   useEffect(() => {
     const refresh = () => {
-      fetch("/api/referrals")
+      apiFetch("/api/referrals", { silent: true })
         .then((r) => (r.ok ? r.json() : null))
         .then((data) => { if (data) setStatus(data) })
         .catch(() => { /* silent */ })

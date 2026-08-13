@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { RefreshCw, Wallet, Zap, ShieldAlert, CreditCard, CloudOff } from "lucide-react"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface Money { amount: number; currency: string }
 interface Charge { id: string; amount: number; currency: string; status: string; paid: boolean; refunded: boolean; description: string | null; email: string | null; created: number }
@@ -29,7 +30,7 @@ export default function StripeLivePanel() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const res = await fetch("/api/admin/stripe/live")
+      const res = await apiFetch("/api/admin/stripe/live")
       if (res.status === 503) { setState("disabled"); setData(null); return }
       if (!res.ok) throw new Error("fetch failed")
       setData(await res.json())

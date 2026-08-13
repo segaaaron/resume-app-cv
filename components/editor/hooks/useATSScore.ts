@@ -18,6 +18,7 @@ import type { EngineSimulation } from "@/lib/ats/engines"
 import { track } from "@/lib/analytics/track"
 import { scoreBucket } from "@/lib/analytics/user-type"
 import { useEditorPro } from "../EditorContext"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 
 /** The engine that repairs a finding — mirrors CvFixAction on the server. */
 export interface FixAction {
@@ -460,7 +461,16 @@ export function useATSScore() {
           ].slice(0, 40),
         }),
       })
-      if (!res.ok) return null
+      if (!res.ok) {
+        // Silent to the user ON PURPOSE — a live re-score that fails must not
+        // interrupt typing. Silent to US was the mistake: this runs on every
+        // edit pause, so if it breaks, every PRO user watches their score sit
+        // still while they improve their CV, and nobody would ever report it as
+        // an error because no error is shown. A 4xx/5xx has a server row; what
+        // this adds is the count of users actually affected.
+        reportUxFailure("ats_rescore_failed", { status: res.status })
+        return null
+      }
       const data: ATSResult = await res.json()
       // Preserve the LLM-only fields the deterministic rescore doesn't produce:
       // summary/suggestions (from the analyze) and analysis (the recruiter pass).
@@ -479,8 +489,11 @@ export function useATSScore() {
       // edit that LOWERED the score left a stale "+N" badge under the new number.
       setScoreDelta(d)
       return d
-    } catch {
+    } catch (err) {
       // Silent — keep the prior score rather than surfacing a re-score failure.
+      // Recorded all the same: a thrown re-score is a broken response body or a
+      // dead network, and this is the only place either can be seen.
+      reportUxFailure("ats_rescore_threw", { name: err instanceof Error ? err.name.slice(0, 40) : "unknown" })
       return null
     }
   }, [cvLanguage])
@@ -557,7 +570,13 @@ export function useATSScore() {
       if (!res.ok) { if (!auto) toast.error(t("verify_error")); return }
       setVerifyResult(await res.json())
       track("ats_verified_real", { plan })
-    } catch {
+    } catch (err) {
+      // The automatic run says nothing to the user by design — it is a bonus
+      // check nobody asked for. But this is the ONE honest number in the panel
+      // (what a parser really reads out of the exported PDF), it fires after
+      // every analysis, and a silent failure means the block simply never
+      // appears: no error, no block, no way to know it stopped working.
+      if (auto) reportUxFailure("ats_verify_real_auto_failed", { name: err instanceof Error ? err.name.slice(0, 40) : "unknown" })
       if (!auto) toast.error(t("verify_error"))
     } finally {
       setVerifyLoading(false)

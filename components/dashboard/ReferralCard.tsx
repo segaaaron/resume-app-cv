@@ -9,6 +9,7 @@ import { toast } from "sonner"
 import { cn } from "@/lib/utils"
 import { isActive } from "@/lib/plans"
 import { track } from "@/lib/analytics/track"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface NextTier {
   tier: number
@@ -54,7 +55,7 @@ export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: 
       setLoading(false)
       return
     }
-    fetch("/api/referrals")
+    apiFetch("/api/referrals", { silent: true })
       .then((r) => {
         if (!r.ok) throw new Error("referrals fetch failed")
         return r.json()

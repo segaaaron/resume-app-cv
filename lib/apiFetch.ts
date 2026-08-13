@@ -1,6 +1,7 @@
 import { toast } from "sonner"
 import { track } from "@/lib/analytics/track"
 import { serviceFromUrl } from "@/lib/analytics/events"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 
 const MESSAGES = {
   es: {
@@ -76,11 +77,24 @@ export async function apiFetch(url: string, options?: ApiFetchOptions): Promise<
   } catch (err) {
     // Propagate AbortError / TimeoutError so callers can distinguish cancellation.
     if (err instanceof DOMException && (err.name === "AbortError" || err.name === "TimeoutError")) {
+      // A TIMEOUT is a failure of ours and it is invisible everywhere else: the
+      // request never completed, so no server row exists, and it is swallowed by
+      // the caller's catch as if it were a user cancellation. The AI endpoints
+      // are the slow ones — precisely the ones that hit this ceiling — and until
+      // now "the button did nothing after 30 seconds" produced no record at all.
+      // A user-initiated abort is NOT reported: nothing failed.
+      if (err.name === "TimeoutError") {
+        const svc = serviceFromUrl(url)
+        reportUxFailure("request_timeout", { endpoint: svc.endpoint ?? "unknown", source: svc.source, timeoutMs: effectiveTimeout })
+      }
       throw err
     }
     // Network-level failure the user actually saw (connection dropped, DNS, CORS).
+    // Recorded, not merely counted in analytics: nothing reached the server, so
+    // the Service Errors panel is the ONLY place this can ever appear.
     const svc = serviceFromUrl(url)
     track("service_error_shown", { source: svc.source, endpoint: svc.endpoint, status: 0, error_type: "network" })
+    reportUxFailure("request_network_failed", { endpoint: svc.endpoint ?? "unknown", source: svc.source })
     if (!silent) toast.error(msgs.network_error)
     throw new Error("network_error")
   } finally {
@@ -92,6 +106,16 @@ export async function apiFetch(url: string, options?: ApiFetchOptions): Promise<
   if (res.status >= 500) {
     const svc = serviceFromUrl(url)
     track("service_error_shown", { source: svc.source, endpoint: svc.endpoint, status: res.status, error_type: "server" })
+    // A 502/503/504 comes from the proxy, NOT from the app: the container was
+    // restarting, the deploy was mid-flight, the request timed out upstream.
+    // Next never ran, so `handleError` never wrote a row and the outage is
+    // invisible in the panel — exactly the window in which a user is most
+    // likely to be looking at a broken screen. A 500 IS ours and is already
+    // recorded server-side with its real message; reporting it again would file
+    // the same failure twice under a worse description.
+    if (res.status === 502 || res.status === 503 || res.status === 504) {
+      reportUxFailure("request_gateway_error", { endpoint: svc.endpoint ?? "unknown", source: svc.source, status: res.status })
+    }
     if (!silent) {
       toast.error(res.status === 503 ? msgs.service_unavailable : msgs.server_error)
     }

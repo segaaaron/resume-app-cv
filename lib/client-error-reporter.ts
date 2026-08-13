@@ -7,7 +7,7 @@
 const sent = new Set<string>()
 const MAX_PER_LOAD = 50
 
-export type ClientErrorKind = "error" | "unhandledrejection" | "react"
+export type ClientErrorKind = "error" | "unhandledrejection" | "react" | "ux"
 
 /**
  * True when the failure came from something injected into the page rather than
@@ -42,6 +42,61 @@ export function isThirdPartyClientError(message: string, stack: string | undefin
     return EXTENSION_SCHEME.test(url)
   }
   return false
+}
+
+/**
+ * Facts a blocked action may carry. NEVER résumé content.
+ *
+ * Numbers, booleans and short codes only — enough to reproduce the refusal
+ * (which guard, how many lines, did the index still point at the text) and
+ * nothing a recruiter could read. Free text is not accepted by the endpoint
+ * either, so this rule cannot be broken by a future caller in a hurry.
+ */
+export type UxFailureDetail = Record<string, string | number | boolean>
+
+/**
+ * An action the user asked for did not happen, and the server cannot know it.
+ *
+ * THE HOLE THIS EXISTS TO CLOSE. Three failures were reported from production by
+ * screenshot ("Could not apply change", "Could not improve the achievement") and
+ * the server had NOT ONE row about any of them — no request was ever made, the
+ * refusal was decided in the browser. A guard that rejects an action shows a
+ * toast and returns; it never throws, so window.onerror never sees it either.
+ * From our side the product looked perfectly healthy while the user could not
+ * delete a bullet.
+ *
+ * THE RULE: if the user sees an error, it is recorded. What we cannot count, we
+ * only learn about when somebody complains.
+ *
+ * Three kinds of failure land here, and ONLY these three — everything else is
+ * already recorded server-side by `handleError` / `apiError`:
+ *   1. a local guard refusing the action (nothing was ever sent),
+ *   2. a request that never reached us (network down, timeout, gateway),
+ *   3. a 200 whose body the UI cannot read (our own two halves disagreeing).
+ *
+ * `code` is a stable identifier for the site, never a message: the panel groups
+ * by it, so "this guard fired 40 times today" is one glance instead of a ticket.
+ */
+export function reportUxFailure(code: string, detail?: UxFailureDetail): void {
+  if (typeof window === "undefined") return
+  const key = `ux:${code}:${JSON.stringify(detail ?? {})}`
+  if (sent.has(key) || sent.size >= MAX_PER_LOAD) return
+  sent.add(key)
+  try {
+    void fetch("/api/client-errors", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: `ux: ${code}`.slice(0, 2000),
+        source: window.location.pathname,
+        kind: "ux" as ClientErrorKind,
+        detail,
+      }),
+      keepalive: true,
+    }).catch(() => {})
+  } catch {
+    /* swallow — telemetry must never break the page */
+  }
 }
 
 export function reportClientError(

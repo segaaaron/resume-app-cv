@@ -109,3 +109,54 @@ describe("apiFetch", () => {
     }))
   })
 })
+
+/**
+ * THE HOLE THIS COVERS. These three failures never reach the server, so
+ * `handleError` cannot write a row and the Service Errors panel is the only
+ * place they can ever appear. Before this, a 30s timeout on an AI endpoint —
+ * the slow ones, the ones that hit the ceiling — produced no record anywhere:
+ * the button "did nothing" and we could not count it.
+ */
+describe("apiFetch — failures the server cannot record", () => {
+  async function withReporter() {
+    const spy = vi.fn()
+    vi.doMock("@/lib/client-error-reporter", () => ({ reportUxFailure: spy }))
+    const mod = await import("@/lib/apiFetch")
+    return { apiFetch: mod.apiFetch, spy }
+  }
+
+  it("records a timeout", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new DOMException("Timeout", "TimeoutError"))
+    const { apiFetch, spy } = await withReporter()
+    await expect(apiFetch("/api/ai/improve-bullet")).rejects.toThrow()
+    expect(spy).toHaveBeenCalledWith("request_timeout", expect.objectContaining({ timeoutMs: 30000 }))
+  })
+
+  it("does NOT record a user-initiated abort — nothing failed", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new DOMException("Aborted", "AbortError"))
+    const { apiFetch, spy } = await withReporter()
+    await expect(apiFetch("/api/ai/improve-bullet")).rejects.toThrow()
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  it("records a network failure", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"))
+    const { apiFetch, spy } = await withReporter()
+    await expect(apiFetch("/api/resumes")).rejects.toThrow("network_error")
+    expect(spy).toHaveBeenCalledWith("request_network_failed", expect.any(Object))
+  })
+
+  it.each([502, 503, 504])("records a %i from the proxy — Next never ran", async (status) => {
+    global.fetch = vi.fn().mockResolvedValue(new Response("", { status }))
+    const { apiFetch, spy } = await withReporter()
+    await apiFetch("/api/resumes")
+    expect(spy).toHaveBeenCalledWith("request_gateway_error", expect.objectContaining({ status }))
+  })
+
+  it("does NOT record a 500 — that one is ours and already has a server row", async () => {
+    global.fetch = vi.fn().mockResolvedValue(new Response("", { status: 500 }))
+    const { apiFetch, spy } = await withReporter()
+    await apiFetch("/api/resumes")
+    expect(spy).not.toHaveBeenCalled()
+  })
+})

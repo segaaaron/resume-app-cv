@@ -28,6 +28,7 @@ import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
 import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
 import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
 import { formatBullet, parseBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
@@ -174,7 +175,12 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
 
       // Shared API↔UI contract: validate the response shape before touching state.
       const contract = ImproveBulletResponseSchema.safeParse(data)
-      if (!contract.success) { toast.error(ai("error_bullet")); return }
+      if (!contract.success) {
+        // 200 with a body the UI cannot read: our own two halves disagreeing.
+        // The server saw a success and logged nothing; the user saw an error.
+        reportUxFailure("improve_bullet_bad_contract", { status: res.status, surface: "content_tab" })
+        toast.error(ai("error_bullet")); return
+      }
 
       lastKeyRef.current = key
       setCooldownUntil(Date.now() + 120_000)

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useCallback } from "react"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface AIUsageRow {
   userId: string
@@ -98,7 +99,7 @@ export default function AIUsagePanel() {
     setResetting(userId)
     setError(null)
     try {
-      const res = await fetch("/api/admin/ai-usage/reset-quota", {
+      const res = await apiFetch("/api/admin/ai-usage/reset-quota", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),

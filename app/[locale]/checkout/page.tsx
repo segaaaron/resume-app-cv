@@ -5,6 +5,8 @@ import { Suspense, useEffect, useState } from "react"
 import { useSearchParams, useParams } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { apiFetch } from "@/lib/apiFetch"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 
 function CheckoutRedirectInner() {
   const t = useTranslations("checkout")
@@ -20,20 +22,29 @@ function CheckoutRedirectInner() {
       return
     }
 
-    fetch("/api/stripe/checkout", {
+    // A checkout that does not start is a sale lost in silence: the buyer sees
+    // "something went wrong" and leaves. Through apiFetch so a timeout or a
+    // dead network is recorded, `silent` because this page renders its own
+    // error state and a toast on top would say the same thing twice.
+    apiFetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plan, locale }),
+      silent: true,
     })
       .then((r) => r.json())
       .then((data) => {
         if (data.url) {
           window.location.href = data.url
         } else {
+          reportUxFailure("checkout_no_url", { plan: String(plan).slice(0, 40) })
           setError(true)
         }
       })
-      .catch(() => setError(true))
+      .catch(() => {
+        reportUxFailure("checkout_request_failed", { plan: String(plan).slice(0, 40) })
+        setError(true)
+      })
   }, [plan])
 
   if (error) {

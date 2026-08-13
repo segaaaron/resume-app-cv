@@ -14,6 +14,7 @@ import {
   Search,
 } from "lucide-react"
 import { relativeTime as relative } from "@/lib/format/relativeTime"
+import { apiFetch } from "@/lib/apiFetch"
 
 type ErrorWindow = "24h" | "7d" | "30d"
 
@@ -42,6 +43,9 @@ export interface ServiceErrorsReport {
 
 // Stable color per source family — dot + text, never color-only (label always present).
 const SOURCE_COLORS: { match: RegExp; color: string }[] = [
+  // A refused action, not a crash: the product told a user no. Its own colour
+  // because it is read differently — "what are we blocking, and how often".
+  { match: /^ux$/i, color: "#D97706" },
   { match: /pdf/i, color: "#7C3AED" },
   { match: /ai|anthropic|claude/i, color: "#00A8CC" },
   { match: /stripe|billing/i, color: "#635BFF" },
@@ -76,7 +80,7 @@ export default function ServiceErrorsPanel({ report }: { report: ServiceErrorsRe
     if (!confirmClear) { setConfirmClear(true); return }
     setClearing(true)
     try {
-      await fetch("/api/admin/errors/clear", { method: "POST", credentials: "same-origin" })
+      await apiFetch("/api/admin/errors/clear", { method: "POST", credentials: "same-origin" })
     } finally {
       setClearing(false)
       setConfirmClear(false)
