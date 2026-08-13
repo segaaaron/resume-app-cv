@@ -83,6 +83,39 @@ export default function AIUsagePanel() {
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState<string | null>(null)
+
+  /**
+   * Clears one user's daily AI caps.
+   *
+   * Confirmed first: it is a grant of paid capacity, small but real, and it is
+   * logged against the target user. The result says how many counters were
+   * cleared rather than a bare "done" — zero is a meaningful answer (nothing was
+   * capped) and hiding it would leave the operator guessing.
+   */
+  const resetQuota = useCallback(async (userId: string, email: string) => {
+    if (!window.confirm(`Reset today's AI usage caps for ${email}?`)) return
+    setResetting(userId)
+    setError(null)
+    try {
+      const res = await fetch("/api/admin/ai-usage/reset-quota", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId }),
+      })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const json: { cleared: number } = await res.json()
+      window.alert(
+        json.cleared > 0
+          ? `Cleared ${json.cleared} daily counter${json.cleared === 1 ? "" : "s"} for ${email}.`
+          : `${email} had no daily caps in effect.`,
+      )
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Reset failed")
+    } finally {
+      setResetting(null)
+    }
+  }, [])
 
   const fetchData = useCallback(async (newOffset = 0) => {
     setLoading(true)
@@ -297,7 +330,7 @@ export default function AIUsagePanel() {
                 <table className="w-full min-w-[720px] border-collapse">
                   <thead>
                     <tr className="bg-[#f5f8fc]">
-                      {["Email", "Plan", "Calls", "Input Tokens", "Output Tokens", "Cost USD", "Last Call"].map((h) => (
+                      {["Email", "Plan", "Calls", "Input Tokens", "Output Tokens", "Cost USD", "Last Call", ""].map((h) => (
                         <th
                           key={h}
                           className="px-4 py-3 text-left text-[10px] font-bold uppercase tracking-[0.08em] text-[#6B7A8C] border-b border-[#D9E1ED] whitespace-nowrap"
@@ -357,6 +390,23 @@ export default function AIUsagePanel() {
                         </td>
                         <td className="px-4 py-3 text-[11.5px] text-[#6B7A8C] border-b border-[#F0F3F8] whitespace-nowrap">
                           {formatDate(row.lastUsedAt)}
+                        </td>
+                        {/* The daily cap is anti-abuse and has no escape hatch: the
+                            people who hit it first are the ones testing, and support
+                            cannot unblock a paying user mid-incident either. Until
+                            this button, the only way out was a hand-written DELETE
+                            against the database. Clears ONE user's daily windows —
+                            never the lifetime freemium counters. */}
+                        <td className="px-4 py-3 border-b border-[#F0F3F8] whitespace-nowrap text-right">
+                          <button
+                            type="button"
+                            onClick={() => void resetQuota(row.userId, row.email)}
+                            disabled={resetting === row.userId}
+                            title={`Reset today's AI caps for ${row.email}`}
+                            className="inline-flex items-center gap-1 rounded-full border border-[#D9E1ED] px-2.5 py-1 text-[11px] font-semibold text-[#1a2e4a] transition-colors hover:bg-[#f5f8fc] disabled:opacity-50 cursor-pointer"
+                          >
+                            {resetting === row.userId ? "Resetting…" : "Reset daily cap"}
+                          </button>
                         </td>
                       </tr>
                     ))}

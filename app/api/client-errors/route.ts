@@ -3,6 +3,7 @@ import { z } from "zod"
 import { checkOrigin } from "@/lib/csrf"
 import { auth } from "@/lib/auth"
 import { logError } from "@/lib/services/error/errorLog"
+import { isThirdPartyClientError } from "@/lib/client-error-reporter"
 
 // The ErrorLog sink is Prisma-backed → Node runtime.
 export const runtime = "nodejs"
@@ -50,6 +51,11 @@ export async function POST(req: Request) {
   const parsed = schema.safeParse(await req.json().catch(() => ({})))
   if (!parsed.success) return NextResponse.json({ ok: false }, { status: 422 })
   const { message, stack, source, kind } = parsed.data
+
+  // The browser already drops these, but the browser is not a guard: an old tab
+  // running yesterday's bundle, or anything else posting here, would still fill the
+  // panel with other people's extensions. Same predicate, one definition.
+  if (isThirdPartyClientError(message, stack)) return NextResponse.json({ ok: true })
 
   // Best-effort attribution — a client error can happen while logged out.
   let userId: string | null = null

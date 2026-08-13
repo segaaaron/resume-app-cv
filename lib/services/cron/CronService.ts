@@ -208,6 +208,34 @@ export class CronService {
     return { deleted: totalDeleted }
   }
 
+  /**
+   * Retention for the AI answer caches.
+   *
+   * These are caches, not records: they exist so an unchanged CV keeps getting the
+   * same answer, which is a promise about the next few weeks, not forever. A CV is
+   * edited constantly, so a 30-day window keeps the hit rate that matters and stops
+   * the table growing without a ceiling. The skill-equivalence table is NOT purged
+   * here on purpose — "patient care ≡ atención al paciente" does not expire, and
+   * that table is the bilingual vocabulary the product is accumulating.
+   */
+  async purgeAiCaches(): Promise<PurgeStripeEventsResult> {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+    const BATCH_SIZE = 500
+    let totalDeleted = 0
+
+    while (true) {
+      const rows = await db.aiAnswerCache.findMany({ where: { createdAt: { lt: cutoff } }, select: { id: true }, take: BATCH_SIZE })
+      if (rows.length === 0) break
+      const { count } = await db.aiAnswerCache.deleteMany({ where: { id: { in: rows.map((r) => r.id) } } })
+      totalDeleted += count
+      if (rows.length < BATCH_SIZE) break
+      await new Promise((r) => setTimeout(r, 100))
+    }
+
+    this.logger.info(`[CronService] purgeAiCaches: deleted=${totalDeleted}`)
+    return { deleted: totalDeleted }
+  }
+
   /** Purge processed PayPal webhook dedup rows older than 90 days (mirror of purgeStripeEvents). */
   async purgePaypalEvents(): Promise<PurgeStripeEventsResult> {
     const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90 days ago

@@ -9,6 +9,41 @@ const MAX_PER_LOAD = 50
 
 export type ClientErrorKind = "error" | "unhandledrejection" | "react"
 
+/**
+ * True when the failure came from something injected into the page rather than
+ * from this app.
+ *
+ * Browser extensions run inside our document and throw inside it, so window.onerror
+ * and unhandledrejection see them exactly as they see our own bugs. Reported from
+ * production: `TypeError: Cannot read properties of undefined (reading 'M_ID')` at
+ * `chrome-extension://…/executors/200.js`, over and over — a defect in somebody
+ * else's code, filed in our panel, on every page load of every user who has that
+ * extension installed.
+ *
+ * The panel exists to find OUR bugs quickly. A stream of failures we cannot read,
+ * cannot reproduce and cannot fix is worse than no panel: it buries the one entry
+ * that mattered. And each one costs a request and a row.
+ *
+ * Matched by URL SCHEME, not by extension id — an id list would only ever know the
+ * extensions somebody already saw. The check is on the throw site (the first frame
+ * carrying a URL): an extension appearing deeper in a stack that starts in our code
+ * is still our bug to fix.
+ */
+const EXTENSION_SCHEME = /^(chrome|moz|safari-web|safari|ms-browser|edge)-extension:\/\//
+
+export function isThirdPartyClientError(message: string, stack: string | undefined): boolean {
+  // "Script error." is what a cross-origin script gives us: no file, no line, no
+  // stack. Nothing can be done with it, by anyone.
+  if (!stack && /^script error\.?$/i.test(message.trim())) return true
+  if (!stack) return false
+  for (const line of stack.split("\n")) {
+    const url = line.match(/(?:at\s+)?(?:\S+\s+\()?([a-z-]+:\/\/\S+)/i)?.[1]
+    if (!url) continue
+    return EXTENSION_SCHEME.test(url)
+  }
+  return false
+}
+
 export function reportClientError(
   message: string | undefined,
   stack: string | undefined,
@@ -24,6 +59,9 @@ export function reportClientError(
   // redirect during render), so drop them here to keep the Service Errors panel showing
   // only real client failures.
   if (/NEXT_REDIRECT|NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK|NEXT_RSC/.test(msg) || (stack ? /NEXT_REDIRECT|NEXT_NOT_FOUND|NEXT_HTTP_ERROR_FALLBACK|NEXT_RSC/.test(stack) : false)) return
+
+  // Somebody else's extension crashing inside our page is not our failure.
+  if (isThirdPartyClientError(msg, stack)) return
 
   const key = `${kind}:${msg}:${(stack ?? "").slice(0, 200)}`
   if (sent.has(key) || sent.size >= MAX_PER_LOAD) return

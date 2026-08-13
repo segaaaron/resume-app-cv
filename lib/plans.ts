@@ -19,6 +19,7 @@ export type AiEndpointName =
   | "generate-summary"
   | "tailor-cv"
   | "skill-bullet"
+  | "merge-bullets"
   | "generate-cover-letter"
   | "improve-cover-letter"
   | "ats-score"
@@ -32,6 +33,7 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
   "generate-summary",
   "tailor-cv",
   "skill-bullet",
+  "merge-bullets",
   "generate-cover-letter",
   "improve-cover-letter",
   "ats-score",
@@ -55,6 +57,9 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "fill-profile": 10,
   "tailor-cv": 10,
   "skill-bullet": 15,
+  // Mirrors skill-bullet exactly: same surface (one bullet written into one
+  // role) and the same PRO/LIMITED-only grant, so no plan gains or loses.
+  "merge-bullets": 15,
   "ats-score": 10,
   "review-cv": 10,
   // 3/day: translation is idempotent (a CV is translated once and the copy is
@@ -248,6 +253,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-summary": -1,
       "generate-summary": -1,      "tailor-cv": -1,
       "skill-bullet": -1,
+      "merge-bullets": -1,
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": -1,
@@ -267,6 +273,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-summary": 0,
       "generate-summary": 0,      "tailor-cv": 0,
       "skill-bullet": 0,
+      "merge-bullets": 0,
       "generate-cover-letter": 0,
       "improve-cover-letter": 0,
       "ats-score": 0,
@@ -287,6 +294,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-summary": 0,
       "generate-summary": 0,      "tailor-cv": 0,
       "skill-bullet": 0,
+      "merge-bullets": 0,
       "generate-cover-letter": 0,
       "improve-cover-letter": 0,
       "ats-score": 0,
@@ -305,6 +313,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-summary": -1,
       "generate-summary": -1,      "tailor-cv": 0,
       "skill-bullet": 0,
+      "merge-bullets": 0,
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": 0,
@@ -322,6 +331,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
       "improve-summary": -1,
       "generate-summary": -1,      "tailor-cv": -1,
       "skill-bullet": -1,
+      "merge-bullets": -1,
       "generate-cover-letter": -1,
       "improve-cover-letter": -1,
       "ats-score": -1,

@@ -34,11 +34,15 @@ export async function GET(req: Request) {
       // PayPal dedup rows + observability log share this job's schedule — no separate cron needed.
       const paypalEvents = await cronService.purgePaypalEvents()
       const paypalWebhookLogs = await cronService.purgePaypalWebhookLogs()
+      // The AI answer caches ride the same nightly job rather than earning a cron
+      // of their own — one more Dokploy schedule is one more thing to die quietly.
+      const aiCaches = await cronService.purgeAiCaches()
       return {
         deleted: events.deleted,
         webhookLogsDeleted: webhookLogs.deleted,
         paypalEventsDeleted: paypalEvents.deleted,
         paypalWebhookLogsDeleted: paypalWebhookLogs.deleted,
+        aiCachesDeleted: aiCaches.deleted,
       }
     })
     return NextResponse.json(result)
