@@ -1792,6 +1792,7 @@
       "job_picker_untitled": "Puesto sin título",
       "metricless_already_good": "Este logro ya está bien redactado.",
       "metricless_improve_error": "No se pudo mejorar el logro. Intenta de nuevo.",
+      "bullet_line_gone": "Esa línea ya no está en tu CV — se quitó la sugerencia.",
       "metricless_in_job": "en {job}",
       "analysis_unavailable_title": "Falta el análisis del reclutador",
       "analysis_unavailable_desc": "El resto del informe es válido: el score, las keywords y los arreglos son deterministas. Solo esta parte no se pudo generar — vuelve a analizar para intentarlo otra vez.",

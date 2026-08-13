@@ -10,6 +10,7 @@ import type { SkillItem, WorkExperienceItem } from "@/types/resume"
 import { filterVisibleMissingSkills } from "../tailor-dedupe"
 import { useAICooldown, useCooldownLabel } from "./useAICooldown"
 import { useAICall } from "@/hooks/useAICall"
+import { parseBullets } from "@/lib/services/ai/shared/bullets"
 import { useCvLanguage } from "./useCvLanguage"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
@@ -89,7 +90,14 @@ export function useTailorCV({ jobDescription, atsMissingKeywords = [], autoRunSi
     return result.experiences.flatMap((exp) =>
       exp.changedBullets.map((b) => {
         const desc = work.find((j) => j.id === exp.targetId)?.description ?? ""
-        const lines = desc.split("\n").map((l) => l.trim()).filter(Boolean)
+        // parseBullets, NOT a raw split: it strips the "• " marker the CV stores.
+        // A raw line carries the glyph, and the index the model answers with is
+        // the parseBullets index (that is what the prompt enumerates). Keeping the
+        // glyph made every downstream comparison against the live bullet fail —
+        // the write guards rejected Remove, Rewrite and the user's own edit
+        // ("Could not apply change" / "Could not improve the achievement"), and
+        // the figure-slot preview received a line that did not exist in the CV.
+        const lines = parseBullets(desc)
         return {
           targetId: exp.targetId,
           jobTitle: exp.jobTitle,

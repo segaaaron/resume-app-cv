@@ -10,6 +10,8 @@ import { spliceSummary } from "@/lib/ats/summary-splice"
 import { stripSectionLabel } from "@/lib/ats/strip-label"
 import { isKeywordSafe, postingTermsLost } from "@/lib/ats/keyword-safety"
 import { resolveBulletFindings } from "@/lib/ats/bullet-findings"
+import { resolveBulletIndex } from "@/lib/ats/bullet-locate"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
 import { useResumeStore } from "@/stores/resumeStore"
@@ -398,16 +400,27 @@ export default function ATSScorePanel() {
       })
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null
-        toast.error(
-          body?.error === "daily_cap_reached" || res.status === 429
-            ? tAi("daily_cap_reached")
-            : t("metricless_improve_error"),
-        )
+        const capped = body?.error === "daily_cap_reached" || res.status === 429
+        // A cap is the product working as designed and the user is told why.
+        // Anything else is a failure they cannot act on — record it.
+        if (!capped) {
+          reportUxFailure("improve_bullet_request_failed", {
+            status: res.status,
+            code: String(body?.error ?? "").slice(0, 40),
+            focus: focus.join(",").slice(0, 40),
+          })
+        }
+        toast.error(capped ? tAi("daily_cap_reached") : t("metricless_improve_error"))
         return
       }
       const data = await res.json().catch(() => null)
       const parsed = ImproveBulletResponseSchema.safeParse(data)
-      if (!parsed.success) { toast.error(t("metricless_improve_error")); return }
+      if (!parsed.success) {
+        // The endpoint answered 200 with a body the UI cannot read: a broken
+        // contract between our own two halves, invisible until now.
+        reportUxFailure("improve_bullet_bad_contract", { status: res.status })
+        toast.error(t("metricless_improve_error")); return
+      }
       const first = parsed.data.improvements[0]
       if (parsed.data.status === "already_optimized" || !first || first.text.trim() === b.text.trim()) {
         // Never claim "already well written" about a bullet this very panel
@@ -787,11 +800,20 @@ export default function ATSScorePanel() {
     const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
     const job = work.find((j) => j.id === targetId)
     const bullets = parseBullets(job?.description ?? "")
-    if (!job || index < 0 || index >= bullets.length || bullets[index].trim() !== current.trim()) {
-      toast.error(t("metricless_improve_error"))
+    const at = job ? resolveBulletIndex(bullets, index, current) : -1
+    if (at < 0) {
+      // The line is not in the CV any more — deleted, or rewritten in another
+      // tab. There is nothing to write and nothing the user can do about a red
+      // error, so this is not one: say what happened, drop the stale row, and
+      // let the score catch up. Recorded all the same, with facts only — never
+      // the line itself, which is their résumé.
+      reportUxFailure("bullet_write_line_gone", { jobFound: !!job, index, bullets: bullets.length, currentLen: current.length })
+      toast.info(t("bullet_line_gone"))
+      markFixApplied(`bullet-${targetId}-${index}`)
+      void runRescore()
       return false
     }
-    const written = serializeBulletsReporting(bullets.map((line, i) => (i === index ? next : line)))
+    const written = serializeBulletsReporting(bullets.map((line, i) => (i === at ? next : line)))
     const nextDescription = written.text
     updateSectionData("workExperience", work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j)))
     if (aiWritten) markContentOptimized(`opt_bullet_${targetId}`, nextDescription)
@@ -823,25 +845,35 @@ export default function ATSScorePanel() {
       // Stale-index guard: if the description was edited between scoring and
       // applying, the bullet at `index` may no longer be the one we improved.
       // Aborting is safer than overwriting the wrong line.
-      if (!job || index < 0 || index >= bullets.length || bullets[index].trim() !== bulletFix.current.trim()) {
-        toast.error(t("metricless_improve_error"))
+      const at = job ? resolveBulletIndex(bullets, index, bulletFix.current) : -1
+      if (at < 0) {
+        reportUxFailure("bullet_fix_line_gone", { jobFound: !!job, index, bullets: bullets.length, currentLen: bulletFix.current.length })
+        toast.info(t("bullet_line_gone"))
+        markFixApplied(`bullet-${targetId}-${index}`)
+        void runRescore()
         return
       }
-      // A merge deletes a second line, so BOTH have to still be the lines that
-      // were merged. If either moved, dropping one would destroy work the user
-      // never agreed to lose.
-      const rm = bulletFix.removeIndex
-      if (rm !== undefined && (rm < 0 || rm >= bullets.length || bullets[rm].trim() !== (bulletFix.removeCurrent ?? "").trim())) {
-        toast.error(t("metricless_improve_error"))
-        return
+      // A merge also deletes the second line. If that twin is no longer in the
+      // CV, the merge does not fail — there is simply nothing left to delete, so
+      // the rewrite lands on its own. Refusing the whole operation because the
+      // easy half was already done would throw away the half that matters.
+      // What we never do is delete a line we cannot identify: `rmAt` comes from
+      // the same text match as everything else, and only a real hit deletes.
+      let rmAt =
+        bulletFix.removeIndex === undefined
+          ? undefined
+          : resolveBulletIndex(bullets, bulletFix.removeIndex, bulletFix.removeCurrent ?? "")
+      if (rmAt !== undefined && (rmAt < 0 || rmAt === at)) {
+        reportUxFailure("bullet_merge_twin_gone", { index, removeIndex: bulletFix.removeIndex ?? -1, bullets: bullets.length })
+        rmAt = undefined
       }
       // Replace the one bullet; re-mark every bullet uniformly so the stored
       // description stays consistent (formatBullet strips then re-adds "• ").
       // Through the one owner of the convention, so this path cannot reintroduce
       // a duplicate the rest of the app has made impossible.
-      const merged = bullets.map((line, i) => (i === index ? improved : line))
+      const merged = bullets.map((line, i) => (i === at ? improved : line))
       const written = serializeBulletsReporting(
-        bulletFix.removeIndex !== undefined ? merged.filter((_, i) => i !== bulletFix.removeIndex) : merged,
+        rmAt !== undefined ? merged.filter((_, i) => i !== rmAt) : merged,
       )
       const nextDescription = written.text
       const updated = work.map((j) => (j.id === targetId ? { ...j, description: nextDescription } : j))
@@ -1160,10 +1192,16 @@ export default function ATSScorePanel() {
       const work = (sectionData.workExperience ?? []) as WorkExperienceItem[]
       const job = work.find((j) => j.id === targetId)
       const bullets = parseBullets(job?.description ?? "")
-      if (!job || index < 0 || index >= bullets.length || bullets[index].trim() !== text.trim()) {
-        toast.error(t("toast_change_error")); return
+      const at = job ? resolveBulletIndex(bullets, index, text) : -1
+      if (at < 0) {
+        // Already gone is the outcome the user wanted. Not an error.
+        reportUxFailure("bullet_remove_line_gone", { jobFound: !!job, index, bullets: bullets.length, textLen: text.length })
+        toast.info(t("bullet_line_gone"))
+        markFixApplied(`bullet-${targetId}-${index}`)
+        void runRescore()
+        return
       }
-      const next = bullets.filter((_, i) => i !== index).map(formatBullet).join("\n")
+      const next = bullets.filter((_, i) => i !== at).map(formatBullet).join("\n")
       updateSectionData("workExperience", work.map((j) => (j.id === targetId ? { ...j, description: next } : j)))
       markFixApplied(`bullet-${targetId}-${index}`)
       toast.success(t("bullet_removed"))
@@ -1188,6 +1226,7 @@ export default function ATSScorePanel() {
       )
 
       if (result.status === "unplaceable") {
+        reportUxFailure("suggestion_unplaceable", { field: String(field).slice(0, 40), type: String(type).slice(0, 40), hasTarget: !!targetId })
         toast.error(t("toast_change_error"))
         setModal(null)
         return
@@ -2622,7 +2661,27 @@ export default function ATSScorePanel() {
                   .filter((r) => isKeywordSafe(currentBulletAt(r.targetId, r.index) || (r.currentBullet ?? ""), r.text ?? "", postingTerms))
                   .map((r) => [`${r.targetId}-${r.index}`, r]),
               )
-              tailor.bulletRewrites.forEach((r) => add(r.targetId, r.jobTitle, r.index, r.currentBullet || r.text, "tailored"))
+              /**
+               * Only rewrites that SURVIVED the filters above become rows.
+               *
+               * Every rewrite used to be added here while `tailored` kept only the
+               * ones worth applying, so a discarded rewrite still drew a row —
+               * with no "Apply", no repairable defect, and therefore the fallback
+               * button "Add your number" on a line that already ends in "by 20%".
+               * Pressing it opened an editor pre-filled with the same sentence and
+               * "Nothing changed yet". A row whose every action is a no-op is the
+               * panel asking for work it cannot describe.
+               *
+               * The text is the LIVE bullet, never the snapshot the proposal was
+               * written from: the snapshot is what the write guards compare
+               * against, and a stale one turns Remove and Save into errors.
+               */
+              tailor.bulletRewrites.forEach((r) => {
+                if (!tailored.has(`${r.targetId}-${r.index}`)) return
+                const live = currentBulletAt(r.targetId, r.index)
+                if (!live) return
+                add(r.targetId, r.jobTitle, r.index, live, "tailored")
+              })
               // NOT added to the list: a duplicate is not "a bullet to improve",
               // it is a line that should not be there twice. It gets one banner
               // and one button that cleans the whole CV — see the block below.

@@ -2,6 +2,7 @@
 
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
+import { parseBullets } from "@/lib/services/ai/shared/bullets"
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
@@ -344,11 +345,18 @@ export default function ThompsonTemplate() {
                       </span>
                     </div>
                     {job.description && (() => {
-                      const lines = job.description
-                        .replace(/<\/?(ul|ol|li|p|div|br\s*\/?)>/gi, "\n")
-                        .replace(/<[^>]+>/g, "")
-                        .trim().split("\n")
-                        .map((l) => l.trim()).filter((l) => l.length > 3)
+                      // parseBullets, not a hand-rolled split: descriptions are
+                      // STORED with a "• " marker, and this template draws its
+                      // own arrow next to every line — so splitting raw printed
+                      // the marker too and the CV showed two bullets per line.
+                      // The other 127 templates go through fmtDesc, which strips
+                      // it; this was the only one reading the text by hand.
+                      const lines = parseBullets(
+                        job.description
+                          .replace(/<\/?(ul|ol|li|p|div|br\s*\/?)>/gi, "\n")
+                          .replace(/<[^>]+>/g, "")
+                          .trim(),
+                      ).filter((l) => l.length > 3)
                       return (
                         <div style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 5 }}>
                           {lines.map((line, i) => (

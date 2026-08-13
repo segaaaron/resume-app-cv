@@ -1754,6 +1754,7 @@
       "job_picker_untitled": "Untitled role",
       "metricless_already_good": "This achievement is already well written.",
       "metricless_improve_error": "Could not improve the achievement. Try again.",
+      "bullet_line_gone": "That line is no longer in your CV — the suggestion was removed.",
       "metricless_in_job": "in {job}",
       "analysis_unavailable_title": "The recruiter analysis is missing",
       "analysis_unavailable_desc": "The rest of the report is valid — the score, keywords and fixes are deterministic. Only this section failed to generate; re-analyze to try again.",
