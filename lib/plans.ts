@@ -48,6 +48,11 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
  * scripting. Ventana de 24h auto-reseteable vía checkAndIncrementRateLimit
  * (sin cron). Costo máximo acotado: ~$0.05/día por usuario.
  *
+ * ats-score y tailor-cv van a 20: corren JUNTOS en cada análisis, así que el tope
+ * se agota al doble de velocidad de lo que sugiere el número. Con el reembolso de
+ * cupo por respuesta cacheada (ver refundDailyQuota), solo cuentan los análisis
+ * que de verdad procesan algo nuevo.
+ *
  * Las tres acciones por-bullet subieron a 50 tras medirlo contra un CV real: el
  * panel ATS ofrece un botón por skill sin evidencia y otro por bullet débil, así
  * que un solo repaso serio de un CV con cinco puestos consume decenas de llamadas
@@ -62,12 +67,12 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "generate-cover-letter": 20,
   "improve-cover-letter": 20,
   "fill-profile": 10,
-  "tailor-cv": 10,
+  "tailor-cv": 20,
   "skill-bullet": 50,
   // Mirrors skill-bullet exactly: same surface (one bullet written into one
   // role) and the same PRO/LIMITED-only grant, so no plan gains or loses.
   "merge-bullets": 50,
-  "ats-score": 10,
+  "ats-score": 20,
   "review-cv": 10,
   // 3/day: translation is idempotent (a CV is translated once and the copy is
   // reused); this cap only bites the re-do case (user deleted the copy).

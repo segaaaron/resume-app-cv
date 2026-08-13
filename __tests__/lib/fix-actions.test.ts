@@ -90,3 +90,30 @@ describe("fix_dates — the calendar is code's job, not the model's", () => {
     expect(groundFixAction({ kind: "fix_dates" }, mixed)).toEqual({ kind: "fix_dates" })
   })
 })
+
+describe("remove_duplicates — the button only appears when it can act", () => {
+  it("is not drawn for two lines that merely say the same thing", () => {
+    // Reported: the finding said "this repeats the previous bullet almost
+    // exactly" and pressing the button answered "no repeated lines left". The
+    // collapser only removes IDENTICAL lines; a near duplicate is a rewrite, and
+    // only the candidate can say which half to keep.
+    const near = {
+      workExperience: [{
+        id: "w1",
+        description: "- Implemented authentication flows for the app\n- Implemented Authentication flows for the app with secure data handling",
+      }],
+    }
+    expect(groundFixAction({ kind: "remove_duplicates" }, near)).toEqual({ kind: "manual" })
+  })
+
+  it("is drawn when a line really is written twice", () => {
+    const exact = {
+      workExperience: [{ id: "w1", description: "- Built the payments flow\n- Built the payments flow" }],
+    }
+    expect(groundFixAction({ kind: "remove_duplicates" }, exact)).toEqual({ kind: "remove_duplicates" })
+  })
+
+  it("survives malformed data without throwing", () => {
+    expect(groundFixAction({ kind: "remove_duplicates" }, { workExperience: [{ id: "w1", description: 5 }] })).toEqual({ kind: "manual" })
+  })
+})

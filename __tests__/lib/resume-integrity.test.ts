@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { checkChronology, checkFutureDates, checkYearsClaim, findNearDuplicateBullets, findIncompleteEducation } from "@/lib/ats/resume-integrity"
+import { checkChronology, checkFutureDates, checkYearsClaim, findNearDuplicateBullets, findIncompleteEducation, roleRecency } from "@/lib/ats/resume-integrity"
 
 /**
  * Every case below was found by reading a real CV the way a hiring manager does,
@@ -192,5 +192,33 @@ describe("findIncompleteEducation", () => {
 
   it("reads the institution field too", () => {
     expect(findIncompleteEducation([{ institution: "Universidad Mayor" }])[0].school).toBe("Universidad Mayor")
+  })
+})
+
+describe("roleRecency — the button and the check must read dates the same way", () => {
+  it("reads a bare year, the way the chronology check does", () => {
+    // The reported contradiction: a resume written "2015 – 2016" was flagged as
+    // listed oldest-first, and the fix answered "your roles are already in
+    // order" — because the reorder parsed MM/YYYY and treated a bare year as
+    // unreadable, so nothing ever sorted.
+    const roles = [
+      { jobTitle: "iOS Developer", startDate: "2015", endDate: "2016" },
+      { jobTitle: "Web Developer", startDate: "2017", endDate: "2020" },
+      { jobTitle: "Mobile Lead", startDate: "2023", endDate: "2026" },
+    ]
+    expect(roles.map(roleRecency)).toEqual([2016, 2020, 2026])
+    // And the check agrees there is something to fix.
+    expect(checkChronology(roles)?.kind).toBe("reverse_order")
+  })
+
+  it("puts an ongoing role above every finished one", () => {
+    expect(roleRecency({ startDate: "2019", currentlyWorking: true })).toBeGreaterThan(
+      roleRecency({ startDate: "2024", endDate: "2026" }) as number,
+    )
+  })
+
+  it("returns null when the date cannot be read at all", () => {
+    // The caller must leave that row where the candidate put it.
+    expect(roleRecency({ jobTitle: "Volunteer", startDate: "", endDate: "" })).toBeNull()
   })
 })

@@ -568,8 +568,20 @@ model AiAnswerCache {
   model     String
   createdAt DateTime @default(now())
 
+  /// Which résumé this answer was computed FROM.
+  ///
+  /// The row is addressed by content — that is what makes the same question give
+  /// the same answer — but the payload is derived from one candidate's document:
+  /// it quotes their bullets and describes their fit. When they delete the CV,
+  /// this has to go with it, and a content hash cannot be searched by owner.
+  ///
+  /// Nullable so existing rows stay valid, and NOT a foreign key: the cache must
+  /// never be able to block a deletion. Cleanup is explicit, in ResumeService.
+  resumeId String?
+
   @@unique([kind, inputHash])
   @@index([createdAt])
+  @@index([resumeId])
 }
 
 // Persisted application errors — powers the admin "Service Errors" panel.

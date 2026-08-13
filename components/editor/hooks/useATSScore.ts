@@ -342,6 +342,10 @@ export function useATSScore() {
             sectionData,
             language: cvLanguage,
             templateId,
+            // Which CV this answer belongs to, so deleting the CV deletes what we
+            // cached from it. The cache is addressed by content and could never be
+            // found by owner afterwards.
+            resumeId: useResumeStore.getState().resumeId,
             // Same posting as last time → reuse its keywords so the score moves
             // only because the CV moved.
             ...(keywordCacheRef.current?.postingKey === `${mode}:${text}`

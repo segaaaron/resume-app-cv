@@ -11,6 +11,8 @@ const schema = z
     sectionData: z.record(z.string(), z.unknown()).optional(),
     language: z.enum(["es", "en"]).optional(),
     templateId: z.string().max(64).optional(),
+
+    resumeId: z.string().max(64).optional(),
     // Echoed back from a previous run over the SAME posting so the extraction is
     // not re-sampled (see ATSScoreInput.cachedKeywords). Bounded and validated
     // like any other input — a client sending nonsense only skews its own score.

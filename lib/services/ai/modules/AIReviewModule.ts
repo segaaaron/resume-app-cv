@@ -14,7 +14,7 @@ import {
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
-import { enforceAIQuota } from "../shared/quota-enforcer"
+import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
 import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
@@ -99,6 +99,17 @@ const ANALYSIS_CACHE_MAX = 100
 const ANALYSIS_REVISION = "v2-dates"
 
 export class AIReviewModule {
+  /**
+   * Whether THIS request reached the model at all.
+   *
+   * The analysis is cached by content, so re-running it on an unchanged résumé
+   * and posting makes zero calls — and still burned a daily slot, because the
+   * quota is charged before the work starts. Charging for a cache hit is charging
+   * for something nobody bought, and it is what put a day of honest testing into
+   * "you have reached today's limit".
+   */
+  private spentAModelCall = false
+
   constructor(
     private readonly aiClient: IAIClient,
     private readonly logger: ILogger,
@@ -172,6 +183,8 @@ export class AIReviewModule {
     en: boolean,
     langInstruction: string,
     sectionData: Record<string, unknown> = {},
+    /** Scopes the cached answer to the résumé, so deleting the CV deletes it. */
+    resumeId?: string,
   ): Promise<CvAnalysis | null> {
     // Same resume, same posting, same language → the answer we already gave.
     // No call, no tokens, no quota: it is the identical question.
@@ -184,6 +197,7 @@ export class AIReviewModule {
     // rows stay for audit and are simply never read again.
     const cacheKey = `${ANALYSIS_REVISION}:${en ? "en" : "es"}:${createHash("sha256").update(`${resumeText}\u0000${jobContext}`).digest("hex")}`
     const cachedAnalysis = this.analysisCache.get(cacheKey)
+    if (!cachedAnalysis) this.spentAModelCall = true
     if (cachedAnalysis) {
       this.logger.info("[AIService.analyzeResume] cache hit (memory)")
       return this.groundForThisResume(cachedAnalysis, sectionData)
@@ -197,6 +211,9 @@ export class AIReviewModule {
     if (storedAnalysis) {
       const restored = CvAnalysisSchema.safeParse(storedAnalysis)
       if (restored.success) {
+        // Served from the durable cache after all: the flag set above was
+        // pessimistic, and a request that reaches here made no call.
+        this.spentAModelCall = false
         this.logger.info("[AIService.analyzeResume] cache hit (stored)")
         this.analysisCache.set(cacheKey, restored.data)
         return this.groundForThisResume(restored.data, sectionData)
@@ -456,7 +473,7 @@ Reglas duras:
       }
       // Stored AFTER every guard, so a reload re-serves the answer the user
       // actually saw — not the raw model reply a guard had already rejected.
-      await writeAnswer("analysis", cacheKey, a, AI_MODEL_PROSE)
+      await writeAnswer("analysis", cacheKey, a, AI_MODEL_PROSE, resumeId)
       return this.groundForThisResume(a, sectionData)
     } catch (err) {
       this.logger.warn("[AIService.atsScore] recruiter analysis failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
@@ -466,8 +483,12 @@ Reglas duras:
 
   async atsScore(userId: string, input: ATSScoreInput, plan: string): Promise<ATSScoreResult> {
     await enforceAIQuota(userId, "ats-score", plan)
+    // Every model call this request makes flips this. A request that ends with it
+    // still false spent nothing, and the daily slot goes back — the cap exists to
+    // stop spending, not to charge for cache hits.
+    this.spentAModelCall = false
 
-    const { jobDescription, roleTitle, sectionData, language: rawLanguage, templateId } = input
+    const { jobDescription, roleTitle, sectionData, language: rawLanguage, templateId, resumeId } = input
     const { language, langInstruction } = resolveLanguage(rawLanguage)
     const en = language === "en"
 
@@ -644,15 +665,37 @@ Reglas:
      * changed, so the requirements must not either: the answer is stored against
      * the posting text itself, and only editing the posting buys a fresh read.
      */
+    /**
+     * The CV is part of the key because the CV is part of the INPUT.
+     *
+     * This prompt receives the candidate's résumé (lines 529/553/582/604: "=== CANDIDATE
+     * RESUME ===") and its answer depends on it — the summary describes THIS CV's
+     * fit, and every item is written in THIS CV's language. Keyed on the posting
+     * alone, the second person to analyse the same posting was served the reading
+     * of someone else's résumé: a "fit" sentence about a document they never
+     * wrote, and requirements translated into a language they may not use.
+     *
+     * Nobody would have seen it as an error — the list looks plausible either way
+     * — which is exactly why it had to be found by reading the key against the
+     * prompt rather than by using the product.
+     *
+     * The rule, and it is not negotiable: a cache key must cover every input the
+     * answer depends on. Reuse is what is left over after correctness, never
+     * before it. The cost is real and accepted — the same posting with a different
+     * CV now costs a call — and the refund below still covers the case that
+     * actually repeats: the same CV analysed again.
+     */
     const keywordsKey = answerHash(
       AI_MODEL,
       en ? "en" : "es",
       useRole ? "role" : "jd",
       useRole ? (roleTitle ?? "").trim() : jobDescriptionTruncated,
+      createHash("sha256").update(resumeText).digest("hex"),
     )
     let keywordsFromStore = false
     if (!extraction) {
       const storedKeywords = await readAnswer("job-keywords", keywordsKey)
+      if (!storedKeywords) this.spentAModelCall = true
       if (storedKeywords) {
         const parsed = ATSExtractionSchema.safeParse(storedKeywords)
         if (parsed.success) { extraction = parsed.data; keywordsFromStore = true }
@@ -744,7 +787,7 @@ Reglas:
     // it without ever calling the model again. Skipped when it came from the store
     // — the row is already there, and a duplicate insert per analysis is noise.
     if (!keywordsFromStore && !extractionFromClient) {
-      await writeAnswer("job-keywords", keywordsKey, extraction, AI_MODEL)
+      await writeAnswer("job-keywords", keywordsKey, extraction, AI_MODEL, resumeId)
     }
 
     // Start the senior-recruiter analysis HERE — after the off-topic guard, so a
@@ -756,7 +799,7 @@ Reglas:
     // awaited work before we collect it (the embedding pass) fails closed too — so
     // this promise can never dangle or reject. The .catch is a belt against a future
     // edit adding a throwing call between here and the await.
-    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}).catch(() => null)
+    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}, resumeId).catch(() => null)
 
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)
@@ -785,7 +828,7 @@ Reglas:
           aiClient: this.aiClient,
           onFailure: (err: Error) =>
             this.logger.error("[AIService.atsScore] soft-skill evidence pass failed — soft score is literal-match only", {}, err),
-        })
+        }, resumeId)
       : new Set<string>()
 
     const mustMet = metMustHaves(keywords.mustHaves, sectionData ?? {})
@@ -872,6 +915,11 @@ Reglas:
       })
     }
 
+    // Nothing was spent: give the slot back before returning. Best-effort — a
+    // failed refund costs one slot, never the response.
+    if (!this.spentAModelCall) {
+      await refundDailyQuota(userId, "ats-score", plan).catch(() => {})
+    }
     return {
       score: finalScore,
       label,

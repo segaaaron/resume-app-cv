@@ -9,6 +9,8 @@ import { aiService } from "@/lib/controllers/ai-deps"
 import { canUseAdvancedAts } from "@/lib/plans"
 
 const schema = z.object({
+  /** Scopes any cached answer to the résumé it came from. */
+  resumeId: z.string().max(64).optional(),
   keywords: z.object({
     hardSkills: z.array(z.string().max(120)).max(60),
     softSkills: z.array(z.string().max(120)).max(60),

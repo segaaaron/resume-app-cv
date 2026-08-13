@@ -93,6 +93,26 @@ function firstYearOf(raw: string | undefined): number | null {
 }
 
 /**
+ * How recent a role is, on the same reading the chronology check uses.
+ *
+ * Exported because the BUTTON that reorders roles must agree with the CHECK that
+ * says they are out of order. It did not: the check reads a bare year ("2015 –
+ * 2016") happily, while the reorder read MM/YYYY and treated a bare year as
+ * unreadable — so on a résumé written with plain years the panel said "your roles
+ * are listed oldest first", and pressing the fix answered "your roles are already
+ * in order". Two readers, one question, opposite answers, and the user in the
+ * middle.
+ *
+ * An ongoing role sorts above every finished one. Null means the date cannot be
+ * read at all, and the caller must leave that row where the candidate put it —
+ * inventing an order is the same harm as inventing a date.
+ */
+export function roleRecency(role: Role): number | null {
+  if (role.currentlyWorking) return Number.MAX_SAFE_INTEGER
+  return yearOf(role.endDate) ?? yearOf(role.startDate)
+}
+
+/**
  * Reverse-chronological order is the single most universal résumé convention, and
  * breaking it is invisible to a keyword matcher and glaring to a person. Reported
  * only when the FIRST role is older than the LAST one — the unambiguous case. A CV

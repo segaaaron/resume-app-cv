@@ -105,10 +105,34 @@ export function groundFixAction(action: CvFixAction, sectionData: Record<string,
       }
       return realDefect ? action : MANUAL
     }
-    case "remove_duplicates":
-      // Operates on whatever the CV holds and is a no-op on a clean CV; the
-      // client tells the user when nothing changed rather than pretending.
-      return jobs.length > 0 ? action : MANUAL
+    case "remove_duplicates": {
+      // The button collapses lines that are IDENTICAL. The finding that offers it
+      // is usually about two lines that say the same thing in DIFFERENT words —
+      // "this repeats the previous bullet almost exactly" — and those the button
+      // cannot touch. Reported: pressing it answered "no repeated lines left",
+      // one line under a finding insisting there were.
+      //
+      // So it survives only when an exact duplicate actually exists. A near
+      // duplicate is real work, and it has its own place in the report: merging
+      // two lines is a rewrite, not a deletion, and only the candidate can say
+      // which half to keep.
+      let hasExact = false
+      try {
+        for (const j of jobs) {
+          const bullets = parseBullets(j.description ?? "")
+          const seen = new Set<string>()
+          for (const b of bullets) {
+            const k = b.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, "")
+            if (k && seen.has(k)) { hasExact = true; break }
+            if (k) seen.add(k)
+          }
+          if (hasExact) break
+        }
+      } catch {
+        return MANUAL
+      }
+      return hasExact ? action : MANUAL
+    }
     default:
       return MANUAL
   }

@@ -1,5 +1,6 @@
 // lib/services/resume/ResumeService.ts
 import { db } from "@/lib/db"
+import { forgetResumeAnswers } from "@/lib/services/ai/shared/answer-cache"
 import { createLogger } from "@/lib/logger"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
@@ -220,7 +221,11 @@ export class ResumeService {
   async delete(userId: string, resumeId: string): Promise<void> {
     const r = await db.resume.deleteMany({ where: { id: resumeId, userId } })
     if (r.count === 0) throw new AppError("not_found", 404)
-    this.logger.info("[ResumeService] delete", { userId, resumeId })
+    // Everything we cached FROM this CV goes with it. Those payloads quote the
+    // candidate's own bullets, and the rows are addressed by content — after the
+    // résumé is gone nothing else could ever find them to clean up.
+    const forgotten = await forgetResumeAnswers(resumeId)
+    this.logger.info("[ResumeService] delete", { userId, resumeId, cachedAnswersCleared: forgotten })
   }
 
   // ── DUPLICATE ─────────────────────────────────────────────────────────────

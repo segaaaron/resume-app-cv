@@ -260,6 +260,8 @@ export interface ATSRescoreInput {
   sectionData?: Record<string, unknown>
   language?: string
   templateId?: string
+  /** The résumé this analysis is about. Only used to scope the cached answers. */
+  resumeId?: string
   /**
    * Requirements the embedding pass proved the CV states differently, echoed
    * back from the full analysis.
@@ -523,6 +525,8 @@ export interface ATSScoreInput {
   language?: string
   /** The template the CV will export as — its layout affects ATS parseability. */
   templateId?: string
+  /** The résumé this analysis is about. Only used to scope the cached answers. */
+  resumeId?: string
   /**
    * Keywords extracted from THIS posting on a previous run, echoed back by the
    * client so the extraction is not re-sampled.

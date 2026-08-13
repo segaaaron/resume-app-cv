@@ -15,6 +15,7 @@
 // model, no network, no cost.
 
 import { checkSpelling } from "@/lib/ats/spellcheck"
+import { stripSectionLabel } from "@/lib/ats/strip-label"
 import { replaceWord } from "@/lib/ats/apply-spelling"
 import { collectProperNouns } from "@/lib/ats/spellcheck-collect"
 
@@ -30,6 +31,11 @@ export async function cleanGeneratedText(
   language: "es" | "en",
   sectionData: Record<string, unknown> = {},
 ): Promise<string[]> {
+  // A section's NAME is not part of its content. The model quotes the section it
+  // is fixing ("Professional Summary: …"), and applied verbatim that label was
+  // printed inside a CV under a heading that already said PERFIL. Stripped here,
+  // where EVERY generated text passes, so no write path can miss it.
+  texts = texts.map((t) => (t?.trim() ? stripSectionLabel(t) : t))
   const nonEmpty = texts.filter((t) => t?.trim())
   if (nonEmpty.length === 0) return texts
 

@@ -7,6 +7,7 @@
 // bracket placeholder — and returns it for the user to confirm in the diff modal.
 // The human-in-the-loop confirm is the honesty gate: an assertion the user never
 // did is rejected by them, exactly like every other suggestion in the editor.
+import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL_PROSE,
@@ -143,7 +144,22 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // the model's job shrinks to writing the bullet for it.
     const chosenJob = chosenId ? work.find((j) => j.id === chosenId) : undefined
     if (chosenId && !chosenJob) return { status: "no_fit" }
-    const jobs = chosenJob ? [chosenJob] : work.slice(0, 6)
+    /**
+     * Roles already carrying more lines than a recruiter reads are offered LAST.
+     *
+     * Reported, and it was a straight contradiction: the panel talked the user
+     * into proving four skills, wrote all four bullets into the same role, and
+     * the structure check below then asked them to delete lines from that role —
+     * including the ones we had just written. Two of our own features working
+     * against each other on the same screen.
+     *
+     * Not a hard exclusion: a skill belongs where it actually happened, and a
+     * crowded role may be the only credible home. When the user picks the role
+     * themselves this does not apply at all — their choice stands.
+     */
+    const roomy = work.filter((j) => parseBullets(j.description ?? "").length <= BULLETS_PER_ROLE_MAX.value)
+    const crowded = work.filter((j) => parseBullets(j.description ?? "").length > BULLETS_PER_ROLE_MAX.value)
+    const jobs = chosenJob ? [chosenJob] : [...roomy, ...crowded].slice(0, 6)
     const workList = jobs.map((j) => {
       const bulletLines = renderBulletsForPrompt(parseBullets(j.description ?? ""), {
         emptyLabel: "  (no bullets yet)",

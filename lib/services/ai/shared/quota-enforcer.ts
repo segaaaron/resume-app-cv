@@ -1,6 +1,7 @@
 // lib/services/ai/shared/quota-enforcer.ts
 import { db } from "@/lib/db"
 import { checkAndIncrementAIQuota, checkAndIncrementRateLimit } from "@/lib/ai-client"
+import { refundRateLimit } from "@/lib/rate-limit"
 import { AppError } from "@/lib/services/auth/AppError"
 import { createLogger } from "@/lib/logger"
 import { getLimits, AI_DAILY_CAP, AI_DAILY_CAP_WINDOW_MS, type AiEndpointName } from "@/lib/plans"
@@ -20,6 +21,26 @@ const logger = createLogger("quota-enforcer")
  * from lifetime freemium rows (sentinel resetAt 2099) in AIRateLimit — without
  * it, a user upgraded from UNSUBSCRIBED would inherit a counter that never resets.
  */
+/**
+ * Gives back one daily slot when the answer cost us nothing.
+ *
+ * The quota is charged before the work starts, which is correct — it is what
+ * stops a loop from spending a thousand calls. But the analysis is now cached by
+ * content, so re-running it on an unchanged résumé and posting makes ZERO model
+ * calls and still burned a slot. Reported by hitting the wall on a day of
+ * testing: the cap that exists to stop spending was charging for requests that
+ * spent nothing.
+ *
+ * Only the daily anti-abuse counter is refunded. The lifetime freemium quota is
+ * the paid boundary and is never touched here.
+ *
+ * Best-effort by construction: a failed refund costs one slot, never a request.
+ */
+export async function refundDailyQuota(userId: string, endpoint: AiEndpointName, plan: string): Promise<void> {
+  if (getLimits(plan).aiLimitsByEndpoint[endpoint] !== -1) return
+  await refundRateLimit(userId, `ai-daily:${endpoint}`)
+}
+
 export async function enforceAIQuota(
   userId: string,
   endpoint: AiEndpointName,

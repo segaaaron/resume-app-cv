@@ -160,6 +160,18 @@ const STRUCTURAL_METRIC = [
   /\b\d[\d.,]*\s*(?:mil|millones|million|billion)\b/i,
   /\b\d[\d.,]*\s*(?:ms|seg|segundos|minutos|horas|hrs|kb|mb|gb|tb)\b/i,
   /\b\d[\d.,]*\s+[a-zá-úñ]{3,}/i,
+  /**
+   * Units of measurement too short for the rule above.
+   *
+   * Found by the stability bench on its first run: "Drove 1,800 km per week" was
+   * not a figure, because "km" is two letters. Every trade that measures distance,
+   * weight, area or power was affected — a driver, a farmer, an electrician — and
+   * no amount of staring at a developer's resume would have surfaced it.
+   *
+   * A list, and defensible as one: units of measurement are a closed set that has
+   * not changed in a lifetime, unlike the open set of things a person can count.
+   */
+  /\b\d[\d.,]*\s*(?:km|kg|mg|ml|lt|hr|hs|hp|kw|mw|m2|m²|ft|mi|lb|oz|cm|mm|gb|tb|kb|mb)\b/i,
 ]
 
 /** True when the text quantifies anything at all. Prefer this over the regex. */

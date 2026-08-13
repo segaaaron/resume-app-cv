@@ -131,6 +131,14 @@ export async function findDemonstratedSoftSkills(
   softSkills: string[],
   bullets: string[],
   deps: SoftSkillEvidenceDeps,
+  /**
+   * The résumé these bullets belong to.
+   *
+   * Every cached answer has to be findable by the CV it came from, or deleting
+   * the CV leaves behind a payload quoting the candidate's own lines that nothing
+   * can ever locate again — the row is addressed by content.
+   */
+  resumeId?: string,
 ): Promise<Set<string>> {
   const out = new Set<string>()
 
@@ -169,7 +177,7 @@ export async function findDemonstratedSoftSkills(
   // ── Remember, so the same CV keeps scoring the same. An empty result is stored
   // too: "nothing demonstrated" is an answer, and re-asking it every analysis is
   // how a stable score turns into a drifting one.
-  await writeAnswer("soft-evidence", inputHash, demonstrated, model)
+  await writeAnswer("soft-evidence", inputHash, demonstrated, model, resumeId)
 
   return out
 }
