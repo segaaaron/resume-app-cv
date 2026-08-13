@@ -58,10 +58,20 @@ export async function POST(req: Request, { params }: Params) {
     const webpBuffer = await callScreenshotService(printUrl, "")
     const dataUrl = `data:image/webp;base64,${webpBuffer.toString("base64")}`
 
-    await db.resume.update({
-      where: { id },
+    // updateMany, not update: the row was checked before the render, and the
+    // render takes seconds. Deleting the CV from the dashboard in that window is
+    // a normal thing to do, and `update` throws P2025 when the row is gone —
+    // which surfaced in Service Errors as "thumbnail render failed", a red entry
+    // for a user who did nothing wrong. Zero rows updated is the correct outcome
+    // here, not a failure.
+    const { count } = await db.resume.updateMany({
+      where: { id, userId: session.user.id },
       data: { thumbnailUrl: dataUrl },
     })
+    if (count === 0) {
+      logger.info("thumbnail discarded: resume deleted during render", { resumeId: id })
+      return NextResponse.json({ ok: false, skipped: true })
+    }
 
     logger.info("thumbnail generated", { resumeId: id, sizeBytes: webpBuffer.byteLength })
     return NextResponse.json({ thumbnailUrl: dataUrl })

@@ -69,6 +69,11 @@ export default function ResumesDashboard({
   const [portalLoading, setPortalLoading] = useState(false)
   const { open: openUpgradeModal } = useUpgradeModal()
 
+  // What is on screen RIGHT NOW, readable from inside the staggered loop below
+  // without restarting it.
+  const resumesRef = useRef(initialResumes)
+  useEffect(() => { resumesRef.current = resumes }, [resumes])
+
   // Generate thumbnails for CVs that don't have one yet (staggered, fire-and-forget)
   useEffect(() => {
     const missing = initialResumes.filter((r) => !r.thumbnailUrl)
@@ -77,6 +82,12 @@ export default function ResumesDashboard({
     const run = async () => {
       for (const resume of missing) {
         if (cancelled) break
+        // The queue is built once and each render costs seconds, so by the time a
+        // CV's turn arrives the user may well have deleted it from this very
+        // screen. Asking for the thumbnail of a deleted CV answers 404, and every
+        // one of those landed in the admin Service Errors panel as a red row
+        // caused by nothing but normal use.
+        if (!resumesRef.current.some((r) => r.id === resume.id)) continue
         try {
           const res = await apiFetch(`/api/resumes/${resume.id}/thumbnail?locale=${locale}`, { method: "POST", silent: true })
           if (res.ok) {
