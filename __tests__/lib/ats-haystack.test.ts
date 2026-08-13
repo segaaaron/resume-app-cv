@@ -58,3 +58,36 @@ describe("the same for the other sections the prompt truncates", () => {
     expect(matchAgainst(h, ["soldadura tig"]).missingKeywords).toHaveLength(0)
   })
 })
+
+describe("hard requirements the CV already meets", () => {
+  const sections = { summary: true, work: true, skills: true, education: true }
+  const keywords = {
+    jobTitle: "iOS Developer",
+    hardSkills: ["Swift"],
+    softSkills: [],
+    mustHaves: ["5+ years of iOS experience"],
+  }
+  const hay = "ios developer swift uikit swiftui"
+
+  const mustPct = (r: ReturnType<typeof computeATSMatch>) =>
+    r.breakdown.categories.find((c) => c.category === "mustHaves")?.coveragePct
+
+  it("scores zero on the requirement when nothing says it is met", () => {
+    const r = computeATSMatch(keywords, hay, "ios developer", sections, hay)
+    expect(mustPct(r)).toBe(0)
+    expect(r.missingMustHaves).toEqual(["5+ years of iOS experience"])
+  })
+
+  it("credits it once the work history proves it", () => {
+    // Nobody writes "5+ years of experience" on their own resume, so this lever
+    // sat at 0% for candidates who clear it twice over — 20% of the score that
+    // no one could reach. The satisfaction check existed and only fed the list
+    // the panel printed, never the number.
+    const met = new Set(["5+ years of ios experience"])
+    const r = computeATSMatch(keywords, hay, "ios developer", sections, hay, undefined, undefined, undefined, met)
+    expect(mustPct(r)).toBe(100)
+    expect(r.missingMustHaves).toEqual([])
+    // Measured: 78 → 100 on the same resume. Twenty points nobody could reach.
+    expect(r.score).toBeGreaterThan(computeATSMatch(keywords, hay, "ios developer", sections, hay).score + 15)
+  })
+})

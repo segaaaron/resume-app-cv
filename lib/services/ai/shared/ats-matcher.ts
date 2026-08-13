@@ -253,6 +253,21 @@ export function computeATSMatch(
    * requirement is a behaviour and appears in what the candidate DID.
    */
   softDemonstrated?: Set<string>,
+  /**
+   * Hard requirements the CV provably MEETS without saying the sentence.
+   *
+   * Must-haves are extracted as requirements — "5+ years of iOS experience", "a
+   * Bachelor's degree" — and were then scored by looking for those words in the
+   * resume. Nobody writes "5+ years of experience" on their own CV, so the lever
+   * sat at 0% for candidates who clear the requirement twice over, and 20% of the
+   * score was unreachable by anyone: every full report topped out around 80 with
+   * "Hard requirements 0%" next to four bars reading 100%.
+   *
+   * The satisfaction check already existed and was applied only to the list the
+   * panel PRINTS, never to the number. Same defect as the soft-skill lever, which
+   * is why it takes the same route: proof outranks presence.
+   */
+  mustHavesMet?: Set<string>,
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
@@ -260,7 +275,7 @@ export function computeATSMatch(
 
   const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches)
   const soft = coverage(keywords.softSkills, hay, evidence, semanticMatches, softDemonstrated)
-  const must = coverage(keywords.mustHaves, hay, evidence, semanticMatches)
+  const must = coverage(keywords.mustHaves, hay, evidence, semanticMatches, mustHavesMet)
   const title = titleScore(keywords.jobTitle, titlesNorm, recentTitles ? normalize(recentTitles) : undefined)
   const sectionsPct = sectionsScore(sections)
 

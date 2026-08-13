@@ -43,10 +43,24 @@ import { answerHash, readAnswer, writeAnswer } from "../shared/answer-cache"
 import { getTemplateAtsSafety, templateFormatScore, applyTemplatePenalty } from "@/lib/ats/template-ats-safety"
 import { assessResumeContent } from "../shared/bullet-quality"
 import { findNearMisses } from "@/lib/ats/near-miss"
+import { normalizeTerm } from "@/lib/ats/vocabulary"
 import { dropSatisfiedYearRequirements } from "@/lib/ats/experience-years"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { groundFixAction } from "@/lib/ats/fix-actions"
 import { splitFixText } from "@/lib/ats/fix-text"
+
+/**
+ * Hard requirements this CV provably meets, normalized for the matcher.
+ *
+ * Deterministic: it reads the real date span of the work history, exactly like
+ * the check that decides which requirements to PRINT as gaps. Both now read the
+ * same answer — the number and the list used to disagree, and the number was the
+ * one that was wrong.
+ */
+function metMustHaves(mustHaves: string[], sectionData: Record<string, unknown>): Set<string> {
+  const stillMissing = new Set(dropSatisfiedYearRequirements(mustHaves, sectionData))
+  return new Set(mustHaves.filter((m) => !stillMissing.has(m)).map((m) => normalizeTerm(m)))
+}
 
 /** A bracketed blank, or several — the shape of a form, not of an example. */
 const PLACEHOLDER_MENU = /\[[^\]]{0,80}\]|\{[^}]{0,80}\}/
@@ -774,7 +788,8 @@ Reglas:
         })
       : new Set<string>()
 
-    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated)
+    const mustMet = metMustHaves(keywords.mustHaves, sectionData ?? {})
+    let match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, undefined, recentTitles, softDemonstrated, mustMet)
 
     // ── Semantic recall pass (embeddings) ──────────────────────────────────────
     // The exact matcher misses a required skill the CV phrases differently
@@ -818,7 +833,7 @@ Reglas:
         })
         if (semanticMatches.size > 0) {
           semanticMatched = semanticMatches
-          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated)
+          match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, semanticMatches, recentTitles, softDemonstrated, mustMet)
         }
       }
     }
@@ -943,7 +958,7 @@ Reglas:
     // Same carry for the soft-skill evidence: judging bullets needs a model call,
     // which cannot run per keystroke. The analysis published what it found.
     const carriedSoft = input.demonstratedSoftSkills?.length ? new Set(input.demonstratedSoftSkills) : undefined
-    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft)
+    const match = computeATSMatch(keywords, atsHaystack, cvTitles, sections, evidenceText, carried, buildRecentTitles(data), carriedSoft, metMustHaves(keywords.mustHaves, data))
 
     const templateSafety = getTemplateAtsSafety(templateId)
     const formatScore = templateFormatScore(templateSafety)
