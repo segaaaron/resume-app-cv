@@ -55,16 +55,24 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
     // 8 could leave 2, and the user would think the catalog has nothing for them.
     const res = filterSkills(value, 16, boostKey ? boostKey.split(",") : [])
     const listed = listedKey ? listedKey.split(",").filter(Boolean) : []
-    if (listed.length === 0) return { ...res, matches: res.matches.slice(0, 8) }
+    if (listed.length === 0) return { ...res, matches: res.matches.slice(0, 8).map((o) => ({ ...o, owned: false })) }
     // TWO engines, because neither covers the other. findDuplicateSkill knows
     // aliases, spacing and near-spellings ("React.js" hides "React"), while
     // termPresent reads the listed skills as text and catches a term contained
     // in a longer one — "Teamwork and communication" already covers
     // "communication", which the dedup alone returns as not-a-duplicate.
+    //
+    // MARKED, not removed. Hiding a skill the user already has produces the exact
+    // complaint this dropdown was fixed for once before: type "swift", watch
+    // SwiftUI not appear, conclude the catalogue does not have it. It does — you
+    // already own it, and the list should say so instead of going quiet.
     return {
       ...res,
       matches: res.matches
-        .filter((o) => !findDuplicateSkill(o.display, listed) && !listed.some((l) => containsSkill(o.display, l)))
+        .map((o) => ({
+          ...o,
+          owned: !!findDuplicateSkill(o.display, listed) || listed.some((l) => containsSkill(o.display, l)),
+        }))
         .slice(0, 8),
     }
   }, [value, boostKey, listedKey])
@@ -81,9 +89,20 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
       if (e.key === "ArrowDown" && matches.length > 0) { setOpen(true); setActive(0); e.preventDefault() }
       return
     }
-    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, matches.length - 1)) }
-    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => Math.max(a - 1, 0)) }
-    else if (e.key === "Enter" && active >= 0) { e.preventDefault(); commitSelect(matches[active]) }
+    // Arrow keys skip the ones already owned: they are shown for information, and
+    // a keyboard user must never land on something Enter cannot select.
+    const step = (from: number, dir: 1 | -1) => {
+      let i = from
+      for (let n = 0; n < matches.length; n++) {
+        i += dir
+        if (i < 0 || i > matches.length - 1) return from
+        if (!matches[i].owned) return i
+      }
+      return from
+    }
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => step(a, 1)) }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive((a) => step(a, -1)) }
+    else if (e.key === "Enter" && active >= 0 && !matches[active]?.owned) { e.preventDefault(); commitSelect(matches[active]) }
     else if (e.key === "Escape") { setOpen(false); setActive(-1) }
   }
 
@@ -128,9 +147,14 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
                 id={`${listId}-opt-${i}`}
                 role="option"
                 aria-selected={i === active}
-                onMouseDown={(e) => { e.preventDefault(); commitSelect(o) }}
-                onMouseEnter={() => setActive(i)}
-                className={`flex flex-col gap-0.5 px-3 py-2.5 cursor-pointer transition-colors ${i === active ? "bg-cyan-50" : "hover:bg-slate-50"}`}
+                aria-disabled={o.owned || undefined}
+                onMouseDown={(e) => { e.preventDefault(); if (!o.owned) commitSelect(o) }}
+                onMouseEnter={() => { if (!o.owned) setActive(i) }}
+                className={`flex flex-col gap-0.5 px-3 py-2.5 transition-colors ${
+                  o.owned
+                    ? "opacity-45 cursor-not-allowed"
+                    : `cursor-pointer ${i === active ? "bg-cyan-50" : "hover:bg-slate-50"}`
+                }`}
               >
                 {/* The skill NAME owns the full width and wraps. It used to sit
                     next to a shrink-0 category pill, so in a ~340px panel the
@@ -140,8 +164,10 @@ export default function SkillAutocompleteInput({ value, onChange, onCommit, plac
                 <span className="text-[13px] font-medium text-slate-800 leading-snug break-words">
                   {highlight(o.display, fuzzy ? "" : value)}
                 </span>
+                {/* Said in words, not by greying alone — the state has to survive a
+                    user who cannot tell the two shades apart. */}
                 <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                  {o.categoryLabel}
+                  {o.owned ? t("skills.already_added") : o.categoryLabel}
                 </span>
               </li>
             ))}

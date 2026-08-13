@@ -155,6 +155,19 @@ export function expandTerm(keyword: string): string[] {
   return group ? [...group] : [norm]
 }
 
+/**
+ * Does the shared vocabulary recognise this as a capability?
+ *
+ * Broader than isKnownSkill, which reads only the curated dictionary: this also
+ * covers the equivalence groups, where "unit testing", "functional programming" and
+ * "code review" live. Callers deciding WHAT A THING IS — a skill or a credential,
+ * a term or a sentence — need the whole vocabulary, not half of it.
+ */
+export function isKnownVocabularyTerm(term: string): boolean {
+  const norm = normalizeTerm(term)
+  return !!norm && EQUIVALENCE.has(norm)
+}
+
 /** How many terms the shared vocabulary knows. Surfaced for diagnostics. */
 export const VOCABULARY_SIZE = EQUIVALENCE.size
 

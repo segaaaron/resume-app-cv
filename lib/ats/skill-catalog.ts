@@ -70,6 +70,53 @@ const CASE_OVERRIDE: Record<string, string> = {
   "e-learning": "E-Learning", cnc: "CNC", "cnc machining": "CNC Machining", hvac: "HVAC",
   osha: "OSHA", servsafe: "ServSafe", "pos systems": "POS Systems", "cinema 4d": "Cinema 4D",
   c4d: "Cinema 4D", coreldraw: "CorelDRAW", "3d modeling": "3D Modeling",
+  // 2026-08 agile/product/design/backend batch. Brand and acronym casing that the
+  // title-caser cannot infer: it produced "Adobe Indesign", "Api Gateway", "Mvp
+  // Definition" and "Jetpack Datastore", and those strings are what the chip
+  // writes into the user's CV.
+  "adobe indesign": "Adobe InDesign", "adobe after effects": "Adobe After Effects",
+  "adobe lightroom": "Adobe Lightroom", "api gateway": "API Gateway",
+  "mvp definition": "MVP Definition", "jetpack datastore": "Jetpack DataStore",
+  "azure devops": "Azure DevOps", "product requirements document": "Product Requirements Document (PRD)",
+  "rice prioritization": "RICE Prioritization", "moscow prioritization": "MoSCoW Prioritization",
+  "scaled agile framework": "Scaled Agile Framework (SAFe)", "go-to-market": "Go-to-Market",
+  "the composable architecture": "The Composable Architecture (TCA)",
+  "server-sent events": "Server-Sent Events (SSE)", "definition of done": "Definition of Done",
+  "definition of ready": "Definition of Ready", "north star metric": "North Star Metric",
+  "voiceover accessibility": "VoiceOver Accessibility", "qa manual": "Manual Testing",
+  "event-driven architecture": "Event-Driven Architecture",
+  "ceremonias agiles": "Ceremonias Ágiles", "cross-functional teams": "Cross-Functional Teams",
+  // 2026-08 non-tech batch. Acronyms the title-caser mangles into "Iv Insertion"
+  // and "Tig Welding" — and this string is what the chip writes into the CV of a
+  // nurse or a welder, in front of the recruiter who knows how it is spelled.
+  "iv insertion": "IV Insertion", "tig welding": "TIG Welding", "mig welding": "MIG Welding",
+  "iep development": "IEP Development", "plc programming": "PLC Programming",
+  rtos: "RTOS", "pcb design": "PCB Design", "can bus": "CAN Bus", "i2c protocol": "I2C Protocol",
+  "5s methodology": "5S Methodology", "warehouse management system": "Warehouse Management System (WMS)",
+  "net promoter score": "Net Promoter Score (NPS)", "embedded c": "Embedded C",
+  "lockout tagout": "Lockout/Tagout", "learning management systems": "Learning Management Systems (LMS)",
+  "mergers and acquisitions": "Mergers & Acquisitions", "discounted cash flow": "Discounted Cash Flow (DCF)",
+  "applicant tracking systems": "Applicant Tracking Systems (ATS)",
+  "diversity and inclusion": "Diversity & Inclusion", "elk stack": "ELK Stack",
+  "public key infrastructure": "Public Key Infrastructure (PKI)", "pci dss": "PCI DSS",
+  "nist framework": "NIST Framework", "soc 2": "SOC 2",
+  "service level agreement": "Service Level Agreement (SLA)",
+  "service level objectives": "Service Level Objectives (SLO)",
+  "infrastructure as code": "Infrastructure as Code (IaC)", "css grid": "CSS Grid",
+  "css modules": "CSS Modules", "server-side rendering": "Server-Side Rendering (SSR)",
+  "static site generation": "Static Site Generation (SSG)", "ssr hydration": "SSR Hydration",
+  "web vitals": "Core Web Vitals", "camerax": "CameraX", "media3": "Media3",
+  "kotlin symbol processing": "Kotlin Symbol Processing (KSP)", "mockk": "MockK",
+  "wear os": "Wear OS", "android tv": "Android TV", "android auto": "Android Auto",
+  "android app bundles": "Android App Bundles", "core nfc": "Core NFC", "core image": "Core Image",
+  "core audio": "Core Audio", "core text": "Core Text", "core spotlight": "Core Spotlight",
+  "objective-c runtime": "Objective-C Runtime", "swift actors": "Swift Actors",
+  "mobile device management": "Mobile Device Management (MDM)", "apple handoff": "Apple Handoff",
+  "presto sql": "Presto SQL", "amazon kinesis": "Amazon Kinesis", "delta lake": "Delta Lake",
+  "slowly changing dimensions": "Slowly Changing Dimensions (SCD)",
+  "master data management": "Master Data Management (MDM)",
+  "spin selling": "SPIN Selling", "lead qualification": "Lead Qualification (BANT/MEDDIC)",
+  "key account management": "Key Account Management (KAM)",
 }
 
 export function displaySkill(term: string): string {

@@ -61,3 +61,46 @@ export function containsSkill(candidate: string, listed: string): boolean {
   // Word-boundary containment on the normalized form.
   return new RegExp(`(^|\\s)${c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(\\s|$)`).test(l)
 }
+
+/**
+ * Do these two SOFT requirements name the same behaviour?
+ *
+ * A different question from findDuplicateSkill, and it needs a looser answer. Hard
+ * skills are terms and compare as terms; a soft requirement is a sentence the
+ * posting wrote and the tailor pass rewords freely — "Ownership", "Sense of
+ * ownership" and "Takes ownership end to end" are one requirement in three
+ * phrasings, and none of them is a spelling variant of the others.
+ *
+ * Exists because the panel's soft-skill list is filtered against what the bullets
+ * already demonstrate, and an exact comparison let the same requirement come back
+ * under a new wording — which is the "the list only ever grows" report, surviving
+ * in the one corner the first fix did not reach.
+ *
+ * Content-word overlap, ignoring the connective words every phrasing carries. Both
+ * directions, so neither the longer nor the shorter phrasing wins by accident.
+ */
+const SOFT_CONNECTIVES = new Set([
+  "and", "or", "the", "with", "for", "your", "you", "that", "this", "into", "from",
+  "under", "without", "while", "able", "ability", "skills", "skill", "strong",
+  "good", "working", "work", "works", "being", "have", "has",
+  "y", "o", "de", "del", "la", "el", "los", "las", "con", "para", "por", "en",
+  "que", "sin", "capacidad", "habilidad", "habilidades", "buen", "buena",
+])
+
+export function sameSoftRequirement(a: string, b: string): boolean {
+  const words = (s: string) =>
+    normalizeTerm(s)
+      .split(/[^a-z0-9]+/)
+      // Two characters, not three: "UX", "QA" and "AI" are content words, and
+      // dropping them left "UX Focus" with the single token "focus", which then
+      // matched "Cost Focus" completely. A caught-by-test near-miss that would
+      // have hidden a requirement the CV never demonstrated.
+      .filter((w) => w.length > 1 && !SOFT_CONNECTIVES.has(w))
+  const wa = new Set(words(a))
+  const wb = new Set(words(b))
+  if (wa.size === 0 || wb.size === 0) return false
+  const shared = [...wa].filter((w) => wb.has(w)).length
+  // Measured against the smaller side: "Ownership" is one word, and asking it to
+  // cover 60% of "Takes ownership of features end to end" would never match.
+  return shared / Math.min(wa.size, wb.size) >= 0.6
+}

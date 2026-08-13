@@ -24,6 +24,7 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
 import { normalizeDescription } from "@/lib/utils"
 import { randomUUID } from "crypto"
+import { classifyImportedTerms } from "@/lib/ats/import-classification"
 
 export interface ImportExtractInput {
   rawText: string
@@ -50,6 +51,7 @@ interface LlmResume {
 // than blowing the context/cost. ~18k chars ≈ a dense 3-4 page CV.
 const MAX_IMPORT_CHARS = 18_000
 const s = (v: unknown): string => (typeof v === "string" ? v.trim() : "")
+
 
 export class AIImportModule {
   constructor(
@@ -157,6 +159,7 @@ Rules:
 - Language level: map any wording (native, fluent, "conversacional", B2, advanced, stars) to the nearest CEFR value (a1..c2 or native).
 - Work/project descriptions: preserve the ORIGINAL structure. If the source lists discrete achievements — whatever their marker (•, -, *, ●, ▪, →, ✓, numbered "1." / "a)") — return each as its own line prefixed with "• ". If a role is written as a genuine NARRATIVE PARAGRAPH (flowing prose describing scope and impact), keep it as prose — do NOT chop it into bullets. If it opens with an intro sentence and then lists achievements, keep the intro as a prose line and mark only the achievements with "• ". Never rephrase, merge, translate, or add metrics.
 - Put LinkedIn/GitHub in their own fields; any other social/portfolio link goes in socials[].
+- SKILL vs CERTIFICATION. A certification is a credential SOMEBODY AWARDED — a course, exam, bootcamp or licence, usually with an issuer or a year ("App Development with Swift Associate (2024)", "AWS Solutions Architect"). A bare capability is a SKILL ("SwiftUI", "Excel", "Triage"). Copy each item into the section its OWN heading puts it under; do not reassign items between the two lists, and never split one list across both fields.
 
 === RESUME TEXT ===
 ${rawText}`
@@ -188,6 +191,15 @@ ${rawText}`
     // paragraph before bullets stays prose, and a genuine narrative paragraph is left
     // untouched — never shredded into fake bullets. See normalizeDescription.
     const bulletDesc = (v: unknown): string => normalizeDescription(safeDesc(v))
+
+    // Skills and certifications are routed together, once, by the classifier —
+    // never by the model and never twice. See import-classification.ts.
+    const classified = classifyImportedTerms({
+      skills: (p.skills ?? []).filter((sk) => grounded(sk.name)).map((sk) => ({ name: s(sk.name), level: s(sk.level) })),
+      certifications: (p.certifications ?? [])
+        .filter((c) => grounded(c.name))
+        .map((c) => ({ name: s(c.name), issuer: s(c.issuer), date: s(c.date), url: contactOrEmpty(c.url) })),
+    })
 
     const pd = p.personalDetails ?? {}
     const draft = {
@@ -237,17 +249,13 @@ ${rawText}`
           description: safeDesc(e.description),
         }))
         .slice(0, 12),
-      skills: (p.skills ?? [])
-        .filter((sk) => grounded(sk.name))
-        .map((sk) => ({ id: randomUUID(), name: s(sk.name), level: s(sk.level) || "intermediate" }))
-        .slice(0, 60),
+      skills: classified.skills.map((sk) => ({ id: randomUUID(), name: sk.name, level: sk.level || "intermediate" })).slice(0, 60),
       languages: (p.languages ?? [])
         .filter((l) => grounded(l.name))
         .map((l) => ({ id: randomUUID(), name: s(l.name), level: (s(l.level) || "b1").toLowerCase() }))
         .slice(0, 12),
-      certifications: (p.certifications ?? [])
-        .filter((c) => grounded(c.name))
-        .map((c) => ({ id: randomUUID(), name: s(c.name), issuer: s(c.issuer), date: s(c.date), url: contactOrEmpty(c.url) }))
+      certifications: classified.certifications
+        .map((c) => ({ id: randomUUID(), name: c.name, issuer: c.issuer ?? "", date: c.date ?? "", url: contactOrEmpty(c.url) }))
         .slice(0, 20),
       projects: (p.projects ?? [])
         .filter((pr) => grounded(pr.name))

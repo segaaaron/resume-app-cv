@@ -13,6 +13,7 @@
 // on the page.
 import { ATS_SKILLS } from "@/lib/ats/skills-dictionary"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
+import { displaySkill } from "@/lib/ats/skill-catalog"
 
 /** Most suggestions to surface. Keeps the card scannable; the tail is noise. */
 export const MAX_PROVEN_SKILLS = 8
@@ -75,12 +76,83 @@ function fuzzyMatchesListed(candidate: string, listedCollapsed: Iterable<string>
  * alias appears there literally. Word boundaries mirror the vocabulary's own
  * matcher so "+" and "#" survive (c++, c#).
  */
+/**
+ * A short form only counts when the CV wrote it the way an acronym is written.
+ *
+ * Measured: "I go to the client site" offered Go the language AND Monday.com;
+ * "kept my word" offered Word; "a rag" offered RAG; "bee hive" offered Apache
+ * Hive; "lean cuts of meat" offered Lean. Every one of them a person who never
+ * claimed the skill, on the card that says "you have already proven these".
+ *
+ * This class of bug was fixed once by NAMING the offenders — room, expo, glide,
+ * vault, epic — which is a list, and a list only ever knows the words somebody
+ * already tripped over. There are 164 forms of four characters or fewer in this
+ * dictionary and no list stays ahead of them.
+ *
+ * The structural difference is capitalisation: SQL, AWS, RAG and Go are written
+ * with capitals in a resume, while "go to", "my word" and "a rag" are not. So a
+ * form this short must show at least one capital letter in the candidate's own
+ * text. Longer terms are unaffected — "electrical installation" needs no such
+ * evidence, and a lowercase "swiftui" is still SwiftUI.
+ */
+const SHORT_FORM_MAX = 4
+
+function writtenAsAcronym(slice: string): boolean {
+  // \p{Lu}, not an ASCII-plus-Spanish list: a CV can be written in any language
+  // this product will ever support, and hand-listing the accented capitals is how
+  // the accent bugs in this file started.
+  return /\p{Lu}/u.test(slice)
+}
+
+/**
+ * Folds accents while REMEMBERING where each character came from, so a match found
+ * in the folded text can be sliced out of the original with its accents intact.
+ *
+ * A plain .normalize("NFD").replace(...) loses the mapping — the folded string is
+ * shorter, so its indices no longer point anywhere real.
+ */
+function foldWithIndex(text: string): { folded: string; index: number[] } {
+  let folded = ""
+  const index: number[] = []
+  for (let i = 0; i < text.length; i++) {
+    const f = text[i].normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+    for (const ch of f) {
+      folded += ch
+      index.push(i)
+    }
+  }
+  return { folded, index }
+}
+
+/**
+ * The term as the candidate wrote it, found ACCENT-INSENSITIVELY.
+ *
+ * This used to match the raw string, so a CV saying "canalización venosa" never
+ * matched the alias "canalizacion venosa" and the skill was dropped in silence —
+ * termPresent had already found it (it normalises), and then this returned null
+ * and the entry was skipped. Every accented Spanish term in the dictionary was
+ * affected: the card simply never offered them.
+ *
+ * The same defect was found and fixed once in the dictionary index itself, and the
+ * fix was never carried across to the place that decides what to DISPLAY.
+ *
+ * The slice comes out of the ORIGINAL text, so the user still sees their own
+ * spelling, accents and casing — which is the entire point of this function.
+ */
 function displayAsWritten(original: string, terms: string[]): string | null {
+  const { folded, index } = foldWithIndex(original)
   for (const t of terms) {
     if (!t) continue
-    const re = new RegExp(`(^|[^A-Za-z0-9])(${escapeRegExp(t)})([^A-Za-z0-9+#]|$)`, "i")
-    const m = original.match(re)
-    if (m) return m[2].trim()
+    const foldedTerm = foldWithIndex(t).folded
+    if (!foldedTerm) continue
+    const re = new RegExp(`(^|[^a-z0-9])(${escapeRegExp(foldedTerm)})([^a-z0-9+#]|$)`)
+    const m = re.exec(folded)
+    if (!m) continue
+    const start = m.index + m[1].length
+    const from = index[start]
+    const to = index[start + m[2].length - 1]
+    if (from === undefined || to === undefined) continue
+    return original.slice(from, to + 1).trim()
   }
   return null
 }
@@ -119,8 +191,25 @@ export function findProvenUnlistedSkills(experienceText: string, listedSkills: s
     // dedupes against the canonical spelling. Suggestion-only, tightly guarded.
     if (collapsedForms.some((f) => fuzzyMatchesListed(f, listedCollapsed))) continue
 
-    const display = displayAsWritten(experienceText, [skill.term, ...(skill.aliases ?? [])])
-    if (!display) continue
+    const asWritten = displayAsWritten(experienceText, [skill.term, ...(skill.aliases ?? [])])
+    if (!asWritten) continue
+    // A four-letter form the CV wrote in lowercase is a word, not an acronym.
+    if (asWritten.replace(/[^\p{L}\p{N}]/gu, "").length <= SHORT_FORM_MAX && !writtenAsAcronym(asWritten)) continue
+    /**
+     * Offer the CANONICAL name, not the wording the prose happened to use.
+     *
+     * The match can come from an alias: a CV that says "RESTful APIs" matched the
+     * entry whose canonical term is "REST", and the chip offered was "RESTful" —
+     * the alias. Added to Skills that is a weaker string for the matcher and an
+     * inconsistent one next to every other chip, which all carry the catalog's
+     * spelling.
+     *
+     * The as-written form is kept when it IS the canonical term, because then it
+     * carries the user's own casing ("SwiftUI", not "swiftui") — which is the
+     * reason this function existed in the first place.
+     */
+    const canonical = displaySkill(skill.term)
+    const display = normalizeTerm(asWritten) === normalizeTerm(skill.term) ? asWritten : canonical
 
     seen.add(skill.term)
     out.push(display)

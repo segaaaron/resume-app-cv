@@ -82,7 +82,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "django", category: "backend" },
   { term: "flask", category: "backend" },
   { term: "fastapi", category: "backend" },
-  { term: "spring", aliases: ["spring boot"], category: "backend" },
   { term: "rails", aliases: ["ruby on rails"], category: "backend" },
   { term: "laravel", category: "backend" },
   // REST: order + plural + phrasing variants all fold to one term so a JD asking
@@ -182,8 +181,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "adobe xd", category: "design" },
   { term: "photoshop", aliases: ["adobe photoshop"], category: "design" },
   { term: "illustrator", aliases: ["adobe illustrator"], category: "design" },
-  { term: "indesign", category: "design" },
-  { term: "after effects", category: "design" },
   { term: "premiere", aliases: ["premiere pro", "adobe premiere"], category: "design" },
   { term: "ui design", aliases: ["diseño ui"], category: "design" },
   { term: "ux design", aliases: ["diseño ux"], category: "design" },
@@ -235,11 +232,14 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "asana", category: "pm" },
   { term: "trello", category: "pm" },
   { term: "notion", category: "pm" },
-  { term: "monday.com", aliases: ["monday"], category: "pm" },
+  // Sin el alias "monday": es un día de la semana. "Coordinó la reunión de los
+  // lunes" o "every Monday" etiquetaba a cualquiera con una herramienta de gestión
+  // que nunca usó. El nombre del producto lleva el punto-com y con eso alcanza.
+  { term: "monday.com", category: "pm" },
   { term: "linear", category: "pm" },
-  { term: "product management", aliases: ["gestión de producto"], category: "pm" },
+  { term: "product management", aliases: ["gestión de producto", "gestion de producto", "product manager", "gerente de producto"], category: "pm" },
   { term: "project management", aliases: ["gestión de proyectos"], category: "pm" },
-  { term: "stakeholder management", aliases: ["gestión de stakeholders"], category: "pm" },
+  { term: "stakeholder management", aliases: ["gestión de stakeholders", "gestion de stakeholders", "gestion de interesados"], category: "pm" },
   { term: "roadmap", aliases: ["hoja de ruta"], category: "pm" },
   { term: "okrs", aliases: ["okr"], category: "pm" },
   { term: "kpi", aliases: ["kpis"], category: "pm" },
@@ -354,7 +354,7 @@ export const ATS_SKILLS: SkillEntry[] = [
   // Backend
   { term: ".net", aliases: ["dotnet"], category: "backend" },
   { term: "asp.net", category: "backend" },
-  { term: "spring boot", category: "backend" },
+  { term: "spring boot", aliases: ["spring"], category: "backend" },
   { term: "hibernate", category: "backend" },
   { term: "deno", category: "backend" },
   { term: "socket.io", category: "backend" },
@@ -398,7 +398,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   // DevOps / SRE
   { term: "argocd", aliases: ["argo cd"], category: "devops" },
   { term: "helm", category: "devops" },
-  { term: "istio", category: "devops" },
   { term: "circleci", aliases: ["circle ci"], category: "devops" },
   { term: "sonarqube", category: "devops" },
   { term: "splunk", category: "devops" },
@@ -498,25 +497,38 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "blender", category: "design" },
   { term: "cinema 4d", aliases: ["c4d"], category: "design" },
   { term: "coreldraw", category: "design" },
-  { term: "lightroom", category: "design" },
   { term: "affinity designer", category: "design" },
   { term: "affinity photo", category: "design" },
-  { term: "motion graphics", category: "design" },
-  { term: "branding", aliases: ["brand identity"], category: "design" },
+  { term: "motion graphics", aliases: ["motion design", "graficos en movimiento"], category: "design" },
   { term: "typography", category: "design" },
-  { term: "color theory", category: "design" },
+  { term: "color theory", aliases: ["teoria del color"], category: "design" },
   { term: "layout design", category: "design" },
   { term: "print design", category: "design" },
-  { term: "packaging design", category: "design" },
+  { term: "packaging design", aliases: ["diseno de packaging", "diseno de empaques"], category: "design" },
   { term: "3d modeling", category: "design" },
   { term: "animation", category: "design" },
-  { term: "storyboarding", category: "design" },
+  { term: "storyboarding", aliases: ["storyboard", "guion grafico", "storyboards"], category: "design" },
   { term: "logo design", category: "design" },
   { term: "art direction", category: "design" },
   { term: "visual design", category: "design" },
   { term: "illustration", category: "design" },
   // Healthcare — nursing / clinical
   { term: "patient care", aliases: ["atención al paciente", "cuidado del paciente"], category: "healthcare" },
+  // Disciplines that are ALSO the profession's headline skill. Missing here, they
+  // were being reported as "your degree is listed as a skill" for the very people
+  // whose skills list is correct — and, worse, a nurse's resume matched nothing
+  // when a posting asked for "nursing". Unambiguous multi-word or profession terms
+  // only: nothing that doubles as ordinary prose.
+  { term: "nursing", aliases: ["enfermeria", "enfermería"], category: "healthcare" },
+  { term: "graphic design", aliases: ["diseño grafico", "diseño gráfico"], category: "design" },
+  { term: "industrial design", aliases: ["diseño industrial"], category: "design" },
+  { term: "civil engineering", aliases: ["ingenieria civil", "ingeniería civil"], category: "industry" },
+  { term: "industrial engineering", aliases: ["ingenieria industrial", "ingeniería industrial"], category: "industry" },
+  { term: "architecture", aliases: ["arquitectura"], category: "industry" },
+  { term: "psychology", aliases: ["psicologia", "psicología"], category: "healthcare" },
+  { term: "veterinary medicine", aliases: ["medicina veterinaria", "veterinaria"], category: "healthcare" },
+  { term: "social work", aliases: ["trabajo social"], category: "education" },
+  { term: "journalism", aliases: ["periodismo"], category: "marketing" },
   { term: "ehr", aliases: ["electronic health records"], category: "healthcare" },
   { term: "emr", aliases: ["electronic medical records"], category: "healthcare" },
   { term: "epic systems", category: "healthcare" },
@@ -537,7 +549,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "care planning", aliases: ["planificación de cuidados"], category: "healthcare" },
   { term: "infection control", aliases: ["control de infecciones", "bioseguridad"], category: "healthcare" },
   { term: "first aid", aliases: ["primeros auxilios"], category: "healthcare" },
-  { term: "clinical documentation", aliases: ["documentación clínica", "historia clínica", "charting"], category: "healthcare" },
   { term: "ekg", aliases: ["ecg"], category: "healthcare" },
   { term: "acute care", aliases: ["cuidados agudos"], category: "healthcare" },
   { term: "telemetry", category: "healthcare" },
@@ -556,7 +567,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "google classroom", category: "education" },
   { term: "canvas lms", aliases: ["canvas"], category: "education" },
   { term: "blackboard", category: "education" },
-  { term: "moodle", category: "education" },
   { term: "student assessment", aliases: ["evaluación de estudiantes"], category: "education" },
   { term: "iep", aliases: ["individualized education program"], category: "education" },
   { term: "special education", aliases: ["educación especial"], category: "education" },
@@ -571,7 +581,7 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "westlaw", category: "legal" },
   { term: "lexisnexis", category: "legal" },
   { term: "legal writing", aliases: ["redacción jurídica"], category: "legal" },
-  { term: "regulatory compliance", category: "legal" },
+  { term: "regulatory compliance", aliases: ["compliance", "cumplimiento normativo"], category: "legal" },
   { term: "intellectual property", aliases: ["propiedad intelectual"], category: "legal" },
   { term: "corporate law", aliases: ["derecho corporativo"], category: "legal" },
   { term: "contract negotiation", aliases: ["negociación de contratos"], category: "legal" },
@@ -630,7 +640,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "protocol oriented programming", aliases: ["protocol-oriented programming"], category: "mobile" },
   { term: "codable", category: "mobile" },
   { term: "auto layout", aliases: ["autolayout"], category: "mobile" },
-  { term: "storyboards", aliases: ["storyboard"], category: "mobile" },
   { term: "xcuitest", category: "mobile" },
   { term: "xcframework", category: "mobile" },
   { term: "app store connect", category: "mobile" },
@@ -665,9 +674,8 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "proguard", aliases: ["r8"], category: "mobile" },
   { term: "android ndk", aliases: ["ndk"], category: "mobile" },
   { term: "google play console", aliases: ["play console"], category: "mobile" },
-  { term: "content providers", category: "mobile" },
-  { term: "broadcast receivers", category: "mobile" },
-  { term: "foreground services", category: "mobile" },
+  { term: "broadcast receivers", aliases: ["content providers"], category: "mobile" },
+  { term: "foreground services", aliases: ["servicios en primer plano"], category: "mobile" },
   { term: "kotlin multiplatform", aliases: ["kmp"], category: "mobile" },
   { term: "compose multiplatform", category: "mobile" },
   // "MVP" stays OUT as a searchable form on purpose: in a business CV it is the
@@ -701,7 +709,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "framer motion", category: "frontend" },
   { term: "web accessibility", aliases: ["a11y", "accesibilidad web"], category: "frontend" },
   { term: "wcag", category: "frontend" },
-  { term: "core web vitals", category: "frontend" },
   { term: "responsive design", aliases: ["diseno responsivo", "diseño responsivo", "responsive web design"], category: "frontend" },
 
   // Backend
@@ -710,7 +717,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "phoenix framework", category: "backend" },
   { term: "entity framework", aliases: ["ef core"], category: "backend" },
   { term: "message queues", aliases: ["colas de mensajes"], category: "backend" },
-  { term: "cron jobs", aliases: ["tareas programadas"], category: "backend" },
 
   // Data / AI
   { term: "clickhouse", category: "db" },
@@ -734,7 +740,7 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "burp suite", category: "tools" },
   { term: "threat modeling", aliases: ["modelado de amenazas"], category: "industry" },
   { term: "siem", category: "industry" },
-  { term: "security operations center", aliases: ["soc analyst"], category: "industry" },
+  { term: "security operations center", aliases: ["soc analyst", "centro de operaciones de seguridad"], category: "industry" },
   { term: "iso 27001", category: "cert" },
   { term: "gdpr", aliases: ["rgpd"], category: "legal" },
   { term: "encryption", aliases: ["cifrado", "encriptacion", "encriptación"], category: "industry" },
@@ -745,13 +751,11 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "vulnerability assessment", aliases: ["analisis de vulnerabilidades", "análisis de vulnerabilidades"], category: "industry" },
 
   // QA / testing
-  { term: "manual testing", aliases: ["pruebas manuales"], category: "tools" },
+  { term: "manual testing", aliases: ["pruebas manuales", "testing manual", "qa manual"], category: "tools" },
   { term: "test automation", aliases: ["automation testing", "automatizacion de pruebas", "automatización de pruebas"], category: "tools" },
   { term: "appium", category: "tools" },
-  { term: "load testing", aliases: ["pruebas de carga"], category: "tools" },
   { term: "k6", category: "tools" },
   { term: "jmeter", aliases: ["apache jmeter"], category: "tools" },
-  { term: "test plans", aliases: ["plan de pruebas"], category: "tools" },
   { term: "regression testing", aliases: ["pruebas de regresion", "pruebas de regresión"], category: "tools" },
   { term: "tdd", aliases: ["test driven development", "desarrollo guiado por pruebas"], category: "tools" },
   { term: "bdd", aliases: ["behavior driven development"], category: "tools" },
@@ -773,7 +777,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   // Healthcare
   { term: "patient education", aliases: ["educacion al paciente", "educación al paciente"], category: "healthcare" },
   { term: "medical terminology", aliases: ["terminologia medica", "terminología médica"], category: "healthcare" },
-  { term: "venipuncture", aliases: ["venopuncion", "venopunción"], category: "healthcare" },
   { term: "catheter care", aliases: ["cuidado de cateter", "cuidado de catéter"], category: "healthcare" },
   { term: "care plans", aliases: ["planes de cuidado"], category: "healthcare" },
   { term: "discharge planning", aliases: ["planificacion del alta", "planificación del alta"], category: "healthcare" },
@@ -783,7 +786,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "physical therapy", aliases: ["fisioterapia", "terapia fisica", "terapia física"], category: "healthcare" },
   { term: "radiology", aliases: ["radiologia", "radiología"], category: "healthcare" },
   { term: "ultrasound", aliases: ["ecografia", "ecografía"], category: "healthcare" },
-  { term: "surgical assisting", aliases: ["instrumentacion quirurgica", "instrumentación quirúrgica"], category: "healthcare" },
   { term: "sterilization", aliases: ["esterilizacion", "esterilización"], category: "healthcare" },
   { term: "medical billing", aliases: ["facturacion medica", "facturación médica"], category: "healthcare" },
   { term: "prior authorization", aliases: ["autorizacion previa", "autorización previa"], category: "healthcare" },
@@ -802,7 +804,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "montessori", category: "education" },
 
   // Legal
-  { term: "regulatory compliance", aliases: ["compliance", "cumplimiento normativo"], category: "legal" },
   { term: "depositions", aliases: ["declaraciones juradas"], category: "legal" },
   { term: "notary", aliases: ["notaria", "notaría", "notarial"], category: "legal" },
   { term: "paralegal", aliases: ["asistente legal"], category: "legal" },
@@ -824,19 +825,17 @@ export const ATS_SKILLS: SkillEntry[] = [
   // Sales / marketing
   { term: "upselling", aliases: ["venta adicional", "venta cruzada", "cross-selling"], category: "sales" },
   { term: "pipeline management", aliases: ["gestion de pipeline", "gestión de pipeline"], category: "sales" },
-  { term: "social media management", aliases: ["gestion de redes sociales", "gestión de redes sociales", "community management"], category: "marketing" },
   { term: "market research", aliases: ["investigacion de mercado", "investigación de mercado"], category: "marketing" },
   { term: "influencer marketing", aliases: ["marketing de influencers"], category: "marketing" },
 
   // Trades / operations / logistics
   { term: "plumbing", aliases: ["plomeria", "plomería", "gasfiteria", "fontaneria"], category: "operations" },
-  { term: "electrical wiring", aliases: ["instalaciones electricas", "instalaciones eléctricas", "cableado electrico"], category: "operations" },
   { term: "preventive maintenance", aliases: ["mantenimiento preventivo"], category: "operations" },
   { term: "supply chain", aliases: ["cadena de suministro"], category: "operations" },
   { term: "route planning", aliases: ["planificacion de rutas", "planificación de rutas"], category: "operations" },
   { term: "heavy machinery", aliases: ["maquinaria pesada"], category: "operations" },
   { term: "carpentry", aliases: ["carpinteria", "carpintería"], category: "operations" },
-  { term: "industrial painting", aliases: ["pintura industrial"], category: "operations" },
+  { term: "industrial painting", aliases: ["pintura industrial", "pintura de obra"], category: "operations" },
 
   // Hospitality
   { term: "menu planning", aliases: ["planificacion de menus", "planificación de menús"], category: "operations" },
@@ -845,9 +844,7 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "inventory control", aliases: ["control de inventario"], category: "operations" },
   { term: "catering", aliases: ["banquetes"], category: "operations" },
   { term: "event planning", aliases: ["organizacion de eventos", "organización de eventos"], category: "operations" },
-  { term: "front desk", aliases: ["recepcion de hotel", "recepción de hotel", "atencion en recepcion"], category: "operations" },
   { term: "housekeeping", aliases: ["ama de llaves"], category: "operations" },
-  { term: "reservations", aliases: ["gestion de reservas", "gestión de reservas"], category: "operations" },
   { term: "opera pms", category: "operations" },
 
   // HR / admin
@@ -861,7 +858,6 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "scheduling", aliases: ["programacion de turnos", "programación de turnos", "gestion de agenda"], category: "operations" },
   { term: "calendar management", aliases: ["gestion de calendario", "gestión de calendario"], category: "operations" },
   { term: "travel arrangements", aliases: ["gestion de viajes", "gestión de viajes"], category: "operations" },
-  { term: "minute taking", aliases: ["actas de reunion", "actas de reunión"], category: "operations" },
 
   // Design
   { term: "ux research", aliases: ["investigacion ux", "investigación ux"], category: "design" },
@@ -877,6 +873,396 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "technical writing", aliases: ["redaccion tecnica", "redacción técnica"], category: "industry" },
   { term: "occupational safety", aliases: ["seguridad industrial", "seguridad ocupacional", "seguridad y salud en el trabajo"], category: "operations" },
   { term: "phone support", aliases: ["atencion telefonica", "atención telefónica", "call center"], category: "operations" },
+
+  // ── Agile / Scrum ────────────────────────────────────────────────────────────
+  // Measured before writing this: 15 of the 20 terms a Scrum Master's CV and a
+  // Scrum job posting both use were missing, so the whole ceremony vocabulary was
+  // invisible to the matcher. Spanish aliases throughout: LATAM CVs say "reunión
+  // diaria" and "planificación de sprint".
+  //
+  // NOT ADDED BARE, and each for a reason the dictionary has already paid for:
+  //   · "velocity" — an ordinary English noun; enters as "sprint velocity"
+  //   · "SAFe"     — "safe" is one of the commonest words there is
+  // The dictionary is scanned against CV PROSE, so a bare common word tags people
+  // who never claimed the skill.
+  { term: "sprint planning", aliases: ["planificacion de sprint", "planning de sprint"], category: "pm" },
+  { term: "daily standup", aliases: ["daily scrum", "reunion diaria", "daily meeting", "stand-up"], category: "pm" },
+  { term: "sprint retrospective", aliases: ["retrospectiva", "retrospectiva de sprint", "retro"], category: "pm" },
+  { term: "sprint review", aliases: ["revision de sprint", "demo de sprint"], category: "pm" },
+  { term: "backlog grooming", aliases: ["backlog refinement", "refinamiento del backlog", "refinamiento de backlog"], category: "pm" },
+  { term: "product backlog", aliases: ["backlog del producto"], category: "pm" },
+  { term: "story points", aliases: ["puntos de historia", "estimacion por puntos"], category: "pm" },
+  { term: "sprint velocity", aliases: ["velocidad del equipo", "velocidad de sprint"], category: "pm" },
+  { term: "burndown chart", aliases: ["grafico burndown", "burnup chart"], category: "pm" },
+  { term: "scaled agile framework", aliases: ["safe framework", "safe agile"], category: "pm" },
+  { term: "agile coaching", aliases: ["coaching agil", "agile coach"], category: "pm" },
+  { term: "impediment removal", aliases: ["remocion de impedimentos", "gestion de impedimentos"], category: "pm" },
+  { term: "definition of done", aliases: ["definicion de terminado", "dod"], category: "pm" },
+  { term: "definition of ready", aliases: ["definicion de listo"], category: "pm" },
+  { term: "user stories", aliases: ["historias de usuario", "user story"], category: "pm" },
+  { term: "acceptance criteria", aliases: ["criterios de aceptacion"], category: "pm" },
+  { term: "azure devops", aliases: ["vsts", "tfs"], category: "pm" },
+  { term: "ceremonias agiles", aliases: ["agile ceremonies", "scrum ceremonies"], category: "pm" },
+  { term: "cross-functional teams", aliases: ["equipos multifuncionales", "equipos interdisciplinarios"], category: "pm" },
+  { term: "servant leadership", aliases: ["liderazgo de servicio"], category: "pm" },
+
+  // ── Product management ───────────────────────────────────────────────────────
+  // 21 of 30 were missing — the worst-covered discipline in the dictionary.
+  //
+  // The JOB TITLES enter as ABILITIES ("product management", "product ownership")
+  // rather than as "Product Manager". A title is not a skill: the proven-skills
+  // card would otherwise offer a Product Owner their own job title as a chip to
+  // add, which is the same noise as a degree sitting in the Skills list.
+  //
+  // NOT ADDED BARE: "RICE" (a staple food in half the world's CVs) and "MoSCoW"
+  // (a city). Both enter qualified.
+  { term: "product ownership", aliases: ["product owner", "dueno de producto", "propietario de producto"], category: "pm" },
+  { term: "product roadmap", aliases: ["roadmap de producto", "hoja de ruta del producto", "roadmapping"], category: "pm" },
+  { term: "product discovery", aliases: ["descubrimiento de producto"], category: "pm" },
+  { term: "product strategy", aliases: ["estrategia de producto"], category: "pm" },
+  { term: "product analytics", aliases: ["analitica de producto", "analitica de uso"], category: "pm" },
+  { term: "competitive analysis", aliases: ["analisis de competencia", "analisis competitivo", "benchmarking"], category: "pm" },
+  { term: "customer interviews", aliases: ["entrevistas con usuarios", "entrevistas a clientes"], category: "pm" },
+  { term: "feature prioritization", aliases: ["priorizacion de funcionalidades", "priorizacion de features"], category: "pm" },
+  { term: "rice prioritization", aliases: ["rice scoring", "priorizacion rice"], category: "pm" },
+  { term: "moscow prioritization", aliases: ["moscow method", "priorizacion moscow"], category: "pm" },
+  { term: "go-to-market", aliases: ["salida al mercado", "lanzamiento al mercado"], category: "pm" },
+  { term: "pricing strategy", aliases: ["estrategia de precios", "politica de precios"], category: "pm" },
+  { term: "product requirements document", aliases: ["prd", "documento de requisitos"], category: "pm" },
+  { term: "mvp definition", aliases: ["definicion del mvp", "producto minimo viable", "minimum viable product"], category: "pm" },
+  { term: "user personas", aliases: ["buyer persona", "perfiles de usuario", "arquetipos de usuario"], category: "pm" },
+  { term: "customer journey mapping", aliases: ["mapa de experiencia del cliente", "customer journey", "journey map"], category: "pm" },
+  { term: "retention analysis", aliases: ["analisis de retencion"], category: "pm" },
+  { term: "funnel analysis", aliases: ["analisis de embudo", "embudo de conversion"], category: "pm" },
+  { term: "cohort analysis", aliases: ["analisis de cohortes"], category: "pm" },
+  { term: "north star metric", aliases: ["metrica estrella"], category: "pm" },
+
+  // ── Backend architecture ─────────────────────────────────────────────────────
+  // The named patterns a backend posting asks for by name. Verbs and plain nouns
+  // stay out; these are all multi-word and unambiguous in prose.
+  { term: "event-driven architecture", aliases: ["arquitectura orientada a eventos", "event driven"], category: "backend" },
+  { term: "api gateway", aliases: ["puerta de enlace de api"], category: "backend" },
+  { term: "message queue", aliases: ["cola de mensajes", "colas de mensajeria"], category: "backend" },
+  { term: "rate limiting", aliases: ["limitacion de tasa", "throttling"], category: "backend" },
+  { term: "connection pooling", aliases: ["pool de conexiones"], category: "backend" },
+  { term: "database sharding", aliases: ["sharding", "particionado de base de datos"], category: "backend" },
+  { term: "caching strategy", aliases: ["estrategia de cache", "cacheo", "caching"], category: "backend" },
+  { term: "horizontal scaling", aliases: ["escalado horizontal", "escalamiento horizontal"], category: "backend" },
+  { term: "idempotency", aliases: ["idempotencia"], category: "backend" },
+  { term: "circuit breaker", aliases: ["patron circuit breaker"], category: "backend" },
+  { term: "database migrations", aliases: ["migraciones de base de datos"], category: "backend" },
+  { term: "background jobs", aliases: ["trabajos en segundo plano", "tareas programadas", "cron jobs"], category: "backend" },
+  { term: "webhooks", aliases: ["webhook"], category: "backend" },
+  { term: "server-sent events", aliases: ["sse"], category: "backend" },
+
+  // ── Graphic design ───────────────────────────────────────────────────────────
+  // Print and editorial were missing entirely — the dictionary knew product design
+  // and not the half of the profession that predates screens.
+  { term: "adobe indesign", aliases: ["indesign"], category: "design" },
+  { term: "adobe after effects", aliases: ["after effects"], category: "design" },
+  { term: "adobe lightroom", aliases: ["lightroom"], category: "design" },
+  { term: "editorial design", aliases: ["diseno editorial", "maquetacion"], category: "design" },
+  { term: "print production", aliases: ["produccion grafica", "artes finales", "pre-prensa", "preprensa"], category: "design" },
+  { term: "vector illustration", aliases: ["ilustracion vectorial"], category: "design" },
+  { term: "photo retouching", aliases: ["retoque fotografico", "retoque digital"], category: "design" },
+  { term: "brand identity", aliases: ["identidad de marca", "identidad visual", "manual de marca", "branding"], category: "design" },
+  { term: "signage design", aliases: ["senaletica", "diseno de senaletica"], category: "design" },
+
+  // ── QA ───────────────────────────────────────────────────────────────────────
+  // "QA Manual" was the missing one worth naming: the skill is manual testing, and
+  // "manual" on its own is a common word in every language this product supports.
+  { term: "smoke testing", aliases: ["pruebas de humo"], category: "tools" },
+  { term: "performance testing", aliases: ["pruebas de rendimiento", "pruebas de carga", "load testing"], category: "tools" },
+  { term: "test cases", aliases: ["casos de prueba", "test case"], category: "tools" },
+  { term: "test plan", aliases: ["plan de pruebas", "test plans"], category: "tools" },
+  { term: "bug tracking", aliases: ["seguimiento de errores", "gestion de bugs", "reporte de bugs"], category: "tools" },
+  { term: "exploratory testing", aliases: ["pruebas exploratorias"], category: "tools" },
+
+  // ── iOS / Android, the last gaps ─────────────────────────────────────────────
+  // "TCA" is NOT an alias: in a biochemistry CV it is the tricarboxylic acid cycle.
+  // Same rule that keeps bare "MVP" out.
+  { term: "the composable architecture", aliases: ["tca architecture", "composable architecture"], category: "mobile" },
+  { term: "voiceover accessibility", aliases: ["accesibilidad voiceover", "accesibilidad ios"], category: "mobile" },
+  { term: "jetpack datastore", aliases: ["android datastore"], category: "mobile" },
+
+  // ── Data / AI, the last gaps ─────────────────────────────────────────────────
+  { term: "feature engineering", aliases: ["ingenieria de caracteristicas"], category: "data" },
+  { term: "vector database", aliases: ["base de datos vectorial", "pgvector", "pinecone"], category: "data" },
+
+  // ── iOS, la capa que faltaba ─────────────────────────────────────────────────
+  // Medido: 34 de 40 términos que una oferta iOS senior nombra por su nombre no
+  // estaban. EXCLUIDOS por ser palabras corrientes: "Actors" (entra como "swift
+  // actors"), "Quick" y "Nimble" (frameworks cuyos nombres son adjetivos ingleses
+  // de uso diario), "Handoff" (entra como "apple handoff").
+  { term: "core image", aliases: ["coreimage"], category: "mobile" },
+  { term: "core audio", aliases: ["coreaudio"], category: "mobile" },
+  { term: "core text", category: "mobile" },
+  { term: "core nfc", aliases: ["nfc"], category: "mobile" },
+  { term: "background tasks", aliases: ["tareas en segundo plano", "background modes"], category: "mobile" },
+  { term: "app extensions", aliases: ["extensiones de app", "share extension", "notification service extension"], category: "mobile" },
+  { term: "live activities", aliases: ["actividades en vivo", "dynamic island"], category: "mobile" },
+  { term: "swiftui navigation", aliases: ["navigationstack", "navigation stack"], category: "mobile" },
+  { term: "property wrappers", aliases: ["property wrapper"], category: "mobile" },
+  { term: "result builders", aliases: ["function builders"], category: "mobile" },
+  { term: "swift actors", aliases: ["actor isolation", "swift actor"], category: "mobile" },
+  { term: "memory leaks", aliases: ["fugas de memoria", "retain cycles", "ciclos de retencion"], category: "mobile" },
+  { term: "instruments profiling", aliases: ["profiling con instruments", "time profiler"], category: "mobile" },
+  { term: "xcode cloud", category: "mobile" },
+  { term: "swift testing", category: "mobile" },
+  { term: "objective-c runtime", aliases: ["runtime de objective-c", "method swizzling"], category: "mobile" },
+  { term: "size classes", aliases: ["clases de tamano"], category: "mobile" },
+  { term: "dark mode support", aliases: ["soporte modo oscuro", "modo oscuro"], category: "mobile" },
+  { term: "localization", aliases: ["localizacion de apps", "i18n", "internacionalizacion", "internationalization"], category: "mobile" },
+  { term: "app thinning", aliases: ["bitcode", "on-demand resources"], category: "mobile" },
+  { term: "code signing", aliases: ["firma de codigo", "provisioning profiles", "perfiles de aprovisionamiento"], category: "mobile" },
+  { term: "mobile device management", aliases: ["mdm", "gestion de dispositivos moviles"], category: "mobile" },
+  { term: "apple handoff", aliases: ["continuity"], category: "mobile" },
+  { term: "siri shortcuts", aliases: ["app intents", "atajos de siri"], category: "mobile" },
+
+  // ── Android, la capa que faltaba ─────────────────────────────────────────────
+  // EXCLUIDOS: "Timber" (madera) y "Turbine" (turbina) — nombres de librerías que
+  // son sustantivos corrientes en CVs de construcción y energía.
+  { term: "jetpack paging", aliases: ["paging library", "paging 3"], category: "mobile" },
+  { term: "camerax", aliases: ["camera2"], category: "mobile" },
+  { term: "media3", aliases: ["exoplayer media3"], category: "mobile" },
+  { term: "compose navigation", category: "mobile" },
+  { term: "compose testing", category: "mobile" },
+  { term: "baseline profiles", aliases: ["perfiles baseline"], category: "mobile" },
+  { term: "android app bundles", aliases: ["app bundle", "aab"], category: "mobile" },
+  { term: "play feature delivery", aliases: ["dynamic feature modules"], category: "mobile" },
+  { term: "in-app updates", aliases: ["actualizaciones en la app"], category: "mobile" },
+  { term: "firebase remote config", aliases: ["remote config", "feature flags"], category: "mobile" },
+  { term: "android auto", category: "mobile" },
+  { term: "wear os", aliases: ["android wear"], category: "mobile" },
+  { term: "android tv", category: "mobile" },
+  { term: "kotlin symbol processing", aliases: ["ksp", "kapt"], category: "mobile" },
+  { term: "detekt", aliases: ["ktlint"], category: "mobile" },
+  { term: "mockk", aliases: ["kotest", "paparazzi"], category: "mobile" },
+
+  // ── Frontend web ─────────────────────────────────────────────────────────────
+  // EXCLUIDO: "Hydration" — un CV de enfermería o de deporte habla de hidratación
+  // del paciente. Entra como "ssr hydration".
+  { term: "css modules", category: "frontend" },
+  { term: "react hook form", aliases: ["formik"], category: "frontend" },
+  { term: "web vitals", aliases: ["core web vitals", "lcp", "cls"], category: "frontend" },
+  { term: "server-side rendering", aliases: ["ssr", "renderizado del lado del servidor"], category: "frontend" },
+  { term: "static site generation", aliases: ["ssg", "generacion estatica"], category: "frontend" },
+  // Sin alias "hidratacion": en un CV de enfermería es la hidratación del paciente.
+  // El alias estuvo mal desde que se escribió y quedó oculto hasta que el matcheo
+  // dejó de distinguir acentos — y entonces empezó a etiquetar enfermeras con una
+  // técnica de renderizado web.
+  { term: "ssr hydration", category: "frontend" },
+  { term: "code splitting", aliases: ["division de codigo"], category: "frontend" },
+  { term: "lazy loading", aliases: ["carga diferida", "carga perezosa"], category: "frontend" },
+  { term: "css grid", aliases: ["grid layout"], category: "frontend" },
+  { term: "flexbox", category: "frontend" },
+  { term: "micro frontends", aliases: ["microfrontends"], category: "frontend" },
+
+  // ── DevOps / SRE ─────────────────────────────────────────────────────────────
+  { term: "elk stack", aliases: ["elasticsearch logstash kibana", "kibana", "logstash"], category: "devops" },
+  { term: "incident response", aliases: ["respuesta a incidentes", "gestion de incidentes"], category: "devops" },
+  { term: "on-call rotation", aliases: ["guardias", "rotacion de guardias", "on call"], category: "devops" },
+  { term: "postmortem analysis", aliases: ["analisis postmortem", "blameless postmortem"], category: "devops" },
+  { term: "service level agreement", aliases: ["sla", "acuerdo de nivel de servicio"], category: "devops" },
+  { term: "service level objectives", aliases: ["slo", "objetivos de nivel de servicio", "error budget"], category: "devops" },
+  { term: "blue-green deployment", aliases: ["despliegue blue green"], category: "devops" },
+  { term: "canary release", aliases: ["despliegue canario", "canary deployment"], category: "devops" },
+  { term: "infrastructure as code", aliases: ["iac", "infraestructura como codigo"], category: "devops" },
+  { term: "service mesh", aliases: ["istio", "linkerd", "malla de servicios"], category: "devops" },
+  { term: "chaos engineering", aliases: ["ingenieria del caos"], category: "devops" },
+  { term: "capacity planning", aliases: ["planificacion de capacidad"], category: "devops" },
+  { term: "disaster recovery", aliases: ["recuperacion ante desastres", "plan de contingencia"], category: "devops" },
+
+  // ── Seguridad ────────────────────────────────────────────────────────────────
+  // EXCLUIDO bare: "SOC" — entra como "security operations center" y "soc 2".
+  { term: "soc 2", aliases: ["soc2"], category: "cert" },
+  { term: "firewall configuration", aliases: ["configuracion de firewall", "reglas de firewall"], category: "devops" },
+  { term: "public key infrastructure", aliases: ["pki", "infraestructura de clave publica"], category: "devops" },
+  { term: "metasploit", aliases: ["nmap", "wireshark"], category: "devops" },
+  { term: "security audits", aliases: ["auditorias de seguridad", "auditoria de seguridad"], category: "devops" },
+  { term: "pci dss", aliases: ["pci"], category: "cert" },
+  { term: "nist framework", aliases: ["nist"], category: "cert" },
+  { term: "secure code review", aliases: ["revision segura de codigo"], category: "devops" },
+
+  // ── Data engineering ─────────────────────────────────────────────────────────
+  // EXCLUIDOS: "Stitch" (puntada, costura) y "Presto" (en español significa
+  // "pronto"). Presto entra como "presto sql".
+  { term: "data pipelines", aliases: ["pipelines de datos", "tuberias de datos"], category: "data" },
+  { term: "data governance", aliases: ["gobierno de datos", "gobernanza de datos"], category: "data" },
+  { term: "data quality", aliases: ["calidad de datos"], category: "data" },
+  { term: "data lake", aliases: ["lago de datos", "lakehouse"], category: "data" },
+  { term: "star schema", aliases: ["esquema estrella", "snowflake schema"], category: "data" },
+  { term: "slowly changing dimensions", aliases: ["scd"], category: "data" },
+  { term: "kimball methodology", aliases: ["metodologia kimball", "inmon"], category: "data" },
+  { term: "delta lake", category: "data" },
+  { term: "amazon kinesis", aliases: ["kinesis"], category: "data" },
+  { term: "presto sql", aliases: ["trino"], category: "data" },
+  { term: "fivetran", aliases: ["airbyte"], category: "data" },
+  { term: "data catalog", aliases: ["catalogo de datos"], category: "data" },
+  { term: "master data management", aliases: ["gestion de datos maestros"], category: "data" },
+
+  // ── Marketing ────────────────────────────────────────────────────────────────
+  { term: "social media marketing", aliases: ["marketing en redes sociales", "gestion de redes sociales", "community management", "social media management", "gestión de redes sociales"], category: "marketing" },
+  { term: "media buying", aliases: ["compra de medios", "planificacion de medios"], category: "marketing" },
+  { term: "landing page optimization", aliases: ["optimizacion de landing pages"], category: "marketing" },
+  { term: "attribution modeling", aliases: ["modelo de atribucion"], category: "marketing" },
+  { term: "customer segmentation", aliases: ["segmentacion de clientes"], category: "marketing" },
+  { term: "lead nurturing", aliases: ["nutricion de leads", "maduracion de leads"], category: "marketing" },
+  { term: "marketing funnel", aliases: ["embudo de marketing"], category: "marketing" },
+
+  // ── Ventas ───────────────────────────────────────────────────────────────────
+  // EXCLUIDO bare: "Prospecting" — entra como "sales prospecting" (en minería
+  // "prospecting" es prospección de minerales).
+  { term: "sales prospecting", aliases: ["prospeccion comercial", "prospeccion de clientes"], category: "sales" },
+  { term: "lead qualification", aliases: ["calificacion de leads", "bant", "meddic"], category: "sales" },
+  { term: "spin selling", aliases: ["solution selling", "venta consultiva"], category: "sales" },
+  { term: "key account management", aliases: ["gestion de cuentas clave", "kam"], category: "sales" },
+  { term: "sales forecasting", aliases: ["pronostico de ventas", "forecast de ventas"], category: "sales" },
+  { term: "closing techniques", aliases: ["tecnicas de cierre", "cierre de ventas"], category: "sales" },
+  { term: "customer retention", aliases: ["retencion de clientes", "fidelizacion de clientes"], category: "sales" },
+  { term: "quota attainment", aliases: ["cumplimiento de cuota", "logro de cuota"], category: "sales" },
+  { term: "territory management", aliases: ["gestion de territorio"], category: "sales" },
+
+  // ── Finanzas ─────────────────────────────────────────────────────────────────
+  // EXCLUIDO bare: "Audit" — entra como "financial audit"; "auditoría" a secas
+  // aparece en demasiados contextos que no son la habilidad.
+  { term: "discounted cash flow", aliases: ["dcf", "flujo de caja descontado"], category: "finance" },
+  { term: "tax compliance", aliases: ["cumplimiento tributario", "cumplimiento fiscal"], category: "finance" },
+  { term: "financial audit", aliases: ["auditoria financiera"], category: "finance" },
+  { term: "internal controls", aliases: ["controles internos", "sox"], category: "finance" },
+  { term: "oracle financials", aliases: ["oracle erp"], category: "finance" },
+  { term: "xero", category: "finance" },
+  { term: "risk management", aliases: ["gestion de riesgos", "administracion de riesgos"], category: "finance" },
+
+  // ── RRHH ─────────────────────────────────────────────────────────────────────
+  { term: "talent sourcing", aliases: ["sourcing de talento", "busqueda de talento"], category: "hr" },
+  { term: "applicant tracking systems", aliases: ["ats", "sistema de seguimiento de candidatos"], category: "hr" },
+  { term: "employer branding", aliases: ["marca empleadora"], category: "hr" },
+  { term: "diversity and inclusion", aliases: ["diversidad e inclusion", "dei"], category: "hr" },
+  { term: "exit interviews", aliases: ["entrevistas de salida"], category: "hr" },
+  { term: "workforce planning", aliases: ["planificacion de plantilla", "planificacion de personal"], category: "hr" },
+
+  // ── Salud ────────────────────────────────────────────────────────────────────
+  { term: "iv insertion", aliases: ["canalizacion venosa", "venopuncion", "insercion de via", "venipuncture", "venopunción"], category: "healthcare" },
+  { term: "catheterization", aliases: ["cateterismo", "sondaje vesical"], category: "healthcare" },
+  { term: "patient charting", aliases: ["registro clinico", "notas de enfermeria", "historia clinica", "clinical documentation", "documentación clínica", "historia clínica", "charting"], category: "healthcare" },
+  { term: "surgical assistance", aliases: ["instrumentacion quirurgica", "asistencia quirurgica", "surgical assisting", "instrumentación quirúrgica"], category: "healthcare" },
+  { term: "anesthesia monitoring", aliases: ["monitoreo anestesico"], category: "healthcare" },
+  { term: "palliative care", aliases: ["cuidados paliativos"], category: "healthcare" },
+  { term: "mental health first aid", aliases: ["primeros auxilios psicologicos", "contencion emocional"], category: "healthcare" },
+  { term: "occupational therapy", aliases: ["terapia ocupacional"], category: "healthcare" },
+  { term: "laboratory testing", aliases: ["analisis de laboratorio", "pruebas de laboratorio"], category: "healthcare" },
+  { term: "specimen collection", aliases: ["toma de muestras", "recoleccion de muestras"], category: "healthcare" },
+  { term: "nutrition counseling", aliases: ["consejeria nutricional", "asesoria nutricional"], category: "healthcare" },
+  { term: "dialysis", aliases: ["hemodialisis", "dialisis"], category: "healthcare" },
+
+  // ── Educación ────────────────────────────────────────────────────────────────
+  // EXCLUIDO bare: "Grading" — en construcción es la nivelación del terreno.
+  { term: "iep development", aliases: ["plan educativo individualizado", "adaptaciones curriculares"], category: "education" },
+  { term: "summative assessment", aliases: ["evaluacion sumativa"], category: "education" },
+  { term: "blended learning", aliases: ["aprendizaje mixto", "modalidad hibrida"], category: "education" },
+  { term: "learning management systems", aliases: ["lms", "moodle", "plataforma educativa"], category: "education" },
+  { term: "educational technology", aliases: ["tecnologia educativa", "edtech"], category: "education" },
+  { term: "literacy instruction", aliases: ["alfabetizacion", "ensenanza de la lectura"], category: "education" },
+  { term: "adult education", aliases: ["educacion de adultos", "andragogia"], category: "education" },
+  { term: "student grading", aliases: ["calificacion de estudiantes", "correccion de examenes"], category: "education" },
+
+  // ── Legal ────────────────────────────────────────────────────────────────────
+  { term: "contract review", aliases: ["revision de contratos"], category: "legal" },
+  { term: "litigation support", aliases: ["apoyo en litigios", "soporte litigioso"], category: "legal" },
+  { term: "mergers and acquisitions", aliases: ["fusiones y adquisiciones", "m&a"], category: "legal" },
+  { term: "deposition preparation", aliases: ["preparacion de declaraciones"], category: "legal" },
+  { term: "court filings", aliases: ["presentaciones judiciales", "escritos judiciales"], category: "legal" },
+  { term: "notarization", aliases: ["fe notarial", "protocolizacion"], category: "legal" },
+  { term: "mediation", aliases: ["mediacion", "conciliacion"], category: "legal" },
+  { term: "arbitration", aliases: ["arbitraje"], category: "legal" },
+  { term: "regulatory affairs", aliases: ["asuntos regulatorios"], category: "legal" },
+  { term: "legal discovery", aliases: ["exhibicion de pruebas", "discovery"], category: "legal" },
+
+  // ── Oficios ──────────────────────────────────────────────────────────────────
+  // EXCLUIDO bare: "Painting" — pintar la oficina no es el oficio. Entra como
+  // "industrial painting". Y "soldering" NO lleva el alias "soldadura": en español
+  // esa palabra ya es welding, y confundirlas cambia el oficio del candidato.
+  { term: "mig welding", aliases: ["soldadura mig"], category: "industry" },
+  { term: "tig welding", aliases: ["soldadura tig"], category: "industry" },
+  { term: "electrical installation", aliases: ["instalacion electrica", "instalaciones electricas", "electrical wiring", "instalaciones eléctricas", "cableado electrico"], category: "industry" },
+  { term: "masonry", aliases: ["albanileria", "mamposteria"], category: "industry" },
+  { term: "roofing", aliases: ["techado", "cubiertas"], category: "industry" },
+  { term: "heavy equipment operation", aliases: ["operacion de maquinaria pesada", "retroexcavadora"], category: "industry" },
+  { term: "troubleshooting", aliases: ["diagnostico de fallas", "resolucion de averias"], category: "industry" },
+  { term: "hydraulics", aliases: ["hidraulica", "sistemas hidraulicos"], category: "industry" },
+  { term: "pneumatics", aliases: ["neumatica", "sistemas neumaticos"], category: "industry" },
+  { term: "plc programming", aliases: ["programacion de plc", "automatizacion industrial", "scada"], category: "industry" },
+  { term: "machining", aliases: ["mecanizado", "torneria", "fresado"], category: "industry" },
+  { term: "soldering", aliases: ["soldadura de componentes", "soldadura electronica"], category: "industry" },
+  { term: "scaffolding", aliases: ["andamios", "montaje de andamios"], category: "industry" },
+  { term: "concrete work", aliases: ["hormigon", "vaciado de hormigon", "encofrado"], category: "industry" },
+  { term: "safety inspections", aliases: ["inspecciones de seguridad", "checklist de seguridad"], category: "industry" },
+  { term: "lockout tagout", aliases: ["bloqueo y etiquetado", "loto"], category: "industry" },
+
+  // ── Hostelería ───────────────────────────────────────────────────────────────
+  { term: "food preparation", aliases: ["preparacion de alimentos", "mise en place"], category: "operations" },
+  { term: "cost control", aliases: ["control de costos", "control de mermas"], category: "operations" },
+  { term: "table service", aliases: ["atencion de mesas", "servicio de mesa"], category: "operations" },
+  { term: "guest relations", aliases: ["atencion al huesped", "relacion con huespedes"], category: "operations" },
+  { term: "reservation systems", aliases: ["sistema de reservas", "gestion de reservas", "reservations", "gestión de reservas"], category: "operations" },
+  { term: "wine pairing", aliases: ["maridaje", "sommelier"], category: "operations" },
+  { term: "kitchen management", aliases: ["gestion de cocina", "jefe de cocina"], category: "operations" },
+  { term: "portion control", aliases: ["control de porciones", "estandarizacion de recetas"], category: "operations" },
+  { term: "allergen management", aliases: ["gestion de alergenos", "control de alergenos"], category: "operations" },
+  { term: "shift scheduling", aliases: ["elaboracion de turnos", "planificacion de turnos"], category: "operations" },
+
+  // ── Logística ────────────────────────────────────────────────────────────────
+  { term: "customs clearance", aliases: ["despacho aduanero", "gestion aduanera"], category: "operations" },
+  { term: "freight forwarding", aliases: ["gestion de carga internacional", "agente de carga"], category: "operations" },
+  { term: "order fulfillment", aliases: ["preparacion de pedidos", "cumplimiento de pedidos"], category: "operations" },
+  { term: "picking and packing", aliases: ["picking", "packing", "preparacion y embalaje"], category: "operations" },
+  { term: "cycle counting", aliases: ["conteo ciclico", "inventario ciclico"], category: "operations" },
+  { term: "demand planning", aliases: ["planificacion de la demanda", "pronostico de demanda"], category: "operations" },
+  { term: "vendor management", aliases: ["gestion de proveedores", "relacion con proveedores"], category: "operations" },
+  { term: "cold chain", aliases: ["cadena de frio"], category: "operations" },
+  { term: "last mile delivery", aliases: ["ultima milla", "reparto de ultima milla"], category: "operations" },
+  { term: "warehouse management system", aliases: ["wms", "sistema de gestion de almacen"], category: "operations" },
+  { term: "kaizen", aliases: ["mejora continua"], category: "operations" },
+  { term: "5s methodology", aliases: ["metodologia 5s", "5s"], category: "operations" },
+
+  // ── Atención al cliente ──────────────────────────────────────────────────────
+  { term: "ticketing systems", aliases: ["sistema de tickets", "zendesk", "freshdesk", "jira service desk"], category: "operations" },
+  { term: "live chat support", aliases: ["soporte por chat", "chat en vivo"], category: "operations" },
+  { term: "complaint handling", aliases: ["gestion de reclamos", "manejo de quejas"], category: "operations" },
+  { term: "escalation management", aliases: ["gestion de escalamientos", "escalamiento de casos"], category: "operations" },
+  { term: "first call resolution", aliases: ["resolucion en primer contacto", "fcr"], category: "operations" },
+  { term: "customer satisfaction", aliases: ["satisfaccion del cliente", "csat"], category: "operations" },
+  { term: "net promoter score", aliases: ["nps"], category: "operations" },
+  { term: "service level management", aliases: ["gestion de niveles de servicio"], category: "operations" },
+  { term: "knowledge base", aliases: ["base de conocimiento", "documentacion de soporte"], category: "operations" },
+  { term: "technical support", aliases: ["soporte tecnico", "help desk", "mesa de ayuda"], category: "operations" },
+
+  // ── Administración ───────────────────────────────────────────────────────────
+  // EXCLUIDO bare: "Reception" — "recepción de mercadería" es logística, no
+  // recepcionista. Entra como "front desk reception".
+  { term: "document management", aliases: ["gestion documental", "archivo de documentos"], category: "operations" },
+  { term: "meeting minutes", aliases: ["actas de reunion", "redaccion de actas", "minute taking", "actas de reunión"], category: "operations" },
+  { term: "office management", aliases: ["gestion de oficina", "administracion de oficina"], category: "operations" },
+  { term: "filing systems", aliases: ["sistemas de archivo", "clasificacion documental"], category: "operations" },
+  { term: "petty cash", aliases: ["caja chica", "fondo fijo"], category: "finance" },
+  { term: "expense reports", aliases: ["rendicion de gastos", "informes de gastos"], category: "finance" },
+  { term: "front desk reception", aliases: ["recepcionista", "atencion en recepcion", "front desk", "recepcion de hotel", "recepción de hotel"], category: "operations" },
+  { term: "correspondence management", aliases: ["gestion de correspondencia"], category: "operations" },
+  { term: "transcription", aliases: ["transcripcion", "desgrabacion"], category: "operations" },
+
+  // ── Gaming / Embebidos ───────────────────────────────────────────────────────
+  { term: "physics engines", aliases: ["motores de fisica"], category: "backend" },
+  { term: "multiplayer networking", aliases: ["networking multijugador", "netcode"], category: "backend" },
+  { term: "embedded c", aliases: ["c embebido", "programacion embebida"], category: "backend" },
+  { term: "rtos", aliases: ["freertos", "sistema operativo de tiempo real"], category: "backend" },
+  { term: "firmware development", aliases: ["desarrollo de firmware"], category: "backend" },
+  { term: "microcontrollers", aliases: ["microcontroladores", "stm32", "esp32"], category: "backend" },
+  { term: "arduino", aliases: ["raspberry pi"], category: "backend" },
+  { term: "can bus", aliases: ["bus can"], category: "backend" },
+  { term: "i2c protocol", aliases: ["i2c", "spi protocol", "uart"], category: "backend" },
+  { term: "signal processing", aliases: ["procesamiento de senales", "dsp"], category: "backend" },
+  { term: "pcb design", aliases: ["diseno de pcb", "altium", "kicad"], category: "backend" },
 ];
 
 /**
