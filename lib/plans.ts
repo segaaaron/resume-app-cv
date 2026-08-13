@@ -47,19 +47,26 @@ export const AI_ENDPOINT_NAMES: readonly AiEndpointName[] = [
  * legítimo intensivo ronda 10-15 llamadas/día — estos topes solo frenan
  * scripting. Ventana de 24h auto-reseteable vía checkAndIncrementRateLimit
  * (sin cron). Costo máximo acotado: ~$0.05/día por usuario.
+ *
+ * Las tres acciones por-bullet subieron a 50 tras medirlo contra un CV real: el
+ * panel ATS ofrece un botón por skill sin evidencia y otro por bullet débil, así
+ * que un solo repaso serio de un CV con cinco puestos consume decenas de llamadas
+ * sin nada de abuso. El tope viejo cortaba a mitad de la primera pasada y se leía
+ * como un producto roto. Son las llamadas más baratas que hacemos (un bullet,
+ * ~150 tokens de salida), así que el techo de costo apenas se mueve.
  */
 export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
-  "improve-bullet": 30,
+  "improve-bullet": 50,
   "improve-summary": 20,
   "generate-summary": 20,
   "generate-cover-letter": 20,
   "improve-cover-letter": 20,
   "fill-profile": 10,
   "tailor-cv": 10,
-  "skill-bullet": 15,
+  "skill-bullet": 50,
   // Mirrors skill-bullet exactly: same surface (one bullet written into one
   // role) and the same PRO/LIMITED-only grant, so no plan gains or loses.
-  "merge-bullets": 15,
+  "merge-bullets": 50,
   "ats-score": 10,
   "review-cv": 10,
   // 3/day: translation is idempotent (a CV is translated once and the copy is

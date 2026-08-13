@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { AI_DAILY_CAP } from "@/lib/plans"
 import { AIService } from "@/lib/services/ai/AIService"
 import type { IAIClient, ChatCompletion } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
@@ -232,7 +233,15 @@ describe("AIService", () => {
       await expect(
         service.improveBullet("user-1", { text: "Managed a team and delivered projects" }, "PRO")
       ).rejects.toMatchObject({ code: "daily_cap_reached", status: 429 })
-      expect(checkAndIncrementRateLimit).toHaveBeenCalledWith("user-1", "ai-daily:improve-bullet", 30, 86_400_000)
+      // Reads the configured cap instead of restating it: the number is a tuning
+      // decision that moves, and a test that hardcodes it fails on the change
+      // rather than on a defect. What matters here is the KEY and the window.
+      expect(checkAndIncrementRateLimit).toHaveBeenCalledWith(
+        "user-1",
+        "ai-daily:improve-bullet",
+        AI_DAILY_CAP["improve-bullet"],
+        86_400_000,
+      )
       expect(aiClient.chat).not.toHaveBeenCalled()
     })
 
