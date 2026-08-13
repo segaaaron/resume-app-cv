@@ -44,6 +44,14 @@ import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/
 import { computeResumeScore, type ResumeScoreKey } from "@/lib/services/ai/shared/resume-score"
 
 /** One colour per number, so the badge and the figure it refers to read as a pair. */
+/**
+ * Share of bullets that should carry a figure. Not every line takes one — an
+ * "improved code quality" cannot be counted honestly — and a resume where every
+ * single line ends in a percentage is the manufactured pattern the credibility
+ * check exists to catch. Half is the shape of a well-written history.
+ */
+const HEALTHY_METRIC_PCT = 50
+
 const AXIS_STYLE: Record<FixAxis, string> = {
   match: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
   content: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
@@ -2542,9 +2550,22 @@ export default function ATSScorePanel() {
                     )
                   })}
                 {cq && cq.totalBullets > 0 && (
-                  <p className="text-[11px] text-slate-700 leading-relaxed">
-                    {t("content_quality_metrics", { pct: cq.quantificationPct, quantified: cq.quantifiedBullets, total: cq.totalBullets })}
-                  </p>
+                  <>
+                    <p className="text-[11px] text-slate-700 leading-relaxed">
+                      {t("content_quality_metrics", { pct: cq.quantificationPct, quantified: cq.quantifiedBullets, total: cq.totalBullets })}
+                    </p>
+                    {/* Not every line takes a number, and a CV where every single
+                        one ends in a figure reads as manufactured — the same
+                        pattern the credibility check calls out. Around half is the
+                        healthy shape. Listing the rest as defects past that point
+                        was asking for numbers that do not exist, which is how
+                        people end up inventing them. */}
+                    <p className="text-[10.5px] leading-relaxed text-slate-500">
+                      {cq.quantificationPct >= HEALTHY_METRIC_PCT
+                        ? t("content_quality_metrics_enough")
+                        : t("content_quality_metrics_target", { target: HEALTHY_METRIC_PCT })}
+                    </p>
+                  </>
                 )}
 
                 {/* Soft skills the posting asks for that no bullet demonstrates.

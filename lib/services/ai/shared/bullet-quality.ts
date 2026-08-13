@@ -8,7 +8,7 @@
 //
 // Same split that made improve-summary work: the algorithm detects, the model
 // only writes.
-import { ANY_METRIC_REGEX } from "./ai-helpers"
+import { hasAnyMetric } from "./ai-helpers"
 import { parseBullets } from "./bullets"
 import { hasCliche } from "./cliches"
 import type { ATSContentQuality } from "./ai-types"
@@ -62,7 +62,7 @@ export function assessDescription(description: string): DescriptionQuality {
   const bullets = parseBullets(description).map((text, index) => ({
     index,
     text,
-    hasMetric: ANY_METRIC_REGEX.test(text),
+    hasMetric: hasAnyMetric(text),
     weakOpener: opensWeakly(text),
   }))
 
@@ -178,6 +178,6 @@ export function assessImprovability(description: string): Improvability {
   // No formal defect left. Does the CV actually state an outcome anywhere here?
   // A figure is the clearest signal; without one there is nothing to rewrite
   // around, and asking the model produces a synonym swap our own guards drop.
-  const statesOutcome = bullets.some((b) => ANY_METRIC_REGEX.test(b))
+  const statesOutcome = bullets.some((b) => hasAnyMetric(b))
   return statesOutcome ? "optimized" : "needs_input"
 }

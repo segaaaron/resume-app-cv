@@ -1861,7 +1861,9 @@
       "cred_degree_removed": "{count, plural, one {# entrada quitada de Skills} other {# entradas quitadas de Skills}}",
       "cred_degree_as_skill_desc": "\"{skill}\" está en tu lista de Skills y también en Educación. En Skills ocupa el lugar de algo que un reclutador sí busca; en Educación ya cuenta.",
       "figure_or": "o",
-      "figure_kind_reach": "A cuántos llegó"
+      "figure_kind_reach": "A cuántos llegó",
+      "content_quality_metrics_enough": "Ese nivel es sano — no toda línea lleva número, y un CV donde todas terminan en una cifra se lee como fabricado. Las de abajo son opcionales.",
+      "content_quality_metrics_target": "Alrededor del {target}% es el nivel sano. No toda línea lleva número — agregá uno solo donde tengas una cifra real."
     },
     "cv_review": {
       "title": "Revisión IA del CV",

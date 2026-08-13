@@ -134,6 +134,40 @@ export const ANY_METRIC_REGEX =
   /\b\d+(?:[.,]\d+)?\s*(?:%|percent|x\b|k\b|m\b|users?|usuarios?|clients?|clientes?|people|personas|engineers?|ingenieros?|teams?|equipos?|projects?|proyectos?|years?|a[ñn]os?|months?|meses?|minutes?|minutos?|hours?|horas?|releases?|versions?|versiones?|countries?|pa[ií]ses?|accounts?|cuentas?|tickets?|deals?|leads?)/i
 
 /**
+ * The same question, asked structurally instead of by naming units.
+ *
+ * The list above knows the units somebody thought of. Reported from the panel: a
+ * bullet reading "cut release cycle time FROM 4 WEEKS TO 2 WEEKS" was labelled
+ * "no metric" — "weeks" was simply not on the list, and neither were days,
+ * seconds, patients, students, beds, units or any currency symbol. Telling a
+ * candidate that their explicit before-and-after is not a number is the kind of
+ * error that makes the whole panel untrustworthy, and no list ever stays ahead of
+ * every profession's units.
+ *
+ * So: a before→after pair, a currency amount, a magnitude, or a figure followed
+ * by any real word — which is what quantification looks like in every language
+ * this product supports. Same shapes the bullet ranking already scores with, so
+ * the two cannot disagree about whether a line carries a figure.
+ *
+ * The trade-off is deliberate and in the safe direction: over-counting means we
+ * stay QUIET about a bullet, while under-counting means we call a real number
+ * missing to the person who wrote it.
+ */
+const STRUCTURAL_METRIC = [
+  /\bfrom\s+[\d.,]+\s*%?\s*[a-zá-úñ]*\s+to\s+[\d.,]+/i,
+  /\bde\s+[\d.,]+\s*%?\s*[a-zá-úñ]*\s+a\s+[\d.,]+/i,
+  /[$€£]\s?[\d.,]+|\b[\d.,]+\s?(?:usd|eur|bob|mxn|cop|ars)\b/i,
+  /\b\d[\d.,]*\s*(?:mil|millones|million|billion)\b/i,
+  /\b\d[\d.,]*\s*(?:ms|seg|segundos|minutos|horas|hrs|kb|mb|gb|tb)\b/i,
+  /\b\d[\d.,]*\s+[a-zá-úñ]{3,}/i,
+]
+
+/** True when the text quantifies anything at all. Prefer this over the regex. */
+export function hasAnyMetric(text: string): boolean {
+  return ANY_METRIC_REGEX.test(text) || STRUCTURAL_METRIC.some((re) => re.test(text))
+}
+
+/**
  * Matches a METRIC placeholder: a bracket standing in for a figure the source
  * never provided — [X%], [N users], [$Z], [N meses], [number of clients].
  *

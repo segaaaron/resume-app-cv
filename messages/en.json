@@ -1861,7 +1861,9 @@
       "cred_degree_removed": "{count, plural, one {# entry removed from Skills} other {# entries removed from Skills}}",
       "cred_degree_as_skill_desc": "\"{skill}\" is in your Skills list and in your Education. In Skills it takes the place of something a recruiter searches for; in Education it already counts.",
       "figure_or": "or",
-      "figure_kind_reach": "How many it reached"
+      "figure_kind_reach": "How many it reached",
+      "content_quality_metrics_enough": "That is a healthy level — not every line takes a number, and a resume where every one ends in a figure reads as manufactured. The ones below are optional.",
+      "content_quality_metrics_target": "Around {target}% is the healthy level. Not every line takes a number — add one only where you have a real figure."
     },
     "cv_review": {
       "title": "AI Resume Review",
