@@ -40,9 +40,85 @@ function resolveThreshold(): number {
 export const SEMANTIC_MATCH_THRESHOLD = resolveThreshold()
 
 /**
+ * The cheap threshold used when the pass is a PRE-FILTER rather than the verdict.
+ *
+ * Measured against 80 real es/en pairs plus 42 near-miss distractors: no single
+ * threshold separates them. At 0.62 the score credits "backend" to a CV that only
+ * says "frontend" (0.684) and "inspecciones sanitarias" to one that says "safety
+ * inspections" (0.622), while still missing more than half of genuine translations
+ * ("cuentas por cobrar" ↔ "accounts receivable", 0.516). Cosine measures topical
+ * relatedness, and equivalence is not relatedness — no number fixes that.
+ *
+ * So when a judge runs behind it, the threshold stops being the decision and
+ * becomes a cost control: keep recall high (0.40 kept 40/40 of the first set and
+ * 39/40 of a held-out one) and let the judge reject. Only pairs above this cost a
+ * token, and only the first time in the product's life.
+ */
+export const SEMANTIC_PREFILTER_THRESHOLD = 0.4
+
+/** A pair worth asking about: a required keyword and the candidate's closest term. */
+export interface SemanticCandidate {
+  /** The requirement, as the job description worded it. */
+  keyword: string
+  /** The candidate's own term that came closest. */
+  cvTerm: string
+  similarity: number
+}
+
+/**
+ * Same embedding pass as findSemanticMatches, but returns the PAIRS instead of a
+ * verdict, so a judge can decide them. Fails CLOSED — an empty list leaves the
+ * exact-match result untouched.
+ */
+export async function findSemanticCandidates(
+  missingKeywords: string[],
+  cvTerms: string[],
+  embed: (texts: string[]) => Promise<number[][]>,
+  threshold = SEMANTIC_PREFILTER_THRESHOLD,
+  onFailure?: (err: Error) => void,
+): Promise<SemanticCandidate[]> {
+  const missing = [...new Set(missingKeywords.map((k) => k.trim()).filter(Boolean))]
+  const terms = [...new Set(cvTerms.map((t) => t.trim()).filter(Boolean))]
+  if (missing.length === 0 || terms.length === 0) return []
+
+  try {
+    const vectors = await embed([...missing, ...terms])
+    if (vectors.length !== missing.length + terms.length) {
+      onFailure?.(new Error(`embed returned ${vectors.length} vectors, expected ${missing.length + terms.length}`))
+      return []
+    }
+    const missVecs = vectors.slice(0, missing.length)
+    const termVecs = vectors.slice(missing.length)
+
+    const out: SemanticCandidate[] = []
+    for (let i = 0; i < missing.length; i++) {
+      // Only the closest term is worth judging: if the best one is not the same
+      // skill, no weaker one is, and asking about all of them multiplies the bill.
+      let best = 0
+      let bestIdx = -1
+      for (let j = 0; j < termVecs.length; j++) {
+        const sim = cosineSimilarity(missVecs[i], termVecs[j])
+        if (sim > best) { best = sim; bestIdx = j }
+      }
+      if (bestIdx >= 0 && best >= threshold) {
+        out.push({ keyword: missing[i], cvTerm: terms[bestIdx], similarity: best })
+      }
+    }
+    return out
+  } catch (err) {
+    onFailure?.(err instanceof Error ? err : new Error(String(err)))
+    return []
+  }
+}
+
+/**
  * Returns the normalized set of `missingKeywords` that a `cvTerm` is semantically
  * equivalent to (cosine ≥ threshold). One batched embed call. Fails CLOSED — any
  * error yields an empty set, leaving the exact-match result untouched.
+ *
+ * Kept for the callers where a false positive only hides a suggestion instead of
+ * crediting a skill (tailor's dedupe). The ATS score no longer decides on cosine
+ * alone — see findSemanticCandidates and skill-equivalence.ts.
  */
 export async function findSemanticMatches(
   missingKeywords: string[],

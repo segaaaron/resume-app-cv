@@ -14,6 +14,7 @@ import { AIReviewModule } from "./modules/AIReviewModule"
 import { AICoverLetterModule } from "./modules/AICoverLetterModule"
 import { AIProfileModule } from "./modules/AIProfileModule"
 import { AITailorModule } from "./modules/AITailorModule"
+import { AIMergeBulletsModule, type MergeBulletsInput, type MergeBulletsResult } from "./modules/AIMergeBulletsModule"
 import { AISkillBulletModule } from "./modules/AISkillBulletModule"
 import { AITranslateModule } from "./modules/AITranslateModule"
 import { AIImportModule, type ImportExtractInput } from "./modules/AIImportModule"
@@ -75,6 +76,7 @@ export class AIService {
   private readonly profileModule: AIProfileModule
   private readonly tailorModule: AITailorModule
   private readonly skillBulletModule: AISkillBulletModule
+  private readonly mergeBulletsModule: AIMergeBulletsModule
   private readonly translateModule: AITranslateModule
   private readonly importModule: AIImportModule
 
@@ -86,6 +88,7 @@ export class AIService {
     this.profileModule = new AIProfileModule(aiClient, logger)
     this.tailorModule = new AITailorModule(aiClient, logger)
     this.skillBulletModule = new AISkillBulletModule(aiClient, logger)
+    this.mergeBulletsModule = new AIMergeBulletsModule(aiClient, logger)
     this.translateModule = new AITranslateModule(aiClient, logger)
     this.importModule = new AIImportModule(aiClient, logger)
   }
@@ -142,6 +145,12 @@ export class AIService {
   /** Weave a skill the candidate already has into one bullet of the best-fit job. */
   weaveSkillBullet(userId: string, input: SkillBulletInput, plan: string): Promise<SkillBulletResult> {
     return this.skillBulletModule.weaveSkillBullet(userId, input, plan)
+  }
+
+  /** Fuse two thin bullets of one role into a single solid line. Which two is
+   *  decided deterministically before this is ever called. */
+  mergeBullets(userId: string, input: MergeBulletsInput, plan: string): Promise<MergeBulletsResult> {
+    return this.mergeBulletsModule.mergeBullets(userId, input, plan)
   }
 
   translateCV(userId: string, input: TranslateCVInput, plan: string): Promise<TranslateCVResult> {

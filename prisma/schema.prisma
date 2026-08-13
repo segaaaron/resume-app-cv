@@ -504,6 +504,74 @@ model CronRun {
   @@index([createdAt])
 }
 
+// Decided equivalences between two skill terms — the product's own bilingual
+// vocabulary, grown one verdict at a time instead of hand-listed.
+//
+// Why a table and not a cache: the verdict has to be the SAME every time or the
+// ATS score moves without the CV changing, which is the failure this product has
+// already paid for once. Measured before building it: a model asked the same 54
+// pairs three times flipped one borderline verdict. Deciding a pair once and
+// storing the answer removes the variance by construction — an in-memory cache
+// would only hide it until the next deploy.
+//
+// Rows are cheap and permanent on purpose. "patient care ≡ atención al paciente"
+// is not a fact about one user, so the second CV that needs it pays nothing, and
+// the table becomes the dictionary no one had to write.
+model SkillEquivalence {
+  id String @id @default(cuid())
+
+  // Both normalized and stored in sorted order, so (a,b) and (b,a) are one row.
+  termA String
+  termB String
+
+  /// The verdict. FALSE rows matter as much as true ones: they are what stops us
+  /// paying the model again to re-reject "frontend" vs "backend".
+  equivalent Boolean
+
+  /// Which model decided, so a future model change can re-decide only its own rows
+  /// instead of invalidating a vocabulary that took months to accumulate.
+  model     String
+  createdAt DateTime @default(now())
+
+  @@unique([termA, termB])
+  @@index([createdAt])
+}
+
+// One answer to one question, kept so the same question gets the same answer.
+//
+// Three caches were about to exist here — the recruiter analysis, the soft-skill
+// evidence pass, and the job posting's extracted keywords — with three tables,
+// three purges and three chances to get the retention wrong. They are the same
+// shape: a question whose answer must not change while the question does not.
+//
+// `kind` says which question. `inputHash` is the question itself, hashed, so two
+// users asking the identical thing share one answer and the table stays small.
+//
+// This is what makes the score reproducible. The panel promises the number moves
+// when the CV moves, and the posting side was being re-derived by a model on every
+// run: the same resume scored 80, then 71, with soft skills falling from 100% to
+// 80%, because the requirements it was scored against had been re-extracted and
+// come back slightly different. Nothing the user did explained it, and a number
+// that moves on its own is a number nobody believes.
+model AiAnswerCache {
+  id String @id @default(cuid())
+
+  /// Which question: "analysis" | "soft-evidence" | "job-keywords".
+  kind String
+
+  /// sha256 of everything the answer depends on, model included.
+  inputHash String
+
+  /// The answer as it was served, AFTER every guard.
+  payload Json
+
+  model     String
+  createdAt DateTime @default(now())
+
+  @@unique([kind, inputHash])
+  @@index([createdAt])
+}
+
 // Persisted application errors — powers the admin "Service Errors" panel.
 // One row per captured failure (only real errors: 5xx / unhandled / service failures;
 // expected AppError 4xx are NOT recorded). Grouped by `fingerprint` in the UI so

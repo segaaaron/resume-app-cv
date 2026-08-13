@@ -21,6 +21,7 @@ const schema = z.object({
   // Echoed from the full analysis so the instant re-score credits the same
   // synonym matches instead of silently scoring exact-match only.
   semanticMatches: z.array(z.string().max(120)).max(80).optional(),
+  demonstratedSoftSkills: z.array(z.string().max(120)).max(40).optional(),
 })
 
 export async function POST(req: Request) {

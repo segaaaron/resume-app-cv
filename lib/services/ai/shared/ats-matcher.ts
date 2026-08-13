@@ -146,15 +146,34 @@ interface Coverage {
  * is worth 60%") would be exactly the fabricated precision this product has
  * been purging.
  */
-function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string, semanticMatches?: Set<string>): Coverage {
+function coverage(
+  keywords: string[],
+  haystackNorm: string,
+  evidenceNorm: string,
+  semanticMatches?: Set<string>,
+  /**
+   * Normalized keywords a bullet was judged to DEMONSTRATE (see
+   * soft-skill-evidence.ts). Used for the soft-skills lever, where the
+   * requirement is a behaviour rather than a term: "comfortable working with
+   * ambiguity" is never a string in a CV, so string presence pinned that
+   * sub-score at 0% for everyone, forever. Evidence outranks presence here —
+   * a behaviour shown in the work history is demonstrated by definition, which
+   * is the strongest form of the match, not the weakest.
+   */
+  demonstratedByEvidence?: Set<string>,
+): Coverage {
   const unique = dedupe(keywords)
   if (unique.length === 0) {
     return { matched: [], missing: [], demonstrated: [], listedOnly: [], pct: null }
   }
   // Presence (exact OR semantic) is the shared ATS-core primitive — the same
   // loop the free tool runs. See lib/ats/core/matching.ts.
-  const { matched, missing } = partitionByPresence(unique, haystackNorm, semanticMatches)
-  const demonstrated: string[] = []
+  const { matched, missing: notPresent } = partitionByPresence(unique, haystackNorm, semanticMatches)
+  const shown = demonstratedByEvidence?.size
+    ? notPresent.filter((k) => demonstratedByEvidence.has(normalizeTerm(k)))
+    : []
+  const missing = shown.length ? notPresent.filter((k) => !shown.includes(k)) : notPresent
+  const demonstrated: string[] = [...shown]
   const listedOnly: string[] = []
   for (const k of matched) {
     // Demonstrated still requires the keyword in the work experience text —
@@ -164,11 +183,11 @@ function coverage(keywords: string[], haystackNorm: string, evidenceNorm: string
     else listedOnly.push(k)
   }
   return {
-    matched,
+    matched: [...matched, ...shown],
     missing,
     demonstrated,
     listedOnly,
-    pct: Math.round((matched.length / unique.length) * 100),
+    pct: Math.round(((matched.length + shown.length) / unique.length) * 100),
   }
 }
 
@@ -228,13 +247,19 @@ export function computeATSMatch(
    * re-score and existing callers keep identical behavior when omitted.
    */
   recentTitles?: string,
+  /**
+   * Soft skills a bullet was judged to demonstrate. Only the soft lever reads
+   * this: a hard skill is a tool and either appears or does not, while a soft
+   * requirement is a behaviour and appears in what the candidate DID.
+   */
+  softDemonstrated?: Set<string>,
 ): ATSMatchResult {
   const hay = normalize(resumeText)
   const titlesNorm = normalize(cvTitles)
   const evidence = normalize(evidenceText)
 
   const hard = coverage(keywords.hardSkills, hay, evidence, semanticMatches)
-  const soft = coverage(keywords.softSkills, hay, evidence, semanticMatches)
+  const soft = coverage(keywords.softSkills, hay, evidence, semanticMatches, softDemonstrated)
   const must = coverage(keywords.mustHaves, hay, evidence, semanticMatches)
   const title = titleScore(keywords.jobTitle, titlesNorm, recentTitles ? normalize(recentTitles) : undefined)
   const sectionsPct = sectionsScore(sections)
@@ -281,7 +306,7 @@ export function computeATSMatch(
       title,
       sections: sectionsPct,
     },
-    matchedKeywords: hard.matched.slice(0, 12),
+    matchedKeywords: dedupe(hard.matched).slice(0, 12),
     missingKeywords: hard.missing.slice(0, 8),
     missingMustHaves: must.missing.slice(0, 6),
     missingSoftSkills: soft.missing.slice(0, 6),
@@ -289,8 +314,14 @@ export function computeATSMatch(
     // moves the score — coverage only asks whether the word is there — but now
     // all of them come back listed-only, and the user sees exactly which
     // claims their own CV does not back up. A fact, not an invented penalty.
-    demonstratedKeywords: [...hard.demonstrated, ...soft.demonstrated].slice(0, 12),
-    listedOnlyKeywords: [...hard.listedOnly, ...soft.listedOnly].slice(0, 12),
+    // Deduped: a posting can list the same requirement as both a hard skill and a
+    // soft one ("Debugging production issues"), and concatenating the two buckets
+    // emitted it twice. React saw two children with the same key and warned that it
+    // may duplicate or OMIT one — a real risk of a button that edits the wrong
+    // thing. Fixed at the source rather than in the render, so every consumer of
+    // these lists gets one entry per requirement.
+    demonstratedKeywords: dedupe([...hard.demonstrated, ...soft.demonstrated]).slice(0, 12),
+    listedOnlyKeywords: dedupe([...hard.listedOnly, ...soft.listedOnly]).slice(0, 12),
   }
 }
 
