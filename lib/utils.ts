@@ -53,6 +53,52 @@ function looksLikeAchievement(line: string): boolean {
 }
 
 /**
+ * Does this line continue the previous one, or start a new item?
+ *
+ * ONE answer, used by both paths, because the defect showed up in both. Text
+ * extracted from a PDF carries the VISUAL line breaks — one achievement arrives as
+ * two or three lines — and it arrives that way whether or not the source had
+ * bullet markers:
+ *
+ *   no markers   "…high-quality software solutions and" / "reducing timelines by 50%."
+ *   with markers "• …user satisfaction by"               / "• 5%."
+ *
+ * In the first case the wrapped fragment dragged the whole role into prose. In the
+ * second the fragment kept the marker the extractor gave it and became a bullet
+ * reading "5%." on its own. Two symptoms, one cause: the format was being decided
+ * before the layout breaks were repaired.
+ *
+ * Two signals, and BOTH are required:
+ *   · the line starts lowercase or with a digit — a new achievement starts with a
+ *     capitalised verb, a continuation does not
+ *   · the previous line did not finish a sentence
+ *
+ * Either alone is wrong, and both mistakes were made and measured. Case alone
+ * welds a legitimate bullet that happens to start with "iOS" onto the one above
+ * it. Punctuation alone welds two real achievements together whenever the first
+ * simply lacks a full stop — which then runs long enough to fail the achievement
+ * test and take the whole role down to prose. Together they describe exactly one
+ * thing: a sentence that was cut in half by the page width.
+ */
+function continuesPrevious(line: string, prev: string | undefined): boolean {
+  if (!prev) return false
+  const startsLower = /^[\p{Ll}\d]/u.test(line.trim())
+  const prevUnfinished = !/[.!?:;]["')\]]?$/.test(prev.trim())
+  return startsLower && prevUnfinished
+}
+
+/** Rejoin lines a PDF broke for layout rather than for meaning. */
+function unwrapSoftBreaks(lines: string[]): string[] {
+  const out: string[] = []
+  for (const line of lines) {
+    const prev = out[out.length - 1]
+    if (continuesPrevious(line, prev)) out[out.length - 1] = `${prev} ${line}`
+    else out.push(line)
+  }
+  return out
+}
+
+/**
  * Canonicalise a work/education/project description WITHOUT destroying intent. Some
  * résumés write experience as bullets, some as a narrative paragraph, some as an intro
  * paragraph followed by bullets — all valid. So:
@@ -74,16 +120,30 @@ export function normalizeDescription(text: string): string {
     const intro = lines.slice(0, firstMarker).join(" ").trim()
     const bullets: string[] = []
     for (const l of lines.slice(firstMarker)) {
-      if (LEADING_MARKER.test(l)) bullets.push("• " + l.replace(LEADING_MARKER, "").trim())
-      else if (bullets.length) bullets[bullets.length - 1] += " " + l // wrapped continuation
+      const marked = LEADING_MARKER.test(l)
+      const body = marked ? l.replace(LEADING_MARKER, "").trim() : l.trim()
+      const prev = bullets[bullets.length - 1]
+      // A marker on a wrapped fragment is the extractor's, not the author's: the
+      // page broke the line and the glyph came along. Reported verbatim — a bullet
+      // reading "5%." sitting under the one it belongs to.
+      if (bullets.length && continuesPrevious(body, prev?.replace(LEADING_MARKER, ""))) {
+        bullets[bullets.length - 1] += " " + body
+      } else if (marked) {
+        bullets.push("• " + body)
+      } else if (bullets.length) {
+        bullets[bullets.length - 1] += " " + body // unmarked wrapped continuation
+      }
     }
     return [intro, ...bullets].filter(Boolean).join("\n")
   }
 
-  if (lines.length >= 2 && lines.every(looksLikeAchievement)) {
-    return lines.map((l) => "• " + l).join("\n")
+  // No markers: repair the layout breaks BEFORE judging, or a single wrapped line
+  // decides the format for the whole role.
+  const whole = unwrapSoftBreaks(lines)
+  if (whole.length >= 2 && whole.every(looksLikeAchievement)) {
+    return whole.map((l) => "• " + l).join("\n")
   }
-  return lines.join("\n") // narrative prose — leave it as written
+  return whole.join("\n") // narrative prose — leave it as written
 }
 
 /** The marker-free achievement lines only (no intro prose, no paragraph splitting). */
@@ -107,10 +167,20 @@ export function fmtDesc(text: string): string {
   // Intro prose before the first bullet renders as a paragraph, not a fake bullet.
   const introLines = lines.slice(0, firstMarker)
   const bullets: string[] = []
+  // The SAME continuation rule the normalizer uses, and it has to be: this renders
+  // what the ATS panel counts. With the rule on only one side, a résumé whose page
+  // break split "…user satisfaction by / 5%." showed ONE bullet in the panel and
+  // TWO in the preview — the same stored text answering the same question twice.
+  const raw: string[] = []
   for (const line of lines.slice(firstMarker)) {
-    if (LEADING_MARKER.test(line)) bullets.push(escapeHtml(line.replace(LEADING_MARKER, "")))
-    else if (bullets.length > 0) bullets[bullets.length - 1] += " " + escapeHtml(line)
+    const marked = LEADING_MARKER.test(line)
+    const body = marked ? line.replace(LEADING_MARKER, "").trim() : line.trim()
+    const prev = raw[raw.length - 1]
+    if (raw.length > 0 && continuesPrevious(body, prev)) raw[raw.length - 1] += " " + body
+    else if (marked) raw.push(body)
+    else if (raw.length > 0) raw[raw.length - 1] += " " + body
   }
+  for (const b of raw) bullets.push(escapeHtml(b))
   const introHtml = introLines.length ? `<p style="margin:0 0 4px">${introLines.map(escapeHtml).join(" ")}</p>` : ""
   const ul = `<ul style="list-style-type:disc;padding-left:1.2em;margin:4px 0 0">${bullets.map((b) => `<li style="margin-bottom:4px;line-height:1.55">${b}</li>`).join("")}</ul>`
   return introHtml + ul

@@ -19,6 +19,8 @@
 // specific to one document — a summary's missing metric, a letter's generic
 // opener — belongs in that document's own quality module.
 
+import { isEmptyPhrasing } from "./empty-phrasing"
+
 interface Cliche {
   /** Lowercase. What the checks match and the prompt bans. */
   readonly phrase: string
@@ -48,7 +50,15 @@ const CLICHES_EN: readonly Cliche[] = [
   { phrase: "responsible for" },
   { phrase: "passionate about" },
   { phrase: "looking for new challenges" },
-  { phrase: "experienced in" },
+  // "experienced in" / "con experiencia en" REMOVED, measured, not on taste.
+  // They matched every legitimate summary opener that names a real specialty —
+  // "Enfermera con experiencia en sala de emergencias", "Ingeniero de software
+  // con experiencia en sistemas de pago", "Experienced in Kubernetes and
+  // Terraform" — and each match sent the quality gate off to rewrite text that
+  // was correct, on almost every Spanish CV. The phrase is not the defect; the
+  // defect is when what follows it is generic too, and that is a rating attached
+  // to a quality noun ("Amplia experiencia en diversos entornos"), which
+  // empty-phrasing.ts catches structurally without touching the honest ones.
   { phrase: "team player" },
   { phrase: "detail-oriented" },
   { phrase: "hard-working" },
@@ -78,7 +88,6 @@ const CLICHES_ES: readonly Cliche[] = [
   { phrase: "responsable de" },
   { phrase: "apasionado por" },
   { phrase: "apasionada por" },
-  { phrase: "con experiencia en" },
   { phrase: "busco nuevos retos" },
   // Claim forms only. The bare nouns were too broad and it cost real money:
   // "mejoraron la efectividad del trabajo en equipo" describes work the
@@ -128,16 +137,44 @@ function escapeRe(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
 
-/** True when the text leans on a phrase that fits anyone. */
+/**
+ * True when the text leans on a phrase that fits anyone.
+ *
+ * Two layers, and the second is the one that generalises. The list above answers
+ * "is this one of the phrases we know", and measured against 50 ordinary empty
+ * phrasings taken from real CVs in both languages it answered YES to none of them
+ * — not because they were exotic ("Excellent communication and interpersonal
+ * skills", "Profesional altamente motivado") but because a list only ever knows
+ * what somebody typed into it. empty-phrasing.ts answers the structural question
+ * instead — does this praise a quality rather than report work — and finds 39 of
+ * the 50 while flagging NONE of ten real generated summaries.
+ *
+ * It could find 46 by also flagging a bare quality noun in a short line, and that
+ * version was built, measured and thrown away: it hit seven of those ten real
+ * summaries, because "Enfermera con experiencia en sala de emergencias" and
+ * "Amplia experiencia en diversos entornos" differ only in whether the object is
+ * specific. Seven false positives buy seven wasted model calls and seven users
+ * told their correct sentence is a cliché; eleven misses cost one unflagged weak
+ * line each.
+ *
+ * The list stays because it still earns its place: it carries the prefix
+ * substitutions (substituteCliches) and the exact wording the prompts ban
+ * (clicheBanList), and it catches set phrases that are empty for idiomatic rather
+ * than structural reasons ("wear many hats").
+ */
 export function hasCliche(text: string): boolean {
   const lower = (text ?? "").toLowerCase()
-  return ALL.some((c) => lower.includes(c.phrase))
+  return ALL.some((c) => lower.includes(c.phrase)) || isEmptyPhrasing(text)
 }
 
 /** Every cliché the text carries — for logs, so a run can be explained. */
 export function findCliches(text: string): string[] {
   const lower = (text ?? "").toLowerCase()
-  return ALL.filter((c) => lower.includes(c.phrase)).map((c) => c.phrase)
+  const named = ALL.filter((c) => lower.includes(c.phrase)).map((c) => c.phrase)
+  // The structural finding has no phrase to name — say so rather than return an
+  // empty list for a text the gate just rejected, which reads like a bug in a log.
+  if (named.length === 0 && isEmptyPhrasing(text)) return ["(empty phrasing: a quality claimed, not work reported)"]
+  return named
 }
 
 /**
