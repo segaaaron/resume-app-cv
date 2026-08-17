@@ -209,6 +209,9 @@ export default async function ProfessionCountryPage({
     })),
   }
 
+  // Stable lookup in a module-level map, not a component built per render — same case
+  // as lib/resume/section-icons.tsx.
+  // eslint-disable-next-line react-hooks/static-components
   const Icon = getProfessionIcon(profession.icon)
   const faqItems = [1, 2, 3, 4].map((i) => ({
     q: t(`faq.q${i}`),
@@ -245,6 +248,7 @@ export default async function ProfessionCountryPage({
           </span>
           <div className="mt-6 flex items-center justify-center gap-3">
             <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-[#1a2e4a] to-[#0f1a2e] text-[#00D4FF] shadow-lg shadow-[#1a2e4a]/30">
+              {/* eslint-disable-next-line react-hooks/static-components */}
               <Icon className="h-6 w-6" />
             </span>
             <span className="text-4xl md:text-5xl">{country.flag}</span>

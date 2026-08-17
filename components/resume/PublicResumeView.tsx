@@ -17,7 +17,11 @@ interface Props {
 export default function PublicResumeView({ title, sections, sectionData, config }: Props) {
   const init = useResumeStore((s) => s.init)
   const t = useTranslations("public_cv")
+  // "Latest ref": the mount-only effect below needs the CURRENT props without listing
+  // them as dependencies (that would re-init the store on every keystroke upstream).
+  // Assigning inside an effect instead would give the effect the PREVIOUS render's props.
   const propsRef = useRef({ title, sections, sectionData, config })
+  // eslint-disable-next-line react-hooks/refs
   propsRef.current = { title, sections, sectionData, config }
 
   useEffect(() => {

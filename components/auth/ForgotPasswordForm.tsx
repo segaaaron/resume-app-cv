@@ -22,6 +22,7 @@ export default function ForgotPasswordForm() {
   const router = useRouter()
   const locale = useLocale()
   const [oauthProvider, setOauthProvider] = useState<string | null>(null)
+  const [managed, setManaged] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
 
   const {
@@ -55,12 +56,39 @@ export default function ForgotPasswordForm() {
       return
     }
 
+    // Managed account: the administrator holds the reset. Sending this user to the code
+    // screen would park them in front of a field no code will ever arrive for.
+    if (body.managed) {
+      setManaged(true)
+      return
+    }
+
     router.push(`/${locale}/forgot-password/verify?email=${encodeURIComponent(data.email)}`)
   }
 
   async function loginWithProvider(provider: string) {
     setGoogleLoading(true)
     await signIn(provider, { callbackUrl: `/${locale}/dashboard/resumes` })
+  }
+
+  // ── Managed account: nothing for THIS user to do, so no button ───────────────
+  if (managed) {
+    return (
+      <div className="w-full max-w-[420px]">
+        <div className="mb-7">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="inline-flex items-center justify-center w-11 h-11 rounded-[12px] shrink-0"
+              style={{ background: "linear-gradient(135deg,rgba(0,212,255,0.12),rgba(0,153,204,0.08))", border: "1px solid rgba(0,212,255,0.2)" }}>
+              <KeyRound className="h-5 w-5" style={{ color: "#00D4FF" }} />
+            </div>
+            <h1 className="text-[22px] font-extrabold text-[#1a2e4a] tracking-[-0.025em] leading-tight">
+              {t("managed_title")}
+            </h1>
+          </div>
+          <p className="text-[14px] text-[#6B7A8C] leading-[1.55]">{t("managed_account")}</p>
+        </div>
+      </div>
+    )
   }
 
   // ── OAuth-only account: friendly steer, not an error ─────────────────────────

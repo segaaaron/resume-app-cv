@@ -71,6 +71,9 @@ export function useOptimizedGuard(storageKey: string) {
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    // localStorage is browser-only. Reading it during render would make the server and
+    // the first client render disagree about whether the content is already optimised.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true)
     setMark(read(storageKey))
   }, [storageKey])

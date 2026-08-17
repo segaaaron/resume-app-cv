@@ -44,7 +44,13 @@ function PhaseText({ active, labels }: { active: boolean; labels: { preparing: s
   const [phase, setPhase] = useState<"preparing" | "applyingStyles" | "almostDone">("preparing")
 
   useEffect(() => {
+    // The reset is NOT removable, despite what react-hooks/set-state-in-effect says.
+    // Deriving the label as `active ? phase : "preparing"` looks equivalent and is not:
+    // `phase` would still hold "almostDone" from the previous download, so the SECOND
+    // export would jump straight to "almost done" the instant it starts. Measured by
+    // making that change and walking the flow.
     if (!active) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setPhase("preparing")
       return
     }

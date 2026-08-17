@@ -114,7 +114,9 @@ const VerticalCutReveal = forwardRef<VerticalCutRevealRef, TextProps>(
         }
         return Math.abs((staggerFrom as number) - index) * staggerDuration
       },
-      [elements.length, staggerFrom, staggerDuration]
+      // `elements` and `splitBy` are both read above: listing only `elements.length`
+      // meant a text change of the same length kept the previous stagger delays.
+      [elements, splitBy, staggerFrom, staggerDuration]
     )
 
     const startAnimation = useCallback(() => {
@@ -128,7 +130,10 @@ const VerticalCutReveal = forwardRef<VerticalCutRevealRef, TextProps>(
     }))
 
     useEffect(() => {
+      // Fire-once animation kickoff. It sets state because "animating" IS the state; the
+      // alternative (starting during render) is exactly what the rule forbids.
       if (autoStart) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         startAnimation()
       }
     }, [autoStart])

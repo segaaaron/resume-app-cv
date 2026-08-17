@@ -44,6 +44,9 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
   const mrr          = proCount * 15
 
   // Active today: lastActiveAt within last 24h
+  // Server Component: this runs once on the server per request and is never hydrated,
+  // so there is no client render to disagree with. The rule cannot tell the two apart.
+  // eslint-disable-next-line react-hooks/purity
   const yesterday    = new Date(Date.now() - 24 * 60 * 60 * 1000)
   const activeToday  = users.filter(u => new Date(u.lastActiveAt) > yesterday).length
 

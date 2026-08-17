@@ -294,6 +294,10 @@ export function StatsRow({ resumes, isPro }: StatsRowProps) {
           </span>
         </div>
         <div className="mt-2 text-[11px] text-dash-muted flex items-center gap-1">
+          {/* eslint-disable-next-line react-hooks/purity -- client component: the only
+              divergence is a résumé updated within seconds of the 7-day boundary, and the
+              text is informational. Moving it to state would trade that for a flash of
+              the wrong label on every load. */}
           {resumes.some((r) => Date.now() - new Date(r.updatedAt).getTime() < 7 * 24 * 60 * 60 * 1000)
             ? t("stat_updated_this_week")
             : t("stat_no_changes")}

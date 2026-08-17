@@ -11,6 +11,9 @@ export default function PreviewPanel() {
   const { isPro } = useEditorPro()
   const templateSlug = useResumeStore((s) => s.config.templateId)
   const [scale, setScale] = useState(0.8)
+  // Viewport width is a browser fact. Server-rendering the small scale would flash the
+  // wrong size on desktop; this corrects it once, after mount.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (window.innerWidth < 768) setScale(0.5) }, [])
 
   return (

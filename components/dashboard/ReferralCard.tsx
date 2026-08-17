@@ -47,14 +47,13 @@ export default function ReferralCard({ embeddedMode = false }: { embeddedMode?: 
   )
   const [stats, setStats] = useState<ReferralStats | null>(null)
   const [copied, setCopied] = useState(false)
-  const [loading, setLoading] = useState(true)
+  // A managed account never fetches, so it is not loading — that is knowable on the
+  // first render rather than something to correct afterwards with a second one.
+  const [loading, setLoading] = useState(!isManaged)
 
   useEffect(() => {
     // Managed users (plan=LIMITED) cannot use referrals — skip API call.
-    if (isManaged) {
-      setLoading(false)
-      return
-    }
+    if (isManaged) return
     apiFetch("/api/referrals", { silent: true })
       .then((r) => {
         if (!r.ok) throw new Error("referrals fetch failed")

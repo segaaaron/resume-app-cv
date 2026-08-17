@@ -193,6 +193,9 @@ export default function ResumePreview({ overrideTemplateId }: { overrideTemplate
   const { config } = useResumeStore(useShallow((s) => ({ config: s.config })))
   const [mounted, setMounted] = useState(false)
 
+  // The canonical mounted guard: the preview reads browser-only APIs below, and the
+  // server has no equivalent to render.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setMounted(true) }, [])
 
   useEffect(() => {

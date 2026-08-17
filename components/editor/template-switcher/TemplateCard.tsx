@@ -74,6 +74,9 @@ export const TemplateCard = memo(function TemplateCard({
     const node = cardRef.current
     if (!node) return
     if (typeof IntersectionObserver === "undefined") {
+      // Capability probe: without the observer there is no lazy path, so everything is
+      // visible. Cannot be answered during render — the server has no window.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setVisible(true)
       return
     }

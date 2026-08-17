@@ -14,13 +14,13 @@ function CheckoutRedirectInner() {
   const routeParams = useParams()
   const locale = (routeParams?.locale as string | undefined) ?? "es"
   const plan = params.get("plan")
-  const [error, setError] = useState(false)
+  // Derived: an absent or unknown ?plan= is visible on the first render. Setting it from
+  // the effect meant painting the page once as "working" before admitting it was not.
+  const planValid = plan === "monthly" || plan === "annual"
+  const [error, setError] = useState(!planValid)
 
   useEffect(() => {
-    if (!plan || (plan !== "monthly" && plan !== "annual")) {
-      setError(true)
-      return
-    }
+    if (!planValid) return
 
     // A checkout that does not start is a sale lost in silence: the buyer sees
     // "something went wrong" and leaves. Through apiFetch so a timeout or a

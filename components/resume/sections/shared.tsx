@@ -22,7 +22,10 @@ export function PField({
   autoComplete?: string
 }) {
   const [local, setLocal] = useState(value)
+  // Latest-ref: the blur commits with the CURRENT onChange while the field keeps its own
+  // draft state. Moving the assignment into an effect would commit a stale handler.
   const commitRef = useRef(onChange)
+  // eslint-disable-next-line react-hooks/refs
   commitRef.current = onChange
 
   useEffect(() => { setLocal(value) }, [value])

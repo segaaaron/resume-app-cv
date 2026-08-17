@@ -29,6 +29,9 @@ export default function TemplateDetailSchemas({
   const isEs = locale === "es"
 
   // priceValidUntil: dinámico (hoy + 1 año)
+  // Server Component emitting JSON-LD for crawlers: rendered on the server, never
+  // hydrated. `priceValidUntil` has to be a real date relative to now.
+  // eslint-disable-next-line react-hooks/purity
   const priceValidUntil = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
     .toISOString()
     .split("T")[0]

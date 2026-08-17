@@ -8,6 +8,9 @@ export function useUserTimezone(): string {
   const [timezone, setTimezone] = useState("UTC")
 
   useEffect(() => {
+    // The browser's zone does not exist on the server; "UTC" is rendered first on both
+    // sides and corrected after mount. Reading Intl during render is the mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
   }, [])
 

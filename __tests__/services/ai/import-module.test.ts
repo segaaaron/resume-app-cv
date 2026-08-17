@@ -21,7 +21,7 @@ function clientReturning(content: string): IAIClient {
     chat: vi.fn().mockResolvedValue({
       choices: [{ message: { content } }],
       usage: { prompt_tokens: 10, completion_tokens: 10 },
-    }) as any,
+    }) as never,
     embed: vi.fn(),
   }
 }

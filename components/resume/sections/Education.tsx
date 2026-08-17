@@ -18,6 +18,10 @@ export default function EducationSection() {
   )
   const items = sectionData.education
   const [openId, setOpenId] = useState<string | null>(null)
+  // Deriving this (`openId ?? items[0]?.id`) looks equivalent and is not: closing the
+  // accordion sets null, which would immediately re-open the first entry. Measured, then
+  // left alone — it is UI state reacting to a list change, which is what an effect is for.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { if (items[0]?.id) setOpenId(items[0].id) }, [items[0]?.id])
 
   function add() {
