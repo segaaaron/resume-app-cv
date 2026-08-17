@@ -21,7 +21,7 @@ import { isApplicableFix, detectWordCorrections } from "@/lib/ats/fix-text"
 // Spanish skill matches the stored verdict instead of silently missing it.
 import { normalizeTerm, termPresent } from "@/lib/ats/vocabulary"
 import { computeCredibility, credibilityVerdict } from "@/lib/ats/credibility"
-import { fixAxis, type FixAxis } from "@/lib/ats/fix-impact"
+import { fixAxis } from "@/lib/ats/fix-impact"
 import { MAX_APPLICATION_ACTIONS, belongsToApplication, leverBelongsToApplication, readyToApply, type PanelMode } from "@/lib/ats/panel-mode"
 import { sameSoftRequirement } from "@/lib/ats/skill-dedup"
 import { Target, Loader2, CheckCircle2, AlertCircle, Lightbulb, Tag, Plus, Check, MessageSquare, TrendingUp, Wand2, Clock, ShieldCheck, LayoutTemplate, FileSearch, ListChecks, ChevronRight, Layers, Stethoscope, Sparkles, Pencil, PenLine } from "lucide-react"
@@ -43,7 +43,9 @@ import { applySpellingFix } from "@/lib/ats/apply-spelling"
 import { findDuplicateSkill } from "@/lib/ats/skill-dedup"
 import { displaySkill } from "@/lib/ats/skill-catalog"
 import { isPlausibleSkill } from "@/lib/ats/skill-validation"
-import { markContentOptimized, isContentOptimized } from "./hooks/useOptimizedGuard"
+import { markContentOptimized } from "./hooks/useOptimizedGuard"
+import { AXIS_STYLE, RISK_STYLE, ScoreRing, SectionHeader, ATSErrorBlock } from "./ats-panel/presentational"
+import { HEALTHY_METRIC_PCT, BULLETS_PAGE, fixLocationLabel, bulletDefects, canAskAI } from "./ats-panel/panel-helpers"
 import { normalizeDates } from "@/lib/ats/normalize-dates"
 import { useCooldownLabel } from "./hooks/useAICooldown"
 import { useCvLanguage } from "./hooks/useCvLanguage"
@@ -51,157 +53,6 @@ import { AI_INPUT_LIMITS, ImproveBulletResponseSchema } from "@/lib/services/ai/
 import { computeResumeScore } from "@/lib/services/ai/shared/resume-score"
 
 /** One colour per number, so the badge and the figure it refers to read as a pair. */
-/**
- * Share of bullets that should carry a figure. Not every line takes one — an
- * "improved code quality" cannot be counted honestly — and a resume where every
- * single line ends in a percentage is the manufactured pattern the credibility
- * check exists to catch. Half is the shape of a well-written history.
- */
-const HEALTHY_METRIC_PCT = 50
-
-const AXIS_STYLE: Record<FixAxis, string> = {
-  match: "bg-cyan-50 text-cyan-700 ring-1 ring-cyan-200",
-  content: "bg-violet-50 text-violet-700 ring-1 ring-violet-200",
-  trust: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-}
-
-function ScoreRing({ score, label }: { score: number; label: string }) {
-  const r = 70
-  const c = 2 * Math.PI * r
-  const offset = c - (score / 100) * c
-  return (
-    <div className="relative flex flex-col items-center gap-2 py-4">
-      <div className="relative inline-block" style={{ filter: 'drop-shadow(0 0 20px rgba(0,212,255,0.3))' }}>
-        <svg width="160" height="160" viewBox="0 0 160 160">
-          <defs>
-            <linearGradient id="scoreGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style={{ stopColor: '#00D4FF' }} />
-              <stop offset="100%" style={{ stopColor: '#10B981' }} />
-            </linearGradient>
-          </defs>
-          <circle cx="80" cy="80" r="70" fill="none" stroke="rgba(0,212,255,0.08)" strokeWidth="8" />
-          <circle cx="80" cy="80" r="70" fill="none" stroke="url(#scoreGrad)" strokeWidth="10"
-            strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
-            style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.8s ease' }} />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <div className="text-4xl font-black text-[#1a2e4a] leading-none">{score}</div>
-          <div className="text-[10px] font-bold text-dash-cyan uppercase tracking-widest mt-1">{label}</div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-
-// Numbered section header — turns the report into ONE ordered flow (verdict →
-// what to fix → rewrites → verify) instead of a stack of disconnected cards.
-function SectionHeader({ n, title }: { n: number; title: string }) {
-  return (
-    <div className="flex items-center gap-2 pt-1">
-      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#1a2e4a] text-white text-[10px] font-black shrink-0">{n}</span>
-      <span className="text-[11px] font-black uppercase tracking-widest text-[#1a2e4a]">{title}</span>
-      <span className="h-px flex-1 bg-gradient-to-r from-slate-200 to-transparent" />
-    </div>
-  )
-}
-
-// Pass-risk pill styling — color-not-only (icon + word), readable in the report.
-const RISK_STYLE: Record<"low" | "medium" | "high", { chip: string; label: string }> = {
-  low: { chip: "bg-emerald-50 text-emerald-700 ring-emerald-200", label: "risk_low" },
-  medium: { chip: "bg-amber-50 text-amber-700 ring-amber-200", label: "risk_medium" },
-  high: { chip: "bg-rose-50 text-rose-700 ring-rose-200", label: "risk_high" },
-}
-
-
-
-
-function ATSErrorBlock({ title, description }: { title: string; description: string }) {
-  return (
-    <div className="flex flex-col items-center gap-3 rounded-2xl border border-red-200 bg-red-50/80 px-5 py-6 text-center backdrop-blur-sm">
-      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 ring-4 ring-red-50">
-        <AlertCircle className="h-5 w-5 text-red-600" />
-      </div>
-      <div className="space-y-1">
-        <p className="text-sm font-semibold text-red-800">{title}</p>
-        <p className="text-xs text-red-600 leading-relaxed">{description}</p>
-      </div>
-    </div>
-  )
-}
-
-/** Extracts the current string value of a suggestion field from sectionData */
-
-/**
- * What is actually wrong with this one bullet, from the same deterministic
- * signals the server checks. Sending a guessed defect made the request
- * unstoppable and pointed the prompt at a problem that was not there.
- */
-/**
- * What a rewrite of this bullet could still fix.
- *
- * Delegates to the shared rule instead of deciding here. This function used to
- * count a missing figure as a defect, which the endpoint refuses to treat as one
- * — so the panel drew a button whose only possible answer was "already well
- * written". Empty means: do not offer the rewrite.
- */
-/**
- * Rows of the "bullets to improve" list shown at once.
- *
- * A CV with forty bullets produced twenty-four rows, which reads as "your resume
- * is broken" rather than as work to get through. Six matches the number of lines
- * a single role should carry (writing-checks), so a full page of this list is
- * about one role's worth of decisions.
- */
-const BULLETS_PAGE = 6
-
-/**
- * Where in the CV a finding lands, in the user's words.
- *
- * The report quoted a line and named a problem but never said WHICH section or
- * role it belonged to — on a resume with five jobs and forty bullets, "this
- * bullet" is not an address. The action already carries the target because the
- * buttons need it; this just says it out loud, so a finding with no button is
- * still findable by hand.
- */
-function fixLocationLabel(
-  action: { kind: string; targetId?: string; index?: number } | undefined,
-  jobs: WorkExperienceItem[],
-  t: (k: string, v?: Record<string, string | number>) => string,
-): string | null {
-  if (!action) return null
-  if (action.kind === "rewrite_summary") return t("fix_where_summary")
-  if (action.kind === "add_skill") return t("fix_where_skills")
-  if (action.kind === "fix_dates") return t("fix_where_dates")
-  if (action.kind === "rewrite_bullet" && action.targetId) {
-    const job = jobs.find((j) => j.id === action.targetId)
-    if (!job) return null
-    const where = [job.jobTitle, job.employer].filter(Boolean).join(" · ")
-    return action.index === undefined
-      ? where
-      : t("fix_where_bullet", { job: where, n: action.index + 1 })
-  }
-  return null
-}
-
-function bulletDefects(text: string): string[] {
-  return repairableDefects(text)
-}
-
-/**
- * May the AI still be asked to rewrite this job's bullets?
- *
- * Two conditions, both cheap and local. There has to be a defect a rewrite can
- * repair, AND the text must not be what the AI wrote last time — the ATS panel
- * used to only WRITE that mark and never read it, so a bullet the model had just
- * produced could be sent straight back to the model from here. Every such press
- * pays for an answer we already have.
- */
-function canAskAI(jobId: string, description: string, bullet: string): boolean {
-  if (repairableDefects(bullet).length === 0) return false
-  return !isContentOptimized(`opt_bullet_${jobId}`, description)
-}
-
 export default function ATSScorePanel() {
   const t = useTranslations("editor.ats")
   /**

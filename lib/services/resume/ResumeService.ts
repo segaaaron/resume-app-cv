@@ -28,6 +28,21 @@ async function enforceResumeLimit(tx: TxClient, userId: string, maxResumes: numb
   }
 }
 
+// A résumé's `sections` array carries LAYOUT descriptors — id, type, label, column,
+// visibility — while the actual content lives in `sectionData` (capped at 500 KB below).
+// A real CV has ~10-14 of them and serialises to a couple of KB. It was the one field in
+// the body with no bound at all: `z.array(z.any())`, and App Router route handlers have
+// no default body-size limit, so any signed-in user could PATCH megabytes into the row
+// and keep doing it. These caps sit far above any genuine résumé and far below anything
+// that hurts the database.
+const MAX_SECTIONS = 60
+const MAX_SECTIONS_BYTES = 100_000
+
+const sectionsSchema = z
+  .array(z.any())
+  .max(MAX_SECTIONS, { message: "too many sections" })
+  .refine((val) => JSON.stringify(val).length <= MAX_SECTIONS_BYTES, { message: "sections too large" })
+
 // ─── Snapshot schema (mirrors autosave fields) ────────────────────────────────
 
 export const snapshotConfigSchema = z.object({
@@ -43,7 +58,7 @@ export const snapshotConfigSchema = z.object({
 
 export const snapshotSchema = z.object({
   title:       z.string().optional(),
-  sections:    z.array(z.any()).optional(),
+  sections:    sectionsSchema.optional(),
   sectionData: ResumeSectionsSchema.optional(),
   config:      snapshotConfigSchema,
 })
@@ -54,7 +69,7 @@ export type ResumeSnapshot = z.infer<typeof snapshotSchema>
 
 export const resumePatchSchema = z.object({
   title:       z.string().min(1).max(200).optional(),
-  sections:    z.array(z.any()).optional(),
+  sections:    sectionsSchema.optional(),
   sectionData: z.record(z.string(), z.unknown()).optional().refine(
     (val) => !val || JSON.stringify(val).length <= 500_000,
     { message: "sectionData too large" }

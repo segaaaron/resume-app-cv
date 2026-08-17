@@ -133,6 +133,16 @@ export type PlanLimits = {
   maxResumes: number
   /** -1 = unlimited */
   maxCoverLetters: number
+  /**
+   * Whether the plan may download a PDF AT ALL, before any daily cap.
+   *
+   * DO NOT read this as "how many downloads": UNSUBSCRIBED had `false` here while the
+   * route hands it UNSUBSCRIBED_DAILY_PDF_CAP downloads a day, so the field disagreed
+   * with the product. The whole download policy — plan window, premium template, free
+   * daily cap, managed quota — is decided in `app/api/resumes/[id]/pdf/route.ts`; this
+   * flag only answers the coarse question the UI asks when it decides whether to show a
+   * download button or an upgrade CTA.
+   */
   canExportPdf: boolean
   /** Lifetime quota per AI endpoint. 0 = blocked. -1 = unlimited. */
   aiLimitsByEndpoint: Record<AiEndpointName, number>
@@ -276,7 +286,10 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
   UNSUBSCRIBED: {
     maxResumes: 1,
     maxCoverLetters: 1,
-    canExportPdf: false,
+    // true, with UNSUBSCRIBED_DAILY_PDF_CAP per rolling 24h enforced in the route. It
+    // read `false` for a long time after the free tier was loosened, which is how a
+    // surface that trusted this field would have hidden a download the server allows.
+    canExportPdf: true,
     // No AI of any kind: UNSUBSCRIBED fills the CV manually. Every content
     // endpoint is blocked (0). Upgrading unlocks AI.
     aiLimitsByEndpoint: {

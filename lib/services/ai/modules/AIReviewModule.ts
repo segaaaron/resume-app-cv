@@ -48,6 +48,7 @@ import { dropSatisfiedYearRequirements } from "@/lib/ats/experience-years"
 import { analyzeWriting } from "@/lib/ats/writing-checks"
 import { groundFixAction } from "@/lib/ats/fix-actions"
 import { splitFixText } from "@/lib/ats/fix-text"
+import { untrustedDataRule } from "../shared/untrusted-input"
 
 /**
  * Hard requirements this CV provably meets, normalized for the matcher.
@@ -248,6 +249,7 @@ export class AIReviewModule {
 
     const prompt = en
       ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you NEVER invent facts — every claim quotes the candidate's real text.
+${untrustedDataRule(true)}
 
 Judge this RESUME for the JOB below the way you would in a 7-second screen, then a deeper read.
 
@@ -306,6 +308,7 @@ Hard rules:
   · manual — anything else (missing LinkedIn, an unexplained gap, a claim only the candidate can verify). Use it freely; a wrong action is worse than none.
 - Respond ONLY with the JSON, no markdown.`
       : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA inventas datos — cada afirmación cita el texto real del candidato.
+${untrustedDataRule(false)}
 
 Evalúa este CV para el PUESTO de abajo como lo harías en un escaneo de 7 segundos, y luego en una lectura a fondo.
 
@@ -524,6 +527,7 @@ Reglas duras:
     // extracts keyword lists + writes a short summary and actionable suggestions.
     const jdPrompt = en
       ? `Extract the hiring requirements from this job description. Do NOT score or rate anything — only extract and advise.
+${untrustedDataRule(true)}
 
 === JOB DESCRIPTION ===
 ${jobDescriptionTruncated}
@@ -548,6 +552,7 @@ Rules:
 - If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
       : `Extrae los requisitos de contratación de esta descripción de puesto. NO puntúes ni califiques nada — solo extrae y aconseja.
+${untrustedDataRule(false)}
 
 === DESCRIPCIÓN DEL PUESTO ===
 ${jobDescriptionTruncated}
@@ -1075,6 +1080,7 @@ Reglas:
 
     const prompt = language === "en"
       ? `TASK: Analyze this resume and provide a detailed professional review.
+${untrustedDataRule(true)}
 
 === CANDIDATE RESUME ===
 ${resumeContext}
@@ -1134,6 +1140,7 @@ Respond ONLY with valid JSON (no markdown):
   "answer": "<direct answer to candidate's question, or empty string if general review>"
 }`
       : `TAREA: Analiza el siguiente CV y proporciona una revisión profesional detallada.
+${untrustedDataRule(false)}
 
 === CV DEL CANDIDATO ===
 ${resumeContext}

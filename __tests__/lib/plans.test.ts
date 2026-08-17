@@ -20,6 +20,16 @@ const past = new Date(Date.now() - 1000 * 60 * 60) // -1h
 
 describe("plans · BASIC + SPRINT capabilities", () => {
   describe("getLimits", () => {
+    // The flag used to say `false` for UNSUBSCRIBED while the route handed that plan
+    // three downloads a day. Nothing rendered it, so the lie was invisible — the next
+    // surface to trust it would have hidden a download the server allows.
+    it("UNSUBSCRIBED: can export (bounded per day by the route), no AI", () => {
+      const l = getLimits("UNSUBSCRIBED")
+      expect(l.canExportPdf).toBe(true)
+      expect(Object.values(l.aiLimitsByEndpoint).every((v) => v === 0)).toBe(true)
+      expect(l.maxResumes).toBe(1)
+    })
+
     it("BASIC: can export, ALL AI blocked", () => {
       const l = getLimits("BASIC")
       expect(l.canExportPdf).toBe(true)

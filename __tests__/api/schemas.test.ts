@@ -1,41 +1,15 @@
-import { describe, it, expect } from "vitest"
-import { z } from "zod"
+import { describe, it, expect, vi } from "vitest"
 
-// ─── Cover Letter PATCH schema ───────────────────────────────────────────────
-const coverLetterPatchSchema = z.object({
-  title:       z.string().max(200).optional(),
-  content:     z.any().optional(),
-  colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-  fontFamily:  z.string().max(100).optional(),
-  templateId:  z.string().max(50).optional(),
-})
+// These run the SHIPPED schemas. They used to re-declare their own copies of all three,
+// which meant the file kept passing no matter what the services actually accepted — the
+// same failure mode that once left 39 green tests over a broken product. Migrating them
+// immediately exposed two places where the copy described behaviour the real schema does
+// not have (see the `photoUrl` and `content` cases below).
+vi.mock("@/lib/db", () => ({ db: {} }))
+vi.mock("@/lib/auth", () => ({ purgeUserCache: vi.fn() }))
 
-// ─── Resume PATCH schema ──────────────────────────────────────────────────────
-const resumePatchSchema = z.object({
-  title:       z.string().min(1).max(200).optional(),
-  sections:    z.array(z.any()).optional(),
-  sectionData: z.any().optional(),
-  config: z.object({
-    templateId:  z.string().optional(),
-    colorScheme: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
-    fontFamily:  z.string().max(100).optional(),
-    fontSize:    z.number().int().min(8).max(24).optional(),
-    spacing:     z.number().min(0.5).max(3).optional(),
-    photoUrl:    z.string().refine(
-      (v) => v.startsWith("data:image/") || /^https?:\/\//.test(v),
-      "Invalid photo URL"
-    ).nullable().optional(),
-    photoPosition: z.number().int().min(0).max(100).optional(),
-    language:      z.enum(["es", "en"]).optional(),
-  }).optional(),
-})
-
-// ─── Snapshot schema (versions) ───────────────────────────────────────────────
-const snapshotSchema = z.object({
-  title:       z.string().optional(),
-  sections:    z.array(z.any()).optional(),
-  sectionData: z.any().optional(),
-})
+import { coverLetterPatchSchema } from "@/lib/services/cover-letter/CoverLetterService"
+import { resumePatchSchema, snapshotSchema } from "@/lib/services/resume/ResumeService"
 
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
@@ -150,11 +124,18 @@ describe("resumePatchSchema", () => {
     expect(result.success).toBe(true)
   })
 
-  it("accepts photoUrl as https url", () => {
+  // The old copy of this schema claimed an https photo URL was accepted. The shipped
+  // schema takes base64 data URLs ONLY, and that is the correct behaviour: photos are
+  // uploaded through /api/resumes/[id]/photo, which stores a data URL (ResumeService
+  // .updatePhoto), and accepting a remote URL would let a résumé embed — and make our
+  // PDF renderer fetch — an arbitrary third-party address. The copy documented a
+  // capability the product never had, and nothing failed because nothing ran the real
+  // schema.
+  it("rejects a remote photo URL — photos are stored as data URLs", () => {
     const result = resumePatchSchema.safeParse({
       config: { photoUrl: "https://cdn.example.com/photo.jpg" },
     })
-    expect(result.success).toBe(true)
+    expect(result.success).toBe(false)
   })
 
   it("rejects invalid photoUrl", () => {
