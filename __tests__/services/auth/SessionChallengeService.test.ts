@@ -27,7 +27,14 @@ const mockEmail: IEmailService = {
   sendSessionChallengeBlocked: vi.fn(),
   sendSessionForced: vi.fn(),
 }
-const mockRateLimit: IRateLimitService = { check: vi.fn(), recordFailure: vi.fn() }
+const mockRateLimit: IRateLimitService = { check: vi.fn(), consume: vi.fn() }
+// The send paths (issueChallenge / requestOtp / requestReset) now go through the
+// atomic `consume`; the confirm/verify paths still use `check`. Setting both keeps
+// each test expressing one thing: "the limiter allows / refuses this call".
+const setRateLimit = (allowed: boolean) => {
+  vi.mocked(mockRateLimit.check).mockResolvedValue(allowed)
+  vi.mocked(mockRateLimit.consume).mockResolvedValue(allowed)
+}
 const mockLogger: ILogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
 function makeService() {
@@ -46,21 +53,21 @@ beforeEach(() => vi.clearAllMocks())
 
 describe("SessionChallengeService.issueChallenge", () => {
   it("rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makeService().issueChallenge("a@b.com")).rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("user not found → records failure, returns { sent: true } (anti-enumeration)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue(null)
     const result = await makeService().issueChallenge("a@b.com")
     expect(result).toEqual({ sent: true })
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("a@b.com", "session-challenge")
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("a@b.com", "session-challenge", 5)
     expect(mockEmail.sendSessionChallenge).not.toHaveBeenCalled()
   })
 
   it("user is blocked → returns { sent: true } without sending email (anti-enumeration)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_USER, sessionChallengeBlockedUntil: new Date(Date.now() + 99999) })
     const result = await makeService().issueChallenge("a@b.com")
     expect(result).toEqual({ sent: true })
@@ -68,15 +75,30 @@ describe("SessionChallengeService.issueChallenge", () => {
   })
 
   it("no active session → returns { sent: true } without sending email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_USER, activeSessionToken: null })
     const result = await makeService().issueChallenge("a@b.com")
     expect(result).toEqual({ sent: true })
     expect(mockEmail.sendSessionChallenge).not.toHaveBeenCalled()
   })
 
+  // Same hole as registration and password reset: the branch that emails a real user
+  // never moved the counter, so the challenge could be replayed without limit.
+  it("counts the attempt on the branch that SENDS the email", async () => {
+    setRateLimit(true)
+    vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ id: "u1", name: "Ana", email: "a@b.com", activeSessionToken: "tok", sessionChallengeBlockedUntil: null } as never)
+    vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue(undefined as never)
+    vi.mocked(mockEmail.sendSessionChallenge).mockResolvedValue(undefined as never)
+
+    await makeService().issueChallenge("a@b.com")
+
+    expect(mockEmail.sendSessionChallenge).toHaveBeenCalledOnce()
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("a@b.com", "session-challenge", 5)
+    expect(mockRateLimit.check).not.toHaveBeenCalled()
+  })
+
   it("happy path → stores OTP hash, sends email, returns { sent: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_USER })
     vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue()
     vi.mocked(mockEmail.sendSessionChallenge).mockResolvedValue()
@@ -94,18 +116,18 @@ describe("SessionChallengeService.issueChallenge", () => {
 
 describe("SessionChallengeService.verifyChallenge", () => {
   it("rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makeService().verifyChallenge("a@b.com", "123456")).rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("user not found → throws 400 invalid_or_no_challenge", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue(null)
     await expect(makeService().verifyChallenge("a@b.com", "123456")).rejects.toMatchObject({ code: "invalid_or_no_challenge", status: 400 })
   })
 
   it("user is blocked → throws 429 blocked with blockedUntil in extra", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const blockedUntil = new Date(Date.now() + 99999)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_USER, sessionChallengeBlockedUntil: blockedUntil })
     const err = await makeService().verifyChallenge("a@b.com", "123456").catch((e) => e)
@@ -115,13 +137,13 @@ describe("SessionChallengeService.verifyChallenge", () => {
   })
 
   it("no challenge code stored → throws 400 no_challenge", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_USER, sessionChallengeCode: null })
     await expect(makeService().verifyChallenge("a@b.com", "123456")).rejects.toMatchObject({ code: "no_challenge", status: 400 })
   })
 
   it("expired challenge → throws 400 expired", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_USER, sessionChallengeCode: "hash", sessionChallengeExp: new Date(Date.now() - 1000),
     })
@@ -129,7 +151,7 @@ describe("SessionChallengeService.verifyChallenge", () => {
   })
 
   it("invalid code below max_attempts → increments, sends failed email, throws 400 invalid with attemptsLeft", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_USER, sessionChallengeAttempts: 1,
       sessionChallengeCode: "$2b$10$aaaaaaaaaaaaaaaaaaaaa.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -144,7 +166,7 @@ describe("SessionChallengeService.verifyChallenge", () => {
   })
 
   it("invalid code at max_attempts → blocks user, sends blocked email, throws 429 blocked", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_USER, sessionChallengeAttempts: 4,
       sessionChallengeCode: "$2b$10$aaaaaaaaaaaaaaaaaaaaa.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -159,7 +181,7 @@ describe("SessionChallengeService.verifyChallenge", () => {
   })
 
   it("valid code → clears session, sends forced email, returns { success: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({

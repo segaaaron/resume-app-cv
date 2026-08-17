@@ -79,11 +79,20 @@ export default function ForgotPasswordVerifyForm() {
     if (!email) return
     setResending(true)
     try {
-      await apiFetch("/api/auth/reset-password/request", {
+      const res = await apiFetch("/api/auth/reset-password/request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       })
+      // The response was ignored here, so this said "code sent" no matter what came back.
+      // Harmless while the limit never counted; now that it does, the fourth resend in an
+      // hour is refused and claiming success would leave the user waiting for a mail that
+      // was never sent — the same silent lie being removed everywhere else in this flow.
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({} as { error?: string }))
+        if (body?.error === "rate_limited") toast.error(tRoot("rate_limit"))
+        return
+      }
       toast.success(tRoot("sent_message"))
     } finally {
       setResending(false)

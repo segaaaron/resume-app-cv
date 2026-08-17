@@ -26,6 +26,26 @@ export interface ConfirmInput {
   locale?: string | null
 }
 
+/**
+ * The rate-limit key for an address.
+ *
+ * Lower-cased on purpose: mail delivery ignores case, so `Victim@gmail.com` and
+ * `victim@gmail.com` land in the SAME inbox while hashing to two different counters.
+ * Without this, the per-address limit is bypassed by holding shift. Note this normalises
+ * the COUNTER only — the stored address is untouched, so no existing account changes.
+ *
+ * It does not canonicalise provider tricks (Gmail dots, plus-addressing): those are
+ * provider-specific and the per-IP cap is what bounds them.
+ */
+function mailboxKey(email: string): string {
+  return email.trim().toLowerCase()
+}
+
+/** Signup codes for ONE address per hour. The limit a real person feels. */
+const REGISTER_MAX_PER_EMAIL = 3
+/** Signup requests from one source per hour. Wide on purpose: shared NAT is common. */
+const REGISTER_MAX_PER_IP = 20
+
 export class RegistrationService {
   constructor(
     private readonly users: IUserRepository,
@@ -36,15 +56,29 @@ export class RegistrationService {
   ) {}
 
   async requestOtp(input: RegisterInput): Promise<{ pending: true }> {
-    const allowed = await this.rateLimit.check(input.ipAddress, "register", 5)
-    if (!allowed) {
-      this.logger.warn("RegistrationService.requestOtp: rate limited", { ip: input.ipAddress })
+    // TWO keys, the same shape `lib/auth.ts` already uses for login (email 5 / IP 10):
+    //
+    //   · PER ADDRESS — the limit that protects a person. Three signup codes for the same
+    //     mailbox in an hour is already generous; past that somebody is being mailed at,
+    //     not signing up. An IP-only limit could not see this at all: whoever wants to
+    //     bury one address just rotates source addresses.
+    //   · PER IP — the backstop that protects US, since each request costs a Resend send
+    //     and two bcrypt hashes (~200ms of CPU). Kept wide (20/h) so a shared NAT — an
+    //     office, a campus, a mobile carrier — never blocks honest signups.
+    //
+    // `consume`, not `check`: both must be counted whatever the outcome. Counting only
+    // the "email already exists" branch left the branch that actually sends mail free.
+    const [emailAllowed, ipAllowed] = await Promise.all([
+      this.rateLimit.consume(mailboxKey(input.email), "register", REGISTER_MAX_PER_EMAIL),
+      this.rateLimit.consume(`ip:${input.ipAddress}`, "register", REGISTER_MAX_PER_IP),
+    ])
+    if (!emailAllowed || !ipAllowed) {
+      this.logger.warn("RegistrationService.requestOtp: rate limited", { email: input.email, ip: input.ipAddress, emailAllowed, ipAllowed })
       throw new AppError("rate_limited", 429)
     }
 
     const existing = await this.users.findByEmail(input.email)
     if (existing) {
-      await this.rateLimit.recordFailure(input.ipAddress, "register")
       this.logger.warn("RegistrationService.requestOtp: email already exists", { email: input.email })
       throw new AppError("email_exists", 409)
     }

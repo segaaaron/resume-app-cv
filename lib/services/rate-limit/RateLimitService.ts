@@ -1,4 +1,4 @@
-import { checkRateLimit, recordRateLimitUsage } from "@/lib/rate-limit"
+import { checkRateLimit, checkAndIncrementRateLimit } from "@/lib/rate-limit"
 import type { IRateLimitService } from "@/lib/interfaces/IRateLimitService"
 
 export class RateLimitService implements IRateLimitService {
@@ -6,7 +6,8 @@ export class RateLimitService implements IRateLimitService {
     return checkRateLimit(key, endpoint, limit)
   }
 
-  async recordFailure(key: string, endpoint: string): Promise<void> {
-    return recordRateLimitUsage(key, endpoint)
+  /** Atomic INSERT … ON CONFLICT DO UPDATE — counts and decides in one statement. */
+  async consume(key: string, endpoint: string, limit: number): Promise<boolean> {
+    return checkAndIncrementRateLimit(key, endpoint, limit)
   }
 }

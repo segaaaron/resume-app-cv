@@ -20,6 +20,10 @@ vi.mock("@/lib/db", () => ({
       findMany: vi.fn(),
       deleteMany: vi.fn(),
     },
+    aIRateLimit: {
+      findMany: vi.fn(),
+      deleteMany: vi.fn(),
+    },
   },
 }))
 
@@ -198,5 +202,45 @@ describe("CronService.purgeStripeEvents", () => {
     vi.mocked(db.stripeEvent.deleteMany).mockRejectedValueOnce(new Error("DB down"))
 
     await expect(makeService().purgeStripeEvents()).rejects.toThrow("DB down")
+  })
+})
+
+// ============================================================
+// purgeExpiredRateLimits
+// ============================================================
+// Nothing purged this table until the anti-mail-bombing fix keyed registration and
+// password reset by EMAIL: from then on, spraying invented addresses mints a permanent
+// row per address, for free, in the database that has no backups.
+
+describe("CronService.purgeExpiredRateLimits", () => {
+  it("deletes only windows that already elapsed", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.aIRateLimit.findMany)
+      .mockResolvedValueOnce([{ id: "rl_1" }, { id: "rl_2" }] as never)
+      .mockResolvedValueOnce([] as never)
+    vi.mocked(db.aIRateLimit.deleteMany).mockResolvedValue({ count: 2 } as never)
+
+    const result = await makeService().purgeExpiredRateLimits()
+
+    expect(result).toEqual({ deleted: 2 })
+    expect(db.aIRateLimit.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { resetAt: { lt: expect.any(Date) } },
+      select: { id: true },
+    }))
+    expect(db.aIRateLimit.deleteMany).toHaveBeenCalledWith({ where: { id: { in: ["rl_1", "rl_2"] } } })
+  })
+
+  it("never touches a live window — that would hand back attempts", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.aIRateLimit.findMany).mockResolvedValue([] as never)
+
+    const result = await makeService().purgeExpiredRateLimits()
+
+    expect(result).toEqual({ deleted: 0 })
+    expect(db.aIRateLimit.deleteMany).not.toHaveBeenCalled()
+    // The filter is strictly "already expired": lifetime freemium quotas carry a sentinel
+    // resetAt in 2099 exactly so this can never reach them.
+    const where = vi.mocked(db.aIRateLimit.findMany).mock.calls[0][0] as { where: { resetAt: { lt: Date } } }
+    expect(where.where.resetAt.lt.getTime()).toBeLessThanOrEqual(Date.now())
   })
 })

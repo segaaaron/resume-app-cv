@@ -3,6 +3,7 @@ import { apiError } from "@/lib/controllers/shared"
 import { timingSafeEqual } from "crypto"
 import { db } from "@/lib/db"
 import { recordCronRun } from "@/lib/services/cron/cronRunner"
+import { cronService } from "@/lib/controllers/cron-deps"
 
 // GDPR Art. 17 — delete accounts marked for deletion after 90-day retention window.
 // Configure in Dokploy: 0 2 * * * → GET https://www.valhallaresume.com/api/cron/data-cleanup
@@ -43,7 +44,7 @@ export async function GET(req: Request) {
       return totalDeleted
     })()
 
-    const [deletedCount, deletedLogs, deletedAuditLogs] = await Promise.all([
+    const [deletedCount, deletedLogs, deletedAuditLogs, deletedRateLimits] = await Promise.all([
       userDeletePromise,
       db.aIUsageLog.deleteMany({
         where: { createdAt: { lt: cutoff } },
@@ -52,9 +53,12 @@ export async function GET(req: Request) {
       db.auditLog.deleteMany({
         where: { createdAt: { lt: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000) } },
       }),
+      // Expired rate-limit windows. Keyed by email since the anti-mail-bombing fix, so
+      // without this an attacker mints a permanent row per invented address.
+      cronService.purgeExpiredRateLimits(),
     ])
 
-    return { deleted: deletedCount, deletedLogs: deletedLogs.count, deletedAuditLogs: deletedAuditLogs.count }
+    return { deleted: deletedCount, deletedLogs: deletedLogs.count, deletedAuditLogs: deletedAuditLogs.count, deletedRateLimits: deletedRateLimits.deleted }
   })
 
   return NextResponse.json(result)

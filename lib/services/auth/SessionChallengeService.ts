@@ -20,7 +20,10 @@ export class SessionChallengeService {
   ) {}
 
   async issueChallenge(emailAddress: string, locale?: string | null): Promise<{ sent: true }> {
-    const allowed = await this.rateLimit.check(emailAddress, "session-challenge", 5)
+    // `consume`, not `check`: same defect as registration and password reset — usage was
+    // recorded only for addresses with no account, so the branch that actually emails a
+    // code to a real user never moved the counter and could be replayed without end.
+    const allowed = await this.rateLimit.consume(emailAddress, "session-challenge", 5)
     if (!allowed) {
       this.logger.warn("SessionChallengeService.issueChallenge: rate limited", { email: emailAddress })
       throw new AppError("rate_limited", 429)
@@ -28,7 +31,6 @@ export class SessionChallengeService {
 
     const user = await this.users.findForChallenge(emailAddress)
     if (!user) {
-      await this.rateLimit.recordFailure(emailAddress, "session-challenge")
       return { sent: true }
     }
 

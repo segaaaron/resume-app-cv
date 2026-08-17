@@ -65,7 +65,14 @@ const mockEmail: IEmailService = {
   sendSessionForced: vi.fn(),
 }
 
-const mockRateLimit: IRateLimitService = { check: vi.fn(), recordFailure: vi.fn() }
+const mockRateLimit: IRateLimitService = { check: vi.fn(), consume: vi.fn() }
+// The send paths (issueChallenge / requestOtp / requestReset) now go through the
+// atomic `consume`; the confirm/verify paths still use `check`. Setting both keeps
+// each test expressing one thing: "the limiter allows / refuses this call".
+const setRateLimit = (allowed: boolean) => {
+  vi.mocked(mockRateLimit.check).mockResolvedValue(allowed)
+  vi.mocked(mockRateLimit.consume).mockResolvedValue(allowed)
+}
 const mockLogger: ILogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
 // ── Service factories ──────────────────────────────────────────────────────────
@@ -132,22 +139,22 @@ beforeEach(() => vi.clearAllMocks())
 
 describe("A. SessionChallengeService — issueChallenge", () => {
   it("A01 rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makeChallengeService().issueChallenge("a@b.com"))
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("A02 unauthenticated / user not in DB (orphan JWT) → anti-enumeration: returns { sent: true }, does NOT send email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue(null)
     const result = await makeChallengeService().issueChallenge("orphan@example.com")
     expect(result).toEqual({ sent: true })
     expect(mockEmail.sendSessionChallenge).not.toHaveBeenCalled()
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("orphan@example.com", "session-challenge")
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("orphan@example.com", "session-challenge", 5)
   })
 
   it("A03 user is blocked (sessionChallengeBlockedUntil in future) → returns { sent: true }, does NOT send email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeBlockedUntil: new Date(Date.now() + 99_999),
@@ -158,7 +165,7 @@ describe("A. SessionChallengeService — issueChallenge", () => {
   })
 
   it("A04 user is NOT blocked (blockedUntil in the past) → proceeds to send email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       // past block should not trigger the block guard
@@ -172,7 +179,7 @@ describe("A. SessionChallengeService — issueChallenge", () => {
   })
 
   it("A05 user has no active session token → returns { sent: true }, does NOT send email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       activeSessionToken: null,
@@ -183,7 +190,7 @@ describe("A. SessionChallengeService — issueChallenge", () => {
   })
 
   it("A06 happy path → persists hashed OTP, resets attempts to 0, sends 6-digit code, returns { sent: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_CHALLENGE_USER })
     vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue()
     vi.mocked(mockEmail.sendSessionChallenge).mockResolvedValue()
@@ -205,7 +212,7 @@ describe("A. SessionChallengeService — issueChallenge", () => {
   })
 
   it("A07 user.name is null → issueChallenge does NOT call sendSessionChallenge (skips email)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       name: null,
@@ -222,7 +229,7 @@ describe("A. SessionChallengeService — issueChallenge", () => {
   })
 
   it("A08 OTP expiry window is 10 minutes from now", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_CHALLENGE_USER })
     vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue()
     vi.mocked(mockEmail.sendSessionChallenge).mockResolvedValue()
@@ -243,20 +250,20 @@ describe("A. SessionChallengeService — issueChallenge", () => {
 
 describe("A. SessionChallengeService — verifyChallenge", () => {
   it("A09 rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makeChallengeService().verifyChallenge("a@b.com", "123456"))
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("A10 user not found → throws 400 invalid_or_no_challenge", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue(null)
     await expect(makeChallengeService().verifyChallenge("ghost@b.com", "123456"))
       .rejects.toMatchObject({ code: "invalid_or_no_challenge", status: 400 })
   })
 
   it("A11 user is blocked → throws 429 blocked with blockedUntil in extra", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const blockedUntil = new Date(Date.now() + 99_999)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
@@ -269,7 +276,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A12 no challenge code stored (null) → throws 400 no_challenge", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeCode: null,
@@ -280,7 +287,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A13 no expiry stored (null) → throws 400 no_challenge", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeCode: "$2b$10$aaaaaaaaaaaaaaaaaaaaa.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -291,7 +298,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A14 correct code but expired → throws 400 expired (expiry checked before bcrypt)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     // Use a real bcrypt hash so the code WOULD match if expiry weren't checked
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
@@ -307,7 +314,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A15 wrong code, attempts=1 → increments to 2, sends failed email, throws 400 invalid with attemptsLeft=3", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeAttempts: 1,
@@ -326,7 +333,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A16 wrong code, attempts=0 → attemptsLeft=4", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeAttempts: 0,
@@ -342,7 +349,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A17 wrong code at MAX_ATTEMPTS (4 existing → 5 total) → blocks user, sends blocked email, throws 429 blocked", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeAttempts: 4, // next failure = 5 = MAX
@@ -365,7 +372,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A18 block duration is 5 hours", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeAttempts: 4,
@@ -387,7 +394,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A19 correct code → clears active session, purges cache, sends forced email, returns { success: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
@@ -409,7 +416,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
 
   it("A20 already-used code (cleared after success): code stored is null after prior success → throws 400 no_challenge", async () => {
     // After a successful verify, code+exp are cleared. The next attempt should fail.
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeCode: null,  // cleared by prior success
@@ -420,7 +427,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
   })
 
   it("A21 blocked user tries to request a new OTP → issueChallenge returns { sent: true } silently, no email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeBlockedUntil: new Date(Date.now() + 60 * 60_000),
@@ -435,7 +442,7 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
     // The service generates codes in range 100000-999999, all 6 digits.
     // This test verifies that the code format is always /^\d{6}$/ (no leading zeros
     // are possible given the algorithm, but verify via regex on generated code).
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_CHALLENGE_USER })
     vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue()
     vi.mocked(mockEmail.sendSessionChallenge).mockResolvedValue()
@@ -448,15 +455,15 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
 
   it("A23 verifyChallenge uses a different rate-limit key than issueChallenge", async () => {
     // verifyChallenge checks 'session-challenge-verify', not 'session-challenge'
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await makeChallengeService().verifyChallenge("a@b.com", "123456").catch(() => {})
     expect(mockRateLimit.check).toHaveBeenCalledWith("a@b.com", "session-challenge-verify", 10)
   })
 
   it("A24 issueChallenge uses rate-limit key 'session-challenge' with limit 5", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await makeChallengeService().issueChallenge("a@b.com").catch(() => {})
-    expect(mockRateLimit.check).toHaveBeenCalledWith("a@b.com", "session-challenge", 5)
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("a@b.com", "session-challenge", 5)
   })
 })
 
@@ -466,37 +473,37 @@ describe("A. SessionChallengeService — verifyChallenge", () => {
 
 describe("B. RegistrationService — requestOtp", () => {
   it("B01 rate limited → throws 429 rate_limited, does NOT upsert pending", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
     expect(mockPending.upsert).not.toHaveBeenCalled()
   })
 
   it("B02 email already exists with password → records failure, throws 409 generic email_exists", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: REGISTER_INPUT.email, hasPassword: true, referralCode: null,
       plan: "PRO",
     })
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
       .rejects.toMatchObject({ code: "email_exists", status: 409 })
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith(REGISTER_INPUT.ipAddress, "register")
+    expect(mockRateLimit.consume).toHaveBeenCalledWith(REGISTER_INPUT.email, "register", 3)
     expect(mockPending.upsert).not.toHaveBeenCalled()
   })
 
   it("B03 email exists as Google-only account (no password) → throws 409 generic email_exists (no account-type leak)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue({
       id: "u1", name: "Ana", email: REGISTER_INPUT.email, hasPassword: false, referralCode: null,
       plan: "PRO",
     })
     await expect(makeRegistrationService().requestOtp(REGISTER_INPUT))
       .rejects.toMatchObject({ code: "email_exists", status: 409 })
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith(REGISTER_INPUT.ipAddress, "register")
+    expect(mockRateLimit.consume).toHaveBeenCalledWith(REGISTER_INPUT.email, "register", 3)
   })
 
   it("B04 happy path → upserts pending record, sends 6-digit OTP, returns { pending: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue(null)
     vi.mocked(mockPending.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendRegistrationOtp).mockResolvedValue()
@@ -513,7 +520,7 @@ describe("B. RegistrationService — requestOtp", () => {
   })
 
   it("B05 generated OTP is exactly 6 digits in range 100000-999999 (no leading zeros)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue(null)
     vi.mocked(mockPending.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendRegistrationOtp).mockResolvedValue()
@@ -526,7 +533,7 @@ describe("B. RegistrationService — requestOtp", () => {
   })
 
   it("B06 pending record upsert includes hashed password, hashed OTP, expiry, and all user fields", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue(null)
     vi.mocked(mockPending.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendRegistrationOtp).mockResolvedValue()
@@ -549,15 +556,15 @@ describe("B. RegistrationService — requestOtp", () => {
   })
 
   it("B07 requestOtp uses ipAddress as rate-limit key with 'register' and limit 5", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await makeRegistrationService().requestOtp(REGISTER_INPUT).catch(() => {})
-    expect(mockRateLimit.check).toHaveBeenCalledWith(REGISTER_INPUT.ipAddress, "register", 5)
+    expect(mockRateLimit.consume).toHaveBeenCalledWith(REGISTER_INPUT.email, "register", 3)
   })
 
   it("B08 SQL-injection-like input in email → treated as invalid user lookup, no real email sent if rejected", async () => {
     // The schema validation at route level would reject these, but at service level
     // the email is passed directly to findByEmail — the mock should handle any string.
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue(null)
     vi.mocked(mockPending.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendRegistrationOtp).mockResolvedValue()
@@ -575,20 +582,20 @@ describe("B. RegistrationService — requestOtp", () => {
 
 describe("B. RegistrationService — confirmOtp", () => {
   it("B09 rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makeRegistrationService().confirmOtp({ email: "a@b.com", code: "123456" }))
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("B10 no pending registration (non-existent token) → throws 400 no_pending", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue(null)
     await expect(makeRegistrationService().confirmOtp({ email: "ghost@b.com", code: "123456" }))
       .rejects.toMatchObject({ code: "no_pending", status: 400 })
   })
 
   it("B11 OTP expired (24h window exceeded) → deletes pending, throws 400 expired", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       otpExp: new Date(Date.now() - 24 * 60 * 60_000), // 24h ago
@@ -601,7 +608,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B12 OTP expired by 1 second → still throws 400 expired and deletes pending", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       otpExp: new Date(Date.now() - 1000),
@@ -614,7 +621,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B13 wrong code, attempts=2 → increments to 3, attemptsLeft=2, throws 400 invalid", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       attempts: 2,
@@ -629,7 +636,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B14 wrong code, attempts=0 → attemptsLeft=4", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       attempts: 0,
@@ -641,7 +648,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B15 wrong code at max_attempts (4 existing → 5 total) → deletes pending, throws 429 max_attempts", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       attempts: 4,
@@ -654,7 +661,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B16 email taken race condition (another user registered with same email between OTP send and confirm) → deletes pending, throws 409 email_taken", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
@@ -674,7 +681,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B17 valid code, no referral → creates user with generated 8-char nanoid, no referrerId", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
@@ -694,7 +701,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B18 valid code with valid referral code → creates user with referrerId", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
@@ -713,7 +720,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B19 valid code with invalid referral code → creates user WITHOUT referrerId (referral silently ignored)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
@@ -732,7 +739,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   })
 
   it("B20 confirmOtp uses email as rate-limit key (not IP) with 'register-confirm' and limit 10", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await makeRegistrationService().confirmOtp({ email: "a@b.com", code: "123456" }).catch(() => {})
     expect(mockRateLimit.check).toHaveBeenCalledWith("a@b.com", "register-confirm", 10)
   })
@@ -740,7 +747,7 @@ describe("B. RegistrationService — confirmOtp", () => {
   it("B21 already verified user (existing user, code correct) → race condition handled as email_taken", async () => {
     // If the user was already created (verified), findByEmail returns a user,
     // so the service throws email_taken and deletes the stale pending record.
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
@@ -765,22 +772,24 @@ describe("B. RegistrationService — confirmOtp", () => {
 
 describe("C. PasswordResetService — requestReset", () => {
   it("C01 rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makePasswordResetService().requestReset("1.2.3.4", "a@b.com"))
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("C02 non-existent email → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue(null)
     await expect(makePasswordResetService().requestReset("1.2.3.4", "nobody@b.com"))
       .resolves.toEqual({ sent: true })
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
+    // Counted under the address that was probed, not the source — that is what makes
+    // burying one mailbox impossible even from a rotating set of IPs.
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("nobody@b.com", "reset-password-request", 3)
     expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
   it("C03 Google-only account (no password, oauth provider) → returns { sent: false, oauth }, no email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({
       id: "u1", name: "Ana", hasPassword: false, plan: "PRO", oauthProvider: "google",
     })
@@ -790,18 +799,18 @@ describe("C. PasswordResetService — requestReset", () => {
   })
 
   it("C03b no password AND no oauth provider → anti-enumeration: silent { sent: true }, records failure, no email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({
       id: "u1", name: "Ana", hasPassword: false, plan: "PRO", oauthProvider: null,
     })
     await expect(makePasswordResetService().requestReset("1.2.3.4", "a@b.com"))
       .resolves.toEqual({ sent: true })
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("1.2.3.4", "reset-password-request")
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("a@b.com", "reset-password-request", 3)
     expect(mockEmail.sendPasswordResetOtp).not.toHaveBeenCalled()
   })
 
   it("C04 happy path → upserts reset record, sends OTP email, returns { sent: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
@@ -813,7 +822,7 @@ describe("C. PasswordResetService — requestReset", () => {
   })
 
   it("C05 user with null name → uses fallback 'Usuario' in the email", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: null, hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
@@ -823,13 +832,13 @@ describe("C. PasswordResetService — requestReset", () => {
   })
 
   it("C06 requestReset uses IP as rate-limit key with 'reset-password-request' and limit 3", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await makePasswordResetService().requestReset("9.9.9.9", "a@b.com").catch(() => {})
-    expect(mockRateLimit.check).toHaveBeenCalledWith("9.9.9.9", "reset-password-request", 3)
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("a@b.com", "reset-password-request", 3)
   })
 
   it("C07 OTP stored is bcrypt hash, not plain text", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
@@ -840,7 +849,7 @@ describe("C. PasswordResetService — requestReset", () => {
   })
 
   it("C08 OTP expiry is 10 minutes from now", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue({ id: "u1", name: "Ana", hasPassword: true, plan: "PRO", oauthProvider: null })
     vi.mocked(mockResets.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendPasswordResetOtp).mockResolvedValue()
@@ -861,20 +870,20 @@ describe("C. PasswordResetService — confirmReset", () => {
   const validInput = { email: "a@b.com", code: "654321", password: "NewPass123" }
 
   it("C09 rate limited → throws 429 rate_limited", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await expect(makePasswordResetService().confirmReset(validInput))
       .rejects.toMatchObject({ code: "rate_limited", status: 429 })
   })
 
   it("C10 no reset record (non-existent or expired token) → throws 400 no_reset_request", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue(null)
     await expect(makePasswordResetService().confirmReset(validInput))
       .rejects.toMatchObject({ code: "no_reset_request", status: 400 })
   })
 
   it("C11 expired reset token → throws 400 expired", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       expiresAt: new Date(Date.now() - 1000),
@@ -884,7 +893,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C12 already-used token → throws 400 already_used", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       usedAt: new Date(),
@@ -894,7 +903,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C13 max attempts already reached (attempts=5) → throws 400 too_many_attempts without calling incrementAttempts", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       attempts: 5,
@@ -906,7 +915,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C14 invalid code, attempts=1 → increments to 2, attemptsLeft=3, throws 400 invalid_code", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       attempts: 1,
@@ -921,7 +930,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C15 invalid code, attempts=0 → attemptsLeft=4", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       attempts: 0,
@@ -935,7 +944,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   it("C16 invalid code, attempts=4 → incrementAttempts called, then bcrypt fails, attemptsLeft=0", async () => {
     // attempts=4 doesn't hit too_many_attempts (which requires >=5), so we
     // proceed to increment and then fail on bcrypt compare
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       attempts: 4,
@@ -949,7 +958,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C17 user not found after valid token exists (orphan reset record) → throws 400 user_not_found", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
@@ -964,7 +973,7 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C18 valid code → updates password with bcrypt hash, marks token used, purges user cache, returns { ok: true }", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
@@ -991,7 +1000,7 @@ describe("C. PasswordResetService — confirmReset", () => {
     // PasswordResetService itself doesn't validate password strength.
     // The route's Zod schema enforces uppercase, lowercase, digit, min-8.
     // This test documents that the service accepts any string.
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
@@ -1012,14 +1021,14 @@ describe("C. PasswordResetService — confirmReset", () => {
   })
 
   it("C20 confirmReset uses email as rate-limit key with 'reset-password-confirm' and limit 10", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(false)
+    setRateLimit(false)
     await makePasswordResetService().confirmReset(validInput).catch(() => {})
     expect(mockRateLimit.check).toHaveBeenCalledWith("a@b.com", "reset-password-confirm", 10)
   })
 
   it("C21 incrementAttempts is always called before bcrypt compare (even on valid code)", async () => {
     // This verifies the correct ordering: increment → compare (prevents brute force)
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const bcrypt = await import("bcryptjs")
     const hash = await bcrypt.hash("654321", 1)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
@@ -1037,7 +1046,7 @@ describe("C. PasswordResetService — confirmReset", () => {
     await makePasswordResetService().confirmReset(validInput)
     expect(mockResets.incrementAttempts).toHaveBeenCalledOnce()
     expect(mockResets.incrementAttempts).toHaveBeenCalledBefore(
-      vi.mocked(mockUsers.updatePassword) as any,
+      vi.mocked(mockUsers.updatePassword) as never,
     )
   })
 
@@ -1045,7 +1054,7 @@ describe("C. PasswordResetService — confirmReset", () => {
     // The service calls resets.findByEmail(input.email). If email in input != email
     // in stored record, that would be a repo bug. The service trusts the repo result.
     // We verify the service uses the input email for ALL lookups.
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue(null) // no record for this email
     await expect(makePasswordResetService().confirmReset({ ...validInput, email: "attacker@b.com" }))
       .rejects.toMatchObject({ code: "no_reset_request" })
@@ -1078,7 +1087,7 @@ describe("D. Edge cases and security", () => {
     // Run 10 iterations for each service to verify statistical distribution
     const codes: number[] = []
     for (let i = 0; i < 10; i++) {
-      vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+      setRateLimit(true)
       vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_CHALLENGE_USER })
       vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue()
       vi.mocked(mockEmail.sendSessionChallenge).mockResolvedValue()
@@ -1098,7 +1107,7 @@ describe("D. Edge cases and security", () => {
     // Two parallel calls to issueChallenge should each generate and store an OTP independently.
     // We capture both calls and verify they may differ (they use crypto.getRandomValues).
     const collectedCodes: string[] = []
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({ ...BASE_CHALLENGE_USER })
     vi.mocked(mockUsers.updateSessionChallenge).mockResolvedValue()
     vi.mocked(mockEmail.sendSessionChallenge).mockImplementation(async (_email, _name, code) => {
@@ -1125,7 +1134,7 @@ describe("D. Edge cases and security", () => {
     const now = new Date("2026-01-01T10:00:00Z")
     vi.setSystemTime(now)
 
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeCode: "$2b$10$aaaaaaaaaaaaaaaaaaaaa.AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
@@ -1147,7 +1156,7 @@ describe("D. Edge cases and security", () => {
     vi.setSystemTime(new Date("2026-01-01T10:00:00Z"))
 
     const blockedUntil = new Date("2026-01-01T12:00:00Z") // 2h from now
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeBlockedUntil: blockedUntil,
@@ -1176,7 +1185,7 @@ describe("D. Edge cases and security", () => {
   it("D07 session challenge verify: MAX_ATTEMPTS is 5 (boundary test at attempt 5)", async () => {
     // At exactly attempts=4 (the 5th total attempt), the user is blocked.
     // At attempts=3 (4th total), they get one more chance.
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeAttempts: 3, // 4th attempt coming up
@@ -1193,7 +1202,7 @@ describe("D. Edge cases and security", () => {
 
     // 5th attempt (attempts=4) → blocked
     vi.clearAllMocks()
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
       sessionChallengeAttempts: 4,
@@ -1210,7 +1219,7 @@ describe("D. Edge cases and security", () => {
 
   it("D08 registration confirm: MAX_ATTEMPTS is 5 — at attempts=4 (5th fail) throws max_attempts, at attempts=3 throws invalid", async () => {
     // At attempts=3 (4th attempt coming), should still be invalid not max_attempts
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       attempts: 3,
@@ -1223,7 +1232,7 @@ describe("D. Edge cases and security", () => {
 
     // At attempts=4 (5th attempt) → max_attempts
     vi.clearAllMocks()
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockPending.findByEmail).mockResolvedValue({
       ...BASE_PENDING,
       attempts: 4,
@@ -1237,7 +1246,7 @@ describe("D. Edge cases and security", () => {
   it("D09 password reset: too_many_attempts guard fires at attempts=5 WITHOUT calling incrementAttempts first", async () => {
     // This is a security boundary: if attempts reached MAX before this call,
     // we reject immediately without giving another increment
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockResets.findByEmail).mockResolvedValue({
       ...BASE_RESET_RECORD,
       attempts: 5,
@@ -1249,14 +1258,14 @@ describe("D. Edge cases and security", () => {
   })
 
   it("D10 email field passed as empty string to session challenge verify → throws invalid_or_no_challenge (not rate_limited)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue(null)
     await expect(makeChallengeService().verifyChallenge("", "123456"))
       .rejects.toMatchObject({ code: "invalid_or_no_challenge" })
   })
 
   it("D11 registration requestOtp: marketingConsent defaults to false when undefined", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue(null)
     vi.mocked(mockPending.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendRegistrationOtp).mockResolvedValue()
@@ -1271,7 +1280,7 @@ describe("D. Edge cases and security", () => {
   })
 
   it("D12 registration requestOtp: referralCode defaults to null when undefined", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findByEmail).mockResolvedValue(null)
     vi.mocked(mockPending.upsert).mockResolvedValue()
     vi.mocked(mockEmail.sendRegistrationOtp).mockResolvedValue()
@@ -1286,15 +1295,15 @@ describe("D. Edge cases and security", () => {
   })
 
   it("D13 session challenge issueChallenge: records failure on missing user (anti-enumeration with rate-limit penalty)", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue(null)
     await makeChallengeService().issueChallenge("nobody@b.com")
-    // recordFailure called to penalize the IP / email
-    expect(mockRateLimit.recordFailure).toHaveBeenCalledWith("nobody@b.com", "session-challenge")
+    // every attempt is consumed, whether or not the address exists
+    expect(mockRateLimit.consume).toHaveBeenCalledWith("nobody@b.com", "session-challenge", 5)
   })
 
   it("D14 session challenge blocked user: blockedUntil in extra is ISO string format", async () => {
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     const blockedUntil = new Date("2027-01-01T00:00:00.000Z")
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
@@ -1307,7 +1316,7 @@ describe("D. Edge cases and security", () => {
 
   it("D15 password reset: SQL-injection-like email is passed as-is to repo (service delegates sanitisation to DB layer)", async () => {
     const maliciousEmail = "' OR '1'='1"
-    vi.mocked(mockRateLimit.check).mockResolvedValue(true)
+    setRateLimit(true)
     vi.mocked(mockUsers.findForReset).mockResolvedValue(null)
     await makePasswordResetService().requestReset("1.2.3.4", maliciousEmail).catch(() => {})
     expect(mockUsers.findForReset).toHaveBeenCalledWith(maliciousEmail)

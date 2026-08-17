@@ -150,7 +150,10 @@ export default function RegisterForm({ serverError }: { serverError?: boolean } 
         toast.success(t("otp_resent"))
       } else {
         const body = await res.json().catch(() => ({}))
-        toast.error(body.error ?? t("error"))
+        // Was printing the raw error code at the user ("rate_limited"). Now that the
+        // register limit actually counts, this toast is reachable, so it has to read
+        // like a sentence.
+        toast.error(body.error === "rate_limited" ? t("rate_limit") : (body.error ?? t("error")))
       }
     } finally {
       setResending(false)

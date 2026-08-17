@@ -236,6 +236,41 @@ export class CronService {
     return { deleted: totalDeleted }
   }
 
+  /**
+   * Drop rate-limit counters whose window has already elapsed.
+   *
+   * Nothing purged this table before, and it was survivable while every key was a userId
+   * or an IP: the row count tracked real users and real sources. It stopped being
+   * survivable when the anti-mail-bombing fix keyed registration and password reset by
+   * EMAIL ADDRESS — an attacker spraying invented addresses now mints one permanent row
+   * per address, for free, in the database that has no backups.
+   *
+   * Only EXPIRED windows go. A row past its `resetAt` is already dead weight: the next
+   * request for that key resets its count to 1 regardless (see checkAndIncrementRateLimit),
+   * so deleting it grants nobody an extra attempt. The lifetime freemium quotas are NOT
+   * touched — those carry a sentinel `resetAt` in 2099 precisely so they never expire.
+   */
+  async purgeExpiredRateLimits(): Promise<PurgeStripeEventsResult> {
+    const BATCH_SIZE = 1000
+    let totalDeleted = 0
+
+    while (true) {
+      const rows = await db.aIRateLimit.findMany({
+        where: { resetAt: { lt: new Date() } },
+        select: { id: true },
+        take: BATCH_SIZE,
+      })
+      if (rows.length === 0) break
+      const { count } = await db.aIRateLimit.deleteMany({ where: { id: { in: rows.map((r) => r.id) } } })
+      totalDeleted += count
+      if (rows.length < BATCH_SIZE) break
+      await new Promise((r) => setTimeout(r, 100))
+    }
+
+    this.logger.info(`[CronService] purgeExpiredRateLimits: deleted=${totalDeleted}`)
+    return { deleted: totalDeleted }
+  }
+
   /** Purge processed PayPal webhook dedup rows older than 90 days (mirror of purgeStripeEvents). */
   async purgePaypalEvents(): Promise<PurgeStripeEventsResult> {
     const cutoff = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000) // 90 days ago
