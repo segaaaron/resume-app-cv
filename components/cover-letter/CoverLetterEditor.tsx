@@ -110,6 +110,12 @@ interface Props {
   content: CoverLetterContent
   initialCandidate: CandidateData
   isPro?: boolean
+  /** Free tier may download, bounded per day by the route (same rule as the résumé). */
+  canDownloadFree?: boolean
+  /** Plan INCLUDES premium templates (SPRINT/PRO/LIMITED/admin). Distinct from `isPro`,
+   *  which only says the user has paid access — BASIC is active and has no premium
+   *  templates, so using `isPro` here handed all 54 of them to a $2.99 buyer. */
+  canUsePremium?: boolean
   language?: string
   isNew?: boolean
 }
@@ -194,6 +200,8 @@ export default function CoverLetterEditor({
   content: initialContent,
   initialCandidate,
   isPro = false,
+  canUsePremium = false,
+  canDownloadFree = false,
   language = "es",
   isNew: _isNew = false,
 }: Props) {
@@ -520,7 +528,9 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
   }, [])
 
   const downloadPDF = useCallback(async () => {
-    if (!isPro) {
+    // Mirrors the route: UNSUBSCRIBED downloads, capped per day. A locked button over an
+    // endpoint that would have said yes is the drift that makes a feature look broken.
+    if (!isPro && !canDownloadFree) {
       toast.error(t("pdf_pro_required"), {
         action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
       })
@@ -530,7 +540,21 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     try {
       if (dirty) await save()
       const res = await apiFetch(`/api/cover-letters/${id}/pdf?locale=${language}`)
-      if (!res.ok) { toast.error(t("pdf_error")); return }
+      if (!res.ok) {
+        // Reachable without touching the picker: a PRO letter saved in a premium
+        // template outlives a downgrade to BASIC. "Error generating the PDF" would
+        // send them hunting for a bug — the truth is the template needs a plan, and
+        // the free one is one click away in the picker.
+        const code = await res.json().then((b) => b?.error).catch(() => null)
+        if (res.status === 403 && code === "premium_template_requires_upgrade") {
+          toast.error(t("pdf_premium_template"), {
+            action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
+          })
+          return
+        }
+        toast.error(t("pdf_error"))
+        return
+      }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement("a")
@@ -543,7 +567,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     } finally {
       setDownloadingPdf(false)
     }
-  }, [id, title, language, dirty, save])
+  }, [id, title, language, dirty, save, isPro, canDownloadFree, locale, t])
 
   const toneOptions = [
     ["formal", t("ai_tone_formal")],
@@ -714,7 +738,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
               <div className="grid grid-cols-2 gap-[10px]">
                 {TEMPLATES.map(({ id, labelKey, pro }) => {
                   const isSelected = activeTemplate === id
-                  const locked = !!pro && !isPro
+                  const locked = !!pro && !canUsePremium
                   return (
                     <button
                       key={id}

@@ -1,7 +1,7 @@
 import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
-import { isActive, isSuperAdmin } from "@/lib/plans"
+import { isActive, isSuperAdmin, effectivePlan, canUsePremiumTemplates } from "@/lib/plans"
 import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor"
 
 export const dynamic = "force-dynamic"
@@ -40,6 +40,16 @@ export default async function CoverLetterPage({ params, searchParams }: { params
     user?.managedBlocked,
     user?.managedExpiresAt,
   )
+
+  // Separate question from `isPro`: BASIC is active but its plan does not include the
+  // premium templates, so the picker must lock them for that plan (the PDF route enforces
+  // the same rule, and a UI that unlocks what the server refuses is a dead end either way).
+  const canUsePremium = isSuperAdmin(user?.role) || canUsePremiumTemplates(
+    effectivePlan({ plan: user?.plan ?? "UNSUBSCRIBED", subscriptionEndsAt: user?.subscriptionEndsAt ?? null }),
+  )
+
+  // Free tier: the route allows a bounded number of downloads a day, same as the résumé.
+  const canDownloadFree = !isPro && effectivePlan({ plan: user?.plan ?? "UNSUBSCRIBED", subscriptionEndsAt: user?.subscriptionEndsAt ?? null }) === "UNSUBSCRIBED"
 
   const content = (letter.content as Record<string, string>) ?? {}
 
@@ -80,6 +90,8 @@ export default async function CoverLetterPage({ params, searchParams }: { params
       fontFamily={letter.fontFamily}
       templateId={letter.templateId ?? "classic"}
       isPro={isPro}
+      canUsePremium={canUsePremium}
+      canDownloadFree={canDownloadFree}
       language={locale}
       content={{
         recipientName: content.recipientName ?? "",

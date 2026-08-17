@@ -2,7 +2,7 @@ import { redirect, notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { verifyPrintToken } from "@/lib/pdf/print-token"
-import { isActive } from "@/lib/plans"
+import { isActive, effectivePlan } from "@/lib/plans"
 import CoverLetterPrintLayout from "@/components/cover-letter/CoverLetterPrintLayout"
 
 export const dynamic = "force-dynamic"
@@ -43,6 +43,8 @@ export default async function CoverLetterPrintPage({
     }),
   ])
   const isPro = isActive(user?.plan ?? "UNSUBSCRIBED", user?.subscriptionEndsAt, user?.subscriptionStatus, user?.role, user?.isManaged, user?.managedBlocked, user?.managedExpiresAt)
+  // Same shape as the résumé editor: the free tier downloads, the route counts it.
+  const canDownloadFree = !isPro && effectivePlan({ plan: user?.plan ?? "UNSUBSCRIBED", subscriptionEndsAt: user?.subscriptionEndsAt ?? null }) === "UNSUBSCRIBED"
 
   if (!letter) notFound()
 
@@ -80,6 +82,7 @@ export default async function CoverLetterPrintPage({
       candidate={candidate}
       locale={locale}
       isPro={isPro}
+      canDownloadFree={canDownloadFree}
     />
   )
 }

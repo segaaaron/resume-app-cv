@@ -77,22 +77,27 @@ interface Props {
   candidate: CandidateData
   locale: string
   isPro?: boolean
+  /** Free tier may download, bounded per day by the route (same rule as the résumé). */
+  canDownloadFree?: boolean
 }
 
-export default function CoverLetterPrintLayout({ letterId, title, colorScheme, fontFamily, templateId, content, candidate, locale, isPro = false }: Props) {
+export default function CoverLetterPrintLayout({ letterId, title, colorScheme, fontFamily, templateId, content, candidate, locale, isPro = false, canDownloadFree = false }: Props) {
   const t = useTranslations("cover_letter_editor")
   const [downloading, setDownloading] = useState(false)
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    if (searchParams.get("auto") === "true" && isPro) {
+    if (searchParams.get("auto") === "true" && (isPro || canDownloadFree)) {
       handleDownload()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function handleDownload() {
-    if (!isPro) {
+    // `canDownloadFree` mirrors what the route now allows for UNSUBSCRIBED. Keeping the
+    // button locked while the server hands over the file is the drift that turns a
+    // working feature into a support ticket.
+    if (!isPro && !canDownloadFree) {
       toast.error(t("pdf_pro_required"), {
         action: { label: t("see_plans"), onClick: () => { window.location.href = `/${locale}/pricing` } },
       })
