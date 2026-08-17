@@ -125,10 +125,19 @@ describe("apiFetch — failures the server cannot record", () => {
     return { apiFetch: mod.apiFetch, spy }
   }
 
-  it("records a timeout", async () => {
+  it("records a timeout, with the ceiling that actually applied", async () => {
     global.fetch = vi.fn().mockRejectedValue(new DOMException("Timeout", "TimeoutError"))
     const { apiFetch, spy } = await withReporter()
     await expect(apiFetch("/api/ai/improve-bullet")).rejects.toThrow()
+    // 120s, not 30s: a model-backed endpoint. Reporting the real ceiling matters —
+    // the panel is where we would notice these endpoints creeping past it.
+    expect(spy).toHaveBeenCalledWith("request_timeout", expect.objectContaining({ timeoutMs: 120000 }))
+  })
+
+  it("records the ordinary 30s ceiling for a non-model endpoint", async () => {
+    global.fetch = vi.fn().mockRejectedValue(new DOMException("Timeout", "TimeoutError"))
+    const { apiFetch, spy } = await withReporter()
+    await expect(apiFetch("/api/resumes")).rejects.toThrow()
     expect(spy).toHaveBeenCalledWith("request_timeout", expect.objectContaining({ timeoutMs: 30000 }))
   })
 
@@ -158,5 +167,47 @@ describe("apiFetch — failures the server cannot record", () => {
     const { apiFetch, spy } = await withReporter()
     await apiFetch("/api/resumes")
     expect(spy).not.toHaveBeenCalled()
+  })
+})
+
+// ── Per-endpoint timeout ceiling ────────────────────────────────────────────────
+// The flat 30s ceiling sat below what the server needs for a model call: the browser
+// aborted while the server finished the work and we paid for every token of a result
+// nobody was listening for. These lock the two tiers in place.
+
+describe("apiFetch: timeout ceiling per endpoint", () => {
+  it("gives model-backed endpoints room to finish (they cost money to abandon)", async () => {
+    const { defaultTimeoutFor } = await import("@/lib/apiFetch")
+    expect(defaultTimeoutFor("/api/ai/ats-score")).toBe(120_000)
+    expect(defaultTimeoutFor("/api/ai/tailor-cv")).toBe(120_000)
+    expect(defaultTimeoutFor("/api/resumes/import")).toBe(120_000)
+  })
+
+  it("covers PDF renders and thumbnails, which go out to the screenshot microservice", async () => {
+    const { defaultTimeoutFor } = await import("@/lib/apiFetch")
+    expect(defaultTimeoutFor("/api/resumes/abc123/pdf?locale=es")).toBe(120_000)
+    expect(defaultTimeoutFor("/api/cover-letters/abc123/pdf")).toBe(120_000)
+    expect(defaultTimeoutFor("/api/resumes/abc123/thumbnail?locale=es")).toBe(120_000)
+  })
+
+  it("leaves ordinary endpoints at 30s — a slow save is a real failure", async () => {
+    const { defaultTimeoutFor } = await import("@/lib/apiFetch")
+    expect(defaultTimeoutFor("/api/resumes")).toBe(30_000)
+    expect(defaultTimeoutFor("/api/user/profile")).toBe(30_000)
+    expect(defaultTimeoutFor("https://www.valhallaresume.com/api/resumes")).toBe(30_000)
+  })
+
+  it("works on absolute URLs too", async () => {
+    const { defaultTimeoutFor } = await import("@/lib/apiFetch")
+    expect(defaultTimeoutFor("https://www.valhallaresume.com/api/ai/ats-score")).toBe(120_000)
+  })
+
+  it("an explicit timeoutMs still wins over the per-endpoint default", async () => {
+    const spy = vi.fn()
+    vi.doMock("@/lib/client-error-reporter", () => ({ reportUxFailure: spy }))
+    global.fetch = vi.fn().mockRejectedValue(new DOMException("Timeout", "TimeoutError"))
+    const { apiFetch } = await import("@/lib/apiFetch")
+    await expect(apiFetch("/api/ai/ats-score", { timeoutMs: 5_000 })).rejects.toThrow()
+    expect(spy).toHaveBeenCalledWith("request_timeout", expect.objectContaining({ timeoutMs: 5_000 }))
   })
 })

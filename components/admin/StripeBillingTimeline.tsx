@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { RefreshCw, Receipt, ShieldAlert, Ban, RefreshCcw, UserCog, History } from "lucide-react"
 import { relativeTime as relative } from "@/lib/format/relativeTime"
+import { apiFetch } from "@/lib/apiFetch"
 
 interface TimelineItem {
   id: string
@@ -43,7 +44,7 @@ export default function StripeBillingTimeline() {
     try {
       const p = new URLSearchParams()
       if (!reset && cur) p.set("cursor", cur)
-      const res = await fetch(`/api/admin/stripe/billing-timeline?${p.toString()}`)
+      const res = await apiFetch(`/api/admin/stripe/billing-timeline?${p.toString()}`, { silent: true })
       if (!res.ok) throw new Error("fetch failed")
       const data: { items: TimelineItem[]; nextCursor: string | null } = await res.json()
       setItems((prev) => (reset ? data.items : [...prev, ...data.items]))

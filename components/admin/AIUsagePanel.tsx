@@ -125,7 +125,7 @@ export default function AIUsagePanel() {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE), offset: String(newOffset) })
       if (from) params.set("from", from)
       if (to) params.set("to", to)
-      const res = await fetch(`/api/admin/ai-usage?${params.toString()}`)
+      const res = await apiFetch(`/api/admin/ai-usage?${params.toString()}`, { silent: true })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json: AIUsageResponse = await res.json()
       setData(json)

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { RefreshCw, ChevronDown, Webhook } from "lucide-react"
 import { relativeTime as relative } from "@/lib/format/relativeTime"
+import { apiFetch } from "@/lib/apiFetch"
 
 type WebhookStatus = "SUCCESS" | "FAILED" | "SKIPPED"
 
@@ -42,7 +43,7 @@ export default function StripeWebhookFeed() {
       const p = new URLSearchParams()
       if (statusFilter) p.set("status", statusFilter)
       if (!reset && cur) p.set("cursor", cur)
-      const res = await fetch(`/api/admin/stripe/webhooks?${p.toString()}`)
+      const res = await apiFetch(`/api/admin/stripe/webhooks?${p.toString()}`, { silent: true })
       if (!res.ok) throw new Error("fetch failed")
       const data: { items: FeedItem[]; nextCursor: string | null } = await res.json()
       setItems((prev) => (reset ? data.items : [...prev, ...data.items]))

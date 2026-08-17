@@ -25,11 +25,42 @@ type ApiFetchOptions = RequestInit & {
   silent?: boolean
   /** Caller-provided AbortSignal. Composed with the internal timeout signal. */
   signal?: AbortSignal
-  /** Timeout in ms. Defaults to 30_000 (30s). Aborts with TimeoutError DOMException. */
+  /** Timeout in ms. Overrides the per-endpoint default. Aborts with TimeoutError. */
   timeoutMs?: number
 }
 
 const DEFAULT_TIMEOUT_MS = 30_000
+
+/**
+ * Ceiling for the endpoints that are genuinely slow: anything that calls a model, and
+ * anything that renders a PDF in the screenshot microservice.
+ *
+ * WHY: the flat 30s ceiling sat BELOW what the server needs. `lib/ai-client.ts` gives
+ * OpenAI 60s per call with 3 retries, and an ATS analysis chains several calls plus an
+ * embedding pass. The browser gave up first — and giving up costs nothing on the server:
+ * the work runs to completion and we pay for every token of it, then the result is
+ * dropped because nobody is listening. From the user's side "the button did nothing".
+ * Waiting longer is not a fix for slowness; it is a fix for THROWING AWAY work we paid
+ * for. Anything past this ceiling is a real failure and still surfaces as one.
+ */
+const SLOW_ENDPOINT_TIMEOUT_MS = 120_000
+
+/** Endpoints whose normal path is a model call or a PDF render. */
+function isSlowEndpoint(url: string): boolean {
+  const path = url.startsWith("http") ? safePath(url) : url
+  return path.startsWith("/api/ai/")
+    || path === "/api/resumes/import"
+    || /^\/api\/(resumes|cover-letters)\/[^/]+\/(pdf|thumbnail)/.test(path)
+}
+
+function safePath(url: string): string {
+  try { return new URL(url).pathname } catch { return url }
+}
+
+/** The ceiling that applies when the caller did not name one. Exported for the tests. */
+export function defaultTimeoutFor(url: string): number {
+  return isSlowEndpoint(url) ? SLOW_ENDPOINT_TIMEOUT_MS : DEFAULT_TIMEOUT_MS
+}
 
 // Polyfill fallback in case AbortSignal.any is not available in the runtime.
 // Node 22 / modern browsers support it natively; this is a defensive path.
@@ -62,7 +93,7 @@ export async function apiFetch(url: string, options?: ApiFetchOptions): Promise<
   const msgs = MESSAGES[getLocale()]
 
   const timeoutController = new AbortController()
-  const effectiveTimeout = timeoutMs ?? DEFAULT_TIMEOUT_MS
+  const effectiveTimeout = timeoutMs ?? defaultTimeoutFor(url)
   const timeoutId = setTimeout(
     () => timeoutController.abort(new DOMException("Timeout", "TimeoutError")),
     effectiveTimeout,

@@ -268,7 +268,12 @@ function makeResumeStore() {
         const locale = typeof window !== "undefined"
           ? (["es", "en"].includes(window.location.pathname.split("/")[1]) ? window.location.pathname.split("/")[1] : "es")
           : "es"
-        fetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST" })
+        // Through apiFetch: this one renders a screenshot in the microservice, so it is
+        // slow AND it can hang. A raw fetch had no timeout at all and its failure only
+        // reached a client-side logger nobody reads — the visible symptom is a stale
+        // thumbnail in the dashboard, which no user reports as a bug. `silent` because
+        // the handler below already decides what to say.
+        apiFetch(`/api/resumes/${resumeId}/thumbnail?locale=${locale}`, { method: "POST", silent: true })
           .then(async (r) => {
             if (!r.ok) {
               set((state) => { state.lastThumbnailAt = lastThumbnailAt })

@@ -6,22 +6,27 @@ import Link from "next/link"
 import { CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { useTranslations } from "next-intl"
 import { track } from "@/lib/analytics/track"
+import { apiFetch } from "@/lib/apiFetch"
 
 type Status = "loading" | "success" | "invalid_token" | "token_expired" | "error"
 
 function VerifyEmailInner() {
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
-  const [status, setStatus] = useState<Status>("loading")
+  // Derived, not synced: whether the link carries a token is known on the first render,
+  // so setting it from an effect only bought an extra render (and a lint error) to
+  // display something we already knew.
+  const [status, setStatus] = useState<Status>(token ? "loading" : "invalid_token")
   const t = useTranslations("auth.verify_email")
 
   useEffect(() => {
-    if (!token) {
-      setStatus("invalid_token")
-      return
-    }
+    if (!token) return
 
-    fetch(`/api/user/verify-email?token=${encodeURIComponent(token)}`)
+    // Through apiFetch like every other client call: it carries the 30s timeout and,
+    // more to the point, records a timeout or a dead network in the admin panel. A raw
+    // fetch here failed silently — the page just sat on "verifying" with nothing logged.
+    // `silent` because this screen renders its own state; a toast on top would be noise.
+    apiFetch(`/api/user/verify-email?token=${encodeURIComponent(token)}`, { silent: true })
       .then(async (res) => {
         if (res.ok) {
           track("email_verified")
