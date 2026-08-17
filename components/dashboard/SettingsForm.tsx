@@ -209,8 +209,12 @@ export default function SettingsForm({ user }: { user: UserData }) {
     setDeleteLoading(true)
     try {
       const res = await apiFetch("/api/user/delete", { method: "DELETE" })
-      if (res.ok) await logoutAction(`/${locale}/`)
-      else toast.error(t("delete_error"))
+      if (res.ok) { await logoutAction(`/${locale}/`); return }
+      // The account is deliberately kept when the subscription could not be cancelled —
+      // say so, because "Error deleting account" reads like a bug the user should retry
+      // forever, and the real state (nothing deleted, nothing cancelled) matters here.
+      const code = await res.json().then((b) => b?.error).catch(() => null)
+      toast.error(code === "cancel_failed" ? t("delete_error_cancel_failed") : t("delete_error"))
     } catch {
       toast.error(t("delete_error"))
     } finally {

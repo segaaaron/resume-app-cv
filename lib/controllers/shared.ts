@@ -98,6 +98,7 @@ const ERROR_DESCRIPTIONS: Record<string, string> = {
   already_subscribed: "the user already has an active subscription",
   already_canceled: "the subscription is already canceled",
   no_active_subscription: "no active subscription to manage/cancel",
+  cancel_failed: "the gateway refused to cancel the subscription, so the account was NOT deleted — deleting it would have left a live subscription billing a locked-out account",
 
   // ── Resources ──────────────────────────────────────────────────────────────
   not_found: "the requested resource does not exist or does not belong to this user",

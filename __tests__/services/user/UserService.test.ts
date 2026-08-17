@@ -41,6 +41,11 @@ vi.mock("@/lib/unsubscribe-token", () => ({
   verifyUnsubscribeToken: vi.fn(),
 }))
 
+// ─── Mock gateway availability (stop-billing reads these) ─────────────────────
+
+vi.mock("@/lib/stripe", () => ({ stripeEnabled: vi.fn(() => true) }))
+vi.mock("@/lib/paypal", () => ({ paypalEnabled: vi.fn(() => true) }))
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const mockLogger: ILogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
@@ -97,9 +102,17 @@ describe("UserService.updateProfile", () => {
 // ─────────────────────────────────────────────────────────────────────────────
 
 describe("UserService.deleteAccount", () => {
+  /** Row shape stop-billing selects. Default: nothing to cancel (one-time or free user). */
+  const billingRow = (over: { subscriptionId?: string | null; paypalSubscriptionId?: string | null } = {}) => ({
+    subscriptionId: null,
+    paypalSubscriptionId: null,
+    ...over,
+  })
+
   it("creates audit log and soft-deletes user, clears session and purges cache", async () => {
     const { db } = await import("@/lib/db")
     const { purgeUserCache } = await import("@/lib/auth")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow() as never)
     vi.mocked(db.auditLog.create).mockResolvedValue({} as never)
     vi.mocked(db.user.update).mockResolvedValue({} as never)
 
@@ -107,7 +120,7 @@ describe("UserService.deleteAccount", () => {
 
     expect(result).toEqual({ success: true })
     expect(vi.mocked(db.auditLog.create)).toHaveBeenCalledWith({
-      data: { userId: USER_ID, action: "DELETE_ACCOUNT" },
+      data: { userId: USER_ID, action: "DELETE_ACCOUNT", metadata: { subscriptionCanceled: false } },
     })
 
     const updateCall = vi.mocked(db.user.update).mock.calls[0][0] as { data: { deletedAt: Date; activeSessionToken: null; forceLogoutAt: Date }; where: { id: string } }
@@ -120,6 +133,7 @@ describe("UserService.deleteAccount", () => {
 
   it("creates audit log BEFORE the soft-delete (ordering)", async () => {
     const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow() as never)
     const order: string[] = []
     vi.mocked(db.auditLog.create).mockImplementation((() => { order.push("audit"); return Promise.resolve({} as never) }) as never)
     vi.mocked(db.user.update).mockImplementation((() => { order.push("update"); return Promise.resolve({} as never) }) as never)
@@ -127,6 +141,92 @@ describe("UserService.deleteAccount", () => {
     await makeService().deleteAccount(USER_ID)
 
     expect(order).toEqual(["audit", "update"])
+  })
+
+  // ── The account must never outlive its billing ─────────────────────────────
+  // A soft-deleted row cannot log in (lib/auth.ts), so a subscription that survives
+  // the deletion charges a card whose owner has no way to reach a cancel button.
+
+  it("cancels the Stripe subscription BEFORE soft-deleting, and records it", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow({ subscriptionId: "sub_123" }) as never)
+    const order: string[] = []
+    const cancelStripe = vi.fn(async () => { order.push("cancel") })
+    vi.mocked(db.auditLog.create).mockImplementation((() => { order.push("audit"); return Promise.resolve({} as never) }) as never)
+    vi.mocked(db.user.update).mockImplementation((() => { order.push("update"); return Promise.resolve({} as never) }) as never)
+
+    await makeService().deleteAccount(USER_ID, { cancelStripe })
+
+    expect(cancelStripe).toHaveBeenCalledWith("sub_123")
+    expect(order).toEqual(["cancel", "audit", "update"])
+    expect(vi.mocked(db.auditLog.create)).toHaveBeenCalledWith({
+      data: { userId: USER_ID, action: "DELETE_ACCOUNT", metadata: { subscriptionCanceled: true, provider: "STRIPE", subscriptionId: "sub_123" } },
+    })
+  })
+
+  it("does NOT delete the account when the gateway refuses the cancel", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow({ subscriptionId: "sub_123" }) as never)
+    const cancelStripe = vi.fn(async () => { throw new Error("stripe down") })
+
+    await expect(makeService().deleteAccount(USER_ID, { cancelStripe }))
+      .rejects.toMatchObject({ code: "cancel_failed", status: 409 })
+
+    expect(vi.mocked(db.user.update)).not.toHaveBeenCalled()
+    expect(vi.mocked(db.auditLog.create)).not.toHaveBeenCalled()
+  })
+
+  it("cancels a PayPal subscription through the PayPal path", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow({ paypalSubscriptionId: "I-PP1" }) as never)
+    const cancelPayPal = vi.fn(async () => {})
+    const cancelStripe = vi.fn(async () => {})
+    vi.mocked(db.auditLog.create).mockResolvedValue({} as never)
+    vi.mocked(db.user.update).mockResolvedValue({} as never)
+
+    await makeService().deleteAccount(USER_ID, { cancelPayPal, cancelStripe })
+
+    expect(cancelPayPal).toHaveBeenCalledWith("I-PP1", expect.any(String))
+    expect(cancelStripe).not.toHaveBeenCalled()
+    expect(vi.mocked(db.user.update)).toHaveBeenCalled()
+  })
+
+  it("treats an already-gone Stripe subscription as cancelled and still deletes", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow({ subscriptionId: "sub_gone" }) as never)
+    const cancelStripe = vi.fn(async () => { throw Object.assign(new Error("No such subscription"), { code: "resource_missing" }) })
+    vi.mocked(db.auditLog.create).mockResolvedValue({} as never)
+    vi.mocked(db.user.update).mockResolvedValue({} as never)
+
+    await expect(makeService().deleteAccount(USER_ID, { cancelStripe })).resolves.toEqual({ success: true })
+    expect(vi.mocked(db.user.update)).toHaveBeenCalled()
+  })
+
+  it("refuses to delete when a subscription exists but its gateway is switched off", async () => {
+    const { db } = await import("@/lib/db")
+    const { stripeEnabled } = await import("@/lib/stripe")
+    vi.mocked(stripeEnabled).mockReturnValueOnce(false)
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow({ subscriptionId: "sub_123" }) as never)
+
+    await expect(makeService().deleteAccount(USER_ID))
+      .rejects.toMatchObject({ code: "payments_not_configured", status: 503 })
+
+    expect(vi.mocked(db.user.update)).not.toHaveBeenCalled()
+  })
+
+  it("deletes a one-time (BASIC/SPRINT) account with no subscription without calling any gateway", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue(billingRow() as never)
+    const cancelStripe = vi.fn(async () => {})
+    const cancelPayPal = vi.fn(async () => {})
+    vi.mocked(db.auditLog.create).mockResolvedValue({} as never)
+    vi.mocked(db.user.update).mockResolvedValue({} as never)
+
+    await makeService().deleteAccount(USER_ID, { cancelStripe, cancelPayPal })
+
+    expect(cancelStripe).not.toHaveBeenCalled()
+    expect(cancelPayPal).not.toHaveBeenCalled()
+    expect(vi.mocked(db.user.update)).toHaveBeenCalled()
   })
 })
 

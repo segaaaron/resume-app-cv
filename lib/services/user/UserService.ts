@@ -5,6 +5,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import { checkRateLimit } from "@/lib/ai-client"
 import { purgeUserCache } from "@/lib/auth"
 import { verifyUnsubscribeToken } from "@/lib/unsubscribe-token"
+import { stopGatewayBilling, type StopBillingClients } from "@/lib/services/billing/stop-billing"
 import { z } from "zod"
 
 // ─── Schemas ──────────────────────────────────────────────────────────────────
@@ -91,10 +92,25 @@ export class UserService {
 
   /**
    * Soft-delete the user account (GDPR: hard-delete after 90 days via cron).
+   *
+   * Billing is stopped FIRST and the deletion is abandoned if that fails. The login is
+   * refused for a soft-deleted row (`lib/auth.ts`), so a subscription that survives the
+   * deletion bills a card whose owner cannot reach any cancel button — see
+   * `stopGatewayBilling` for why that ordering is not negotiable.
    */
-  async deleteAccount(userId: string): Promise<{ success: true }> {
+  async deleteAccount(userId: string, clients?: StopBillingClients): Promise<{ success: true }> {
+    const billing = await stopGatewayBilling(userId, this.logger, clients)
+
     await db.auditLog.create({
-      data: { userId, action: "DELETE_ACCOUNT" },
+      data: {
+        userId,
+        action: "DELETE_ACCOUNT",
+        // Recorded so a later "you kept charging me" can be answered with the date the
+        // subscription was cancelled and by which gateway.
+        metadata: billing.canceled
+          ? { subscriptionCanceled: true, provider: billing.provider, subscriptionId: billing.subscriptionId }
+          : { subscriptionCanceled: false },
+      },
     })
 
     const now = new Date()
@@ -104,7 +120,7 @@ export class UserService {
     })
     purgeUserCache(userId)
 
-    this.logger.info("UserService.deleteAccount: soft-deleted", { userId })
+    this.logger.info("UserService.deleteAccount: soft-deleted", { userId, subscriptionCanceled: billing.canceled })
     return { success: true }
   }
 
