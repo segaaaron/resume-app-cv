@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest"
 import { readFileSync, readdirSync } from "fs"
 import { join } from "path"
-import { computeCostUsd, MODEL_PRICING, CACHED_INPUT_RATIO } from "@/lib/services/ai/shared/cost-tracker"
+import { computeCostUsd, MODEL_PRICING } from "@/lib/services/ai/shared/cost-tracker"
 
 // TODA llamada al modelo tiene que dejar registrado lo que gastó. Tres no lo hacían y
 // nadie se enteraba: el panel mostraba un costo por usuario menor que el real, y las dos
@@ -71,15 +71,35 @@ describe("precios de OpenAI", () => {
     expect(unknown).toBeGreaterThan(known)
   })
 
-  // OpenAI descuenta el prompt que ya vio. Cobrarlo entero infla el gasto del panel —
-  // hacia arriba, que es el lado seguro, pero inservible para calcular margen fino.
-  it("los tokens cacheados vienen DENTRO de promptTokens y no se cobran dos veces", () => {
+  // OpenAI cobra más barato el prompt que ya vio. Cobrarlo entero infla el gasto del
+  // panel — hacia arriba, que es el lado seguro, pero inservible para calcular margen.
+  it("cobra los tokens cacheados a su precio de caché, no al de entrada", () => {
+    // 600 frescos a $0,20/1M + 400 cacheados a $0,02/1M = (120 + 8) / 1e6
+    expect(computeCostUsd("gpt-5.4-nano", 1000, 0, 400)).toBeCloseTo(0.000128, 12)
+  })
+
+  it("los cacheados vienen DENTRO de promptTokens y no se cobran dos veces", () => {
     const conCache = computeCostUsd("gpt-5.4-nano", 1000, 0, 400)
     const sinCache = computeCostUsd("gpt-5.4-nano", 1000, 0, 0)
-    // Con el ratio en 1.0 el precio es idéntico: lo que se prueba es que separar los
-    // cacheados NO duplica el cobro de esos 400 tokens.
-    expect(conCache).toBeCloseTo(sinCache * CACHED_INPUT_RATIO === sinCache ? sinCache : conCache, 10)
-    expect(conCache).toBeLessThanOrEqual(sinCache)
+    // Si se sumaran aparte en vez de descontarse del total, salir más caro con caché.
+    expect(conCache).toBeLessThan(sinCache)
+    expect(conCache).toBeGreaterThan(0)
+  })
+
+  // ESTE es el que impide volver a una constante global: 5.4 descuenta 90% y 4.1 un 75%.
+  // Un único CACHED_INPUT_RATIO no puede satisfacer las dos filas a la vez.
+  it("el descuento de caché NO es el mismo para todos los modelos", () => {
+    const ratio = (m: string) => MODEL_PRICING[m].cachedInputPer1M / MODEL_PRICING[m].inputPer1M
+    expect(ratio("gpt-5.4-nano")).toBeCloseTo(0.1, 6)
+    expect(ratio("gpt-4.1-nano")).toBeCloseTo(0.25, 6)
+    expect(ratio("gpt-5.4-nano")).not.toBeCloseTo(ratio("gpt-4.1-nano"), 3)
+  })
+
+  it("ningún modelo cobra el prompt cacheado MÁS caro que el fresco", () => {
+    for (const [m, p] of Object.entries(MODEL_PRICING)) {
+      expect(p.cachedInputPer1M, m).toBeLessThanOrEqual(p.inputPer1M)
+      expect(p.cachedInputPer1M, m).toBeGreaterThan(0)
+    }
   })
 
   it("un cachedTokens absurdo no puede hacer negativo el costo", () => {
