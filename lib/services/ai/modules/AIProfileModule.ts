@@ -66,8 +66,9 @@ export class AIProfileModule {
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY produce content derivable from the candidate's instruction and the CURRENT RESUME above. Do NOT invent technologies, frameworks, libraries, company names, job titles, certifications, dates, percentages, or real numbers not provided.
 2. NEVER use placeholders like [X%] or [N users] in final output — if the user didn't provide a metric, omit it.
-3. For workExperienceNew: every entry must come from a company/role explicitly mentioned in the instruction. If you cannot fully ground a new entry in the user's input, OMIT the entry — never fill gaps with invented details.
-4. For suggestedSkills: only skills explicitly mentioned in the instruction or the current resume. Never invent unrelated skills.
+3. For workExperienceNew: every entry must come from a job the candidate describes in the instruction. If they describe the job but never name the company (or never state the role), leave that field as an empty string "" — NEVER invent a company name or a title to fill it. Omit the whole entry only when neither the company nor the role comes from the instruction.
+4. For suggestedSkills: only skills explicitly mentioned in the instruction or the current resume.
+5. inferredSkills is the ONE field where you may go beyond what the candidate wrote: list skills their role normally carries and that they most likely have. Keep them plausible for THIS role and seniority — never a tool from another trade, never a certification, never anything that implies a fact about them (an employer, a degree, a licence). The candidate reviews these one by one before any of them reaches the resume.
 
 The candidate wants to improve their resume with this instruction:
 "${prompt.trim()}"
@@ -83,9 +84,10 @@ ${(sd as { hobbies?: string }).hobbies ? `Current interests: ${(sd as { hobbies?
 TASK: Analyze the instruction and determine which resume sections need improvement. Apply changes where appropriate:
 
 - If mentions a company or role that already exists in the resume → improve that entry's description using its exact id in workExperienceUpdates
-- If mentions a company or role NOT in the current resume → create it in workExperienceNew with jobTitle, employer, city, startDate, endDate, currentlyWorking and description (• bullet points, no markdown). Max 3 new entries.
+- If mentions a company or role NOT in the current resume → create it in workExperienceNew with jobTitle, employer, city, startDate, endDate, currentlyWorking and description (• bullet points, no markdown). Leave empty "" any of those fields the candidate did not state. Max 3 new entries.
 - If talks about their general profile → improve the summary and/or jobTitle
 - If mentions skills → add to suggestedSkills (ONLY real technical or soft skills: frameworks, languages, tools, methodologies; NEVER company names, employers, job titles, cities or locations)
+- ALWAYS fill inferredSkills, whatever the trade: 4 to 6 skills standard for this role that the candidate did NOT name. A branch manager gets cash handling and team supervision; a legal secretary gets case-file management and court deadlines; a cook gets food safety and portion control. Never repeat one already in suggestedSkills or in the resume.
 - If mentions languages → add to suggestedLanguages with appropriate level
 - If mentions education → improve that education entry's description
 - If mentions projects → improve that project's description
@@ -98,7 +100,8 @@ Respond ONLY with valid JSON (no markdown). Only include fields that actually ch
   "summary": "<improved summary or null>",
   "jobTitle": "<updated title or null>",
   "hobbies": "<updated interests or null>",
-  "suggestedSkills": ["<new skill>"],
+  "suggestedSkills": ["<skill the candidate named>"],
+  "inferredSkills": ["<skill standard for the role, not named by the candidate>"],
   "suggestedLanguages": [{ "name": "<language>", "level": "elementary|limited|professional|full_professional|native" }],
   "workExperienceUpdates": [{ "id": "<exact id>", "description": "<improved description with • bullets, no markdown>" }],
   "workExperienceNew": [{ "jobTitle": "<role>", "employer": "<company>", "city": "<optional city>", "startDate": "<MM/YYYY optional>", "endDate": "<MM/YYYY optional>", "currentlyWorking": false, "description": "<• bullets>" }],
@@ -123,8 +126,9 @@ ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-seco
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO inventes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
 2. NUNCA uses placeholders como [X%] o [N usuarios] en el output final — si el usuario no proporcionó una métrica, omítela.
-3. Para workExperienceNew: cada entrada debe provenir de una empresa/rol mencionado explícitamente en la instrucción. Si no puedes fundamentar completamente una entrada nueva en el input del usuario, OMÍTELA — nunca rellenes huecos con detalles inventados.
-4. Para suggestedSkills: solo habilidades mencionadas explícitamente en la instrucción o en el CV actual. Nunca inventes habilidades no relacionadas.
+3. Para workExperienceNew: cada entrada debe provenir de un trabajo que el candidato describe en la instrucción. Si describe el trabajo pero nunca nombra la empresa (o nunca dice el puesto), deja ESE campo como cadena vacía "" — NUNCA inventes un nombre de empresa ni un puesto para rellenarlo. Omite la entrada completa solo cuando ni la empresa ni el puesto provienen de la instrucción.
+4. Para suggestedSkills: solo habilidades mencionadas explícitamente en la instrucción o en el CV actual.
+5. inferredSkills es el ÚNICO campo donde puedes ir más allá de lo que el candidato escribió: lista habilidades que su puesto normalmente lleva y que con toda probabilidad tiene. Mantenlas plausibles para ESTE puesto y ESTA antigüedad — nunca una herramienta de otro oficio, nunca una certificación, nunca nada que afirme un hecho sobre él (un empleador, un título, una licencia). El candidato las revisa una por una antes de que ninguna llegue al CV.
 
 El candidato quiere mejorar su CV con esta instrucción:
 "${prompt.trim()}"
@@ -140,9 +144,10 @@ ${(sd as { hobbies?: string }).hobbies ? `Intereses actuales: ${(sd as { hobbies
 TAREA: Analiza la instrucción y determina qué secciones del CV deben mejorar. Aplica los cambios donde corresponda:
 
 - Si menciona una empresa o rol que ya existe en el CV → mejora la descripción de esa entrada usando su id exacto en workExperienceUpdates
-- Si menciona una empresa o rol que NO existe en el CV actual → créala en workExperienceNew con jobTitle, employer, city, startDate, endDate, currentlyWorking y description (viñetas • sin markdown). Máximo 3 entradas nuevas.
+- Si menciona una empresa o rol que NO existe en el CV actual → créala en workExperienceNew con jobTitle, employer, city, startDate, endDate, currentlyWorking y description (viñetas • sin markdown). Deja vacío "" cualquiera de esos campos que el candidato no haya dicho. Máximo 3 entradas nuevas.
 - Si habla de su perfil general → mejora el resumen (summary) y/o título (jobTitle)
 - Si menciona habilidades → agrégalas a suggestedSkills (SOLO habilidades técnicas o blandas reales: frameworks, lenguajes, herramientas, metodologías; NUNCA nombres de empresas, empleadores, puestos de trabajo, ciudades ni ubicaciones)
+- Rellena SIEMPRE inferredSkills, sea cual sea el oficio: de 4 a 6 habilidades estándar de ese puesto que el candidato NO nombró. A un gerente de sucursal le corresponden manejo de efectivo y supervisión de equipo; a una secretaria jurídica, gestión de expedientes y control de plazos judiciales; a un cocinero, inocuidad alimentaria y control de porciones. Nunca repitas una que ya esté en suggestedSkills ni en el CV.
 - Si menciona idiomas → agrégalos a suggestedLanguages con nivel apropiado
 - Si menciona estudios → mejora la descripción de esa educación
 - Si menciona proyectos → mejora la descripción de ese proyecto
@@ -155,7 +160,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
   "summary": "<resumen mejorado o null>",
   "jobTitle": "<título actualizado o null>",
   "hobbies": "<intereses actualizados o null>",
-  "suggestedSkills": ["<skill nuevo>"],
+  "suggestedSkills": ["<habilidad que el candidato nombró>"],
+  "inferredSkills": ["<habilidad estándar del puesto, no nombrada por el candidato>"],
   "suggestedLanguages": [{ "name": "<idioma>", "level": "elementary|limited|professional|full_professional|native" }],
   "workExperienceUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada con viñetas •, sin markdown>" }],
   "workExperienceNew": [{ "jobTitle": "<puesto>", "employer": "<empresa>", "city": "<ciudad opcional>", "startDate": "<MM/YYYY opcional>", "endDate": "<MM/YYYY opcional>", "currentlyWorking": false, "description": "<bullets •>" }],
@@ -208,7 +214,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     const parsed = parseAIJson<FillProfileResult>(raw)
 
     const hasContent = parsed.summary || parsed.jobTitle || parsed.hobbies ||
-      parsed.suggestedSkills?.length || parsed.suggestedLanguages?.length ||
+      parsed.suggestedSkills?.length || parsed.inferredSkills?.length || parsed.suggestedLanguages?.length ||
       parsed.workExperienceUpdates?.length || parsed.workExperienceNew?.length ||
       parsed.educationUpdates?.length || parsed.projectUpdates?.length || parsed.volunteerUpdates?.length
 
@@ -240,13 +246,36 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       })
       .slice(0, 8)
 
+    // inferredSkills is the one list the grounding filter must NOT touch: the
+    // whole point is proposing what the candidate did not write. What still
+    // applies is everything that stops a PROPOSAL turning into a CLAIM —
+    // no employers, cities or job titles dressed up as skills, nothing already
+    // in the resume, and nothing duplicating what they did write. They arrive
+    // unchecked in the panel, so the user is the filter.
+    const alreadyHave = new Set([
+      ...cleanSkills.map((s: string) => s.toLowerCase().trim()),
+      ...((sd.skills ?? []) as { name: string }[]).map((s) => (s.name ?? "").toLowerCase().trim()),
+    ])
+    const cleanInferred = (data.inferredSkills ?? [])
+      .map((s: string) => s.trim())
+      .filter((s: string) => {
+        const sl = s.toLowerCase()
+        if (!sl || sl.length > 60) return false
+        if (skillBlocklist.has(sl)) return false
+        if (alreadyHave.has(sl)) return false
+        alreadyHave.add(sl)
+        return true
+      })
+      .slice(0, 6)
+
     // workExperienceNew: drop entries whose employer or jobTitle cannot be
     // grounded in the user's instruction (the resume's existing items are
     // handled via workExperienceUpdates, so new ones must come from the prompt).
     const promptLower = prompt.toLowerCase()
     let droppedNewWork = 0
+    let blankedFields = 0
     const cleanNewWork = (data.workExperienceNew ?? [])
-      .filter((entry) => {
+      .map((entry) => {
         const employer = (entry.employer ?? "").trim()
         const role = (entry.jobTitle ?? "").trim()
         // Grounded, not echoed. Demanding a verbatim substring dropped the model
@@ -254,10 +283,17 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         // "Backend Developer" on a CV, and that entry was binned.
         const employerGrounded = !!employer && isGroundedIn(employer, promptLower)
         const roleGrounded = !!role && isGroundedIn(role, promptLower)
-        // Require BOTH employer and jobTitle to be derivable from the prompt.
-        if (!employerGrounded || !roleGrounded) {
+        // Requiring BOTH grounded binned the common case: people describe a job
+        // ("I cooked for three years in a hotel restaurant") without naming the
+        // company. The model has to put SOMETHING in `employer`, that invention
+        // failed grounding, and the whole entry — description included — was
+        // thrown away. The user saw an assistant that returned only a summary.
+        // Now the ungrounded FIELD is blanked, not the work the user described;
+        // an empty employer is a hole they fill in, never an invented company.
+        if (!employerGrounded && !roleGrounded) {
+          // Nothing here comes from the user. This one really is invented.
           droppedNewWork++
-          return false
+          return null
         }
         // Description must not introduce hallucinated tech/metrics.
         if (
@@ -265,16 +301,23 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
           detectHallucination(entry.description, `${prompt}\n${resumeContext}`)
         ) {
           droppedNewWork++
-          return false
+          return null
         }
-        return true
+        if (!employerGrounded || !roleGrounded) blankedFields++
+        return {
+          ...entry,
+          employer: employerGrounded ? employer : "",
+          jobTitle: roleGrounded ? role : "",
+        }
       })
+      .filter((e): e is NonNullable<typeof e> => e !== null)
       .slice(0, 3)
 
-    if (droppedSkills > 0 || droppedNewWork > 0) {
+    if (droppedSkills > 0 || droppedNewWork > 0 || blankedFields > 0) {
       this.logger.warn("[AIService.fillProfile] dropped hallucinated content", {
         droppedSkills,
         droppedNewWork,
+        blankedFields,
       })
     }
 
@@ -291,6 +334,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       jobTitle: data.jobTitle ?? null,
       hobbies: data.hobbies ?? null,
       suggestedSkills: cleanSkills,
+      inferredSkills: cleanInferred,
       suggestedLanguages: (data.suggestedLanguages ?? []).slice(0, 5),
       workExperienceUpdates: (data.workExperienceUpdates ?? []).filter((u: { id: string }) => validWorkIds.has(u.id)),
       workExperienceNew: cleanNewWork,

@@ -735,6 +735,136 @@ describe("AIService", () => {
       expect(result.suggestedSkills).toContain("TypeScript")
       expect(result.suggestedSkills).toContain("React")
     })
+
+    // The candidate describes a job but never names the company. The model has
+    // to put something in `employer`; that invention failed grounding and the
+    // WHOLE entry — the description included — used to be binned, so a cook or
+    // a waiter got back a summary and nothing else.
+    it("keeps a new job whose role is grounded but blanks the invented employer", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        workExperienceNew: [{
+          jobTitle: "Cocinero",
+          employer: "Restaurante El Fogon",
+          description: "• Preparé el servicio diario de comidas",
+        }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "Trabajé tres años como cocinero preparando el servicio diario de comidas",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.workExperienceNew).toHaveLength(1)
+      expect(result.workExperienceNew![0].jobTitle).toBe("Cocinero")
+      expect(result.workExperienceNew![0].employer).toBe("")
+      expect(result.workExperienceNew![0].description).toContain("servicio diario")
+    })
+
+    it("drops a new job when neither role nor employer comes from the prompt", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        workExperienceNew: [{
+          jobTitle: "Astronauta",
+          employer: "NASA",
+          description: "• Comandé misiones orbitales",
+        }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "Trabajé tres años como cocinero preparando el servicio diario de comidas",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.workExperienceNew).toHaveLength(0)
+    })
+
+    // An empty employer must not fail the response schema: safeParse failing
+    // fell back to the RAW model object, turning validation off for every field.
+    it("still returns grounded skills when a new job carries an empty employer", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        suggestedSkills: ["React"],
+        workExperienceNew: [{
+          jobTitle: "Cocinero",
+          employer: "",
+          description: "• Preparé el servicio diario",
+        }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "Trabajé como cocinero preparando el servicio diario y también uso React",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.suggestedSkills).toContain("React")
+      expect(result.workExperienceNew).toHaveLength(1)
+      expect(result.workExperienceNew![0].employer).toBe("")
+    })
+
+    // The point of the whole feature: propose what the user did NOT write. If a
+    // filter ever touches this list it becomes suggestedSkills again, which is
+    // the bug it was built to replace.
+    it("returns role-typical skills the user never wrote", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        suggestedSkills: ["Analisis de Riesgo"],
+        inferredSkills: ["Manejo de Efectivo", "Excel", "Atencion al Cliente"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "trabaje en banca haciendo analisis de riesgo de carteras",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.inferredSkills).toEqual(["Manejo de Efectivo", "Excel", "Atencion al Cliente"])
+      expect(result.suggestedSkills).toContain("Analisis de Riesgo")
+    })
+
+    it("keeps an inferred skill from becoming a claim about the user", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        // An employer, a city and a skill the CV already has: none may pass.
+        inferredSkills: ["Banco Mercantil", "La Paz", "Excel", "Excel", "Liderazgo"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "trabaje en banca haciendo analisis de riesgo",
+        sectionData: {
+          workExperience: [{ id: "w1", employer: "Banco Mercantil", jobTitle: "Analista" }],
+          personalDetails: { location: "La Paz" },
+          skills: [{ id: "s1", name: "Excel" }],
+        },
+      }, "PRO")
+
+      expect(result.inferredSkills).toEqual(["Liderazgo"])
+    })
+
+    // Same failure seen from the other side: while the schema rejected an empty
+    // employer, safeParse failed and the code fell back to the RAW model object,
+    // so zod stripped nothing and unknown keys rode into the user's CV.
+    it("strips unknown keys from a new job that carries an empty employer", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        workExperienceNew: [{
+          jobTitle: "Cocinero",
+          employer: "",
+          description: "• Preparé el servicio diario",
+          salary: "3000 EUR",
+        }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "Trabajé como cocinero preparando el servicio diario",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.workExperienceNew).toHaveLength(1)
+      expect(result.workExperienceNew![0]).not.toHaveProperty("salary")
+    })
   })
 
   // ── generateSummary ────────────────────────────────────────────────────────

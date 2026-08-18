@@ -458,8 +458,12 @@ export const ItemUpdateSchema = z.object({
 })
 
 export const NewWorkExperienceSchema = z.object({
-  jobTitle: z.string().min(1),
-  employer: z.string().min(1),
+  // Empty is legal on purpose: when the candidate describes a job without naming
+  // the company, the model is told to send "" rather than invent one. Requiring
+  // min(1) here failed the safeParse for the WHOLE response, which silently fell
+  // back to the unvalidated object — validation off for every other field too.
+  jobTitle: z.string(),
+  employer: z.string(),
   city: z.string().optional(),
   startDate: z.string().optional(),
   endDate: z.string().optional(),
@@ -472,6 +476,14 @@ export const FillProfileResponseSchema = z.object({
   jobTitle: z.string().nullable().optional(),
   hobbies: z.string().nullable().optional(),
   suggestedSkills: z.array(z.string()).max(10).optional(),
+  /**
+   * Skills the candidate did NOT write but that the role normally carries.
+   * Kept apart from suggestedSkills on purpose: these arrive UNCHECKED and
+   * labelled as a proposal, because we are proposing rather than reporting.
+   * The grounding filter must never touch this list — filtering it would make
+   * it identical to suggestedSkills, which is exactly the bug it replaces.
+   */
+  inferredSkills: z.array(z.string()).max(10).optional(),
   suggestedLanguages: z.array(z.object({ name: z.string(), level: z.string() })).max(5).optional(),
   workExperienceUpdates: z.array(ItemUpdateSchema).max(5).optional(),
   workExperienceNew: z.array(NewWorkExperienceSchema).max(3).optional(),

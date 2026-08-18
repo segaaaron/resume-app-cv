@@ -17,34 +17,9 @@ import {
 import { toast } from "sonner"
 import { nanoid } from "nanoid"
 import { useAIProfileFill } from "./hooks/useAIProfileFill"
+import AIProfileInterview from "./AIProfileInterview"
+import { useCooldownLabel } from "./hooks/useAICooldown"
 import type { ResumeSections } from "@/types/resume"
-
-type SectionIntent =
-  | "summary" | "jobTitle" | "workExperience" | "education"
-  | "skills" | "languages" | "projects" | "volunteer" | "hobbies"
-  | null
-
-function detectSectionIntent(prompt: string): SectionIntent {
-  const p = prompt.toLowerCase()
-  if (/resumen|summary|perfil profesional|professional summary/.test(p)) return "summary"
-  if (/título|titulo|cargo|job title|puesto|posici[oó]n/.test(p)) return "jobTitle"
-  if (/experiencia|trabajo|laboral|work experience|empleo|empresa/.test(p)) return "workExperience"
-  if (/educaci[oó]n|estudio|universidad|carrera|grado|degree|school/.test(p)) return "education"
-  if (/habilidad|skill|competencia|conocimiento/.test(p)) return "skills"
-  if (/idioma|language|lengua/.test(p)) return "languages"
-  if (/proyecto|project/.test(p)) return "projects"
-  if (/voluntari|volunteer/.test(p)) return "volunteer"
-  if (/hobby|hobbie|inter[eé]s|pasatiempo/.test(p)) return "hobbies"
-  return null
-}
-
-function isCVEmpty(sectionData: ResumeSections): boolean {
-  const summary = (sectionData.summary as string) ?? ""
-  const workExp = (sectionData.workExperience as unknown[]) ?? []
-  const education = (sectionData.education as unknown[]) ?? []
-  const skills = (sectionData.skills as unknown[]) ?? []
-  return !summary.trim() && workExp.length === 0 && education.length === 0 && skills.length === 0
-}
 
 function isCVComplete(sectionData: ResumeSections): boolean {
   const summary = (sectionData.summary as string) ?? ""
@@ -140,7 +115,12 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
       save: s.save,
     }))
   )
-  const { prompt, setPrompt, loading, result, generate } = useAIProfileFill()
+  const { prompt, setPrompt, loading, result, generate, cooldownUntil } = useAIProfileFill()
+
+  // The hook has enforced a 2-minute cooldown since day one, but the panel never
+  // read it: the button stayed lit, the click was swallowed and the only sign
+  // was a toast. Same countdown the Summary and Work Experience buttons show.
+  const { inCooldown, label: cooldownLabel } = useCooldownLabel(cooldownUntil)
   const [expanded, setExpanded] = useState(inTab)
 
   // Applied state per section (UI-only)
@@ -157,12 +137,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
   const [selectedSkills, setSelectedSkills] = useState<Set<string>>(new Set())
   const [selectedLanguages, setSelectedLanguages] = useState<Set<string>>(new Set())
 
-  // Detect which section the user is asking about (set on generate, not on every keystroke)
-  const [sectionIntent, setSectionIntent] = useState<SectionIntent>(null)
-
   async function handleGenerate() {
-    // Detect section intent from current prompt before clearing state
-    setSectionIntent(detectSectionIntent(prompt))
     // Reset all applied UI state before generating
     setAppliedSummary(false); setAppliedJobTitle(false); setAppliedHobbies(false)
     setAppliedSkills(false); setAppliedLanguages(false)
@@ -176,15 +151,18 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
     }
   }
 
-  // Show all sections when CV is empty or user didn't mention a specific section
-  const cvIsEmpty = isCVEmpty(sectionData as ResumeSections)
+  // Every suggestion the model returned is rendered. There used to be a
+  // keyword-guessed "section intent" filter here that hid the rest, and it read
+  // live sectionData: applying ONE suggestion changed the CV, flipped the
+  // filter, and the remaining suggestions vanished mid-review — paid AI work
+  // thrown away in front of the user.
   const cvComplete = isCVComplete(sectionData as ResumeSections)
-  const showAll = cvIsEmpty || !sectionIntent
-  function show(section: SectionIntent) { return showAll || sectionIntent === section }
 
   // ── Apply handlers ─────────────────────────────────────────────────────────
   function applySkills() {
     const existing = (sectionData.skills ?? []) as SkillItem[]
+    // selectedSkills spans both lists, so nothing here needs to know which one
+    // a chip came from — the user ticking it is what makes it theirs.
     const toAdd = [...selectedSkills].filter(n => !existing.some(e => e.name.toLowerCase() === n.toLowerCase()))
     if (!toAdd.length) { toast.info(t("toast_skills_already")); return }
     updateSectionData("skills", [...existing, ...toAdd.map((n): SkillItem => ({ id: nanoid(), name: n, level: "intermediate" }))])
@@ -312,14 +290,17 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               </div>
             )}
 
-            <div style={{ position: 'relative', marginBottom: 10, opacity: cvComplete ? 0.5 : 1, pointerEvents: cvComplete ? 'none' : undefined }}>
+            {/* The "already complete" banner INFORMS; it does not lock the tool.
+                A CV with one job and one skill counted as complete, and the
+                textarea was disabled from then on — the user could never ask
+                the assistant for a new role again. */}
+            <div style={{ position: 'relative', marginBottom: 10 }}>
               <Textarea
                 value={prompt}
                 onChange={e => setPrompt(e.target.value)}
                 placeholder={t("placeholder")}
                 className="ai-main-textarea"
                 maxLength={500}
-                disabled={cvComplete}
               />
               <span
                 style={{
@@ -332,33 +313,31 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               </span>
             </div>
 
-            {!cvComplete && (
-              <div
-                style={{
-                  display: 'flex', gap: 8, alignItems: 'flex-start',
-                  background: 'rgba(6,182,212,0.07)',
-                  border: '1px solid rgba(6,182,212,0.25)',
-                  borderRadius: 10, padding: '10px 12px', marginBottom: 14,
-                  fontSize: 11, color: '#0E7490', lineHeight: 1.5,
-                }}
-              >
-                <Info
-                  style={{ width: 14, height: 14, color: '#06B6D4', flexShrink: 0, marginTop: 1 }}
-                />
-                <span>
-                  {t("review_hint")} <span style={{ fontWeight: 600 }}>{t("review_hint_tab")}</span> {t("review_hint_suffix")}
-                </span>
-              </div>
-            )}
+            <div
+              style={{
+                display: 'flex', gap: 8, alignItems: 'flex-start',
+                background: 'rgba(6,182,212,0.07)',
+                border: '1px solid rgba(6,182,212,0.25)',
+                borderRadius: 10, padding: '10px 12px', marginBottom: 14,
+                fontSize: 11, color: '#0E7490', lineHeight: 1.5,
+              }}
+            >
+              <Info
+                style={{ width: 14, height: 14, color: '#06B6D4', flexShrink: 0, marginTop: 1 }}
+              />
+              <span>
+                {t("review_hint")} <span style={{ fontWeight: 600 }}>{t("review_hint_tab")}</span> {t("review_hint_suffix")}
+              </span>
+            </div>
 
             <button
               type="button"
               className="ai-generate-btn"
               onClick={handleGenerate}
-              disabled={loading || prompt.trim().length < 10 || cvComplete}
+              disabled={loading || inCooldown || prompt.trim().length < 10}
             >
               {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-              {loading ? t("btn_generating") : t("btn_generate")}
+              {loading ? t("btn_generating") : inCooldown ? t("btn_cooldown", { seconds: cooldownLabel }) : t("btn_generate")}
             </button>
 
           {hasAnyResult && (
@@ -368,7 +347,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               </p>
 
               {/* Work experience */}
-              {show("workExperience") && result!.workExperienceUpdates?.map(u => {
+              {result!.workExperienceUpdates?.map(u => {
                 const job = workExps.find(j => j.id === u.id)
                 if (!job) return null
                 return (
@@ -387,13 +366,15 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               })}
 
               {/* New work experience entries */}
-              {show("workExperience") && result!.workExperienceNew?.map((entry, i) => (
+              {result!.workExperienceNew?.map((entry, i) => (
                 <div key={i} className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
                       <Briefcase className="h-3 w-3 text-violet-600" />
-                      {entry.jobTitle} — {entry.employer}
-                      <span className="text-[9px] bg-violet-100 text-violet-600 px-1 py-0.5 rounded ml-1">Nueva</span>
+                      {/* Either field can be empty: the model is told to send ""
+                          instead of inventing a company the user never named. */}
+                      {[entry.jobTitle, entry.employer].filter(Boolean).join(" — ") || t("label_new_experience")}
+                      <span className="text-[9px] bg-violet-100 text-violet-600 px-1 py-0.5 rounded ml-1">{t("badge_new")}</span>
                     </p>
                     {!appliedNewWork.has(i) ? (
                       <Button size="sm" variant="outline"
@@ -433,7 +414,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               ))}
 
               {/* Education */}
-              {show("education") && result!.educationUpdates?.map(u => {
+              {result!.educationUpdates?.map(u => {
                 const edu = educations.find(e => e.id === u.id)
                 if (!edu) return null
                 return (
@@ -452,7 +433,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               })}
 
               {/* Projects */}
-              {show("projects") && result!.projectUpdates?.map(u => {
+              {result!.projectUpdates?.map(u => {
                 const proj = projects.find(p => p.id === u.id)
                 if (!proj) return null
                 return (
@@ -471,7 +452,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               })}
 
               {/* Volunteer */}
-              {show("volunteer") && result!.volunteerUpdates?.map(u => {
+              {result!.volunteerUpdates?.map(u => {
                 const vol = volunteers.find(v => v.id === u.id)
                 if (!vol) return null
                 return (
@@ -490,7 +471,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               })}
 
               {/* Summary */}
-              {show("summary") && result!.summary && (
+              {result!.summary && (
                 <DiffBlock
                   icon={<span className="text-[10px]">📝</span>}
                   label={t("label_summary")}
@@ -510,7 +491,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               )}
 
               {/* Job title */}
-              {show("jobTitle") && result!.jobTitle && (
+              {result!.jobTitle && (
                 <DiffBlock
                   icon={<span className="text-[10px]">🏷️</span>}
                   label={t("label_job_title")}
@@ -531,7 +512,7 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               )}
 
               {/* Hobbies */}
-              {show("hobbies") && result!.hobbies && (
+              {result!.hobbies && (
                 <DiffBlock
                   icon={<span className="text-[10px]">🎯</span>}
                   label={t("label_hobbies")}
@@ -550,8 +531,11 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
                 />
               )}
 
-              {/* Skills */}
-              {show("skills") && (result!.suggestedSkills?.length ?? 0) > 0 && (
+              {/* Skills — two lists, one selection, one Apply.
+                  "From your text" comes pre-selected because the user already
+                  claimed it. "Typical of your role" arrives UNSELECTED: it is a
+                  proposal about them, and only they can turn it into a claim. */}
+              {((result!.suggestedSkills?.length ?? 0) > 0 || (result!.inferredSkills?.length ?? 0) > 0) && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground">{t("label_suggested_skills")}</p>
@@ -578,11 +562,32 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
                       )
                     })}
                   </div>
+
+                  {(result!.inferredSkills?.length ?? 0) > 0 && (
+                    <div className="space-y-1 pt-1.5">
+                      <p className="text-[10px] text-muted-foreground leading-snug">
+                        {t("inferred_skills_hint")}
+                      </p>
+                      <div className="flex flex-wrap gap-1">
+                        {result!.inferredSkills!.map(skill => {
+                          const selected = selectedSkills.has(skill)
+                          const inCV = (sectionData.skills as { name: string }[] ?? []).some(s => s.name.toLowerCase() === skill.toLowerCase())
+                          return (
+                            <button key={`inf-${skill}`} type="button" disabled={appliedSkills || inCV}
+                              onClick={() => setSelectedSkills(prev => { const n = new Set(prev); if (n.has(skill)) n.delete(skill); else n.add(skill); return n })}
+                              className={`text-[10px] border border-dashed rounded-full px-2 py-0.5 transition-colors ${inCV ? "bg-gray-50 text-gray-400 border-gray-200 cursor-default" : appliedSkills ? "bg-green-50 text-green-700 border-green-300 cursor-default" : selected ? "bg-indigo-100 text-indigo-700 border-indigo-400 border-solid" : "bg-white text-muted-foreground border-indigo-200 hover:border-indigo-400"}`}>
+                              {inCV ? "✓ " : selected && !appliedSkills ? "● " : "+ "}{skill}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Languages */}
-              {show("languages") && (result!.suggestedLanguages?.length ?? 0) > 0 && (
+              {(result!.suggestedLanguages?.length ?? 0) > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between">
                     <p className="text-[11px] font-semibold text-foreground flex items-center gap-1">
@@ -615,6 +620,13 @@ export default function AIProfileFillPanel({ inTab = false }: { inTab?: boolean 
               )}
           </div>
         )}
+
+          {/* Step 2 — the questions. The model has written what it could; this
+              asks for what is still missing, in the order that improves the CV
+              most. Rendered whether or not there was a result: an untouched CV
+              needs the questions most, and that is exactly the user the
+              one-shot text box served worst. */}
+          <AIProfileInterview />
       </div>
         )}
       </div>

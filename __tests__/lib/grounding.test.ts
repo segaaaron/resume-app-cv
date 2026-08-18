@@ -57,4 +57,37 @@ describe("isGroundedIn", () => {
     expect(isGroundedIn("Node.js", p)).toBe(true)
     expect(isGroundedIn("C++", p)).toBe(true)
   })
+
+  // Real text from a real user, 2026-08-18. The prompts ORDER the model to write
+  // the canonical spelling of a company so an ATS matches it exactly. It obeyed,
+  // turned "banco mercanil" into "Banco Mercantil" — and exact-word grounding
+  // then binned both jobs FOR OBEYING. The CV came back with a summary and a job
+  // title and nothing else.
+  describe("typos in the user's own text", () => {
+    const TYPED =
+      "soy administrador de empresas, con mas de 10 anos en el rubro, trabaje en el banco mercanil " +
+      "en mayo del 2010, realize varias analisis de riesgo en carteras dfe clientes privados, tambien " +
+      "trabaje en banco central de bolicia desde el octubre del 2015 realizando analisis de cartera"
+
+    it("grounds the corrected spelling of what the user misspelled", () => {
+      expect(isGroundedIn("Banco Mercantil", TYPED)).toBe(true)
+      expect(isGroundedIn("Banco Central de Bolivia", TYPED)).toBe(true)
+      expect(isGroundedIn("Administrador de Empresas", TYPED)).toBe(true)
+    })
+
+    it("still rejects an employer the user never named", () => {
+      // "Banco" is in the text; "Santander" is not, and every word must match.
+      expect(isGroundedIn("Banco Santander", TYPED)).toBe(false)
+      expect(isGroundedIn("Google", TYPED)).toBe(false)
+      expect(isGroundedIn("Microsoft", TYPED)).toBe(false)
+      expect(isGroundedIn("Amazon Web Services", TYPED)).toBe(false)
+      expect(isGroundedIn("Ingeniero de Software", TYPED)).toBe(false)
+    })
+
+    it("does not treat short lookalike words as the same word", () => {
+      // One edit apart, but at three letters that is a different word.
+      expect(isGroundedIn("car", "i have a cat")).toBe(false)
+      expect(isGroundedIn("Sales", "i work in sale")).toBe(true)
+    })
+  })
 })

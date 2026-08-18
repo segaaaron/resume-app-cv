@@ -281,10 +281,50 @@ const ALIAS_LOOKUP: Map<string, number> = (() => {
   return m
 })()
 
+/**
+ * Edit distance, capped: stops as soon as it exceeds `max` instead of computing
+ * the true distance, so this stays cheap over a whole resume's worth of words.
+ */
+function withinEditDistance(a: string, b: string, max: number): boolean {
+  if (Math.abs(a.length - b.length) > max) return false
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i)
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i]
+    let rowMin = i
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1
+      const v = Math.min(curr[j - 1] + 1, prev[j] + 1, prev[j - 1] + cost)
+      curr.push(v)
+      if (v < rowMin) rowMin = v
+    }
+    if (rowMin > max) return false
+    prev = curr
+  }
+  return prev[b.length] <= max
+}
+
+/**
+ * How far apart two words may be and still count as the same word. Nothing
+ * under 4 letters — at that length one edit is a different word ("cat"/"car").
+ */
+function typoBudget(len: number): number {
+  if (len >= 8) return 2
+  if (len >= 4) return 1
+  return 0
+}
+
 function wordsMatch(a: string, b: string): boolean {
   if (a === b) return true
   const ga = ALIAS_LOOKUP.get(a)
-  return ga !== undefined && ga === ALIAS_LOOKUP.get(b)
+  if (ga !== undefined && ga === ALIAS_LOOKUP.get(b)) return true
+  // Typo tolerance, and it is not a nicety. The prompts ORDER the model to use
+  // the canonical spelling of a name so an ATS matches it exactly; the user
+  // types "banco mercanil" and "banco central de bolicia". The model obeys,
+  // writes "Banco Mercantil" — and an exact-match grounding check then binned
+  // the entry FOR OBEYING, so a CV with two real jobs came back with a summary
+  // and nothing else. Measured against a real user's text, 2026-08-18.
+  const budget = Math.min(typoBudget(a.length), typoBudget(b.length))
+  return budget > 0 && withinEditDistance(a, b, budget)
 }
 
 const WORD_SPLIT = /[^\p{L}\p{N}.+#]+/u

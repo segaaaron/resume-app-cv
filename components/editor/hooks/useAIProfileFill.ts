@@ -22,6 +22,8 @@ export interface FillProfileResult {
   jobTitle?: string | null
   hobbies?: string | null
   suggestedSkills?: string[]
+  /** Standard for the role but never written by the user — arrives unchecked. */
+  inferredSkills?: string[]
   suggestedLanguages?: SuggestedLanguage[]
   workExperienceUpdates?: { id: string; description: string }[]
   workExperienceNew?: {

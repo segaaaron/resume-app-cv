@@ -18,6 +18,16 @@ export interface ResumeScoreDimension {
   score: number | null
   /** Supporting counts so the UI can explain the number honestly. */
   detail: Record<string, number>
+  /**
+   * WHICH individual checks passed, for the dimensions that are a checklist.
+   *
+   * These booleans were always computed — `completeness` and `recruiterScan` are
+   * built from them — and then collapsed into `detail.passed` and thrown away one
+   * line later. That left the product able to say "3 of 5" and never *which* 3,
+   * so nothing downstream could act on it: the assistant could not ask the user
+   * for the missing piece because the only consumer of the answer was a counter.
+   */
+  checks?: Record<string, boolean>
 }
 
 export interface ResumeScore {
@@ -95,6 +105,7 @@ export function computeResumeScore(sectionData: Record<string, unknown>): Resume
     key: "completeness",
     score: clamp((presentCount / 5) * 100),
     detail: { present: presentCount, total: 5 },
+    checks: present,
   }
 
   // ── Brevity: share of text units (summary + each bullet) within the ─────
@@ -140,6 +151,7 @@ export function computeResumeScore(sectionData: Record<string, unknown>): Resume
     key: "recruiterScan",
     score: clamp((scanPassed / 5) * 100),
     detail: { passed: scanPassed, total: 5 },
+    checks: scanChecks,
   }
 
   const dimensions = [impact, actionVerbs, completeness, brevity, recruiterScan]
