@@ -122,7 +122,9 @@ const nextConfig: NextConfig = {
     return {
       beforeFiles: [
         { source: "/script.js", destination: "https://analytics.yasminmedrano.com/script.js" },
-        { source: "/api/send", destination: "https://analytics.yasminmedrano.com/api/send" },
+        // /api/send YA NO se reescribe: lo atiende app/api/send/route.ts, que reenvía la
+        // IP del visitante. Un rewrite es un proxy ciego y Umami ubicaba a todo el mundo
+        // como "(Unknown)" porque veía siempre la IP de nuestro servidor.
       ],
     }
   },
