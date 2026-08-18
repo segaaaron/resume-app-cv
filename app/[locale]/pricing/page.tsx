@@ -135,7 +135,7 @@ export default async function PricingPage({
   // `userIsPro` was a subscriber, so it told one-time BASIC/SPRINT buyers "you're a Pro
   // member, your plan renews on X" — both false: they aren't PRO and a one-time payment
   // never renews. Admins got "your subscription is active" with no subscription at all.
-  let accessKind: "subscription" | "one_time" | "staff" = "subscription"
+  let accessKind: "subscription" | "one_time" | "staff" | "managed" = "subscription"
   let oneTimePlanLabel: string | null = null
 
   if (session?.user?.id) {
@@ -143,9 +143,10 @@ export default async function PricingPage({
       where: { id: session.user.id },
       select: { plan: true, subscriptionStatus: true, subscriptionEndsAt: true, planInterval: true, paymentProvider: true, role: true, isManaged: true, managedBlocked: true, managedExpiresAt: true, stripeCustomerId: true },
     })
-    if (dbUser?.isManaged || dbUser?.plan === "LIMITED") {
-      redirect(`/${locale}/dashboard`)
-    }
+    // Antes se redirigía al dashboard. Un LIMITED que entraba a Planes salía expulsado
+    // sin ninguna explicación, y como el CTA de upgrade también está oculto para su plan,
+    // no había una sola superficie que le dijera por qué no puede comprar. Ahora ve la
+    // página, con el aviso y los botones bloqueados por `blocksNewPurchase`.
     if (dbUser) {
       userIsPro = isActive(
         dbUser.plan,
@@ -186,9 +187,9 @@ export default async function PricingPage({
       // copy ("you keep access until X" instead of "renews on X"), which stays true
       // whether or not a Stripe customer exists.
       subscriptionCancelled = hasManageableBilling(dbUser.subscriptionStatus)
-        && !blocksNewPurchase(dbUser.subscriptionStatus, false)
-      blocksRecurringPurchase = blocksNewPurchase(dbUser.subscriptionStatus, false)
-      blocksOneTimePurchase = blocksNewPurchase(dbUser.subscriptionStatus, true)
+        && !blocksNewPurchase(dbUser.subscriptionStatus, false, dbUser.isManaged)
+      blocksRecurringPurchase = blocksNewPurchase(dbUser.subscriptionStatus, false, dbUser.isManaged)
+      blocksOneTimePurchase = blocksNewPurchase(dbUser.subscriptionStatus, true, dbUser.isManaged)
       // An admin whose ACTIVE status has no gateway behind it is staff access, not a
       // subscriber. Judging this by status alone was the gap: it produced a banner
       // claiming their subscription renews, a portal button that 400s, and one-time
@@ -198,12 +199,20 @@ export default async function PricingPage({
       // neither manage nor purchase, and every "cancel first" instruction is
       // unfollowable. Only support can fix the row, so say that instead.
       billingNeedsSupport = !isStaffAccess && !hasRealBilling && hasManageableBilling(dbUser.subscriptionStatus)
-      subscriptionEndsAt = dbUser.subscriptionEndsAt
+      // Para un managed la fecha que importa es la que puso el admin, no una de facturación
+      // (no tiene). Sin esto el aviso diría "no tiene fecha" y sería falso.
+      subscriptionEndsAt = dbUser.isManaged || dbUser.plan === "LIMITED"
+        ? dbUser.managedExpiresAt
+        : dbUser.subscriptionEndsAt
       planInterval = dbUser.planInterval
       paymentProvider = dbUser.paymentProvider
 
       const isOneTimePlan = dbUser.plan === "BASIC" || dbUser.plan === "SPRINT"
-      accessKind = isStaffAccess ? "staff" : isOneTimePlan ? "one_time" : "subscription"
+      // "managed" primero: su acceso no es una suscripción ni una compra, y decirle
+      // cualquiera de las dos cosas sería falso.
+      accessKind = dbUser.isManaged || dbUser.plan === "LIMITED"
+        ? "managed"
+        : isStaffAccess ? "staff" : isOneTimePlan ? "one_time" : "subscription"
       oneTimePlanLabel = isOneTimePlan ? (dbUser.plan === "BASIC" ? "Basic" : "Sprint") : null
     }
   }
@@ -275,6 +284,8 @@ export default async function PricingPage({
           oneTimePlanLabel={oneTimePlanLabel}
           memberTitleOneTime={t("member_title_onetime")}
           memberTitleStaff={t("member_title_staff")}
+          memberTitleManaged={t("member_title_managed")}
+          memberManagedNote={formattedEndsAt ? t("member_managed_until", { date: formattedEndsAt }) : t("member_managed_note")}
           memberOneTimeUntil={
             formattedEndsAt
               ? t("member_onetime_until", { date: formattedEndsAt })

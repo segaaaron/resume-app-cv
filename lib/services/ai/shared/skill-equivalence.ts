@@ -65,6 +65,14 @@ interface JudgeDeps {
   /** Reported, never thrown: a failed judgement must not fail the analysis. */
   onFailure?: (err: Error) => void
   model?: string
+  /**
+   * Tokens que gastó ESTA llamada, para que el llamador los sume a los suyos.
+   *
+   * Sin esto la llamada era invisible en el costo: corre dentro de cada análisis ATS con
+   * techo de 4.000 tokens, y el panel del admin mostraba un gasto por usuario menor que
+   * el real. Es el mismo patrón con el que AISummaryModule suma el reintento de su gate.
+   */
+  onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void
 }
 
 /**
@@ -182,6 +190,12 @@ export async function confirmEquivalences(
       // verdicts (~14 tokens each) with room for the model's own reasoning. The
       // adapter renames it to max_completion_tokens for the GPT-5 family.
       max_tokens: 4000,
+    })
+    // Se reporta ANTES de parsear: los tokens se gastaron aunque la respuesta venga
+    // malformada, y un costo que sólo se cuenta cuando todo sale bien miente hacia abajo.
+    deps.onUsage?.({
+      promptTokens: completion.usage?.prompt_tokens ?? 0,
+      completionTokens: completion.usage?.completion_tokens ?? 0,
     })
     verdicts = parseVerdicts(completion.choices[0]?.message?.content ?? "", toJudge.length)
   } catch (err) {

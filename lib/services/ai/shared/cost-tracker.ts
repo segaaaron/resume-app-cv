@@ -26,7 +26,27 @@ const FALLBACK_PRICING = { inputPer1M: 10.00, outputPer1M: 30.00 } as const
 
 let unknownModelWarned = false
 
-export function computeCostUsd(model: string, promptTokens: number, completionTokens: number): number {
+/**
+ * Proporción del precio de entrada que cobra OpenAI por un prompt CACHEADO.
+ *
+ * 1.0 = sin descuento, que es lo que este cálculo asumía sin decirlo. OpenAI descuenta el
+ * prompt que ya vio (`usage.prompt_tokens_details.cached_tokens`), así que cobrarlo entero
+ * infla el gasto que muestra el panel — hacia arriba, que es el lado seguro, pero deja de
+ * servir para calcular margen fino.
+ *
+ * SE QUEDA EN 1.0 A PROPÓSITO hasta verificar la proporción real contra la página oficial
+ * de precios. Poner un número inventado acá sería peor que sobreestimar: convertiría una
+ * cifra conservadora en una cifra falsa que parece exacta.
+ */
+export const CACHED_INPUT_RATIO = 1.0
+
+export function computeCostUsd(
+  model: string,
+  promptTokens: number,
+  completionTokens: number,
+  /** De `usage.prompt_tokens_details.cached_tokens`. Va INCLUIDO en promptTokens. */
+  cachedTokens = 0,
+): number {
   let pricing = MODEL_PRICING[model]
   if (!pricing) {
     // Unknown model: assume expensive pricing — under-reporting real spend is
@@ -37,5 +57,12 @@ export function computeCostUsd(model: string, promptTokens: number, completionTo
       console.error(`[cost-tracker] modelo "${model}" sin precio en MODEL_PRICING — usando tarifa más cara conocida como estimación conservadora. Actualiza MODEL_PRICING.`)
     }
   }
-  return (promptTokens * pricing.inputPer1M + completionTokens * pricing.outputPer1M) / 1_000_000
+  // Los cacheados vienen DENTRO de promptTokens: se separan para no cobrarlos dos veces.
+  const cached = Math.min(Math.max(cachedTokens, 0), promptTokens)
+  const fresh = promptTokens - cached
+  return (
+    fresh * pricing.inputPer1M +
+    cached * pricing.inputPer1M * CACHED_INPUT_RATIO +
+    completionTokens * pricing.outputPer1M
+  ) / 1_000_000
 }

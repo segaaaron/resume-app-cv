@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
-vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "test-model" }))
+vi.mock("@/lib/ai-client", () => ({ AI_MODEL_PROSE: "test-model", logAIUsage: vi.fn() }))
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({ enforceAIQuota: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/services/ai/shared/clean-output", () => ({
   cleanGeneratedText: vi.fn(async (texts: string[]) => texts),
@@ -83,4 +83,28 @@ describe("mergeBullets", () => {
       mod.mergeBullets("u1", { targetId: "ghost", indexes: [0, 1], sectionData }, "PRO"),
     ).rejects.toThrow()
   })
+
+  // El endpoint llamaba al modelo sin registrar su gasto: en el panel de costos por
+  // usuario aparecía en cero mientras la factura de OpenAI decía otra cosa.
+  it("registra lo que gastó, con los tokens reales de la respuesta", async () => {
+    const { logAIUsage } = await import("@/lib/ai-client")
+    const merged = "Built and tuned the checkout screen in SwiftUI, improving loading behaviour with Combine"
+    const aiClient = {
+      chat: vi.fn().mockResolvedValue({
+        choices: [{ message: { content: merged } }],
+        usage: { prompt_tokens: 300, completion_tokens: 60 },
+      }),
+      embed: vi.fn(),
+    }
+    const mod = new AIMergeBulletsModule(aiClient, logger as never)
+
+    await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
+
+    expect(logAIUsage).toHaveBeenCalledWith("u1", "merge-bullets", expect.objectContaining({
+      promptTokens: 300,
+      completionTokens: 60,
+      plan: "PRO",
+    }))
+  })
+
 })

@@ -15,6 +15,7 @@ import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../sha
 import { assessDescription, isDescriptionOptimized } from "../shared/bullet-quality"
 import { hasCliche } from "../shared/cliches"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { EMBEDDING_MODEL } from "../OpenAIClientAdapter"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { findSemanticMatches } from "../shared/semantic-match"
 import { normalizeTerm } from "@/lib/ats/vocabulary"
@@ -365,7 +366,18 @@ Reglas:
       const dupNorms = await findSemanticMatches(
         cleanMissingSkills,
         atsKeywords,
-        (texts) => this.aiClient.embed(texts),
+        // Los embeddings valían $0,02/1M y su costo terminaba en un log de texto que
+        // nadie suma: cada análisis embebe el CV y las keywords, así que el gasto por
+        // usuario salía por debajo del real. Barato no es gratis.
+        (texts) => this.aiClient.embed(texts, (u) =>
+          logAIUsage(userId, "tailor-cv:embeddings", {
+            model: EMBEDDING_MODEL,
+            plan,
+            promptTokens: u.tokens,
+            completionTokens: 0,
+            costUsd: computeCostUsd(EMBEDDING_MODEL, u.tokens, 0),
+          }),
+        ),
       )
       if (dupNorms.size > 0) {
         dedupedMissingSkills = cleanMissingSkills.filter((s) => !dupNorms.has(normalizeTerm(s)))

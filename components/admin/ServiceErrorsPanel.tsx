@@ -46,6 +46,9 @@ const SOURCE_COLORS: { match: RegExp; color: string }[] = [
   // A refused action, not a crash: the product told a user no. Its own colour
   // because it is read differently — "what are we blocking, and how often".
   { match: /^ux$/i, color: "#D97706" },
+  // Un rebote no es una caída: es un correo que no llegó. Color propio para que se
+  // distinga de un error de servicio cuando se mira el panel de un vistazo.
+  { match: /^email$/i, color: "#C2410C" },
   { match: /pdf/i, color: "#7C3AED" },
   { match: /ai|anthropic|claude/i, color: "#00A8CC" },
   { match: /stripe|billing/i, color: "#635BFF" },

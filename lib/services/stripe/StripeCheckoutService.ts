@@ -41,15 +41,18 @@ export class StripeCheckoutService {
 
     const user = await db.user.findUnique({
       where: { id: userId },
-      select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true, subscriptionId: true },
+      select: { id: true, email: true, stripeCustomerId: true, plan: true, subscriptionStatus: true, subscriptionId: true, isManaged: true },
     })
     if (!user) throw new AppError("user_not_found", 404)
 
     // Shared with the pricing UI so the two can never drift — see blocksNewPurchase().
     // Semantics unchanged: ACTIVE/PAST_DUE blocked, NONE (one-time → PRO upgrade) and
     // CANCELED (monthly → annual switch, re-subscribe) allowed.
-    if (blocksNewPurchase(user.subscriptionStatus, isOneTime)) {
-      throw new AppError("already_subscribed", 400)
+    if (blocksNewPurchase(user.subscriptionStatus, isOneTime, user.isManaged)) {
+      // A managed account is refused for a different reason than a live subscription,
+      // and the buyer has to be told which: one is "you already have this", the other is
+      // "your organisation decides this". Same guard, honest message.
+      throw new AppError(user.isManaged ? "managed_account" : "already_subscribed", user.isManaged ? 403 : 400)
     }
 
     if (!isOneTime && user.subscriptionId && user.subscriptionStatus === "CANCELED") {

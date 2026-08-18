@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { isActive } from "@/lib/plans"
 import DashboardShell from "@/components/dashboard/DashboardShell"
 import PastDueBanner from "@/components/dashboard/PastDueBanner"
+import ManagedAccessBanner from "@/components/dashboard/ManagedAccessBanner"
 import AnalyticsIdentity from "@/components/analytics/AnalyticsIdentity"
 import { deriveUserType, tenureBucket } from "@/lib/analytics/user-type"
 import type { IdentityTraits } from "@/lib/analytics/events"
@@ -40,7 +41,14 @@ export default async function DashboardLayout({
     session.user.managedExpiresAt ? new Date(session.user.managedExpiresAt) : null,
   )
 
-  const pastDueBanner = session.user.subscriptionStatus === "PAST_DUE" ? <PastDueBanner /> : undefined
+  // A managed account that lost access has nothing else telling it why: the upgrade CTA
+  // is hidden for LIMITED by design and /pricing redirects it straight back here.
+  const managedNoAccess = session.user.plan === "LIMITED" && !isPro
+  const managedReason: "blocked" | "expired" = session.user.managedBlocked ? "blocked" : "expired"
+
+  const pastDueBanner = managedNoAccess
+    ? <ManagedAccessBanner reason={managedReason} />
+    : session.user.subscriptionStatus === "PAST_DUE" ? <PastDueBanner /> : undefined
 
   const [resumeCount, letterCount, applicationCount, dbUser] = await Promise.all([
     db.resume.count({ where: { userId: session.user.id } }),

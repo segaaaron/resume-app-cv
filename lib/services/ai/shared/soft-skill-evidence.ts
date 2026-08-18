@@ -43,6 +43,11 @@ export interface SoftSkillEvidenceDeps {
   aiClient: Pick<IAIClient, "chat">
   onFailure?: (err: Error) => void
   model?: string
+  /**
+   * Tokens que gastó ESTA llamada, para que el llamador los sume a los suyos. Corre dentro
+   * de cada análisis ATS con techo de 3.000 tokens y no se estaba contando en ningún lado.
+   */
+  onUsage?: (usage: { promptTokens: number; completionTokens: number }) => void
 }
 
 /**
@@ -164,6 +169,11 @@ export async function findDemonstratedSoftSkills(
       // Reasoning models bill their thinking against this cap; the verdicts
       // themselves are ~12 tokens each. The adapter renames it per model family.
       max_tokens: 3000,
+    })
+    // Antes de parsear: los tokens ya se gastaron aunque la respuesta venga mal.
+    deps.onUsage?.({
+      promptTokens: completion.usage?.prompt_tokens ?? 0,
+      completionTokens: completion.usage?.completion_tokens ?? 0,
     })
     indices = parseEvidence(completion.choices[0]?.message?.content ?? "", skills, lines)
   } catch (err) {

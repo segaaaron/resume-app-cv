@@ -11,8 +11,19 @@ export const dynamic = "force-dynamic"
 
 export const metadata = { title: "Admin — Users", robots: { index: false, follow: false } }
 
-export default async function AdminPage({ params }: { params: Promise<{ locale: string }> }) {
+const PAGE_SIZE = 10
+
+export default async function AdminPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>
+  searchParams: Promise<{ page?: string; q?: string }>
+}) {
   const { locale } = await params
+  const sp = await searchParams
+  const q = (sp.q ?? "").trim()
+  const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1)
   const t = await getTranslations({ locale, namespace: "dashboard_admin" })
   const session = await auth()
 
@@ -20,35 +31,53 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
     redirect(`/${locale}/dashboard/resumes`)
   }
 
-  const users = await db.user.findMany({
-    orderBy: { createdAt: "desc" },
-    select: {
-      id:                 true,
-      name:               true,
-      email:              true,
-      plan:               true,
-      subscriptionStatus: true,
-      subscriptionEndsAt: true,
-      planInterval:       true,
-      role:               true,
-      stripeCustomerId:   true,
-      createdAt:          true,
-      lastActiveAt:       true,
-    },
-  })
+  // Búsqueda por email o nombre. Insensible a mayúsculas porque nadie escribe un email
+  // como está guardado cuando lo copia de un ticket de soporte.
+  const where = q
+    ? {
+        deletedAt: null,
+        OR: [
+          { email: { contains: q, mode: "insensitive" as const } },
+          { name:  { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : { deletedAt: null }
 
-  const totalUsers   = users.length
-  const proUsers     = users.filter(u => u.plan === "PRO" && u.subscriptionStatus === "ACTIVE")
-  const proCount     = proUsers.length
-  const convRate     = totalUsers > 0 ? Math.round((proCount / totalUsers) * 100) : 0
-  const mrr          = proCount * 15
-
-  // Active today: lastActiveAt within last 24h
-  // Server Component: this runs once on the server per request and is never hydrated,
-  // so there is no client render to disagree with. The rule cannot tell the two apart.
+  // Server Component: corre una vez por request en el servidor y no se hidrata.
   // eslint-disable-next-line react-hooks/purity
-  const yesterday    = new Date(Date.now() - 24 * 60 * 60 * 1000)
-  const activeToday  = users.filter(u => new Date(u.lastActiveAt) > yesterday).length
+  const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000)
+
+  // Las métricas se cuentan en la BASE, no sobre la lista. Antes salían de contar el
+  // array completo en memoria: con la lista paginada ese array ya no existe, y calcularlas
+  // sobre la página visible daría "1 PRO de 10" en vez de la verdad.
+  const [users, matching, totalUsers, proCount, activeToday] = await Promise.all([
+    db.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: PAGE_SIZE,
+      skip: (page - 1) * PAGE_SIZE,
+      select: {
+        id:                 true,
+        name:               true,
+        email:              true,
+        plan:               true,
+        subscriptionStatus: true,
+        subscriptionEndsAt: true,
+        planInterval:       true,
+        role:               true,
+        stripeCustomerId:   true,
+        createdAt:          true,
+        lastActiveAt:       true,
+      },
+    }),
+    db.user.count({ where }),
+    db.user.count({ where: { deletedAt: null } }),
+    db.user.count({ where: { deletedAt: null, plan: "PRO", subscriptionStatus: "ACTIVE" } }),
+    db.user.count({ where: { deletedAt: null, lastActiveAt: { gt: yesterday } } }),
+  ])
+
+  const convRate = totalUsers > 0 ? Math.round((proCount / totalUsers) * 100) : 0
+  const mrr      = proCount * 15
 
   return (
     <div className="flex flex-col gap-0">
@@ -305,7 +334,13 @@ export default async function AdminPage({ params }: { params: Promise<{ locale: 
       {/* Table — horizontal scroll on mobile */}
       <div className="dash-card-in overflow-x-auto" style={{ animationDelay: "120ms" }}>
         <div className="min-w-[600px]">
-          <AdminUsersTable users={users} />
+          <AdminUsersTable
+            users={users}
+            total={matching}
+            page={page}
+            totalPages={Math.max(1, Math.ceil(matching / PAGE_SIZE))}
+            query={q}
+          />
         </div>
       </div>
 

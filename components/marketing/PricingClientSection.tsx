@@ -68,11 +68,13 @@ interface Props {
    * What KIND of access the banner describes. Subscription copy ("your plan renews
    * on X") is a lie for one-time BASIC/SPRINT buyers and for role-based staff access.
    */
-  accessKind: "subscription" | "one_time" | "staff"
+  accessKind: "subscription" | "one_time" | "staff" | "managed"
   /** "Basic" | "Sprint" for the one-time pill; null otherwise. */
   oneTimePlanLabel: string | null
   memberTitleOneTime: string
   memberTitleStaff: string
+  memberTitleManaged: string
+  memberManagedNote: string
   /** Already interpolated with the end date (or the no-date variant). */
   memberOneTimeUntil: string
   memberStaffNote: string
@@ -113,6 +115,8 @@ export default function PricingClientSection({
   oneTimePlanLabel,
   memberTitleOneTime,
   memberTitleStaff,
+  memberTitleManaged,
+  memberManagedNote,
   memberOneTimeUntil,
   memberStaffNote,
   memberCancelledUntil,
@@ -162,6 +166,9 @@ export default function PricingClientSection({
     },
     one_time: { title: memberTitleOneTime, note: memberOneTimeUntil, pill: oneTimePlanLabel },
     staff: { title: memberTitleStaff, note: memberStaffNote, pill: null },
+    // Un LIMITED no compra: su acceso lo administra su organización. El aviso dice eso y
+    // cuándo termina, en vez de dejarlo mirando botones que su plan no puede usar.
+    managed: { title: memberTitleManaged, note: memberManagedNote, pill: null },
   }
   const banner = BANNER_COPY[accessKind]
 

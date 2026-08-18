@@ -15,7 +15,8 @@
 // stopping problem this codebase has already paid for twice. The algorithm decides
 // IF; this only decides HOW it reads.
 
-import { AI_MODEL_PROSE } from "@/lib/ai-client"
+import { AI_MODEL_PROSE, logAIUsage } from "@/lib/ai-client"
+import { computeCostUsd } from "../shared/cost-tracker"
 import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
@@ -85,6 +86,7 @@ BULLET B: ${b}
 Return ONLY the merged sentence, or NOT_MERGEABLE.`
 
     let text: string
+    let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined
     try {
       const completion = await this.aiClient.chat({
         model: AI_MODEL_PROSE,
@@ -92,11 +94,26 @@ Return ONLY the merged sentence, or NOT_MERGEABLE.`
         // One sentence; the cap covers the reasoning budget of the GPT-5 family.
         max_tokens: 1200,
       })
+      // Este endpoint era el único que llamaba al modelo sin registrar lo que gastaba: su
+      // columna en el panel de costos estaba en cero mientras la factura decía otra cosa.
+      //
+      // FUERA del try de la llamada, a propósito: adentro, un fallo al ESCRIBIR el
+      // registro caía en el catch de abajo y devolvía `ai_error` — la medición tumbando
+      // la función que mide, sobre una respuesta del modelo que ya estaba bien.
+      usage = completion.usage
       text = (completion.choices[0]?.message?.content ?? "").trim()
     } catch (err) {
       this.logger.error("[AIService.mergeBullets] model call failed", { targetId }, err instanceof Error ? err : new Error(String(err)))
       throw new AppError("ai_error", 500)
     }
+
+    logAIUsage(userId, "merge-bullets", {
+      model: AI_MODEL_PROSE,
+      plan,
+      promptTokens: usage?.prompt_tokens ?? 0,
+      completionTokens: usage?.completion_tokens ?? 0,
+      costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+    })
 
     if (!text || /NOT_MERGEABLE/i.test(text)) return { status: "not_mergeable" }
 

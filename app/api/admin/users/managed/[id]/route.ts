@@ -25,6 +25,7 @@ const patchSchema = z.discriminatedUnion("action", [
   }),
   z.object({ action: z.literal("reset-downloads") }),
   z.object({ action: z.literal("reset-password") }),
+  z.object({ action: z.literal("unmanage") }),
 ])
 
 type Params = { params: Promise<{ id: string }> }
@@ -63,6 +64,46 @@ export async function PATCH(req: Request, { params }: Params) {
       data: { userId: session.user.id, action: managedBlocked ? "MANAGED_USER_BLOCKED" : "MANAGED_USER_UNBLOCKED", metadata: { targetUserId: id, email: existing.email } },
     }).catch((err) => logger.error("auditLog MANAGED_USER_BLOCKED/UNBLOCKED failed", { targetUserId: id }, err instanceof Error ? err : undefined))
     return NextResponse.json({ id, managedBlocked })
+  }
+
+  // ── Quitar el plan LIMITED y dejar al usuario como uno gratis ──────────────
+  //
+  // La alternativa que había era DELETE, que borra la fila y con ella —por cascada— sus
+  // CVs y sus cartas. Cuando termina el acuerdo con una organización la persona no hizo
+  // nada: destruir su trabajo es un castigo sin causa, y encima tira un lead que ya tiene
+  // el producto cargado y ahora puede comprar por su cuenta.
+  //
+  // Escribe EXACTAMENTE la misma baja que el cron de vencimiento, para que "esta relación
+  // terminó" signifique una sola cosa, se llegue por plazo o a mano. Se conservan
+  // `managedCreatedBy` y `managedNote` como rastro de que alguna vez fue gestionado.
+  if (data.action === "unmanage") {
+    await db.user.update({
+      where: { id },
+      data: {
+        plan: "UNSUBSCRIBED",
+        isManaged: false,
+        managedBlocked: false,
+        managedExpiresAt: null,
+        managedResumeLimit: null,
+        managedCoverLetterLimit: null,
+        managedDownloadLimit: null,
+        managedDownloadsUsed: 0,
+        subscriptionStatus: "EXPIRED",
+        sessionVersion: { increment: 1 },
+      },
+    })
+    purgeUserCache(id)
+    logger.info("admin: managed plan removed, user is now a free account", { targetUserId: id, byAdmin: session.user.id })
+    // Se reusa MANAGED_USER_EDITED a propósito: un valor nuevo del enum obliga a una
+    // migración, y `metadata.change` deja la fila igual de buscable.
+    db.auditLog.create({
+      data: {
+        userId: session.user.id,
+        action: "MANAGED_USER_EDITED",
+        metadata: { targetUserId: id, email: existing.email, change: "unmanaged", from: "LIMITED", to: "UNSUBSCRIBED" },
+      },
+    }).catch((err) => logger.error("auditLog unmanage failed", { targetUserId: id }, err instanceof Error ? err : undefined))
+    return NextResponse.json({ id, plan: "UNSUBSCRIBED", isManaged: false })
   }
 
   if (data.action === "edit") {

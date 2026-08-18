@@ -62,7 +62,7 @@ export class OpenAIClientAdapter implements IAIClient {
     }
   }
 
-  async embed(texts: string[]): Promise<number[][]> {
+  async embed(texts: string[], onUsage?: (usage: { tokens: number }) => void): Promise<number[][]> {
     if (texts.length === 0) return []
     const res = await limit(() =>
       getOpenAI().embeddings.create({ model: EMBEDDING_MODEL, input: texts }),
@@ -76,6 +76,7 @@ export class OpenAIClientAdapter implements IAIClient {
       tokens,
       costUsd: computeCostUsd(EMBEDDING_MODEL, tokens, 0),
     })
+    onUsage?.({ tokens })
     // The API preserves input order; map straight through.
     return res.data.map((d) => d.embedding)
   }

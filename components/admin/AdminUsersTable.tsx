@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { useRouter, usePathname } from "next/navigation"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
 import { useTranslations } from "next-intl"
@@ -19,42 +20,52 @@ import { TableRow, type UserRow } from "./_admin-table-parts"
 
 const PAGE_SIZE = 10
 
-export default function AdminUsersTable({ users: initial }: { users: UserRow[] }) {
+/**
+ * La paginación se mudó al SERVIDOR. Antes la página traía la tabla `User` entera y esto
+ * la cortaba de a diez en el navegador: con cuatro usuarios no se nota, con veinte mil la
+ * pantalla principal del admin no abre.
+ */
+export default function AdminUsersTable({
+  users,
+  total,
+  page,
+  totalPages,
+  query,
+}: {
+  users: UserRow[]
+  total: number
+  page: number
+  totalPages: number
+  query: string
+}) {
   const t = useTranslations("dashboard_admin")
-  const [users] = useState(initial)
+  const router = useRouter()
+  const pathname = usePathname()
   const [confirmId, setConfirmId] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
-  const [page, setPage] = useState(1)
+  const [term, setTerm] = useState(query)
 
-  const totalPages = Math.ceil(users.length / PAGE_SIZE)
-  const pageFrom = (page - 1) * PAGE_SIZE + 1
-  const pageTo = Math.min(page * PAGE_SIZE, users.length)
-  const pageUsers = users.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const pageFrom = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1
+  const pageTo = Math.min(page * PAGE_SIZE, total)
+  const pageUsers = users
   const confirmUser = users.find(u => u.id === confirmId)
 
+  /** Navegar reescribe la URL: el servidor vuelve a consultar y la búsqueda queda
+   *  compartible y en el historial, que es lo que uno espera de un panel. */
+  function go(next: { page?: number; q?: string }) {
+    const sp = new URLSearchParams()
+    const qq = next.q !== undefined ? next.q : query
+    if (qq) sp.set("q", qq)
+    const p = next.page ?? 1
+    if (p > 1) sp.set("page", String(p))
+    router.push(`${pathname}${sp.toString() ? `?${sp}` : ""}`)
+  }
+
+  // Baja TODOS los usuarios desde el servidor. Armarlo con el array local exportaría
+  // sólo la página visible, que es peor que no tener el botón: parece completo y no lo es.
   const exportUsersCSV = useCallback(() => {
-    const headers = ["id", "name", "email", "plan", "subscriptionStatus", "planInterval", "subscriptionEndsAt", "role", "createdAt", "lastActiveAt"]
-    const rows = users.map(u => [
-      u.id,
-      u.name ?? "",
-      u.email ?? "",
-      u.plan,
-      u.subscriptionStatus,
-      u.planInterval ?? "",
-      u.subscriptionEndsAt ? new Date(u.subscriptionEndsAt).toISOString() : "",
-      u.role,
-      new Date(u.createdAt).toISOString(),
-      new Date(u.lastActiveAt).toISOString(),
-    ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(","))
-    const csv = [headers.join(","), ...rows].join("\n")
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = `valhalla-resume-users-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
-  }, [users])
+    window.location.href = "/api/admin/users/export"
+  }, [])
 
   useEffect(() => {
     document.addEventListener("admin-export-users", exportUsersCSV)
@@ -95,7 +106,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
         btns.push(
           <button
             key={i}
-            onClick={() => setPage(i)}
+            onClick={() => go({ page: i })}
             style={{
               minWidth: 32, height: 32, padding: "0 10px",
               border: isActive ? "none" : "1px solid #D9E1ED",
@@ -128,8 +139,32 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
         <span className="font-serif text-[16px] font-semibold text-dash-navy tracking-[-0.025em] flex-1">
           {t("table_registered_users")}
         </span>
+        {/* Buscador: con cuatro usuarios sobra la vista, con dos mil el soporte llega con
+            un email y no con una posición en la lista. Envía por URL para que el servidor
+            filtre en la base, no el navegador sobre una página. */}
+        <form
+          onSubmit={(e) => { e.preventDefault(); go({ q: term.trim(), page: 1 }) }}
+          className="flex items-center gap-1.5"
+        >
+          <input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder={t("table_search_placeholder")}
+            aria-label={t("table_search_placeholder")}
+            className="h-[30px] w-[210px] rounded-[6px] border border-dash-border bg-white px-2.5 text-[12px] text-dash-navy outline-none focus:border-dash-cyan"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => { setTerm(""); go({ q: "", page: 1 }) }}
+              className="h-[30px] px-2 rounded-[6px] border border-dash-border bg-transparent text-[11px] text-dash-muted hover:text-dash-navy"
+            >
+              {t("table_search_clear")}
+            </button>
+          )}
+        </form>
         <span className="font-mono text-[11px] text-dash-muted bg-dash-surface2 border border-dash-border-s rounded-lg px-2 py-[2px]">
-          {users.length} total
+          {query ? t("table_search_results", { count: total }) : `${total} total`}
         </span>
         <button
           onClick={exportUsersCSV}
@@ -191,7 +226,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
           <div className="flex items-center gap-1">
             <button
               disabled={page === 1}
-              onClick={() => setPage(p => Math.max(1, p - 1))}
+              onClick={() => go({ page: Math.max(1, page - 1) })}
               style={{
                 minWidth: 32, height: 32, padding: "0 10px",
                 border: "1px solid #D9E1ED", background: "white",
@@ -208,7 +243,7 @@ export default function AdminUsersTable({ users: initial }: { users: UserRow[] }
             {renderPageButtons()}
             <button
               disabled={page === totalPages}
-              onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+              onClick={() => go({ page: Math.min(totalPages, page + 1) })}
               style={{
                 minWidth: 32, height: 32, padding: "0 10px",
                 border: "1px solid #D9E1ED", background: "white",

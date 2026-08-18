@@ -6,7 +6,7 @@ import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
 import {
   UserPlus, Loader2, Ban, CheckCircle2, Trash2, AlertCircle,
-  Infinity as InfinityIcon, Copy, Check, Pencil, RotateCcw, KeyRound,
+  Infinity as InfinityIcon, Copy, Check, Pencil, RotateCcw, KeyRound, UserMinus,
 } from "lucide-react"
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -30,6 +30,7 @@ export default function ManagedUsersPanel() {
   const [submitting, setSubmitting]   = useState(false)
   const [rowLoading, setRowLoading]   = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<ManagedUser | null>(null)
+  const [confirmUnmanage, setConfirmUnmanage] = useState<ManagedUser | null>(null)
   const [editTarget, setEditTarget]   = useState<ManagedUser | null>(null)
   const [editExpiry, setEditExpiry]   = useState("")
   const [editLimit, setEditLimit]     = useState("")
@@ -276,6 +277,12 @@ export default function ManagedUsersPanel() {
                           <ActionBtn onClick={() => patchUser(u.id, { action: "reset-password" })} disabled={rowLoading === u.id} title={t("action_reset_password")} variant="slate">
                             <KeyRound className="w-3 h-3" />
                           </ActionBtn>
+                          {/* Quitar el plan va ANTES de eliminar: es la acción correcta en
+                              casi todos los casos, y la destructiva no debe ser la que
+                              queda más a mano. */}
+                          <ActionBtn onClick={() => setConfirmUnmanage(u)} disabled={rowLoading === u.id} title={t("action_unmanage")} variant="slate">
+                            <UserMinus className="w-3 h-3" />
+                          </ActionBtn>
                           <ActionBtn onClick={() => setConfirmDelete(u)} disabled={rowLoading === u.id} title={t("action_delete")} variant="red">
                             <Trash2 className="w-3 h-3" />
                           </ActionBtn>
@@ -314,6 +321,25 @@ export default function ManagedUsersPanel() {
           <AlertDialogFooter>
             <AlertDialogCancel>{t("edit_cancel")}</AlertDialogCancel>
             <AlertDialogAction onClick={handleEdit} className="bg-[#00A8CC] text-white hover:bg-[#0090B0]">{t("edit_confirm")}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* ── Quitar plan LIMITED (no destructivo) ── */}
+      <AlertDialog open={!!confirmUnmanage} onOpenChange={o => !o && setConfirmUnmanage(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("unmanage_dialog_title")}</AlertDialogTitle>
+            <AlertDialogDescription>{t("unmanage_dialog_desc", { email: confirmUnmanage?.email ?? "" })}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("delete_cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => { if (confirmUnmanage) { patchUser(confirmUnmanage.id, { action: "unmanage" }); setConfirmUnmanage(null) } }}
+              className="bg-[#1a2e4a] text-white hover:bg-[#0f1a2e]"
+            >
+              {t("unmanage_confirm")}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

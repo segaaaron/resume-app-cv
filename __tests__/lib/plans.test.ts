@@ -18,6 +18,30 @@ import {
 const future = new Date(Date.now() + 1000 * 60 * 60) // +1h
 const past = new Date(Date.now() - 1000 * 60 * 60) // -1h
 
+// El plan LIMITED lo crea un administrador y NO compra nada. La regla vivía sólo en el
+// webhook —es decir, DESPUÉS del cobro—, así que un managed podía llegar a la pantalla
+// de pago, pagar, y que el webhook se negara a provisionarle nada.
+describe("plans · un LIMITED no puede comprar ningún plan", () => {
+  it("bloquea la suscripción y también el pago único", () => {
+    expect(blocksNewPurchase("NONE", false, true)).toBe(true)
+    expect(blocksNewPurchase("NONE", true, true)).toBe(true)
+  })
+
+  it("lo bloquea sin importar el estado de suscripción que traiga la fila", () => {
+    for (const st of ["NONE", "ACTIVE", "CANCELED", "PAST_DUE", "EXPIRED"]) {
+      expect(blocksNewPurchase(st, false, true), st).toBe(true)
+      expect(blocksNewPurchase(st, true, true), st).toBe(true)
+    }
+  })
+
+  it("NO bloquea a un usuario normal con el mismo estado (el guard mira isManaged, no el plan)", () => {
+    // Si la regla se hubiera escrito contra el estado en vez de contra la marca,
+    // rechazaría a un comprador legítimo: un BASIC que sube a PRO también tiene "NONE".
+    expect(blocksNewPurchase("NONE", false, false)).toBe(false)
+    expect(blocksNewPurchase("NONE", true, false)).toBe(false)
+  })
+})
+
 describe("plans · BASIC + SPRINT capabilities", () => {
   describe("getLimits", () => {
     // The flag used to say `false` for UNSUBSCRIBED while the route handed that plan

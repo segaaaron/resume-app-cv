@@ -252,7 +252,20 @@ export function isStaffAccess(
 export function blocksNewPurchase(
   subscriptionStatus?: SubscriptionStatus | string | null,
   isOneTimePurchase = false,
+  isManaged = false,
 ): boolean {
+  // A managed (LIMITED) account cannot buy ANY plan, ever. Its access is granted and
+  // revoked by an administrator, and the provisioning webhooks refuse to touch it
+  // (`if (targetUser?.isManaged) return { skip: true }` in Stripe,
+  // `if (!user || user.isManaged) return null` in PayPal). So a purchase could only end
+  // one way: the money taken and nothing delivered.
+  //
+  // It belongs HERE and not in each checkout service. This function is the single source
+  // the pricing UI and both gateways read, precisely so the rule cannot be true in one
+  // place and missing in another — which is exactly what happened: the refusal existed
+  // only at the webhook, AFTER the charge.
+  if (isManaged) return true
+
   // Buying a one-time plan is a DOWNGRADE, and it clears `subscriptionId`. It must
   // wait until no subscription exists at all — CANCELED included. A cancelled sub is
   // still live until its period end, and Stripe will emit `customer.subscription.deleted`
@@ -492,6 +505,13 @@ export function canUsePremiumTemplates(plan: string): boolean {
   return plan === "SPRINT" || plan === "PRO" || plan === "LIMITED"
 }
 
+/**
+ * DEAD as a gate — kept only because deleting it would suggest the question it answers
+ * is not asked anywhere, and it is: the real enforcement lives in
+ * `claimManagedDownload`, which reserves the slot ATOMICALLY. This version reads a
+ * counter that a concurrent download has already moved, so two tabs could both pass it
+ * and spend one slot twice. Do not reintroduce it in a route.
+ */
 export function canDownloadPDF(user: { isManaged: boolean; managedDownloadLimit: number | null; managedDownloadsUsed: number }): boolean {
   if (!user.isManaged) return true
   if (user.managedDownloadLimit === null) return true

@@ -2,7 +2,8 @@
 
 import { format } from "date-fns"
 import { RefreshCw } from "lucide-react"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
+import Link from "next/link"
 
 export interface UserRow {
   id:                 string
@@ -30,6 +31,7 @@ export function TableRow({
   isLast: boolean
 }) {
   const t = useTranslations("dashboard_admin")
+  const locale = useLocale()
 
   const isPro = user.plan === "PRO"
   const isActive = user.subscriptionStatus === "ACTIVE"
@@ -42,14 +44,16 @@ export function TableRow({
     <tr className="group">
       {/* Usuario */}
       <td className={`${tdBase} text-dash-navy`}>
-        <div className="flex flex-col gap-[2px]">
-          <span className="font-semibold text-dash-navy text-[13px]">
+        {/* El nombre es el acceso a la ficha: cuando llega un ticket, el camino natural es
+            buscar a la persona y abrirla, no copiar su id a otra pantalla. */}
+        <Link href={`/${locale}/dashboard/admin/users/${user.id}`} className="flex flex-col gap-[2px] group/link">
+          <span className="font-semibold text-dash-navy text-[13px] group-hover/link:text-dash-cyan transition-colors">
             {user.name ?? "—"}
           </span>
           <span className="text-[11px] text-dash-subtle font-mono">
             {user.email}
           </span>
-        </div>
+        </Link>
       </td>
 
       {/* Plan */}

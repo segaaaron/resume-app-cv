@@ -19,6 +19,7 @@ import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination } fr
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { EMBEDDING_MODEL } from "../OpenAIClientAdapter"
 import {
   AI_INPUT_LIMITS,
   ATSExtractionSchema,
@@ -833,6 +834,17 @@ Reglas:
           aiClient: this.aiClient,
           onFailure: (err: Error) =>
             this.logger.error("[AIService.atsScore] soft-skill evidence pass failed — soft score is literal-match only", {}, err),
+          // Esta pasada corre dentro de CADA análisis y no se contaba en ningún lado: el
+          // gasto por usuario del panel salía menor que el real. Va con su propio nombre
+          // de endpoint para poder ver cuánto cuesta esta pieza y no sólo el total.
+          onUsage: (u) =>
+            logAIUsage(userId, "ats-score:soft-skills", {
+              model: AI_MODEL,
+              plan,
+              promptTokens: u.promptTokens,
+              completionTokens: u.completionTokens,
+              costUsd: computeCostUsd(AI_MODEL, u.promptTokens, u.completionTokens),
+            }),
         }, resumeId)
       : new Set<string>()
 
@@ -870,7 +882,18 @@ Reglas:
       const candidates = await findSemanticCandidates(
         match.missingKeywords,
         cvTerms,
-        (texts) => this.aiClient.embed(texts),
+        // Los embeddings valían $0,02/1M y su costo terminaba en un log de texto que
+        // nadie suma: cada análisis embebe el CV y las keywords, así que el gasto por
+        // usuario salía por debajo del real. Barato no es gratis.
+        (texts) => this.aiClient.embed(texts, (u) =>
+          logAIUsage(userId, "ats-score:embeddings", {
+            model: EMBEDDING_MODEL,
+            plan,
+            promptTokens: u.tokens,
+            completionTokens: 0,
+            costUsd: computeCostUsd(EMBEDDING_MODEL, u.tokens, 0),
+          }),
+        ),
         undefined,
         onFailure,
       )
@@ -878,6 +901,16 @@ Reglas:
         const semanticMatches = await confirmEquivalences(candidates, {
           aiClient: this.aiClient,
           onFailure,
+          // Igual que la pasada de blandas: corre en cada análisis, con el techo de tokens
+          // más alto de todo el flujo (4.000), y era invisible en el costo.
+          onUsage: (u) =>
+            logAIUsage(userId, "ats-score:equivalences", {
+              model: AI_MODEL,
+              plan,
+              promptTokens: u.promptTokens,
+              completionTokens: u.completionTokens,
+              costUsd: computeCostUsd(AI_MODEL, u.promptTokens, u.completionTokens),
+            }),
         })
         if (semanticMatches.size > 0) {
           semanticMatched = semanticMatches

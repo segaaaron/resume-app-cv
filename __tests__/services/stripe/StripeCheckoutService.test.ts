@@ -43,6 +43,30 @@ describe("StripeCheckoutService.createSession", () => {
     await expect(makeService().createSession("u1", "monthly", "es")).rejects.toMatchObject({ code: "user_not_found", status: 404 })
   })
 
+  // A managed account's plan comes from an administrator, and the webhook REFUSES to
+  // provision one (`if (targetUser?.isManaged) return { skip: true }`). Letting checkout
+  // start means taking the money and delivering nothing — the failure mode that costs a
+  // refund, a dispute, or a customer who never says anything and leaves.
+  it("managed (LIMITED) account → throws 403 managed_account, no session is created", async () => {
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", email: "a@b.com", stripeCustomerId: null, plan: "LIMITED", subscriptionStatus: "NONE", subscriptionId: null, isManaged: true } as unknown as import("@prisma/client").User)
+
+    await expect(makeService().createSession("u1", "monthly", "es")).rejects.toMatchObject({ code: "managed_account", status: 403 })
+  })
+
+  it("a normal user with the same NONE status is NOT blocked by that guard", async () => {
+    // Guards the guard: `subscriptionStatus: "NONE"` is what a one-time buyer upgrading
+    // to PRO looks like. If the managed check were written against the status instead of
+    // the flag, it would refuse a paying customer.
+    const { db } = await import("@/lib/db")
+    vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", email: "a@b.com", stripeCustomerId: "cus_1", plan: "BASIC", subscriptionStatus: "NONE", subscriptionId: null, isManaged: false } as unknown as import("@prisma/client").User)
+
+    // Asserted as "not refused for being managed" rather than a full happy path: the
+    // gateway mock beyond this point is another test's concern.
+    const err = await makeService().createSession("u1", "monthly", "es").catch((e) => e)
+    expect(err?.code).not.toBe("managed_account")
+  })
+
   it("already subscribed ACTIVE → throws 400 already_subscribed", async () => {
     const { db } = await import("@/lib/db")
     vi.mocked(db.user.findUnique).mockResolvedValue({ id: "u1", email: "a@b.com", stripeCustomerId: "cus_1", plan: "PRO", subscriptionStatus: "ACTIVE", subscriptionId: "sub_1" } as unknown as import("@prisma/client").User)
