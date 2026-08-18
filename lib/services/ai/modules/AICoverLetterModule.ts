@@ -11,6 +11,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
+import { untrustedDataRule } from "../shared/untrusted-input"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
@@ -167,6 +168,8 @@ export class AICoverLetterModule {
 
 Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
 
+${untrustedDataRule(true)}
+
 ${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
 === TARGET POSITION ===
 ${company ? `Company: ${company}` : ""}
@@ -197,6 +200,8 @@ Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using 
       : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
 
 Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
+
+${untrustedDataRule(false)}
 
 ${resumeContext ? `=== PERFIL DEL CANDIDATO ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
 === PUESTO OBJETIVO ===
@@ -239,9 +244,13 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
         {
           role: "system",
           content:
-            "Eres un asistente especializado EXCLUSIVAMENTE en redacción de cartas de presentación profesionales para búsqueda de empleo. " +
-            "Una descripción profesional del candidato (su rol, años de experiencia o habilidades) YA ES suficiente para escribir la carta — aunque NO haya empresa ni puesto específico, y aunque la descripción sea breve o quede a medias, escribe una carta general fuerte con lo que haya. NUNCA devuelvas vacío por falta de empresa/puesto o por poco detalle. " +
-            "Responde con {\"body\": \"\"} ÚNICAMENTE si la solicitud no tiene NADA que ver con empleo, carrera o experiencia profesional (por ejemplo: un poema, una receta, una pregunta random o texto sin sentido). " +
+            (language === "en"
+              ? "You are an assistant specialized EXCLUSIVELY in writing professional cover letters for job applications. " +
+                "A professional description of the candidate (their role, years of experience or skills) IS ALREADY enough to write the letter — even with NO specific company or position, and even if the description is short or unfinished, write a strong general letter with what you have. NEVER return empty because a company/position is missing or because there is little detail. " +
+                "Respond with {\"body\": \"\"} ONLY if the request has NOTHING to do with employment, career or professional experience (for example: a poem, a recipe, a random question or nonsense text). "
+              : "Eres un asistente especializado EXCLUSIVAMENTE en redacción de cartas de presentación profesionales para búsqueda de empleo. " +
+                "Una descripción profesional del candidato (su rol, años de experiencia o habilidades) YA ES suficiente para escribir la carta — aunque NO haya empresa ni puesto específico, y aunque la descripción sea breve o quede a medias, escribe una carta general fuerte con lo que haya. NUNCA devuelvas vacío por falta de empresa/puesto o por poco detalle. " +
+                "Responde con {\"body\": \"\"} ÚNICAMENTE si la solicitud no tiene NADA que ver con empleo, carrera o experiencia profesional (por ejemplo: un poema, una receta, una pregunta random o texto sin sentido). ") +
             langInstruction,
         },
         { role: "user", content: prompt },
@@ -594,11 +603,17 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
         {
           role: "system",
           content:
-            "Eres un Consultor de Carrera de Élite especializado en redacción de cartas de presentación de alto impacto para procesos de selección. " +
-            "Tu especialidad es transformar cartas genéricas en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
-            "SOLO trabajas con cartas de presentación laborales. " +
-            "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
-            "Si el contenido no es una carta de presentación laboral, responde únicamente con: {\"versions\": []} sin texto adicional. " +
+            (language === "en"
+              ? "You are an Elite Career Consultant specialized in writing high-impact cover letters for hiring processes. " +
+                "Your specialty is turning generic letters into text that makes the candidate stand out through concrete achievements and impactful language. " +
+                "You ONLY work with professional cover letters. " +
+                "You NEVER invent figures and NEVER write bracket placeholders — when there is no real metric, you write without a number. " +
+                "If the content is not a professional cover letter, respond only with: {\"versions\": []} and nothing else. "
+              : "Eres un Consultor de Carrera de Élite especializado en redacción de cartas de presentación de alto impacto para procesos de selección. " +
+                "Tu especialidad es transformar cartas genéricas en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
+                "SOLO trabajas con cartas de presentación laborales. " +
+                "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
+                "Si el contenido no es una carta de presentación laboral, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },
         { role: "user", content: prompt },

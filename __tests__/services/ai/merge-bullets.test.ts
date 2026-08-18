@@ -16,9 +16,15 @@ const sectionData = {
   workExperience: [{ id: "job1", jobTitle: "iOS Developer", description: `• ${A}\n• ${B}` }],
 }
 
+/** El modelo responde con el contrato JSON: {"status":"ok","text":"..."}. */
 function moduleReturning(text: string) {
+  return moduleAnswering(JSON.stringify({ status: "ok", text }))
+}
+
+/** Respuesta cruda, para probar el contrato en sí (refusal, JSON roto). */
+function moduleAnswering(content: string) {
   const aiClient = {
-    chat: vi.fn().mockResolvedValue({ choices: [{ message: { content: text } }] }),
+    chat: vi.fn().mockResolvedValue({ choices: [{ message: { content } }] }),
     embed: vi.fn(),
   }
   return { mod: new AIMergeBulletsModule(aiClient, logger as never), aiClient }
@@ -35,7 +41,7 @@ describe("mergeBullets", () => {
   })
 
   it("accepts an honest refusal instead of forcing two unrelated lines together", async () => {
-    const { mod } = moduleReturning("NOT_MERGEABLE")
+    const { mod } = moduleAnswering(JSON.stringify({ status: "not_mergeable" }))
     const res = await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
     expect(res.status).toBe("not_mergeable")
   })
@@ -91,7 +97,7 @@ describe("mergeBullets", () => {
     const merged = "Built and tuned the checkout screen in SwiftUI, improving loading behaviour with Combine"
     const aiClient = {
       chat: vi.fn().mockResolvedValue({
-        choices: [{ message: { content: merged } }],
+        choices: [{ message: { content: JSON.stringify({ status: "ok", text: merged }) } }],
         usage: { prompt_tokens: 300, completion_tokens: 60 },
       }),
       embed: vi.fn(),
@@ -107,4 +113,50 @@ describe("mergeBullets", () => {
     }))
   })
 
+
+  // El contrato de salida es JSON. Una respuesta ilegible no puede colarse como bullet.
+  it("una respuesta que no es JSON no se escribe en el CV", async () => {
+    const { mod } = moduleAnswering("Built and tuned the checkout screen in SwiftUI with Combine")
+    const res = await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
+    expect(res.status).toBe("not_mergeable")
+  })
+
+  // Escribe prosa DENTRO del CV: si las reglas solo existen en inglés, un CV en
+  // español recibe una frase construida con gramática que no es la suya.
+  it("manda las reglas en el idioma del CV, en las dos ramas", async () => {
+    // Se comparan los marcadores de las REGLAS, no verbos sueltos: los bullets de
+    // prueba están en inglés y aparecerían en las dos ramas, dando un falso verde.
+    for (const [language, debe, noDebe] of [
+      ["es", "REGLAS:", "RULES:"],
+      ["en", "RULES:", "REGLAS:"],
+    ] as const) {
+      const { mod, aiClient } = moduleReturning("x")
+      await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData, language }, "PRO")
+      const params = aiClient.chat.mock.calls[0][0]
+      const rules = params.messages[1].content as string
+      const system = params.messages[0].content as string
+      expect(rules, language).toContain(debe)
+      expect(rules, language).not.toContain(noDebe)
+      // El system también cambia de idioma, no solo el prompt de usuario.
+      expect(system, language).toContain(language === "es" ? "élite" : "elite")
+    }
+  })
+
+  it("lleva mensaje system y pide JSON", async () => {
+    const { mod, aiClient } = moduleReturning("x")
+    await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
+    const params = aiClient.chat.mock.calls[0][0]
+    expect(params.messages[0].role).toBe("system")
+    expect(params.response_format).toEqual({ type: "json_object" })
+  })
+
+  // OpenAI cobra al precio de caché el PREFIJO común de la petición. Con los bullets
+  // arriba, ese prefijo era de cero y el descuento no se aplicaba nunca.
+  it("las reglas van ANTES de los datos, para que el prefijo sea cacheable", async () => {
+    const { mod, aiClient } = moduleReturning("x")
+    await mod.mergeBullets("u1", { targetId: "job1", indexes: [0, 1], sectionData }, "PRO")
+    const prompt = aiClient.chat.mock.calls[0][0].messages[1].content as string
+    expect(prompt.indexOf("REGLAS:")).toBeGreaterThan(-1)
+    expect(prompt.indexOf("REGLAS:")).toBeLessThan(prompt.indexOf("BULLET A:"))
+  })
 })

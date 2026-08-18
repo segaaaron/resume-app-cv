@@ -236,14 +236,23 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       messages: [
         {
           role: "system",
-          content:
-            "Eres un Consultor de Carrera de Élite con expertise en optimización de CVs ejecutivos para empresas Fortune 500 y startups de alto crecimiento. " +
-            "Tu especialidad: transformar descripciones genéricas en bullets de alto impacto que superan filtros ATS y capturan la atención de recruiters en los primeros 6 segundos de lectura. " +
-            "Usas el método CAR (Acción-Contexto-Resultado) y priorizas logros de negocio sobre responsabilidades. " +
-            "SOLO procesas contenido de experiencia laboral profesional real. Si el contenido no es de experiencia laboral, responde: {\"status\": \"off_topic\", \"improvements\": []}. " +
-            "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando falta una métrica, mejoras la redacción del bullet sin inventar ni pedir un número. " +
-            "Devolver menos sugerencias de las que te piden es correcto: solo sugieres lo que mejora de verdad. " +
-            langInstruction,
+          // El `system` va en el MISMO idioma que el CV. Estaba solo en español: un CV en
+          // inglés recibía el rol y las restricciones duras en un idioma y la tarea en
+          // otro, que es justo donde se cuelan los errores de una de las dos ramas.
+          content: (language === "en"
+            ? "You are an Elite Career Consultant specialized in optimizing executive résumés for Fortune 500 companies and high-growth startups. " +
+              "Your specialty: turning generic descriptions into high-impact bullets that pass ATS filters and hold a recruiter's attention in the first 6 seconds. " +
+              "You use the CAR method (Action-Context-Result) and prioritize business outcomes over duties. " +
+              "You ONLY process real professional work experience. If the content is not work experience, respond: {\"status\": \"off_topic\", \"improvements\": []}. " +
+              "You NEVER invent figures and NEVER write bracket placeholders — when a metric is missing you improve the wording without inventing one or asking the user for it. " +
+              "Returning fewer suggestions than requested is correct: you only suggest what genuinely improves. "
+            : "Eres un Consultor de Carrera de Élite con expertise en optimización de CVs ejecutivos para empresas Fortune 500 y startups de alto crecimiento. " +
+              "Tu especialidad: transformar descripciones genéricas en bullets de alto impacto que superan filtros ATS y capturan la atención de recruiters en los primeros 6 segundos de lectura. " +
+              "Usas el método CAR (Acción-Contexto-Resultado) y priorizas logros de negocio sobre responsabilidades. " +
+              "SOLO procesas contenido de experiencia laboral profesional real. Si el contenido no es de experiencia laboral, responde: {\"status\": \"off_topic\", \"improvements\": []}. " +
+              "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando falta una métrica, mejoras la redacción del bullet sin inventar ni pedir un número. " +
+              "Devolver menos sugerencias de las que te piden es correcto: solo sugieres lo que mejora de verdad. "
+          ) + langInstruction,
         },
         { role: "user", content: userContent },
       ],
@@ -358,9 +367,19 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     // different result was exactly the reported behaviour. Costs a second call on
     // the rare path instead of leaving a labelled bullet unfixable.
     if (improvements.length === 0 && focus.length > 0) {
+      // Se RETIRA la licencia de devolver vacío en vez de contradecirla. Antes esto
+      // pegaba "tu respuesta vacía se rechaza" a un prompt que unas líneas arriba decía
+      // "dejarlo fuera es lo correcto": OpenAI documenta que ante reglas en conflicto el
+      // modelo gasta tokens de razonamiento intentando reconciliarlas en lugar de elegir
+      // una. Aquí no hay conflicto real — el defecto ya se diagnosticó en código, así que
+      // en ESTE camino vaciar sí es una negativa.
+      const licence = language === "en"
+        ? "A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. "
+        : "Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. "
+      const withoutLicence = prompt.replace(licence, "")
       const insist = language === "en"
-        ? `${prompt}\n\nYOUR PREVIOUS ANSWER WAS EMPTY AND IS REJECTED. The bullet has the diagnosed defect above. Return exactly one entry for index 0 that fixes it, preserving every fact. Do not answer "already_optimized".`
-        : `${prompt}\n\nTU RESPUESTA ANTERIOR VINO VACÍA Y SE RECHAZA. El bullet tiene el defecto diagnosticado arriba. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos. No respondas "already_optimized".`
+        ? `${withoutLicence}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`
+        : `${withoutLicence}\n\nEl bullet de arriba tiene el defecto diagnosticado que se nombra en esta petición, así que SÍ se puede mejorar. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos.`
       const retry = await callModel(insist)
       const retryUsage = retry.usage
       logAIUsage(userId, "improve-bullet", {

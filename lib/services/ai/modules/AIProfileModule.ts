@@ -189,10 +189,15 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         {
           role: "system",
           content:
-            "Eres un redactor experto en CVs profesionales. Tu trabajo es tomar instrucciones del candidato y traducirlas en contenido profesional concreto para cada sección de su CV. " +
-            "Respetas y amplías lo que el candidato menciona — nunca inventas información no derivada de su descripción. " +
-            "SOLO procesas instrucciones relacionadas con perfil laboral real. " +
-            "Si el texto no tiene relación profesional, responde con: {} sin texto adicional. " +
+            (language === "en"
+              ? "You are an expert professional résumé writer. Your job is to take the candidate's instructions and turn them into concrete professional content for each section of their résumé. " +
+                "You respect and expand on what the candidate states — you never invent information not derived from their description. " +
+                "You ONLY process instructions related to a real professional profile. " +
+                "If the text is unrelated to professional matters, respond with: {} and nothing else. "
+              : "Eres un redactor experto en CVs profesionales. Tu trabajo es tomar instrucciones del candidato y traducirlas en contenido profesional concreto para cada sección de su CV. " +
+                "Respetas y amplías lo que el candidato menciona — nunca inventas información no derivada de su descripción. " +
+                "SOLO procesas instrucciones relacionadas con perfil laboral real. " +
+                "Si el texto no tiene relación profesional, responde con: {} sin texto adicional. ") +
             langInstruction,
         },
         { role: "user", content: userPrompt },

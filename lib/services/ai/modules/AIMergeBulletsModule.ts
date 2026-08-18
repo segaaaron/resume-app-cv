@@ -21,7 +21,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { resolveLanguage, detectHallucination, parseAIJson } from "../shared/ai-helpers"
 import { parseBullets } from "../shared/bullets"
 import { clicheBanList } from "../shared/cliches"
 import { cleanGeneratedText } from "../shared/clean-output"
@@ -69,30 +69,56 @@ export class AIMergeBulletsModule {
     const a = bullets[i].trim()
     const b = bullets[j2].trim()
 
-    const prompt = `${langInstruction}
+    // Reglas ESTÁTICAS primero y los datos al final, a propósito: OpenAI cachea el
+    // prefijo común de la petición, así que todo lo que va antes de la primera línea
+    // variable se cobra al precio de caché en la segunda llamada en adelante. Con los
+    // bullets arriba, ese prefijo era de cero.
+    const prompt = language === "en"
+      ? `Fuse the two résumé bullets below —both from the same role— into ONE line.
 
-Combine these TWO résumé bullets from the same role into ONE.
-
-Rules:
+RULES:
 - Keep every fact, tool, technology and figure that appears in either line. Losing one is a failure.
-- One sentence, starting with a past-tense action verb. No bullet marker.
-- Do NOT invent a metric, a scale, an outcome or a technology that is not already in the two lines.
-- Do not use: ${clicheBanList(language)}
-- If the two lines describe genuinely different work and forcing them together would distort either one, return exactly: NOT_MERGEABLE
+- One sentence, verb-first in the past tense (Built, Integrated, Automated, Migrated, Implemented). No pronouns. No bullet marker.
+- Do NOT invent a metric, a scale, an outcome or a technology that is not already in the two lines. Never write a bracket placeholder such as [X%] or [N users].
+- Do not use: ${clicheBanList("en")}
+- If the two lines describe genuinely different work and forcing them together would distort either one, return {"status": "not_mergeable"}. That is a correct and expected answer, not a failure.
+
+Respond ONLY with valid JSON (no markdown):
+{"status": "ok", "text": "<the merged sentence>"} or {"status": "not_mergeable"}
 
 BULLET A: ${a}
-BULLET B: ${b}
+BULLET B: ${b}`
+      : `Fusiona los dos bullets de currículum de abajo —ambos del mismo puesto— en UNA sola línea.
 
-Return ONLY the merged sentence, or NOT_MERGEABLE.`
+REGLAS:
+- Conserva todos los datos, herramientas, tecnologías y cifras que aparezcan en cualquiera de las dos líneas. Perder uno es un fallo.
+- Una sola frase, con el verbo primero y en pasado (Desarrollé, Integré, Automaticé, Migré, Implementé). Sin pronombres. Sin viñeta.
+- NO inventes métricas, escalas, resultados ni tecnologías que no estén ya en las dos líneas. Nunca escribas un placeholder entre corchetes como [X%] o [N usuarios].
+- No uses: ${clicheBanList("es")}
+- Si las dos líneas describen trabajos genuinamente distintos y forzarlas distorsionaría alguna, devuelve {"status": "not_mergeable"}. Es una respuesta correcta y esperada, no un fallo.
+
+Responde ÚNICAMENTE con JSON válido (sin markdown):
+{"status": "ok", "text": "<la frase fusionada>"} o {"status": "not_mergeable"}
+
+BULLET A: ${a}
+BULLET B: ${b}`
+
+    const system = language === "en"
+      ? `You are an elite résumé editor. You fuse two bullets from the same role into one line that keeps every fact and invents nothing. Returning {"status": "not_mergeable"} is a correct answer when the two lines are about different work. ${langInstruction}`
+      : `Eres un editor de currículums de élite. Fusionas dos bullets del mismo puesto en una línea que conserva todos los datos y no inventa nada. Devolver {"status": "not_mergeable"} es una respuesta correcta cuando las dos líneas tratan de trabajos distintos. ${langInstruction}`
 
     let text: string
     let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined
     try {
       const completion = await this.aiClient.chat({
         model: AI_MODEL_PROSE,
-        messages: [{ role: "user", content: prompt }],
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: prompt },
+        ],
         // One sentence; the cap covers the reasoning budget of the GPT-5 family.
         max_tokens: 1200,
+        response_format: { type: "json_object" },
       })
       // Este endpoint era el único que llamaba al modelo sin registrar lo que gastaba: su
       // columna en el panel de costos estaba en cero mientras la factura decía otra cosa.
@@ -115,7 +141,21 @@ Return ONLY the merged sentence, or NOT_MERGEABLE.`
       costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
     })
 
-    if (!text || /NOT_MERGEABLE/i.test(text)) return { status: "not_mergeable" }
+    // Contrato de salida JSON. `not_mergeable` es una respuesta legítima del modelo,
+    // no un error: las dos líneas pueden tratar de trabajos distintos.
+    // Una respuesta ilegible degrada a "no se puede fusionar", NO a un 500: el usuario
+    // pidió unir dos líneas y quedarse como estaba es inocuo — un error rojo por una
+    // mejora opcional no lo es. Mismo criterio que el resto de rechazos de este módulo.
+    let parsed: { status?: unknown; text?: unknown }
+    try {
+      parsed = parseAIJson<{ status?: unknown; text?: unknown }>(text || "{}")
+    } catch {
+      this.logger.warn("[AIService.mergeBullets] respuesta ilegible del modelo — descartada", { targetId })
+      return { status: "not_mergeable" }
+    }
+    if (parsed.status === "not_mergeable") return { status: "not_mergeable" }
+    text = typeof parsed.text === "string" ? parsed.text.trim() : ""
+    if (!text) return { status: "not_mergeable" }
 
     // Strip a bullet marker or wrapping quotes the model may add back.
     text = text.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["'“”]|["'“”]$/g, "").trim()

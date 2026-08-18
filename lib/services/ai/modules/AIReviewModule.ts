@@ -726,10 +726,16 @@ Reglas:
               ? // Role mode: we feed a job TITLE, not a posting. The system prompt
                 // must license inferring standard requirements — otherwise the
                 // "only real job descriptions" rule would off_topic a valid title.
-                "Eres un experto en los requisitos ESTÁNDAR de roles profesionales para análisis de compatibilidad ATS. " +
-                "Dado un título de puesto, infieres los requisitos típicos y bien establecidos de ese rol (sin inventar requisitos de nicho ni específicos de una empresa). NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. "
-              : "Eres un extractor experto de requisitos de vacantes para análisis de compatibilidad ATS. " +
-                "Solo procesas descripciones de puestos de trabajo reales. NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ") +
+                (language === "en"
+                  ? "You are an expert on the STANDARD requirements of professional roles, for ATS compatibility analysis. " +
+                    "Given a job title, you infer that role's typical, well-established requirements (never inventing niche or company-specific ones). You NEVER assign a numeric score — you only extract keywords and give advice. "
+                  : "Eres un experto en los requisitos ESTÁNDAR de roles profesionales para análisis de compatibilidad ATS. " +
+                    "Dado un título de puesto, infieres los requisitos típicos y bien establecidos de ese rol (sin inventar requisitos de nicho ni específicos de una empresa). NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ")
+              : (language === "en"
+                  ? "You are an expert job-posting requirement extractor, for ATS compatibility analysis. " +
+                    "You only process real job descriptions. You NEVER assign a numeric score — you only extract keywords and give advice. "
+                  : "Eres un extractor experto de requisitos de vacantes para análisis de compatibilidad ATS. " +
+                    "Solo procesas descripciones de puestos de trabajo reales. NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ")) +
             langInstruction,
         },
         { role: "user", content: prompt },
@@ -1249,10 +1255,15 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         {
           role: "system",
           content:
-            "Eres un Consultor de Carrera de Élite especializado en revisión y optimización de CVs. " +
-            "SOLO respondes sobre el CV del candidato, perfil profesional, experiencia laboral o búsqueda de empleo. " +
-            "Si la pregunta no tiene relación, responde únicamente con: " +
-            "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} sin texto adicional. " +
+            (language === "en"
+              ? "You are an Elite Career Consultant specialized in résumé review and optimization. " +
+                "You ONLY answer about the candidate's résumé, professional profile, work experience or job search. " +
+                "If the question is unrelated, respond only with: " +
+                "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} and nothing else. "
+              : "Eres un Consultor de Carrera de Élite especializado en revisión y optimización de CVs. " +
+                "SOLO respondes sobre el CV del candidato, perfil profesional, experiencia laboral o búsqueda de empleo. " +
+                "Si la pregunta no tiene relación, responde únicamente con: " +
+                "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} sin texto adicional. ") +
             langInstruction,
         },
         { role: "user", content: prompt },

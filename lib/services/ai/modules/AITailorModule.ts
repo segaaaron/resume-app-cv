@@ -10,6 +10,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
+import { untrustedDataRule } from "../shared/untrusted-input"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
 import { assessDescription, isDescriptionOptimized } from "../shared/bullet-quality"
@@ -121,7 +122,9 @@ export class AITailorModule {
 
 You are an expert resume strategist. Tailor the candidate's CV to this specific job description.
 
-JOB DESCRIPTION:
+${untrustedDataRule(true)}
+
+=== JOB DESCRIPTION ===
 ${jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)}
 
 CANDIDATE CV:
@@ -165,7 +168,9 @@ Rules:
 
 Eres un estratega experto en currículos. Adapta el CV del candidato a esta oferta de trabajo específica.
 
-OFERTA DE TRABAJO:
+${untrustedDataRule(false)}
+
+=== OFERTA DE TRABAJO ===
 ${jobDescription.slice(0, AI_INPUT_LIMITS.jobDescription)}
 
 CV DEL CANDIDATO:
