@@ -197,30 +197,39 @@ export default function ResumesDashboard({
   }
 
   function createResume() {
-    // Double-click guard: lock button for 1.5s to prevent accidental dual creation.
+    // Double-click guard, tied to the REQUEST rather than to a stopwatch. It
+    // used to unlock on a 1.5s timer: a create slower than that — which is any
+    // create on a cold serverless start — released the button mid-flight and
+    // the guard let a second POST through, creating two résumés from one
+    // impatient user. Every path below now hands the lock back explicitly.
     if (creating) return
     setCreating(true)
-    setTimeout(() => setCreating(false), 1500)
     // Freemium funnel: 1 CV included on free plan. Beyond that → UpgradeModal.
     if (!isPro && resumes.length >= 1) {
       track("paywall_hit", { feature: "resume_cap", current_plan: session?.user?.plan ?? "UNSUBSCRIBED" })
       openUpgradeModal("second-resume")
+      setCreating(false)
       return
     }
     if (isPro && resumes.length >= 1) {
+      // The modal owns the flow now; doCreateResume takes the lock again if
+      // and when the user confirms.
       requirePersonalUseConsent(doCreateResume)
+      setCreating(false)
       return
     }
-    doCreateResume()
+    void doCreateResume()
   }
 
   async function doCreateResume() {
     setCreating(true)
     try {
       const res = await apiFetch("/api/resumes", { method: "POST" })
-      if (!res.ok) { toast.error(t("create_error")); return }
+      if (!res.ok) { toast.error(t("create_error")); setCreating(false); return }
       const data = await res.json()
       track("resume_created", { method: "blank" })
+      // Deliberately still locked: we are navigating away, and releasing it
+      // here just offers the user one more click on a page that is leaving.
       router.push(`/${locale}/editor/${data.id}?new=1`)
     } catch {
       toast.error(t("create_error"))
