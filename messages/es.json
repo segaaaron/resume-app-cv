@@ -2793,7 +2793,21 @@
       "action_SUBSCRIPTION_CREATED_EXTERNAL": "Suscripción creada (externa)",
       "action_PROFILE_SYNCED_FROM_STRIPE": "Perfil sincronizado desde Stripe",
       "action_ADMIN_RECONCILE_USER": "Usuario reconciliado por admin"
-    }
+    },
+    "email_quota_title": "Correos enviados este mes",
+    "email_quota_subtitle": "Consumo que reporta Resend, no un conteo nuestro",
+    "email_quota_used": "usados",
+    "email_quota_of": "de",
+    "email_quota_remaining": "{n} disponibles",
+    "email_quota_free_plan": "Plan gratuito",
+    "email_quota_paid_plan": "Cuenta de pago",
+    "email_quota_empty": "Todavía sin datos. El número aparece con el primer correo que salga después del despliegue.",
+    "email_quota_updated": "Última lectura",
+    "email_quota_history": "Meses anteriores",
+    "email_quota_unparsed": "Resend devolvió un formato que no supimos leer. Valor crudo:",
+    "email_quota_over": "Tope alcanzado — Resend está rechazando envíos",
+    "email_quota_near": "Cerca del tope",
+    "email_quota_no_limit": "Sin tope declarado por Resend"
   },
   "guide": {
     "hero": {

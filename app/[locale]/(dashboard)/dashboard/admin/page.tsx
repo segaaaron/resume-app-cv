@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import AdminUsersTable from "@/components/admin/AdminUsersTable"
 import AIUsagePanel from "@/components/admin/AIUsagePanel"
+import EmailQuotaPanel from "@/components/admin/EmailQuotaPanel"
 import { getTranslations } from "next-intl/server"
 
 export const dynamic = "force-dynamic"
@@ -327,6 +328,9 @@ export default async function AdminPage({
           <ArrowRight className="w-4 h-4 text-[#003087] transition-transform duration-200 group-hover:translate-x-0.5" />
         </Link>
       </div>
+
+      {/* Cuota de correo de Resend — el número que decide si hay que pagar el plan */}
+      <EmailQuotaPanel locale={locale} />
 
       {/* AI Usage Panel */}
       <AIUsagePanel />

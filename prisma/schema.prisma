@@ -66,18 +66,18 @@ model User {
   createdAt                    DateTime             @default(now())
   updatedAt                    DateTime             @updatedAt
 
-  isManaged            Boolean   @default(false)
-  managedExpiresAt     DateTime?
-  managedDownloadLimit Int?
-  managedDownloadsUsed Int       @default(0)
+  isManaged               Boolean   @default(false)
+  managedExpiresAt        DateTime?
+  managedDownloadLimit    Int?
+  managedDownloadsUsed    Int       @default(0)
   // Admin-configurable caps for a LIMITED (managed) user. NULL = use the LIMITED
   // default (5), enforced in lib/plans.ts. Mirrors managedDownloadLimit; no effect
   // on any other plan.
   managedResumeLimit      Int?
   managedCoverLetterLimit Int?
-  managedCreatedBy     String?
-  managedNote          String?
-  managedBlocked       Boolean   @default(false)
+  managedCreatedBy        String?
+  managedNote             String?
+  managedBlocked          Boolean   @default(false)
 
   consentLogs ConsentLog[]
 
@@ -606,4 +606,41 @@ model ErrorLog {
   @@index([fingerprint, createdAt])
   @@index([source, createdAt])
   @@index([userId, createdAt])
+}
+
+/// Consumo mensual de Resend, tomado de SUS cabeceras, no contado por nosotros.
+///
+/// Resend no expone endpoint para consultar el consumo, pero devuelve
+/// `x-resend-monthly-quota` ("Your used monthly email sending quota") en cada respuesta.
+/// Guardamos su número, así que no puede desviarse del que decide si hay que pagar.
+///
+/// `x-resend-daily-quota` SOLO llega a cuentas del plan gratuito: si `dailyRaw` viene
+/// vacío es que la cuenta ya dejó de ser gratis. Por eso se guarda aunque no se muestre.
+///
+/// Una fila por mes (`period` = "YYYY-MM"): el histórico es lo que dice si el consumo
+/// crece hacia el tope o se quedó plano, que es la decisión de compra real.
+model EmailQuota {
+  id String @id @default(cuid())
+
+  /// "YYYY-MM" en UTC. Único: cada mes se actualiza su propia fila.
+  period String @unique
+
+  /// Valor crudo de la cabecera. Se guarda tal cual porque el formato NO está
+  /// documentado: si algún día llega "12/3000" o un porcentaje, el dato no se pierde
+  /// aunque el parseo falle, y el panel puede mostrarlo sin cambiar el esquema.
+  monthlyRaw String
+  dailyRaw   String?
+
+  /// Parseo best-effort del crudo. Null = llegó en un formato que no supimos leer.
+  monthlyUsed  Int?
+  monthlyLimit Int?
+
+  /// Cuántas respuestas de Resend alimentaron esta fila. Sirve de contraste: si nuestro
+  /// conteo y el suyo se separan mucho, alguien más está enviando con la misma clave.
+  observations Int @default(0)
+
+  /// Última vez que Resend nos contestó con una cabecera de cuota.
+  lastSeenAt DateTime @default(now())
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }

@@ -2793,7 +2793,21 @@
       "action_SUBSCRIPTION_CREATED_EXTERNAL": "Subscription created (external)",
       "action_PROFILE_SYNCED_FROM_STRIPE": "Profile synced from Stripe",
       "action_ADMIN_RECONCILE_USER": "Admin reconciled user"
-    }
+    },
+    "email_quota_title": "Emails sent this month",
+    "email_quota_subtitle": "Usage as reported by Resend, not a count of our own",
+    "email_quota_used": "used",
+    "email_quota_of": "of",
+    "email_quota_remaining": "{n} left",
+    "email_quota_free_plan": "Free plan",
+    "email_quota_paid_plan": "Paid account",
+    "email_quota_empty": "No data yet. The number appears with the first email sent after the deploy.",
+    "email_quota_updated": "Last reading",
+    "email_quota_history": "Previous months",
+    "email_quota_unparsed": "Resend returned a format we could not read. Raw value:",
+    "email_quota_over": "Limit reached — Resend is rejecting sends",
+    "email_quota_near": "Close to the limit",
+    "email_quota_no_limit": "No limit declared by Resend"
   },
   "guide": {
     "hero": {
