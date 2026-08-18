@@ -22,7 +22,7 @@ const LANG_LEVEL_LABEL: Record<string, string> = {
 
 export default function ShowSoireeTemplate() {
   const black = "#0f0f10"
-  const smoke = "#d8d4cb"
+  const smoke = "#4f4b44"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -99,7 +99,7 @@ export default function ShowSoireeTemplate() {
       style={{
         width: "100%",
         minHeight: "297mm",
-        background: black,
+        background: "#ffffff",
         color: smoke,
         fontFamily: "inherit",
         overflow: "hidden",
@@ -118,19 +118,19 @@ export default function ShowSoireeTemplate() {
             {pd.jobTitle}
           </div>
         )}
-        <h1 style={{ fontFamily: SERIF, fontSize: 56, fontWeight: 600, margin: 0, lineHeight: 0.92, color: "#fff", letterSpacing: "0.01em" }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 56, fontWeight: 600, margin: 0, lineHeight: 0.92, color: "#15171c", letterSpacing: "0.01em" }}>
           {pd.firstName || "Your"}<br /><span style={{ color: accent }}>{pd.lastName || "Name"}</span>
         </h1>
 
         <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "20px 0 22px" }}>
           <span style={{ width: 30, height: 1, background: accent, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-          <span style={{ fontSize: 10.5, letterSpacing: "0.2em", color: "#8a857c", textTransform: "uppercase" }}>
+          <span style={{ fontSize: 10.5, letterSpacing: "0.2em", color: "#706c64", textTransform: "uppercase" }}>
             {config.language === "en" ? "Curriculum Vitae" : "Currículum Vitae"}
           </span>
         </div>
 
         {visible("summary") && summary && (
-          <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "#b0aca3", margin: "0 0 26px", maxWidth: 380 }}>{summary}</p>
+          <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "#73716b", margin: "0 0 26px", maxWidth: 380 }}>{summary}</p>
         )}
 
         {visible("workExperience") && workExperience.length > 0 && (
@@ -139,7 +139,7 @@ export default function ShowSoireeTemplate() {
             {workExperience.map((e) => (
               <div key={e.id} className="resume-entry" style={{ marginBottom: 13, breakInside: "avoid" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                  <span style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{e.jobTitle}</span>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: "#15171c" }}>{e.jobTitle}</span>
                   <span style={{ fontSize: 10.5, color: accent, whiteSpace: "nowrap" }}>
                     {e.startDate}
                     {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
@@ -151,7 +151,7 @@ export default function ShowSoireeTemplate() {
                 {e.description && (
                   <div
                     className="resume-desc"
-                    style={{ fontSize: 11.5, color: "#9a958c", lineHeight: 1.5 }}
+                    style={{ fontSize: 11.5, color: "#706d66", lineHeight: 1.5 }}
                     dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                   />
                 )}
@@ -165,10 +165,10 @@ export default function ShowSoireeTemplate() {
             <SoH id="education">{labelFor("education")}</SoH>
             {education.map((ed) => (
               <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
-                <div style={{ fontSize: 14, color: "#fff" }}>
+                <div style={{ fontSize: 14, color: "#15171c" }}>
                   {ed.degree}{ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                 </div>
-                <div style={{ fontSize: 11, color: "#8a857c" }}>
+                <div style={{ fontSize: 11, color: "#706c64" }}>
                   {ed.institution} · {ed.startDate}
                   {ed.currentlyStudying ? ` — ${present}` : ed.endDate ? ` — ${ed.endDate}` : ""}
                 </div>
@@ -216,7 +216,7 @@ export default function ShowSoireeTemplate() {
             <>
               <SoMini>{labelFor("languages")}</SoMini>
               {languages.map((l) => (
-                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#b0aca3", padding: "4px 0", borderBottom: `1px solid ${accent}1f` }}>
+                <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "#73716b", padding: "4px 0", borderBottom: `1px solid ${accent}1f` }}>
                   <span>{l.name}</span>
                   <span style={{ color: accent }}>{langLbl(l.level)}</span>
                 </div>
@@ -240,7 +240,7 @@ export default function ShowSoireeTemplate() {
           {contacts.length > 0 && (
             <>
               <SoMini>{config.language === "en" ? "Contact" : "Contacto"}</SoMini>
-              <div style={{ display: "flex", flexDirection: "column", gap: 9, fontSize: 11, color: "#b0aca3" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 9, fontSize: 11, color: "#73716b" }}>
                 {contacts.map(([I, t], i) => (
                   <span key={i} style={{ display: "flex", alignItems: "center", gap: 11 }}>
                     <span style={{ color: accent, fontSize: 12 }}>{I}</span>{t}

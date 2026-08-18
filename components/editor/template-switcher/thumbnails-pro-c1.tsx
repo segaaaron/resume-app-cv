@@ -1060,35 +1060,6 @@ export function SommelierThumb({ color }: { color: string }) {
   )
 }
 
-export function HotelCVThumb({ color }: { color: string }) {
-  const navy = color || "#1c3957"
-  const gold = "#a98a4a"
-  const sand = "#e8dfcd"
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill={sand} />
-      <rect x="0" y="0" width="80" height="26" fill={navy} />
-      <text x="4" y="9" fontSize="3.5" fontFamily="monospace" fill={gold} letterSpacing="0.8">{"· HOSPITALITY ·"}</text>
-      <text x="4" y="18" fontSize="10" fontFamily="serif" fill={sand} fontWeight="500">Full Name</text>
-      <text x="4" y="24" fontSize="4" fontFamily="serif" fill={gold} fontStyle="italic">General Manager</text>
-      <rect x="0" y="26" width="80" height="5" fill={gold} />
-      {[0,1,2,3].map((i) => (
-        <g key={i}>
-          <rect x="4" y={36 + i * 14} width="18" height="1.5" rx="0.5" fill={navy} opacity="0.3" />
-          <rect x="4" y={39 + i * 14} width="34" height="1.5" rx="0.5" fill="#1a1a1a" opacity="0.15" />
-          <line x1="4" y1={46 + i * 14} x2="38" y2={46 + i * 14} stroke={gold} strokeWidth="0.5" />
-        </g>
-      ))}
-      {[0,1,2].map((i) => (
-        <g key={i}>
-          <rect x="44" y={36 + i * 18} width="16" height="1.5" rx="0.5" fill={navy} opacity="0.3" />
-          <rect x="44" y={39 + i * 18} width="30" height="1.5" rx="0.5" fill="#1a1a1a" opacity="0.15" />
-        </g>
-      ))}
-      <rect x="0" y="104" width="80" height="6" fill={navy} />
-    </svg>
-  )
-}
 
 export function BartenderCVThumb({ color }: { color: string }) {
   const neon = color || "#ff2e63"
@@ -1205,9 +1176,6 @@ export function ChalkboardThumb({ color }: { color: string }) {
 export function AcademicCVThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="white" /><rect x="8" y="8" width="44" height="5" rx="1" fill="#111" opacity="0.8" /><rect x="8" y="15" width="56" height="1.5" rx="0.75" fill="#666" opacity="0.5" /><rect x="8" y="21" width="64" height="1.5" fill="#111" opacity="0.8" /><rect x="8" y="28" width="32" height="1.5" rx="0.75" fill="#111" opacity="0.7" /><rect x="8" y="31" width="64" height="0.5" fill="#111" opacity="0.3" />{[0,1,2,3].map((i) => (<g key={i}><rect x="8" y={35 + i * 7} width="14" height="1" rx="0.5" fill={color} opacity="0.7" /><rect x="26" y={35 + i * 7} width="40" height="1" rx="0.5" fill="#111" opacity="0.3" /></g>))}<rect x="8" y="65" width="28" height="1.5" rx="0.75" fill="#111" opacity="0.7" /><rect x="8" y="100" width="64" height="0.5" fill="#111" opacity="0.4" /></svg>)
 }
-export function PsychologistThumb({ color }: { color: string }) {
-  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#f6f0e6" /><rect x="0" y="0" width="40" height="36" fill={color} opacity="0.85" /><rect x="40" y="0" width="40" height="36" fill="#c97a55" opacity="0.85" /><rect x="4" y="8" width="28" height="3" rx="1" fill="white" opacity="0.85" /><rect x="4" y="13" width="20" height="1.5" rx="0.75" fill="white" opacity="0.7" /><rect x="4" y="42" width="22" height="2" rx="1" fill={color} opacity="0.6" />{[0,1,2,3].map((i) => (<g key={i}><rect x="4" y={47 + i * 8} width="10" height="1" rx="0.5" fill="#c97a55" opacity="0.6" /><rect x="16" y={47 + i * 8} width="20" height="1.2" rx="0.6" fill="#2b2218" opacity="0.35" /></g>))}<rect x="44" y="42" width="18" height="2" rx="1" fill={color} opacity="0.6" /></svg>)
-}
 
 export function PilotLogThumb({ color: _color }: { color: string }) {
   const navy = "#0c2545", paper = "#f6f1e4", gold = "#d4a942"
@@ -1292,13 +1260,11 @@ export default function ProC1Thumb({ id, color }: { id: string; color: string })
     case "animatorcv":       return <AnimatorCVThumb color={color} />
     case "chefmenu":         return <ChefMenuThumb color={color} />
     case "sommelier":        return <SommelierThumb color={color} />
-    case "hotelcv":          return <HotelCVThumb color={color} />
     case "bartendercv":      return <BartenderCVThumb color={color} />
     case "legalbrief":       return <LegalBriefThumb color={color} />
     case "engraved":         return <EngravedThumb color={color} />
     case "chalkboard":       return <ChalkboardThumb color={color} />
     case "academiccv":       return <AcademicCVThumb color={color} />
-    case "psychologist":     return <PsychologistThumb color={color} />
     case "pilotlog":         return <PilotLogThumb color={color} />
     case "onboardingform":   return <OnboardingFormThumb color={color} />
     case "athletecard":      return <AthleteCardThumb color={color} />

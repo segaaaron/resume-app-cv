@@ -184,7 +184,6 @@ export type TemplateId =
   | "atsonyx"
   | "atssable"
   | "atscerulean"
-  | "atsivory"
   | "atsgarnet"
   | "atscopper"
   | "atsharbor"
@@ -193,7 +192,6 @@ export type TemplateId =
   | "sharp"
   | "glass"
   | "neon"
-  | "executive"
   | "sidebar"
   | "fold"
   | "bauhaus"
@@ -215,14 +213,10 @@ export type TemplateId =
   | "geneva"
   | "windsor"
   | "milan"
-  | "zurich"
   | "porto"
-  | "barcelona"
   | "vienna"
   | "berlin"
   | "stockholm"
-  | "dublin"
-  | "helsinki"
   | "lagos"
   | "seoul"
   | "copenhagen"
@@ -251,10 +245,8 @@ export type TemplateId =
   | "engraved"
   | "chalkboard"
   | "academiccv"
-  | "psychologist"
   | "chefmenu"
   | "sommelier"
-  | "hotelcv"
   | "bartendercv"
   | "medicalchart"
   | "vitalsigns"
@@ -297,7 +289,6 @@ export type TemplateId =
   | "elite-cuvee"
   | "elite-cadence"
   | "elite-meridian"
-  | "luxe-aurum"
   | "luxe-vellum"
   | "luxe-regent"
   | "luxe-apex"
@@ -305,9 +296,7 @@ export type TemplateId =
   | "exec-sovereign"
   | "exec-citadel"
   | "exec-dynasty"
-  | "exec-oxblood"
   | "exec-cobalt"
-  | "exec-terra"
   | "exec-nocturne"
   | "exec-platine"
   | "atelier"
@@ -362,6 +351,15 @@ export interface TemplateInfo {
   description: string
   columns: "single" | "double"
   hasPhoto: boolean
+  /**
+   * Harvard-style résumé: one column, no photo, no colour fields, no icons, bars or
+   * rings — hierarchy carried by type alone. Measured, not asserted: every id flagged
+   * here was verified against the rendered template, and the guard test re-checks it.
+   *
+   * Deliberately NOT "endorsed by Harvard": the phrase names a widely used layout
+   * convention, and the badge says "Formato Harvard" for exactly that reason.
+   */
+  harvard?: boolean
 }
 
 /** Default template applied when a CV is created or imported without an explicit pick. */
@@ -371,7 +369,7 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "classic", name: "Clásico", description: "Simple y adecuado para cualquier industria", columns: "single", hasPhoto: false },
   { id: "modern", name: "Moderno", description: "Atractivo y orientado al futuro", columns: "single", hasPhoto: true },
   { id: "professional", name: "Profesional", description: "Estructura organizada y moderna", columns: "single", hasPhoto: true },
-  { id: "elegant", name: "Elegante", description: "Minimalista con bloques de color", columns: "single", hasPhoto: false },
+  { id: "elegant", name: "Elegante", description: "Minimalista con bloques de color", columns: "single", hasPhoto: false, harvard: true },
   { id: "circular", name: "Circular", description: "Curvas suaves con acentos de color", columns: "single", hasPhoto: true },
   { id: "vertical", name: "Vertical", description: "Skills junto a la experiencia, dos columnas", columns: "double", hasPhoto: true },
   { id: "horizontal", name: "Horizontal", description: "Maximiza el espacio, encuadre profesional", columns: "double", hasPhoto: false },
@@ -381,23 +379,21 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "ats", name: "ATS Pro", description: "Optimizado para sistemas de selección automática", columns: "single", hasPhoto: false },
   { id: "atsmeridian", name: "ATS Meridian", description: "ATS-safe con banda de color y tipografía limpia", columns: "single", hasPhoto: false },
   { id: "atsverdant", name: "ATS Verdant", description: "ATS-safe, banda de color y viñetas de punto", columns: "single", hasPhoto: false },
-  { id: "atscardinal", name: "ATS Cardinal", description: "ATS-safe serif con regla superior", columns: "single", hasPhoto: false },
-  { id: "atscobalt", name: "ATS Cobalt", description: "ATS-safe con encabezado dividido y barras de sección", columns: "single", hasPhoto: false },
+  { id: "atscardinal", name: "ATS Cardinal", description: "ATS-safe serif con regla superior", columns: "single", hasPhoto: false, harvard: true },
+  { id: "atscobalt", name: "ATS Cobalt", description: "ATS-safe con encabezado dividido y barras de sección", columns: "single", hasPhoto: false, harvard: true },
   { id: "atsslate", name: "ATS Slate", description: "ATS-safe minimalista con subrayado de sección", columns: "single", hasPhoto: false },
   { id: "atsnordic", name: "ATS Nordic", description: "ATS-safe con regla y barras de sección", columns: "single", hasPhoto: false },
-  { id: "atsonyx", name: "ATS Onyx", description: "ATS-safe minimalista con secciones tipo badge", columns: "single", hasPhoto: false },
+  { id: "atsonyx", name: "ATS Onyx", description: "ATS-safe minimalista con secciones tipo badge", columns: "single", hasPhoto: false, harvard: true },
   { id: "atssable", name: "ATS Sable", description: "ATS-safe serif con banda de color", columns: "single", hasPhoto: false },
   { id: "atscerulean", name: "ATS Cerulean", description: "ATS-safe con banda y barras de sección", columns: "single", hasPhoto: false },
-  { id: "atsivory", name: "ATS Ivory", description: "ATS-safe minimalista y ligero", columns: "single", hasPhoto: false },
-  { id: "atsgarnet", name: "ATS Garnet", description: "ATS-safe serif con subrayado de sección", columns: "single", hasPhoto: false },
-  { id: "atscopper", name: "ATS Copper", description: "ATS-safe serif con banda y barras", columns: "single", hasPhoto: false },
+  { id: "atsgarnet", name: "ATS Garnet", description: "ATS-safe serif con subrayado de sección", columns: "single", hasPhoto: false, harvard: true },
+  { id: "atscopper", name: "ATS Copper", description: "ATS-safe serif con banda y barras", columns: "single", hasPhoto: false, harvard: true },
   { id: "atsharbor", name: "ATS Harbor", description: "ATS-safe con encabezado dividido y badges", columns: "single", hasPhoto: false },
-  { id: "atsgraphite", name: "ATS Graphite", description: "ATS-safe con banda de color y barras", columns: "single", hasPhoto: false },
+  { id: "atsgraphite", name: "ATS Graphite", description: "ATS-safe con banda de color y barras", columns: "single", hasPhoto: false, harvard: true },
   { id: "atssequoia", name: "ATS Sequoia", description: "ATS-safe serif con encabezado dividido y badges", columns: "single", hasPhoto: false },
   { id: "sharp", name: "Sharp", description: "Líneas angulares, máximo impacto visual", columns: "double", hasPhoto: true },
   { id: "glass", name: "Glass", description: "Efecto glassmorphism moderno", columns: "double", hasPhoto: true },
-  { id: "neon", name: "Neon", description: "Neobrutalism vibrante para perfiles creativos", columns: "single", hasPhoto: false },
-  { id: "executive", name: "Executive", description: "Premium para perfiles senior y directivos", columns: "double", hasPhoto: false },
+  { id: "neon", name: "Neon", description: "Neobrutalism vibrante para perfiles creativos", columns: "single", hasPhoto: false, harvard: true },
   { id: "sidebar", name: "Sidebar", description: "Sidebar de color sólido con foto circular", columns: "double", hasPhoto: true },
   { id: "fold", name: "Fold", description: "Diseño modular en bloques, muy visual", columns: "double", hasPhoto: false },
   { id: "bauhaus", name: "Bauhaus", description: "Geométrico y bold, inspirado en diseño gráfico", columns: "double", hasPhoto: false },
@@ -428,14 +424,10 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "geneva", name: "Geneva ✦", description: "Nombre centrado en mayúsculas, divisores SVG punteados con icono", columns: "single", hasPhoto: false },
   { id: "windsor", name: "Windsor ✦", description: "Banda navy ejecutiva con nombre blanco y título dorado, foto con marco dorado", columns: "single", hasPhoto: true },
   { id: "milan", name: "Milán ✦", description: "Sidebar derecho carbón con iconos blancos, acento rojo bajo el nombre", columns: "double", hasPhoto: false },
-  { id: "zurich", name: "Zürich ✦", description: "Numeración editorial (01 02 03) detrás de cada sección, acento cobre", columns: "single", hasPhoto: false },
   { id: "porto", name: "Porto ✦", description: "Header diagonal con split de color SVG, nombre a caballo entre dos tonos", columns: "single", hasPhoto: false },
-  { id: "barcelona", name: "Barcelona ✦", description: "Skills como chips en grid, iconos iOS-style filled, nombre ultra-bold", columns: "double", hasPhoto: false },
   { id: "vienna", name: "Viena ✦", description: "Monograma faint de fondo, línea acento lateral en cada sección", columns: "single", hasPhoto: true },
   { id: "berlin", name: "Berlín ✦", description: "Estética monospace con prefijo › en secciones, chips de skills con borde", columns: "single", hasPhoto: false },
   { id: "stockholm", name: "Estocolmo ✦", description: "Sidebar gris claro con barras de progreso etiquetadas, iconos sky blue", columns: "double", hasPhoto: true },
-  { id: "dublin", name: "Dublín ✦", description: "Máxima densidad de contenido, headers en versalitas, divisores SVG lineales", columns: "single", hasPhoto: false },
-  { id: "helsinki", name: "Helsinki ✦", description: "Timeline SVG de skills en sidebar estrecho, proyectos con chips de tecnologías", columns: "double", hasPhoto: false },
   { id: "seoul", name: "Seúl ✦", description: "Sidebar oscuro con textura SVG de puntos, indicadores de color por contacto", columns: "double", hasPhoto: true },
   { id: "copenhagen", name: "Copenhague ✦", description: "Secciones con fondos tintados alternos, foto con marco redondeado, editorial suave", columns: "single", hasPhoto: true },
   { id: "genevanoir", name: "Geneva Noir ✦", description: "Header negro, nombre blanco tracking amplio, badges oscuros en secciones, acento eléctrico", columns: "single", hasPhoto: false },
@@ -457,11 +449,9 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "coralsidebar",     name: "Coral Sidebar ⭐",    description: "Sidebar coral derecho, nombre grande 56px, chips de stack redondeados", columns: "double", hasPhoto: true },
   { id: "sagebotanical",    name: "Sage Botanical ⭐",   description: "Header sage con curva, 2 columnas, tipografía DM Serif italic", columns: "double", hasPhoto: true },
   { id: "datadriven",       name: "Data Driven ⭐",      description: "Número gigante de años, métricas en strip, sparkline SVG footer", columns: "double", hasPhoto: false },
-  { id: "legalbrief",      name: "Legal Brief ⭐",      description: "Memorial curricular estilo brief legal, márgenes rojos, firma cursiva", columns: "single", hasPhoto: false },
+  { id: "legalbrief",      name: "Legal Brief ⭐",      description: "Memorial curricular estilo brief legal, márgenes rojos, firma cursiva", columns: "single", hasPhoto: false, harvard: true },
   { id: "engraved",        name: "Engraved ⭐",          description: "Marco doble dorado, monograma SVG, tipografía Cormorant grabada", columns: "single", hasPhoto: false },
-  { id: "academiccv",      name: "Academic CV ⭐",       description: "CV académico sobrio, línea negra, columna fecha/contenido, EB Garamond", columns: "single", hasPhoto: false },
-  { id: "psychologist",    name: "Psychologist ⭐",      description: "Header partido olive/terracotta, tipografía Lora, warm journal style", columns: "double", hasPhoto: true },
-  { id: "hotelcv",        name: "Hotel CV ⭐",           description: "Estética concierge de hotel de lujo, tarjeta de bienvenida y datos estructurados", columns: "single", hasPhoto: true },
+  { id: "academiccv",      name: "Academic CV ⭐",       description: "CV académico sobrio, línea negra, columna fecha/contenido, EB Garamond", columns: "single", hasPhoto: false, harvard: true },
   { id: "translatorcv",   name: "Translator CV ⭐",        description: "Dos columnas bilingüe en papel crema, tipografía EB Garamond itálica, edición clásica", columns: "double", hasPhoto: false },
   { id: "risodesigner",         name: "Riso Designer ⭐",          description: "Estética risografía indie, bloques de color, tipografía bold contrastante", columns: "double", hasPhoto: false },
   { id: "uxtokens",             name: "UX Tokens ⭐",              description: "Sistema de diseño card dark, etiquetas tipo design token, paleta verde/azul", columns: "double", hasPhoto: true },
@@ -478,7 +468,6 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "elite-cuvee",          name: "Cuvée ✦",                  description: "Chef · Menú luxe sobre fondo obsidian, secciones bordeadas en oro y tipografía serif para perfiles culinarios", columns: "double", hasPhoto: true },
   { id: "elite-cadence",        name: "Cadence ✦",                description: "Filmmaker · Estética cinematográfica ámbar, banda amber rule y timeline sobre fondo oscuro para perfiles audiovisuales", columns: "single", hasPhoto: true },
   { id: "elite-meridian",       name: "Meridian ✦",               description: "Doctor · Clinical luxe con banda teal, paneles blancos y layout estructurado para perfiles médicos", columns: "single", hasPhoto: false },
-  { id: "luxe-aurum",           name: "Aurum ✦",                  description: "Cream & gold — gauges de habilidades en anillos SVG dorados, fondo crema cálido para perfiles signature", columns: "double", hasPhoto: true },
   { id: "luxe-vellum",          name: "Vellum ✦",                 description: "Ivory editorial — guilloché SVG en ondas, tipografía centrada serif y estructura editorial para perfiles luxe", columns: "single", hasPhoto: false },
   { id: "luxe-regent",          name: "Régent ✦",                 description: "Emerald executive — banda métrica de trayectoria, fondo esmeralda y composición ejecutiva para perfiles directivos", columns: "single", hasPhoto: false },
   { id: "luxe-apex",            name: "Luxe Apex ✦",              description: "Charcoal tech-luxe — marca de compás SVG, tipografía mono y fondo oscuro técnico para perfiles tech-executive", columns: "single", hasPhoto: false },
@@ -486,9 +475,7 @@ export const TEMPLATES: TemplateInfo[] = [
   { id: "exec-sovereign",       name: "Sovereign ✦",              description: "Executive · Rail navy lateral izquierdo, marco circular de retrato y grid estructurado para perfiles C-suite", columns: "double", hasPhoto: true },
   { id: "exec-citadel",         name: "Citadel ✦",                description: "Executive · Doble marco Art-Deco navy, banda masthead invertida y chevrones dorados para perfiles ejecutivos premium", columns: "single", hasPhoto: false },
   { id: "exec-dynasty",         name: "Dynasty ✦",                description: "Executive · Rosetones ornamentales en esquinas, guilloché diagonal y monograma diamante sobre fondo obsidian", columns: "single", hasPhoto: false },
-  { id: "exec-oxblood",         name: "Oxblood ✦",                description: "Executive · Panel lateral bordeaux, sello de cera SVG y tipografía serif para perfiles ejecutivos con carácter", columns: "double", hasPhoto: false },
   { id: "exec-cobalt",          name: "Exec Cobalt ✦",            description: "Executive · Fondo midnight, constelación de nodos platino SVG y tipografía técnica para perfiles tech-executive", columns: "single", hasPhoto: false },
-  { id: "exec-terra",           name: "Terra ✦",                  description: "Executive · Arco arquitectónico terracota, toques tierra y tipografía serif warm para perfiles ejecutivos creativos", columns: "single", hasPhoto: false },
   { id: "exec-nocturne",        name: "Nocturne ✦",               description: "Executive · Banda plum, acentos rose-gold y gauges de anillos SVG para perfiles ejecutivos con estética nocturna", columns: "single", hasPhoto: false },
   { id: "exec-platine",         name: "Platine ✦",                description: "Executive · Black & platinum, numerales outline de índice y layout minimalista elegante para perfiles C-suite", columns: "single", hasPhoto: false },
   // ─── Signature / Tpl ───

@@ -23,11 +23,11 @@ export async function generateMetadata({
   return {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
+    default: "Valhalla Resume — AI Resume Builder | Beat ATS, 132 Templates",
     template: "%s | Valhalla Resume",
   },
   description:
-    "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. Try Valhalla Resume Pro from $15/month.",
+    "Build an ATS-optimized resume with AI in minutes. 132 professional templates, cover letter generator, job application tracker. Try Valhalla Resume Pro from $15/month.",
   keywords: [
     // High-intent EN (KD 50-65)
     "ai resume builder",
@@ -75,23 +75,23 @@ export async function generateMetadata({
     alternateLocale: isEs ? ["en_US"] : ["es_ES"],
     url: `${BASE_URL}/${locale}`,
     siteName: "Valhalla Resume",
-    title: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
+    title: "Valhalla Resume — AI Resume Builder | Beat ATS, 132 Templates",
     description:
-      "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. From $15/month.",
+      "Build an ATS-optimized resume with AI in minutes. 132 professional templates, cover letter generator, job application tracker. From $15/month.",
     images: [
       {
         url: `${BASE_URL}/og-image.png`,
         width: 1200,
         height: 630,
-        alt: "Valhalla Resume — AI Resume Builder with 143 Professional Templates",
+        alt: "Valhalla Resume — AI Resume Builder with 132 Professional Templates",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
+    title: "Valhalla Resume — AI Resume Builder | Beat ATS, 132 Templates",
     description:
-      "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker.",
+      "Build an ATS-optimized resume with AI in minutes. 132 professional templates, cover letter generator, job application tracker.",
     images: [`${BASE_URL}/og-image.png`],
   },
   verification: {

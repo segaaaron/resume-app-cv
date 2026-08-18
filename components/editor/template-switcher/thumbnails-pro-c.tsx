@@ -1060,35 +1060,6 @@ export function SommelierThumb({ color }: { color: string }) {
   )
 }
 
-export function HotelCVThumb({ color }: { color: string }) {
-  const navy = color || "#1c3957"
-  const gold = "#a98a4a"
-  const sand = "#e8dfcd"
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill={sand} />
-      <rect x="0" y="0" width="80" height="26" fill={navy} />
-      <text x="4" y="9" fontSize="3.5" fontFamily="monospace" fill={gold} letterSpacing="0.8">{"· HOSPITALITY ·"}</text>
-      <text x="4" y="18" fontSize="10" fontFamily="serif" fill={sand} fontWeight="500">Full Name</text>
-      <text x="4" y="24" fontSize="4" fontFamily="serif" fill={gold} fontStyle="italic">General Manager</text>
-      <rect x="0" y="26" width="80" height="5" fill={gold} />
-      {[0,1,2,3].map((i) => (
-        <g key={i}>
-          <rect x="4" y={36 + i * 14} width="18" height="1.5" rx="0.5" fill={navy} opacity="0.3" />
-          <rect x="4" y={39 + i * 14} width="34" height="1.5" rx="0.5" fill="#1a1a1a" opacity="0.15" />
-          <line x1="4" y1={46 + i * 14} x2="38" y2={46 + i * 14} stroke={gold} strokeWidth="0.5" />
-        </g>
-      ))}
-      {[0,1,2].map((i) => (
-        <g key={i}>
-          <rect x="44" y={36 + i * 18} width="16" height="1.5" rx="0.5" fill={navy} opacity="0.3" />
-          <rect x="44" y={39 + i * 18} width="30" height="1.5" rx="0.5" fill="#1a1a1a" opacity="0.15" />
-        </g>
-      ))}
-      <rect x="0" y="104" width="80" height="6" fill={navy} />
-    </svg>
-  )
-}
 
 export function BartenderCVThumb({ color }: { color: string }) {
   const neon = color || "#ff2e63"
@@ -1204,9 +1175,6 @@ export function ChalkboardThumb({ color }: { color: string }) {
 }
 export function AcademicCVThumb({ color }: { color: string }) {
   return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="white" /><rect x="8" y="8" width="44" height="5" rx="1" fill="#111" opacity="0.8" /><rect x="8" y="15" width="56" height="1.5" rx="0.75" fill="#666" opacity="0.5" /><rect x="8" y="21" width="64" height="1.5" fill="#111" opacity="0.8" /><rect x="8" y="28" width="32" height="1.5" rx="0.75" fill="#111" opacity="0.7" /><rect x="8" y="31" width="64" height="0.5" fill="#111" opacity="0.3" />{[0,1,2,3].map((i) => (<g key={i}><rect x="8" y={35 + i * 7} width="14" height="1" rx="0.5" fill={color} opacity="0.7" /><rect x="26" y={35 + i * 7} width="40" height="1" rx="0.5" fill="#111" opacity="0.3" /></g>))}<rect x="8" y="65" width="28" height="1.5" rx="0.75" fill="#111" opacity="0.7" /><rect x="8" y="100" width="64" height="0.5" fill="#111" opacity="0.4" /></svg>)
-}
-export function PsychologistThumb({ color }: { color: string }) {
-  return (<svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg"><rect width="80" height="110" fill="#f6f0e6" /><rect x="0" y="0" width="40" height="36" fill={color} opacity="0.85" /><rect x="40" y="0" width="40" height="36" fill="#c97a55" opacity="0.85" /><rect x="4" y="8" width="28" height="3" rx="1" fill="white" opacity="0.85" /><rect x="4" y="13" width="20" height="1.5" rx="0.75" fill="white" opacity="0.7" /><rect x="4" y="42" width="22" height="2" rx="1" fill={color} opacity="0.6" />{[0,1,2,3].map((i) => (<g key={i}><rect x="4" y={47 + i * 8} width="10" height="1" rx="0.5" fill="#c97a55" opacity="0.6" /><rect x="16" y={47 + i * 8} width="20" height="1.2" rx="0.6" fill="#2b2218" opacity="0.35" /></g>))}<rect x="44" y="42" width="18" height="2" rx="1" fill={color} opacity="0.6" /></svg>)
 }
 
 export function PilotLogThumb({ color: _color }: { color: string }) {
@@ -1908,21 +1876,6 @@ export function EliteMeridianThumb({ color: _color }: { color: string }) {
 }
 
 // Aurum — cream bg, gold rings/gauges, skill arc trio
-export function LuxeAurumThumb({ color: _color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#faf6ee" />
-      <rect x="0" y="0" width="80" height="30" fill="#f0e8d4" />
-      <rect x="6" y="8" width="40" height="7" rx="0.3" fill="#1a1712" />
-      <rect x="6" y="18" width="24" height="2.5" rx="0.3" fill="#c9a227" opacity="0.7" />
-      <circle cx="65" cy="15" r="8" fill="none" stroke="#c9a227" strokeWidth="1.2" opacity="0.4" />
-      <circle cx="65" cy="15" r="8" fill="none" stroke="#c9a227" strokeWidth="1.2" strokeDasharray="30 20" opacity="0.9" />
-      {[30,46,62].map((x,i)=><g key={x}><circle cx={x} cy="44" r="7" fill="none" stroke="#e8dfc0" strokeWidth="1.5" /><circle cx={x} cy="44" r="7" fill="none" stroke="#c9a227" strokeWidth="1.5" strokeDasharray={`${(i+2)*11} 44`} /></g>)}
-      <rect x="8" y="58" width="18" height="1" fill="#c9a227" opacity="0.6" />
-      {[62,66,70,74,78,82,86,90].map(y=><rect key={y} x="8" y={y} width="64" height="0.7" fill="#555" opacity="0.3" />)}
-    </svg>
-  )
-}
 
 // Vellum — ivory editorial, guilloché wave, centered serif
 export function LuxeVellumThumb({ color: _color }: { color: string }) {
@@ -2043,22 +1996,6 @@ export function ExecDynastyThumb({ color: _color }: { color: string }) {
 }
 
 // Oxblood — bordeaux sidebar, wax seal, executive
-export function ExecOxbloodThumb({ color: _color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#f5f0eb" />
-      <rect x="0" y="0" width="28" height="110" fill="#5a1020" />
-      {[14,20,26,32].map(y=><rect key={y} x="4" y={y} width="20" height="0.7" fill="#f5f0eb" opacity="0.3" />)}
-      <circle cx="14" cy="52" r="9" fill="#8a1830" />
-      <circle cx="14" cy="52" r="9" fill="none" stroke="#c9a040" strokeWidth="0.5" opacity="0.8" />
-      <circle cx="14" cy="52" r="6" fill="none" stroke="#c9a040" strokeWidth="0.3" opacity="0.5" />
-      {[66,72,78,84].map(y=><rect key={y} x="4" y={y} width="20" height="0.7" fill="#f5f0eb" opacity="0.25" />)}
-      <rect x="34" y="10" width="40" height="7" rx="0.3" fill="#1a0a0d" opacity="0.85" />
-      <rect x="34" y="20" width="26" height="2.5" rx="0.3" fill="#8a1830" opacity="0.6" />
-      {[32,46,60,74,88].map(y=><g key={y}><rect x="32" y={y} width="24" height="1.2" fill="#1a0a0d" opacity="0.6" />{[y+3].map(yy=><rect key={yy} x="32" y={yy} width="40" height="0.6" fill="#555" opacity="0.3" />)}</g>)}
-    </svg>
-  )
-}
 
 // Cobalt — midnight bg, platinum network constellation
 export function ExecCobaltThumb({ color: _color }: { color: string }) {
@@ -2080,19 +2017,6 @@ export function ExecCobaltThumb({ color: _color }: { color: string }) {
 }
 
 // Terra — terracotta arch header, earth tones, serif executive
-export function ExecTerraThumb({ color: _color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#faf5ee" />
-      <rect x="0" y="0" width="80" height="30" fill="#8b3a1e" />
-      <path d="M0 30 Q10 22 20 30 Q30 22 40 30 Q50 22 60 30 Q70 22 80 30" fill="none" stroke="#c06040" strokeWidth="1" opacity="0.6" />
-      <rect x="8" y="7" width="44" height="7" rx="0.3" fill="#f5e8d8" opacity="0.95" />
-      <rect x="8" y="17" width="28" height="2.5" rx="0.3" fill="#e8c090" opacity="0.8" />
-      <rect x="0" y="30" width="80" height="2" fill="#c06040" opacity="0.5" />
-      {[36,50,64,78].map(y=><g key={y}><rect x="8" y={y} width="26" height="1.5" fill="#3d1a0c" opacity="0.75" /><rect x="8" y={y+2.5} width="16" height="0.8" fill="#8b3a1e" opacity="0.5" />{[y+5,y+7].map(yy=><rect key={yy} x="8" y={yy} width="62" height="0.7" fill="#6a4030" opacity="0.3" />)}</g>)}
-    </svg>
-  )
-}
 
 // Nocturne — plum header, rose-gold accents, skill rings
 export function ExecNocturneThumb({ color: _color }: { color: string }) {

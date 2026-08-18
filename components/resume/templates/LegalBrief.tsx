@@ -11,7 +11,7 @@ export default function LegalBriefTemplate() {
     useShallow((s) => ({ config: s.config, sections: s.sections }))
   )
   const sd = useTemplateSectionData()
-  const { personalDetails: pd, summary, workExperience, education, languages, certifications } = sd
+  const { personalDetails: pd, summary, workExperience, education, skills, languages, certifications } = sd
 
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
@@ -102,9 +102,20 @@ export default function LegalBriefTemplate() {
           </Section>
         )}
 
+        {/* Skills — the section was missing outright: the candidate filled it in the editor
+            and it never reached the page, while the ATS panel kept telling them to add
+            more. Written as a prose run to match the brief's typographic voice. */}
+        {visible("skills") && skills.length > 0 && (
+          <Section n="IV." t={label("skills").toUpperCase()} red={red}>
+            <p style={{ margin: 0, lineHeight: 1.7 }}>
+              {skills.map((sk) => sk.name).filter(Boolean).join(" · ")}
+            </p>
+          </Section>
+        )}
+
         {/* Certifications / Projects */}
         {visible("certifications") && certifications.length > 0 && (
-          <Section n="IV." t={label("certifications").toUpperCase()} red={red}>
+          <Section n="V." t={label("certifications").toUpperCase()} red={red}>
             <ol style={{ margin: 0, paddingLeft: 22, lineHeight: 1.7 }}>
               {certifications.map((cert) => (
                 <li key={cert.id}>
@@ -117,7 +128,7 @@ export default function LegalBriefTemplate() {
 
         {/* Languages & Contact */}
         {(visible("languages") || pd.email || pd.phone) && (
-          <Section n="V." t={`${L.languages.toUpperCase()} & ${L.contact.toUpperCase()}`} red={red}>
+          <Section n="VI." t={`${L.languages.toUpperCase()} & ${L.contact.toUpperCase()}`} red={red}>
             <p style={{ margin: 0, lineHeight: 1.7 }}>
               {visible("languages") && languages.length > 0 && (
                 <><b>{L.languages}:</b> {languages.map(l => `${l.name}${l.level ? ` (${l.level.toUpperCase()})` : ""}`).join(" · ")}<br /></>

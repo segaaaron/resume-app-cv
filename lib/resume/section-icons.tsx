@@ -77,7 +77,6 @@ export function SectionIcon({
   // Not a component created during render: `getSectionIcon` LOOKS UP a stable lucide
   // component in a module-level map, so its identity never changes between renders and
   // React has nothing to remount. The rule cannot see through the lookup.
-  // eslint-disable-next-line react-hooks/static-components
   const Icon = getSectionIcon(sectionId)
   if (!Icon) return null
   return (

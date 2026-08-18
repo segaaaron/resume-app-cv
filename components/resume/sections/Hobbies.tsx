@@ -15,7 +15,6 @@ export default function HobbiesSection() {
   const [local, setLocal] = useState(sectionData.hobbies)
   // Latest-ref for the commit handler: the blur must call the CURRENT onChange, and the
   // component holds local text state so the handler cannot be a dependency.
-  // eslint-disable-next-line react-hooks/refs
   const commitRef = useRef(updateSectionData)
   // eslint-disable-next-line react-hooks/refs
   commitRef.current = updateSectionData

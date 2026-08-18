@@ -60,9 +60,9 @@ const IcoMedal = () => (
 )
 
 export default function ExecRegencyTemplate() {
-  const bg = "#161410"
-  const cream = "#ece5d4"
-  const mut = "#8b8472"
+  const bg = "#ffffff"
+  const cream = "#15171c"
+  const mut = "#5a6070"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -128,7 +128,7 @@ export default function ExecRegencyTemplate() {
             fontSize: 50,
             margin: 0,
             lineHeight: 0.96,
-            color: "#fff",
+            color: "#15171c",
             letterSpacing: "0.01em",
           }}
         >
@@ -161,7 +161,7 @@ export default function ExecRegencyTemplate() {
               fontStyle: "italic",
               fontSize: 15,
               lineHeight: 1.55,
-              color: "#cfc8b6",
+              color: "#7a766b",
               margin: "0 auto 26px",
               textAlign: "center",
               maxWidth: 600,
@@ -192,7 +192,7 @@ export default function ExecRegencyTemplate() {
                     }}
                   >
                     <div>
-                      <div style={{ fontFamily: "inherit", fontSize: 16.5, fontWeight: 600, color: "#fff" }}>{e.jobTitle}</div>
+                      <div style={{ fontFamily: "inherit", fontSize: 16.5, fontWeight: 600, color: "#15171c" }}>{e.jobTitle}</div>
                       <div style={{ fontSize: 11, color: gold, marginBottom: 4 }}>
                         {e.employer}
                         {e.city ? ` · ${e.city}` : ""}
@@ -200,7 +200,7 @@ export default function ExecRegencyTemplate() {
                       {e.description && (
                         <div
                           className="resume-desc"
-                          style={{ fontSize: 10.5, color: "#b6b0a0", lineHeight: 1.5 }}
+                          style={{ fontSize: 10.5, color: "#777369", lineHeight: 1.5 }}
                           dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                         />
                       )}
@@ -243,7 +243,7 @@ export default function ExecRegencyTemplate() {
               <SectionHead icon={<IcoShield />}>{labelFor("education")}</SectionHead>
               {education.map((ed) => (
                 <div key={ed.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
-                  <div style={{ fontFamily: "inherit", fontSize: 14.5, color: "#fff", lineHeight: 1.2 }}>
+                  <div style={{ fontFamily: "inherit", fontSize: 14.5, color: "#15171c", lineHeight: 1.2 }}>
                     {ed.degree}
                     {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                   </div>
@@ -266,7 +266,7 @@ export default function ExecRegencyTemplate() {
                   ? labelFor("projects")
                   : labelFor("certifications")}
               </SectionHead>
-              <div style={{ fontSize: 10.5, color: "#cbc5b4", lineHeight: 1.65 }}>
+              <div style={{ fontSize: 10.5, color: "#78746a", lineHeight: 1.65 }}>
                 {visible("projects") && projects.length > 0
                   ? projects.map((p) => (
                       <div key={p.id} style={{ display: "flex", gap: 8, marginBottom: 3 }}>

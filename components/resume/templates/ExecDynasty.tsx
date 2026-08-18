@@ -80,9 +80,9 @@ function Monogram({ size, gold, cream, bg, initials }: { size: number; gold: str
 }
 
 export default function ExecDynastyTemplate() {
-  const bg = "#100f0c"
-  const cream = "#ece4d1"
-  const mut = "#8a8270"
+  const bg = "#ffffff"
+  const cream = "#15171c"
+  const mut = "#5a6070"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -153,7 +153,7 @@ export default function ExecDynastyTemplate() {
         <div style={{ display: "flex", justifyContent: "center", marginBottom: 6 }}>
           <Monogram size={66} gold={gold} cream={cream} bg={bg} initials={initials} />
         </div>
-        <h1 style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 40, margin: "6px 0 0", lineHeight: 1, color: "#fff", letterSpacing: "0.02em" }}>
+        <h1 style={{ fontFamily: SERIF, fontWeight: 700, fontSize: 40, margin: "6px 0 0", lineHeight: 1, color: "#15171c", letterSpacing: "0.02em" }}>
           {fullName}
         </h1>
         {pd.jobTitle && (
@@ -177,7 +177,7 @@ export default function ExecDynastyTemplate() {
 
       {visible("summary") && summary && (
         <>
-          <p style={{ textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontSize: 13.5, lineHeight: 1.55, color: "#cbc4b2", maxWidth: 520, margin: "0 auto" }}>
+          <p style={{ textAlign: "center", fontFamily: SERIF, fontStyle: "italic", fontSize: 13.5, lineHeight: 1.55, color: "#787469", maxWidth: 520, margin: "0 auto" }}>
             {summary}
           </p>
           <Divider />
@@ -192,7 +192,7 @@ export default function ExecDynastyTemplate() {
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 13, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 8 }}>
-                    <div style={{ fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: "#fff" }}>{e.jobTitle}</div>
+                    <div style={{ fontFamily: "inherit", fontSize: 15, fontWeight: 600, color: "#15171c" }}>{e.jobTitle}</div>
                     <div style={{ fontSize: 9, color: gold, whiteSpace: "nowrap" }}>
                       {e.startDate}
                       {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
@@ -205,7 +205,7 @@ export default function ExecDynastyTemplate() {
                   {e.description && (
                     <div
                       className="resume-desc"
-                      style={{ fontSize: 10.5, color: "#b2b0a3", lineHeight: 1.5 }}
+                      style={{ fontSize: 10.5, color: "#75736b", lineHeight: 1.5 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                     />
                   )}
@@ -222,7 +222,7 @@ export default function ExecDynastyTemplate() {
               <div style={{ marginBottom: 18 }}>
                 {education.map((ed) => (
                   <div key={ed.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
-                    <div style={{ fontFamily: "inherit", fontSize: 13.5, color: "#fff", lineHeight: 1.2 }}>
+                    <div style={{ fontFamily: "inherit", fontSize: 13.5, color: "#15171c", lineHeight: 1.2 }}>
                       {ed.degree}
                       {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                     </div>
@@ -259,7 +259,7 @@ export default function ExecDynastyTemplate() {
               <div>
                 {certifications.map((c) => (
                   <div key={c.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
-                    <div style={{ fontFamily: "inherit", fontSize: 12, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                    <div style={{ fontFamily: "inherit", fontSize: 12, color: "#15171c", lineHeight: 1.25 }}>{c.name}</div>
                     {(c.issuer || c.date) && (
                       <div style={{ fontSize: 9.5, color: gold }}>
                         {c.issuer || ""}{c.issuer && c.date ? " · " : ""}{c.date || ""}

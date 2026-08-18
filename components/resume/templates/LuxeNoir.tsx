@@ -186,9 +186,9 @@ const IcoAward = () => (
 
 export default function LuxeNoirTemplate() {
   // Q5 — source #0e0d0b → softened to #1a1814 (warm obsidian, keeps identity)
-  const bg = "#1a1814"
-  const cream = "#ece7db"
-  const mut = "#8c8472"
+  const bg = "#ffffff"
+  const cream = "#15171c"
+  const mut = "#5a6070"
   const line = "rgba(198,163,90,0.24)"
 
   const { config, sections } = useResumeStore(
@@ -275,7 +275,7 @@ export default function LuxeNoirTemplate() {
             fontSize: 50,
             margin: 0,
             lineHeight: 1,
-            color: "#fff",
+            color: "#15171c",
           }}
         >
           {fullFirst} <span style={{ fontStyle: "italic" }}>{fullLast}</span>
@@ -313,7 +313,7 @@ export default function LuxeNoirTemplate() {
             fontSize: 16.5,
             fontStyle: "italic",
             lineHeight: 1.55,
-            color: "#d6cfbf",
+            color: "#726e66",
             maxWidth: 540,
             margin: "0 auto 26px",
           }}
@@ -332,7 +332,7 @@ export default function LuxeNoirTemplate() {
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 15, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                    <div style={{ fontFamily: "inherit", fontSize: 18.5, color: "#fff", lineHeight: 1.1 }}>{e.jobTitle}</div>
+                    <div style={{ fontFamily: "inherit", fontSize: 18.5, color: "#15171c", lineHeight: 1.1 }}>{e.jobTitle}</div>
                     <div style={{ fontFamily: "inherit", fontSize: 9.5, color: gold, whiteSpace: "nowrap" }}>
                       {e.startDate}
                       {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
@@ -345,7 +345,7 @@ export default function LuxeNoirTemplate() {
                   {e.description && (
                     <div
                       className="resume-desc"
-                      style={{ fontFamily: "inherit", fontSize: 11, color: "#b8b1a2", lineHeight: 1.5 }}
+                      style={{ fontFamily: "inherit", fontSize: 11, color: "#79746a", lineHeight: 1.5 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                     />
                   )}
@@ -369,7 +369,7 @@ export default function LuxeNoirTemplate() {
                     gap: 10,
                     fontFamily: "inherit",
                     fontSize: 11,
-                    color: "#cfc8b9",
+                    color: "#7a766d",
                     padding: "5.5px 0",
                     borderBottom: i < a.length - 1 ? `1px solid ${line}` : "none",
                   }}
@@ -402,7 +402,7 @@ export default function LuxeNoirTemplate() {
                       justifyContent: "space-between",
                       fontFamily: "inherit",
                       fontSize: 10.5,
-                      color: "#cfc8b9",
+                      color: "#7a766d",
                       marginBottom: 4,
                     }}
                   >
@@ -430,7 +430,7 @@ export default function LuxeNoirTemplate() {
               <LxHead gold={gold} line={line}>{labelFor("education")}</LxHead>
               {education.map((ed) => (
                 <div key={ed.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
-                  <div style={{ fontFamily: "inherit", fontSize: 14.5, color: "#fff" }}>
+                  <div style={{ fontFamily: "inherit", fontSize: 14.5, color: "#15171c" }}>
                     {ed.degree}
                     {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                   </div>

@@ -27,8 +27,10 @@ const LANG_LEVEL_LABEL: Record<string, string> = {
 }
 
 export default function EliteCadenceTemplate() {
-  const ink = "#0c0b0d"
-  const fog = "#cfc9bd"
+  // The page was ink-black; on paper that is where the design stopped working. White
+  // canvas, and every value that carried text re-grounded so it can be read.
+  const ink = "#ffffff"
+  const fog = "#575249"   // was #cfc9bd — 1.65:1 on white
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -51,8 +53,8 @@ export default function EliteCadenceTemplate() {
   const NumSec = ({ n, label }: { n: string; label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "0 0 15px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: am }}>{n}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#fff" }}>{label}</span>
-      <span style={{ flex: 1, height: 1, background: "#26242a", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
+      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#15171c" }}>{label}</span>
+      <span style={{ flex: 1, height: 1, background: "#f4f2ee", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
   const MiniLabel = ({ children }: { children: React.ReactNode }) => (
@@ -84,7 +86,7 @@ export default function EliteCadenceTemplate() {
       }}
     >
       {/* top letterbox */}
-      <div style={{ height: 26, background: "#000", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
+      <div style={{ height: 26, background: "#f4f2ee", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", padding: "34px 46px 60px", gap: 30 }}>
         {/* LEFT */}
@@ -94,13 +96,13 @@ export default function EliteCadenceTemplate() {
               ● {pd.jobTitle}
             </div>
           )}
-          <h1 style={{ fontSize: 56, fontWeight: 700, margin: 0, lineHeight: 0.9, letterSpacing: "-0.03em", color: "#fff" }}>
+          <h1 style={{ fontSize: 56, fontWeight: 700, margin: 0, lineHeight: 0.9, letterSpacing: "-0.03em", color: "#15171c" }}>
             {firstLine}
             <br />
             {lastLine}
           </h1>
           {visible("summary") && summary && (
-            <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "#a09a8f", margin: "20px 0 28px", maxWidth: 380 }}>
+            <p style={{ fontSize: 13.5, lineHeight: 1.65, color: "#757068", margin: "20px 0 28px", maxWidth: 380 }}>
               {summary}
             </p>
           )}
@@ -111,7 +113,7 @@ export default function EliteCadenceTemplate() {
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 14, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                    <div style={{ fontSize: 16, fontWeight: 700, color: "#fff" }}>{e.jobTitle}</div>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: "#15171c" }}>{e.jobTitle}</div>
                     <div style={{ fontFamily: MONO, fontSize: 10.5, color: am, whiteSpace: "nowrap" }}>
                       {e.startDate}
                       {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
@@ -124,7 +126,7 @@ export default function EliteCadenceTemplate() {
                   {e.description && (
                     <div
                       className="resume-desc"
-                      style={{ fontSize: 12, color: "#9a948a", lineHeight: 1.5 }}
+                      style={{ fontSize: 12, color: "#706c65", lineHeight: 1.5 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                     />
                   )}
@@ -138,11 +140,11 @@ export default function EliteCadenceTemplate() {
               <NumSec n="02" label={labelFor("education")} />
               {education.map((ed) => (
                 <div key={ed.id} className="resume-entry" style={{ marginBottom: 10, breakInside: "avoid" }}>
-                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#fff" }}>
+                  <div style={{ fontSize: 14.5, fontWeight: 700, color: "#15171c" }}>
                     {ed.degree}
                     {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                   </div>
-                  <div style={{ fontFamily: MONO, fontSize: 11, color: "#9a948a" }}>
+                  <div style={{ fontFamily: MONO, fontSize: 11, color: "#706c65" }}>
                     {ed.institution}
                     {" · "}
                     {ed.startDate}
@@ -168,7 +170,7 @@ export default function EliteCadenceTemplate() {
                 }}
               />
             ) : (
-              <div style={{ width: "100%", height: 256, background: "#1a1719", display: "grid", placeItems: "center", color: am, fontSize: 60, fontWeight: 700 }}>
+              <div style={{ width: "100%", height: 256, background: "#f4f2ee", display: "grid", placeItems: "center", color: am, fontSize: 60, fontWeight: 700 }}>
                 {initials}
               </div>
             )}
@@ -194,7 +196,7 @@ export default function EliteCadenceTemplate() {
           {visible("certifications") && certifications.length > 0 && (
             <>
               <MiniLabel>{labelFor("certifications")}</MiniLabel>
-              <div style={{ fontFamily: MONO, fontSize: 11, color: "#a09a8f", lineHeight: 1.9, marginBottom: 18 }}>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: "#757068", lineHeight: 1.9, marginBottom: 18 }}>
                 {certifications.map((c) => (
                   <div key={c.id}>{c.name}</div>
                 ))}
@@ -205,7 +207,7 @@ export default function EliteCadenceTemplate() {
           {visible("languages") && languages.length > 0 && (
             <>
               <MiniLabel>{labelFor("languages")}</MiniLabel>
-              <div style={{ fontFamily: MONO, fontSize: 11, color: "#a09a8f", lineHeight: 1.9, marginBottom: 18 }}>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: "#757068", lineHeight: 1.9, marginBottom: 18 }}>
                 {languages.map((l) => (
                   <div key={l.id} style={{ display: "flex", justifyContent: "space-between" }}>
                     <span>{l.name}</span>
@@ -219,7 +221,7 @@ export default function EliteCadenceTemplate() {
           {contactLines.length > 0 && (
             <>
               <MiniLabel>{config.language === "en" ? "Contact" : "Contacto"}</MiniLabel>
-              <div style={{ fontFamily: MONO, fontSize: 11, color: "#a09a8f", lineHeight: 1.9 }}>
+              <div style={{ fontFamily: MONO, fontSize: 11, color: "#757068", lineHeight: 1.9 }}>
                 {contactLines.map((c, i) => <div key={i}>{c}</div>)}
               </div>
             </>
@@ -228,7 +230,7 @@ export default function EliteCadenceTemplate() {
       </div>
 
       {/* bottom letterbox */}
-      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 26, background: "#000", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 26, background: "#f4f2ee", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
 }

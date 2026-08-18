@@ -133,10 +133,12 @@ const IcoGlobe = () => (
 )
 
 export default function LuxeApexTemplate() {
-  const bg = "#141418"
-  const panel = "#1b1b21"
-  const cream = "#e7e8ec"
-  const mut = "#7b7d88"
+  const bg = "#ffffff"
+  // White canvas: the design's dark ground is what made this unreadable on paper.
+  // Structure and accent survive; only the values that carry text were re-grounded.
+  const panel = "#f4f4f6"
+  const cream = "#15171c"
+  const mut = "#5a6070"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -209,7 +211,7 @@ export default function LuxeApexTemplate() {
               margin: 0,
               lineHeight: 0.9,
               letterSpacing: "-0.03em",
-              color: "#fff",
+              color: "#15171c",
             }}
           >
             {firstLine}<br />{lastLine}
@@ -242,7 +244,7 @@ export default function LuxeApexTemplate() {
       )}
 
       {visible("summary") && summary && (
-        <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "#b6b8c2", margin: "0 0 24px", maxWidth: 620 }}>
+        <p style={{ fontSize: 12.5, lineHeight: 1.65, color: "#6b6d73", margin: "0 0 24px", maxWidth: 620 }}>
           {summary}
         </p>
       )}
@@ -274,7 +276,7 @@ export default function LuxeApexTemplate() {
                     }}
                   />
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                    <div style={{ fontSize: 15.5, fontWeight: 700, color: "#fff" }}>{e.jobTitle}</div>
+                    <div style={{ fontSize: 15.5, fontWeight: 700, color: "#15171c" }}>{e.jobTitle}</div>
                     <div style={{ fontFamily: MONO, fontSize: 9.5, color: ice, whiteSpace: "nowrap" }}>
                       {e.startDate}
                       {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
@@ -286,7 +288,7 @@ export default function LuxeApexTemplate() {
                   {e.description && (
                     <div
                       className="resume-desc"
-                      style={{ fontSize: 11, color: "#b6b8c2", lineHeight: 1.5 }}
+                      style={{ fontSize: 11, color: "#6b6d73", lineHeight: 1.5 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                     />
                   )}
@@ -358,7 +360,7 @@ export default function LuxeApexTemplate() {
                       justifyContent: "space-between",
                       fontFamily: MONO,
                       fontSize: 10.5,
-                      color: "#b6b8c2",
+                      color: "#6b6d73",
                       marginBottom: 6,
                     }}
                   >
@@ -376,7 +378,7 @@ export default function LuxeApexTemplate() {
               <div style={{ marginBottom: 22 }}>
                 {certifications.map((c) => (
                   <div key={c.id} style={{ marginBottom: 9, breakInside: "avoid" }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: "#15171c", lineHeight: 1.25 }}>{c.name}</div>
                     {c.issuer && <div style={{ fontFamily: MONO, fontSize: 9.5, color: mut }}>{c.issuer}</div>}
                     {c.date && <div style={{ fontFamily: MONO, fontSize: 9.5, color: ice, marginTop: 2 }}>{c.date}</div>}
                   </div>
@@ -390,7 +392,7 @@ export default function LuxeApexTemplate() {
               <LxHead color={ice} line={line}>{labelFor("education")}</LxHead>
               {education.map((ed) => (
                 <div key={ed.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: "#15171c" }}>
                     {ed.degree}{ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                   </div>
                   <div style={{ fontFamily: MONO, fontSize: 9.5, color: mut }}>

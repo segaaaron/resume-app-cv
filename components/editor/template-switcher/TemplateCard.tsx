@@ -1,7 +1,7 @@
 "use client"
 
 import { memo, useEffect, useRef, useState } from "react"
-import { Lock, Check, ShieldCheck } from "lucide-react"
+import { Lock, Check, ShieldCheck, GraduationCap } from "lucide-react"
 import { TEMPLATES, TemplateId } from "@/types/resume"
 import { getTemplateAtsSafety } from "@/lib/ats/template-ats-safety"
 import { hasStaticThumbnail } from "@/lib/resume/static-thumbnails"
@@ -168,6 +168,38 @@ export const TemplateCard = memo(function TemplateCard({
           >
             <ShieldCheck style={{ width: 9, height: 9, strokeWidth: 2.5 }} />
             ATS
+          </div>
+        )}
+
+        {/* Harvard-format badge — sits under the ATS pill (same top-left column) so the
+            two read as one stack and neither collides with the selected check on the
+            right. Icon + word, never colour alone: the pill has to survive a greyscale
+            print and a colour-blind reader. Navy on white is the brand's most formal
+            pair, which is the point of the label. */}
+        {template.harvard && (
+          <div
+            title="Formato Harvard: una columna, sin foto, sin gráficos"
+            style={{
+              position: "absolute",
+              top: atsSafe ? 24 : 6,
+              left: 6,
+              zIndex: 10,
+              display: "flex",
+              alignItems: "center",
+              gap: 3,
+              padding: "2px 6px",
+              borderRadius: 999,
+              background: "linear-gradient(135deg, #1a2e4a 0%, #33507a 100%)",
+              boxShadow: "0 2px 6px rgba(26,46,74,0.35)",
+              color: "#fff",
+              fontSize: 8,
+              fontWeight: 800,
+              letterSpacing: "0.06em",
+              lineHeight: 1,
+            }}
+          >
+            <GraduationCap style={{ width: 9, height: 9, strokeWidth: 2.5 }} />
+            HARVARD
           </div>
         )}
 

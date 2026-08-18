@@ -27,8 +27,10 @@ const LANG_LEVEL_LABEL: Record<string, string> = {
 }
 
 export default function EliteCounselTemplate() {
-  const navy = "#10182b"
-  const ivory = "#ece6d8"
+  // White canvas: the design's dark ground is what made this unreadable on paper.
+  // Structure and accent survive; only the values that carry text were re-grounded.
+  const navy = "#ffffff"
+  const ivory = "#15171c"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -90,7 +92,7 @@ export default function EliteCounselTemplate() {
             {pd.jobTitle}
           </div>
         )}
-        <h1 style={{ fontFamily: SERIF, fontSize: 62, fontWeight: 500, margin: 0, lineHeight: 0.92, color: "#fff", letterSpacing: "-0.01em" }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 62, fontWeight: 500, margin: 0, lineHeight: 0.92, color: "#15171c", letterSpacing: "-0.01em" }}>
           {firstLine}
           <br />
           <span style={{ fontStyle: "italic", fontWeight: 500 }}>{lastLine}</span>
@@ -100,11 +102,11 @@ export default function EliteCounselTemplate() {
           <>
             <div style={{ display: "flex", alignItems: "center", gap: 14, margin: "22px 0 24px" }}>
               <span style={{ width: 44, height: 1, background: gold, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
-              <span style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.2em", color: "#a9b0c0", textTransform: "uppercase" }}>
+              <span style={{ fontFamily: "inherit", fontSize: 11, letterSpacing: "0.2em", color: "#6f737e", textTransform: "uppercase" }}>
                 {config.language === "en" ? "Summary" : "Resumen"}
               </span>
             </div>
-            <p style={{ fontSize: 17.5, lineHeight: 1.55, fontStyle: "italic", color: "#cfd3dd", margin: "0 0 30px", maxWidth: 420 }}>
+            <p style={{ fontSize: 17.5, lineHeight: 1.55, fontStyle: "italic", color: "#6e7075", margin: "0 0 30px", maxWidth: 420 }}>
               {summary}
             </p>
           </>
@@ -119,10 +121,10 @@ export default function EliteCounselTemplate() {
                 <div key={e.id} className="resume-entry" style={{ display: "grid", gridTemplateColumns: "54px 1fr", gap: 16, marginBottom: 17, breakInside: "avoid" }}>
                   <div style={{ fontFamily: "inherit", fontSize: 22, fontStyle: "italic", color: gold, lineHeight: 1 }}>’{yr}</div>
                   <div>
-                    <div style={{ fontSize: 19, color: "#fff", lineHeight: 1.1 }}>
+                    <div style={{ fontSize: 19, color: "#15171c", lineHeight: 1.1 }}>
                       {e.jobTitle}
                       <span style={{ color: gold }}> · </span>
-                      <span style={{ fontStyle: "italic", color: "#c9cdd8" }}>{e.employer}</span>
+                      <span style={{ fontStyle: "italic", color: "#6b6d73" }}>{e.employer}</span>
                     </div>
                     <div style={{ fontFamily: "inherit", fontSize: 11, color: gold, marginTop: 3, letterSpacing: "0.04em" }}>
                       {e.startDate}
@@ -132,7 +134,7 @@ export default function EliteCounselTemplate() {
                     {e.description && (
                       <div
                         className="resume-desc"
-                        style={{ fontFamily: "inherit", fontSize: 11.5, color: "#8a91a3", lineHeight: 1.5, marginTop: 4 }}
+                        style={{ fontFamily: "inherit", fontSize: 11.5, color: "#707584", lineHeight: 1.5, marginTop: 4 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                       />
                     )}
@@ -149,7 +151,7 @@ export default function EliteCounselTemplate() {
             {education.map((ed) => (
               <div key={ed.id} className="resume-entry" style={{ marginBottom: 10, breakInside: "avoid" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                  <div style={{ fontSize: 18, color: "#fff" }}>
+                  <div style={{ fontSize: 18, color: "#15171c" }}>
                     {ed.degree}
                     {ed.fieldOfStudy ? " — " : ""}
                     {ed.fieldOfStudy && <span style={{ fontStyle: "italic" }}>{ed.fieldOfStudy}</span>}
@@ -159,7 +161,7 @@ export default function EliteCounselTemplate() {
                     {ed.currentlyStudying ? ` — ${present}` : ed.endDate ? ` — ${ed.endDate}` : ""}
                   </div>
                 </div>
-                <div style={{ fontFamily: "inherit", fontSize: 11.5, color: "#8a91a3", marginTop: 4 }}>
+                <div style={{ fontFamily: "inherit", fontSize: 11.5, color: "#707584", marginTop: 4 }}>
                   {ed.institution}
                   {ed.city ? ` · ${ed.city}` : ""}
                 </div>
@@ -186,7 +188,7 @@ export default function EliteCounselTemplate() {
               }}
             />
           ) : (
-            <div style={{ width: "100%", height: 270, background: "#1a2440", display: "grid", placeItems: "center", color: `${gold}99`, fontSize: 56, fontWeight: 300, letterSpacing: "0.04em", fontFamily: "inherit" }}>
+            <div style={{ width: "100%", height: 270, background: "#f4f2ee", display: "grid", placeItems: "center", color: `${gold}99`, fontSize: 56, fontWeight: 300, letterSpacing: "0.04em", fontFamily: "inherit" }}>
               {initials}
             </div>
           )}
@@ -197,7 +199,7 @@ export default function EliteCounselTemplate() {
             <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", color: gold, marginBottom: 14, textTransform: "uppercase" }}>
               {config.language === "en" ? "Chambers" : "Contacto"}
             </div>
-            <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 11, fontSize: 11.5, color: "#cfd3dd", marginBottom: 26 }}>
+            <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 11, fontSize: 11.5, color: "#6e7075", marginBottom: 26 }}>
               {contactRows.map(([k, v], i) => (
                 <div key={i} style={{ display: "flex", gap: 12 }}>
                   <span style={{ color: gold, width: 10 }}>{k}</span>
@@ -213,7 +215,7 @@ export default function EliteCounselTemplate() {
             <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", color: gold, marginBottom: 14, textTransform: "uppercase" }}>
               {labelFor("skills")}
             </div>
-            <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#cfd3dd", marginBottom: 22 }}>
+            <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#6e7075", marginBottom: 22 }}>
               {skills.map((s) => (
                 <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, borderBottom: `1px solid ${gold}22`, paddingBottom: 8 }}>
                   <span style={{ width: 4, height: 4, background: gold, transform: "rotate(45deg)", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
@@ -229,7 +231,7 @@ export default function EliteCounselTemplate() {
             <div style={{ fontFamily: "inherit", fontSize: 10.5, letterSpacing: "0.24em", color: gold, marginBottom: 12, textTransform: "uppercase" }}>
               {labelFor("certifications")}
             </div>
-            <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 6, fontSize: 11.5, color: "#cfd3dd", marginBottom: 18 }}>
+            <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 6, fontSize: 11.5, color: "#6e7075", marginBottom: 18 }}>
               {certifications.map((c) => (
                 <div key={c.id}>{c.name}</div>
               ))}

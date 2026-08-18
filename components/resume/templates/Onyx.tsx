@@ -27,8 +27,10 @@ export default function OnyxTemplate() {
   const present = config.language === "en" ? "Present" : "Presente"
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
 
-  const bg = "#141414"
-  const surface = "#1e1e1e"
+  // White canvas — the dark ground is what made this illegible on paper. Panels keep a
+  // faint tint so the structure survives; text values were re-grounded to be readable.
+  const bg = "#ffffff"
+  const surface = "#f3f3f3"
   const border = "#2a2a2a"
 
   const SideLabel = ({ id, title }: { id: string; title: string }) => (
@@ -48,7 +50,7 @@ export default function OnyxTemplate() {
       <div style={{ width: "3px", height: "16px", backgroundColor: accent, borderRadius: 2, flexShrink: 0 }} />
       <h2 style={{
         fontSize: "9px", fontWeight: 800, letterSpacing: "0.15em",
-        textTransform: "uppercase", color: "#fff",
+        textTransform: "uppercase", color: "#15171c",
       }}>
         <SectionIcon sectionId={id} size={11} strokeWidth={2.25} style={{ display: "inline-block", verticalAlign: "-0.12em", marginRight: 5 }} />{title}
       </h2>
@@ -75,7 +77,7 @@ export default function OnyxTemplate() {
         </div>
         <div style={{ flex: 1 }}>
           <h1 style={{
-            fontSize: "26px", fontWeight: 900, color: "#fff",
+            fontSize: "26px", fontWeight: 900, color: "#15171c",
             lineHeight: 1.1, letterSpacing: "-0.01em", marginBottom: 3,
           }}>
             {[pd.firstName, pd.lastName].filter(Boolean).join(" ") || "Your Name"}
@@ -126,7 +128,7 @@ export default function OnyxTemplate() {
                     WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 2 }}>
-                      <p style={{ fontWeight: 800, fontSize: "10.5px", color: "#fff" }}>{job.jobTitle}</p>
+                      <p style={{ fontWeight: 800, fontSize: "10.5px", color: "#15171c" }}>{job.jobTitle}</p>
                       <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.35)", flexShrink: 0, marginLeft: 8 }}>
                         {job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
                       </span>
@@ -157,7 +159,7 @@ export default function OnyxTemplate() {
                     WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
                   }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
-                      <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#fff" }}>
+                      <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#15171c" }}>
                         {edu.degree}{edu.fieldOfStudy ? ` — ${edu.fieldOfStudy}` : ""}
                       </p>
                       <span style={{ fontSize: "8px", color: "rgba(255,255,255,0.35)", flexShrink: 0, marginLeft: 8 }}>
@@ -183,7 +185,7 @@ export default function OnyxTemplate() {
                     padding: "10px 12px", borderRadius: "4px",
                     WebkitPrintColorAdjust: "exact", printColorAdjust: "exact",
                   }}>
-                    <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#fff", marginBottom: 2 }}>{proj.name}</p>
+                    <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#15171c", marginBottom: 2 }}>{proj.name}</p>
                     {proj.role && <p style={{ fontSize: "9px", color: accent, fontWeight: 600, marginBottom: 3 }}>{proj.role}</p>}
                     {proj.description && <p className="resume-desc" style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.65 }} dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
                   </div>
@@ -198,7 +200,7 @@ export default function OnyxTemplate() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {volunteer.map((vol) => (
                   <div key={vol.id} className="resume-entry">
-                    <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#fff" }}>{vol.role}</p>
+                    <p style={{ fontWeight: 700, fontSize: "10.5px", color: "#15171c" }}>{vol.role}</p>
                     <p style={{ fontSize: "9px", color: accent }}>{vol.organization}</p>
                     {vol.description && <p className="resume-desc" style={{ fontSize: "9.5px", color: "rgba(255,255,255,0.6)", lineHeight: 1.65, marginTop: 3 }} dangerouslySetInnerHTML={{ __html: fmtDesc(vol.description) }} />}
                   </div>
@@ -213,7 +215,7 @@ export default function OnyxTemplate() {
               <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
                 {references.map((ref) => (
                   <div key={ref.id} style={{ minWidth: 140 }}>
-                    <p style={{ fontWeight: 700, fontSize: "10px", color: "#fff" }}>{ref.name}</p>
+                    <p style={{ fontWeight: 700, fontSize: "10px", color: "#15171c" }}>{ref.name}</p>
                     {ref.company && <p style={{ fontSize: "9px", color: accent }}>{ref.company}</p>}
                     {ref.phone && <p style={{ fontSize: "9px", color: "rgba(255,255,255,0.45)" }}>{ref.phone}</p>}
                     {ref.email && <p style={{ fontSize: "9px", color: "rgba(255,255,255,0.45)" }}>{ref.email}</p>}

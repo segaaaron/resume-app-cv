@@ -430,7 +430,7 @@ export default async function CVEnInglesPostPage({
               <BlogCTA
                 locale={locale}
                 title="Crea tu CV en inglés con el formato que sí funciona en el mercado anglosajón."
-                description="Valhalla Resume PRO incluye 143 plantillas optimizadas para ATS internacional, sugerencias AI en inglés (US y UK) y el ATS Checker que valida tu match contra cualquier job description. Empieza en menos de 2 minutos."
+                description="Valhalla Resume PRO incluye 132 plantillas optimizadas para ATS internacional, sugerencias AI en inglés (US y UK) y el ATS Checker que valida tu match contra cualquier job description. Empieza en menos de 2 minutos."
                 buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas AI · Cancela cuando quieras"
               />

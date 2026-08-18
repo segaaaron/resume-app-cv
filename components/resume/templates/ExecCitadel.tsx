@@ -19,6 +19,7 @@
 import { fmtDesc } from "@/lib/utils"
 import { useResumeStore, useTemplateSectionData } from "@/stores/resumeStore"
 import { designAccent } from "@/lib/resume/template-accent"
+import { readableOn } from "@/lib/resume/readable-color"
 import { useShallow } from "zustand/react/shallow"
 
 const SERIF = 'var(--font-playfair), "Playfair Display", Georgia, "Times New Roman", serif'
@@ -69,19 +70,25 @@ function Chevron({ flip, gold }: { flip?: boolean; gold: string }) {
 }
 
 export default function ExecCitadelTemplate() {
-  const bg = "#0e1320"
-  const cream = "#e7e5da"
-  const mut = "#808799"
+  // White canvas. The design was drawn on navy, where cream text reads perfectly; on the
+  // paper a résumé is actually printed on, that same cream is invisible. The Art-Deco
+  // identity lives in the gold frames and the chevrons, not in the darkness, so the
+  // structure is untouched and only the values that carry TEXT were re-grounded.
+  const bg = "#ffffff"
+  const ink = "#12182a"      // was cream #e7e5da — body text
+  const cream = ink          // every former light-on-dark run now reads dark-on-white
+  const mut = "#5a6274"      // was #808799 (2.9:1 on white) — muted but legible
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
   )
   const accent = designAccent(config.colorScheme, "#cbab5c")
-  const gold = accent
+  const gold = accent                       // decoration: frames, diamonds, rules
+  const goldText = readableOn(accent)       // the same gold, dark enough to be read
   const line = `${accent}3d`
   const lineFaint = `${accent}1f`
   const data = useTemplateSectionData()
-  const { personalDetails: pd, workExperience, education, skills, certifications } = data
+  const { personalDetails: pd, summary, workExperience, education, skills, certifications } = data
   const labelFor = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const visible = (id: string) => sections.find((s) => s.id === id)?.visible !== false
   const present = config.language === "en" ? "Present" : "Presente"
@@ -90,7 +97,7 @@ export default function ExecCitadelTemplate() {
 
   const SectionHead = ({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 10, margin: "0 0 13px" }}>
-      <span style={{ color: gold, fontSize: 13 }}>{icon}</span>
+      <span style={{ color: goldText, fontSize: 13 }}>{icon}</span>
       <span style={{ fontFamily: "inherit", fontSize: 13, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: cream }}>
         {children}
       </span>
@@ -138,14 +145,14 @@ export default function ExecCitadelTemplate() {
             fontSize: 42,
             margin: 0,
             lineHeight: 1,
-            color: "#fff",
+            color: ink,
             letterSpacing: "0.04em",
           }}
         >
           {fullName}
         </h1>
         {pd.jobTitle && (
-          <div style={{ fontSize: 11.5, letterSpacing: "0.42em", textTransform: "uppercase", color: gold, margin: "10px 0 12px" }}>
+          <div style={{ fontSize: 11.5, letterSpacing: "0.42em", textTransform: "uppercase", color: goldText, margin: "10px 0 12px" }}>
             {pd.jobTitle}
           </div>
         )}
@@ -153,7 +160,7 @@ export default function ExecCitadelTemplate() {
           <div style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "5px 18px", fontSize: 10, color: mut }}>
             {contacts.map(([I, t], i) => (
               <span key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <span style={{ color: gold, fontSize: 11 }}>{I}</span>
+                <span style={{ color: goldText, fontSize: 11 }}>{I}</span>
                 {t}
               </span>
             ))}
@@ -163,6 +170,16 @@ export default function ExecCitadelTemplate() {
 
       <div style={{ height: 1, background: line, margin: "22px 0 24px" }} />
 
+      {/* The professional summary was missing entirely: the user could write it in the
+          editor and it never reached the page. Sits above the two columns, where a
+          recruiter reads it first. */}
+      {visible("summary") && summary && (
+        <div style={{ marginBottom: 22 }}>
+          <SectionHead icon={<IcoChart />}>{labelFor("summary")}</SectionHead>
+          <p style={{ fontSize: 10.8, lineHeight: 1.62, color: mut, margin: 0 }}>{summary}</p>
+        </div>
+      )}
+
       <div style={{ display: "grid", gridTemplateColumns: "1.55fr 1fr", gap: 34 }}>
         <div>
           {visible("workExperience") && workExperience.length > 0 && (
@@ -171,20 +188,20 @@ export default function ExecCitadelTemplate() {
               {workExperience.map((e) => (
                 <div key={e.id} className="resume-entry" style={{ marginBottom: 15, breakInside: "avoid" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 10 }}>
-                    <div style={{ fontFamily: "inherit", fontSize: 15.5, fontWeight: 600, color: "#fff" }}>{e.jobTitle}</div>
-                    <div style={{ fontSize: 9.5, color: gold, whiteSpace: "nowrap" }}>
+                    <div style={{ fontFamily: "inherit", fontSize: 15.5, fontWeight: 600, color: ink }}>{e.jobTitle}</div>
+                    <div style={{ fontSize: 9.5, color: goldText, whiteSpace: "nowrap" }}>
                       {e.startDate}
                       {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
                     </div>
                   </div>
-                  <div style={{ fontSize: 10.5, color: gold, marginBottom: 5 }}>
+                  <div style={{ fontSize: 10.5, color: goldText, marginBottom: 5 }}>
                     {e.employer}
                     {e.city ? ` · ${e.city}` : ""}
                   </div>
                   {e.description && (
                     <div
                       className="resume-desc"
-                      style={{ fontSize: 10.5, color: "#b3b1a6", lineHeight: 1.5 }}
+                      style={{ fontSize: 10.5, color: "#3d4453", lineHeight: 1.5 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                     />
                   )}
@@ -198,7 +215,7 @@ export default function ExecCitadelTemplate() {
               <SectionHead icon={<IcoShield />}>{labelFor("education")}</SectionHead>
               {education.map((ed) => (
                 <div key={ed.id} style={{ marginBottom: 8, breakInside: "avoid" }}>
-                  <div style={{ fontFamily: "inherit", fontSize: 14, color: "#fff" }}>
+                  <div style={{ fontFamily: "inherit", fontSize: 14, color: ink }}>
                     {ed.degree}
                     {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                   </div>
@@ -243,9 +260,9 @@ export default function ExecCitadelTemplate() {
               <div style={{ marginBottom: 22 }}>
                 {certifications.map((c) => (
                   <div key={c.id} style={{ marginBottom: 9, breakInside: "avoid" }}>
-                    <div style={{ fontFamily: "inherit", fontSize: 12, color: "#fff" }}>{c.name}</div>
+                    <div style={{ fontFamily: "inherit", fontSize: 12, color: ink }}>{c.name}</div>
                     {(c.issuer || c.date) && (
-                      <div style={{ fontSize: 9.5, color: gold }}>
+                      <div style={{ fontSize: 9.5, color: goldText }}>
                         {c.issuer || ""}{c.issuer && c.date ? " · " : ""}{c.date || ""}
                       </div>
                     )}

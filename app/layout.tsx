@@ -85,11 +85,11 @@ const UMAMI_WEBSITE_ID =
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
   title: {
-    default: "Valhalla Resume — AI Resume Builder | Beat ATS, 143 Templates",
+    default: "Valhalla Resume — AI Resume Builder | Beat ATS, 132 Templates",
     template: "%s | Valhalla Resume",
   },
   description:
-    "Build an ATS-optimized resume with AI in minutes. 143 professional templates, cover letter generator, job application tracker. From $15/month.",
+    "Build an ATS-optimized resume with AI in minutes. 132 professional templates, cover letter generator, job application tracker. From $15/month.",
 }
 
 export default async function RootLayout({

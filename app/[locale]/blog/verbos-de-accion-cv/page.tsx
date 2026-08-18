@@ -323,7 +323,7 @@ export default async function VerbosAccionPage({
               <BlogCTA
                 locale={locale}
                 title="Deja que la IA elija el verbo correcto en cada bullet."
-                description="El editor de bullets con IA de Valhalla Resume PRO reescribe tu experiencia con estructura verbo-primero, intensidad ajustada al alcance y métricas embebidas — en segundos, sobre 143 plantillas ATS-verificadas."
+                description="El editor de bullets con IA de Valhalla Resume PRO reescribe tu experiencia con estructura verbo-primero, intensidad ajustada al alcance y métricas embebidas — en segundos, sobre 132 plantillas ATS-verificadas."
                 buttonLabel="Empezar con Valhalla Resume PRO"
                 hint="$15/mes o $99/año · 7 herramientas con IA · Cancela cuando quieras"
               />

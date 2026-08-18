@@ -24,9 +24,11 @@ import { useShallow } from "zustand/react/shallow"
 
 
 export default function TplFilmmakerTemplate() {
-  const bg = "#0c0b0a"
-  const panel = "#1a1815"
-  const text = "#e8e3d8"
+  // White canvas — the dark ground is what made this illegible on paper. Panels keep a
+  // faint tint so the structure survives; text values were re-grounded to be readable.
+  const bg = "#ffffff"
+  const panel = "#f4f2ef"
+  const text = "#1a1815"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -86,7 +88,7 @@ export default function TplFilmmakerTemplate() {
         fontWeight: 700,
         textTransform: "uppercase",
         letterSpacing: "0.1em",
-        color: "#fff",
+        color: "#15171c",
         marginBottom: 12,
         display: "flex",
         alignItems: "center",
@@ -170,17 +172,17 @@ export default function TplFilmmakerTemplate() {
         <div style={{ fontSize: 12, letterSpacing: "0.35em", color: accent, marginBottom: 12 }}>
           ● {config.language === "en" ? "SCENE 01 — DIRECTOR" : "ESCENA 01 — DIRECTOR/A"}
         </div>
-        <h1 style={{ fontSize: 56, fontWeight: 700, margin: 0, lineHeight: 0.92, letterSpacing: "-0.03em", color: "#fff" }}>
+        <h1 style={{ fontSize: 56, fontWeight: 700, margin: 0, lineHeight: 0.92, letterSpacing: "-0.03em", color: "#15171c" }}>
           {firstLine}
           <br />
           {lastLine}
         </h1>
         {pd.jobTitle && (
-          <div style={{ fontSize: 15, marginTop: 12, color: "#b3aa98" }}>{pd.jobTitle}</div>
+          <div style={{ fontSize: 15, marginTop: 12, color: "#757064" }}>{pd.jobTitle}</div>
         )}
 
         {contacts.length > 0 && (
-          <div style={{ display: "flex", gap: 20, marginTop: 16, fontSize: 12, color: "#8a8273", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 20, marginTop: 16, fontSize: 12, color: "#7c7568", flexWrap: "wrap" }}>
             {contacts.map(([I, t], i) => (
               <span key={i} style={{ display: "flex", alignItems: "center", gap: 7 }}>
                 <span style={{ color: accent, fontSize: 13, display: "grid", placeItems: "center" }}>{I}</span>
@@ -195,7 +197,7 @@ export default function TplFilmmakerTemplate() {
             style={{
               fontSize: 13.5,
               lineHeight: 1.6,
-              color: "#c3bbab",
+              color: "#736e65",
               margin: "20px 0",
               borderLeft: `3px solid ${accent}`,
               paddingLeft: 16,
@@ -217,20 +219,20 @@ export default function TplFilmmakerTemplate() {
                 {workExperience.map((e) => (
                   <div key={e.id} className="resume-entry" style={{ marginBottom: 15, breakInside: "avoid" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                      <div style={{ fontWeight: 700, fontSize: 14.5, color: "#fff" }}>{e.jobTitle}</div>
+                      <div style={{ fontWeight: 700, fontSize: 14.5, color: "#15171c" }}>{e.jobTitle}</div>
                       <div style={{ fontSize: 11.5, color: accent, fontWeight: 600, whiteSpace: "nowrap" }}>
                         {e.startDate}
                         {e.currentlyWorking ? ` — ${present}` : e.endDate ? ` — ${e.endDate}` : ""}
                       </div>
                     </div>
-                    <div style={{ fontSize: 12.5, color: "#8a8273", marginBottom: 5 }}>
+                    <div style={{ fontSize: 12.5, color: "#7c7568", marginBottom: 5 }}>
                       {e.employer}
                       {e.city ? ` · ${e.city}` : ""}
                     </div>
                     {e.description && (
                       <div
                         className="resume-desc"
-                        style={{ fontSize: 12, color: "#c3bbab", lineHeight: 1.5 }}
+                        style={{ fontSize: 12, color: "#736e65", lineHeight: 1.5 }}
                         dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                       />
                     )}
@@ -270,10 +272,10 @@ export default function TplFilmmakerTemplate() {
               <>
                 <FilmH>{labelFor("projects")}</FilmH>
                 {projects.map((s) => (
-                  <div key={s.id} style={{ fontSize: 12.5, color: "#c3bbab", marginBottom: 3, display: "flex", gap: 8 }}>
+                  <div key={s.id} style={{ fontSize: 12.5, color: "#736e65", marginBottom: 3, display: "flex", gap: 8 }}>
                     <span style={{ color: accent }}>◆</span>
                     <span>
-                      <strong style={{ color: "#fff", fontWeight: 700 }}>{s.name}</strong>
+                      <strong style={{ color: "#15171c", fontWeight: 700 }}>{s.name}</strong>
                       {s.role ? ` — ${s.role}` : ""}
                     </span>
                   </div>
@@ -286,11 +288,11 @@ export default function TplFilmmakerTemplate() {
                 <FilmH>{labelFor("education")}</FilmH>
                 {education.map((ed) => (
                   <div key={ed.id} className="resume-entry" style={{ marginBottom: 8, breakInside: "avoid" }}>
-                    <div style={{ fontSize: 13, color: "#fff", fontWeight: 700 }}>
+                    <div style={{ fontSize: 13, color: "#15171c", fontWeight: 700 }}>
                       {ed.degree}
                       {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                     </div>
-                    <div style={{ fontSize: 11.5, color: "#8a8273" }}>
+                    <div style={{ fontSize: 11.5, color: "#7c7568" }}>
                       {ed.institution}
                       {ed.city ? ` · ${ed.city}` : ""}
                     </div>
@@ -309,10 +311,10 @@ export default function TplFilmmakerTemplate() {
                 {languages.map((l) => (
                   <div
                     key={l.id}
-                    style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: "#c3bbab" }}
+                    style={{ display: "flex", justifyContent: "space-between", fontSize: 12, marginBottom: 4, color: "#736e65" }}
                   >
                     <span style={{ fontWeight: 600 }}>{l.name}</span>
-                    <span style={{ color: "#8a8273" }}>{l.level}</span>
+                    <span style={{ color: "#7c7568" }}>{l.level}</span>
                   </div>
                 ))}
               </>

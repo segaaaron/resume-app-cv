@@ -26,7 +26,7 @@ export default function CarbonTemplate() {
   const initials = [pd.firstName?.charAt(0), pd.lastName?.charAt(0)].filter(Boolean).join("").toUpperCase()
 
   return (
-    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", backgroundColor: "#111827", "--pdf-sidebar-bg": "#0f172a", "--pdf-main-bg": "#111827", "--pdf-sidebar-width": "208px" } as React.CSSProperties}>
+    <div data-print-layout="sidebar-left" className="flex" style={{ minHeight: "297mm", backgroundColor: "#ffffff", "--pdf-sidebar-bg": "#f2f3f5", "--pdf-main-bg": "#ffffff", "--pdf-sidebar-width": "208px" } as React.CSSProperties}>
       {/* Left sidebar — dark */}
       <div className="w-52 shrink-0 px-5 pt-8 pb-8 flex flex-col gap-5" style={{ backgroundColor: "#0f172a" }}>
         {/* Avatar */}
@@ -115,7 +115,7 @@ export default function CarbonTemplate() {
       <div className="flex-1 px-7 pt-8 pb-8">
         {visible("summary") && summary && (
           <div className="mb-5 pb-5 border-b border-gray-700">
-            <p className="text-sm text-gray-400 leading-relaxed">{summary}</p>
+            <p className="text-sm text-[#4b5563] leading-relaxed">{summary}</p>
           </div>
         )}
 
@@ -124,14 +124,14 @@ export default function CarbonTemplate() {
             {workExperience.map((job) => (
               <div key={job.id} className="resume-entry mb-4">
                 <div className="flex justify-between items-baseline gap-2">
-                  <h4 className="font-bold text-sm text-white">{job.jobTitle}</h4>
+                  <h4 className="font-bold text-sm text-[#111827]">{job.jobTitle}</h4>
                   <span className="text-[10px] text-gray-500 whitespace-nowrap shrink-0 font-mono">
                     {job.startDate}{job.currentlyWorking ? ` – ${present}` : job.endDate ? ` – ${job.endDate}` : ""}
                   </span>
                 </div>
                 <p className="text-xs font-semibold mb-1" style={{ color }}>{job.employer}{job.city ? ` · ${job.city}` : ""}</p>
                 {job.description && (
-                  <div className="resume-desc text-xs text-gray-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
+                  <div className="resume-desc text-xs text-[#4b5563] leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(job.description) }} />
                 )}
               </div>
             ))}
@@ -143,7 +143,7 @@ export default function CarbonTemplate() {
             {education.map((edu) => (
               <div key={edu.id} className="resume-entry mb-3">
                 <div className="flex justify-between items-baseline gap-2">
-                  <h4 className="font-bold text-sm text-white">{edu.degree}{edu.fieldOfStudy ? ` · ${edu.fieldOfStudy}` : ""}</h4>
+                  <h4 className="font-bold text-sm text-[#111827]">{edu.degree}{edu.fieldOfStudy ? ` · ${edu.fieldOfStudy}` : ""}</h4>
                   <span className="text-[10px] text-gray-500 whitespace-nowrap shrink-0 font-mono">
                     {edu.startDate}{edu.currentlyStudying ? ` – ${present}` : edu.endDate ? ` – ${edu.endDate}` : ""}
                   </span>
@@ -158,9 +158,9 @@ export default function CarbonTemplate() {
           <CarbonSection title={label("projects")} color={color}>
             {projects.map((proj) => (
               <div key={proj.id} className="mb-3">
-                <h4 className="font-bold text-sm text-white">{proj.name}</h4>
+                <h4 className="font-bold text-sm text-[#111827]">{proj.name}</h4>
                 {proj.role && <p className="text-xs font-semibold" style={{ color }}>{proj.role}</p>}
-                {proj.description && <p className="resume-desc text-xs text-gray-400 mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
+                {proj.description && <p className="resume-desc text-xs text-[#4b5563] mt-0.5 leading-relaxed" dangerouslySetInnerHTML={{ __html: fmtDesc(proj.description) }} />}
               </div>
             ))}
           </CarbonSection>
@@ -172,7 +172,7 @@ export default function CarbonTemplate() {
 
 function CarbonContact({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="flex items-start gap-1.5 text-[10px] text-gray-400 break-all">
+    <div className="flex items-start gap-1.5 text-[10px] text-[#4b5563] break-all">
       <span className="mt-0.5">{icon}</span> {text}
     </div>
   )

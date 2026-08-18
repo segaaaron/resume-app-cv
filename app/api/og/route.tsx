@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
         : "Valhalla Resume — Constructor de CV con IA"
     const fallbackDescription =
       locale === "en"
-        ? "ATS-optimized resumes. 143 premium templates."
-        : "CVs optimizados para ATS. 143 plantillas premium."
+        ? "ATS-optimized resumes. 132 premium templates."
+        : "CVs optimizados para ATS. 132 plantillas premium."
 
     const title = clamp(rawTitle || fallbackTitle, 90)
     const description = clamp(rawDescription || fallbackDescription, 140)

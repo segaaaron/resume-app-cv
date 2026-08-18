@@ -211,7 +211,6 @@ export default async function ProfessionCountryPage({
 
   // Stable lookup in a module-level map, not a component built per render — same case
   // as lib/resume/section-icons.tsx.
-  // eslint-disable-next-line react-hooks/static-components
   const Icon = getProfessionIcon(profession.icon)
   const faqItems = [1, 2, 3, 4].map((i) => ({
     q: t(`faq.q${i}`),

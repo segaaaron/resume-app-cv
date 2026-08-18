@@ -2,7 +2,7 @@ import React from "react"
 import dynamic from "next/dynamic"
 import {
   ClassicThumb, ModernThumb, SidebarResumeThumb, ElegantResumeThumb,
-  ProfessionalThumb, ExecutiveResumeThumb, MinimalResumeThumb,
+  ProfessionalThumb, MinimalResumeThumb,
   CarbonThumb, VerticalThumb, HorizontalThumb, GlassThumb, NeonThumb,
   BauhausThumb, OutlineThumb, StripeThumb,
 } from "./thumbnails-free"
@@ -12,8 +12,8 @@ import {
 } from "./thumbnails-pro-a"
 import {
   KyotoThumb, GenevaThumb, WindsorThumb, MilanThumb,
-  ZurichThumb, PortoThumb, BarcelonaThumb, ViennaThumb, BerlinThumb,
-  StockholmThumb, DublinThumb, HelsinkiThumb, LagosThumb, SeoulThumb,
+  PortoThumb, ViennaThumb, BerlinThumb,
+  StockholmThumb, LagosThumb, SeoulThumb,
   CopenhagenThumb, GenevanoirThumb, ReykjavikThumb,
 } from "./thumbnails-pro-b"
 
@@ -33,7 +33,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "sidebar":      return <SidebarResumeThumb color={color} />
     case "elegant":      return <ElegantResumeThumb color={color} />
     case "professional": return <ProfessionalThumb color={color} />
-    case "executive":    return <ExecutiveResumeThumb color={color} />
     case "minimal":      return <MinimalResumeThumb color={color} />
     case "carbon":       return <CarbonThumb color={color} />
     case "vertical":     return <VerticalThumb color={color} />
@@ -54,14 +53,10 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "geneva":       return <GenevaThumb color={color} />
     case "windsor":      return <WindsorThumb color={color} />
     case "milan":        return <MilanThumb color={color} />
-    case "zurich":       return <ZurichThumb color={color} />
     case "porto":        return <PortoThumb color={color} />
-    case "barcelona":    return <BarcelonaThumb color={color} />
     case "vienna":       return <ViennaThumb color={color} />
     case "berlin":       return <BerlinThumb color={color} />
     case "stockholm":    return <StockholmThumb color={color} />
-    case "dublin":       return <DublinThumb color={color} />
-    case "helsinki":     return <HelsinkiThumb color={color} />
     case "lagos":        return <LagosThumb color={color} />
     case "seoul":        return <SeoulThumb color={color} />
     case "copenhagen":   return <CopenhagenThumb color={color} />
@@ -97,13 +92,11 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "animatorcv":
     case "chefmenu":
     case "sommelier":
-    case "hotelcv":
     case "bartendercv":
     case "legalbrief":
     case "engraved":
     case "chalkboard":
     case "academiccv":
-    case "psychologist":
     case "pilotlog":
     case "onboardingform":
     case "athletecard":
@@ -155,7 +148,6 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "elite-cuvee":
     case "elite-cadence":
     case "elite-meridian":
-    case "luxe-aurum":
     case "luxe-vellum":
     case "luxe-regent":
     case "luxe-apex":
@@ -163,9 +155,7 @@ export function ResumeThumbnail({ id, color }: { id: string; color: string }) {
     case "exec-sovereign":
     case "exec-citadel":
     case "exec-dynasty":
-    case "exec-oxblood":
     case "exec-cobalt":
-    case "exec-terra":
     case "exec-nocturne":
     case "exec-platine":
     case "atelier":

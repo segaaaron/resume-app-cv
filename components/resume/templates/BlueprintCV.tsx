@@ -18,10 +18,12 @@ export default function BlueprintCVTemplate() {
   const L = getResumeLabels(config.language)
   const present = L.present
 
-  const blue = "#0d3b66"
+  // White canvas — the dark ground is what made this illegible on paper. Panels keep a
+  // faint tint so the structure survives; text values were re-grounded to be readable.
+  const blue = "#ffffff"
   const lineColor = "rgba(255,255,255,0.18)"
-  const white = "#f6f8fb"
-  const faint = "#cfdef0"
+  const white = "#12283d"
+  const faint = "#4a6480"
   const accent = designAccent(config.colorScheme, "#9ec1e8")
   const subdue = accent
 

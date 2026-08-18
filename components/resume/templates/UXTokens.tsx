@@ -16,11 +16,13 @@ export default function UXTokensTemplate() {
   const label = (id: string) => sections.find((s) => s.id === id)?.label ?? id
   const present = config.language === "en" ? "Present" : "Presente"
 
-  const bg = "#0f1115"
-  const card = "#171a21"
+  // White canvas — the dark ground is what made this illegible on paper. Panels keep a
+  // faint tint so the structure survives; text values were re-grounded to be readable.
+  const bg = "#ffffff"
+  const card = "#f3f4f7"
   const line = "#262a33"
-  const text = "#e6e7ea"
-  const dim = "#8a8e97"
+  const text = "#15171c"
+  const dim = "#585d67"
   const accent = designAccent(config.colorScheme, "#7cf0bd")
 
   return (

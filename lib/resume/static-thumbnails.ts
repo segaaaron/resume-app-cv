@@ -11,6 +11,8 @@
  * 99 wasted round trips. The card now starts at the first step that can actually
  * succeed, so a template with no pre-generated file never requests one.
  */
+import { isThumbnailPending } from "./thumbnail-pending"
+
 export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "academiccv",
   "apex",
@@ -24,7 +26,6 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "atsgarnet",
   "atsgraphite",
   "atsharbor",
-  "atsivory",
   "atsmeridian",
   "atsnordic",
   "atsonyx",
@@ -34,7 +35,6 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "atsverdant",
   "aurora",
   "banner",
-  "barcelona",
   "bauhaus",
   "berlin",
   "bloom",
@@ -58,7 +58,6 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "datadriven",
   "doctor",
   "duality",
-  "dublin",
   "editorial2",
   "editorialserif",
   "elegant",
@@ -74,13 +73,10 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "exec-cobalt",
   "exec-dynasty",
   "exec-nocturne",
-  "exec-oxblood",
   "exec-platine",
   "exec-porcelain",
   "exec-regency",
   "exec-sovereign",
-  "exec-terra",
-  "executive",
   "fashion",
   "filmmaker",
   "fold",
@@ -90,9 +86,7 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "glass",
   "havana",
   "helix",
-  "helsinki",
   "horizontal",
-  "hotelcv",
   "journalist",
   "kyoto",
   "larsson",
@@ -100,7 +94,6 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "lisbon",
   "lumiere",
   "luxe-apex",
-  "luxe-aurum",
   "luxe-noir",
   "luxe-regent",
   "luxe-vellum",
@@ -121,7 +114,6 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "porto",
   "prism",
   "professional",
-  "psychologist",
   "reykjavik",
   "risodesigner",
   "riviera",
@@ -154,10 +146,13 @@ export const STATIC_THUMBNAIL_IDS: ReadonlySet<string> = new Set([
   "vogue",
   "windsor",
   "writer",
-  "zurich",
 ])
 
 /** True when `public/thumbnails/<id>.webp` is known to exist. */
 export function hasStaticThumbnail(templateId: string): boolean {
+  // A redesigned template's photograph is a lie until it is re-shot, and a gallery that
+  // shows the wrong design is worse than a heavier card. Pending ids fall through to the
+  // live render of the real component. See lib/resume/thumbnail-pending.ts.
+  if (isThumbnailPending(templateId)) return false
   return STATIC_THUMBNAIL_IDS.has(templateId)
 }

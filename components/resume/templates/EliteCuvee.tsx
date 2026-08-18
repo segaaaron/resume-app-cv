@@ -27,9 +27,11 @@ const LANG_LEVEL_LABEL: Record<string, string> = {
 const ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
 
 export default function EliteCuveeTemplate() {
-  const ink = "#16120c"
-  const cream = "#f3ecdd"
-  const stone = "#9a8f78"
+  // White canvas: the design's dark ground is what made this unreadable on paper.
+  // Structure and accent survive; only the values that carry text were re-grounded.
+  const ink = "#ffffff"
+  const cream = "#15171c"
+  const stone = "#5d5546"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -52,7 +54,7 @@ export default function EliteCuveeTemplate() {
   const NumSec = ({ n, label }: { n: string; label: string }) => (
     <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "26px 0 16px" }}>
       <span style={{ fontFamily: "inherit", fontSize: 12, fontWeight: 700, color: gold }}>{n}</span>
-      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#fff" }}>{label}</span>
+      <span style={{ fontFamily: "inherit", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.22em", textTransform: "uppercase", color: "#15171c" }}>{label}</span>
       <span style={{ flex: 1, height: 1, background: `${gold}40`, WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
     </div>
   )
@@ -98,13 +100,13 @@ export default function EliteCuveeTemplate() {
             {pd.jobTitle}
           </div>
         )}
-        <h1 style={{ fontFamily: SERIF, fontSize: 60, fontWeight: 500, margin: 0, lineHeight: 0.9, color: "#fff" }}>
+        <h1 style={{ fontFamily: SERIF, fontSize: 60, fontWeight: 500, margin: 0, lineHeight: 0.9, color: "#15171c" }}>
           {firstLine}
           <br />
           <span style={{ fontStyle: "italic" }}>{lastLine}</span>
         </h1>
         {visible("summary") && summary && (
-          <p style={{ fontSize: 18, fontStyle: "italic", lineHeight: 1.5, color: "#d4cbb6", margin: "20px 0 8px", maxWidth: 430 }}>
+          <p style={{ fontSize: 18, fontStyle: "italic", lineHeight: 1.5, color: "#716c61", margin: "20px 0 8px", maxWidth: 430 }}>
             {summary}
           </p>
         )}
@@ -115,7 +117,7 @@ export default function EliteCuveeTemplate() {
             {workExperience.map((e) => (
               <div key={e.id} className="resume-entry" style={{ display: "flex", alignItems: "baseline", gap: 14, marginBottom: 13, breakInside: "avoid" }}>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 20, color: "#fff", lineHeight: 1.1 }}>
+                  <div style={{ fontSize: 20, color: "#15171c", lineHeight: 1.1 }}>
                     {e.jobTitle}
                     <span style={{ color: gold, fontStyle: "italic", fontSize: 17 }}> · {e.employer}</span>
                   </div>
@@ -142,7 +144,7 @@ export default function EliteCuveeTemplate() {
             {education.map((ed) => (
               <div key={ed.id} className="resume-entry" style={{ marginBottom: 10, breakInside: "avoid" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-                  <div style={{ fontSize: 18, color: "#fff" }}>
+                  <div style={{ fontSize: 18, color: "#15171c" }}>
                     {ed.degree}
                     {ed.fieldOfStudy ? " — " : ""}
                     {ed.fieldOfStudy && <span style={{ fontStyle: "italic" }}>{ed.fieldOfStudy}</span>}
@@ -164,7 +166,7 @@ export default function EliteCuveeTemplate() {
         {visible("certifications") && certifications.length > 0 && (
           <>
             <NumSec n={ROMAN[2]} label={labelFor("certifications")} />
-            <div style={{ fontFamily: "inherit", display: "flex", flexWrap: "wrap", gap: 8, fontSize: 11.5, color: "#d4cbb6" }}>
+            <div style={{ fontFamily: "inherit", display: "flex", flexWrap: "wrap", gap: 8, fontSize: 11.5, color: "#716c61" }}>
               {certifications.map((c) => (
                 <span key={c.id} style={{ border: `1px solid ${gold}55`, padding: "4px 10px", borderRadius: 3 }}>{c.name}</span>
               ))}
@@ -187,7 +189,7 @@ export default function EliteCuveeTemplate() {
               }}
             />
           ) : (
-            <div style={{ width: "100%", height: 300, background: "#1f1a13", display: "grid", placeItems: "center", color: `${gold}aa`, fontSize: 64, fontFamily: "inherit" }}>
+            <div style={{ width: "100%", height: 300, background: "#f4f2ee", display: "grid", placeItems: "center", color: `${gold}aa`, fontSize: 64, fontFamily: "inherit" }}>
               {initials}
             </div>
           )}
@@ -197,7 +199,7 @@ export default function EliteCuveeTemplate() {
           {contacts.length > 0 && (
             <>
               <MiniLabel>{config.language === "en" ? "Kitchen" : "Contacto"}</MiniLabel>
-              <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 11, fontSize: 11.5, color: "#d4cbb6", marginBottom: 24 }}>
+              <div style={{ fontFamily: "inherit", display: "flex", flexDirection: "column", gap: 11, fontSize: 11.5, color: "#716c61", marginBottom: 24 }}>
                 {contacts.map(([I, t], i) => (
                   <span key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <span style={{ color: gold, fontSize: 13, width: 15, display: "grid", placeItems: "center" }}>{I}</span>
@@ -213,7 +215,7 @@ export default function EliteCuveeTemplate() {
               <MiniLabel>{labelFor("skills")}</MiniLabel>
               <div style={{ fontFamily: "inherit" }}>
                 {skills.map((s, i) => (
-                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, color: "#d4cbb6", padding: "7px 0", borderBottom: i < skills.length - 1 ? `1px solid ${gold}1f` : "none" }}>
+                  <div key={s.id} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, color: "#716c61", padding: "7px 0", borderBottom: i < skills.length - 1 ? `1px solid ${gold}1f` : "none" }}>
                     <span style={{ width: 4, height: 4, background: gold, transform: "rotate(45deg)", WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }} />
                     {s.name}
                   </div>
@@ -227,7 +229,7 @@ export default function EliteCuveeTemplate() {
               <MiniLabel>{labelFor("languages")}</MiniLabel>
               <div style={{ fontFamily: "inherit" }}>
                 {languages.map((l) => (
-                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#d4cbb6", padding: "5px 0" }}>
+                  <div key={l.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 11.5, color: "#716c61", padding: "5px 0" }}>
                     <span>{l.name}</span>
                     <span style={{ color: gold }}>{langLbl(l.level)}</span>
                   </div>

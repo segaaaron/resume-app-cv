@@ -26,9 +26,9 @@ const SANS = 'var(--font-archivo), "Archivo", "Inter", system-ui, -apple-system,
 const MONO = '"Geist Mono", "JetBrains Mono", "Courier New", monospace'
 
 export default function ExecPlatineTemplate() {
-  const bg = "#0c0c0d"
-  const bone = "#ece9e2"
-  const mut = "#76767a"
+  const bg = "#ffffff"
+  const bone = "#15171c"
+  const mut = "#5a6070"
 
   const { config, sections } = useResumeStore(
     useShallow((s) => ({ config: s.config, sections: s.sections })),
@@ -130,7 +130,7 @@ export default function ExecPlatineTemplate() {
               lineHeight: 0.85,
               letterSpacing: "-0.03em",
               textTransform: "uppercase",
-              color: "#fff",
+              color: "#15171c",
             }}
           >
             {firstLine}
@@ -167,7 +167,7 @@ export default function ExecPlatineTemplate() {
       )}
 
       {visible("summary") && summary && (
-        <p style={{ fontSize: 13, lineHeight: 1.6, color: "#c7c4bc", margin: "0 0 30px", maxWidth: 540 }}>{summary}</p>
+        <p style={{ fontSize: 13, lineHeight: 1.6, color: "#76746f", margin: "0 0 30px", maxWidth: 540 }}>{summary}</p>
       )}
 
       {visible("workExperience") && workExperience.length > 0 && (
@@ -192,7 +192,7 @@ export default function ExecPlatineTemplate() {
               >
                 <IndexNumeral n={String(i + 1).padStart(2, "0")} />
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: 17, color: "#fff", letterSpacing: "-0.01em" }}>{e.jobTitle}</div>
+                  <div style={{ fontWeight: 700, fontSize: 17, color: "#15171c", letterSpacing: "-0.01em" }}>{e.jobTitle}</div>
                   <div style={{ fontFamily: MONO, fontSize: 10, color: plat, margin: "3px 0 6px" }}>
                     {(e.employer || "").toUpperCase()}
                     {e.city ? ` · ${e.city.toUpperCase()}` : ""}
@@ -200,7 +200,7 @@ export default function ExecPlatineTemplate() {
                   {e.description && (
                     <div
                       className="resume-desc"
-                      style={{ fontSize: 11, color: "#b3b0a8", lineHeight: 1.55 }}
+                      style={{ fontSize: 11, color: "#75736e", lineHeight: 1.55 }}
                       dangerouslySetInnerHTML={{ __html: fmtDesc(e.description) }}
                     />
                   )}
@@ -243,7 +243,7 @@ export default function ExecPlatineTemplate() {
             <SubHead letter="C" label={labelFor("education")} />
             {education.map((ed) => (
               <div key={ed.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: "#fff" }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: "#15171c" }}>
                   {ed.degree}
                   {ed.fieldOfStudy ? ` — ${ed.fieldOfStudy}` : ""}
                 </div>
@@ -265,7 +265,7 @@ export default function ExecPlatineTemplate() {
             <SubHead letter="D" label={labelFor("certifications")} />
             {certifications.map((c) => (
               <div key={c.id} style={{ marginBottom: 10, breakInside: "avoid" }}>
-                <div style={{ fontWeight: 700, fontSize: 13, color: "#fff", lineHeight: 1.25 }}>{c.name}</div>
+                <div style={{ fontWeight: 700, fontSize: 13, color: "#15171c", lineHeight: 1.25 }}>{c.name}</div>
                 {c.issuer && (
                   <div style={{ fontFamily: MONO, fontSize: 10, color: plat, marginTop: 3 }}>
                     {c.issuer.toUpperCase()}

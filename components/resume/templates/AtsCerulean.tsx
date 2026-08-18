@@ -60,7 +60,17 @@ export default function AtsCerulean() {
           {d.skillBars.length > 0 && (
             <div>
               <AHead icon="bolt" color={c} font={ASAP} variant="badge" size={11}>{d.label("skills")}</AHead>
+              {/* Bars for the first four, then the rest as plain text. The slice used to
+                  be the whole section: a candidate with twelve skills printed four, and
+                  this template is the one sold as ATS-safe — the eight it dropped are
+                  exactly the keywords the panel told them to add. A bar is also not
+                  machine-readable, so the text run is what a parser actually sees. */}
               <ABars items={d.skillBars.slice(0, 4)} color={c} font={ASAP} />
+              {d.skillBars.length > 4 && (
+                <p style={{ fontSize: 9.5, lineHeight: 1.55, color: "#4a4f57", margin: "6px 0 0" }}>
+                  {d.skillBars.slice(4).map((s) => s.name).join(" · ")}
+                </p>
+              )}
             </div>
           )}
           {d.visible("languages") && d.languages.length > 0 && (

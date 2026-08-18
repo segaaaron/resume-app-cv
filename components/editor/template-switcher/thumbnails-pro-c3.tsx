@@ -253,21 +253,6 @@ export function EliteMeridianThumb({ color: _color }: { color: string }) {
 }
 
 // Aurum — cream bg, gold rings/gauges, skill arc trio
-export function LuxeAurumThumb({ color: _color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#faf6ee" />
-      <rect x="0" y="0" width="80" height="30" fill="#f0e8d4" />
-      <rect x="6" y="8" width="40" height="7" rx="0.3" fill="#1a1712" />
-      <rect x="6" y="18" width="24" height="2.5" rx="0.3" fill="#c9a227" opacity="0.7" />
-      <circle cx="65" cy="15" r="8" fill="none" stroke="#c9a227" strokeWidth="1.2" opacity="0.4" />
-      <circle cx="65" cy="15" r="8" fill="none" stroke="#c9a227" strokeWidth="1.2" strokeDasharray="30 20" opacity="0.9" />
-      {[30,46,62].map((x,i)=><g key={x}><circle cx={x} cy="44" r="7" fill="none" stroke="#e8dfc0" strokeWidth="1.5" /><circle cx={x} cy="44" r="7" fill="none" stroke="#c9a227" strokeWidth="1.5" strokeDasharray={`${(i+2)*11} 44`} /></g>)}
-      <rect x="8" y="58" width="18" height="1" fill="#c9a227" opacity="0.6" />
-      {[62,66,70,74,78,82,86,90].map(y=><rect key={y} x="8" y={y} width="64" height="0.7" fill="#555" opacity="0.3" />)}
-    </svg>
-  )
-}
 
 // Vellum — ivory editorial, guilloché wave, centered serif
 export function LuxeVellumThumb({ color: _color }: { color: string }) {
@@ -388,22 +373,6 @@ export function ExecDynastyThumb({ color: _color }: { color: string }) {
 }
 
 // Oxblood — bordeaux sidebar, wax seal, executive
-export function ExecOxbloodThumb({ color: _color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#f5f0eb" />
-      <rect x="0" y="0" width="28" height="110" fill="#5a1020" />
-      {[14,20,26,32].map(y=><rect key={y} x="4" y={y} width="20" height="0.7" fill="#f5f0eb" opacity="0.3" />)}
-      <circle cx="14" cy="52" r="9" fill="#8a1830" />
-      <circle cx="14" cy="52" r="9" fill="none" stroke="#c9a040" strokeWidth="0.5" opacity="0.8" />
-      <circle cx="14" cy="52" r="6" fill="none" stroke="#c9a040" strokeWidth="0.3" opacity="0.5" />
-      {[66,72,78,84].map(y=><rect key={y} x="4" y={y} width="20" height="0.7" fill="#f5f0eb" opacity="0.25" />)}
-      <rect x="34" y="10" width="40" height="7" rx="0.3" fill="#1a0a0d" opacity="0.85" />
-      <rect x="34" y="20" width="26" height="2.5" rx="0.3" fill="#8a1830" opacity="0.6" />
-      {[32,46,60,74,88].map(y=><g key={y}><rect x="32" y={y} width="24" height="1.2" fill="#1a0a0d" opacity="0.6" />{[y+3].map(yy=><rect key={yy} x="32" y={yy} width="40" height="0.6" fill="#555" opacity="0.3" />)}</g>)}
-    </svg>
-  )
-}
 
 // Cobalt — midnight bg, platinum network constellation
 export function ExecCobaltThumb({ color: _color }: { color: string }) {
@@ -425,19 +394,6 @@ export function ExecCobaltThumb({ color: _color }: { color: string }) {
 }
 
 // Terra — terracotta arch header, earth tones, serif executive
-export function ExecTerraThumb({ color: _color }: { color: string }) {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#faf5ee" />
-      <rect x="0" y="0" width="80" height="30" fill="#8b3a1e" />
-      <path d="M0 30 Q10 22 20 30 Q30 22 40 30 Q50 22 60 30 Q70 22 80 30" fill="none" stroke="#c06040" strokeWidth="1" opacity="0.6" />
-      <rect x="8" y="7" width="44" height="7" rx="0.3" fill="#f5e8d8" opacity="0.95" />
-      <rect x="8" y="17" width="28" height="2.5" rx="0.3" fill="#e8c090" opacity="0.8" />
-      <rect x="0" y="30" width="80" height="2" fill="#c06040" opacity="0.5" />
-      {[36,50,64,78].map(y=><g key={y}><rect x="8" y={y} width="26" height="1.5" fill="#3d1a0c" opacity="0.75" /><rect x="8" y={y+2.5} width="16" height="0.8" fill="#8b3a1e" opacity="0.5" />{[y+5,y+7].map(yy=><rect key={yy} x="8" y={yy} width="62" height="0.7" fill="#6a4030" opacity="0.3" />)}</g>)}
-    </svg>
-  )
-}
 
 // Nocturne — plum header, rose-gold accents, skill rings
 export function ExecNocturneThumb({ color: _color }: { color: string }) {
@@ -846,7 +802,6 @@ export default function ProC3Thumb({ id, color }: { id: string; color: string })
     case "elite-cuvee":     return <EliteCuveeThumb color={color} />
     case "elite-cadence":   return <EliteCadenceThumb color={color} />
     case "elite-meridian":  return <EliteMeridianThumb color={color} />
-    case "luxe-aurum":      return <LuxeAurumThumb color={color} />
     case "luxe-vellum":     return <LuxeVellumThumb color={color} />
     case "luxe-regent":     return <LuxeRegentThumb color={color} />
     case "luxe-apex":       return <LuxeApexThumb color={color} />
@@ -854,9 +809,7 @@ export default function ProC3Thumb({ id, color }: { id: string; color: string })
     case "exec-sovereign":  return <ExecSovereignThumb color={color} />
     case "exec-citadel":    return <ExecCitadelThumb color={color} />
     case "exec-dynasty":    return <ExecDynastyThumb color={color} />
-    case "exec-oxblood":    return <ExecOxbloodThumb color={color} />
     case "exec-cobalt":     return <ExecCobaltThumb color={color} />
-    case "exec-terra":      return <ExecTerraThumb color={color} />
     case "exec-nocturne":   return <ExecNocturneThumb color={color} />
     case "exec-platine":    return <ExecPlatineThumb color={color} />
     case "atelier":         return <TplAtelierThumb color={color} />
