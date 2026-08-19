@@ -13,6 +13,7 @@
 import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { findCliches } from "@/lib/services/ai/shared/cliches"
 import { findMergeCandidates, type MergeCandidate } from "./merge-candidates"
+import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
 import { assessMetricCredibility, findDegreeInSkills, hasVerifiableLink, type MetricCredibility } from "./metric-credibility"
 import { rankRoleBullets, type RoleBulletRanking } from "./bullet-strength"
 import {
@@ -172,7 +173,16 @@ function duplicateKey(bullet: string): string {
 /** Below this a repeated line is a heading-like fragment, not a duplicated achievement. */
 const MIN_DUPLICATE_CHARS = 25
 
-export function analyzeWriting(sectionData: Record<string, unknown>): WritingChecks {
+/**
+ * `semanticPairs` — merge proposals from the last ATS analysis, echoed by the
+ * panel so the live recompute offers the same pairs the server found. Absent on
+ * the server's own first pass and between analyses, and the merge finder falls
+ * back to its deterministic path there.
+ */
+export function analyzeWriting(
+  sectionData: Record<string, unknown>,
+  semanticPairs: SemanticPair[] = [],
+): WritingChecks {
   const work = (sectionData.workExperience ?? []) as WorkRow[]
   const clicheBullets: ClicheBullet[] = []
   const weakVerbBullets: WeakVerbBullet[] = []
@@ -237,6 +247,8 @@ export function analyzeWriting(sectionData: Record<string, unknown>): WritingChe
     // deciding that a merge is warranted — see merge-candidates.ts.
     mergeCandidates: findMergeCandidates(
       work.map((j) => ({ targetId: j.id ?? "", jobTitle: j.jobTitle ?? "", bullets: parseBullets(j.description ?? "") })),
+      undefined,
+      semanticPairs,
     ),
     // What a recruiter catches in seven seconds and a keyword matcher never can.
     // The year is read here, at the single call site, so the checks themselves stay

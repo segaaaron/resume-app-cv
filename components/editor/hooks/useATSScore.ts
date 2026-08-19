@@ -1,6 +1,7 @@
 "use client"
 
 import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
+import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
 import { useState, useCallback, useRef, useEffect } from "react"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
@@ -56,6 +57,10 @@ export interface ATSResult {
   listedOnlyKeywords?: string[]
   /** Requirements the CV states in other words — carried into every re-score. */
   semanticMatches?: string[]
+  /** Bullet pairs of one role that talk about the same work, ranked by the
+   *  analysis. Carried for the same reason: finding them costs an embedding
+   *  call, and the live recompute runs on every keystroke. */
+  mergePairs?: SemanticPair[]
   /** Points the chosen template cost this score. Published by the scorer so the
    *  panel cannot state a different figure than the one actually applied. */
   templatePenaltyPoints?: number
@@ -441,6 +446,10 @@ export function useATSScore() {
           // re-score ran exact-match only while the analysis had run WITH
           // synonyms, so the number collapsed the moment the CV was edited.
           semanticMatches: prev?.semanticMatches ?? [],
+          // Same carry, same reason: an embedding call cannot run per keystroke,
+          // and without these the merge card disappears on the first character
+          // typed and comes back only after another full analysis.
+          mergePairs: prev?.mergePairs ?? [],
           // Soft-skill credit is decided by a model reading the bullets, and this
           // re-score is deterministic — it cannot re-run that pass on every
           // keystroke, so it carries the last verdict forward.

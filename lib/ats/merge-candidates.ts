@@ -32,6 +32,8 @@
 
 import { sharesSubject, addsNothingNew } from "./resume-integrity"
 import { BULLETS_PER_ROLE_MAX } from "./scoring-config"
+import type { SemanticPair } from "@/lib/services/ai/shared/semantic-match"
+import { parseBullets } from "@/lib/services/ai/shared/bullets"
 
 export interface MergeCandidate {
   targetId: string
@@ -66,32 +68,43 @@ export interface MergeInput {
 /**
  * The pairs worth offering to merge, best first.
  *
- * Conservative by construction, because merging is destructive: it only looks
- * inside ONE role (two roles saying similar things is a different problem, and
- * merging across them would rewrite history), only at roles already carrying more
- * lines than a recruiter reads, and only at pairs where BOTH lines are thin. A
- * line with a number in it is never offered — that one is doing its job.
- *
- * Each bullet appears in at most one pair, so applying every suggestion cannot
- * cascade into merging a role down to a single line.
- */
-/**
- * The pairs worth offering to merge, best first.
- *
  * Conservative by construction, because merging is destructive: only inside ONE
- * role (two roles saying similar things is a different problem, and merging across
- * them would rewrite history), only on roles a recruiter would already find
- * crowded, and only between lines that are thin — a line carrying a figure has
- * earned its slot and is never folded away.
+ * role (two roles saying similar things is a different problem, and merging
+ * across them would rewrite history), only on roles a recruiter would already
+ * find crowded, and only between lines that are thin — a line carrying a figure
+ * has earned its slot and is never folded away. A pair where one line adds
+ * NOTHING is not a merge, it is a duplicate, and it goes to the delete flow:
+ * fusing them would dress a deletion up as a model call. Each bullet appears in
+ * at most one pair, so applying every suggestion cannot cascade a role down to a
+ * single line.
  *
- * A pair where one line adds NOTHING is not a merge, it is a duplicate, and it is
- * routed to the duplicate flow instead: fusing them would dress a deletion up as a
- * model call.
+ * `semanticPairs` — the ranked proposals from the embedding pass, when there are
+ * any. Optional on purpose, and the fallback matters:
  *
- * Each bullet appears in at most one pair, so applying every suggestion cannot
- * cascade a role down to a single line.
+ *   · The panel recomputes these checks on every keystroke, with no network. It
+ *     passes the pairs published by the last analysis; between analyses, or when
+ *     the embedding call failed, there are none and the deterministic path runs.
+ *   · That path is what shipped before, so nothing regresses when this is absent
+ *     — it simply offers what it always offered.
+ *
+ * WHY THE DETERMINISTIC PATH IS NOT ENOUGH ON ITS OWN, measured on 20 labelled
+ * pairs across ten trades in both languages: `sharesSubject` asks whether two
+ * lines share vocabulary and offered 0 of 10 real merges, because half of them
+ * share no content word — "Gestioné la agenda" and "Confirmé los turnos" are one
+ * job written twice. That predicate answers the DUPLICATE question, which is a
+ * different question, and no threshold on it separates the two (real merges
+ * 0.00–0.29 overlap, non-merges 0.00–0.17).
+ *
+ * And this PROPOSES. Ranking inside a role put the labelled pair first in four
+ * roles out of six, with margins as thin as 0.004, so several survive and the
+ * card shows both lines of each: the person who did the work is the one who can
+ * tell "prep before service" from "cleandown after it".
  */
-export function findMergeCandidates(roles: MergeInput[], max = 4): MergeCandidate[] {
+export function findMergeCandidates(
+  roles: MergeInput[],
+  max = 4,
+  semanticPairs: SemanticPair[] = [],
+): MergeCandidate[] {
   const out: (MergeCandidate & { score: number })[] = []
 
   for (const role of roles) {
@@ -101,15 +114,33 @@ export function findMergeCandidates(roles: MergeInput[], max = 4): MergeCandidat
     const thin = bullets
       .map((text, index) => ({ text: text.trim(), index }))
       .filter(({ text }) => text.length >= TOO_SHORT_TO_KEEP && !carriesFigure(text))
+    const eligible = new Set(thin.map((t) => t.index))
 
     const taken = new Set<number>()
+    const proposed = semanticPairs.filter((p) => p.targetId === targetId)
     const pairs: { a: number; b: number }[] = []
-    for (let i = 0; i < thin.length; i++) {
-      for (let j = i + 1; j < thin.length; j++) {
-        if (!sharesSubject(thin[i].text, thin[j].text)) continue
-        // One of them contributes nothing → that is a duplicate, not a merge.
-        if (addsNothingNew(thin[i].text, thin[j].text)) continue
-        pairs.push({ a: thin[i].index, b: thin[j].index })
+    if (proposed.length > 0) {
+      // Every filter below still applies to a proposed pair: the embedding says
+      // the two lines are about one thing, not that folding them is a good idea.
+      // A line carrying a figure has earned its slot, a line under 25 characters
+      // is not a sentence, and a pair where one adds nothing is a duplicate and
+      // belongs to the delete flow.
+      for (const p of proposed) {
+        const [a, b] = p.indexes
+        if (!eligible.has(a) || !eligible.has(b)) continue
+        const ta = bullets[a]?.trim() ?? ""
+        const tb = bullets[b]?.trim() ?? ""
+        if (!ta || !tb || addsNothingNew(ta, tb)) continue
+        pairs.push({ a, b })
+      }
+    } else {
+      for (let i = 0; i < thin.length; i++) {
+        for (let j = i + 1; j < thin.length; j++) {
+          if (!sharesSubject(thin[i].text, thin[j].text)) continue
+          // One of them contributes nothing → that is a duplicate, not a merge.
+          if (addsNothingNew(thin[i].text, thin[j].text)) continue
+          pairs.push({ a: thin[i].index, b: thin[j].index })
+        }
       }
     }
 
@@ -131,4 +162,30 @@ export function findMergeCandidates(roles: MergeInput[], max = 4): MergeCandidat
     .sort((a, b) => b.score - a.score)
     .slice(0, max)
     .map(({ score: _score, ...c }) => c)
+}
+
+/**
+ * The bullets of each crowded role that are ELIGIBLE to be merged, for the
+ * embedding pass.
+ *
+ * Lives here, next to the filters it mirrors, so the pass never pays to embed a
+ * line this file would refuse anyway: a role under the crowding line, a fragment
+ * under 25 characters, or a line carrying a figure — that one has earned its
+ * slot and is never folded away.
+ */
+export function buildMergeRoleInput(
+  sectionData: Record<string, unknown>,
+): { targetId: string; candidates: { index: number; text: string }[] }[] {
+  const work = (sectionData.workExperience ?? []) as { id?: string; description?: string }[]
+  const out: { targetId: string; candidates: { index: number; text: string }[] }[] = []
+  for (const job of work) {
+    if (!job.id) continue
+    const bullets = parseBullets(job.description ?? "")
+    if (bullets.length < CROWDED_ROLE) continue
+    const candidates = bullets
+      .map((text, index) => ({ index, text: text.trim() }))
+      .filter(({ text }) => text.length >= TOO_SHORT_TO_KEEP && !carriesFigure(text))
+    if (candidates.length >= 2) out.push({ targetId: job.id, candidates })
+  }
+  return out
 }

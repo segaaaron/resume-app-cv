@@ -163,3 +163,108 @@ export async function findSemanticMatches(
   }
   return matched
 }
+
+// ─── Bullets of one role that talk about the same work ────────────────────────
+
+/**
+ * The floor under a pair worth OFFERING to merge.
+ *
+ * MEASURED on 20 hand-labelled pairs across ten trades in both languages, held
+ * out — labelled before any number was seen. Real merges scored 0.498 to 0.632;
+ * genuinely different work from the same role scored 0.325 to 0.551. The bands
+ * touch, so this is not a verdict and must never be used as one: at 0.50 it
+ * offers 9 of 10 real merges and 1 of 10 wrong ones, and at 0.60 it offers 1 of
+ * 10 real ones — a cut that kills the feature to buy precision it does not need.
+ *
+ * It does not need it because NOTHING IS APPLIED FROM THIS. The card shows both
+ * lines in full and the user clicks; the model then writes the fusion and may
+ * decline; and the result goes through a confirm before it touches the CV. Same
+ * shape as SEMANTIC_PREFILTER_THRESHOLD above: keep recall high and let the
+ * reader decide.
+ *
+ * WHY EMBEDDINGS AT ALL. The deterministic predicate this replaces asks whether
+ * two lines share vocabulary, which answers "is this the same sentence?" — the
+ * DUPLICATE question. Measured on the same set, it offered 0 of 10, because five
+ * of the ten real merges share no content word at all: "Gestioné la agenda" and
+ * "Confirmé los turnos" are one job written twice with no word in common. Cosine
+ * measures topical relatedness, and "same work?" is a topical question.
+ */
+export const MERGE_PAIR_THRESHOLD = 0.5
+
+/** How many pairs one role may propose. The user picks among them. */
+export const MERGE_PAIRS_PER_ROLE = 3
+
+export interface RoleBullets {
+  targetId: string
+  /** Only the bullets eligible to be merged, with their real index in the role. */
+  candidates: { index: number; text: string }[]
+}
+
+export interface SemanticPair {
+  targetId: string
+  indexes: [number, number]
+  score: number
+}
+
+/**
+ * Ranks, per role, the bullet pairs most likely to be one piece of work.
+ *
+ * PROPOSES, never decides. Measured, no automatic selector is accurate enough to
+ * pick THE pair: ranking inside a role put the labelled pair first in four roles
+ * out of six, with margins as thin as 0.004. So it returns several, the card
+ * shows both lines of each, and the person who did the work chooses. That is the
+ * same reasoning `merge-candidates.ts` already applies to the model — a chooser
+ * that is always confident is not a chooser — extended to our own code once the
+ * numbers said our code is not confident either.
+ *
+ * Fails closed: any embedding error yields an empty list, and the caller keeps
+ * its deterministic behaviour.
+ */
+export async function findMergePairs(
+  roles: RoleBullets[],
+  embed: (texts: string[]) => Promise<number[][]>,
+): Promise<SemanticPair[]> {
+  const work = roles.filter((r) => r.targetId && r.candidates.length >= 2)
+  if (work.length === 0) return []
+
+  // One call for every role's bullets: the cost of this feature is a single
+  // embedding request per analysis, and the vectors are useless separately.
+  const flat = work.flatMap((r) => r.candidates.map((c) => c.text))
+  let vectors: number[][]
+  try {
+    vectors = await embed(flat)
+  } catch {
+    return []
+  }
+  if (vectors.length !== flat.length) return []
+
+  const out: SemanticPair[] = []
+  let offset = 0
+  for (const role of work) {
+    const vecs = vectors.slice(offset, offset + role.candidates.length)
+    offset += role.candidates.length
+    const pairs: SemanticPair[] = []
+    for (let i = 0; i < role.candidates.length; i++) {
+      for (let j = i + 1; j < role.candidates.length; j++) {
+        const score = cosineSimilarity(vecs[i], vecs[j])
+        if (score < MERGE_PAIR_THRESHOLD) continue
+        pairs.push({
+          targetId: role.targetId,
+          indexes: [role.candidates[i].index, role.candidates[j].index],
+          score,
+        })
+      }
+    }
+    // Best first, and no bullet in two proposals: two cards offering to fold the
+    // same line in different directions is a choice nobody can make.
+    pairs.sort((a, b) => b.score - a.score)
+    const taken = new Set<number>()
+    for (const p of pairs) {
+      if (taken.has(p.indexes[0]) || taken.has(p.indexes[1])) continue
+      taken.add(p.indexes[0]); taken.add(p.indexes[1])
+      out.push(p)
+      if (taken.size >= MERGE_PAIRS_PER_ROLE * 2) break
+    }
+  }
+  return out
+}

@@ -2,6 +2,7 @@
 // Shared result and input types used across AI modules.
 import type { ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import { z } from "zod"
+import type { SemanticPair } from "./semantic-match"
 import type { WritingChecks } from "@/lib/ats/writing-checks"
 
 // ─── Shared Result Types ───────────────────────────────────────────────────────
@@ -203,6 +204,15 @@ export interface ATSScoreResult {
    *  scores the same way this analysis did. */
   semanticMatches: string[]
   /**
+   * Bullet pairs of one role that talk about the same work, ranked.
+   *
+   * Echoed for the same reason as `semanticMatches`: finding them needs an
+   * embedding call, the panel recomputes its writing checks on every keystroke,
+   * and without carrying these the merge card would vanish the moment the user
+   * typed a character. Empty when the pass found nothing or failed.
+   */
+  mergePairs: SemanticPair[]
+  /**
    * Points the template's layout cost this score, already applied.
    *
    * Published rather than recomputed in the UI so the panel can never state a
@@ -276,6 +286,9 @@ export interface ATSRescoreInput {
   /** Soft skills the full analysis judged demonstrated, carried in for the same
    *  reason — judging bullets needs a model call and cannot run per keystroke. */
   demonstratedSoftSkills?: string[]
+  /** The merge proposals the full analysis published, carried back so the live
+   *  re-score keeps offering the same pairs. */
+  mergePairs?: SemanticPair[]
 }
 
 // LLM call #1 for ats-score: extract the requirements from the job description

@@ -39,7 +39,8 @@ import {
 } from "../shared/ai-types"
 import { computeResumeScore } from "../shared/resume-score"
 import { computeATSMatch, scoreLabel, type SectionPresence } from "../shared/ats-matcher"
-import { findSemanticCandidates } from "../shared/semantic-match"
+import { buildMergeRoleInput } from "@/lib/ats/merge-candidates"
+import { findSemanticCandidates, findMergePairs } from "../shared/semantic-match"
 import { confirmEquivalences } from "../shared/skill-equivalence"
 import { findDemonstratedSoftSkills } from "../shared/soft-skill-evidence"
 import { answerHash, readAnswer, writeAnswer } from "../shared/answer-cache"
@@ -1039,6 +1040,33 @@ Reglas:
       })
     }
 
+    /**
+     * Which two lines of a role are one piece of work — proposed, not decided.
+     *
+     * Computed HERE, on the server, and published in the result, for the same
+     * reason `semanticMatches` is: the panel recomputes its writing checks on
+     * every keystroke and cannot embed per keystroke. See `findMergePairs` for
+     * the numbers behind the threshold, and `merge-candidates.ts` for why the
+     * deterministic predicate it supplements could never do this on its own.
+     *
+     * Only crowded roles and their eligible lines, so the cost is one embedding
+     * request per analysis over a handful of short strings. Fails closed: an
+     * error yields an empty list and the merge card falls back to exactly what
+     * it offered before.
+     */
+    const mergePairs = await findMergePairs(
+      buildMergeRoleInput(data),
+      (texts) => this.aiClient.embed(texts, (u) =>
+        logAIUsage(userId, "ats-score:embeddings", {
+          model: EMBEDDING_MODEL,
+          plan,
+          promptTokens: u.tokens,
+          completionTokens: 0,
+          costUsd: computeCostUsd(EMBEDDING_MODEL, u.tokens, 0),
+        }),
+      ),
+    )
+
     // Nothing was spent: give the slot back before returning. Best-effort — a
     // failed refund costs one slot, never the response.
     if (!this.spentAModelCall) {
@@ -1095,7 +1123,8 @@ Reglas:
       // they paid for. Everything else in the response is deterministic, so the
       // rest of the report is still valid; only this piece is gone.
       analysisUnavailable: !analysis,
-      writingChecks: analyzeWriting(data),
+      writingChecks: analyzeWriting(data, mergePairs),
+      mergePairs,
       inferredFromRole: useRole,
     }
   }
@@ -1165,7 +1194,10 @@ Reglas:
       // Live re-score is deterministic/no-LLM — the critique from the last full
       // analyze still stands; the client preserves it (never overwrites with null).
       analysis: null,
-      writingChecks: analyzeWriting(data),
+      writingChecks: analyzeWriting(data, input.mergePairs ?? []),
+      // Carried, not recomputed: the live re-score makes no network call, and
+      // dropping them would make the merge card vanish on the first keystroke.
+      mergePairs: input.mergePairs ?? [],
     }
   }
 

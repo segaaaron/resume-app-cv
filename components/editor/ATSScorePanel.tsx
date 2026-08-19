@@ -924,9 +924,16 @@ export default function ATSScorePanel() {
     () => assessResumeContent(sectionData as Record<string, unknown>),
     [sectionData],
   )
+  /**
+   * `result.mergePairs` — the merge proposals the last analysis found, fed back
+   * in. They come from an embedding call, which cannot run on a keystroke; the
+   * checks themselves stay pure and deterministic, exactly as before. Absent
+   * before the first analysis, and the merge finder falls back to its own
+   * deterministic pass there.
+   */
   const liveWritingChecks = useMemo(
-    () => analyzeWriting(sectionData as Record<string, unknown>),
-    [sectionData],
+    () => analyzeWriting(sectionData as Record<string, unknown>, atsResult?.mergePairs ?? []),
+    [sectionData, atsResult?.mergePairs],
   )
 
   /**

@@ -24,6 +24,15 @@ const schema = z.object({
   // synonym matches instead of silently scoring exact-match only.
   semanticMatches: z.array(z.string().max(120)).max(80).optional(),
   demonstratedSoftSkills: z.array(z.string().max(120)).max(40).optional(),
+  // The merge proposals the full analysis published, echoed for the same reason:
+  // finding them costs an embedding call and this route makes none. Bounded like
+  // everything else that crosses this boundary — the indexes are positions in a
+  // role's bullet list, and the score is a cosine.
+  mergePairs: z.array(z.object({
+    targetId: z.string().max(64),
+    indexes: z.tuple([z.number().int().min(0).max(200), z.number().int().min(0).max(200)]),
+    score: z.number().min(0).max(1),
+  })).max(40).optional(),
 })
 
 export async function POST(req: Request) {
