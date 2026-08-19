@@ -28,6 +28,17 @@
  * misma reconstrucción de líneas y columnas que todo lo demás, en su sitio, en
  * vez de quedar amontonado arriba adivinando el orden.
  *
+ * LO QUE ESTE LECTOR NO CUBRE, y conviene saberlo antes de perseguir un bug.
+ * La norma (ISO 32000) admite DOS formas de declarar el texto real: la del árbol
+ * de estructura, que es la que se lee acá —`/ActualText` con su `/K` y su `/Pg`,
+ * la que emite Word— y una *inline*, dentro de la lista de propiedades del propio
+ * marked content (`/Span <</ActualText(...)>> BDC`, desde PDF 1.5). Un documento
+ * que use la segunda pasa de largo: no hay MCID ni página que enlazar, y este
+ * lector devuelve vacío en vez de adivinar. Cerrarlo pide mapear cada página con
+ * su content stream, y no se hizo sin un caso real que lo ejercite — meter código
+ * de parseo sin probar sobre archivos que sube cualquiera es exactamente como
+ * entró la bomba de descompresión de más abajo.
+ *
  * FALLA CERRADA: cualquier cosa que no se entienda devuelve una lista vacía y la
  * extracción sigue siendo la de siempre. Nunca inventa una posición ni un texto.
  */

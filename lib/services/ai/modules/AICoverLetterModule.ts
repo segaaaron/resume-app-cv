@@ -444,7 +444,21 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     // marcaba cualquier número y tumbó un caso que sólo contenía "alert(1)"
     // dentro de un texto de prueba. Lo que hay que cazar es "250-350 palabras"
     // y "3 párrafos" — cifras con su unidad, que es como se afirma un dato.
-    const QUANTITY = /(\d+(?:[.,]\d+)?)(?:\s*[-–—a]\s*(\d+(?:[.,]\d+)?))?\s*%?\s*\p{L}{3,}/gu
+    // ACOTADA, que es la mitigación que OWASP nombra para ReDoS: conjunto de
+    // caracteres definido y longitud mínima y máxima, en vez de `+` y `*`.
+    // Medido sobre la primera versión, con `+` sin tope: 50.000 dígitos seguidos
+    // sin una letra detrás tardaban 6,6 s, y un dígito con 50.000 espacios 1,4 s
+    // — cuadrático. Hoy sólo corre sobre salida del modelo (acotada por
+    // max_tokens), así que no era explotable; era una bomba esperando que alguien
+    // reutilizara la función con texto del usuario.
+    //
+    // El lookbehind impide arrancar en medio de un número, que es lo que hacía
+    // que cada dígito de una tira fuera un punto de partida nuevo. Las cotas
+    // salen de lo que un CV puede decir: doce dígitos cubren cualquier importe,
+    // tres decimales cualquier porcentaje, y tres espacios cualquier separación
+    // real entre la cifra y su unidad.
+    const QUANTITY =
+      /(?<![\d.,])(\d{1,12}(?:[.,]\d{1,3})?)(?:[ \t]{0,3}[-–—a][ \t]{0,3}(\d{1,12}(?:[.,]\d{1,3})?))?[\s%]{0,3}\p{L}{3,}/gu
     const quantities = (t: string) => {
       const out: string[] = []
       for (const m of t.matchAll(QUANTITY)) {
