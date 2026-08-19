@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { isValidManagedLimit } from "@/lib/plans"
 import { apiError } from "@/lib/controllers/shared"
 import { auth, purgeUserCache } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -18,10 +19,11 @@ const patchSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("edit"),
     expiresAt: z.string().datetime(),
-    downloadLimit: z.number().int().positive().nullable().optional(),
-    // NULL/omitted → the LIMITED default (5) applies in code.
-    resumeLimit: z.number().int().positive().nullable().optional(),
-    coverLetterLimit: z.number().int().positive().nullable().optional(),
+    // Mismos valores que al crear: un entero positivo, o MANAGED_UNLIMITED (-1)
+    // para "sin limite". NULL vuelve al comportamiento del campo en blanco.
+    downloadLimit: z.number().refine(isValidManagedLimit).nullable().optional(),
+    resumeLimit: z.number().refine(isValidManagedLimit).nullable().optional(),
+    coverLetterLimit: z.number().refine(isValidManagedLimit).nullable().optional(),
   }),
   z.object({ action: z.literal("reset-downloads") }),
   z.object({ action: z.literal("reset-password") }),

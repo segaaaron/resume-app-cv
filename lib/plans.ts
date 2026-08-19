@@ -537,6 +537,41 @@ export const LIMITED_DEFAULT_RESUME_LIMIT = 5
 export const LIMITED_DEFAULT_COVER_LETTER_LIMIT = 5
 
 /**
+ * "Sin límite", escrito.
+ *
+ * ES -1 Y NO 0 porque -1 ya es el idioma de esta casa: `PLAN_LIMITS` dice
+ * `maxResumes: -1` para los planes ilimitados y `enforceResumeLimit` ya sale
+ * temprano al verlo. Un 0 habria significado "infinito" en un archivo donde 0
+ * significa "bloqueado" en la tabla de al lado (`aiLimitsByEndpoint`), que es
+ * como se escriben los errores caros.
+ *
+ * POR QUE HACIA FALTA. Dejar el campo vacio no servia: `null` significa cosas
+ * OPUESTAS segun el campo — ilimitado en descargas, cinco en CVs y cartas. Y el
+ * schema de admin exigia `positive()`, asi que no habia ningun valor que un
+ * administrador pudiera escribir para decir "sin tope". Un usuario LIMITED no
+ * podia tener CVs ilimitados ni pidiendolo, aunque `PLAN_LIMITS.LIMITED` los
+ * declare.
+ */
+export const MANAGED_UNLIMITED = -1
+
+/** True cuando un tope de managed significa "sin limite". */
+export function isManagedUnlimited(limit: number | null | undefined): boolean {
+  return limit === MANAGED_UNLIMITED
+}
+
+/**
+ * Los valores que un administrador puede escribir en un tope de managed.
+ *
+ * Vive aca, junto a la constante, para que crear y editar no puedan aceptar
+ * cosas distintas: eran dos `z.number().int().positive()` sueltos en dos rutas,
+ * y bastaba tocar uno para que un usuario se pudiera crear "sin limite" y no
+ * editar, o al reves.
+ */
+export function isValidManagedLimit(n: number): boolean {
+  return Number.isInteger(n) && (n === MANAGED_UNLIMITED || n > 0)
+}
+
+/**
  * Effective resume cap. For LIMITED, the admin's per-user value or the default
  * (5). For every other plan, the plan's own PLAN_LIMITS.maxResumes — unchanged.
  * `effPlan` must already be the EFFECTIVE plan (see effectivePlan).

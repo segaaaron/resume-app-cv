@@ -3,6 +3,7 @@
 // route (resume PDF, cover letter PDF, DOCX) must claim through here so the
 // reservation, limit check, refund and audit logic can never drift apart.
 import { db } from "@/lib/db"
+import { isManagedUnlimited } from "@/lib/plans"
 import { createLogger } from "@/lib/logger"
 
 const logger = createLogger("managed-quota")
@@ -24,14 +25,20 @@ export type ManagedClaim =
 export async function claimManagedDownload(userId: string, user: ManagedQuotaUser): Promise<ManagedClaim> {
   if (!user.isManaged) return { ok: true, claimed: false }
 
+  // Sin tope = el admin lo dejo en blanco (NULL) o lo marco "sin limite" (-1).
+  // Las dos formas tienen que entrar por la misma puerta: con -1 y el filtro de
+  // abajo, `managedDownloadsUsed < -1` no se cumple NUNCA y la marca de "sin
+  // limite" habria bloqueado todas las descargas — el reverso exacto de lo que
+  // el administrador pidio.
+  const cap = user.managedDownloadLimit
   const r = await db.user.updateMany({
-    where: user.managedDownloadLimit === null
+    where: cap === null || isManagedUnlimited(cap)
       ? { id: userId, isManaged: true }
       : {
           id: userId,
           isManaged: true,
           managedDownloadLimit: { not: null },
-          managedDownloadsUsed: { lt: user.managedDownloadLimit },
+          managedDownloadsUsed: { lt: cap },
         },
     data: { managedDownloadsUsed: { increment: 1 } },
   })

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import { MANAGED_UNLIMITED, isManagedUnlimited } from "@/lib/plans"
 import { format } from "date-fns"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
@@ -202,13 +203,13 @@ export default function ManagedUsersPanel() {
               <input type="date" value={expiresAt} onChange={e => setExpiresAt(e.target.value)} required className={inputCls} />
             </Field>
             <Field label={t("field_download_limit")}>
-              <input type="number" min={1} value={downloadLimit} onChange={e => setDownloadLimit(e.target.value)} placeholder={t("field_download_limit_placeholder")} className={inputCls} />
+              <LimitInput value={downloadLimit} onChange={setDownloadLimit} placeholder={t("field_download_limit_placeholder")} unlimitedLabel={t("field_unlimited")} />
             </Field>
             <Field label={t("field_resume_limit")}>
-              <input type="number" min={1} value={resumeLimit} onChange={e => setResumeLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
+              <LimitInput value={resumeLimit} onChange={setResumeLimit} placeholder={t("field_content_limit_placeholder")} unlimitedLabel={t("field_unlimited")} />
             </Field>
             <Field label={t("field_cover_limit")}>
-              <input type="number" min={1} value={coverLimit} onChange={e => setCoverLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
+              <LimitInput value={coverLimit} onChange={setCoverLimit} placeholder={t("field_content_limit_placeholder")} unlimitedLabel={t("field_unlimited")} />
             </Field>
             <Field label={t("field_note")} hint={`${note.length}/500`}>
               <textarea value={note} onChange={e => setNote(e.target.value.slice(0, 500))} rows={2} placeholder={t("field_note_placeholder")} className={`${inputCls} resize-none`} />
@@ -256,7 +257,10 @@ export default function ManagedUsersPanel() {
                         {u.managedExpiresAt ? <span className="font-mono">{format(new Date(u.managedExpiresAt), "dd MMM yyyy")}</span> : "—"}
                       </td>
                       <td className={`${td} text-[#4B5A6C]`}>
-                        {u.managedDownloadLimit == null
+                        {/* Sin tope, escrito o en blanco: el mismo infinito. Sin
+                            esto la tabla mostraba "0 / -1" al administrador que
+                            acababa de marcar "sin límite". */}
+                        {u.managedDownloadLimit == null || isManagedUnlimited(u.managedDownloadLimit)
                           ? <span className="inline-flex items-center gap-1 text-[#6B7A8C]"><InfinityIcon className="w-3.5 h-3.5" /></span>
                           : <span className="font-mono">{u.managedDownloadsUsed ?? 0} / {u.managedDownloadLimit}</span>}
                       </td>
@@ -309,13 +313,13 @@ export default function ManagedUsersPanel() {
               <input type="date" value={editExpiry} onChange={e => setEditExpiry(e.target.value)} required className={inputCls} />
             </Field>
             <Field label={t("field_download_limit")}>
-              <input type="number" min={1} value={editLimit} onChange={e => setEditLimit(e.target.value)} placeholder={t("field_download_limit_placeholder")} className={inputCls} />
+              <LimitInput value={editLimit} onChange={setEditLimit} placeholder={t("field_download_limit_placeholder")} unlimitedLabel={t("field_unlimited")} />
             </Field>
             <Field label={t("field_resume_limit")}>
-              <input type="number" min={1} value={editResumeLimit} onChange={e => setEditResumeLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
+              <LimitInput value={editResumeLimit} onChange={setEditResumeLimit} placeholder={t("field_content_limit_placeholder")} unlimitedLabel={t("field_unlimited")} />
             </Field>
             <Field label={t("field_cover_limit")}>
-              <input type="number" min={1} value={editCoverLimit} onChange={e => setEditCoverLimit(e.target.value)} placeholder={t("field_content_limit_placeholder")} className={inputCls} />
+              <LimitInput value={editCoverLimit} onChange={setEditCoverLimit} placeholder={t("field_content_limit_placeholder")} unlimitedLabel={t("field_unlimited")} />
             </Field>
           </div>
           <AlertDialogFooter>
@@ -374,6 +378,48 @@ function Field({ label, required, hint, children }: { label: string; required?: 
       </div>
       {children}
     </label>
+  )
+}
+
+/**
+ * Un tope de managed: un número, o "sin límite".
+ *
+ * El valor viaja como STRING porque asi lo guarda el formulario; "-1" es la
+ * marca de sin limite y "" es "dejalo en blanco". La casilla existe porque el
+ * campo vacio no alcanzaba para decirlo: en descargas significa sin limite y en
+ * CVs/cartas significa cinco, asi que no habia forma de pedir "sin tope" para
+ * el contenido — ni escribiendo, porque el schema exigia un positivo.
+ *
+ * Escribir "-1" a mano tambien funciona, pero nadie deberia tener que saberlo.
+ */
+function LimitInput({ value, onChange, placeholder, unlimitedLabel }: {
+  value: string
+  onChange: (v: string) => void
+  placeholder: string
+  unlimitedLabel: string
+}) {
+  const unlimited = value === String(MANAGED_UNLIMITED)
+  return (
+    <div className="space-y-1.5">
+      <input
+        type="number"
+        min={1}
+        value={unlimited ? "" : value}
+        disabled={unlimited}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={unlimited ? unlimitedLabel : placeholder}
+        className={`${inputCls} disabled:bg-[#F4F7FB] disabled:text-[#9AA7B8] disabled:cursor-not-allowed`}
+      />
+      <label className="flex items-center gap-2 cursor-pointer select-none">
+        <input
+          type="checkbox"
+          checked={unlimited}
+          onChange={(e) => onChange(e.target.checked ? String(MANAGED_UNLIMITED) : "")}
+          className="w-3.5 h-3.5 rounded border-[#D9E1ED] text-[#00D4FF] focus:ring-[rgba(0,212,255,0.25)] cursor-pointer"
+        />
+        <span className="text-[11.5px] text-[#6B7A8C]">{unlimitedLabel}</span>
+      </label>
+    </div>
   )
 }
 

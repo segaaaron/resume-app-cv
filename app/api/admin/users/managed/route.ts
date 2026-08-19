@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { isValidManagedLimit } from "@/lib/plans"
 import { apiError } from "@/lib/controllers/shared"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -15,10 +16,13 @@ const logger = createLogger("admin-managed-users")
 const bodySchema = z.object({
   email: z.string().email(),
   expiresAt: z.string().datetime(),
-  downloadLimit: z.number().int().positive().optional(),
-  // Omitted → the LIMITED default (5) applies in code.
-  resumeLimit: z.number().int().positive().optional(),
-  coverLetterLimit: z.number().int().positive().optional(),
+  // Un entero positivo, o MANAGED_UNLIMITED (-1) para "sin limite". Omitido →
+  // en descargas es sin limite, y en CVs/cartas el default de LIMITED (5): dos
+  // significados opuestos para el mismo campo en blanco, que es exactamente por
+  // lo que hace falta poder DECIRLO.
+  downloadLimit: z.number().refine(isValidManagedLimit).optional(),
+  resumeLimit: z.number().refine(isValidManagedLimit).optional(),
+  coverLetterLimit: z.number().refine(isValidManagedLimit).optional(),
   note: z.string().max(500).optional(),
 })
 

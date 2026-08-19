@@ -2703,6 +2703,7 @@
       "field_expires_at": "Fecha de expiración",
       "field_download_limit": "Límite de descargas",
       "field_download_limit_placeholder": "Sin límite",
+      "field_unlimited": "Sin límite",
       "field_resume_limit": "Límite de currículums",
       "field_cover_limit": "Límite de cartas",
       "field_content_limit_placeholder": "Por defecto: 5",
