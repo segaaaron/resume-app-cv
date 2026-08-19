@@ -211,7 +211,29 @@ describe("A. SessionChallengeService — issueChallenge", () => {
     expect(Number(sentCode)).toBeLessThanOrEqual(999_999)
   })
 
-  it("A07 user.name is null → issueChallenge does NOT call sendSessionChallenge (skips email)", async () => {
+  /**
+   * A07 — INVERTIDO A PROPOSITO, y conviene saber por que.
+   *
+   * Este caso afirmaba lo contrario: sin nombre, no se enviaba el correo. No
+   * defendia una decision — el comentario decia "email was NOT sent because name
+   * is null", que describe el codigo en vez de justificarlo, y el encabezado del
+   * archivo dice que cubre "cada rama de error". Cubria la rama; nadie la habia
+   * elegido.
+   *
+   * Lo que costaba: `user.name` es null para TODOS los usuarios managed —
+   * la creacion de LIMITED escribe correo, contrasena, plan y topes, y el panel
+   * del admin ni pide un nombre. Con sesion abierta en la computadora, ese
+   * usuario intentaba entrar desde el telefono, se topaba con el guard de sesion
+   * unica, pedia el codigo, la API respondia `{ sent: true }` y el correo no
+   * salia nunca. Quedaba afuera hasta que la sesion vieja se enfriara (30 min) o
+   * el JWT expirara solo (24 h) — con la pestana abierta, nunca.
+   *
+   * Y no hay razon de seguridad para callarse: el correo esta verificado y el
+   * mismo repositorio ya manda siempre en `PasswordResetService`, usando
+   * `user.name ?? "Usuario"` para el saludo. El nombre es el saludo de la carta,
+   * no la llave de la puerta.
+   */
+  it("A07 user.name is null → issueChallenge SI envia el codigo, saludando sin nombre", async () => {
     setRateLimit(true)
     vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
       ...BASE_CHALLENGE_USER,
@@ -222,10 +244,12 @@ describe("A. SessionChallengeService — issueChallenge", () => {
 
     const result = await makeChallengeService().issueChallenge("noname@b.com")
     expect(result).toEqual({ sent: true })
-    // updateSessionChallenge was still called (OTP stored)
     expect(mockUsers.updateSessionChallenge).toHaveBeenCalledOnce()
-    // But email was NOT sent because name is null
-    expect(mockEmail.sendSessionChallenge).not.toHaveBeenCalled()
+    expect(mockEmail.sendSessionChallenge).toHaveBeenCalledOnce()
+    // El saludo cae a un generico; lo que no puede caerse es el envio.
+    const [, greeting, code] = vi.mocked(mockEmail.sendSessionChallenge).mock.calls[0]
+    expect(greeting).toBeTruthy()
+    expect(String(code)).toMatch(/^\d{6}$/)
   })
 
   it("A08 OTP expiry window is 10 minutes from now", async () => {

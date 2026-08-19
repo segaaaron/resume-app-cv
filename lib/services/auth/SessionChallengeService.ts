@@ -7,6 +7,27 @@ import type { IEmailService } from "@/lib/interfaces/IEmailService"
 import type { IRateLimitService } from "@/lib/interfaces/IRateLimitService"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 
+/**
+ * Cómo saludar a quien no tiene nombre.
+ *
+ * El nombre estaba usado como CONDICIÓN — `if (user.name) await sendX(...)` en
+ * los cuatro correos de este servicio — y `user.name` es null para todos los
+ * usuarios managed: la creación de LIMITED escribe correo, contraseña, plan y
+ * topes, y el panel del admin ni pide un nombre.
+ *
+ * Lo que eso costaba: el usuario con sesión abierta en su computadora intentaba
+ * entrar desde el teléfono, se topaba con el guard de sesión única, pedía el
+ * código, la API respondía `{ sent: true }` y el correo no salía nunca. Quedaba
+ * afuera hasta que la sesión vieja se enfriara (30 minutos sin actividad) o el
+ * JWT expirara solo (24 horas) — y con la pestaña de la computadora abierta,
+ * nunca. Tampoco recibía el aviso de bloqueo, ni el de intento fallido, que es
+ * como uno se entera de que alguien más está probando entrar a su cuenta.
+ *
+ * `PasswordResetService` ya lo hacía bien (`user.name ?? "Usuario"`): el nombre
+ * es el saludo de la carta, no la llave de la puerta.
+ */
+const FALLBACK_NAME = "Usuario"
+
 const MAX_ATTEMPTS = 5
 const BLOCK_DURATION_MS = 5 * 60 * 60 * 1000
 
@@ -50,7 +71,7 @@ export class SessionChallengeService {
       sessionChallengeAttempts: 0,
     })
 
-    if (user.name) await this.email.sendSessionChallenge(emailAddress, user.name, code, locale)
+    await this.email.sendSessionChallenge(emailAddress, user.name ?? FALLBACK_NAME, code, locale)
     this.logger.info("SessionChallengeService.issueChallenge: OTP sent", { email: emailAddress })
     return { sent: true }
   }
@@ -86,21 +107,21 @@ export class SessionChallengeService {
           sessionChallengeCode:         null,
           sessionChallengeExp:          null,
         })
-        if (user.name) await this.email.sendSessionChallengeBlocked(emailAddress, user.name, blockedUntil, locale)
+        await this.email.sendSessionChallengeBlocked(emailAddress, user.name ?? FALLBACK_NAME, blockedUntil, locale)
         this.logger.warn("SessionChallengeService.verifyChallenge: user blocked", { email: emailAddress })
         throw new AppError("blocked", 429, { blockedUntil: blockedUntil.toISOString() })
       }
 
       await this.users.updateSessionChallenge(user.id, { sessionChallengeAttempts: newAttempts })
       const attemptsLeft = MAX_ATTEMPTS - newAttempts
-      if (user.name) await this.email.sendSessionChallengeFailed(emailAddress, user.name, attemptsLeft, locale)
+      await this.email.sendSessionChallengeFailed(emailAddress, user.name ?? FALLBACK_NAME, attemptsLeft, locale)
       this.logger.warn("SessionChallengeService.verifyChallenge: invalid code", { email: emailAddress, attemptsLeft })
       throw new AppError("invalid", 400, { attemptsLeft })
     }
 
     await this.session.clearActiveSession(user.id)
     purgeUserCache(user.id)
-    if (user.name) await this.email.sendSessionForced(emailAddress, user.name, locale)
+    await this.email.sendSessionForced(emailAddress, user.name ?? FALLBACK_NAME, locale)
     this.logger.info("SessionChallengeService.verifyChallenge: session forced out", { email: emailAddress })
     return { success: true }
   }

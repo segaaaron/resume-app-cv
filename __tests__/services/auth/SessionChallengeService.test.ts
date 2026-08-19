@@ -195,3 +195,75 @@ describe("SessionChallengeService.verifyChallenge", () => {
     expect(mockEmail.sendSessionForced).toHaveBeenCalledWith("a@b.com", "Ana", undefined)
   })
 })
+
+/**
+ * Un usuario SIN NOMBRE se quedaba sin poder entrar desde otro dispositivo.
+ *
+ * Los cuatro correos de este servicio salían detrás de `if (user.name)`, con el
+ * nombre usado como CONDICIÓN en vez de como saludo. Y `user.name` es null para
+ * todos los usuarios managed: la creación de LIMITED escribe correo, contraseña,
+ * plan y topes, y el panel del admin ni pide un nombre.
+ *
+ * El resultado, de punta a punta: el usuario tiene sesión abierta en su
+ * computadora, intenta entrar desde el teléfono, se topa con el guard de sesión
+ * única, pide el código, la API responde `{ sent: true }` — y el correo no sale
+ * nunca. Queda afuera hasta que la sesión vieja se enfríe (30 minutos sin
+ * actividad) o el JWT expire solo (24 horas). Con la pestaña de la computadora
+ * abierta, nunca.
+ *
+ * El repositorio ya sabía hacerlo bien: `PasswordResetService` manda siempre y
+ * usa `user.name ?? "Usuario"` para el saludo. Este archivo era el que ponía el
+ * nombre en la puerta.
+ */
+describe("un usuario sin nombre — los managed lo son todos", () => {
+  const NAMELESS: SessionChallengeUser = { ...BASE_USER, name: null }
+
+  it("recibe el código igual cuando pide entrar desde otro dispositivo", async () => {
+    setRateLimit(true)
+    vi.mocked(mockUsers.findForChallenge).mockResolvedValue(NAMELESS)
+    await makeService().issueChallenge("managed@example.com")
+    expect(mockEmail.sendSessionChallenge).toHaveBeenCalledTimes(1)
+    // El código guardado y el enviado tienen que ser el mismo: sin esto el
+    // usuario recibiría un correo que no le sirve para nada.
+    const [, , sentCode] = vi.mocked(mockEmail.sendSessionChallenge).mock.calls[0]
+    expect(String(sentCode)).toMatch(/^\d{6}$/)
+  })
+
+  it("le avisa cuando lo bloquean por intentos fallidos", async () => {
+    setRateLimit(true)
+    const hash = await (await import("@/lib/bcrypt")).default.hash("111111", 10)
+    vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
+      ...NAMELESS,
+      sessionChallengeCode: hash,
+      sessionChallengeExp: new Date(Date.now() + 60_000),
+      sessionChallengeAttempts: 4,
+    })
+    await expect(makeService().verifyChallenge("managed@example.com", "999999")).rejects.toThrow()
+    expect(mockEmail.sendSessionChallengeBlocked).toHaveBeenCalledTimes(1)
+  })
+
+  it("le avisa de un intento fallido, que es como se entera de un intruso", async () => {
+    setRateLimit(true)
+    const hash = await (await import("@/lib/bcrypt")).default.hash("111111", 10)
+    vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
+      ...NAMELESS,
+      sessionChallengeCode: hash,
+      sessionChallengeExp: new Date(Date.now() + 60_000),
+      sessionChallengeAttempts: 0,
+    })
+    await expect(makeService().verifyChallenge("managed@example.com", "999999")).rejects.toThrow()
+    expect(mockEmail.sendSessionChallengeFailed).toHaveBeenCalledTimes(1)
+  })
+
+  it("le avisa cuando su sesión fue cerrada desde otro dispositivo", async () => {
+    setRateLimit(true)
+    const hash = await (await import("@/lib/bcrypt")).default.hash("111111", 10)
+    vi.mocked(mockUsers.findForChallenge).mockResolvedValue({
+      ...NAMELESS,
+      sessionChallengeCode: hash,
+      sessionChallengeExp: new Date(Date.now() + 60_000),
+    })
+    await makeService().verifyChallenge("managed@example.com", "111111")
+    expect(mockEmail.sendSessionForced).toHaveBeenCalledTimes(1)
+  })
+})
