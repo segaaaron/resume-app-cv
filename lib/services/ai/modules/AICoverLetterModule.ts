@@ -434,9 +434,30 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
    * convence queda en pie el primero. El costo de equivocarse es una llamada.
    */
   private letterStatesUnsourcedFigure(body: string, grounding: string): string[] {
-    const digitsOf = (t: string) => (t.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(/[.,]/g, ""))
-    const known = new Set(digitsOf(grounding))
-    return [...new Set(digitsOf(body))].filter((d) => !known.has(d))
+    const norm = (n: string) => n.replace(/[.,]/g, "")
+    // Sólo los números que CUANTIFICAN algo: una cifra seguida de la palabra que
+    // mide. Es la misma pregunta que el proyecto ya se hace en ANY_METRIC_REGEX
+    // ("¿esto cuantifica?"), y es la que separa una afirmación sobre la persona
+    // de un dígito suelto.
+    //
+    // Un dígito a secas no es una afirmación: la primera versión de esta regla
+    // marcaba cualquier número y tumbó un caso que sólo contenía "alert(1)"
+    // dentro de un texto de prueba. Lo que hay que cazar es "250-350 palabras"
+    // y "3 párrafos" — cifras con su unidad, que es como se afirma un dato.
+    const QUANTITY = /(\d+(?:[.,]\d+)?)(?:\s*[-–—a]\s*(\d+(?:[.,]\d+)?))?\s*%?\s*\p{L}{3,}/gu
+    const quantities = (t: string) => {
+      const out: string[] = []
+      for (const m of t.matchAll(QUANTITY)) {
+        out.push(norm(m[1]))
+        if (m[2]) out.push(norm(m[2]))
+      }
+      return out
+    }
+    // El respaldo se busca entre TODOS los números del perfil, no sólo los que
+    // allí cuantifican: el CV puede decir "40-60" en una tabla y la carta
+    // escribirlo como "40 clientes", y sigue siendo su dato.
+    const known = new Set((grounding.match(/\d+(?:[.,]\d+)?/g) ?? []).map(norm))
+    return [...new Set(quantities(body))].filter((d) => !known.has(d))
   }
 
   /** True when a fresh cover-letter draft carries content the profile does not
@@ -800,7 +821,13 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // not a rewrite. Doing it here means every reader below — the cliché gate,
       // the retry decision — sees the text the user would actually get.
       .map(substituteCliches)
-      .filter((v) => !detectHallucination(v, source))
+      // La MISMA definición de "inventado" que usa la carta nueva. Estaban
+      // divididas: generate pasaba por `letterInventsContent` y esto sólo por
+      // `detectHallucination`, así que la fuga medida ahí —el modelo hablándole
+      // al operador con nuestra propia instrucción, "3 párrafos, 250-350
+      // palabras"— entraba igual por el camino de mejorar. Dos caminos escriben
+      // la carta del usuario; no pueden tener dos varas.
+      .filter((v) => !this.letterInventsContent(v, source))
       .filter((v) => !isTrivialEdit(plainBody, v))
   }
 

@@ -191,3 +191,90 @@ describe("generateCoverLetter — cifras sin respaldo", () => {
     expect(chat.mock.calls.length).toBe(1)
   })
 })
+
+/**
+ * Dos caminos escriben la carta del usuario; no pueden tener dos varas.
+ *
+ * `generateCoverLetter` pasaba por `letterInventsContent` y `usableVersions`
+ * —el único filtro del camino de MEJORAR— sólo por `detectHallucination`. Así
+ * que la fuga medida en generate (el modelo hablándole al operador con nuestra
+ * propia instrucción: "3 párrafos, 250-350 palabras") entraba igual por mejorar.
+ * El propio comentario de esa función dice "un solo dueño, para que el reintento
+ * pase por todos los chequeos" — y los chequeos no eran los mismos.
+ */
+describe("improveCoverLetter — la misma vara que la carta nueva", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const versionsReply = (versions: string[]) => ({
+    choices: [{ message: { content: JSON.stringify({ status: "improved", versions }) } }],
+    usage: { prompt_tokens: 10, completion_tokens: 10 },
+  })
+  const BODY = "<p>Me interesa el puesto en Acme por su foco en la atención al cliente.</p><p>Quedo a disposición.</p>"
+
+  it("descarta la versión que cita una cifra que la carta no tenía", async () => {
+    const leak = "Te devuelvo la carta en 3 párrafos, dentro de las 250-350 palabras pedidas, lista para enviar."
+    const good = "Me interesa el puesto en Acme porque mi trabajo diario es sostener el trato en mostrador sin perder el ritmo del turno."
+    const chat = vi.fn(async () => versionsReply([leak, good]))
+    const mod = new AICoverLetterModule({ chat } as never, logger as never)
+    const r = await mod.improveCoverLetter("u1", { body: BODY, language: "es" } as never, "PRO")
+
+    const all = (r.versions ?? []).join(" ")
+    expect(all).not.toContain("250")
+    expect(all).toContain("mostrador")
+  })
+
+  /**
+   * Nunca dejar al usuario sin nada: si TODAS se caen, vuelve su propia carta
+   * con "ya está bien". Un filtro más estricto no puede convertirse en un hueco.
+   */
+  it("devuelve la carta del usuario cuando ninguna versión sobrevive", async () => {
+    const chat = vi.fn(async () => versionsReply([
+      "Una versión con 250 palabras exactas y 3 párrafos pedidos.",
+      "Otra con 999 clientes atendidos por semana.",
+    ]))
+    const mod = new AICoverLetterModule({ chat } as never, logger as never)
+    const r = await mod.improveCoverLetter("u1", { body: BODY, language: "es" } as never, "PRO")
+
+    expect(r.status).toBe("already_optimized")
+    expect(r.versions).toEqual([BODY])
+  })
+})
+
+/**
+ * La regla mira si el número CUANTIFICA algo, no si hay un dígito.
+ *
+ * La primera versión marcaba cualquier cifra y tumbó un caso de prueba que sólo
+ * contenía "alert(1)" dentro de un texto escapado: un dígito suelto no es una
+ * afirmación sobre el candidato. Lo que hay que cazar es "250-350 palabras" o
+ * "3 párrafos" — la cifra con la unidad que mide, que es como se afirma un dato.
+ */
+describe("qué cuenta como cifra afirmada", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("no reintenta por un dígito que no mide nada", async () => {
+    const body = "Me interesa el puesto en Acme.\n\nMantengo el parser alert(1) y quedo a disposición."
+    const { client, chat } = queuedClient([body])
+    const mod = new AICoverLetterModule(client, logger as never)
+    await mod.generateCoverLetter("u1", input({ language: "es" }), "PRO")
+    expect(chat.mock.calls.length).toBe(1)
+  })
+
+  it("sí reintenta por un rango con su unidad", async () => {
+    const leak = "Te la devuelvo dentro de las 250-350 palabras pedidas."
+    const clean = "Me interesa el puesto en Acme por su foco en el trato diario.\n\nQuedo a disposición."
+    const { client, chat } = queuedClient([leak, clean])
+    const mod = new AICoverLetterModule(client, logger as never)
+    const r = await mod.generateCoverLetter("u1", input({ language: "es" }), "PRO")
+    expect(chat.mock.calls.length).toBe(2)
+    expect(r.body).not.toContain("250")
+  })
+
+  it("acepta la cifra del candidato aunque su unidad cambie de palabra", async () => {
+    const body = "Con 9 años de trayectoria, me interesa el puesto en Acme.\n\nQuedo a disposición."
+    const { client, chat } = queuedClient([body])
+    const mod = new AICoverLetterModule(client, logger as never)
+    // El perfil dice "9 años de experiencia"; la carta escribe "9 años de trayectoria".
+    await mod.generateCoverLetter("u1", input({ language: "es", userPrompt: "Tengo 9 años de experiencia en caja" }), "PRO")
+    expect(chat.mock.calls.length).toBe(1)
+  })
+})
