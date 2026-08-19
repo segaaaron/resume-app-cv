@@ -2,6 +2,7 @@
 import { validateAIInput } from "@/lib/ai-safety"
 import {
   AI_MODEL,
+  AI_MODEL_PROSE,
   AI_TEMPERATURE,
   buildResumeContext,
   logAIUsage,
@@ -14,6 +15,8 @@ import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination,
 import { computeCostUsd } from "../shared/cost-tracker"
 import { canonicalSkillName } from "@/lib/ats/skill-catalog"
 import { buildModePrompt } from "./profile-modes"
+import { assessDescription } from "../shared/bullet-quality"
+import { cleanGeneratedText } from "../shared/clean-output"
 import {
   AI_INPUT_LIMITS,
   FillProfileResponseSchema,
@@ -44,7 +47,7 @@ export class AIProfileModule {
     // run before any of the extraction machinery below, which needs a résumé
     // they do not have and do not want.
     if (input.mode) {
-      return await this.runMode(userId, input.mode, prompt, language, plan)
+      return await this.runMode(userId, input.mode, prompt, language, plan, sectionData)
     }
 
     const sd = sectionData ?? {}
@@ -465,30 +468,54 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     prompt: string,
     language: string,
     plan: string,
+    sectionData?: Record<string, unknown>,
   ): Promise<FillProfileResult> {
-    const { system, user, maxTokens } = buildModePrompt(mode, prompt, language)
+    const { system, user, maxTokens, writesProse } = buildModePrompt(mode, prompt, language, sectionData)
+    // The prompt file declares what the task IS; this is the one place that maps
+    // that to a model, so the prompt text stays free of the client and its db.
+    const model = writesProse ? AI_MODEL_PROSE : AI_MODEL
 
     let empty = false
+    /**
+     * What the previous attempt got wrong, appended to the retry.
+     *
+     * The loop already existed for an empty answer. It now also covers a defect
+     * the project's OWN checker can see in what came back: the assistant wrote
+     * "Participé en la automatización de QA…" into a real CV, and "participé en"
+     * has been on `WEAK_OPENERS` all along — nothing was checking the assistant's
+     * output against it. A guard that only runs on the improve buttons is a guard
+     * the assistant is exempt from, and the assistant is where most bullets are
+     * born now.
+     *
+     * It REPORTS the defect and quotes the line; it adds no rule the prompt does
+     * not already carry.
+     */
+    let retryNote = ""
+    /**
+     * ONE row for this endpoint, first attempt plus the retry.
+     *
+     * Logging inside the loop wrote a second row whenever the assistant was asked
+     * again, and the admin panel groups AIUsageLog with `_count: { id: true }` —
+     * so one question from the user would have read as two calls while the cost
+     * column stayed right. The convention the summary and the cover letter
+     * already follow. Billed from a `finally` so the empty-twice throw at the
+     * bottom pays for what it spent, same as every successful return.
+     */
+    const usages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
+    try {
     for (let attempt = 0; attempt < 2; attempt++) {
       const response = await this.aiClient.chat({
-        model: AI_MODEL,
+        model,
         max_tokens: maxTokens,
         temperature: AI_TEMPERATURE,
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: system },
-          { role: "user", content: user },
+          { role: "user", content: attempt === 0 || !retryNote ? user : `${user}\n\n${retryNote}` },
         ],
       })
 
-      const usage = response.usage
-      logAIUsage(userId, "fill-profile", {
-        model: AI_MODEL,
-        plan,
-        promptTokens: usage?.prompt_tokens ?? 0,
-        completionTokens: usage?.completion_tokens ?? 0,
-        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-      })
+      usages.push(response.usage ?? {})
 
       const parsed = parseAIJson<{
         off_topic?: boolean
@@ -519,6 +546,26 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
 
       if (!gotSomething) { empty = true; continue }
 
+      // The assistant's bullets go straight into the CV, so they answer to the
+      // same checker as every other bullet in the product.
+      let cleanLines = lines
+      if (mode === "bullets") {
+        const weak = assessDescription(cleanLines.map((b) => `• ${b}`).join("\n"))
+          .bullets.filter((b) => b.weakOpener)
+        if (weak.length > 0 && attempt === 0) {
+          const quoted = weak.slice(0, 2).map((b) => `"${b.text.slice(0, 60)}"`).join(", ")
+          retryNote = language === "en"
+            ? `Your last answer opened a bullet with a duty phrase: ${quoted}. Rewrite every bullet so it opens with the action itself.`
+            : `Tu respuesta anterior abrió una viñeta con una frase de tarea: ${quoted}. Reescribí cada viñeta para que abra con la acción en sí.`
+          this.logger.warn("[AIService.fillProfile] assistant bullet opened with a duty phrase — retrying once", { count: weak.length })
+          continue
+        }
+        // Our text, so our typos. "Creeé matrices de test" reached a real CV
+        // because this path never ran the shared cleaner every other generated
+        // line runs through.
+        cleanLines = await cleanGeneratedText(cleanLines, language === "en" ? "en" : "es", sectionData ?? {})
+      }
+
       return {
         // The first one is what a caller that ignores the choice would apply.
         summary: summaries[0] ?? null,
@@ -539,11 +586,26 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         volunteerUpdates: [],
         // Only the bullets mode fills this; the panel writes them into the role
         // it asked about, which is the only one that knows the id.
-        bullets: lines.slice(0, 6),
+        bullets: cleanLines.slice(0, 6),
       }
     }
 
     // Twice empty on a task this short means the answer really is not coming.
     throw new AppError(empty ? "off_topic" : "ai_error", 422)
+    } finally {
+      // Billed against the model that actually ran — the cost table is per model,
+      // so recording the extractor's price for a prose call would understate it.
+      const promptTokens = usages.reduce((n, u) => n + (u.prompt_tokens ?? 0), 0)
+      const completionTokens = usages.reduce((n, u) => n + (u.completion_tokens ?? 0), 0)
+      if (usages.length > 0) {
+        logAIUsage(userId, "fill-profile", {
+          model,
+          plan,
+          promptTokens,
+          completionTokens,
+          costUsd: computeCostUsd(model, promptTokens, completionTokens),
+        })
+      }
+    }
   }
 }

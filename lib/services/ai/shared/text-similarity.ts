@@ -234,6 +234,29 @@ const FILLER_WORDS = new Set([
  * closed: the model may always answer, and an answer that adds nothing never
  * reaches the CV.
  */
+/**
+ * Content words present in `source` that `merged` no longer carries.
+ *
+ * FOR THE MERGE, whose whole promise is that nothing is lost. Every other guard
+ * in this file answers "is the rewrite worth it?"; this answers "did the fusion
+ * quietly drop half of what it was fusing?", and nothing answered that before.
+ *
+ * MEASURED, 2026-08-19: "Confirmé los turnos por teléfono el día anterior" fused
+ * into "…confirmando por teléfono el día anterior" — the OBJECT of the sentence,
+ * the appointments themselves, simply gone. No figure was lost so
+ * `losesStatedFigure` was quiet; nothing was invented so `detectHallucination`
+ * was quiet; and `dropsContentWithoutGain` can never fire on a merge, because a
+ * merge always adds the other line's words and so always shows a "gain".
+ *
+ * Stem-tolerant on purpose: a fusion re-conjugates ("packed" → "packing",
+ * "gestioné" → "gestionando"), and calling that a loss would reject every
+ * correct merge.
+ */
+export function contentDroppedFrom(source: string, merged: string): string[] {
+  const have = contentWords(merged)
+  return contentWords(source).filter((w) => !have.some((h) => h === w || sameStem(w, h)))
+}
+
 export function addsNoInformation(original: string, suggested: string): boolean {
   if (!suggested.trim()) return true
 

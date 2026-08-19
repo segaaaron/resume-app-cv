@@ -15,7 +15,8 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
-import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination, losesStatedFigure, resolveJobId } from "../shared/ai-helpers"
+import { cvValueBar, neverInventRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
@@ -25,8 +26,9 @@ import {
   ATSExtractionSchema,
   CvAnalysisSchema,
   type CvAnalysis,
+  type CvFixAction,
+  MAX_PREVIEW_CHARS,
   ReviewItemSchema,
-  ReviewResponseSchema,
   type ATSScoreInput,
   type ATSScoreResult,
   type ATSRescoreInput,
@@ -173,7 +175,35 @@ export class AIReviewModule {
    */
   private groundForThisResume(analysis: CvAnalysis, sectionData: Record<string, unknown>): CvAnalysis {
     const copy = structuredClone(analysis)
-    for (const f of copy.criticalFixes) f.action = groundFixAction(f.action, sectionData)
+    for (const f of copy.criticalFixes) {
+      f.action = groundFixAction(f.action, sectionData)
+      /**
+       * And no button that deletes a number the candidate wrote.
+       *
+       * MEASURED end to end, 2026-08-19: every ATS fix on the eval set was
+       * applied to the real CV through the panel's own write path, and seven
+       * résumés came out the other side missing a figure — "Completed 40
+       * structural frames" replaced by a fuller line with no 40 in it. The
+       * candidate presses a button labelled as an improvement and loses the one
+       * thing on the line a recruiter can weigh.
+       *
+       * `groundFixAction` above validates that the TARGET exists; it never sees
+       * `fix`, so it cannot ask whether the replacement keeps what is being
+       * replaced. That question is asked here, where both are in hand — and it
+       * runs on every cache hit too, because the answer depends on the CV as it
+       * is NOW, not as it was when the analysis was written.
+       *
+       * The finding survives as advice: the problem it names is usually real, so
+       * degrading to `manual` keeps the diagnosis and removes only the write.
+       */
+      const target = targetTextFor(f.action, sectionData)
+      if (target && f.fix?.trim() && losesStatedFigure(target, f.fix)) {
+        this.logger.warn("[AIService.atsScore] fix would delete a stated figure — degraded to advice", {
+          kind: f.action.kind,
+        })
+        f.action = { kind: "manual" }
+      }
+    }
     return copy
   }
 
@@ -252,6 +282,16 @@ export class AIReviewModule {
       ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you NEVER invent facts — every claim quotes the candidate's real text.
 ${untrustedDataRule(true)}
 
+${cvValueBar("en")}
+
+${neverInventRule("en")}
+
+${keepCandidateFactsRule("en")}
+
+${proseRules("en")}
+
+${alreadyGoodRule("en")}
+
 Judge this RESUME for the JOB below the way you would in a 7-second screen, then a deeper read.
 
 === JOB ===
@@ -293,6 +333,7 @@ Review the resume against ALL of the following and report every real problem you
 
 Hard rules:
 - DEPTH IS THE POINT. "issue" quotes the candidate's actual line. "why" names the concrete consequence for THIS posting (which requirement goes unmatched, what the recruiter concludes) — never a generic platitude. "fix" is the REPLACEMENT TEXT, ready to paste, written in the candidate's voice — not a description of what they should do. A fix the user cannot copy straight into their CV is a wasted fix.
+- "fix" IS NEVER EMPTY AND NEVER AN INSTRUCTION. Measured: on the thinnest résumé in the set, three fixes came back as an empty string and one read "Rewrite the line to name the process you handled" — the user is shown a button that writes nothing, or writes homework into their CV. If the line is thin, that is precisely when you write it: name what that trade's work consists of, using the bar above, and state no fact about the person. If you truly cannot write the replacement, use action.kind "manual" and put the advice in "fix" as a complete sentence addressed to the candidate — but never leave it blank.
 - WHEN THE LINE NEEDS A NUMBER THE CANDIDATE HAS NOT GIVEN: write "fix" as the sentence WITHOUT the number, ending naturally, and put the request in "needsFromYou" as ONE concrete example sentence showing what a finished version looks like — using an obviously illustrative figure. Write it as a single example, never as a menu: "e.g. 'reducing crash rate from 2.1% to 0.4% across 50k users'". NEVER emit bracket placeholders like [insert metric] or [timeframe] anywhere: a list of options inside brackets is not an example, it is homework, and if it reaches the CV a recruiter reads it verbatim.
 - Ground EVERYTHING in the real resume text — quote it. Never invent a fact, metric or percentage.
 - Do NOT list which job-description keywords are missing — that is reported separately.
@@ -310,6 +351,16 @@ Hard rules:
 - Respond ONLY with the JSON, no markdown.`
       : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA inventas datos — cada afirmación cita el texto real del candidato.
 ${untrustedDataRule(false)}
+
+${cvValueBar("es")}
+
+${neverInventRule("es")}
+
+${keepCandidateFactsRule("es")}
+
+${proseRules("es")}
+
+${alreadyGoodRule("es")}
 
 Evalúa este CV para el PUESTO de abajo como lo harías en un escaneo de 7 segundos, y luego en una lectura a fondo.
 
@@ -352,6 +403,7 @@ Revisa el CV contra TODO lo siguiente y reporta cada problema real que encuentre
 
 Reglas duras:
 - LA PROFUNDIDAD ES EL PUNTO. "issue" cita la línea real del candidato. "why" nombra la consecuencia concreta para ESTA vacante (qué requisito queda sin cubrir, qué concluye el reclutador) — nunca una generalidad. "fix" es el TEXTO DE REEMPLAZO, listo para pegar, escrito en la voz del candidato — no una descripción de lo que debería hacer. Un arreglo que el usuario no puede copiar tal cual a su CV es un arreglo desperdiciado.
+- "fix" NUNCA VA VACÍO NI ES UNA INSTRUCCIÓN. Medido: en el CV más flaco del set, tres arreglos volvieron como cadena vacía y uno decía "Reescribe la línea para nombrar el proceso real que manejaste" — al usuario le queda un botón que no escribe nada, o que le mete la tarea dentro del CV. Si la línea es flaca, es justo cuando la escribís: nombrá en qué consiste el trabajo de ese oficio, con la vara de arriba, sin afirmar ningún dato sobre la persona. Si de verdad no podés escribir el reemplazo, usá action.kind "manual" y poné el consejo en "fix" como una oración completa dirigida al candidato — pero nunca en blanco.
 - CUANDO LA LÍNEA NECESITA UN NÚMERO QUE EL CANDIDATO NO DIO: escribe "fix" como la oración SIN el número, terminada de forma natural, y pon el pedido en "needsFromYou" como UN ejemplo concreto que muestre cómo se ve la versión terminada, con una cifra obviamente ilustrativa. Escríbelo como un solo ejemplo, nunca como un menú: "ej.: 'reduciendo los crashes de 2,1% a 0,4% en 50.000 usuarios'". NUNCA uses marcadores entre corchetes como [inserta métrica] o [plazo]: una lista de opciones entre corchetes no es un ejemplo, es tarea, y si llega al CV el reclutador la lee tal cual.
 - Ancla TODO en el texto real del CV — cítalo. Nunca inventes un dato, métrica ni porcentaje.
 - NO listes qué keywords de la vacante faltan — eso se reporta aparte.
@@ -430,6 +482,23 @@ Reglas duras:
           f.needsFromYou = instruction
         }
         /**
+         * A button that would write nothing must not be drawn.
+         *
+         * The split above keeps only the pasteable half of `fix`. When the model
+         * answered with an instruction and NOTHING else — measured on the thinnest
+         * résumé in the eval set, three of four fixes — the pasteable half is the
+         * empty string, and the finding still carried a `rewrite_bullet` action.
+         * The user then sees "Apply this text" on a card whose text is blank:
+         * pressing it either does nothing or erases the line it points at.
+         *
+         * `groundFixAction` cannot catch this — it validates that the TARGET
+         * exists, and here the target is fine and the text is missing. So the
+         * check belongs here, beside the split that produces the empty string.
+         */
+        if ((f.action?.kind === "rewrite_bullet" || f.action?.kind === "rewrite_summary") && !f.fix?.trim()) {
+          f.action = { kind: "manual" }
+        }
+        /**
          * A bracket menu is not an example.
          *
          * The model answers the "what is missing" slot with a list of options —
@@ -466,6 +535,17 @@ Reglas duras:
             : "Agregá el resultado que puedas defender: qué cambió, cuánto y sobre qué — ej.: \"bajando los crashes de 2,1% a 0,4% en 50.000 usuarios\"."
         }
       }
+      // A finding with nothing to read AND nothing to press is an empty card: it
+      // names a problem in "issue" and offers the user no way to act on it.
+      //
+      // "Nothing to press" is the part that is easy to get wrong. `fix` is
+      // `z.string().catch("")`, so it is empty whenever the model omitted it — and
+      // some actions do not write from `fix` at all: `add_skill` writes
+      // `action.value`, `fix_dates` and `remove_duplicates` operate on the CV
+      // directly. Dropping on empty `fix` alone would have binned findings whose
+      // button works perfectly. Only a `manual` action has nothing to press.
+      a.criticalFixes = a.criticalFixes.filter((f) =>
+        f.fix?.trim() || f.needsFromYou?.trim() || f.action?.kind !== "manual")
       // Nothing usable → null, so the UI shows no empty analysis.
       if (!a.verdict.trim() && a.criticalFixes.length === 0 && a.strengths.length === 0) return null
       // Remembered only once it survived every guard: a failed or empty read must
@@ -1137,13 +1217,23 @@ INSTRUCTIONS:
    a. TOP-THIRD FIRST: the current job title and the professional summary carry the most weight — a missing/weak current title or a vague summary is the #1 reason to reject on the first scan. Flag these before anything lower on the page.
    b. SENIORITY SIGNALS: reward scope and ownership — team size led, budget owned, cross-functional leadership, systems designed. If the target is a senior/lead role and the bullets read as individual-contributor tasks, say so.
    c. RED FLAGS a recruiter reacts to: unexplained employment gaps, a current title that does not match the target role, achievements with zero quantification, duty-listing ("responsible for…") instead of results, and inconsistent dates. Name the specific ones you see.
-   d. RELEVANCE OVER COMPLETENESS: a shorter, sharper resume beats a long one padded with weak bullets — recommend cutting or tightening, not just adding.
+   d. RELEVANCE OVER COMPLETENESS: between a long resume padded with weak bullets and a shorter, sharper one, the second wins — there, recommend cutting. This does NOT apply to a resume that is already thin: if its lines run to three or four words, the problem is that they say nothing, and tightening them further makes it worse. There, what is called for is writing what the work consists of.
    Keep every point grounded in this specific resume; do not give generic career advice.
+
+${cvValueBar("en")}
+
+${neverInventRule("en")}
+
+${keepCandidateFactsRule("en")}
+
+${proseRules("en")}
+
+${alreadyGoodRule("en")}
 
 For IMPROVEMENTS only: evaluate if there is a concrete fix the AI can generate. If so, include the "suggestion" field with:
 - field: ONE of these exact values: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (replace current content) or "append" (add to current content)
-- preview: the IMPROVED, ENRICHED text — more specific, more impactful than the original. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max 1200 characters. It must read as human-written: natural voice (not a press release), and none of the AI-tell words ("Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy").
+- preview: the IMPROVED text, judged by the bar above — and this includes the summary, which is where the failure is easiest to miss: a summary that only re-lists the words already in the CV ("Cashier with experience in till counts, customer service and bill payments") reads as a table of contents, not a profile. It must say what the work consists of, in the trade's own words — it must name the content of the work in that trade's vocabulary, and a reader must learn from it something the job title did not say. A preview whose only words are the candidate's own, reordered, does not qualify: omit it instead. NEVER shorten or genericize existing content. NO markdown, NO asterisks, NO HTML. Max ${MAX_PREVIEW_CHARS} characters. It must read as human-written: natural voice (not a press release), and none of the AI-tell words ("Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy").
 - reason: max 12 words explaining the change
 - targetId: REQUIRED whenever field starts with "workExperience." — use the item's exact id (shown as ID:xxx in the resume above). Without it the suggestion is discarded, because we would not know which job to apply it to.
 
@@ -1157,12 +1247,12 @@ The description is a LIST OF BULLETS, one per line. Your preview MUST stay a lis
 For STRENGTHS: do NOT include suggestion. Strengths confirm what is already working well — never suggest replacing or rewriting them.
 
 CRITICAL RULES FOR SUGGESTIONS (mandatory, no exceptions):
-1. ONLY include "suggestion" if you can rewrite using ONLY information already present in the resume context above. Otherwise OMIT the "suggestion" field entirely.
+1. Include "suggestion" whenever you can write the improved line without stating a FACT about the candidate they did not give. Naming what the work of their trade consists of is not a fact about them — it is the content of the task they said they performed, and writing it is the whole point. Returning their own sentence back to them, tidied, is not a suggestion.
 2. DO NOT invent: technologies, frameworks, libraries, tools, company names, job titles, certifications, percentages, numbers, dates, or any metric not explicitly stated in the input.
-3. DO NOT add bullets with new content. Only rewrite existing text to be clearer or more impactful.
-4. If the improvement requires data the user did not provide, OMIT "suggestion" and use ONLY "text" to describe what the user should add manually (e.g., "Add measurable metrics to your achievements" — NOT "Achieved 80% reduction in load time").
+3. DO NOT add a NEW bullet describing work the candidate never mentioned. Rewriting an existing bullet so it names the operations, documents, materials or controls that work consists of is required, not "new content".
+4. OMIT "suggestion" in one case only: when the improvement would require stating a FACT about the person they did not give — a figure, an employer, a tool they never listed. Then use ONLY "text" (e.g., "Add measurable metrics to your achievements" — NOT "Achieved 80% reduction in load time"). Naming what the work of their trade consists of is NOT that case: that is the thing you are here to write.
 5. NEVER use placeholders like [X%], [N users], <number>, or similar in the preview field. The preview must be production-ready text.
-6. If in doubt, OMIT "suggestion". A descriptive "text"-only advice is always preferable to an invented preview.
+6. If you can write the improvement without inventing a fact, WRITE IT. Advice with no preview leaves the user the problem and no way to fix it: you named the defect and withheld the repair. Measured on a real CV: five improvements, five verdicts, zero buttons. "If in doubt, omit" was the right rule when a preview could invent; the bar above now says what an acceptable preview is, and doubt is not an answer.
 7. For an ADVICE-ONLY improvement (no "suggestion"), STILL add a "location" object with the section it refers to, so the user knows WHERE to apply it: { "field": <one of the field values above>, "targetId": "<ID:xxx if the field starts with workExperience.>" }. e.g. advice about a skills typo → "location": { "field": "skills" }.
 
 Respond ONLY with valid JSON (no markdown):
@@ -1197,13 +1287,23 @@ INSTRUCCIONES:
    a. TERCIO SUPERIOR PRIMERO: el puesto actual y el resumen profesional pesan más — un título actual débil/ausente o un resumen vago es la razón #1 de rechazo en el primer escaneo. Señálalos antes que nada de más abajo.
    b. SEÑALES DE SENIORITY: premia alcance y ownership — tamaño de equipo liderado, presupuesto gestionado, liderazgo cross-funcional, sistemas diseñados. Si el objetivo es un rol senior/lead y los bullets se leen como tareas de colaborador individual, dilo.
    c. RED FLAGS que un reclutador nota: gaps de empleo sin explicar, título actual que no coincide con el rol objetivo, logros sin ninguna cuantificación, listar funciones ("responsable de…") en vez de resultados, y fechas inconsistentes. Nombra las específicas que veas.
-   d. RELEVANCIA SOBRE COMPLETITUD: un CV más corto y afilado gana a uno largo relleno de bullets débiles — recomienda recortar o apretar, no solo añadir.
+   d. RELEVANCIA SOBRE COMPLETITUD: entre un CV largo relleno de bullets débiles y uno más corto y afilado, gana el segundo — ahí recomienda recortar. Pero esto NO aplica a un CV que ya es escueto: si sus líneas son de tres o cuatro palabras, el problema es que no dicen nada, y apretarlas más lo empeora. Ahí lo que corresponde es escribir en qué consiste ese trabajo.
    Mantén cada punto anclado a ESTE CV específico; no des consejos genéricos de carrera.
+
+${cvValueBar("es")}
+
+${neverInventRule("es")}
+
+${keepCandidateFactsRule("es")}
+
+${proseRules("es")}
+
+${alreadyGoodRule("es")}
 
 Solo para IMPROVEMENTS: evalúa si hay una corrección o mejora concreta que la IA pueda generar. Si la hay, incluye el campo "suggestion" con:
 - field: UNO de estos valores exactos: "summary" | "personalDetails.jobTitle" | "skills" | "workExperience.description" | "workExperience.jobTitle" | "languages" | "certifications"
 - type: "replace" (reemplazar el contenido actual) o "append" (agregar al contenido actual)
-- preview: el texto MEJORADO y ENRIQUECIDO — más específico, más impactante que el original. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo 1200 caracteres. Debe sonar escrito por una persona: voz natural (no nota de prensa), sin palabras-IA ("Orquestó", "Apalancó", "Utilizó", "sinergia").
+- preview: el texto MEJORADO, juzgado por la vara de arriba — y esto incluye el resumen, que es donde más fácil se pasa por alto: un resumen que sólo vuelve a listar las palabras que ya están en el CV ("Cajera con experiencia en arqueo de caja, atención a clientes y cobro de servicios") se lee como un índice, no como un perfil. Tiene que decir en qué consiste el trabajo, con las palabras del oficio — tiene que nombrar el contenido del trabajo con el vocabulario de ese oficio, y quien lo lee tiene que aprender algo que el nombre del puesto no decía. Un preview cuyas únicas palabras son las del propio candidato, reordenadas, no califica: omitilo. NUNCA acortes ni hagas más genérico el contenido existente. SIN markdown, SIN asteriscos, SIN HTML. Máximo ${MAX_PREVIEW_CHARS} caracteres. Debe sonar escrito por una persona: voz natural (no nota de prensa), sin palabras-IA ("Orquestó", "Apalancó", "Utilizó", "sinergia").
 - reason: máximo 12 palabras explicando el cambio
 - targetId: OBLIGATORIO cuando field empieza por "workExperience." — usa el id exacto del item (lo ves como ID:xxx en el CV de arriba). Sin él la sugerencia se descarta, porque no sabríamos a qué trabajo aplicarla.
 
@@ -1217,12 +1317,12 @@ La descripción es una LISTA DE BULLETS, un bullet por línea. Tu preview DEBE s
 Para STRENGTHS: NO incluyas suggestion. Las fortalezas confirman lo que ya funciona bien — nunca sugieras reemplazar ni reescribir el contenido existente.
 
 REGLAS CRÍTICAS PARA SUGGESTIONS (obligatorias, sin excepciones):
-1. SOLO incluye "suggestion" si puedes reescribir usando ÚNICAMENTE información ya presente en el contexto del CV de arriba. Si no, OMITE el campo "suggestion" por completo.
+1. Incluí "suggestion" siempre que puedas escribir la línea mejorada sin afirmar un DATO sobre el candidato que él no dio. Nombrar en qué consiste el trabajo de su oficio no es un dato sobre él — es el contenido de la tarea que dijo hacer, y escribirlo es justamente el punto. Devolverle su propia oración acomodada no es una sugerencia.
 2. NO inventes: tecnologías, frameworks, librerías, herramientas, nombres de empresas, cargos, certificaciones, porcentajes, números, fechas, ni ninguna métrica que no esté explícitamente declarada en el input.
-3. NO añadas bullets con contenido nuevo. Solo reescribe texto existente para que sea más claro o impactante.
-4. Si la mejora requiere datos que el usuario no proporcionó, OMITE "suggestion" y usa SOLO "text" para describir qué debe añadir manualmente (ej.: "Añade métricas medibles a tus logros" — NO "Logré reducir el tiempo de carga en un 80%").
+3. NO agregues un bullet NUEVO que describa trabajo que el candidato nunca mencionó. Reescribir un bullet existente para que nombre las operaciones, documentos, materiales o controles en que consiste ese trabajo es obligatorio, no "contenido nuevo".
+4. OMITE "suggestion" en un solo caso: cuando la mejora exigiría afirmar un DATO sobre la persona que ella no dio — una cifra, un empleador, una herramienta que no declaró. Ahí usa SOLO "text" (ej.: "Añade métricas medibles a tus logros" — NO "Logré reducir el tiempo de carga en un 80%"). Nombrar en qué consiste el trabajo de su oficio NO es ese caso: eso es lo que tenés que escribir.
 5. NUNCA uses placeholders como [X%], [N usuarios], <número>, ni similares en el campo preview. El preview debe ser texto listo para producción.
-6. Ante la duda, OMITE "suggestion". Un consejo descriptivo en "text" sin preview es siempre preferible a un preview inventado.
+6. Si podés escribir la mejora sin inventar un dato, ESCRIBILA. Un consejo sin preview le deja al usuario el problema y ninguna forma de arreglarlo: le nombraste el defecto y le negaste el arreglo. Medido en un CV real: cinco mejoras, cinco veredictos, cero botones. "Ante la duda, omitir" era la regla correcta cuando un preview podía inventar; ahora la vara de arriba ya dice qué es un preview aceptable, y dudar no es una respuesta.
 7. Para una mejora SOLO-CONSEJO (sin "suggestion"), IGUAL agrega un objeto "location" con la sección a la que se refiere, para que el usuario sepa DÓNDE aplicarla: { "field": <uno de los valores de field de arriba>, "targetId": "<ID:xxx si el field empieza por workExperience.>" }. ej.: consejo sobre un typo en skills → "location": { "field": "skills" }.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
@@ -1239,7 +1339,41 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
   "answer": "<respuesta directa a la pregunta del candidato, o cadena vacía si fue revisión general>"
 }`
 
-    const response = await this.aiClient.chat({
+    /**
+     * ONE retry when the review comes back with nothing to press.
+     *
+     * Measured on a real CV, three rounds: five improvements, five verdicts,
+     * zero suggestions — the panel named the title, the summary and both roles
+     * as weak and offered no way to fix any of them. Loosening the "if in doubt,
+     * omit" rule moved it to two rounds in three; the third still answered with
+     * advice only, because the prompt allows it and a model varies.
+     *
+     * So the guarantee lives where the rest of the product's does: ask, and if
+     * the answer has nothing the user can act on, ask once more saying so. A
+     * review with no improvements at all is a different thing and stands — that
+     * is a clean CV, not a hole.
+     */
+    /**
+     * The retry names the FIELDS the first answer itself pointed at.
+     *
+     * A generic "you gave no suggestions" moved the reported CV from 0 buttons in
+     * 3 rounds to 2 in 3 — better and still not an answer. The first reply is not
+     * empty, though: every advice-only improvement carries a `location.field`
+     * saying WHERE it applies, so the second ask can quote its own list back and
+     * ask for the text. Reporting what it already said, never a new rule.
+     */
+    const retryNote = (first: ReviewResult): string => {
+      const fields = [...new Set((first.improvements ?? [])
+        .filter((i) => !i.suggestion?.preview?.trim())
+        .map((i) => (i.location?.field ?? i.suggestion?.field) as string | undefined)
+        .filter((f): f is string => !!f))]
+      const list = fields.length ? fields.join(", ") : "summary, workExperience.description"
+      return language === "en"
+        ? `Your last answer named problems and offered no "suggestion" for any of them, so the candidate was told what is wrong and given no way to fix it. You pointed at these fields: ${list}. Return the same JSON, and for each of them include a "suggestion" with the rewritten text — omit one only where writing it would state a fact the candidate never gave.`
+        : `Tu respuesta anterior nombró problemas y no ofreció "suggestion" para ninguno, así que al candidato le dijiste qué está mal y no le diste manera de arreglarlo. Señalaste estos campos: ${list}. Devolvé el mismo JSON, y para cada uno incluí una "suggestion" con el texto reescrito — omitilo sólo donde escribirlo afirmaría un dato que el candidato nunca dio.`
+    }
+
+    const askReview = (attempt: number, note = "") => this.aiClient.chat({
       // Same reasoning as analyzeResume: this one writes the rewrite the user
       // applies to their CV, so it belongs on the prose model, not the extractor.
       model: AI_MODEL_PROSE,
@@ -1266,15 +1400,37 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
                 "{\"summary\": \"\", \"strengths\": [], \"improvements\": [], \"answer\": \"off_topic\"} sin texto adicional. ") +
             langInstruction,
         },
-        { role: "user", content: prompt },
+        {
+          role: "user",
+          content: attempt === 0 || !note ? prompt : `${prompt}\n\n${note}`,
+        },
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<ReviewResult & { answer: string }>(raw)
+    const usages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = []
+    let response = await askReview(0)
+    usages.push(response.usage ?? {})
+    let raw = response.choices[0]?.message?.content ?? ""
+    let parsed = parseAIJson<ReviewResult & { answer: string }>(raw)
 
     if (parsed.answer === "off_topic") {
       throw new AppError("off_topic", 422)
+    }
+
+    // Nothing to press — but only when there was something to fix in the first
+    // place. An empty improvements list is a clean CV, and asking again would
+    // spend the user's money to be told the same true thing.
+    const nothingActionable = (p: ReviewResult) =>
+      (p.improvements?.length ?? 0) > 0 && !(p.improvements ?? []).some((i) => i.suggestion?.preview?.trim())
+    if (nothingActionable(parsed)) {
+      this.logger.warn("[AIService.reviewCV] no applicable suggestion — asking once more")
+      response = await askReview(1, retryNote(parsed))
+      usages.push(response.usage ?? {})
+      raw = response.choices[0]?.message?.content ?? ""
+      const second = parseAIJson<ReviewResult & { answer: string }>(raw)
+      // Keep the second answer only if it actually improved on the first; a
+      // second helping of advice is not worth losing the first one's wording.
+      if (second.answer !== "off_topic" && !nothingActionable(second)) parsed = second
     }
 
     // Strips markdown emphasis but NOT "•" or newlines: those carry the bullet
@@ -1287,7 +1443,13 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       item = { ...item, text: stripJobMarkers(item.text) }
       if (!item.suggestion) return { ...item, suggestion: undefined }
       const cleanedPreview = sanitizePreview(item.suggestion.preview)
-      const { field, targetId } = item.suggestion
+      const { field } = item.suggestion
+      // Same normalisation as tailor: the model echoes the "ID:x" label it was
+      // shown about as often as it answers the bare id, and an id that resolves
+      // to no job makes the guards below skip while the suggestion still ships.
+      const targetId = field.startsWith("workExperience.")
+        ? resolveJobId(item.suggestion.targetId, (sectionData.workExperience ?? []) as { id?: string }[]) ?? undefined
+        : item.suggestion.targetId
       // When a suggestion is stripped below, the item becomes advice-only — but it
       // still knows WHERE it applied, so preserve that as a location for the UI.
       const loc = item.location ?? { field, targetId }
@@ -1305,7 +1467,21 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // user already fixed). Exact-equality only — NOT a fuzzy 90% threshold —
       // so a spelling fix, which is nearly identical by design, still survives.
       const currentValue = getCurrentFieldValue(field, targetId, sectionData)
-      const normEq = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase()
+      /**
+       * Compared by CONTENT, not by bullet character.
+       *
+       * The raw comparison read "- Completed 40 structural frames" and
+       * "• Completed 40 structural frames" as two different texts, so a preview
+       * whose only change was the marker survived as a suggestion — the user is
+       * offered an improvement that, once applied, changes nothing they can see.
+       * `parseBullets` is the project's single reader of a description and it
+       * already strips the marker, so the comparison uses it.
+       */
+      const normEq = (s: string) => {
+        const bullets = parseBullets(s)
+        const body = bullets.length ? bullets.join("\n") : s
+        return body.replace(/\s+/g, " ").trim().toLowerCase()
+      }
       if (currentValue && normEq(currentValue) === normEq(cleanedPreview)) {
         return { ...item, suggestion: undefined, location: loc }
       }
@@ -1316,7 +1492,35 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // isCosmeticReword is built to spare genuine spelling fixes (small in-word edits)
       // and real enrichments (added keyword, nothing removed), so this only drops the
       // no-value rewords the user was complaining about.
-      if (currentValue && isCosmeticReword(currentValue, cleanedPreview)) {
+      /**
+       * Judged PER BULLET when the field is a bullet list, never as one blob.
+       *
+       * MEASURED on the reported CV: a six-bullet role where the model fixed the
+       * one line opening "Participé en la automatización de QA…" — the exact
+       * defect the panel had just named — came back 5/6 identical, so the whole
+       * suggestion read as a cosmetic reword and was thrown away. The user was
+       * shown the criticism and denied the fix for it.
+       *
+       * The same mistake, in the same shape, as the import comparison this
+       * codebase already fixed: a whole-field check on a list deletes nine good
+       * lines because of one. A description is a list of claims; if ONE of them
+       * is a real improvement, the suggestion is worth showing.
+       */
+      const cosmetic = field === "workExperience.description" && currentValue
+        ? (() => {
+            const before = parseBullets(currentValue)
+            const after = parseBullets(cleanedPreview)
+            // Line count already guarded below; pair by position for the ones
+            // that exist on both sides and ask whether ANY is a real change.
+            const anyReal = after.some((line, i) => {
+              const orig = before[i]
+              if (orig === undefined) return true
+              return !isCosmeticReword(orig, line) && normEq(orig) !== normEq(line)
+            })
+            return !anyReal
+          })()
+        : !!currentValue && isCosmeticReword(currentValue, cleanedPreview)
+      if (cosmetic) {
         this.logger.warn("[AIService.reviewCV] dropped cosmetic reword suggestion", {
           field,
           previewSample: cleanedPreview.slice(0, 120),
@@ -1328,6 +1532,24 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // resume context, drop the suggestion and keep only the advisory text.
       if (detectHallucination(cleanedPreview, resumeContext)) {
         this.logger.warn("[AIService.reviewCV] dropped hallucinated suggestion", {
+          field,
+          previewSample: cleanedPreview.slice(0, 120),
+        })
+        return { ...item, suggestion: undefined, location: loc }
+      }
+
+      /**
+       * Rewriting is not deleting the number either.
+       *
+       * The bullet-count check below catches a preview that returns four lines
+       * where the CV had five. It cannot catch the preview that returns all five
+       * with the figures rubbed out — measured on a well-written résumé, the
+       * summary preview came back without "30 patients per shift" or "6 new
+       * hires", which were the two facts that made it worth reading. Same rule
+       * as tailor's: keep every figure or keep the user's text.
+       */
+      if (currentValue && losesStatedFigure(currentValue, cleanedPreview)) {
+        this.logger.warn("[AIService.reviewCV] dropped suggestion that deletes a stated figure", {
           field,
           previewSample: cleanedPreview.slice(0, 120),
         })
@@ -1353,42 +1575,61 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
       return {
         ...item,
-        suggestion: { ...item.suggestion, preview: cleanedPreview },
+        suggestion: { ...item.suggestion, preview: cleanedPreview, targetId },
       }
     }
 
-    const reviewUsage = response.usage
+    // One row for this endpoint, first attempt plus the retry.
+    const reviewPromptTokens = usages.reduce((n, u) => n + (u.prompt_tokens ?? 0), 0)
+    const reviewCompletionTokens = usages.reduce((n, u) => n + (u.completion_tokens ?? 0), 0)
     const reviewLogOpts = {
       model: AI_MODEL_PROSE,
       plan,
-      promptTokens: reviewUsage?.prompt_tokens ?? 0,
-      completionTokens: reviewUsage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL_PROSE, reviewUsage?.prompt_tokens ?? 0, reviewUsage?.completion_tokens ?? 0),
+      promptTokens: reviewPromptTokens,
+      completionTokens: reviewCompletionTokens,
+      costUsd: computeCostUsd(AI_MODEL_PROSE, reviewPromptTokens, reviewCompletionTokens),
     }
 
-    const validated = ReviewResponseSchema.safeParse(parsed)
-    if (!validated.success) {
-      this.logger.warn("[AIService.reviewCV] Zod validation failed, returning without suggestions", { error: validated.error.flatten() })
-      logAIUsage(userId, "review-cv", reviewLogOpts)
-      return {
-        summary: parsed.summary ?? "",
-        strengths: (parsed.strengths ?? []).slice(0, 5).map((s: unknown) =>
-          typeof s === "string" ? { text: s } : { text: (s as { text?: string }).text ?? "" }
-        ),
-        improvements: (parsed.improvements ?? []).slice(0, 5).map((s: unknown) =>
-          typeof s === "string" ? { text: s } : { text: (s as { text?: string }).text ?? "" }
-        ),
-        answer: parsed.answer ?? "",
-        resumeScore,
+    /**
+     * Validated ITEM BY ITEM, never all or nothing.
+     *
+     * What stood here ran one `safeParse` over the whole response and, on any
+     * failure, returned the review with EVERY suggestion stripped — the user saw
+     * five things wrong with their CV and not one button to fix them. Measured
+     * live on the reported CV, six rounds: the model offered three to seven
+     * usable rewrites every single time, and three of those rounds delivered
+     * zero, because one preview ran past the character cap or the list held six
+     * items instead of five.
+     *
+     * A bad item is a bad item. It is dropped, and the good ones go through —
+     * the same rule this codebase already applies to imported bullets, to merge
+     * candidates and to critical fixes. Nothing here can turn one oversized
+     * string into a review with no buttons.
+     */
+    type ReviewItem = z.infer<typeof ReviewItemSchema>
+    const keepValid = (raw: unknown): ReviewItem[] => {
+      const items = Array.isArray(raw) ? raw : []
+      const out: ReviewItem[] = []
+      let dropped = 0
+      for (const item of items) {
+        const one = ReviewItemSchema.safeParse(item)
+        if (one.success) { out.push(sanitizeItem(one.data)); continue }
+        // Salvage the advice even when the suggestion is malformed: the text is
+        // what names the problem, and losing it as well helps nobody.
+        const text = typeof item === "string" ? item : (item as { text?: unknown })?.text
+        if (typeof text === "string" && text.trim()) out.push({ text: stripJobMarkers(text) })
+        dropped++
       }
+      if (dropped > 0) this.logger.warn("[AIService.reviewCV] dropped malformed review items", { dropped, kept: out.length })
+      return out.slice(0, 5)
     }
 
     logAIUsage(userId, "review-cv", reviewLogOpts)
     return {
-      summary: validated.data.summary,
-      strengths: validated.data.strengths.map(sanitizeItem),
-      improvements: validated.data.improvements.map(sanitizeItem),
-      answer: validated.data.answer,
+      summary: typeof parsed.summary === "string" ? parsed.summary : "",
+      strengths: keepValid(parsed.strengths),
+      improvements: keepValid(parsed.improvements),
+      answer: typeof parsed.answer === "string" ? parsed.answer : "",
       resumeScore,
     }
   }
@@ -1561,4 +1802,21 @@ function defaultSummary(score: number, en: boolean): string {
   if (score >= 60) return en ? "Good match — a few targeted additions will strengthen it." : "Buena coincidencia — algunos ajustes puntuales la reforzarán."
   if (score >= 40) return en ? "Partial match — several key requirements are missing." : "Coincidencia parcial — faltan varios requisitos clave."
   return en ? "Low match — the resume is missing most of the role's requirements." : "Baja coincidencia — al CV le faltan la mayoría de los requisitos del puesto."
+}
+
+/**
+ * The text a rewrite action would overwrite, or null when the action writes no
+ * prose. Kept beside the check that uses it: the only reason it exists is that
+ * `groundFixAction` deliberately knows nothing about `fix`.
+ */
+function targetTextFor(action: CvFixAction, sectionData: Record<string, unknown>): string | null {
+  if (action.kind === "rewrite_summary") {
+    const summary = sectionData.summary
+    return typeof summary === "string" && summary.trim() ? summary : null
+  }
+  if (action.kind !== "rewrite_bullet") return null
+  const jobs = (sectionData.workExperience ?? []) as { id?: string; description?: string }[]
+  const job = jobs.find((j) => !!j.id && j.id === action.targetId)
+  if (!job || action.index === undefined) return null
+  return parseBullets(job.description ?? "")[action.index] ?? null
 }

@@ -414,10 +414,27 @@ export const SUGGESTION_FIELDS = [
   "certifications",
 ] as const
 
+/**
+ * How long a preview may be, and it has to fit the field it REPLACES.
+ *
+ * It was 1000 while the prompt asked for up to 1200 — the schema and the
+ * instruction disagreed, and the schema won by rejecting. Worse, a preview for a
+ * work-experience description is a whole bullet list: the reported CV has six
+ * bullets of ~140 characters, so a faithful rewrite passes 1000 by simply
+ * existing. Measured over six live rounds on that CV, three came back with every
+ * suggestion destroyed by this cap.
+ *
+ * 2400 is not a new opinion: `buildResumeContext` already renders a role's
+ * bullets up to 2200 characters, so that is this codebase's own idea of how long
+ * a full description runs, plus room for a rewrite that says more than the
+ * original. The prompt quotes this constant so the two cannot drift again.
+ */
+export const MAX_PREVIEW_CHARS = 2400
+
 export const SuggestionSchema = z.object({
   field: z.enum(SUGGESTION_FIELDS),
   type: z.enum(["replace", "append"]),
-  preview: z.string().min(1).max(1000),
+  preview: z.string().min(1).max(MAX_PREVIEW_CHARS),
   reason: z.string().max(120),
   targetId: z.string().optional(),
 })
@@ -434,10 +451,20 @@ export const ReviewItemSchema = z.object({
   location: z.object({ field: z.enum(SUGGESTION_FIELDS), targetId: z.string().optional() }).optional().catch(undefined),
 })
 
+/**
+ * No `.max(5)` here, on purpose.
+ *
+ * A model that returned six improvements failed the WHOLE parse, and the caller's
+ * fallback then returned the review with every suggestion stripped — six good
+ * fixes thrown away for being one too many. A count is not a validity question;
+ * it is a display question, and the caller slices. Same lesson the fill-profile
+ * schema records a few lines below: a strict rule in the wrong place does not
+ * reject the bad part, it rejects everything.
+ */
 export const ReviewResponseSchema = z.object({
   summary: z.string(),
-  strengths: z.array(ReviewItemSchema).max(5),
-  improvements: z.array(ReviewItemSchema).max(5),
+  strengths: z.array(ReviewItemSchema),
+  improvements: z.array(ReviewItemSchema),
   answer: z.string(),
 })
 

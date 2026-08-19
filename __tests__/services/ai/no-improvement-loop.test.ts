@@ -112,17 +112,36 @@ describe("no improvement loop — strong content never reaches the model", () =>
   // rewritten went straight back. The two tests at the end state the real rule —
   // a focus is honoured while the defect it names is still there.
 
-  it("tailor-cv: refuses when the CV misses nothing and every bullet is clean", async () => {
-    // Tailoring is about a POSTING, so "well written" alone is not the bar —
-    // the ATS pass must also report no missing keyword for this posting.
-    const r = await new AIService(client, logger).tailorCV("u1", {
+  /**
+   * Tailor used to RETURN EARLY here, with no model call at all, whenever the ATS
+   * pass found no missing keyword and no bullet had a formal defect. That was the
+   * same mistake improve-bullet made: `isDescriptionOptimized` reads the opening
+   * word, and "Soldé piezas." passes it. Measured over 8 résumés whose every
+   * bullet is three words, tailor handed back nothing for five — a use and a
+   * cooldown spent to be told there was nothing to do.
+   *
+   * The contract now: the model is ALWAYS asked, the check becomes FOCUS in the
+   * prompt, and the loop brake lives in the response (a rewrite that changed
+   * nothing is dropped) rather than in a refusal to look.
+   */
+  it("tailor-cv: asks the model even when nothing is missing, and passes the check as focus", async () => {
+    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
+      summary: null, experiences: [], missingSkills: [], softSkillSuggestions: [],
+    })))
+    const c: IAIClient = { chat, embed: vi.fn() }
+    const r = await new AIService(c, logger).tailorCV("u1", {
       sectionData: { workExperience: [{ id: "w1", description: STRONG_BULLETS }] },
       jobDescription: "We need a senior iOS engineer with SwiftUI and CI experience. ".repeat(3),
       atsMissingKeywords: [],
     }, "PRO")
-    expect(r.experiences).toEqual([])
+    expect(chat.mock.calls.length).toBeGreaterThan(0)
+    const sent = String(chat.mock.calls[0]?.[0]?.messages?.[1]?.content ?? "")
+    // Either branch: the module builds the Spanish prompt by default.
+    expect(sent).toMatch(/FOCUS|FOCO/)
+    // A genuinely empty answer is still allowed to be empty — never-empty retries
+    // it once, and the user's own strong bullets are not overwritten with churn.
+    expect(r.experiences.flatMap((e) => e.changedBullets)).toEqual([])
     expect(r.summary).toBeNull()
-    expect(calls()).toBe(0)
   })
 
   it("tailor-cv still runs when the posting asks for something the CV lacks", async () => {

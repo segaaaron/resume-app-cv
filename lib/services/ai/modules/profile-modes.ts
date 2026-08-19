@@ -46,6 +46,24 @@ interface Built {
   system: string
   user: string
   maxTokens: number
+  /**
+   * True when this mode writes PROSE THAT LANDS IN THE CV, so the caller puts it
+   * on the prose model rather than the extractor.
+   *
+   * Declared as a PROPERTY OF THE TASK, not as a model id: importing the model
+   * constant here would drag `ai-client` — and through it `lib/db` — into a file
+   * that is otherwise pure prompt text, and the test that covers these prompts
+   * stopped loading the moment it did. Same reason `model-params.ts` exists
+   * apart from the adapter. The caller already imports both models and is the
+   * one place that should decide.
+   *
+   * Measured on the extraction model: two mangled Spanish verb forms in four
+   * rounds — "Cobra o a las clientas", "definid criterios de validación" —
+   * shipped straight into a résumé, where no spellchecker catches them because
+   * both halves are real words. seed and certifications stay on the extractor:
+   * they emit a job title and short labels, not sentences a recruiter reads.
+   */
+  writesProse?: boolean
 }
 
 /**
@@ -153,7 +171,7 @@ Nombralas en ESPAÑOL, salvo las que tengan nombre oficial en otro idioma.`
  * only one that can be tempted to embellish it. It may not: the line between
  * "shaped what they said" and "wrote a job for them" is the whole product.
  */
-function bullets(role: string, told: string, language: string): Built {
+function bullets(role: string, told: string, language: string, declared: string): Built {
   const system = language === "en"
     ? `You are a senior résumé writer who specialises in the trade the candidate names. You write the bullets THEY would write if they knew how a CV is read.
 
@@ -166,6 +184,11 @@ ${cvValueBar("en")}
 
 ${neverInventRule("en")}
 
+${declared ? `WHAT THIS CANDIDATE HAS ALREADY DECLARED — tools, standards and skills, from their own CV:
+${declared}
+
+USE THEM. These are not yours to invent; they are already on the page in their own hand, and a bullet that describes the work without naming the tool they use for it throws away the keyword the CV was supposed to carry. Naming the tool costs nothing and is the difference between a line a parser skips and one it matches — same facts either way, and only one of them is searchable. Name a declared tool ONLY where it genuinely belongs to the activity they described; never scatter the list across every line.
+` : ""}
 SHAPE:
 - ONE bullet per activity they mentioned. Never merge two, never invent a fourth.
 - Open with a first-person past-tense action verb.
@@ -185,6 +208,11 @@ ${cvValueBar("es")}
 
 ${neverInventRule("es")}
 
+${declared ? `LO QUE ESTE CANDIDATO YA DECLARÓ — herramientas, normas y habilidades, sacadas de su propio CV:
+${declared}
+
+USALAS. No son tuyas para inventar: ya están escritas por él en su CV, y una viñeta que describe el trabajo sin nombrar la herramienta con la que lo hace tira a la basura la keyword que ese CV tenía que llevar. Nombrar la herramienta no cuesta nada y es la diferencia entre una línea que el parser saltea y una que matchea — los mismos hechos en las dos, y sólo una es buscable. Nombrá una herramienta declarada SÓLO donde de verdad pertenece a la actividad que él contó; nunca repartas la lista por todas las líneas.
+` : ""}
 FORMA:
 - UNA viñeta por cada actividad que mencionó. No fusiones dos ni inventes una cuarta.
 - Abre con un verbo en PRIMERA persona del pasado simple: la forma -é/-í (Ejecuté, Atendí, Registré, Coordiné). NUNCA la forma -ó de tercera persona, que se lee como si otro escribiera sobre él.
@@ -204,7 +232,7 @@ Lo que cuenta la persona: "${told}"
 Responde ÚNICAMENTE con este JSON: {"bullets": ["<una viñeta por cada actividad que nombró, sin el símbolo •>"]}
 Escribí las viñetas en ESPAÑOL — este CV está en español, sin importar en qué idioma haya contado su trabajo la persona.`
 
-  return { system, user, maxTokens: 700 }
+  return { system, user, maxTokens: 700, writesProse: true }
 }
 
 /**
@@ -214,7 +242,34 @@ Escribí las viñetas en ESPAÑOL — este CV está en español, sin importar en
  * certifications, and "Role — Employer: what they said" for bullets, which is
  * split back apart here so the model is told which role it is writing about.
  */
-export function buildModePrompt(mode: ProfileMode, prompt: string, language: string): Built {
+/**
+ * The tools and standards the candidate has already put on their own CV.
+ *
+ * WHY THE BULLETS PROMPT NEEDS THIS. Reported from a real résumé: a QA engineer
+ * whose skills list reads Selenium, Cypress, Playwright, JUnit, TestNG, CI/CD
+ * got back bullets about "matrices de test" and "criterios de aceptación" —
+ * generic QA nouns, not one tool named. The prompt could not do better: it was
+ * handed the role and one sentence, so it had no idea which tools were his, and
+ * the never-invent rule (correctly) forbids naming a brand out of nowhere.
+ *
+ * Passing what he already declared closes both halves at once. It invents
+ * nothing — every word here was typed by the candidate — and it is precisely
+ * what an ATS searches for.
+ */
+function declaredTools(sectionData: Record<string, unknown> | undefined): string {
+  if (!sectionData) return ""
+  const skills = ((sectionData.skills ?? []) as { name?: string }[])
+    .map((s) => s.name?.trim()).filter((n): n is string => !!n)
+  if (skills.length === 0) return ""
+  return skills.slice(0, 25).join(", ")
+}
+
+export function buildModePrompt(
+  mode: ProfileMode,
+  prompt: string,
+  language: string,
+  sectionData?: Record<string, unknown>,
+): Built {
   const text = prompt.trim()
   if (mode === "certifications") return certifications(text, language)
   if (mode === "bullets") {
@@ -223,7 +278,7 @@ export function buildModePrompt(mode: ProfileMode, prompt: string, language: str
     // role reads as "unspecified" to the model rather than breaking the prompt.
     const role = at > 0 ? text.slice(0, at).trim() : ""
     const told = at > 0 ? text.slice(at + 1).trim() : text
-    return bullets(role, told, language)
+    return bullets(role, told, language, declaredTools(sectionData))
   }
   return seed(text, language)
 }

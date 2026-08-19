@@ -14,6 +14,12 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
+// The letter takes the BAR and the never-invent list, and not `proseRules`:
+// those describe how a CV BULLET opens and how long it runs ("• ", one tense,
+// 16-28 words, a past-tense verb first), which is the wrong shape for a letter
+// and would fight the paragraph structure below. The two that do apply are the
+// two that are about content rather than form.
+import { cvValueBar, neverInventRule } from "../shared/cv-writing-doctrine"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessCoverLetter } from "../shared/cover-letter-quality"
@@ -168,6 +174,10 @@ export class AICoverLetterModule {
 
 Write a complete, compelling cover letter body for the following candidate and position. This letter must feel personal, specific, and tailored — not generic. It should demonstrate clear understanding of the role and convincingly show why this candidate is the right fit.
 
+${cvValueBar("en")}
+
+${neverInventRule("en")}
+
 ${untrustedDataRule(true)}
 
 ${resumeContext ? `=== CANDIDATE PROFILE ===\n${resumeContext}\n` : ""}${candidateBlock}${briefBlock}
@@ -200,6 +210,10 @@ Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using 
       : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
 
 Escribe el cuerpo completo de una carta de presentación para el siguiente candidato y puesto. La carta debe sentirse personal, específica y totalmente adaptada — no genérica. Debe demostrar comprensión real del rol y convencer de forma genuina por qué este candidato es la persona indicada.
+
+${cvValueBar("es")}
+
+${neverInventRule("es")}
 
 ${untrustedDataRule(false)}
 
@@ -427,7 +441,13 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
         temperature: AI_TEMPERATURE_STRUCTURED,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
+          // Both branches, because a `system` that exists in one language is a
+          // ROLE the other language never receives — the same omission 9ba3af2
+          // fixed in ten other modules. The retry is where grounding matters most,
+          // so an English letter must not be asked in Spanish not to invent.
+          { role: "system", content: language === "en"
+            ? `You are a senior cover-letter writer. You NEVER invent figures, companies or technologies absent from the profile. ${langInstruction}`
+            : `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}` },
         ],
       })
@@ -460,7 +480,13 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
         temperature: AI_TEMPERATURE_STRUCTURED,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
+          // Both branches, because a `system` that exists in one language is a
+          // ROLE the other language never receives — the same omission 9ba3af2
+          // fixed in ten other modules. The retry is where grounding matters most,
+          // so an English letter must not be asked in Spanish not to invent.
+          { role: "system", content: language === "en"
+            ? `You are a senior cover-letter writer. You NEVER invent figures, companies or technologies absent from the profile. ${langInstruction}`
+            : `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}` },
         ],
       })
@@ -777,7 +803,9 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
         temperature: AI_TEMPERATURE_STRUCTURED,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
+          { role: "system", content: language === "en"
+            ? `You are an Elite Career Consultant. You NEVER invent figures and never write placeholders. ${langInstruction}`
+            : `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}` },
         ],
       })

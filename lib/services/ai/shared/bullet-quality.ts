@@ -14,16 +14,43 @@ import { hasCliche } from "./cliches"
 import type { ATSContentQuality } from "./ai-types"
 
 /** Openers that describe a duty instead of an achievement. */
-const WEAK_OPENERS: readonly string[] = [
-  // en
+/**
+ * Duty openers, kept apart BY LANGUAGE rather than in one bag.
+ *
+ * The prompts quote this list so a phrase is banned in one place and enforced in
+ * one place. Quoting the wrong half teaches nothing: a first attempt at deriving
+ * the two sides with a regex put "Participated in" into the Spanish prompt,
+ * because "particip" is a prefix of both languages' word. The split is data now,
+ * not a guess.
+ */
+export const WEAK_OPENERS_EN: readonly string[] = [
   "responsible for", "in charge of", "assisted with", "helped with",
   "worked on", "duties included", "tasked with", "involved in",
   "participated in", "contributed to",
-  // es
+]
+export const WEAK_OPENERS_ES: readonly string[] = [
   "responsable de", "encargado de", "encargada de", "apoyé en", "apoye en",
   "ayudé con", "ayude con", "trabajé en", "trabaje en",
   "mis funciones incluían", "participé en", "participe en", "colaboré en",
 ]
+export const WEAK_OPENERS: readonly string[] = [...WEAK_OPENERS_EN, ...WEAK_OPENERS_ES]
+
+/**
+ * A Spanish bullet written as if somebody else were reporting on the candidate.
+ *
+ * The -ó preterite is third person: "Ejecutó suites con Selenium" is a sentence
+ * ABOUT the candidate, and a CV line is written BY them. Measured on a real CV,
+ * tailor returned two of them straight into the work history.
+ *
+ * Narrow on purpose — only the FIRST word, only when it ends in the accented -ó
+ * that marks the third-person preterite. A noun cannot end that way in Spanish
+ * without being a verb form, so this cannot fire on ordinary vocabulary, and it
+ * stays silent on English, where the same form does not exist.
+ */
+export function opensInThirdPersonEs(text: string): boolean {
+  const first = text.replace(/^[\s•·▪‣*\-–—]+/, "").trim().split(/\s+/)[0] ?? ""
+  return /^[a-zá-úñ]+ó$/i.test(first)
+}
 
 export interface BulletAssessment {
   /** Position in the original description, 0-based. */

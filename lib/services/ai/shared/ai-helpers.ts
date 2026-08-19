@@ -189,6 +189,61 @@ export function hasAnyMetric(text: string): boolean {
  * and "[Company]" both matched on their incidental "n" — which silently binned
  * every cover letter the model signed off with "Sincerely, [Your Name]".
  */
+/**
+ * Resolves the job id a model answered with to a job that actually exists.
+ *
+ * The prompts show work experience as "ID:w1 | Welder at Talleres Cruz", and the
+ * model is asked to answer with the id. Measured across 8 résumés: sometimes it
+ * answers "w1" and sometimes "ID:w1" — it echoes the label it was shown.
+ *
+ * WHY THAT IS NOT COSMETIC. Everything downstream looks the job up by exact id.
+ * A miss is silent in the worst possible way: in tailor, `origBulletsByJob.get()`
+ * returns undefined, and EVERY per-bullet guard is written as
+ * `if (orig !== undefined)` — so the figure-loss check, the trivial-edit check
+ * and the lateral-rewrite check all quietly skip for that job, and the rewrite
+ * ships unexamined. The client then cannot place it either, because the id it
+ * was handed matches nothing.
+ *
+ * Returns null when the id matches no job, so the caller can drop the suggestion
+ * instead of shipping one that points nowhere.
+ */
+export function resolveJobId(raw: string | undefined, jobs: { id?: string }[]): string | null {
+  const candidate = (raw ?? "").trim().replace(/^ID:\s*/i, "")
+  if (!candidate) return null
+  return jobs.some((j) => j.id === candidate) ? candidate : null
+}
+
+/**
+ * True when the rewrite has dropped a figure the ORIGINAL stated.
+ *
+ * THE SYMMETRIC HALF OF `detectHallucination`, and it was missing.
+ * `detectHallucination` asks "did it ADD a number nobody gave?" — the failure
+ * that gets a CV caught in an interview. This asks "did it REMOVE a number the
+ * candidate did give?" — the failure that quietly deletes the one thing on the
+ * line a recruiter can weigh, and it is the more expensive of the two, because
+ * the candidate spent a year earning that number and the button promised an
+ * improvement.
+ *
+ * Measured on well-written résumés, 2026-08-19: asking tailor to name the
+ * content of the work turned "Cut medication errors from 12 to 3 per month"
+ * into "Reduced medication errors by reconciling prescriptions, MAR entries and
+ * administered doses" — richer, truthful, and stripped of 12 and 3. Four of five
+ * bullets on that CV lost their figures, and every existing guard passed it:
+ * nothing was invented, nothing was trivially reworded, and the text grew, so
+ * `dropsContentWithoutGain` saw a gain.
+ *
+ * Compared on DIGITS, not on the token: "1.400" and "1,400" are the same figure
+ * written under two locales, and a CV in Spanish must not be judged by an
+ * English separator.
+ */
+export function losesStatedFigure(original: string, rewrite: string): boolean {
+  const digitsOf = (t: string) => (t.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(/[.,]/g, ""))
+  const before = digitsOf(original)
+  if (before.length === 0) return false
+  const after = new Set(digitsOf(rewrite))
+  return before.some((d) => !after.has(d))
+}
+
 export const METRIC_PLACEHOLDER_REGEX =
   /\[\s*(?:x\b|n\b|z\b|\$|\d|number\b|métrica\b|metric\b|porcentaje\b|percent\b|cifra\b)/i
 

@@ -21,8 +21,10 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { resolveLanguage, detectHallucination, parseAIJson } from "../shared/ai-helpers"
+import { resolveLanguage, detectHallucination, parseAIJson, losesStatedFigure } from "../shared/ai-helpers"
+import { cvValueBar, neverInventRule, keepCandidateFactsRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
+import { contentDroppedFrom } from "../shared/text-similarity"
 import { clicheBanList } from "../shared/cliches"
 import { cleanGeneratedText } from "../shared/clean-output"
 
@@ -76,10 +78,19 @@ export class AIMergeBulletsModule {
     const prompt = language === "en"
       ? `Fuse the two résumé bullets below —both from the same role— into ONE line.
 
+${cvValueBar("en")}
+
+${neverInventRule("en")}
+
+${keepCandidateFactsRule("en")}
+
+WHAT A MERGE IS, and this is the part that goes wrong:
+- A merge is NOT the two sentences joined by "and". "Picked orders from the pick list and packed them onto pallets" is two lines with a conjunction between them: it is longer than either, says nothing neither said, and buys the candidate one line of space and no more. Measured: three of four merges came back exactly like that.
+- A merge names ONE action and folds the other in as HOW or WITH WHAT it was done. "Managed the clinic's appointment book, confirming each patient's slot by phone the day before" is one claim; "Managed the book and confirmed the slots" is two. The test is not length — two lines that share no wording cannot get much shorter without losing a fact, and keeping the facts wins. The test is whether a reader meets ONE claim or two.
+- Do not open with a verb that upgrades the work into something the candidate never claimed. "Built the order fulfilment workflow" is a claim about designing a system; picking and packing is not. Use the verb their own line used.
+
 RULES:
-- Keep every fact, tool, technology and figure that appears in either line. Losing one is a failure.
-- One sentence, verb-first in the past tense (Built, Integrated, Automated, Migrated, Implemented). No pronouns. No bullet marker.
-- Do NOT invent a metric, a scale, an outcome or a technology that is not already in the two lines. Never write a bracket placeholder such as [X%] or [N users].
+- One sentence, verb-first in the past tense. No pronouns. No bullet marker.
 - Do not use: ${clicheBanList("en")}
 - If the two lines describe genuinely different work and forcing them together would distort either one, return {"status": "not_mergeable"}. That is a correct and expected answer, not a failure.
 
@@ -90,10 +101,19 @@ BULLET A: ${a}
 BULLET B: ${b}`
       : `Fusiona los dos bullets de currículum de abajo —ambos del mismo puesto— en UNA sola línea.
 
+${cvValueBar("es")}
+
+${neverInventRule("es")}
+
+${keepCandidateFactsRule("es")}
+
+QUÉ ES UNA FUSIÓN, y esta es la parte que sale mal:
+- Una fusión NO son las dos oraciones unidas con "y". "Gestioné la agenda y confirmé los turnos por teléfono" son dos líneas con una conjunción en el medio: queda más larga que cualquiera de las dos, no dice nada que ninguna dijera, y le compra al candidato un renglón de espacio y nada más. Medido: tres de cada cuatro fusiones volvieron exactamente así.
+- Una fusión nombra UNA acción y mete la otra adentro como el CÓMO o el CON QUÉ. "Gestioné la agenda médica del consultorio confirmando cada turno por teléfono el día anterior" es una sola afirmación; "Gestioné la agenda y confirmé los turnos" son dos. La prueba no es el largo — dos líneas que no comparten palabras no pueden acortarse mucho sin perder un dato, y conservar los datos gana. La prueba es si quien lee se encuentra con UNA afirmación o con dos.
+- No abras con un verbo que ascienda el trabajo a algo que el candidato nunca dijo. "Construí el flujo de preparación de pedidos" afirma haber diseñado un sistema; preparar y embalar pedidos no lo es. Usá el verbo que usó su propia línea.
+
 REGLAS:
-- Conserva todos los datos, herramientas, tecnologías y cifras que aparezcan en cualquiera de las dos líneas. Perder uno es un fallo.
-- Una sola frase, con el verbo primero y en pasado (Desarrollé, Integré, Automaticé, Migré, Implementé). Sin pronombres. Sin viñeta.
-- NO inventes métricas, escalas, resultados ni tecnologías que no estén ya en las dos líneas. Nunca escribas un placeholder entre corchetes como [X%] o [N usuarios].
+- Una sola frase, con el verbo primero y en pasado. Sin pronombres. Sin viñeta.
 - No uses: ${clicheBanList("es")}
 - Si las dos líneas describen trabajos genuinamente distintos y forzarlas distorsionaría alguna, devuelve {"status": "not_mergeable"}. Es una respuesta correcta y esperada, no un fallo.
 
@@ -109,11 +129,11 @@ BULLET B: ${b}`
 
     let text: string
     let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined
-    const callOnce = () => this.aiClient.chat({
+    const callOnce = (note = "") => this.aiClient.chat({
       model: AI_MODEL_PROSE,
       messages: [
         { role: "system", content: system },
-        { role: "user", content: prompt },
+        { role: "user", content: note ? `${prompt}\n\n${note}` : prompt },
       ],
       // One sentence; the cap covers the reasoning budget of the GPT-5 family.
       max_tokens: 1200,
@@ -150,13 +170,30 @@ BULLET B: ${b}`
       return { status: "not_mergeable" }
     }
 
-    logAIUsage(userId, "merge-bullets", {
-      model: AI_MODEL_PROSE,
-      plan,
-      promptTokens: usage?.prompt_tokens ?? 0,
-      completionTokens: usage?.completion_tokens ?? 0,
-      costUsd: computeCostUsd(AI_MODEL_PROSE, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
-    })
+    /**
+     * ONE row for this endpoint, first attempt plus any retry — the convention the
+     * summary and the cover letter already follow.
+     *
+     * It is not only about tokens. The admin panel groups AIUsageLog with
+     * `_count: { id: true }`, so a second row would report two merge calls for one
+     * button press: the cost column would stay right while the calls column
+     * quietly doubled. Billed from a `finally` so every exit path below — and
+     * there are six — pays exactly once, including the ones that discard the
+     * answer. A discarded answer still cost money.
+     */
+    const usages: Array<{ prompt_tokens?: number; completion_tokens?: number }> = [usage ?? {}]
+    const bill = () => {
+      const promptTokens = usages.reduce((n, u) => n + (u.prompt_tokens ?? 0), 0)
+      const completionTokens = usages.reduce((n, u) => n + (u.completion_tokens ?? 0), 0)
+      logAIUsage(userId, "merge-bullets", {
+        model: AI_MODEL_PROSE,
+        plan,
+        promptTokens,
+        completionTokens,
+        costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens),
+      })
+    }
+    try {
 
     // Contrato de salida JSON. `not_mergeable` es una respuesta legítima del modelo,
     // no un error: las dos líneas pueden tratar de trabajos distintos.
@@ -191,8 +228,95 @@ BULLET B: ${b}`
     // content rather than combined it.
     if (text.length < Math.max(a.length, b.length)) return { status: "not_mergeable" }
 
+    /**
+     * "Keep every figure" was a prompt rule with nothing checking it.
+     *
+     * `findMergeCandidates` never offers a line carrying a digit, so this cannot
+     * fire on the panel's own suggestions — but the endpoint takes indexes from
+     * the request, and a merge that quietly drops the one number in the pair is
+     * exactly the loss the rest of this session made unrepresentable everywhere
+     * else. Same rule, same place: the response.
+     */
+    if (losesStatedFigure(`${a}\n${b}`, text)) {
+      this.logger.warn("[AIService.mergeBullets] merged bullet dropped a stated figure — discarded", { targetId })
+      return { status: "not_mergeable" }
+    }
+
+    /**
+     * And the same promise for words that are not numbers.
+     *
+     * "Perder uno es un fallo" was the prompt's rule and nothing enforced it.
+     * Measured: "Confirmé LOS TURNOS por teléfono el día anterior" came back as
+     * "…confirmando por teléfono el día anterior" — the object of the sentence
+     * gone, so the merged line no longer says what was confirmed. That is the
+     * "mixed together with no CV value" case: two lines went in and what came out
+     * says less than they did.
+     */
+    const dropped = [...contentDroppedFrom(a, text), ...contentDroppedFrom(b, text)]
+    if (dropped.length > 0) {
+      /**
+       * ONE retry, saying exactly what went missing.
+       *
+       * A discarded merge is not free: the user spent a use and a cooldown to be
+       * told their two lines stay as they were. Measured, the loss is usually a
+       * single word the fusion swallowed ("los TURNOS por teléfono" → "por
+       * teléfono"), which a second pass fixes — this is the "bad roll, not a bad
+       * prompt" case the never-empty rule exists for.
+       *
+       * The note REPORTS the miss, it does not add a rule: keeping every word is
+       * already in the prompt, and a retry that introduces new instructions is
+       * how a prompt ends up arguing with itself.
+       */
+      const missed = dropped.slice(0, 6).join(", ")
+      const note = language === "en"
+        ? `Your last answer dropped these words from the two lines: ${missed}. They are facts the candidate wrote. Write the merge again with every one of them in it.`
+        : `Tu respuesta anterior perdió estas palabras de las dos líneas: ${missed}. Son datos que escribió el candidato. Escribí la fusión de nuevo con todas ellas adentro.`
+      const second = await this.retryMerge(note, callOnce, usages, a, b, targetId)
+      if (second) return { status: "ok", text: (await cleanGeneratedText([second], language, sectionData))[0] ?? second }
+      this.logger.warn("[AIService.mergeBullets] merged bullet dropped content twice — discarded", { targetId, dropped: dropped.slice(0, 5) })
+      return { status: "not_mergeable" }
+    }
+
     // Our text, so our typos: the shared cleaner runs on everything generated.
     const [cleaned] = await cleanGeneratedText([text], language, sectionData)
     return { status: "ok", text: cleaned ?? text }
+    } finally {
+      bill()
+    }
+  }
+
+  /**
+   * The second and final attempt. Returns the merged sentence, or null when it
+   * fails any of the same checks — never a third call: a prompt that loses
+   * content twice on the same pair is not going to keep it on the third try, and
+   * leaving the candidate's two lines exactly as they are is harmless.
+   */
+  private async retryMerge(
+    note: string,
+    call: (note?: string) => ReturnType<IAIClient["chat"]>,
+    usages: Array<{ prompt_tokens?: number; completion_tokens?: number }>,
+    a: string,
+    b: string,
+    targetId: string,
+  ): Promise<string | null> {
+    try {
+      const completion = await call(note)
+      // Recorded, never billed here: the caller adds it to the single row.
+      usages.push(completion.usage ?? {})
+      const parsed = parseAIJson<{ status?: unknown; text?: unknown }>((completion.choices[0]?.message?.content ?? "").trim() || "{}")
+      if (parsed.status === "not_mergeable") return null
+      let out = typeof parsed.text === "string" ? parsed.text.trim() : ""
+      if (!out) return null
+      out = out.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["\u2018\u2019\u201c\u201d']|["\u2018\u2019\u201c\u201d']$/g, "").trim()
+      // Every check the first answer had to pass, on the second one too.
+      if (detectHallucination(out, `${a}\n${b}`)) return null
+      if (out.length < Math.max(a.length, b.length)) return null
+      if (losesStatedFigure(`${a}\n${b}`, out)) return null
+      if (contentDroppedFrom(a, out).length || contentDroppedFrom(b, out).length) return null
+      this.logger.info("[AIService.mergeBullets] second attempt kept every word", { targetId })
+      return out
+    } catch {
+      return null
+    }
   }
 }
