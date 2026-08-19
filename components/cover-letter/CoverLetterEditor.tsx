@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { apiFetch } from "@/lib/apiFetch"
+import { parseListPage, type ListPage } from "@/lib/api/list-page"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 import { compressImage } from "@/lib/compressImage"
 import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil, ShieldCheck } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
@@ -192,6 +194,10 @@ const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
 ]
 
 
+/** El endpoint acepta hasta 100 por página; 3 páginas cubren 300 CVs. */
+const RESUMES_PER_PAGE = 100
+const MAX_RESUME_PAGES = 3
+
 export default function CoverLetterEditor({
   id,
   title: initialTitle,
@@ -283,13 +289,49 @@ export default function CoverLetterEditor({
   const bodyHasContent = (content.body?.replace(/<[^>]+>/g, "").trim() ?? "").length > 0
 
 
+  /**
+   * Los CVs con los que se puede basar la carta.
+   *
+   * Esto estuvo vacío desde mayo. `/api/resumes` devuelve `{ data, nextCursor }`
+   * y acá se preguntaba `Array.isArray(data)`, que da `false` sobre un objeto:
+   * la lista quedaba en cero, el selector no se dibujaba (se muestra sólo si
+   * `resumes.length > 0`) y `selectedResumeId` se quedaba vacío — así que TODA
+   * carta se generó sin el currículum del usuario, que es justo el dato que la
+   * hace valer. Nada falló: 200, JSON válido, y un selector ausente que parecía
+   * una decisión de diseño. Ver `lib/api/list-page.ts`.
+   *
+   * Que el usuario no tenga ningún CV sí es una razón legítima para no mostrar
+   * el selector. Que la petición falle NO lo es, y por eso se registra en vez de
+   * confundirse con lo anterior.
+   */
   useEffect(() => {
-    apiFetch("/api/resumes")
-      .then((r) => r.json())
-      .then((data) => {
-        if (Array.isArray(data)) setResumes(data.map((r: { id: string; title: string }) => ({ id: r.id, title: r.title })))
-      })
-      .catch(() => {})
+    let cancelled = false
+    ;(async () => {
+      const collected: { id: string; title: string }[] = []
+      let cursor: string | null = null
+      for (let page = 0; page < MAX_RESUME_PAGES; page++) {
+        const url = cursor
+          ? `/api/resumes?limit=${RESUMES_PER_PAGE}&cursor=${encodeURIComponent(cursor)}`
+          : `/api/resumes?limit=${RESUMES_PER_PAGE}`
+        let parsed: ListPage<{ id: string; title: string }> | null = null
+        try {
+          const res = await apiFetch(url, { silent: true })
+          if (!res.ok) return reportUxFailure("cover_letter_resume_list_failed", { status: res.status })
+          parsed = parseListPage(await res.json().catch(() => null))
+        } catch {
+          return reportUxFailure("cover_letter_resume_list_failed")
+        }
+        if (!parsed) return reportUxFailure("cover_letter_resume_list_bad_contract")
+        collected.push(...parsed.items.map((row) => ({ id: row.id, title: row.title })))
+        cursor = parsed.nextCursor
+        if (!cursor) break
+        // Cortar en silencio dejaría CVs del usuario fuera del selector sin que
+        // nadie lo sepa: el mismo silencio que causó este bug, más chico.
+        if (page === MAX_RESUME_PAGES - 1) reportUxFailure("cover_letter_resume_list_truncated")
+      }
+      if (!cancelled) setResumes(collected)
+    })()
+    return () => { cancelled = true }
   }, [])
 
   const dirtyRef = useRef(dirty)

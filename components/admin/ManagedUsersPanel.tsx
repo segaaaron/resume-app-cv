@@ -5,7 +5,7 @@ import { MANAGED_UNLIMITED, isManagedUnlimited } from "@/lib/plans"
 import { format } from "date-fns"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
-import { parseManagedListPage } from "@/lib/admin/managed-list"
+import { parseListPage } from "@/lib/api/list-page"
 import { reportUxFailure } from "@/lib/client-error-reporter"
 import {
   UserPlus, Loader2, Ban, CheckCircle2, Trash2, AlertCircle,
@@ -60,7 +60,7 @@ export default function ManagedUsersPanel() {
    * panel no existe.
    *
    * Y un fallo NO se dibuja como una lista vacía. Eso es lo que escondió durante
-   * tres semanas el desajuste de forma con la ruta (ver `lib/admin/managed-list.ts`):
+   * tres semanas el desajuste de forma con la ruta (ver `lib/api/list-page.ts`):
    * cero filas se lee como "no hay nadie", la conclusión opuesta a la verdad.
    */
   const fetchList = useCallback(async () => {
@@ -75,7 +75,7 @@ export default function ManagedUsersPanel() {
           : `/api/admin/users/managed/list`
         const res = await apiFetch(url, { silent: true })
         if (!res.ok) { setListError(true); return }
-        const parsed = parseManagedListPage<ManagedUser>(await res.json().catch(() => null))
+        const parsed = parseListPage<ManagedUser>(await res.json().catch(() => null))
         if (!parsed) { setListError(true); return }
         collected.push(...parsed.items)
         cursor = parsed.nextCursor
