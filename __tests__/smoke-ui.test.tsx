@@ -46,44 +46,10 @@ vi.mock("@/stores/resumeStore", () => ({
 vi.mock("zustand/react/shallow", () => ({ useShallow: (f: unknown) => f }))
 vi.mock("@/components/editor/EditorContext", () => ({ useEditorPro: () => ({ isPro: true, openUpgrade: () => {} }) }))
 
-import BulletsImprovementModal, { type BulletPair } from "@/components/resume/sections/BulletsImprovementModal"
 import ATSScorePanel from "@/components/editor/ATSScorePanel"
 import WorkExperienceSection from "@/components/resume/sections/WorkExperience"
 
 describe("UI smoke", () => {
-  it("BulletsImprovementModal renders sparse suggestions (2 of 8)", () => {
-    const pairs: BulletPair[] = [
-      { index: 3, original: "• Delta work", improved: "• Rebuilt the Delta flow" },
-      { index: 6, original: "• Eta work", improved: "• Rewrote the Eta pipeline" },
-    ]
-    const html = mount(
-      <BulletsImprovementModal open onClose={() => {}} jobTitle="iOS Developer"
-        pairs={pairs} total={8} onApplyBullet={() => {}} onApplyAll={() => {}} />
-    )
-    // The bullet's REAL position must be shown, not the row index.
-    expect(html).toContain("bullet_label_of")
-    expect(html).toContain('"n":4')   // index 3 -> "Bullet 4 of 8"
-    expect(html).toContain('"total":8')
-    expect(html).toContain("bullets_untouched")
-    expect(html).not.toContain("metrics_disclaimer")
-  })
-
-  it("BulletsImprovementModal renders a single suggestion without the untouched note", () => {
-    const pairs: BulletPair[] = [{ index: 0, original: "• A", improved: "• Better A" }]
-    const html = mount(
-      <BulletsImprovementModal open onClose={() => {}} jobTitle="Dev"
-        pairs={pairs} total={1} onApplyBullet={() => {}} onApplyAll={() => {}} />
-    )
-    expect(html).toContain("bullet_label_of")
-    expect(html).not.toContain("bullets_untouched")
-  })
-
-  // Tailor no longer has a panel of its own: it is a hook whose results are
-  // merged into the ONE list of fixes (§②). The two tests that mounted
-  // TailorCVPanel in isolation went with it — what they guarded (no second
-  // textarea, nothing shown before a score) is asserted on the whole panel below,
-  // which is the only place the behaviour is now observable.
-
   // ATSScorePanel is the whole chained flow: one job-description textarea and the
   // score. Every other test here mounts a leaf in isolation; this is the only one
   // that proves the composition itself renders — which is exactly where the
@@ -103,11 +69,26 @@ describe("UI smoke", () => {
     expect(html).not.toContain("section_rewrites")
   })
 
-  // The AI card lives inside a non-exported item component, so it only mounts
-  // through the whole section.
+  // The bullet AI was removed from this tab: the ATS panel already rewrites
+  // bullets and the assistant writes them, so a third entry point was three
+  // places to keep in step. What the section still owes is the form itself.
   it("WorkExperience mounts with an expanded job", () => {
     const html = mount(<WorkExperienceSection />)
-    expect(html).toContain("description")
-    expect(html).toContain("improve_bullet")   // the AI button the card hangs off
+    expect(html).toContain("work.bullets")
+    expect(html).not.toContain("improve_bullet")
+  })
+
+  // One box per bullet, parsed out of the single `description` string. The
+  // store gives this job "• a\n• b", so two boxes carrying "a" and "b" — with
+  // the marker nowhere in the editable text — is the whole contract.
+  it("splits the description into one box per bullet, markers stripped", () => {
+    const html = mount(<WorkExperienceSection />)
+    const boxes = html.match(/<textarea[^>]*>([^<]*)<\/textarea>/g) ?? []
+    expect(boxes.length).toBe(2)
+    expect(boxes.join(" ")).toContain(">a<")
+    expect(boxes.join(" ")).toContain(">b<")
+    expect(boxes.join(" ")).not.toContain("•")
+    // The count is shown against the cap the rest of the product enforces.
+    expect(html).toContain("2/6")
   })
 })

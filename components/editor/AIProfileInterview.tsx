@@ -36,6 +36,7 @@ import { buildProfileWrites } from "@/lib/editor/apply-profile"
 import MonthYearField from "./MonthYearField"
 import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
 import { useAICall } from "@/hooks/useAICall"
+import { useDeclinedGaps } from "./hooks/useDeclinedGaps"
 import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
 import { handleApiError } from "@/lib/upgrade-modal-handler"
 import { useRouter } from "next/navigation"
@@ -140,9 +141,13 @@ export default function AIProfileInterview() {
   const cvLanguage = useCvLanguage()
   const { open: openUpgradeModal } = useUpgradeModal()
   const { preCheck, onSuccess } = useAICall()
-  const { sectionData, updateSectionData, save } = useResumeStore(
-    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, save: s.save }))
+  const { sectionData, updateSectionData, save, resumeId } = useResumeStore(
+    useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData, save: s.save, resumeId: s.resumeId }))
   )
+  // "No, that's all" is an answer, not a screen state: it has to outlive a
+  // reload and a trip back to the CV list, or the assistant re-opens asking for
+  // more experience the moment it is closed.
+  const { decline, hasDeclined } = useDeclinedGaps(resumeId)
 
   // Draft answers, keyed by gap. Cleared as each one lands in the CV.
   const [draft, setDraft] = useState<Record<string, string>>({})
@@ -162,15 +167,9 @@ export default function AIProfileInterview() {
   // presses Build instead of retyping what we could read.
   const [seeded, setSeeded] = useState(false)
   const [cursor, setCursor] = useState(0)
-  // "No, that's all my experience" — remembered for the session so the question
-  // is asked once, not after every role.
-  const [noMoreJobs, setNoMoreJobs] = useState(false)
   // Set by answering "yes": renders the same "where did you work" card, which
   // creates the role on save. No empty placeholder entry is ever written.
   const [addingJob, setAddingJob] = useState(false)
-  // Roles the user has said are finished. Per job: "no more lines here" must not
-  // silence the question for a different role.
-  const [doneBullets, setDoneBullets] = useState<Set<string>>(new Set())
   const [addingBullet, setAddingBullet] = useState<string | null>(null)
 
   // Memoised against the CV, not the draft: typing an answer re-renders this
@@ -178,9 +177,11 @@ export default function AIProfileInterview() {
   // resume to produce a list that had not changed.
   const gaps = useMemo(
     () => computeProfileGaps(sectionData as Record<string, unknown>)
-      .filter((g) => g.kind !== "moreExperience" || !noMoreJobs)
-      .filter((g) => g.kind !== "moreBullets" || !doneBullets.has(g.jobId ?? "")),
-    [sectionData, noMoreJobs, doneBullets]
+      // Per job on the bullets side: "no more lines here" must not silence the
+      // question for a different role.
+      .filter((g) => g.kind !== "moreExperience" || !hasDeclined("moreExperience"))
+      .filter((g) => g.kind !== "moreBullets" || !hasDeclined(`moreBullets:${g.jobId ?? ""}`)),
+    [sectionData, hasDeclined]
   )
   if (gaps.length > totalAtStart) setTotalAtStart(gaps.length)
   if (!seeded) {
@@ -652,7 +653,7 @@ export default function AIProfileInterview() {
                   <Plus aria-hidden /> {t("more_bullets_yes")}
                 </Button>
                 <Button variant="outline" className="flex-1"
-                  onClick={() => setDoneBullets((prev) => new Set(prev).add(g.jobId ?? ""))}>
+                  onClick={() => decline(`moreBullets:${g.jobId ?? ""}`)}>
                   {t("more_bullets_no")}
                 </Button>
               </div>
@@ -673,7 +674,7 @@ export default function AIProfileInterview() {
                 <Button className="flex-1" onClick={() => setAddingJob(true)}>
                   <Plus aria-hidden /> {t("more_experience_yes")}
                 </Button>
-                <Button variant="outline" className="flex-1" onClick={() => setNoMoreJobs(true)}>
+                <Button variant="outline" className="flex-1" onClick={() => decline("moreExperience")}>
                   {t("more_experience_no")}
                 </Button>
               </div>

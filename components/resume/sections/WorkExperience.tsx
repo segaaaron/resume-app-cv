@@ -1,41 +1,24 @@
 "use client"
 
-import { useState, useEffect, useLayoutEffect, useRef } from "react"
-import { createPortal } from "react-dom"
-import { useTranslations, useLocale } from "next-intl"
+import { useState, useEffect, useRef } from "react"
+import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { WorkExperienceItem } from "@/types/resume"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
+import DateField from "@/components/editor/MonthYearField"
 import {
-  Plus, Trash2, ChevronDown, ChevronRight, Loader2,
-  Lock, Check, Briefcase, Building2, MapPin, CalendarDays, FileText, Wand2, ChevronLeft,
+  Plus, Trash2, ChevronDown, ChevronRight,
+  Briefcase, Building2, MapPin, CalendarDays,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { nanoid } from "nanoid"
-import { toast } from "sonner"
-import { apiFetch } from "@/lib/apiFetch"
-import { track } from "@/lib/analytics/track"
-import { useEditorPro } from "@/components/editor/EditorContext"
-import BulletsImprovementModal, { type BulletPair } from "./BulletsImprovementModal"
-import { useAICall } from "@/hooks/useAICall"
-import { useCvLanguage } from "@/components/editor/hooks/useCvLanguage"
-import { useUpgradeModal } from "@/contexts/UpgradeModalContext"
-import { handleApiError } from "@/lib/upgrade-modal-handler"
-import { useRouter } from "next/navigation"
-import { useAICooldown } from "@/components/editor/hooks/useAICooldown"
-import { useOptimizedGuard } from "@/components/editor/hooks/useOptimizedGuard"
-import { ImproveBulletResponseSchema } from "@/lib/services/ai/shared/ai-types"
-import { formatBullet, parseBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
-import { reportUxFailure } from "@/lib/client-error-reporter"
+import BulletFields from "./BulletFields"
+import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 
 export default function WorkExperienceSection() {
   const t = useTranslations("editor.sections_form")
-  const { isPro, plan, openUpgrade } = useEditorPro()
-  // Detected once here and passed down: every card would otherwise re-run the
-  // detector over the whole CV on each keystroke.
-  const cvLanguage = useCvLanguage()
   const { sectionData, updateSectionData } = useResumeStore(
     useShallow((s) => ({ sectionData: s.sectionData, updateSectionData: s.updateSectionData }))
   )
@@ -75,10 +58,6 @@ export default function WorkExperienceSection() {
           onToggle={() => setOpenId(openId === job.id ? null : job.id)}
           onUpdate={(field, value) => updateJob(job.id, field, value)}
           onRemove={() => removeJob(job.id)}
-          isPro={isPro}
-          plan={plan}
-          openUpgrade={openUpgrade}
-          cvLanguage={cvLanguage}
         />
       ))}
       <button onClick={addJob} className="w-full flex items-center justify-center gap-2 py-2.5 rounded-lg" style={{ border: "1.5px dashed #7A9BB5", background: "rgba(26,46,74,0.08)", color: "#1a2e4a", fontSize: 12, fontWeight: 600 }}>
@@ -88,201 +67,22 @@ export default function WorkExperienceSection() {
   )
 }
 
-function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPro, plan, openUpgrade, cvLanguage }: {
+function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove }: {
   job: WorkExperienceItem
   isOpen: boolean
   onToggle: () => void
   onUpdate: (field: keyof WorkExperienceItem, value: unknown) => void
   onRemove: () => void
-  isPro: boolean
-  plan: string
-  openUpgrade: () => void
-  /** Language the AI must write this bullet in — the CV's, not the app's. */
-  cvLanguage: "es" | "en"
 }) {
   const t = useTranslations("editor.sections_form")
-  const ai = useTranslations("editor.ai")
-  const router = useRouter()
-  const localeForErr = useLocale()
-  const { open: openUpgradeModal } = useUpgradeModal()
-  const { preCheck, onSuccess } = useAICall()
-  const { cooldownUntil, setCooldownUntil } = useAICooldown(`cooldown_work_${job.id}`)
-  // Persistent "already optimized" guard: survives collapse/tab-switch/reload and
-  // self-clears when the description changes. Stops a wasted improve-bullet call
-  // on content the AI already finished with.
-  const { markOptimized: markBulletsOptimized, isUpToDate: bulletsUpToDateFn, clear: clearBulletsMark } =
-    useOptimizedGuard(`opt_bullet_${job.id}`)
-  const [nowTs, setNowTs] = useState(Date.now())
-  const [improving, setImproving] = useState(false)
-  const [improved, setImproved] = useState(false)
-  const [alreadyOptimized, setAlreadyOptimized] = useState(false)
-  const [bulletModal, setBulletModal] = useState<{ pairs: BulletPair[]; working: string[]; total: number } | null>(null)
-  const lastKeyRef = useRef("")
-
-  useEffect(() => {
-    if (cooldownUntil <= Date.now()) return
-    const id = setInterval(() => {
-      const ts = Date.now()
-      setNowTs(ts)
-      if (ts >= cooldownUntil) clearInterval(id)
-    }, 1000)
-    return () => clearInterval(id)
-  }, [cooldownUntil])
-
-  const inCooldown = nowTs < cooldownUntil
-  const cooldownSecs = inCooldown ? Math.ceil((cooldownUntil - nowTs) / 1000) : 0
-  const cooldownLabel = cooldownSecs >= 60
-    ? `${Math.floor(cooldownSecs / 60)}:${String(cooldownSecs % 60).padStart(2, "0")}`
-    : `${cooldownSecs}s`
-
-  const isEmpty = !job.description.trim()
-  // True when THIS description already went through the AI and hasn't changed since
-  // (persisted). Drives the "already optimized" chip and blocks a wasted call.
-  const bulletsUpToDate = isPro && !isEmpty && bulletsUpToDateFn(job.description)
-  const aiButtonDisabled = isPro && (improving || improved || isEmpty || inCooldown || bulletsUpToDate)
-
-  async function handleImprove() {
-    if (improving || isEmpty) return
-    if (inCooldown) { toast.info(ai("cooldown_wait", { seconds: cooldownLabel })); return }
-    const key = job.description.trim()
-    if (key === lastKeyRef.current) { toast.info(ai("no_changes")); return }
-    setImproving(true)
-    setBulletModal(null)
-    preCheck("improve-bullet")
-    try {
-      const res = await apiFetch("/api/ai/improve-bullet", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        // The rewrite is welded straight into this bullet, so it must come back in
-        // the CV's own language — not the app's. See useCvLanguage.
-        body: JSON.stringify({ text: job.description, jobTitle: job.jobTitle, language: cvLanguage }),
-      })
-      if (res.status === 429 || res.status === 403) {
-        const handled = await handleApiError(res, {
-          openUpgradeModal,
-          redirect: (p) => router.push(p),
-          locale: localeForErr,
-          fallbackToast: () => toast.error(res.status === 429 ? ai("rate_limit_exceeded") : ai("pro_only")),
-          dailyCapToast: () => toast.warning(ai("daily_cap_reached"), { duration: 6000 }),
-        })
-        if (handled || res.status === 429 || res.status === 403) return
-      }
-      if (res.status === 422) { await res.text().catch(() => {}); track("ai_error_shown", { endpoint: "improve-bullet", error_type: "offtopic" }); toast.error(ai("off_topic_bullet")); return }
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error)
-      await onSuccess()
-      track("ai_bullet_improved", { plan })
-
-      // Shared API↔UI contract: validate the response shape before touching state.
-      const contract = ImproveBulletResponseSchema.safeParse(data)
-      if (!contract.success) {
-        // 200 with a body the UI cannot read: our own two halves disagreeing.
-        // The server saw a success and logged nothing; the user saw an error.
-        reportUxFailure("improve_bullet_bad_contract", { status: res.status, surface: "content_tab" })
-        toast.error(ai("error_bullet")); return
-      }
-
-      lastKeyRef.current = key
-      setCooldownUntil(Date.now() + 120_000)
-
-      const { status, improvements } = contract.data
-
-      // Well formed, but it never says what the work achieved. A rewrite cannot
-      // add that — only the candidate knows the result — so we name what is
-      // missing instead of claiming the bullet is fine or inventing a number.
-      if (status === "needs_your_input") {
-        toast.info(ai("bullets_need_your_input"), { duration: 8000 })
-        markBulletsOptimized(job.description)
-        return
-      }
-
-      if (status === "already_optimized" || improvements.length === 0) {
-        // The AI is allowed to return nothing, and nothing is a real answer:
-        // the content is already good. No metric interrogation.
-        setAlreadyOptimized(true)
-        markBulletsOptimized(job.description)
-        return
-      }
-
-      // Marked, because the AI's bullets are marked: both sides of the diff
-      // modal must look alike.
-      const origLines = parseBullets(job.description).map(formatBullet)
-      // Pairs come from the suggestions, NOT from the original list: a bullet the
-      // AI left alone has nothing to decide and must not appear as a no-op row.
-      // `working` still covers EVERY original line so applying never deletes one.
-      const working = [...origLines]
-      const pairs: BulletPair[] = improvements
-        .filter((s) => origLines[s.index] !== undefined)
-        .map((s) => ({ index: s.index, original: origLines[s.index], improved: s.text }))
-
-      if (pairs.length === 0) { setAlreadyOptimized(true); markBulletsOptimized(job.description); return }
-      setBulletModal({ pairs, working, total: origLines.length })
-    } catch {
-      toast.error(ai("error_bullet"))
-    } finally {
-      setImproving(false)
-    }
-  }
-
-  /** `index` is the bullet's position in the original description, not a row. */
-  function applyOneBullet(index: number) {
-    if (!bulletModal) return
-    const pair = bulletModal.pairs.find((p) => p.index === index)
-    if (!pair) return
-    const newWorking = [...bulletModal.working]
-    newWorking[index] = pair.improved
-    // The write collapses any line this role states twice. Saying so is the
-    // point: a bullet disappearing from the CV without a word is not acceptable,
-    // even when removing it is the right call.
-    const { text, removed } = serializeBulletsReporting(newWorking)
-    onUpdate("description", text)
-    if (removed > 0) toast.info(ai("duplicates_removed", { count: removed }))
-    track("ai_suggestion_applied", { type: "bullet" })
-    // Text the AI just wrote is optimized text — applying ONE bullet used to
-    // leave the guard unset, so the content changed, the mark self-invalidated,
-    // and after the cooldown the button offered to "improve" its own output.
-    // That loop has no end: a model always returns another variant. Only a HUMAN
-    // edit should reopen it, and that still works — the mark is a content hash.
-    markBulletsOptimized(text)
-    setBulletModal({ ...bulletModal, working: newWorking })
-  }
-
-  function applyAllBullets() {
-    if (!bulletModal) return
-    const previous = job.description
-    // Overlay suggestions onto the originals by index: bullets the AI left alone
-    // must survive untouched.
-    const merged = [...bulletModal.working]
-    for (const pair of bulletModal.pairs) merged[pair.index] = pair.improved
-    const { text: mergedText, removed } = serializeBulletsReporting(merged)
-    onUpdate("description", mergedText)
-    if (removed > 0) toast.info(ai("duplicates_removed", { count: removed }))
-    setBulletModal(null)
-    setImproved(true)
-    // The applied result is now the optimized content — lock it so re-running the
-    // AI on what it just produced doesn't burn a call ("mejoras ya aplicadas").
-    markBulletsOptimized(mergedText)
-    toast.success(ai("bullets_all_applied"), {
-      duration: 10_000,
-      action: {
-        label: ai("undo"),
-        onClick: () => {
-          onUpdate("description", previous)
-          setImproved(false)
-          clearBulletsMark()
-          toast.info(ai("bullets_undone"))
-        },
-      },
-    })
-  }
 
   return (
     <div className="border border-border rounded-lg bg-white">
       <div
         role="button" tabIndex={0}
         className="w-full flex items-center justify-between px-3 py-2.5 text-sm hover:bg-muted/50 transition-colors cursor-pointer"
-        onClick={() => { onToggle(); if (improved) setImproved(false); if (bulletModal) setBulletModal(null) }}
-        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { onToggle(); if (improved) setImproved(false); if (bulletModal) setBulletModal(null) } }}
+        onClick={onToggle}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") onToggle() }}
       >
         <span className="font-medium truncate text-left">
           {job.jobTitle || job.employer || t("new_experience")}
@@ -301,9 +101,9 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
           <Field label={t("work.employer")} value={job.employer} onChange={(v) => onUpdate("employer", v)} icon={Building2} />
           <Field label={t("work.city")} value={job.city} onChange={(v) => onUpdate("city", v)} icon={MapPin} />
           <div />
-          <DateField label={t("work.start_date")} value={job.startDate} onChange={(v) => onUpdate("startDate", v)} />
+          <DateField variant="form" icon={CalendarDays} label={t("work.start_date")} value={job.startDate} onChange={(v) => onUpdate("startDate", v)} />
           {!job.currentlyWorking && (
-            <DateField label={t("work.end_date")} value={job.endDate} onChange={(v) => onUpdate("endDate", v)} />
+            <DateField variant="form" icon={CalendarDays} label={t("work.end_date")} value={job.endDate} onChange={(v) => onUpdate("endDate", v)} />
           )}
 
           <div className="col-span-2 flex items-center gap-2">
@@ -311,96 +111,21 @@ function WorkExperienceJobItem({ job, isOpen, onToggle, onUpdate, onRemove, isPr
             <Label htmlFor={`current-${job.id}`} className="text-xs">{t("currently_working")}</Label>
           </div>
 
-          <div className="col-span-2 space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <FileText size={12} strokeWidth={2} style={{ color: "#5B8FBD" }} />
-                {t("description")}
-              </div>
-              {(alreadyOptimized || bulletsUpToDate) ? (
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold" style={{ background: "rgba(16,185,129,0.12)", color: "#10B981", border: "1px solid rgba(16,185,129,0.3)" }}>
-                  <Check className="h-2.5 w-2.5" />
-                  {ai("already_optimized")}
-                </span>
-              ) : (
-                <button
-                  type="button"
-                  onClick={isPro ? handleImprove : openUpgrade}
-                  disabled={aiButtonDisabled}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10.5px] font-bold tracking-wide transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed border-none"
-                  style={{
-                    background: improved
-                      ? "linear-gradient(135deg, #10B981 0%, #059669 100%)"
-                      : inCooldown
-                        ? "linear-gradient(135deg, #64748B 0%, #475569 100%)"
-                        : "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
-                    color: "#fff",
-                    boxShadow: improved
-                      ? "0 2px 6px rgba(16,185,129,0.3)"
-                      : inCooldown
-                        ? "0 2px 6px rgba(100,116,139,0.3)"
-                        : "0 2px 6px rgba(124,58,237,0.25)",
-                  }}
-                >
-                  {!isPro
-                    ? <><Lock className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
-                    : improving
-                      ? <><Loader2 className="h-2.5 w-2.5 animate-spin" />{ai("generating")}</>
-                      : improved
-                        ? <><Check className="h-2.5 w-2.5" />{ai("bullet_improved")}</>
-                        : inCooldown
-                          ? <><Loader2 className="h-2.5 w-2.5" />{cooldownLabel}</>
-                          : <><Wand2 className="h-2.5 w-2.5" />{ai("improve_bullet")}</>
-                  }
-                </button>
-              )}
-            </div>
-
-            <div className="relative">
-              <textarea
-                value={job.description}
-                onChange={(e) => {
-                  onUpdate("description", e.target.value)
-                  if (improved) setImproved(false)
-                  if (alreadyOptimized) setAlreadyOptimized(false)
-                }}
-                placeholder={t("description_placeholder")}
-                rows={5}
-                className="w-full resize-none text-[12.5px] leading-relaxed text-[#1a2e4a] placeholder:text-slate-400 outline-none transition-all duration-200"
-                style={{
-                  background: "linear-gradient(135deg, rgba(240,248,255,0.8) 0%, rgba(232,244,251,0.6) 100%)",
-                  border: "1.5px solid rgba(0,212,255,0.2)",
-                  borderRadius: 10,
-                  padding: "10px 12px",
-                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.03)",
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(0,212,255,0.5)"
-                  e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.03), 0 0 0 3px rgba(0,212,255,0.08)"
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "rgba(0,212,255,0.2)"
-                  e.currentTarget.style.boxShadow = "inset 0 2px 4px rgba(0,0,0,0.03)"
-                }}
-              />
-            </div>
-
+          <div className="col-span-2">
+            <BulletFields
+              label={t("work.bullets")}
+              value={job.description}
+              onChange={(v) => onUpdate("description", v)}
+              addLabel={t("work.add_bullet")}
+              placeholder={t("work.bullet_placeholder")}
+              removeLabel={t("work.remove_bullet")}
+              max={BULLETS_PER_ROLE_MAX.value}
+              maxHint={t("work.bullets_max", { max: BULLETS_PER_ROLE_MAX.value })}
+            />
           </div>
         </div>
       )}
 
-      {bulletModal && (
-        <BulletsImprovementModal
-          open={true}
-          onClose={() => { track("ai_suggestion_dismissed", { type: "bullet" }); setBulletModal(null) }}
-          jobTitle={job.jobTitle}
-          pairs={bulletModal.pairs}
-          total={bulletModal.total}
-          onApplyBullet={applyOneBullet}
-          onApplyAll={applyAllBullets}
-          onAllApplied={() => { setImproved(true); setBulletModal(null); toast.success(ai("bullets_all_applied")) }}
-        />
-      )}
     </div>
   )
 }
@@ -432,122 +157,6 @@ function Field({ label, value, onChange, placeholder, icon: Icon }: {
         className="h-9 text-sm w-full"
         style={{ paddingLeft: 12, paddingRight: 12, color: "#1a2e4a" }}
       />
-    </div>
-  )
-}
-
-const MONTHS_ES = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
-
-function DateField({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
-  const t = useTranslations("editor.sections_form")
-  const [open, setOpen] = useState(false)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  const popoverRef = useRef<HTMLDivElement>(null)
-  const [popoverPos, setPopoverPos] = useState({ top: 0, left: 0, width: 240 })
-
-  useLayoutEffect(() => {
-    if (open && triggerRef.current) {
-      const r = triggerRef.current.getBoundingClientRect()
-      const popW = 240
-      const left = r.left + popW > window.innerWidth ? r.right - popW : r.left
-      setPopoverPos({ top: r.bottom + 6, left, width: popW })
-    }
-  }, [open])
-
-  const parsed = (() => {
-    // `sections` is untyped Json in Prisma and nothing validates it on load —
-    // ResumeSectionsSchema only runs in mock-resume.ts. A record written without
-    // startDate takes the whole editor down with a white screen instead of
-    // showing an empty field.
-    const raw = value ?? ""
-    const m = raw.match(/^(\d{4})-(\d{2})$/)
-    if (m) return { year: parseInt(m[1]), month: parseInt(m[2]) - 1 }
-    const y = raw.match(/^(\d{4})$/)
-    if (y) return { year: parseInt(y[1]), month: -1 }
-    return { year: new Date().getFullYear(), month: -1 }
-  })()
-
-  const [viewYear, setViewYear] = useState(parsed.year)
-
-  const displayValue = (() => {
-    if (!value) return ""
-    if (parsed.month >= 0) return `${MONTHS_ES[parsed.month]} ${parsed.year}`
-    return `${parsed.year}`
-  })()
-
-  useEffect(() => {
-    function handleClick(e: MouseEvent) {
-      const target = e.target as Node
-      if (
-        triggerRef.current && !triggerRef.current.contains(target) &&
-        popoverRef.current && !popoverRef.current.contains(target)
-      ) {
-        setOpen(false)
-      }
-    }
-    if (open) document.addEventListener("mousedown", handleClick)
-    return () => document.removeEventListener("mousedown", handleClick)
-  }, [open])
-
-  function selectMonth(monthIdx: number) {
-    const mm = String(monthIdx + 1).padStart(2, "0")
-    onChange(`${viewYear}-${mm}`)
-    setOpen(false)
-  }
-
-  const popover = open ? (
-    <div
-      ref={popoverRef}
-      style={{
-        position: "fixed", zIndex: 200, top: popoverPos.top, left: popoverPos.left, width: popoverPos.width,
-        borderRadius: 16, overflow: "hidden",
-        background: "linear-gradient(135deg, #0f1e3a 0%, #1a2e4a 100%)",
-        border: "1px solid rgba(0,212,255,0.25)",
-        boxShadow: "0 16px 48px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,212,255,0.1)",
-      }}
-    >
-      <div style={{ position: "absolute", top: 0, left: "12.5%", width: "75%", height: 1, background: "linear-gradient(90deg, transparent, #00D4FF, transparent)", opacity: 0.55 }} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px 10px" }}>
-        <button type="button" onClick={(e) => { e.stopPropagation(); setViewYear((y) => y - 1) }} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, cursor: "pointer", background: "rgba(0,212,255,0.12)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF" }}>
-          <ChevronLeft size={14} strokeWidth={2.5} />
-        </button>
-        <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: "0.04em", color: "#fff" }}>{viewYear}</span>
-        <button type="button" onClick={(e) => { e.stopPropagation(); setViewYear((y) => y + 1) }} style={{ width: 28, height: 28, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, cursor: "pointer", background: "rgba(0,212,255,0.12)", border: "1px solid rgba(0,212,255,0.25)", color: "#00D4FF" }}>
-          <ChevronRight size={14} strokeWidth={2.5} />
-        </button>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, padding: "0 12px 12px" }}>
-        {MONTHS_ES.map((m, i) => {
-          const isSelected = parsed.month === i && parsed.year === viewYear
-          return (
-            <button key={m} type="button" onClick={(e) => { e.stopPropagation(); selectMonth(i) }} style={{ padding: "8px 0", borderRadius: 10, fontSize: 11, fontWeight: 700, cursor: "pointer", border: "none", transition: "all 0.15s ease", background: isSelected ? "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)" : "rgba(255,255,255,0.06)", color: isSelected ? "#0a1a35" : "rgba(255,255,255,0.78)", boxShadow: isSelected ? "0 2px 10px rgba(0,212,255,0.4)" : "none" }}>
-              {m}
-            </button>
-          )
-        })}
-      </div>
-      <div style={{ borderTop: "1px solid rgba(255,255,255,0.07)", padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <button type="button" onClick={(e) => { e.stopPropagation(); onChange(""); setOpen(false) }} style={{ fontSize: 10.5, fontWeight: 500, cursor: "pointer", border: "none", background: "transparent", color: "rgba(255,255,255,0.38)" }}>
-          {t("date.clear")}
-        </button>
-        <button type="button" onClick={(e) => { e.stopPropagation(); selectMonth(new Date().getMonth()) }} style={{ fontSize: 10.5, fontWeight: 700, cursor: "pointer", border: "none", background: "transparent", color: "#00D4FF" }}>
-          {t("date.this_month")}
-        </button>
-      </div>
-    </div>
-  ) : null
-
-  return (
-    <div>
-      <label style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, fontWeight: 600, color: "#7A9BB5", letterSpacing: "0.01em", textTransform: "capitalize", marginBottom: 6 }}>
-        <CalendarDays size={12} strokeWidth={2} style={{ color: "#5B8FBD", flexShrink: 0 }} />
-        {label}
-      </label>
-      <button ref={triggerRef} type="button" onClick={() => { setViewYear(parsed.year || new Date().getFullYear()); setOpen((o) => !o) }} className="w-full text-left flex items-center justify-between" style={{ height: 36, paddingLeft: 12, paddingRight: 12, background: "#ffffff", border: "1px solid #C8DCF0", borderRadius: 6, color: displayValue ? "#1a2e4a" : "#94A3B8", fontSize: 13.5, fontWeight: 500 }}>
-        <span>{displayValue || t("date.select")}</span>
-        <CalendarDays size={11} style={{ color: "#5B8FBD", flexShrink: 0 }} />
-      </button>
-      {typeof document !== "undefined" && createPortal(popover, document.body)}
     </div>
   )
 }
