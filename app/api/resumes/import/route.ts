@@ -11,6 +11,7 @@ import { createLogger } from "@/lib/logger"
 import mammoth from "mammoth"
 import { parseResumeText, detectLanguage, PARSE_LIMITS } from "@/lib/parseResumeText"
 import { extractPdfText } from "@/lib/resume-parser/extract-pdf"
+import { findImportGaps } from "@/lib/resume-parser/import-gaps"
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse: (buf: Buffer) => Promise<{ text: string; numpages: number }> = require("pdf-parse")
 
@@ -140,6 +141,9 @@ export async function POST(req: Request) {
   }
 
   // ── 4. Fallback + validate/fill defaults ─────────────────────────────────
+  // Cuál de los dos extractores respondió. Va en el registro de huecos de abajo:
+  // "faltó el nombre" significa cosas distintas según quién leyó el documento.
+  const usedAiExtractor = sectionData !== null
   if (!sectionData) {
     // The import still succeeds, but with the weaker heuristic parser — the user
     // gets a worse extraction and never knows. The throw path above was logged
@@ -186,5 +190,29 @@ export async function POST(req: Request) {
     },
   })
 
-  return NextResponse.json({ id: resume.id, truncated }, { status: 201 })
+  /**
+   * Lo que el documento no entregó, dicho y registrado.
+   *
+   * Hasta ahora el nombre se calculaba SÓLO para el título, y su ausencia se
+   * resolvía titulando el CV con el nombre del archivo y guardando en silencio.
+   * Un usuario subió su currículum, recibió uno sin su nombre y se enteró
+   * mirando la pantalla — y nosotros no teníamos forma de saber que había
+   * pasado. El extractor no puede prometer leer cualquier documento del mundo;
+   * sí puede no fingir que lo leyó.
+   *
+   * Se registra el TIPO de hueco y nada del contenido: qué faltó, en qué
+   * formato y de qué largo. Sirve para ver si esto le pasa a más gente sin
+   * guardar una línea del CV de nadie.
+   */
+  const gaps = findImportGaps(sectionData)
+  if (gaps.length > 0) {
+    createLogger("import").warn("[import] campos imprescindibles que el documento no entregó", {
+      gaps,
+      ext,
+      chars: rawText.length,
+      usedAiExtractor,
+    })
+  }
+
+  return NextResponse.json({ id: resume.id, truncated, gaps }, { status: 201 })
 }

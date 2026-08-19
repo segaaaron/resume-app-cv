@@ -84,6 +84,28 @@ export default function ImportResumeButton({ locked }: Props) {
       if (data.truncated) {
         toast.warning(t("import_truncated"), { duration: 12_000 })
       }
+      /**
+       * Lo que el archivo no entregó, dicho antes de que el usuario lo descubra.
+       *
+       * La importación podía terminar bien y dejar un CV sin nombre: el servidor
+       * lo titulaba con el nombre del archivo y guardaba en silencio. Alguien
+       * subió su currículum, recibió uno sin su nombre y se enteró mirando la
+       * pantalla. No siempre vamos a poder leer un documento —uno escaneado, uno
+       * que dibuja su texto en vez de escribirlo— pero sí podemos no fingir que
+       * lo leímos.
+       *
+       * Se nombra sólo lo imprescindible (ver import-gaps.ts): un aviso por cada
+       * ausencia posible se vuelve ruido y la gente aprende a ignorarlo.
+       */
+      const gaps: string[] = Array.isArray(data.gaps) ? data.gaps : []
+      if (gaps.length > 0) {
+        const known = gaps.filter((g) => g === "name" || g === "contact" || g === "experience")
+        if (known.length > 0) {
+          toast.warning(`${t("import_gaps_title")}: ${known.map((g) => t(`import_gaps_${g}`)).join(", ")}.`, {
+            duration: 12_000,
+          })
+        }
+      }
       router.push(`/${locale}/editor/${data.id}`)
     } catch {
       toast.error(t("import_error"))
