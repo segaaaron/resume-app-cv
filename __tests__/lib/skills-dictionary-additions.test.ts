@@ -29,6 +29,33 @@ describe("the disciplines that were missing", () => {
     }
   })
 
+  /**
+   * Banking, measured 2026-08-18: the entire dictionary answered a banking CV
+   * with one term — "risk management". A credit analyst, a teller and a branch
+   * manager had no vocabulary of their own in either language, in a market where
+   * that is one of the largest slices of white-collar work.
+   */
+  it("knows what a bank actually does, in both languages", () => {
+    for (const t of [
+      "credit analysis", "credit risk", "portfolio management", "loan origination",
+      "credit scoring", "anti-money laundering", "know your customer", "teller operations",
+      "analisis crediticio", "riesgo crediticio", "gestion de carteras", "colocacion de creditos",
+      "scoring crediticio", "prevencion de lavado de dinero", "operaciones de caja",
+      "cartera en mora", "normativa bancaria", "basilea", "asesoria financiera",
+    ]) {
+      expect(isKnownSkill(t)).toBe(true)
+    }
+  })
+
+  it("keeps the everyday Spanish words out of the banking batch", () => {
+    // The dictionary is scanned against CV prose: a bare "cartera" tags anyone
+    // who mentions a handbag, and "caja", "mora" and "garantia" are no better.
+    const byNorm = new Set(SKILL_CATALOG.map((o) => o.norm))
+    for (const bare of ["cartera", "mora", "caja", "garantia", "credito", "riesgo", "banco"]) {
+      expect(byNorm.has(bare)).toBe(false)
+    }
+  })
+
   it("finds them with accents, the way people actually type", () => {
     for (const t of ["planificación de sprint", "análisis de cohortes", "diseño editorial", "retoque fotográfico"]) {
       expect(isKnownSkill(t)).toBe(true)

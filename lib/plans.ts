@@ -66,7 +66,11 @@ export const AI_DAILY_CAP: Record<AiEndpointName, number> = {
   "generate-summary": 20,
   "generate-cover-letter": 20,
   "improve-cover-letter": 20,
-  "fill-profile": 10,
+  // 20, not 10: the guided assistant makes several fill-profile calls to build
+  // ONE résumé — the opening draft, the duties menu per role, the certifications
+  // list. At 10 a PRO user on an "unlimited" plan hit the anti-abuse wall after
+  // two CVs in a day, which is a support ticket, not abuse.
+  "fill-profile": 20,
   "tailor-cv": 20,
   "skill-bullet": 50,
   // Mirrors skill-bullet exactly: same surface (one bullet written into one

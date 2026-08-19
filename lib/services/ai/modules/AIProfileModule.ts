@@ -12,12 +12,16 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
+import { canonicalSkillName } from "@/lib/ats/skill-catalog"
 import {
   AI_INPUT_LIMITS,
   FillProfileResponseSchema,
   type FillProfileInput,
   type FillProfileResult,
 } from "../shared/ai-types"
+
+/** Longest a skill may be. See `isSkillName` for where the number comes from. */
+const MAX_SKILL_WORDS = 4
 
 export class AIProfileModule {
   constructor(
@@ -66,7 +70,7 @@ export class AIProfileModule {
       ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
 1. ONLY produce content derivable from the candidate's instruction and the CURRENT RESUME above. Do NOT invent technologies, frameworks, libraries, company names, job titles, certifications, dates, percentages, or real numbers not provided.
 2. NEVER use placeholders like [X%] or [N users] in final output — if the user didn't provide a metric, omit it.
-3. For workExperienceNew: every entry must come from a job the candidate describes in the instruction. If they describe the job but never name the company (or never state the role), leave that field as an empty string "" — NEVER invent a company name or a title to fill it. Omit the whole entry only when neither the company nor the role comes from the instruction.
+3. For workExperienceNew: every entry must come from a job or a PROFESSION the candidate states. If they name only a profession ("I am a telecommunications engineer with 5 years"), still create ONE entry: jobTitle = that profession, employer = "", dates = "", and a description of 4-5 bullets of the work that role normally does — that draft is the point, and they review it before it reaches the resume. If they describe a job but never name the company, leave employer as "" — NEVER invent a company name. Omit the whole entry only when neither the company nor the role comes from the instruction.
 4. For suggestedSkills: only skills explicitly mentioned in the instruction or the current resume.
 5. inferredSkills is the ONE field where you may go beyond what the candidate wrote: list skills their role normally carries and that they most likely have. Keep them plausible for THIS role and seniority — never a tool from another trade, never a certification, never anything that implies a fact about them (an employer, a degree, a licence). The candidate reviews these one by one before any of them reaches the resume.
 
@@ -85,9 +89,15 @@ TASK: Analyze the instruction and determine which resume sections need improveme
 
 - If mentions a company or role that already exists in the resume → improve that entry's description using its exact id in workExperienceUpdates
 - If mentions a company or role NOT in the current resume → create it in workExperienceNew with jobTitle, employer, city, startDate, endDate, currentlyWorking and description (• bullet points, no markdown). Leave empty "" any of those fields the candidate did not state. Max 3 new entries.
+- If the resume has NO work experience at all and the candidate stated a profession, workExperienceNew is NOT optional: return exactly one entry with jobTitle = that profession, employer = "", dates = "", and 4-5 bullets of what that role does. An empty experience section is the single biggest reason a resume is rejected, and the candidate edits this draft rather than facing a blank page.
 - If talks about their general profile → improve the summary and/or jobTitle
 - If mentions skills → add to suggestedSkills (ONLY real technical or soft skills: frameworks, languages, tools, methodologies; NEVER company names, employers, job titles, cities or locations)
-- ALWAYS fill inferredSkills, whatever the trade: 4 to 6 skills standard for this role that the candidate did NOT name. A branch manager gets cash handling and team supervision; a legal secretary gets case-file management and court deadlines; a cook gets food safety and portion control. Never repeat one already in suggestedSkills or in the resume.
+- EVERY skill, in both skill lists, is the CANONICAL NAME of a tool, technology, standard or methodology — 1 to 3 words, the way it appears in a job posting so an ATS matches it exactly. Never a description of an activity.
+  RIGHT: "React", "PostgreSQL", "Git", "REST APIs", "Docker", "Scrum", "Excel", "SAP", "AutoCAD", "Basel III"
+  WRONG: "Designing and maintaining relational databases" → write "PostgreSQL" or "SQL". "Version control with Git" → write "Git". "Consuming REST APIs" → write "REST APIs". "Responsive layout" → write "CSS" or "Responsive Design".
+- ALWAYS fill inferredSkills, whatever the trade: 4 to 6 skills standard for this role that the candidate did NOT name.
+- ALWAYS fill suggestedCertifications: 3 to 6 credentials STANDARD for this role, whatever the trade — CCNA or CCNP for a network engineer, ITIL for support, food-handling for a cook, a teaching licence for a teacher, a forklift licence for a warehouse lead. Name real, recognisable credentials; never say the candidate holds one.
+- If they mention studying somewhere → put it in educationNew with degree and institution, leaving empty "" anything they did not state A branch manager gets cash handling and team supervision; a legal secretary gets case-file management and court deadlines; a cook gets food safety and portion control. Never repeat one already in suggestedSkills or in the resume.
 - If mentions languages → add to suggestedLanguages with appropriate level
 - If mentions education → improve that education entry's description
 - If mentions projects → improve that project's description
@@ -102,7 +112,9 @@ Respond ONLY with valid JSON (no markdown). Only include fields that actually ch
   "hobbies": "<updated interests or null>",
   "suggestedSkills": ["<skill the candidate named>"],
   "inferredSkills": ["<skill standard for the role, not named by the candidate>"],
-  "suggestedLanguages": [{ "name": "<language>", "level": "elementary|limited|professional|full_professional|native" }],
+  "suggestedCertifications": ["<credential standard for the role>"],
+  "educationNew": [{ "degree": "<degree>", "institution": "<school>", "fieldOfStudy": "<optional>", "startDate": "<MM/YYYY optional>", "endDate": "<MM/YYYY optional>" }],
+  "suggestedLanguages": [{ "name": "<language>", "level": "a1|a2|b1|b2|c1|c2|native" }],
   "workExperienceUpdates": [{ "id": "<exact id>", "description": "<improved description with • bullets, no markdown>" }],
   "workExperienceNew": [{ "jobTitle": "<role>", "employer": "<company>", "city": "<optional city>", "startDate": "<MM/YYYY optional>", "endDate": "<MM/YYYY optional>", "currentlyWorking": false, "description": "<• bullets>" }],
   "educationUpdates": [{ "id": "<exact id>", "description": "<improved description>" }],
@@ -126,7 +138,7 @@ ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-seco
       : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
 1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO inventes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
 2. NUNCA uses placeholders como [X%] o [N usuarios] en el output final — si el usuario no proporcionó una métrica, omítela.
-3. Para workExperienceNew: cada entrada debe provenir de un trabajo que el candidato describe en la instrucción. Si describe el trabajo pero nunca nombra la empresa (o nunca dice el puesto), deja ESE campo como cadena vacía "" — NUNCA inventes un nombre de empresa ni un puesto para rellenarlo. Omite la entrada completa solo cuando ni la empresa ni el puesto provienen de la instrucción.
+3. Para workExperienceNew: cada entrada debe provenir de un trabajo o de una PROFESIÓN que el candidato declara. Si solo nombra una profesión ("soy ingeniero de telecomunicaciones con 5 años"), crea igual UNA entrada: jobTitle = esa profesión, employer = "", fechas = "", y una description de 4-5 viñetas del trabajo que ese puesto normalmente hace — ese borrador es justamente el objetivo, y el candidato lo revisa antes de que llegue al CV. Si describe un trabajo pero nunca nombra la empresa, deja employer como "" — NUNCA inventes un nombre de empresa. Omite la entrada completa solo cuando ni la empresa ni el puesto provienen de la instrucción.
 4. Para suggestedSkills: solo habilidades mencionadas explícitamente en la instrucción o en el CV actual.
 5. inferredSkills es el ÚNICO campo donde puedes ir más allá de lo que el candidato escribió: lista habilidades que su puesto normalmente lleva y que con toda probabilidad tiene. Mantenlas plausibles para ESTE puesto y ESTA antigüedad — nunca una herramienta de otro oficio, nunca una certificación, nunca nada que afirme un hecho sobre él (un empleador, un título, una licencia). El candidato las revisa una por una antes de que ninguna llegue al CV.
 
@@ -145,9 +157,15 @@ TAREA: Analiza la instrucción y determina qué secciones del CV deben mejorar. 
 
 - Si menciona una empresa o rol que ya existe en el CV → mejora la descripción de esa entrada usando su id exacto en workExperienceUpdates
 - Si menciona una empresa o rol que NO existe en el CV actual → créala en workExperienceNew con jobTitle, employer, city, startDate, endDate, currentlyWorking y description (viñetas • sin markdown). Deja vacío "" cualquiera de esos campos que el candidato no haya dicho. Máximo 3 entradas nuevas.
+- Si el CV NO tiene ninguna experiencia laboral y el candidato declaró una profesión, workExperienceNew NO es opcional: devuelve exactamente una entrada con jobTitle = esa profesión, employer = "", fechas = "", y de 4 a 5 viñetas de lo que hace ese puesto. Una sección de experiencia vacía es el motivo número uno por el que se descarta un CV, y el candidato edita ese borrador en lugar de enfrentarse a una página en blanco.
 - Si habla de su perfil general → mejora el resumen (summary) y/o título (jobTitle)
 - Si menciona habilidades → agrégalas a suggestedSkills (SOLO habilidades técnicas o blandas reales: frameworks, lenguajes, herramientas, metodologías; NUNCA nombres de empresas, empleadores, puestos de trabajo, ciudades ni ubicaciones)
-- Rellena SIEMPRE inferredSkills, sea cual sea el oficio: de 4 a 6 habilidades estándar de ese puesto que el candidato NO nombró. A un gerente de sucursal le corresponden manejo de efectivo y supervisión de equipo; a una secretaria jurídica, gestión de expedientes y control de plazos judiciales; a un cocinero, inocuidad alimentaria y control de porciones. Nunca repitas una que ya esté en suggestedSkills ni en el CV.
+- TODA habilidad, en las dos listas, es el NOMBRE CANÓNICO de una herramienta, tecnología, estándar o metodología — de 1 a 3 palabras, tal como aparece en una oferta de trabajo para que un ATS la matchee exacto. Nunca la descripción de una actividad.
+  BIEN: "React", "PostgreSQL", "Git", "REST APIs", "Docker", "Scrum", "Excel", "SAP", "AutoCAD", "Basilea III"
+  MAL: "Diseño y mantenimiento de bases de datos relacionales" → escribí "PostgreSQL" o "SQL". "Control de versiones con Git" → escribí "Git". "Consumo de REST APIs" → escribí "REST APIs". "Maquetación responsiva" → escribí "CSS" o "Diseño responsivo".
+- Rellena SIEMPRE inferredSkills, sea cual sea el oficio: de 4 a 6 habilidades estándar de ese puesto que el candidato NO nombró.
+- Rellena SIEMPRE suggestedCertifications: de 3 a 6 credenciales ESTÁNDAR de ese puesto, sea cual sea el oficio — CCNA o CCNP para un ingeniero de redes, ITIL para soporte, carnet de manipulación de alimentos para un cocinero, licencia docente para un profesor, licencia de montacargas para un jefe de almacén. Nombra credenciales reales y reconocibles; nunca afirmes que el candidato las tiene.
+- Si menciona que estudió en algún lado → ponlo en educationNew con degree e institution, dejando vacío "" lo que no haya dicho A un gerente de sucursal le corresponden manejo de efectivo y supervisión de equipo; a una secretaria jurídica, gestión de expedientes y control de plazos judiciales; a un cocinero, inocuidad alimentaria y control de porciones. Nunca repitas una que ya esté en suggestedSkills ni en el CV.
 - Si menciona idiomas → agrégalos a suggestedLanguages con nivel apropiado
 - Si menciona estudios → mejora la descripción de esa educación
 - Si menciona proyectos → mejora la descripción de ese proyecto
@@ -162,7 +180,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
   "hobbies": "<intereses actualizados o null>",
   "suggestedSkills": ["<habilidad que el candidato nombró>"],
   "inferredSkills": ["<habilidad estándar del puesto, no nombrada por el candidato>"],
-  "suggestedLanguages": [{ "name": "<idioma>", "level": "elementary|limited|professional|full_professional|native" }],
+  "suggestedCertifications": ["<credencial estándar del puesto>"],
+  "educationNew": [{ "degree": "<título>", "institution": "<institución>", "fieldOfStudy": "<opcional>", "startDate": "<MM/AAAA opcional>", "endDate": "<MM/AAAA opcional>" }],
+  "suggestedLanguages": [{ "name": "<idioma>", "level": "a1|a2|b1|b2|c1|c2|native" }],
   "workExperienceUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada con viñetas •, sin markdown>" }],
   "workExperienceNew": [{ "jobTitle": "<puesto>", "employer": "<empresa>", "city": "<ciudad opcional>", "startDate": "<MM/YYYY opcional>", "endDate": "<MM/YYYY opcional>", "currentlyWorking": false, "description": "<bullets •>" }],
   "educationUpdates": [{ "id": "<id exacto>", "description": "<descripción mejorada>" }],
@@ -214,7 +234,8 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     const parsed = parseAIJson<FillProfileResult>(raw)
 
     const hasContent = parsed.summary || parsed.jobTitle || parsed.hobbies ||
-      parsed.suggestedSkills?.length || parsed.inferredSkills?.length || parsed.suggestedLanguages?.length ||
+      parsed.suggestedSkills?.length || parsed.inferredSkills?.length ||
+      parsed.suggestedCertifications?.length || parsed.educationNew?.length || parsed.suggestedLanguages?.length ||
       parsed.workExperienceUpdates?.length || parsed.workExperienceNew?.length ||
       parsed.educationUpdates?.length || parsed.projectUpdates?.length || parsed.volunteerUpdates?.length
 
@@ -233,9 +254,36 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     // Anti-hallucination grounding source = user instruction + current resume.
     const groundingSource = `${prompt}\n${resumeContext}`.toLowerCase()
 
+    /**
+     * A skill is a NAME, not a sentence.
+     *
+     * The model was returning "Diseño y mantenimiento de bases de datos
+     * relacionales" where a résumé needs "PostgreSQL": an ATS matches keywords,
+     * and a description of an activity matches nothing. The ceiling is read off
+     * our own curated dictionary rather than invented — of its 1,002 entries,
+     * 94% are one or two words and none exceeds four, and the four-word ones are
+     * a name plus its acronym ("Applicant Tracking Systems (ATS)").
+     *
+     * The prompt asks for canonical names; this is what happens when it does not
+     * get them.
+     */
+    const isSkillName = (s: string) => s.trim().split(/\s+/).length <= MAX_SKILL_WORDS
+
+    /**
+     * Our catalog's spelling when it knows the skill, the model's when it does
+     * not.
+     *
+     * 1,002 curated terms are a taxonomy, and aligning to it is what an ATS does
+     * to the résumé anyway — but they do not cover every trade, so an unknown
+     * skill is kept rather than dropped. Dropping it would repeat the filter that
+     * once left the suggestion list able to echo only what the user had typed.
+     */
+    const canonical = (s: string) => canonicalSkillName(s) ?? s.trim()
+
     // suggestedSkills: keep only those mentioned in prompt or sectionData.
     let droppedSkills = 0
     const cleanSkills = (data.suggestedSkills ?? [])
+      .filter(isSkillName)
       .filter((s: string) => !skillBlocklist.has(s.toLowerCase().trim()))
       .filter((s: string) => {
         const sl = s.toLowerCase().trim()
@@ -244,6 +292,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         droppedSkills++
         return false
       })
+      .map(canonical)
       .slice(0, 8)
 
     // inferredSkills is the one list the grounding filter must NOT touch: the
@@ -258,6 +307,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     ])
     const cleanInferred = (data.inferredSkills ?? [])
       .map((s: string) => s.trim())
+      .filter(isSkillName)
       .filter((s: string) => {
         const sl = s.toLowerCase()
         if (!sl || sl.length > 60) return false
@@ -266,12 +316,46 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         alreadyHave.add(sl)
         return true
       })
+      .map(canonical)
       .slice(0, 6)
+
+    const promptLower = prompt.toLowerCase()
+
+    // Certifications are EXAMPLES for the role, so grounding them against the
+    // user's own words would empty the list — that filter is what made the
+    // skills section unable to suggest anything. What still applies is the line
+    // between a proposal and a claim: they arrive unticked, and nothing that is
+    // really an employer, a city or a job title gets in wearing a badge.
+    const cleanCertifications = (data.suggestedCertifications ?? [])
+      .map((c: string) => c.trim())
+      .filter((c: string) => {
+        const cl = c.toLowerCase()
+        return cl.length > 1 && cl.length <= 80 && !skillBlocklist.has(cl)
+      })
+      .slice(0, 6)
+
+    // educationNew: same rule as a new job. A degree the user described is
+    // theirs; a university they never named is not ours to write down.
+    let droppedEducation = 0
+    const cleanEducation = (data.educationNew ?? [])
+      .map((entry) => {
+        const degree = (entry.degree ?? "").trim()
+        const institution = (entry.institution ?? "").trim()
+        const degreeGrounded = !!degree && isGroundedIn(degree, promptLower)
+        const institutionGrounded = !!institution && isGroundedIn(institution, promptLower)
+        if (!degreeGrounded && !institutionGrounded) { droppedEducation++; return null }
+        return {
+          ...entry,
+          degree: degreeGrounded ? degree : "",
+          institution: institutionGrounded ? institution : "",
+        }
+      })
+      .filter((e): e is NonNullable<typeof e> => e !== null)
+      .slice(0, 3)
 
     // workExperienceNew: drop entries whose employer or jobTitle cannot be
     // grounded in the user's instruction (the resume's existing items are
     // handled via workExperienceUpdates, so new ones must come from the prompt).
-    const promptLower = prompt.toLowerCase()
     let droppedNewWork = 0
     let blankedFields = 0
     const cleanNewWork = (data.workExperienceNew ?? [])
@@ -295,8 +379,17 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
           droppedNewWork++
           return null
         }
-        // Description must not introduce hallucinated tech/metrics.
+        // The description is checked for invented tech and metrics ONLY when the
+        // entry is tied to a real employer the user named. There, a tool they
+        // never mentioned is a false claim about a real job.
+        //
+        // An entry with no employer is a DRAFT of the role — "this is what a
+        // telecommunications engineer does" — which is exactly what we asked
+        // the model for, and it cannot be written without naming the tools of
+        // the trade. Checking it would bin every draft for doing its job. It
+        // reaches the CV only when the user presses Apply on it.
         if (
+          employerGrounded &&
           entry.description &&
           detectHallucination(entry.description, `${prompt}\n${resumeContext}`)
         ) {
@@ -313,11 +406,12 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       .filter((e): e is NonNullable<typeof e> => e !== null)
       .slice(0, 3)
 
-    if (droppedSkills > 0 || droppedNewWork > 0 || blankedFields > 0) {
+    if (droppedSkills > 0 || droppedNewWork > 0 || blankedFields > 0 || droppedEducation > 0) {
       this.logger.warn("[AIService.fillProfile] dropped hallucinated content", {
         droppedSkills,
         droppedNewWork,
         blankedFields,
+        droppedEducation,
       })
     }
 
@@ -335,6 +429,8 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       hobbies: data.hobbies ?? null,
       suggestedSkills: cleanSkills,
       inferredSkills: cleanInferred,
+      suggestedCertifications: cleanCertifications,
+      educationNew: cleanEducation,
       suggestedLanguages: (data.suggestedLanguages ?? []).slice(0, 5),
       workExperienceUpdates: (data.workExperienceUpdates ?? []).filter((u: { id: string }) => validWorkIds.has(u.id)),
       workExperienceNew: cleanNewWork,

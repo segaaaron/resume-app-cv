@@ -181,6 +181,57 @@ export function categoryOfSkill(name: string): string | null {
   return NORM_TO_CATEGORY.get(normalizeTerm(name)) ?? null
 }
 
+// Same index, pointing at the display form instead of the category. Aliases
+// included, which is the whole point: "reactjs" and "react.js" both land on
+// "React".
+const NORM_TO_DISPLAY = new Map(
+  SKILL_CATALOG.flatMap((o) => [o.norm, ...o.aliases].map((f) => [f, o.display] as const)),
+)
+
+/**
+ * The catalog's spelling of a skill, or null when it does not know it.
+ *
+ * This is taxonomy alignment, which is what an ATS does to the résumé anyway:
+ * synonyms and variants collapse onto one canonical form. Modern parsers have an
+ * LLM layer that treats "React", "React.js" and "ReactJS" as the same thing;
+ * older ones still token-match literal strings and score only the exact form. So
+ * writing the canonical name costs nothing on the systems that are clever and
+ * wins on the ones that are not.
+ *
+ * A skill the catalog does not carry comes back null on purpose — the caller
+ * keeps what it had. 1,002 curated terms do not cover every trade, and dropping
+ * an unknown skill would be the same mistake as the filter that once left the
+ * suggestion list able to echo only what the user had already typed.
+ */
+export function canonicalSkillName(name: string): string | null {
+  const norm = normalizeTerm(name)
+  const display = NORM_TO_DISPLAY.get(norm)
+  if (!display) return null
+
+  const target = normalizeTerm(display)
+
+  // Identical but for casing and punctuation: "git" → "Git", "rest apis" →
+  // "REST APIs". Always safe.
+  if (norm === target) return display
+
+  // Otherwise only a ONE-WORD variant of a one-word name: "reactjs" → "React",
+  // "postgres" → "PostgreSQL". Two rules learned the hard way, both caught by
+  // tests rather than by review:
+  //
+  //  · Aliases carry the translations, so matching on any alias rewrote "Manejo
+  //    de Efectivo" to "Cash Handling" — an English skills section on a Spanish
+  //    CV, since every display form here is English.
+  //  · "REST APIs" is an alias of the "REST" entry, so a loose substring rule
+  //    shortened it and threw away the half that a posting actually says.
+  //
+  // Requiring both sides to be a single word rules out both: a translation is
+  // never one word matching one word, and a phrase is never collapsed to its
+  // first term.
+  const oneWord = !norm.includes(" ") && !target.includes(" ")
+  const variant = oneWord && (norm.startsWith(target) || target.startsWith(norm))
+  return variant ? display : null
+}
+
 const FUZZY_THRESHOLD = 0.72
 
 export interface SkillSearchResult {

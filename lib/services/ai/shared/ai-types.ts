@@ -484,6 +484,26 @@ export const FillProfileResponseSchema = z.object({
    * it identical to suggestedSkills, which is exactly the bug it replaces.
    */
   inferredSkills: z.array(z.string()).max(10).optional(),
+  /**
+   * Certifications that are STANDARD for the role — CCNA for a network
+   * engineer, ITIL for support, food-safety for a kitchen. Examples to
+   * recognise, never claims: the CV section existed with no way for the
+   * assistant to fill it, so nobody was ever prompted about the one credential
+   * that most changes how a technical CV reads.
+   */
+  suggestedCertifications: z.array(z.string()).max(8).optional(),
+  /**
+   * A study the candidate described that is not yet on the CV. Same rule as a
+   * new job: whatever they did not state stays an empty string rather than an
+   * invented university or year.
+   */
+  educationNew: z.array(z.object({
+    degree: z.string(),
+    institution: z.string(),
+    fieldOfStudy: z.string().optional(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+  })).max(3).optional(),
   suggestedLanguages: z.array(z.object({ name: z.string(), level: z.string() })).max(5).optional(),
   workExperienceUpdates: z.array(ItemUpdateSchema).max(5).optional(),
   workExperienceNew: z.array(NewWorkExperienceSchema).max(3).optional(),

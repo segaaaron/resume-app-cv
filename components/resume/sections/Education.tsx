@@ -7,7 +7,7 @@ import { useShallow } from "zustand/react/shallow"
 import type { EducationItem } from "@/types/resume"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { Plus, Trash2, ChevronDown, ChevronRight, GraduationCap, Award, BookOpen, MapPin } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, GraduationCap, Award, BookOpen, MapPin, CalendarDays } from "lucide-react"
 import { nanoid } from "nanoid"
 import { PField, DateField, PTextarea } from "./shared"
 
@@ -68,10 +68,13 @@ export default function EducationSection() {
               <PField label={t("education.institution")} value={item.institution} onChange={(v) => update(item.id, "institution", v)} icon={GraduationCap} span2 />
               <PField label={t("education.degree")}       value={item.degree}      onChange={(v) => update(item.id, "degree", v)}      icon={Award} />
               <PField label={t("education.field_of_study")} value={item.fieldOfStudy} onChange={(v) => update(item.id, "fieldOfStudy", v)} icon={BookOpen} />
-              <PField label={t("education.city")}         value={item.city}        onChange={(v) => update(item.id, "city", v)}        icon={MapPin} />
-              <DateField label={t("education.start_date")} value={item.startDate}  onChange={(v) => update(item.id, "startDate", v)} />
+              {/* Full width, so the two dates land together on the row below.
+                  Sharing a row with the city left "Fecha Fin" orphaned on a line
+                  of its own — the only section where the pair was split. */}
+              <PField label={t("education.city")}         value={item.city}        onChange={(v) => update(item.id, "city", v)}        icon={MapPin} span2 />
+              <DateField variant="form" icon={CalendarDays} label={t("education.start_date")} value={item.startDate}  onChange={(v) => update(item.id, "startDate", v)} />
               {!item.currentlyStudying && (
-                <DateField label={t("education.end_date")} value={item.endDate}    onChange={(v) => update(item.id, "endDate", v)} />
+                <DateField variant="form" icon={CalendarDays} label={t("education.end_date")} value={item.endDate}    onChange={(v) => update(item.id, "endDate", v)} />
               )}
               <div className="col-span-2 flex items-center gap-2">
                 <Switch id={`studying-${item.id}`} checked={item.currentlyStudying} onCheckedChange={(v) => update(item.id, "currentlyStudying", v)} />

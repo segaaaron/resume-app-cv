@@ -11,7 +11,13 @@ const FULL_JOB = {
 }
 
 /** A CV that passes every check, so each test can remove exactly one thing. */
+const WITH_CERTS = {
+  certifications: [{ id: "c1", name: "CCNA" }],
+  languages: [{ id: "l1", name: "Inglés", level: "b2" }],
+}
+
 const COMPLETE = {
+  ...WITH_CERTS,
   personalDetails: { firstName: "Alfredo", lastName: "Sandoval", email: "a@b.com", jobTitle: "Analista de Riesgo" },
   summary: "Administrador de empresas con más de diez años en banca, especializado en el análisis de riesgo de carteras de clientes privados y en la evaluación crediticia.",
   workExperience: [FULL_JOB],
@@ -22,8 +28,12 @@ const COMPLETE = {
 const kinds = (sd: Record<string, unknown>) => computeProfileGaps(sd).map((g) => g.kind)
 
 describe("computeProfileGaps", () => {
-  it("asks nothing when the CV already covers every check", () => {
-    expect(computeProfileGaps(COMPLETE)).toEqual([])
+  it("has nothing left to ask but the two 'anything more?' questions", () => {
+    // A CV passing every check still owes two: one role is 60% of the
+    // work-experience score and two is 100%, and one bullet is below the three
+    // to five that read best. The panel drops each once the person says "that's
+    // all" — the engine cannot know that on its own.
+    expect(kinds(COMPLETE).sort()).toEqual(["moreBullets", "moreExperience"])
   })
 
   it("asks for everything on an empty CV", () => {
@@ -47,8 +57,25 @@ describe("computeProfileGaps", () => {
       ...COMPLETE,
       workExperience: [{ ...FULL_JOB, startDate: "", endDate: "" }],
     })
-    expect(gaps).toHaveLength(1)
+    // The dates come first; the role also has room for another bullet, which is
+    // a lower-value question and sorts below.
     expect(gaps[0]).toMatchObject({ kind: "jobDates", jobId: "w1", subject: "Banco Mercantil", fill: "direct" })
+  })
+
+  // "How long did you work AT Telecommunications Engineer" is not a sentence.
+  // The question has to know whether it is naming a company or a role.
+  it("flags when the subject is the role because no employer is known", () => {
+    const withEmployer = computeProfileGaps({
+      ...COMPLETE,
+      workExperience: [{ ...FULL_JOB, startDate: "", endDate: "" }],
+    })
+    expect(withEmployer[0]).toMatchObject({ kind: "jobDates", subject: "Banco Mercantil", subjectIsRole: false })
+
+    const withoutEmployer = computeProfileGaps({
+      ...COMPLETE,
+      workExperience: [{ ...FULL_JOB, employer: "", startDate: "", endDate: "" }],
+    })
+    expect(withoutEmployer[0]).toMatchObject({ kind: "jobDates", subject: "Analista de Riesgo", subjectIsRole: true })
   })
 
   it("asks what the user did in a role with no description, and routes it to the model", () => {
@@ -84,15 +111,91 @@ describe("computeProfileGaps", () => {
     expect(gaps).not.toContain("education")
   })
 
-  it("orders by how much the answer improves the CV", () => {
+  it("offers to build the CV when it carries a job title and nothing else", () => {
+    // The role is already known, so opening with "where did you work?" wastes
+    // the one thing that could have written the whole draft.
+    const gaps = kinds({ personalDetails: { firstName: "Ana", email: "a@b.com", jobTitle: "Administradora" } })
+    expect(gaps[0]).toBe("jobTitle")
+  })
+
+  it("asks what you do first — everything else keys off the role", () => {
+    // Sorted purely by weight, "where did you work" came before "what do you
+    // do", which reads as an interrogation instead of a conversation.
+    expect(kinds({})[0]).toBe("jobTitle")
+  })
+
+  it("orders the middle by how much the answer improves the CV", () => {
     const gaps = computeProfileGaps({ personalDetails: { firstName: "Ana", email: "a@b.com" } })
-    const weights = gaps.filter((g) => g.kind !== "summary").map((g) => g.weight)
+    const weights = gaps.filter((g) => g.kind !== "summary" && g.kind !== "jobTitle").map((g) => g.weight)
     expect(weights).toEqual([...weights].sort((a, b) => b - a))
+  })
+
+  it("asks about certifications only once there is a role to key them off", () => {
+    // Examples for "Ingeniero de Telecomunicaciones" are useful; examples for
+    // nobody in particular are noise.
+    expect(kinds({})).not.toContain("certifications")
+    expect(kinds({ ...COMPLETE, certifications: [] })).toContain("certifications")
+  })
+
+  /**
+   * One role is where the wizard used to stop — and then announce the CV was
+   * complete. The product's own completeness model scores work experience at
+   * 60% with a single role and 100% from two.
+   */
+  describe("more than one job", () => {
+    it("offers to add another once the roles on file are finished", () => {
+      expect(kinds(COMPLETE)).toContain("moreExperience")
+    })
+
+    it("does not offer it while the current role is still missing something", () => {
+      const halfDone = { ...COMPLETE, workExperience: [{ ...FULL_JOB, description: "" }] }
+      expect(kinds(halfDone)).not.toContain("moreExperience")
+    })
+
+    it("stops offering past five roles, where a résumé starts sprawling", () => {
+      const five = Array.from({ length: 5 }, (_, i) => ({ ...FULL_JOB, id: `w${i}` }))
+      expect(kinds({ ...COMPLETE, workExperience: five })).not.toContain("moreExperience")
+    })
+  })
+
+  /**
+   * The ceiling is not this file's opinion: BULLETS_PER_ROLE_MAX is 6, and the
+   * ATS panel already calls a role crowded there while the skill writer stops
+   * proposing. An assistant pushing past a limit its own analyser penalises
+   * makes both look untrustworthy.
+   */
+  describe("more bullets, up to the limit the rest of the product enforces", () => {
+    const withBullets = (n: number) => ({
+      ...COMPLETE,
+      workExperience: [{ ...FULL_JOB, description: Array.from({ length: n }, (_, i) => `• Línea ${i + 1}`).join("\n") }],
+    })
+
+    it("offers another line while there is room", () => {
+      expect(kinds(withBullets(1))).toContain("moreBullets")
+      expect(kinds(withBullets(5))).toContain("moreBullets")
+    })
+
+    it("stops at six", () => {
+      expect(kinds(withBullets(6))).not.toContain("moreBullets")
+      expect(kinds(withBullets(7))).not.toContain("moreBullets")
+    })
+
+    it("does not offer it on a role with no bullets — that one gets asked outright", () => {
+      const empty = { ...COMPLETE, workExperience: [{ ...FULL_JOB, description: "" }] }
+      expect(kinds(empty)).toContain("jobBullets")
+      expect(kinds(empty)).not.toContain("moreBullets")
+    })
+  })
+
+  it("asks which languages you speak — nobody can guess that for you", () => {
+    expect(kinds({ ...COMPLETE, languages: [] })).toContain("languages")
+    expect(kinds(COMPLETE)).not.toContain("languages")
   })
 
   it("only charges the model for writing, never for asking", () => {
     const aiKinds = computeProfileGaps({}).filter((g) => g.fill === "ai").map((g) => g.kind)
-    // Dates, employers, degrees and skills are typed in by the user as-is.
-    expect(aiKinds).toEqual(["summary"])
+    // Dates, employers, degrees and skills are typed in by the user as-is. The
+    // role is the exception: answering it seeds the summary and the skills too.
+    expect(aiKinds).toEqual(["jobTitle", "summary"])
   })
 })

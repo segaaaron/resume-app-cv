@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { CertificationItem } from "@/types/resume"
-import { Plus, Trash2, ChevronDown, ChevronRight, Award, Building2, Link } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, Award, Building2, Link, CalendarDays } from "lucide-react"
 import { nanoid } from "nanoid"
 import { PField, DateField } from "./shared"
 
@@ -54,7 +54,7 @@ export default function CertificationsSection() {
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
               <PField label={t("certifications.name")}   value={item.name}   onChange={(v) => update(item.id, "name", v)}   icon={Award}     span2 />
               <PField label={t("certifications.issuer")} value={item.issuer} onChange={(v) => update(item.id, "issuer", v)} icon={Building2} />
-              <DateField label={t("certifications.date")} value={item.date}  onChange={(v) => update(item.id, "date", v)} />
+              <DateField variant="form" icon={CalendarDays} label={t("certifications.date")} value={item.date}  onChange={(v) => update(item.id, "date", v)} />
               <PField label={t("certifications.url")}    value={item.url}    onChange={(v) => update(item.id, "url", v)}    icon={Link}      span2 />
             </div>
           )}

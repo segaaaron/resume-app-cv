@@ -5,7 +5,7 @@ import { useTranslations } from "next-intl"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import type { VolunteerItem } from "@/types/resume"
-import { Plus, Trash2, ChevronDown, ChevronRight, Building2, UserRound } from "lucide-react"
+import { Plus, Trash2, ChevronDown, ChevronRight, Building2, UserRound, CalendarDays } from "lucide-react"
 import { nanoid } from "nanoid"
 import { PField, DateField, PTextarea } from "./shared"
 
@@ -54,8 +54,8 @@ export default function VolunteerSection() {
             <div className="border-t border-border px-3 py-3 grid grid-cols-2 gap-3">
               <PField label={t("volunteer.organization")} value={item.organization} onChange={(v) => update(item.id, "organization", v)} icon={Building2} span2 />
               <PField label={t("volunteer.role")}         value={item.role}         onChange={(v) => update(item.id, "role", v)}         icon={UserRound} span2 />
-              <DateField label={t("volunteer.start_date")} value={item.startDate}   onChange={(v) => update(item.id, "startDate", v)} />
-              <DateField label={t("volunteer.end_date")}   value={item.endDate}     onChange={(v) => update(item.id, "endDate", v)} />
+              <DateField variant="form" icon={CalendarDays} label={t("volunteer.start_date")} value={item.startDate}   onChange={(v) => update(item.id, "startDate", v)} />
+              <DateField variant="form" icon={CalendarDays} label={t("volunteer.end_date")}   value={item.endDate}     onChange={(v) => update(item.id, "endDate", v)} />
               <PTextarea label={t("description")} value={item.description} onChange={(v) => update(item.id, "description", v)} />
             </div>
           )}

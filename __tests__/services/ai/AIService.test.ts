@@ -823,6 +823,70 @@ describe("AIService", () => {
       expect(result.suggestedSkills).toContain("Analisis de Riesgo")
     })
 
+    /**
+     * Reported from a real CV: the skills section read "Diseño y mantenimiento
+     * de bases de datos relacionales" and "Control de versiones con Git" —
+     * descriptions of activities, which match nothing in an ATS. A résumé needs
+     * the name: PostgreSQL, Git.
+     */
+    it("drops skills that are sentences instead of names", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        suggestedSkills: ["React", "Diseño y mantenimiento de bases de datos relacionales"],
+        inferredSkills: ["PostgreSQL", "Control de versiones con Git y despliegue continuo"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "soy desarrollador web y uso react y postgresql",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.suggestedSkills).toEqual(["React"])
+      expect(result.inferredSkills).toEqual(["PostgreSQL"])
+    })
+
+    /**
+     * Taxonomy alignment: our 1,002 curated terms decide the spelling when they
+     * know the skill, the model keeps its own when they do not. Older ATS still
+     * token-match literal strings, so the canonical form is what scores.
+     */
+    it("rewrites a known skill in the catalog's spelling and keeps an unknown one", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        inferredSkills: ["reactjs", "postgres", "Manejo de guadaña"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "soy desarrollador web",
+        sectionData: {},
+      }, "PRO")
+
+      // The two the catalog knows come back the way a posting writes them; the
+      // one it has never heard of survives untouched — 1,002 terms do not cover
+      // every trade, and dropping it would leave the list able to suggest only
+      // what we already thought of.
+      expect(result.inferredSkills).toEqual(["React", "PostgreSQL", "Manejo de guadaña"])
+    })
+
+    it("keeps the multi-word names that are real skills", async () => {
+      // Four words is the ceiling because our own dictionary has entries like
+      // "Applicant Tracking Systems (ATS)" — a name plus its acronym.
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        inferredSkills: ["REST APIs", "Applicant Tracking Systems (ATS)", "Google Tag Manager"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "soy reclutador",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.inferredSkills).toEqual(["REST APIs", "Applicant Tracking Systems (ATS)", "Google Tag Manager"])
+    })
+
     it("keeps an inferred skill from becoming a claim about the user", async () => {
       const aiClient = makeMockAIClient(JSON.stringify({
         summary: "Perfil",
@@ -841,6 +905,106 @@ describe("AIService", () => {
       }, "PRO")
 
       expect(result.inferredSkills).toEqual(["Liderazgo"])
+    })
+
+    // The CV has had a certifications section all along and the assistant had no
+    // way to fill it, so nobody was ever prompted about the one credential that
+    // most changes how a technical CV reads. These are EXAMPLES for the role, so
+    // grounding them against the user's text would empty the list — the exact
+    // filter that made the skills section unable to suggest anything.
+    it("suggests certifications standard for the role, ungrounded on purpose", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        suggestedCertifications: ["CCNA", "CCNP", "ITIL Foundation"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "soy ingeniero de telecomunicaciones con 5 anos de experiencia",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.suggestedCertifications).toEqual(["CCNA", "CCNP", "ITIL Foundation"])
+    })
+
+    it("keeps an employer from entering dressed as a certification", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Perfil",
+        suggestedCertifications: ["Banco Mercantil", "CCNA"],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "trabaje en banca",
+        sectionData: { workExperience: [{ id: "w1", employer: "Banco Mercantil", jobTitle: "Analista" }] },
+      }, "PRO")
+
+      expect(result.suggestedCertifications).toEqual(["CCNA"])
+    })
+
+    it("creates the studies the user described and blanks the university they never named", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        educationNew: [{ degree: "Ingeniería en Telecomunicaciones", institution: "Universidad Mayor de San Andrés" }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "estudie ingenieria en telecomunicaciones",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.educationNew).toHaveLength(1)
+      expect(result.educationNew![0].degree).toBe("Ingeniería en Telecomunicaciones")
+      expect(result.educationNew![0].institution).toBe("")
+    })
+
+    // The case the whole feature exists for: one line, no company, and a real
+    // resume has to come back. The prompt used to forbid the entry outright, so
+    // "I am a telecommunications engineer with 5 years" produced a summary, a
+    // job title and an empty experience section.
+    it("drafts the role from a profession alone, naming the tools of that trade", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        summary: "Ingeniero de telecomunicaciones...",
+        jobTitle: "Ingeniero de Telecomunicaciones",
+        workExperienceNew: [{
+          jobTitle: "Desarrollador de Software",
+          employer: "",
+          // Names the tools of the trade, which is the only way a role draft can
+          // be written — and every one of them is on the invented-tech list.
+          description: "• Construí interfaces con React\n• Desarrollé APIs en Node.js y TypeScript",
+        }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "soy desarrollador de software con 5 anos de experiencia",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.workExperienceNew).toHaveLength(1)
+      expect(result.workExperienceNew![0].employer).toBe("")
+      expect(result.workExperienceNew![0].description).toContain("React")
+    })
+
+    // The other side of that line: once a real employer is named, a tool the
+    // user never mentioned stops being a draft and becomes a false claim about
+    // a job a recruiter can call and check.
+    it("still refuses invented tech on an entry tied to a named employer", async () => {
+      const aiClient = makeMockAIClient(JSON.stringify({
+        workExperienceNew: [{
+          jobTitle: "Analista de Riesgo",
+          employer: "Banco Mercantil",
+          description: "• Desplegué microservicios en Kubernetes y Docker",
+        }],
+      }))
+      const service = new AIService(aiClient, logger)
+
+      const result = await service.fillProfile("user-1", {
+        prompt: "trabaje en banco mercantil como analista de riesgo de carteras",
+        sectionData: {},
+      }, "PRO")
+
+      expect(result.workExperienceNew).toHaveLength(0)
     })
 
     // Same failure seen from the other side: while the schema rejected an empty

@@ -259,6 +259,30 @@ export const ATS_SKILLS: SkillEntry[] = [
   { term: "budgeting", aliases: ["presupuestación", "presupuestos", "elaboración de presupuestos"], category: "finance" },
   { term: "p&l", aliases: ["pyl", "profit and loss"], category: "finance" },
 
+  // Banking and credit. Measured 2026-08-18: the whole dictionary answered a
+  // banking CV with one term, "risk management" — a credit analyst, a teller and
+  // a branch manager had no vocabulary of their own, in either language. Every
+  // entry here enters in an unambiguous form: "cartera", "mora", "caja" and
+  // "garantía" are ordinary Spanish words and the dictionary is scanned against
+  // CV prose, so they are only ever part of a phrase.
+  { term: "credit analysis", aliases: ["análisis de crédito", "analisis de credito", "análisis crediticio", "evaluación crediticia", "evaluacion crediticia"], category: "finance" },
+  { term: "credit risk", aliases: ["riesgo crediticio", "riesgo de crédito", "riesgo de credito"], category: "finance" },
+  { term: "risk assessment", aliases: ["evaluación de riesgos", "evaluacion de riesgos", "análisis de riesgo", "analisis de riesgo"], category: "finance" },
+  { term: "portfolio management", aliases: ["gestión de carteras", "gestion de carteras", "administración de cartera", "administracion de cartera"], category: "finance" },
+  { term: "loan origination", aliases: ["originación de créditos", "originacion de creditos", "colocación de créditos", "colocacion de creditos", "otorgamiento de créditos"], category: "finance" },
+  { term: "credit scoring", aliases: ["scoring crediticio", "calificación crediticia", "calificacion crediticia"], category: "finance" },
+  { term: "delinquency management", aliases: ["gestión de mora", "gestion de mora", "cartera en mora", "recuperación de cartera"], category: "finance" },
+  { term: "financial statement analysis", aliases: ["análisis de estados financieros", "analisis de estados financieros"], category: "finance" },
+  { term: "anti-money laundering", aliases: ["aml", "prevención de lavado de dinero", "prevencion de lavado de dinero", "antilavado", "lavado de activos"], category: "finance" },
+  { term: "know your customer", aliases: ["kyc", "conocimiento del cliente", "debida diligencia del cliente"], category: "finance" },
+  { term: "banking regulation", aliases: ["normativa bancaria", "regulación bancaria", "regulacion bancaria", "cumplimiento normativo"], category: "finance" },
+  { term: "basel accords", aliases: ["basilea", "acuerdos de basilea"], category: "finance" },
+  { term: "teller operations", aliases: ["operaciones de caja", "manejo de caja bancaria"], category: "finance" },
+  { term: "account opening", aliases: ["apertura de cuentas"], category: "finance" },
+  { term: "financial advisory", aliases: ["asesoría financiera", "asesoria financiera", "asesoramiento financiero"], category: "finance" },
+  { term: "loan guarantees", aliases: ["garantías crediticias", "garantias crediticias", "avales y garantías"], category: "finance" },
+  { term: "budget control", aliases: ["control presupuestario", "control de presupuesto"], category: "finance" },
+
   // HR
   { term: "recruiting", aliases: ["reclutamiento"], category: "hr" },
   { term: "talent acquisition", aliases: ["adquisición de talento"], category: "hr" },
