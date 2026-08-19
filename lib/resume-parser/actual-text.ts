@@ -44,6 +44,24 @@ export interface RecoveredText {
 
 /** Tope de trabajo: un PDF con más streams que esto no es un CV. */
 const MAX_STREAMS = 400
+/**
+ * Cuánto se permite que crezca un stream al inflarlo, y cuánto en total.
+ *
+ * ESTO ES UNA BOMBA DE DESCOMPRESIÓN, medida: 120 KB de deflate se convierten en
+ * 120 MB, y el proceso pasaba de 51 MB (el CV real) a 411 MB de RSS — 3.400
+ * veces el archivo. La ruta acepta hasta 5 MB, asi que la misma bomba a tamaño
+ * completo pide del orden de 4,8 GB.
+ *
+ * Y no bastaba con que la ruta tenga un timeout: esta función es SÍNCRONA, y un
+ * `Promise.race` no interrumpe trabajo síncrono. Mientras infla, el event loop
+ * está bloqueado para todos los demás usuarios del proceso.
+ *
+ * Los números salen del caso real con margen de sobra: su content stream ocupa
+ * 234 KB inflado, y el archivo entero pesa lo mismo. 8 MB por stream y 24 MB en
+ * total dejan lugar para un CV con imágenes grandes y cierran la bomba.
+ */
+const MAX_INFLATED_BYTES = 8 * 1024 * 1024
+const MAX_TOTAL_INFLATED_BYTES = 24 * 1024 * 1024
 /** Un span de ActualText más largo que esto no es una línea de CV. */
 const MAX_SPAN_CHARS = 500
 
@@ -80,17 +98,26 @@ function readableStreams(buf: Buffer): string[] {
   const out: string[] = [buf.toString("latin1")]
   const hay = out[0]
   const re = /stream\r?\n/g
+  let inflatedSoFar = 0
   let m: RegExpExecArray | null
   while ((m = re.exec(hay)) && out.length < MAX_STREAMS) {
     const start = m.index + m[0].length
     const end = hay.indexOf("endstream", start)
     if (end < 0) break
     const slice = buf.subarray(start, end)
+    if (inflatedSoFar >= MAX_TOTAL_INFLATED_BYTES) break
     try {
-      out.push(inflateSync(slice).toString("latin1"))
+      // `maxOutputLength` es la defensa: zlib aborta al pasarse en vez de
+      // reservar la memoria y despues descubrirlo. Un stream que no entra en el
+      // tope simplemente no se lee — un CV no lo necesita, y una bomba vive ahi.
+      const room = Math.min(MAX_INFLATED_BYTES, MAX_TOTAL_INFLATED_BYTES - inflatedSoFar)
+      const inflated = inflateSync(slice, { maxOutputLength: room })
+      inflatedSoFar += inflated.length
+      out.push(inflated.toString("latin1"))
     } catch {
-      // Sin comprimir, o con un filtro que no manejamos: el crudo sirve igual
-      // para buscar /ActualText y /MCID, que son texto plano.
+      // Sin comprimir, con un filtro que no manejamos, o demasiado grande: el
+      // crudo sirve igual para buscar /ActualText y /MCID, que son texto plano,
+      // y su tamaño ya está acotado por el límite de subida.
       out.push(slice.toString("latin1"))
     }
   }
