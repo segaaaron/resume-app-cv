@@ -414,11 +414,37 @@ Destaca estos términos de la vacante que el CV sí respalda, tejidos con natura
 ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites textual):\n${evidence}\n` : ""}NUNCA reclames esto — el CV no lo respalda: ${brief.gapsToAvoid.length ? brief.gapsToAvoid.join(", ") : "(ninguno)"}.\n`
   }
 
+  /**
+   * Cifras que la carta afirma y el perfil no respalda.
+   *
+   * `detectHallucination` sólo acusa un número cuando lleva unidad (%, users,
+   * requests…), y es estrecho a propósito: un falso positivo ahí le cuesta al
+   * usuario su carta entera. El precio de esa decisión es que un número pelado
+   * pasa — y una carta se envía a un reclutador tal cual.
+   *
+   * MEDIDO, 1 de 5 rondas sobre el mismo perfil: el modelo se salió de personaje
+   * y le habló al operador con NUESTRA propia instrucción dentro de la carta —
+   * "te devuelvo una versión final en 3 párrafos, dentro de las 250–350 palabras
+   * pedidas". Ni "3", ni "250", ni "350" existen en el CV ni en la vacante. La
+   * regla que lo caza es la misma que lo cazaría si hubiera inventado "atendí a
+   * 250 clientes": una cifra que el candidato no dio.
+   *
+   * Aquí sí se puede ser estricto donde `detectHallucination` no puede: esto NO
+   * descarta la carta, dispara UN reintento, y si el segundo intento tampoco
+   * convence queda en pie el primero. El costo de equivocarse es una llamada.
+   */
+  private letterStatesUnsourcedFigure(body: string, grounding: string): string[] {
+    const digitsOf = (t: string) => (t.match(/\d+(?:[.,]\d+)?/g) ?? []).map((n) => n.replace(/[.,]/g, ""))
+    const known = new Set(digitsOf(grounding))
+    return [...new Set(digitsOf(body))].filter((d) => !known.has(d))
+  }
+
   /** True when a fresh cover-letter draft carries content the profile does not
-   *  support: an invented metric/technology (detectHallucination) or a stand-in
-   *  employer name that is not in the grounding source. */
+   *  support: an invented metric/technology (detectHallucination), a figure the
+   *  profile never states, or a stand-in employer name absent from the source. */
   private letterInventsContent(body: string, grounding: string): boolean {
     if (detectHallucination(body, grounding)) return true
+    if (this.letterStatesUnsourcedFigure(body, grounding).length > 0) return true
     const m = body.match(PLACEHOLDER_COMPANY_REGEX)
     return !!m && !grounding.toLowerCase().includes(m[0].toLowerCase())
   }

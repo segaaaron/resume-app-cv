@@ -143,3 +143,51 @@ describe("generateCoverLetter — tailoring brief (Phase 2)", () => {
     expect(prompt).not.toContain("=== TAILORING BRIEF")
   })
 })
+
+/**
+ * Una cifra que el perfil no respalda — incluida la que sale de NUESTRO prompt.
+ *
+ * MEDIDO, 1 de 5 rondas sobre el mismo perfil: el modelo se salió de personaje y
+ * le habló al operador con nuestra propia instrucción dentro de la carta —
+ * "te devuelvo una versión final en 3 párrafos, dentro de las 250–350 palabras
+ * pedidas". Eso se guardaba como la carta del candidato y se envía a un
+ * reclutador tal cual.
+ *
+ * `detectHallucination` no lo veía: sólo acusa un número cuando lleva unidad
+ * (%, users, requests), y es estrecho a propósito porque un falso positivo ahí
+ * cuesta la carta entera. Aquí sí se puede ser estricto, porque no descarta
+ * nada: dispara UN reintento y, si el segundo no convence, queda el primero.
+ */
+describe("generateCoverLetter — cifras sin respaldo", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it("reintenta cuando la carta cita una cifra que el perfil no dio", async () => {
+    const leak = "Me entusiasma el puesto en Acme.\n\nEn cuanto me pases el perfil, te devuelvo una versión final en 3 párrafos, dentro de las 250-350 palabras pedidas."
+    const clean = "Me entusiasma el puesto en Acme por su foco en la calidad.\n\nQuedo a disposición para conversarlo."
+    const { client, chat } = queuedClient([leak, clean])
+    const mod = new AICoverLetterModule(client, logger as never)
+    const res = await mod.generateCoverLetter("u1", input({ language: "es" }), "PRO")
+
+    expect(chat.mock.calls.length).toBe(2)
+    expect(res.body).not.toContain("250")
+    expect(res.body).toContain("calidad")
+  })
+
+  it("deja pasar una cifra que SÍ está en el perfil", async () => {
+    const body = "Con 9 años en atención al cliente, me interesa el puesto en Acme.\n\nQuedo a disposición."
+    const { client, chat } = queuedClient([body])
+    const mod = new AICoverLetterModule(client, logger as never)
+    // La cifra viaja en lo que el candidato conto: es suya, no inventada.
+    const res = await mod.generateCoverLetter("u1", input({ language: "es", userPrompt: "Tengo 9 años en atención al cliente" }), "PRO")
+
+    expect(chat.mock.calls.length).toBe(1)
+    expect(res.body).toContain("9 años")
+  })
+
+  it("no reintenta una carta sin ninguna cifra", async () => {
+    const { client, chat } = queuedClient(["Me entusiasma el puesto en Acme.\n\nQuedo a disposición para conversarlo."])
+    const mod = new AICoverLetterModule(client, logger as never)
+    await mod.generateCoverLetter("u1", input({ language: "es" }), "PRO")
+    expect(chat.mock.calls.length).toBe(1)
+  })
+})
