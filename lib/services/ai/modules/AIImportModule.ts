@@ -20,6 +20,7 @@ import { AI_MODEL, AI_TEMPERATURE, logAIUsage } from "@/lib/ai-client"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { parseAIJson, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
+import { appearsIn, normaliseFigures, recoverContact, hostOf, linesForRole } from "../shared/import-recovery"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
 import { normalizeDescription } from "@/lib/utils"
@@ -116,9 +117,16 @@ export class AIImportModule {
     const sections = this.groundAndShape(parsed, rawText)
 
     // If grounding stripped everything (model returned nothing real), fall back.
+    //
+    // A contact field does NOT count here any more. Contacts are now recovered
+    // from the document when the model's version fails to check out, so a run
+    // where the model invented every single field still comes back carrying the
+    // real email — and "we have an email" is not a résumé. Judge on substance:
+    // a name, or an actual section. Otherwise the deterministic parser, which
+    // is better than a page holding one address, never gets its turn.
     const hasAnything =
       s(sections.personalDetails.firstName) ||
-      s(sections.personalDetails.email) ||
+      s(sections.personalDetails.lastName) ||
       sections.workExperience.length ||
       sections.education.length ||
       sections.skills.length
@@ -173,18 +181,61 @@ ${rawText}`
    */
   private groundAndShape(p: LlmResume, rawText: string): ResumeSections {
     const source = rawText.toLowerCase()
+    /** What the repair pass had to fix, and what it could not. Never silent. */
+    const recoveredContacts = { fixed: 0, lost: 0 }
     const grounded = (v: unknown): boolean => {
       const val = s(v)
       return val.length > 0 && isGroundedIn(val, source)
     }
-    // Contact fields must literally appear in the source — never invent an email.
-    const contactOrEmpty = (v: unknown): string => (grounded(v) ? s(v) : "")
+    // Contact fields, verified against the source and RECOVERED FROM IT when the
+    // model's version does not match.
+    //
+    // This used to return "" on any mismatch, which meant the person who
+    // imported a two-column PDF lost their own email and phone: extractors emit
+    // "mikisaravia ios@gmail.com" for an address rendered without the space, and
+    // a literal substring check calls that an invention. Nothing is invented
+    // here either — when the model's value does not check out, the address is
+    // read out of the document itself. Empty now means the CV really has none.
+    const contactOrEmpty = (v: unknown): string => {
+      const val = s(v)
+      if (val && appearsIn(val, rawText)) return val
+      const kind = val.includes("@") ? "email"
+        : /^[+\d(]/.test(val) ? "phone"
+        : "url"
+      const recovered = recoverContact(kind, val, rawText, hostOf(val))
+      if (!recovered && val) recoveredContacts.lost++
+      else if (recovered && recovered !== val) recoveredContacts.fixed++
+      return recovered
+    }
     // A description that introduces facts absent from the source is cleared, but
     // the entry (job/edu) is kept — losing a whole job is worse than losing prose.
+    //
+    // LINE BY LINE, not all-or-nothing. Reported from a real import: a résumé
+    // with five jobs came back with four of them carrying 7-12 bullets and one
+    // carrying none. The check is whole-field, so ONE figure the model reformatted
+    // ("15 %" for "15%") or one tool name it spelled differently is enough to
+    // delete every bullet of that job — nine lines of someone's career, gone
+    // because of the tenth. Bullets are independent claims and are now judged as
+    // such: the invented line is dropped, the verifiable ones are kept.
+    //
+    // Prose (a paragraph with no line breaks) is unchanged: it is one claim, and
+    // half a hallucinated paragraph is not a safe thing to keep.
+    let dropped = 0
     const safeDesc = (v: unknown): string => {
       const val = s(v)
       if (!val) return ""
-      return detectHallucination(val, rawText) ? "" : val
+      if (!detectHallucination(val, rawText)) return val
+
+      const lines = val.split("\n").map((l) => l.trim()).filter(Boolean)
+      if (lines.length < 2) { dropped++; return "" }
+
+      // Figures are compared on normalised text: the CV that says "15%" and the
+      // model that writes "15 %" are stating the same number, and cutting the
+      // line over the space deletes the user's own achievement.
+      const normalisedSource = normaliseFigures(rawText)
+      const kept = lines.filter((line) => !detectHallucination(normaliseFigures(line), normalisedSource))
+      dropped += lines.length - kept.length
+      return kept.join("\n")
     }
     // Canonicalise the description so it renders with the author's intent preserved:
     // any bullet marker (or numbered list) becomes a clean "• " bullet, an intro
@@ -194,6 +245,15 @@ ${rawText}`
 
     // Skills and certifications are routed together, once, by the classifier —
     // never by the model and never twice. See import-classification.ts.
+    // Whatever was dropped is counted and reported. A silent discard is how a
+    // job lost all its bullets without anything, anywhere, saying so.
+    const reportDropped = () => {
+      if (dropped > 0) this.logger.warn("[AIImport] hallucinated lines dropped", { count: dropped })
+      if (recoveredContacts.fixed > 0 || recoveredContacts.lost > 0) {
+        this.logger.warn("[AIImport] contact fields", recoveredContacts)
+      }
+    }
+
     const classified = classifyImportedTerms({
       skills: (p.skills ?? []).filter((sk) => grounded(sk.name)).map((sk) => ({ name: s(sk.name), level: s(sk.level) })),
       certifications: (p.certifications ?? [])
@@ -267,6 +327,26 @@ ${rawText}`
         .slice(0, 12),
       hobbies: s(p.hobbies),
     }
+
+    // NO JOB LEAVES EMPTY WHILE THE DOCUMENT HAS ITS LINES.
+    //
+    // The rule the CEO set, and the right one: a failed check may not end in a
+    // hole. When every line of a role was cut — or the model returned none —
+    // the answer is not an empty role, it is to go back to the document and
+    // read that role's block out of it. Only a role the CV genuinely describes
+    // in no words at all stays blank.
+    //
+    // Recovered text is the PDF's own, verbatim: this repairs, it never writes.
+    const jobs = draft.workExperience as { jobTitle: string; employer: string; description: string }[]
+    let recoveredJobs = 0
+    for (const job of jobs) {
+      if (job.description.trim()) continue
+      const fromSource = linesForRole(rawText, job.jobTitle, job.employer)
+      if (fromSource) { job.description = fromSource; recoveredJobs++ }
+    }
+    if (recoveredJobs > 0) this.logger.warn("[AIImport] job bullets recovered from source", { count: recoveredJobs })
+
+    reportDropped()
 
     // ResumeSectionsSchema fills any remaining defaults + coerces enums
     // (e.g. an out-of-range language level falls back to "b1").

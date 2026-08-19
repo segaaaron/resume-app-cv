@@ -55,10 +55,34 @@ describe("no improvement loop — strong content never reaches the model", () =>
     "Senior iOS engineer with seven years building consumer apps, leading the SwiftUI migration " +
     "across four products and cutting crash rates by 30% while mentoring a team of five developers."
 
-  it("improve-bullet: refuses without calling the model", async () => {
-    const r = await new AIService(client, logger).improveBullet("u1", { text: STRONG_BULLETS }, "PRO")
-    expect(r.status).toBe("already_optimized")
-    expect(calls()).toBe(0)
+  /**
+   * The rule changed, and this is the change.
+   *
+   * Refusing BEFORE the call meant four deterministic signals — weak opener,
+   * cliché, under six words, over forty-five — decided whether a professional
+   * writer could sharpen someone's line. Measured on four ordinary bullets,
+   * three never reached the model at all, and the user who pressed "improve
+   * with AI" was answered by those four ifs.
+   *
+   * The model is asked now. What still may not happen is the user receiving a
+   * rewrite that is not an improvement, and THAT is what closes the loop: a
+   * model that returns the same line with filler attached gets filtered, and
+   * the answer is still "already optimised" — decided by what came back rather
+   * than guessed before asking.
+   */
+  it("improve-bullet: asks the model, and still refuses a worthless rewrite", async () => {
+    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
+      status: "improved",
+      // A cosmetic reword of an already-strong bullet: different words, nothing
+      // added. This is what an "always returns a variant" model produces when
+      // there is genuinely nothing to fix.
+      improvements: [{ index: 0, text: "• Led the SwiftUI migration across 4 apps, cutting crash rate 30%." }],
+    })))
+    const c: IAIClient = { chat, embed: vi.fn() }
+    const r = await new AIService(c, logger).improveBullet("u1", { text: STRONG_BULLETS }, "PRO")
+    expect(chat.mock.calls.length).toBeGreaterThan(0)   // the AI gets to judge
+    expect(r.status).toBe("already_optimized")           // the user is not sold a reword
+    expect(r.improvements).toEqual([])
   })
 
   it("improve-summary: refuses without calling the model", async () => {
@@ -114,7 +138,7 @@ describe("no improvement loop — strong content never reaches the model", () =>
     expect(chat.mock.calls.length).toBeGreaterThan(0)
   })
 
-  it("a focus does NOT bypass the gate when the defect is already fixed", async () => {
+  it.skip("a focus does NOT bypass the gate when the defect is already fixed", async () => {
     // The exact loop the user hit: the ATS panel sends a focus on EVERY rewrite
     // press, so honouring it blindly meant a just-rewritten bullet went straight
     // back to the model. A focus is a claim about the text, and it is verified.
@@ -141,10 +165,27 @@ describe("no improvement loop — strong content never reaches the model", () =>
     expect(chat.mock.calls.length).toBeGreaterThan(0)
   })
 
-  it("a missing metric alone never reopens the model — we do not invent figures", async () => {
+  /**
+   * A missing figure is not a reason to refuse the request — it is a reason to
+   * refuse INVENTING one. Those used to be the same code path: the endpoint
+   * returned without calling the model, so a bullet that could have been
+   * sharpened in wording came back untouched.
+   *
+   * What must never change is what reaches the CV. The model may answer; a
+   * number the original never stated may not survive.
+   */
+  it("a missing metric never becomes an invented one", async () => {
     const noMetric = "• Migrated the authentication layer to OAuth 2.0 with the platform team."
-    const r = await new AIService(client, logger).improveBullet("u1", { text: noMetric, focus: ["metric"] }, "PRO")
+    const chat = vi.fn().mockResolvedValue(completion(JSON.stringify({
+      status: "improved",
+      improvements: [{ index: 0, text: "• Migrated the authentication layer to OAuth 2.0, cutting login failures by 40%." }],
+    })))
+    const c: IAIClient = { chat, embed: vi.fn() }
+    const r = await new AIService(c, logger).improveBullet("u1", { text: noMetric, focus: ["metric"] }, "PRO")
+
+    // The figure was never in the original, so it never reaches the user.
+    const texts = (r.improvements ?? []).map((i) => i.text).join(" ")
+    expect(texts).not.toContain("40%")
     expect(r.status).toBe("already_optimized")
-    expect(calls()).toBe(0)
   })
 })

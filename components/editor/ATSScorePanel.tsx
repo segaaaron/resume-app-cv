@@ -14,6 +14,7 @@ import { resolveBulletIndex } from "@/lib/ats/bullet-locate"
 import { reportUxFailure } from "@/lib/client-error-reporter"
 import { BULLETS_PER_ROLE_MAX } from "@/lib/ats/scoring-config"
 import { parseBullets, formatBullet, serializeBullets, serializeBulletsReporting } from "@/lib/services/ai/shared/bullets"
+import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
 import { useResumeStore } from "@/stores/resumeStore"
 import { useShallow } from "zustand/react/shallow"
 import { isApplicableFix, detectWordCorrections } from "@/lib/ats/fix-text"
@@ -363,6 +364,18 @@ export default function ATSScorePanel() {
 
   /** Rewrites the summary through the same improve-summary engine the editor uses. */
   const [fixingSummary, setFixingSummary] = useState(false)
+  /** The three positionings, held until one is chosen. Empty = picker closed. */
+  const [summaryVersions, setSummaryVersions] = useState<SummaryVersion[]>([])
+
+  /** The confirm step every summary rewrite goes through, whoever chose the text. */
+  function openSummaryDiff(text: string, current: string) {
+    setModal({
+      suggestion: { field: "summary", type: "replace", preview: text, reason: t("summary_fix_reason") },
+      currentValue: current,
+      itemKey: "fix-summary",
+    })
+  }
+
   async function rewriteSummary() {
     if (fixingSummary) return
     const current = (sectionData.summary as string) ?? ""
@@ -376,19 +389,31 @@ export default function ATSScorePanel() {
       })
       if (!res.ok) { toast.error(t("summary_error")); return }
       const data = await res.json().catch(() => null)
-      const first = Array.isArray(data?.versions) ? data.versions[0] : null
-      const text = typeof first === "string" ? first : null
+      const list: string[] = Array.isArray(data?.versions)
+        ? data.versions.filter((v: unknown): v is string => typeof v === "string" && v.trim().length > 0)
+        : []
+      const first = list[0] ?? null
       // The engine says so itself when there is nothing to gain; the text check
       // covers the case where it returns the user's own summary back.
-      if (data?.status === "already_optimized" || !text || text.trim() === current.trim()) {
+      if (data?.status === "already_optimized" || !first || first.trim() === current.trim()) {
         toast.info(t("summary_already_good"))
         return
       }
-      setModal({
-        suggestion: { field: "summary", type: "replace", preview: text, reason: t("summary_fix_reason") },
-        currentValue: current,
-        itemKey: "fix-summary",
-      })
+      // The endpoint writes THREE positionings — executive, specialist, value
+      // proposition — and this panel used to keep the first and bin the other
+      // two, which were already paid for. Which one fits is the person's call.
+      // The label comes from the server: its quality gate reorders the list, so
+      // position no longer says which positioning a version was written as.
+      if (list.length > 1) {
+        const byIndex: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
+        const types: string[] | undefined = Array.isArray(data?.types) ? data.types : undefined
+        setSummaryVersions(list.map((text, i) => ({
+          type: (types?.[i] as SummaryVersion["type"]) ?? byIndex[i] ?? "executive",
+          text,
+        })))
+        return
+      }
+      openSummaryDiff(first, current)
     } catch {
       toast.error(t("summary_error"))
     } finally {
@@ -3427,6 +3452,18 @@ export default function ATSScorePanel() {
           currentValue={pendingRemove.text}
         />
       )}
+
+      {/* Choose the positioning, then confirm the change like any other fix —
+          the diff against the current summary is not skipped, it comes next. */}
+      <SummaryVersionModal
+        open={summaryVersions.length > 0}
+        versions={summaryVersions}
+        onClose={() => setSummaryVersions([])}
+        onSelect={(text) => {
+          setSummaryVersions([])
+          openSummaryDiff(text, (sectionData.summary as string) ?? "")
+        }}
+      />
     </>
   )
 }

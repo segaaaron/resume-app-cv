@@ -109,17 +109,30 @@ BULLET B: ${b}`
 
     let text: string
     let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined
+    const callOnce = () => this.aiClient.chat({
+      model: AI_MODEL_PROSE,
+      messages: [
+        { role: "system", content: system },
+        { role: "user", content: prompt },
+      ],
+      // One sentence; the cap covers the reasoning budget of the GPT-5 family.
+      max_tokens: 1200,
+      response_format: { type: "json_object" },
+    })
     try {
-      const completion = await this.aiClient.chat({
-        model: AI_MODEL_PROSE,
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: prompt },
-        ],
-        // One sentence; the cap covers the reasoning budget of the GPT-5 family.
-        max_tokens: 1200,
-        response_format: { type: "json_object" },
-      })
+      // A network blip on a one-sentence call used to become a red 500 on a
+      // feature the user reached by choosing to tidy two lines. One retry first:
+      // it is the cheapest call in the product, and the alternative is an error
+      // for something that was working a second ago.
+      let completion
+      try {
+        completion = await callOnce()
+      } catch (first) {
+        this.logger.warn("[AIService.mergeBullets] first call failed, retrying once", {
+          targetId, error: (first as Error).message,
+        })
+        completion = await callOnce()
+      }
       // Este endpoint era el único que llamaba al modelo sin registrar lo que gastaba: su
       // columna en el panel de costos estaba en cero mientras la factura decía otra cosa.
       //
@@ -129,8 +142,12 @@ BULLET B: ${b}`
       usage = completion.usage
       text = (completion.choices[0]?.message?.content ?? "").trim()
     } catch (err) {
-      this.logger.error("[AIService.mergeBullets] model call failed", { targetId }, err instanceof Error ? err : new Error(String(err)))
-      throw new AppError("ai_error", 500)
+      // Twice down. The user asked to merge two of their own lines; leaving them
+      // exactly as they are is harmless, and a red error on an optional tidy-up
+      // is not. Same degradation this module already applies to an unreadable
+      // answer — one behaviour for "we could not do it", not two.
+      this.logger.error("[AIService.mergeBullets] model call failed twice", { targetId }, err instanceof Error ? err : new Error(String(err)))
+      return { status: "not_mergeable" }
     }
 
     logAIUsage(userId, "merge-bullets", {

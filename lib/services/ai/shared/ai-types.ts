@@ -493,6 +493,22 @@ export const FillProfileResponseSchema = z.object({
    */
   suggestedCertifications: z.array(z.string()).max(8).optional(),
   /**
+   * Bullets for ONE role, filled only by the "bullets" mode.
+   *
+   * Not workExperienceUpdates: that shape carries an id, and the mode prompts
+   * never see the résumé, so they cannot know one. The panel asked about a
+   * specific role and writes the answer back into it.
+   */
+  bullets: z.array(z.string()).max(8).optional(),
+  /**
+   * The three positionings of the same summary, filled only by the "seed" mode.
+   *
+   * The Content tab offered this choice and the assistant did not; moving the
+   * summary into the assistant without it would have removed a choice the user
+   * already had. Same three readings the improve-summary engine returns.
+   */
+  summaries: z.array(z.string()).max(3).optional(),
+  /**
    * A study the candidate described that is not yet on the CV. Same rule as a
    * new job: whatever they did not state stays an empty string rather than an
    * invented university or year.
@@ -517,7 +533,13 @@ export type FillProfileResult = z.infer<typeof FillProfileResponseSchema>
 // ─── Input types ──────────────────────────────────────────────────────────────
 
 /** Defects the panel already detected on this bullet — see BULLET_FOCUS. */
-export type BulletFocus = "metric" | "weak_verb" | "cliche"
+/**
+ * What the request is about. `polish` is the one that is not a defect: the
+ * bullet has no formal fault, and the user asked anyway — which is a legitimate
+ * request, because "no rule fires on it" and "a professional writer could not
+ * sharpen it" are not the same statement.
+ */
+export type BulletFocus = "metric" | "weak_verb" | "cliche" | "polish"
 
 export interface ImproveBulletInput {
   text: string
@@ -618,10 +640,30 @@ export interface ReviewCVInput {
   language?: string
 }
 
+/**
+ * Which job fill-profile is doing.
+ *
+ * One endpoint, four tasks — and for three of them the big extraction prompt is
+ * the wrong tool. Measured against the real API before this existed: asked to
+ * start a CV from a job title alone, it answered with an empty object 3 times
+ * in 10 (secretaria, cajero de banco and abogado laboralista among the
+ * failures), and asked for the standard credentials of a trade it failed 7
+ * times in 8. Nothing was wrong with the trades: the prompt says "extract what
+ * the candidate stated from the resume below", the resume is empty, and the
+ * model concludes there is nothing to extract. The user then reads "I could not
+ * build your CV with that" for having typed their profession correctly.
+ *
+ * Each mode carries its own short prompt, and each one measured 30/30, 10/10
+ * and 20/20 respectively — while still refusing junk 5 times out of 5.
+ */
+export type FillProfileMode = "seed" | "certifications" | "bullets"
+
 export interface FillProfileInput {
   prompt: string
   sectionData?: Record<string, unknown>
   language?: string
+  /** Absent = the original extraction path, unchanged. */
+  mode?: FillProfileMode
 }
 
 export interface TailorCVInput {

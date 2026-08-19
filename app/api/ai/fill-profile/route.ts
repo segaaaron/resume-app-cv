@@ -5,9 +5,17 @@ import { aiService } from "@/lib/controllers/ai-deps"
 import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
 
 const schema = z.object({
-  prompt: z.string().min(10).max(AI_INPUT_LIMITS.prompt),
+  // Two, not ten: in "seed" mode the whole instruction is the job title, and
+  // plenty of real ones are shorter than ten characters ("albañil", "cocinero",
+  // "chef"). Junk that clears two characters is refused by the model's own
+  // off-topic sentinel, which is measured; a length rule never could be.
+  prompt: z.string().min(2).max(AI_INPUT_LIMITS.prompt),
   sectionData: z.record(z.string(), z.unknown()).optional(),
   language: z.enum(["es", "en"]).optional(),
+  // Which task, so the module can pick the prompt written for it. Unknown
+  // values are rejected here rather than silently falling back — a typo that
+  // quietly routes to the wrong prompt is the kind of bug nobody sees.
+  mode: z.enum(["seed", "certifications", "bullets"]).optional(),
 })
 
 export async function POST(req: Request) {

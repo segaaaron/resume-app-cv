@@ -48,6 +48,7 @@ vi.mock("@/components/editor/EditorContext", () => ({ useEditorPro: () => ({ isP
 
 import ATSScorePanel from "@/components/editor/ATSScorePanel"
 import WorkExperienceSection from "@/components/resume/sections/WorkExperience"
+import SummarySection from "@/components/resume/sections/Summary"
 
 describe("UI smoke", () => {
   // ATSScorePanel is the whole chained flow: one job-description textarea and the
@@ -76,6 +77,23 @@ describe("UI smoke", () => {
     const html = mount(<WorkExperienceSection />)
     expect(html).toContain("work.bullets")
     expect(html).not.toContain("improve_bullet")
+  })
+
+  /**
+   * The summary section is a text box now. Generating one belongs to the AI
+   * assistant and rewriting one to the ATS report, which drives the very same
+   * improve-summary engine — a third door here was a third thing to keep in
+   * step. This asserts the box still carries the stored text, and that no AI
+   * control came back with it.
+   */
+  it("Summary is a plain text box, with no AI buttons", () => {
+    const html = mount(<SummarySection />)
+    expect(html).toContain("<textarea")
+    expect(html).toContain(">s</textarea>")
+    expect(html).not.toContain("<button")
+    for (const gone of ["improve_summary", "generate_summary", "describe_profile"]) {
+      expect(html).not.toContain(gone)
+    }
   })
 
   // One box per bullet, parsed out of the single `description` string. The

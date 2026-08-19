@@ -190,3 +190,74 @@ export function dropsContentWithoutGain(original: string, suggested: string): bo
   //    used to let a 4-words-lost rewrite through; the NET test closes that.
   return removedReal.length - addedReal.length >= 2 && !addedConcrete
 }
+
+/**
+ * Words that carry no information on their own — the mortar of a sentence, and
+ * the raw material of padding. Only used to decide whether ADDED words said
+ * anything; never to compare meaning.
+ */
+const FILLER_WORDS = new Set([
+  // es
+  "para", "por", "con", "de", "del", "la", "el", "los", "las", "un", "una", "y", "o", "que", "su", "sus",
+  "mejorar", "mejorando", "asegurando", "garantizando", "optimizar", "optimizando", "manteniendo",
+  "logrando", "permitiendo", "facilitando", "calidad", "eficiencia", "proceso", "procesos",
+  "funcionamiento", "resultados", "correcto", "adecuado", "óptimo", "optimo", "general", "diario", "diaria",
+  // en
+  "to", "for", "with", "of", "the", "a", "an", "and", "or", "that", "its", "their",
+  "improve", "improving", "ensure", "ensuring", "optimize", "optimizing", "maintaining",
+  "achieving", "allowing", "enabling", "quality", "efficiency", "process", "processes",
+  "operation", "results", "proper", "adequate", "optimal", "overall", "daily",
+  // Measured live against the API: these are the words the model reaches for
+  // when asked to improve a line that needs no improvement.
+  "mantener", "su", "sus", "correcto", "correcta", "continuo", "continua",
+  "keep", "keeping", "working", "order", "smooth", "effective", "successful",
+])
+
+/**
+ * True when `suggested` says exactly what `original` said, only arranged
+ * differently or with empty words bolted on.
+ *
+ * MEASURED GAP THIS CLOSES. `isTrivialEdit` catches near-copies and
+ * `isCosmeticReword` catches synonym swaps, but two shapes walked straight past
+ * both and reached the user labelled as improvements:
+ *
+ *   original  "Led the migration to SwiftUI across 4 apps, cutting crash rate 30%."
+ *   reorder   "Led the SwiftUI migration across 4 apps, cutting crash rate 30%."
+ *   padding   "…cutting crash rate 30% to improve quality."
+ *
+ * Both are the same sentence. The reorder moves words; the padding adds a clause
+ * that states nothing — and padding is precisely what a model produces when it
+ * is asked to improve a line that is already fine, which is now allowed to
+ * happen because the model, not a rule, decides whether it can be improved.
+ *
+ * The guard exists to raise what the user is shown, so this is where the loop is
+ * closed: the model may always answer, and an answer that adds nothing never
+ * reaches the CV.
+ */
+export function addsNoInformation(original: string, suggested: string): boolean {
+  if (!suggested.trim()) return true
+
+  const o = wordsOf(original)
+  const s = wordsOf(suggested)
+  const oSet = new Set(o)
+  const sSet = new Set(s)
+
+  const added = s.filter((w) => !oSet.has(w))
+  const removed = o.filter((w) => !sSet.has(w))
+
+  // Same bag of words, different order: nothing was said that was not said.
+  if (added.length === 0 && removed.length === 0) return true
+
+  // Judged on CONTENT words only. A reorder usually drops or adds a preposition
+  // on the way ("the migration to SwiftUI" → "the SwiftUI migration"), and
+  // counting that as new information is how the reorder slipped through.
+  const contentAdded = added.filter((w) => !FILLER_WORDS.has(w))
+  const contentRemoved = removed.filter((w) => !FILLER_WORDS.has(w))
+
+  // Every content word survived and none arrived: the sentence was rearranged
+  // or padded. A single new content word — a tool, a scope, an object — makes it
+  // a real addition; the bar is "said nothing", not "said little".
+  if (contentAdded.length === 0 && contentRemoved.length === 0) return true
+
+  return false
+}

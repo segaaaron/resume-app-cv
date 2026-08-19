@@ -180,7 +180,13 @@ export default function AIProfileInterview() {
       // Per job on the bullets side: "no more lines here" must not silence the
       // question for a different role.
       .filter((g) => g.kind !== "moreExperience" || !hasDeclined("moreExperience"))
-      .filter((g) => g.kind !== "moreBullets" || !hasDeclined(`moreBullets:${g.jobId ?? ""}`)),
+      .filter((g) => g.kind !== "moreBullets" || !hasDeclined(`moreBullets:${g.jobId ?? ""}`))
+      // "I have none" is an ANSWER — the CV cannot tell "no certifications" from
+      // "not filled in yet", so only the person can. Pressing it used to run the
+      // apply path with an empty list, which wrote nothing, left the question
+      // exactly where it was, and looked like a dead button.
+      .filter((g) => g.kind !== "certifications" || !hasDeclined("certifications"))
+      .filter((g) => g.kind !== "languages" || !hasDeclined("languages")),
     [sectionData, hasDeclined]
   )
   if (gaps.length > totalAtStart) setTotalAtStart(gaps.length)
@@ -281,7 +287,11 @@ export default function AIProfileInterview() {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: t("seed_prompt", { role: value }), sectionData, language: cvLanguage }),
+        // The role alone, and the mode that knows what to do with it. This used
+        // to send "Soy {role}." into the extraction prompt, which answered {}
+        // for 3 trades in 10 — measured, and secretaria, cajero de banco and
+        // abogado laboralista were three of them.
+        body: JSON.stringify({ prompt: value, mode: "seed", language: cvLanguage }),
       })
       if (res.status === 429 || res.status === 403) {
         await handleApiError(res, {
@@ -312,6 +322,20 @@ export default function AIProfileInterview() {
         for (const w of writes) updateSectionData(w.key as any, w.value as any)
       })
       toast.success(t("seed_done"))
+
+      // The role is written, the skills are in — and the summary is a choice,
+      // not a verdict. The endpoint writes three readings of the same job
+      // (executive, specialist, value proposition) and the first one is already
+      // applied above, so the picker replaces it rather than filling a blank:
+      // closing it keeps what is on screen, which is why nothing is lost by
+      // ignoring it.
+      const versions = ((data as { summaries?: string[] }).summaries ?? []).filter((v) => v.trim())
+      if (versions.length > 1) {
+        const byIndex: SummaryVersion["type"][] = ["executive", "specialist", "value_prop"]
+        setSummaryGap(g)
+        setSummaryOpen(true)
+        setSummaryVersions(versions.map((text, i) => ({ type: byIndex[i] ?? "executive", text })))
+      }
     } catch {
       toast.error(t("error_generic"))
     } finally {
@@ -454,7 +478,7 @@ export default function AIProfileInterview() {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, sectionData, language: cvLanguage }),
+        body: JSON.stringify({ prompt, mode: "bullets", language: cvLanguage }),
       })
       if (res.status === 429 || res.status === 403) {
         await handleApiError(res, {
@@ -466,14 +490,15 @@ export default function AIProfileInterview() {
         })
         return
       }
-      const data = await res.json().catch(() => ({})) as {
-        workExperienceUpdates?: { id: string; description: string }[]
-      }
+      const data = await res.json().catch(() => ({})) as { bullets?: string[] }
       if (!res.ok) { toast.error(t("error_generic")); return }
-      const written = (data.workExperienceUpdates ?? []).find((u) => u.id === g.jobId)
-      if (!written?.description) { toast.info(t("bullets_no_result")); return }
+      // The bullets come back as lines, not as an update carrying an id: the
+      // prompt is never shown the résumé, so it cannot know one. The role this
+      // question is about is the one that gets them.
+      const lines = (data.bullets ?? []).filter((b) => b.trim())
+      if (lines.length === 0) { toast.info(t("bullets_no_result")); return }
       await onSuccess()
-      const added = writeBullets(g, parseBullets(written.description))
+      const added = writeBullets(g, lines)
       setAddingBullet(null)
       toast.success(added > 0 ? t("bullets_added") : t("bullets_full"))
     } catch {
@@ -497,7 +522,7 @@ export default function AIProfileInterview() {
       const res = await apiFetch("/api/ai/fill-profile", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: t("certs_prompt", { role: title.trim() }), sectionData, language: cvLanguage }),
+        body: JSON.stringify({ prompt: title.trim(), mode: "certifications", language: cvLanguage }),
       })
       if (res.status === 429 || res.status === 403) {
         await handleApiError(res, {
@@ -518,6 +543,14 @@ export default function AIProfileInterview() {
     } finally {
       setBusy(null)
     }
+  }
+
+  /** "I have none" — recorded like any other answer, so the question is done. */
+  function declineCerts(g: ProfileGap) {
+    setCerts(null); setHeldCerts(new Set())
+    decline("certifications")
+    clear(g)
+    setCursor(0)
   }
 
   function applyCerts(g: ProfileGap) {
@@ -830,7 +863,7 @@ export default function AIProfileInterview() {
                 <Button className="w-full" isLoading={loadingCerts} onClick={() => loadCerts(g)}>
                   {!loadingCerts && <Sparkles aria-hidden />} {loadingCerts ? t("certs_loading") : t("certs_btn")}
                 </Button>
-                <Button variant="ghost" size="sm" className="self-start" onClick={() => applyCerts(g)}>
+                <Button variant="ghost" size="sm" className="self-start" onClick={() => declineCerts(g)}>
                   {t("certs_none")}
                 </Button>
               </div>
@@ -850,7 +883,7 @@ export default function AIProfileInterview() {
                   })}
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => applyCerts(g)}>
+                  <Button variant="ghost" size="sm" onClick={() => declineCerts(g)}>
                     {t("certs_none")}
                   </Button>
                   <Button size="sm" onClick={() => applyCerts(g)} disabled={heldCerts.size === 0}>

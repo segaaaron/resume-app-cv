@@ -13,6 +13,7 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { canonicalSkillName } from "@/lib/ats/skill-catalog"
+import { buildModePrompt } from "./profile-modes"
 import {
   AI_INPUT_LIMITS,
   FillProfileResponseSchema,
@@ -37,6 +38,14 @@ export class AIProfileModule {
 
     const validation = validateAIInput(prompt, AI_INPUT_LIMITS.prompt)
     if (!validation.valid) throw new AppError("invalid_input", 400)
+
+    // The three short paths. Each one is a different task with its own prompt,
+    // measured; see profile-modes.ts for the numbers and why they exist. They
+    // run before any of the extraction machinery below, which needs a résumé
+    // they do not have and do not want.
+    if (input.mode) {
+      return await this.runMode(userId, input.mode, prompt, language, plan)
+    }
 
     const sd = sectionData ?? {}
     const resumeContext = buildResumeContext(sd, language)
@@ -438,5 +447,103 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       projectUpdates: (data.projectUpdates ?? []).filter((u: { id: string }) => validProjIds.has(u.id)),
       volunteerUpdates: (data.volunteerUpdates ?? []).filter((u: { id: string }) => validVolIds.has(u.id)),
     }
+  }
+
+  /**
+   * One short, task-specific call — with one retry.
+   *
+   * Even the right prompt is not deterministic: the model still answers `{}`
+   * occasionally, and the person on the other side just typed their profession
+   * correctly and is being told it did not work. A second attempt costs ~130
+   * tokens and turns a 1-in-10 dead end into roughly 1 in 100. Two would be
+   * cheaper still than one abandoned CV, but a wall of retries hides a prompt
+   * that has genuinely stopped working, so it stops at one.
+   */
+  private async runMode(
+    userId: string,
+    mode: NonNullable<FillProfileInput["mode"]>,
+    prompt: string,
+    language: string,
+    plan: string,
+  ): Promise<FillProfileResult> {
+    const { system, user, maxTokens } = buildModePrompt(mode, prompt, language)
+
+    let empty = false
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const response = await this.aiClient.chat({
+        model: AI_MODEL,
+        max_tokens: maxTokens,
+        temperature: AI_TEMPERATURE,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: system },
+          { role: "user", content: user },
+        ],
+      })
+
+      const usage = response.usage
+      logAIUsage(userId, "fill-profile", {
+        model: AI_MODEL,
+        plan,
+        promptTokens: usage?.prompt_tokens ?? 0,
+        completionTokens: usage?.completion_tokens ?? 0,
+        costUsd: computeCostUsd(AI_MODEL, usage?.prompt_tokens ?? 0, usage?.completion_tokens ?? 0),
+      })
+
+      const parsed = parseAIJson<{
+        off_topic?: boolean
+        jobTitle?: string
+        summary?: string
+        summaries?: string[]
+        inferredSkills?: string[]
+        suggestedCertifications?: string[]
+        bullets?: string[]
+      }>(response.choices[0]?.message?.content ?? "")
+
+      // The model saying "this names no job" is an answer, not a failure, and
+      // it must not be retried — the second call would cost money to be told
+      // the same thing.
+      if (parsed.off_topic) throw new AppError("off_topic", 422)
+
+      const skills = (parsed.inferredSkills ?? []).filter((s) => s.trim() && s.trim().split(/\s+/).length <= MAX_SKILL_WORDS)
+      const certs = (parsed.suggestedCertifications ?? []).filter((c) => c.trim())
+      const lines = (parsed.bullets ?? []).filter((b) => b.trim())
+      // One summary or three: the prompt asks for three, and a model that
+      // returns a single one is still a usable answer, not a failure.
+      const summaries = (parsed.summaries ?? []).map((t) => t.trim()).filter(Boolean)
+      if (!summaries.length && parsed.summary?.trim()) summaries.push(parsed.summary.trim())
+
+      const gotSomething = mode === "certifications" ? certs.length > 0
+        : mode === "bullets" ? lines.length > 0
+        : !!(parsed.jobTitle?.trim() || summaries.length || skills.length)
+
+      if (!gotSomething) { empty = true; continue }
+
+      return {
+        // The first one is what a caller that ignores the choice would apply.
+        summary: summaries[0] ?? null,
+        summaries,
+        jobTitle: parsed.jobTitle?.trim() || null,
+        hobbies: null,
+        suggestedSkills: [],
+        // Catalog spelling where we know the skill, the model's where we do not
+        // — the same rule the extraction path applies, for the same reason.
+        inferredSkills: skills.map((s) => canonicalSkillName(s) ?? s.trim()).slice(0, 8),
+        suggestedCertifications: certs.slice(0, 6),
+        educationNew: [],
+        suggestedLanguages: [],
+        workExperienceUpdates: [],
+        workExperienceNew: [],
+        educationUpdates: [],
+        projectUpdates: [],
+        volunteerUpdates: [],
+        // Only the bullets mode fills this; the panel writes them into the role
+        // it asked about, which is the only one that knows the id.
+        bullets: lines.slice(0, 6),
+      }
+    }
+
+    // Twice empty on a task this short means the answer really is not coming.
+    throw new AppError(empty ? "off_topic" : "ai_error", 422)
   }
 }

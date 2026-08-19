@@ -641,7 +641,14 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
 
     if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
     if (parsed.versions.length === 0) {
-      throw new AppError("off_topic", 422)
+      // The user has a letter and asked to improve it. An empty answer is our
+      // failure to produce something better, not a fault in their letter — and
+      // it already cost them a use and a cooldown. They keep what they wrote and
+      // are told it needs no change, which is the same degradation the summary
+      // takes. An error here would delete nothing but their patience.
+      this.logger.warn("[AIService.improveCoverLetter] empty versions, keeping the user's letter")
+      this.logSummaryUsage(userId, plan, response.usage, undefined)
+      return { versions: [body.trim()], status: "already_optimized" }
     }
 
     // The source of truth for what the candidate claimed: the words they wrote,

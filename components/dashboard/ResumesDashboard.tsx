@@ -314,6 +314,14 @@ export default function ResumesDashboard({
         if (res.status === 429 || code === "daily_cap_reached") toast.error(t("translate_daily_cap"))
         else if (res.status === 403) toast.error(t("translate_pro_only"))
         else if (code === "nothing_to_translate") toast.info(t("translate_empty"))
+        else if (res.status === 404) {
+          // The CV is gone — deleted here or in another tab. Reported as a
+          // service error, which it is not: nothing failed, the thing simply is
+          // not there any more. Saying so and removing the stale card beats a
+          // red "translation failed" on a résumé that no longer exists.
+          toast.info(t("translate_gone"))
+          setResumes((prev) => prev.filter((r) => r.id !== id))
+        }
         else toast.error(t("translate_error"))
         return
       }

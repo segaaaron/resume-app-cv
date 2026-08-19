@@ -7,9 +7,10 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { retryNudge } from "../shared/never-empty"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
-import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain } from "../shared/text-similarity"
+import { isTrivialEdit, isCosmeticReword, addsNoInformation, dropsContentWithoutGain } from "../shared/text-similarity"
 import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
 import { hasCliche } from "../shared/cliches"
 import {
@@ -32,7 +33,8 @@ export class AIBulletModule {
   async improveBullet(userId: string, input: ImproveBulletInput, plan: string): Promise<BulletResult> {
     await enforceAIQuota(userId, "improve-bullet", plan)
 
-    const { text, jobTitle, employer, industry, language: rawLanguage, focus = [] } = input
+    const { text, jobTitle, employer, industry, language: rawLanguage, focus: rawFocus = [] } = input
+    const focus = [...rawFocus]
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const validation = validateAIInput(text, AI_INPUT_LIMITS.bulletText)
@@ -54,29 +56,58 @@ export class AIBulletModule {
      * user pressed that button, so the request is honoured.
      */
     /**
-     * "Nothing to do" has two reasons and the user deserves the right one.
+     * A bullet that states no result is a bullet for the AI to work on, not a
+     * reason to refuse it.
      *
-     * `needs_input` is the bullet that is well formed but never says what it
-     * achieved ("Handled customer inquiries daily"). Measured across fields, 8
-     * of 12 genuinely weak bullets look like this — telling them "already
-     * optimized" is false, and rewriting them means inventing the result. The
-     * honest answer names what is missing and hands it back.
+     * This used to RETURN before the model was ever called: the user pressed
+     * "improve with AI", and the AI never saw their line. Measured on five
+     * ordinary bullets from five trades, two of them ended there — "Atendí
+     * pacientes en el área de emergencias" and "Desarrollé aplicaciones web con
+     * React y Node" were both handed back untouched with "we need more from
+     * you". Both can be improved: the verb, the specificity, the object of the
+     * work. None of that needs a figure.
+     *
+     * The signal was right; blocking on it was wrong. It is passed to the model
+     * as the `metric` focus, whose instruction already reads "NEVER invent a
+     * number and never ask for one; if the source has no figure, improve the
+     * wording". The guard now sharpens the request instead of cancelling it.
      */
-    if (assessImprovability(text) === "needs_input" && focus.length === 0) {
-      return { status: "needs_your_input", improvements: [] }
-    }
+    // What the PANEL diagnosed, as opposed to what this function added below.
+    // The distinction matters: a diagnosis suspends the "leave good bullets
+    // alone" filters, because the defect is known and the rewrite is owed. A
+    // hint we added ourselves must not suspend anything — otherwise asking the
+    // model to polish a clean line would also switch off the filters that stop
+    // a reword being sold as an improvement. That exact mistake was made here
+    // and caught by no-improvement-loop.test.ts.
+    const diagnosed = rawFocus.length > 0
 
-    if (isDescriptionOptimized(text)) {
-      // `focus` is NOT a bypass. The panel sends one on every rewrite button —
-      // sometimes a hardcoded pair rather than the real defect — so honouring it
-      // blindly meant the ATS panel always reached the model, even on a bullet
-      // it had just rewritten. That is the loop the user kept hitting.
-      //
-      // A focus is a CLAIM about this text, and it is checked against the same
-      // deterministic signals: if the declared defect is no longer there, it was
-      // already fixed and there is nothing to do.
-      const stillTrue = focus.some((f) => defectStillPresent(f, text))
-      if (!stillTrue) return { status: "already_optimized", improvements: [] }
+    const statesNoResult = assessImprovability(text) === "needs_input"
+    if (statesNoResult && !diagnosed) focus.push("metric")
+
+    // THE STOP DECISION BELONGS TO THE ANSWER, NOT TO A RULE WRITTEN BEFOREHAND.
+    //
+    // This used to return "already optimised" WITHOUT CALLING THE MODEL, based on
+    // four deterministic signals: weak opener, cliché, under six words, over
+    // forty-five. Measured on four ordinary bullets, three never reached the AI
+    // at all — "Desarrollé aplicaciones web con React y Node" is seven words,
+    // opens with a verb and carries no cliché, so the rules called it finished
+    // and the user who pressed "improve with AI" was answered by four ifs.
+    //
+    // A rule can tell whether a bullet has a FORMAL defect. It cannot tell
+    // whether a professional writer could sharpen it, and that judgement is the
+    // one the user is paying the model for. So the call happens.
+    //
+    // The loop this guarded against is still closed, one step later and by
+    // better evidence: the filters below drop a rewrite that is trivial,
+    // cosmetic, or that strips content without adding any — so a bullet that
+    // truly cannot be improved comes back "already optimised" because every
+    // suggestion for it was empty of value, which is a fact about the answer
+    // rather than a guess made before asking.
+    const formallyClean = isDescriptionOptimized(text)
+    if (formallyClean && !diagnosed) {
+      // Nothing diagnosed and no formal defect: the model is told to polish
+      // rather than repair, so it does not manufacture a fault to fix.
+      focus.push("polish")
     }
 
     const context = [
@@ -112,10 +143,28 @@ export class AIBulletModule {
         en: "states no result — sharpen the action and the outcome the source already contains. NEVER invent a number and never ask for one; if the source has no figure, improve the wording",
         es: "no expresa resultado — afila la acción y el resultado que el source YA contiene. NUNCA inventes una cifra ni la pidas; si el source no tiene número, mejora la redacción",
       },
+      // Not a defect: no rule fired on this bullet and the user asked anyway.
+      // The request is to make it read as a professional wrote it — sharper verb,
+      // the specific object of the work, the scope the source already implies —
+      // NOT to manufacture a fault so there is something to fix. Returning the
+      // same line with filler attached ("...para mantener su funcionamiento") is
+      // what the filters below throw away, and rightly.
+      polish: {
+        en: "has no formal defect — this is a polish, not a repair. Sharpen the verb, name the specific object of the work and the scope the source already implies, and cut any word that carries no information. If you cannot make it genuinely sharper without adding facts, say so instead of padding it",
+        es: "no tiene un defecto formal — esto es un pulido, no una reparación. Afilá el verbo, nombrá el objeto concreto del trabajo y el alcance que el source ya implica, y sacá cualquier palabra que no aporte información. Si no podés hacerlo genuinamente más filoso sin agregar datos, decilo en vez de rellenarlo",
+      },
     }
     const focusLines = focus.map((f) => FOCUS_TEXT[f]).filter(Boolean)
+    // A polish is not a diagnosis, so it does not get the "you MUST rewrite it"
+    // block: ordering a rewrite of a bullet with nothing wrong is how a model
+    // ends up padding a clean line to obey.
+    const isPolishOnly = focus.length === 1 && focus[0] === "polish"
     const focusBlock = focusLines.length === 0
       ? ""
+      : isPolishOnly
+      ? language === "en"
+        ? `\n=== WHAT IS BEING ASKED ===\nThis bullet ${focusLines[0].en}.\nKeep every fact, tool and number the original states.\n`
+        : `\n=== QUÉ SE ESTÁ PIDIENDO ===\nEste bullet ${focusLines[0].es}.\nConservá todos los datos, herramientas y cifras del original.\n`
       : language === "en"
         ? `\n=== ALREADY DIAGNOSED — THIS IS NOT A JUDGEMENT CALL ===
 This bullet was flagged by the resume analyzer for: \n${focusLines.map((l) => `- ${l.en}`).join("\n")}
@@ -311,14 +360,19 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         // ("Participé en…" → "Coordiné…") is a small textual change by every
         // similarity measure, and dropping it is exactly why the panel could flag
         // a bullet as weak and then refuse to fix it.
-        if (focus.length === 0 && isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
+        if (!diagnosed && isCosmeticReword(original, suggested)) { droppedTrivial++; continue }
+        // Reordered words, or the same line with empty words bolted on. Both
+        // used to reach the user as "improvements"; both are the sentence they
+        // already had. Applies with or without a diagnosis: a rewrite that says
+        // nothing new does not fix a defect either.
+        if (addsNoInformation(original, suggested)) { droppedTrivial++; continue }
         // Lateral-rewrite guard: when the ORIGINAL is already strong (opens with a
         // verb — no weak "responsible for" opener — and carries no cliché), a rewrite
         // that STRIPS content it stated and adds nothing concrete is different, not
         // better ("…to enhance iOS app functionality" → "…into the iOS app"). Leave
         // the good bullet alone. A bullet the caller diagnosed is by definition not
         // "already strong", so the guard does not apply to it either.
-        const originalIsStrong = focus.length === 0
+        const originalIsStrong = !diagnosed
           && assessDescription(original).weakOpenerIndices.length === 0
           && !hasCliche(original)
         if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
@@ -361,12 +415,18 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     let improvements = harvest(response.choices[0]?.message?.content ?? "")
 
-    // One retry, ONLY when the caller named a defect and the first pass came back
-    // empty. The bullet is known-defective, so "nothing to improve" is a refusal,
-    // not an answer — and the user pressing the same button twice and getting a
-    // different result was exactly the reported behaviour. Costs a second call on
-    // the rare path instead of leaving a labelled bullet unfixable.
-    if (improvements.length === 0 && focus.length > 0) {
+    // One retry whenever the first pass came back empty.
+    //
+    // It used to run only when the panel had named a defect, on the reasoning
+    // that "nothing to improve" is a legitimate answer otherwise. It is — but it
+    // is also what an empty roll looks like, and the two are indistinguishable
+    // from here. The user pressing a button and being told "nothing to improve",
+    // then pressing it again and getting three suggestions, is the same bug in
+    // both cases, and they paid a use for it either way.
+    //
+    // The insistence below is only truthful when a defect WAS diagnosed, so
+    // without one the retry is a plain second ask.
+    if (improvements.length === 0) {
       // Se RETIRA la licencia de devolver vacío en vez de contradecirla. Antes esto
       // pegaba "tu respuesta vacía se rechaza" a un prompt que unas líneas arriba decía
       // "dejarlo fuera es lo correcto": OpenAI documenta que ante reglas en conflicto el
@@ -377,9 +437,13 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         ? "A bullet you would hand back nearly unchanged does not belong in the response — leaving it out is the correct move, not a failure. "
         : "Un bullet que devolverías casi sin cambios NO va en la respuesta — dejarlo fuera es lo correcto, no un fallo. "
       const withoutLicence = prompt.replace(licence, "")
-      const insist = language === "en"
-        ? `${withoutLicence}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`
-        : `${withoutLicence}\n\nEl bullet de arriba tiene el defecto diagnosticado que se nombra en esta petición, así que SÍ se puede mejorar. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos.`
+      const insist = !diagnosed
+        // No diagnosis to lean on: ask again, plainly. Claiming a defect the
+        // panel never found would push the model to invent one and "fix" it.
+        ? prompt + retryNudge(language)
+        : language === "en"
+          ? `${withoutLicence}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`
+          : `${withoutLicence}\n\nEl bullet de arriba tiene el defecto diagnosticado que se nombra en esta petición, así que SÍ se puede mejorar. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos.`
       const retry = await callModel(insist)
       const retryUsage = retry.usage
       logAIUsage(userId, "improve-bullet", {

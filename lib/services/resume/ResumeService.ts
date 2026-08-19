@@ -241,6 +241,20 @@ export class ResumeService {
     // résumé is gone nothing else could ever find them to clean up.
     const forgotten = await forgetResumeAnswers(resumeId)
     this.logger.info("[ResumeService] delete", { userId, resumeId, cachedAnswersCleared: forgotten })
+
+    // NOTE — the audit trail is asymmetric, and this is where it shows.
+    //
+    // Creating a CV writes CREATE_RESUME to AuditLog; deleting one writes
+    // nothing. Measured on 2026-08-19: the trail held 11 CREATE_RESUME entries
+    // and zero deletions for a day in which all 11 of those CVs were gone. That
+    // is not evidence that nothing deleted them — it is no evidence either way,
+    // and it makes "I lost my CV" impossible to investigate, because a user's
+    // own click and a bug that ate their work look identical from here.
+    //
+    // Closing it needs one value in the AuditAction enum plus its migration,
+    // which is infrastructure and not a call this file gets to make on its own.
+    // Until then the line above is the only trace, and it lives in the app log
+    // rather than the audit trail.
   }
 
   // ── DUPLICATE ─────────────────────────────────────────────────────────────

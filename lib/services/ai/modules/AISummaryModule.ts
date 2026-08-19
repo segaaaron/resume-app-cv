@@ -14,6 +14,9 @@ import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
+import { askUntilAnswered, retryNudge } from "../shared/never-empty"
+import { cvValueBar, neverInventRule } from "../shared/cv-writing-doctrine"
+import { buildModePrompt } from "./profile-modes"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
@@ -92,9 +95,13 @@ Version 2 — SPECIALIST: Emphasis on technical or functional expertise specific
 
 Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their next team. Combines past achievement + differential skill + future value. Tone: dynamic, forward-looking, impact-oriented. 3 sentences.
 
+${cvValueBar("en")}
+
+${neverInventRule("en")}
+
 ABSOLUTE RULES:
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: ${clicheBanList("en")}. Every one of them is checked and rejected — a version carrying any is thrown away.
-• No personal pronouns (I, My, I am). Third person or impersonal form.
+• No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
 • If no metrics in profile: write without numbers. NEVER invent figures and NEVER leave a bracket like [X%] — an unfilled bracket in a CV reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
 • Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
@@ -130,9 +137,13 @@ Versión 2 — ESPECIALISTA: Énfasis en expertise técnico o funcional específ
 
 Versión 3 — PROPUESTA DE VALOR: Enfoca en lo que el candidato aporta a su próximo equipo. Combina logro pasado + habilidad diferencial + valor futuro. Tono: dinámico, propositivo, orientado al impacto. 3 oraciones.
 
+${cvValueBar("es")}
+
+${neverInventRule("es")}
+
 REGLAS ABSOLUTAS:
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA estas frases, se comprueban y se rechazan: ${clicheBanList("es")}.
-• Sin pronombres personales (Yo, Mi, Soy). Tercera persona o forma impersonal.
+• Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
 • Si no hay métricas en el perfil: escribe sin números. NUNCA inventes cifras y NUNCA dejes un corchete tipo [X%] — un corchete sin rellenar en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
 • Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
@@ -143,7 +154,10 @@ ${numbersRuleES}
 Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
 {"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
 
-    const response = await this.aiClient.chat({
+    // An empty answer here is a bad roll, not a verdict on the CV — and the
+    // button that produced it already cost the user a use and a two-minute
+    // cooldown. It is asked again before anyone is told "nothing came out".
+    const askModel = (attempt: number) => this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 600,
       // generate-summary uses 0.6 to keep variety across the 3 versions while
@@ -174,17 +188,49 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
                 "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },
-        { role: "user", content: prompt },
+        { role: "user", content: attempt === 0 ? prompt : prompt + retryNudge(language) },
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ versions?: unknown }>(raw)
-
-    if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) {
-      throw new AppError("off_topic", 422)
+    const readVersions = (r: Awaited<ReturnType<typeof askModel>>): string[] => {
+      const parsed = parseAIJson<{ versions?: unknown }>(r.choices[0]?.message?.content ?? "")
+      return Array.isArray(parsed.versions)
+        ? parsed.versions.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+        : []
     }
+
+    const answered = await askUntilAnswered({
+      ask: askModel,
+      isAnswered: (r) => readVersions(r).length > 0,
+      // No off-topic sentinel here: the input is the user's own CV, and there is
+      // no such thing as a CV that is off-topic for its own summary.
+      fallback: async () => {
+        // The model came back empty twice on a real profile. Rather than an
+        // error on a button that already cost a use, the role is enough to
+        // write from — the same three positionings the assistant produces from
+        // a job title alone, which measured 30/30 across trades.
+        const role = (sectionData?.personalDetails as { jobTitle?: string } | undefined)?.jobTitle?.trim()
+        if (!role) return null
+        const { system, user, maxTokens } = buildModePrompt("seed", role, language)
+        this.logger.warn("[AISummary] generate came back empty twice, writing from the role", { role })
+        return await this.aiClient.chat({
+          model: AI_MODEL_PROSE,
+          max_tokens: maxTokens,
+          temperature: AI_TEMPERATURE_GENERATIVE,
+          response_format: { type: "json_object" },
+          messages: [{ role: "system", content: system }, { role: "user", content: user }],
+        })
+      },
+      onFilled: (how) => this.logger.warn("[AISummary] generate-summary filled a hole", { how }),
+    })
+
+    // Null means there was nothing to write from at all — no answer and no role.
+    if (!answered) throw new AppError("off_topic", 422)
+    const response = answered
+    // The seed fallback answers under "summaries"; the main path under "versions".
+    const rawParsed = parseAIJson<{ versions?: unknown; summaries?: unknown }>(response.choices[0]?.message?.content ?? "")
+    const list = (Array.isArray(rawParsed.versions) ? rawParsed.versions : rawParsed.summaries) as unknown
+    const parsed = { versions: Array.isArray(list) ? list : [] }
 
     const gated = await gateSummaryVersions(this.aiClient, this.logger, {
       rawVersions: parsed.versions,
@@ -337,10 +383,14 @@ Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional exper
 
 Version 3 — VALUE PROPOSITION (3 sentences): Combines most impactful past achievement + differential skill + value the candidate will bring to the next company. Dynamic and forward-looking tone.
 
+${cvValueBar("en")}
+
+${neverInventRule("en")}
+
 ABSOLUTE RULES:
 • Preserve real metrics from the original. If none: write without numbers. NEVER invent figures, NEVER leave brackets.
 • PROHIBITED — every one is checked and rejected; a version carrying any is discarded: ${clicheBanList("en")}.
-• No personal pronouns (I, My, I am). Third person or impersonal.
+• No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
 
 ${numbersRule}
@@ -395,10 +445,14 @@ Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en expertise técnico/func
 
 Versión 3 — PROPUESTA DE VALOR (3 oraciones): Combina logro más impactante del pasado + habilidad diferencial + valor que aportará a la próxima empresa. Tono dinámico y propositivo.
 
+${cvValueBar("es")}
+
+${neverInventRule("es")}
+
 REGLAS ABSOLUTAS:
 • Conserva métricas reales del original. Si no hay: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
 • PROHIBIDO — estas frases se comprueban y se rechazan; una versión que lleve cualquiera se descarta: ${clicheBanList("es")}.
-• Sin pronombres personales (Yo, Mi, Soy). Tercera persona o impersonal.
+• Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
 
 ${numbersRule}
@@ -429,7 +483,11 @@ ${numbersRule}
 Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí, no una etiqueta:
 {"versions": ["<el resumen ejecutivo completo>", "<el resumen especialista completo>", "<el resumen de propuesta de valor completo>"]}`
 
-    const response = await this.aiClient.chat({
+    // Same rule as generate: an empty answer is retried before anyone is told
+    // the AI could not do it. What differs is the fallback — here the user
+    // already HAS a summary, so the honest filling is to leave it alone and say
+    // it is already fine, never to replace it with something weaker.
+    const askImprove = (attempt: number) => this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 700,
       // improve-summary uses 0.3 — must stay close to the existing summary and
@@ -453,21 +511,40 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
                 "Si el contenido no tiene relación con un perfil profesional, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },
-        { role: "user", content: prompt },
+        { role: "user", content: attempt === 0 ? prompt : prompt + retryNudge(language) },
       ],
     })
 
-    const raw = response.choices[0]?.message?.content ?? ""
-    const parsed = parseAIJson<{ versions?: unknown; status?: unknown }>(raw)
+    const readImprove = (r: Awaited<ReturnType<typeof askImprove>>) =>
+      parseAIJson<{ versions?: unknown; status?: unknown }>(r.choices[0]?.message?.content ?? "")
+
+    const improved = await askUntilAnswered({
+      ask: askImprove,
+      isAnswered: (r) => {
+        const p = readImprove(r)
+        // "Already optimised" IS an answer: the model read the summary and
+        // judged it good. Retrying that would spend a call to hear it again.
+        if (p.status === "already_optimized") return true
+        return Array.isArray(p.versions) && p.versions.some((v) => typeof v === "string" && v.trim())
+      },
+      fallback: () => null,
+      onFilled: (how) => this.logger.warn("[AISummary] improve-summary filled a hole", { how }),
+    })
+
+    // Twice empty on a summary that exists. The user keeps what they have and is
+    // told it needs no change — which is true, in the sense that matters to
+    // them: we have nothing better to offer. An error here would take their use
+    // and their two-minute cooldown and hand back a red toast.
+    if (!improved) {
+      this.logger.warn("[AISummary] improve came back empty twice, keeping the user's summary")
+      return { status: "already_optimized", versions: [] }
+    }
+    const response = improved
+    const parsed = readImprove(response)
 
     if (parsed.status === "already_optimized") {
       this.logSummaryUsage(userId, "improve-summary", plan, response.usage, null)
       return { status: "already_optimized", versions: [] }
-    }
-
-    if (!Array.isArray(parsed.versions)) throw new AppError("invalid_response_format", 500)
-    if (parsed.versions.length === 0) {
-      throw new AppError("off_topic", 422)
     }
 
     // The same gate generate-summary goes through. Source = everything the

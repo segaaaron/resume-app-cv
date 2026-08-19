@@ -36,6 +36,68 @@ Acme Corp — Backend Developer 2020-2023
 describe("AIImportModule — grounded extraction", () => {
   beforeEach(() => vi.clearAllMocks())
 
+  /**
+   * Nine bullets deleted by the tenth.
+   *
+   * Reported from a real import: a CV with five jobs came back with four of them
+   * carrying 7 to 12 bullets, and one carrying none at all. The anti-invention
+   * check runs on the WHOLE description, so a single figure the model reformats
+   * ("15 %" where the PDF says "15%") or one tool it spells differently condemns
+   * every other line in that job — and it happens silently, so the person just
+   * sees an empty role and assumes their PDF was unreadable.
+   *
+   * Bullets are independent claims. They are judged one at a time.
+   */
+  it("drops only the invented bullet, not the whole job", async () => {
+    const source = `EXPERIENCIA
+Xiobit — iOS Developer 2015-2016
+• Construí pantallas con UIKit
+• Corregí fallos reportados por soporte
+• Publiqué versiones en App Store`
+    const payload = JSON.stringify({
+      personalDetails: {},
+      workExperience: [{
+        employer: "Xiobit", jobTitle: "iOS Developer", startDate: "2015", endDate: "2016",
+        // The last line carries a figure that appears nowhere in the source.
+        description: "• Construí pantallas con UIKit\n• Corregí fallos reportados por soporte\n• Publiqué versiones en App Store\n• Reduje los crashes en un 47%",
+      }],
+    })
+    const mod = new AIImportModule(clientReturning(payload), logger)
+    const out = await mod.extractResume("u1", { rawText: source, language: "es" }, "PRO")
+    expect(out).not.toBeNull()
+    const desc = (out!.workExperience as { description: string }[])[0].description
+    const lines = desc.split("\n").filter(Boolean)
+
+    expect(lines.length).toBe(3)
+    expect(desc).toContain("UIKit")
+    expect(desc).toContain("App Store")
+    // The invented figure is the only thing gone.
+    expect(desc).not.toContain("47%")
+    // And it is not silent any more.
+    expect(logger.warn).toHaveBeenCalledWith("[AIImport] hallucinated lines dropped", { count: 1 })
+  })
+
+  /**
+   * A single flowing paragraph is ONE claim, so half of it is not safe to keep.
+   * The all-or-nothing rule stays exactly where it was right.
+   */
+  it("still clears a hallucinated paragraph whole", async () => {
+    const source = `EXPERIENCIA
+Acme — Backend Developer 2020-2023
+Mantuve servicios internos.`
+    const payload = JSON.stringify({
+      personalDetails: {},
+      workExperience: [{
+        employer: "Acme", jobTitle: "Backend Developer", startDate: "2020", endDate: "2023",
+        description: "Mantuve servicios internos y reduje la latencia en un 63% para 2 millones de usuarios.",
+      }],
+    })
+    const mod = new AIImportModule(clientReturning(payload), logger)
+    const out = await mod.extractResume("u1", { rawText: source, language: "es" }, "PRO")
+    expect(out).not.toBeNull()
+    expect((out!.workExperience as { description: string }[])[0].description).toBe("")
+  })
+
   it("keeps grounded entities and drops invented ones", async () => {
     const payload = JSON.stringify({
       isResume: true,
@@ -57,7 +119,10 @@ describe("AIImportModule — grounded extraction", () => {
     expect(result).not.toBeNull()
     expect(result!.personalDetails.firstName).toBe("Miguel")
     expect(result!.personalDetails.lastName).toBe("Angel Saravia Belmonte") // 2 apellidos juntos
-    expect(result!.personalDetails.email).toBe("") // invented email stripped
+    // The invented address does not survive — but the answer is no longer an
+    // empty field. The real address is read out of the document: a failed check
+    // repairs the value, it does not delete the person's contact details.
+    expect(result!.personalDetails.email).toBe("miguel@example.com")
     expect(result!.workExperience).toHaveLength(1) // FakeCorp dropped
     expect(result!.workExperience[0].employer).toBe("Acme Corp")
     expect(result!.workExperience[0].id).toBeTruthy()
