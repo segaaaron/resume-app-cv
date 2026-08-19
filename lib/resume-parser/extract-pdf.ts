@@ -16,6 +16,7 @@
  */
 
 import { COLUMN_BREAK } from "./patterns"
+import { extractActualText, type RecoveredText } from "./actual-text"
 
 type PdfParseFn = (
   buf: Buffer,
@@ -211,8 +212,63 @@ export function reconstructText(pages: PageItems[]): string {
  * Extrae texto de un PDF con reconstrucción de columnas y celdas.
  * API compatible con pdf-parse: devuelve { text, numpages }.
  */
+/**
+ * Mete en la página el texto que el PDF declara y sus glifos no dicen.
+ *
+ * Sólo lo AUSENTE. Un span de `/ActualText` puede acompañar a un texto que el
+ * extractor ya leyó perfectamente —Word marca también los que sí son glifos— y
+ * volver a insertarlo duplicaría la línea. Se compara contra lo que la página ya
+ * tiene: si el texto ya está, el span no aporta nada y se descarta.
+ *
+ * El ancho se estima porque el span no lo declara; sólo lo usa la detección de
+ * columnas, y una estimación conservadora no mueve un gutter.
+ */
+export function mergeRecovered(page: PageItems, recovered: RecoveredText[]): void {
+  if (recovered.length === 0) return
+  const key = (t: string) => t.trim().replace(/\s+/g, " ").toLowerCase()
+  /**
+   * Ya presente = LA MISMA LÍNEA ya lo dice. La posición es lo que hace que dos
+   * textos sean la misma aparición, no el texto suelto.
+   *
+   * Dos comparaciones más anchas se probaron y las dos borraron datos reales del
+   * CV que originó esto:
+   *   · contra todo el texto de la página → "LLANQUE" desaparecía por estar
+   *     dentro de "comercialllanque@gmail.com", su propio correo;
+   *   · contra los items sueltos de cualquier parte → volvía a desaparecer,
+   *     esta vez porque uno de sus empleadores se llama "Comercial Llanque",
+   *     setecientos puntos más abajo en la misma página.
+   *
+   * El extractor suele partir una línea en varios items ("Marketing" + " " +
+   * "Digital"), así que se compara contra la línea entera y sin espacios.
+   */
+  const sameLineSays = (r: RecoveredText, k: string): boolean => {
+    const line = page.items
+      .filter((it) => Math.abs(it.y - r.y) <= LINE_Y_TOLERANCE)
+      .sort((a, b) => a.x - b.x)
+      .map((it) => it.s)
+      .join("")
+    return key(line).replace(/\s+/g, "").includes(k.replace(/\s+/g, ""))
+  }
+  for (const r of recovered) {
+    const k = key(r.text)
+    if (!k || sameLineSays(r, k)) continue
+    // ~0.5 pt por carácter a 10 pt: basta para ordenar y para no crear gutters.
+    page.items.push({ s: r.text.trim(), x: r.x, y: r.y, w: r.text.trim().length * 5 })
+  }
+}
+
 export async function extractPdfText(buffer: Buffer): Promise<{ text: string; numpages: number }> {
   const pages: PageItems[] = []
+
+  /**
+   * El texto que el documento declara aparte de lo que dibuja.
+   *
+   * Se lee del archivo, no de pdf-parse, porque la versión de pdf.js que este
+   * paquete trae no conoce `/ActualText` ni expone el marked content donde vive.
+   * Ver `actual-text.ts` para el CV real que se importaba sin nombre: su
+   * encabezado no eran letras, eran curvas.
+   */
+  const recovered = extractActualText(buffer)
 
   const result = await pdfParse(buffer, {
     pagerender: async (pageData: PdfPageData) => {
@@ -224,7 +280,9 @@ export async function extractPdfText(buffer: Buffer): Promise<{ text: string; nu
         if (!s.trim()) continue
         items.push({ s, x: it.transform[4], y: it.transform[5], w: it.width })
       }
-      pages.push({ width: pageData.view[2] ?? 595, items })
+      const page: PageItems = { width: pageData.view[2] ?? 595, items }
+      mergeRecovered(page, recovered.filter((r) => r.page === pages.length))
+      pages.push(page)
       return ""
     },
   })
