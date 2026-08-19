@@ -2720,6 +2720,7 @@
       "list_subtitle": "{count} usuarios activos en el programa",
       "list_loading": "Cargando…",
       "list_empty": "Aún no hay usuarios managed. Crea el primero arriba.",
+      "list_error": "No se pudo cargar la lista de usuarios managed. Actualiza la página; si sigue, avisa a soporte.",
       "col_email": "Email",
       "col_expires": "Expira",
       "col_downloads": "Descargas",

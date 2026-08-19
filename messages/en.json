@@ -2720,6 +2720,7 @@
       "list_subtitle": "{count} users in the program",
       "list_loading": "Loading…",
       "list_empty": "No managed users yet. Create the first one above.",
+      "list_error": "Couldn't load the managed users list. Refresh the page; if it persists, contact support.",
       "col_email": "Email",
       "col_expires": "Expires",
       "col_downloads": "Downloads",

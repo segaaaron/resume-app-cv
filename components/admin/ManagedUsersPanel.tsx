@@ -5,6 +5,8 @@ import { MANAGED_UNLIMITED, isManagedUnlimited } from "@/lib/plans"
 import { format } from "date-fns"
 import { useTranslations } from "next-intl"
 import { apiFetch } from "@/lib/apiFetch"
+import { parseManagedListPage } from "@/lib/admin/managed-list"
+import { reportUxFailure } from "@/lib/client-error-reporter"
 import {
   UserPlus, Loader2, Ban, CheckCircle2, Trash2, AlertCircle,
   Infinity as InfinityIcon, Copy, Check, Pencil, RotateCcw, KeyRound, UserMinus,
@@ -21,6 +23,9 @@ interface ManagedUser {
   managedResumeLimit: number | null; managedCoverLetterLimit: number | null
 }
 
+/** Tope de seguridad al seguir el cursor: 100 filas por página. */
+const MAX_LIST_PAGES = 20
+
 type Banner = { kind: "success" | "error"; msg: string; password?: string } | null
 
 export default function ManagedUsersPanel() {
@@ -28,6 +33,7 @@ export default function ManagedUsersPanel() {
 
   const [users, setUsers]       = useState<ManagedUser[]>([])
   const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError]     = useState(false)
   const [submitting, setSubmitting]   = useState(false)
   const [rowLoading, setRowLoading]   = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<ManagedUser | null>(null)
@@ -47,14 +53,39 @@ export default function ManagedUsersPanel() {
   const [coverLimit, setCoverLimit]     = useState("")
   const [note, setNote]                 = useState("")
 
+  /**
+   * La lista viene paginada (`{ items, nextCursor }`) y se sigue el cursor hasta
+   * el final: un administrador que ve 100 filas no tiene forma de saber que había
+   * 120, y un usuario managed invisible es un cliente que pagó y que para el
+   * panel no existe.
+   *
+   * Y un fallo NO se dibuja como una lista vacía. Eso es lo que escondió durante
+   * tres semanas el desajuste de forma con la ruta (ver `lib/admin/managed-list.ts`):
+   * cero filas se lee como "no hay nadie", la conclusión opuesta a la verdad.
+   */
   const fetchList = useCallback(async () => {
     setListLoading(true)
+    setListError(false)
     try {
-      const res = await apiFetch(`/api/admin/users/managed/list`, { silent: true })
-      if (res.ok) {
-        const d = await res.json()
-        setUsers(Array.isArray(d) ? d : [])
+      const collected: ManagedUser[] = []
+      let cursor: string | null = null
+      for (let page = 0; page < MAX_LIST_PAGES; page++) {
+        const url = cursor
+          ? `/api/admin/users/managed/list?cursor=${encodeURIComponent(cursor)}`
+          : `/api/admin/users/managed/list`
+        const res = await apiFetch(url, { silent: true })
+        if (!res.ok) { setListError(true); return }
+        const parsed = parseManagedListPage<ManagedUser>(await res.json().catch(() => null))
+        if (!parsed) { setListError(true); return }
+        collected.push(...parsed.items)
+        cursor = parsed.nextCursor
+        if (!cursor) break
+        // El tope existe para no encadenar peticiones sin fin, pero cortar en
+        // silencio sería la misma mentira que este arreglo corrige: la pantalla
+        // mostraría 2.000 filas como si fueran todas. Queda registrado.
+        if (page === MAX_LIST_PAGES - 1) reportUxFailure("managed_list_truncated", { pages: MAX_LIST_PAGES })
       }
+      setUsers(collected)
     } finally {
       setListLoading(false)
     }
@@ -234,6 +265,8 @@ export default function ManagedUsersPanel() {
 
         {listLoading ? (
           <div className="px-6 py-10 flex items-center justify-center text-[#6B7A8C]"><Loader2 className="w-5 h-5 animate-spin mr-2" />{t("list_loading")}</div>
+        ) : listError ? (
+          <div className="px-6 py-10 text-center text-[13px] text-[#B42318]">{t("list_error")}</div>
         ) : users.length === 0 ? (
           <div className="px-6 py-10 text-center text-[13px] text-[#6B7A8C]">{t("list_empty")}</div>
         ) : (
