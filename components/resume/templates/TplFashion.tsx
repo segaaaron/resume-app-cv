@@ -5,7 +5,10 @@
  * Source: planillas-lujosas-Jun-29026/cv-professions-b.jsx (TplFashion).
  *
  * Design fidelity:
- *  - Cream #faf6f4 backdrop, blush #d98a96 accent, ink #1a1518.
+ *  - White backdrop, blush #d98a96 accent, ink #1a1518. The cream #faf6f4 it used
+ *    to carry was replaced by white (CEO, 2026-08-19): the accent, the serif and
+ *    the couture composition are what make this template, and a tinted sheet also
+ *    prints heavier — the blush rules and the ✦ read cleaner on white.
  *  - Centered serif hero w/ italic surname + needle & thread SVG.
  *  - Ornament divider (✦) between header and body.
  *  - Two-column body: collections + atelier sidebar.
@@ -76,7 +79,7 @@ export default function TplFashionTemplate() {
       style={{
         width: "100%",
         minHeight: "297mm",
-        background: "#faf6f4",
+        background: "#ffffff",
         color: ink,
         fontFamily: "inherit",
         position: "relative",
