@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -26,14 +26,14 @@ export default function ObsidianTemplate({ content, candidate }: TemplateProps) 
       fontFamily: FF.systemSans,
       color: "#e8dcc8",
       fontSize: 13,
-      lineHeight: 1.7,
+      lineHeight: 1.5,
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
     }}>
       <div style={{ border: "1px solid #2a2a2a", minHeight: "297mm", display: "flex", flexDirection: "column" }}>
         {GOLD_RULE}
-        <div style={{ padding: "52px 64px 40px", background: PANEL, textAlign: "center", position: "relative" }}>
+        <div style={{ padding: "28px 64px 28px", background: PANEL, textAlign: "center", position: "relative" }}>
           <svg style={{ position: "absolute", top: 20, left: 20 }} width={60} height={60} viewBox="0 0 60 60" fill="none">
             <path d="M5 5 L25 5 L5 25" stroke="#b8960c" strokeWidth="1" fill="none" />
             <path d="M5 5 L5 15" stroke="#f0c040" strokeWidth="1.5" />
@@ -45,7 +45,7 @@ export default function ObsidianTemplate({ content, candidate }: TemplateProps) 
             <path d="M55 5 L45 5" stroke="#f0c040" strokeWidth="1.5" />
           </svg>
           {candidate.name && (
-            <div style={{ fontFamily: FF.elegantSerif, fontSize: 44, fontWeight: 700, color: "#f0c040", letterSpacing: 2, lineHeight: 1.1 }}>
+            <div style={{ fontFamily: FF.elegantSerif, fontSize: 32, fontWeight: 700, color: "#f0c040", letterSpacing: 2, lineHeight: 1.1 }}>
               {candidate.name}
             </div>
           )}
@@ -55,7 +55,7 @@ export default function ObsidianTemplate({ content, candidate }: TemplateProps) 
             </div>
           )}
           {contacts.length > 0 && (
-            <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 22, fontSize: 11, color: "#6a6040", flexWrap: "wrap" }}>
+            <div style={{ display: "flex", justifyContent: "center", gap: 24, marginTop: 16, fontSize: 11, color: "#6a6040", flexWrap: "wrap" }}>
               {contacts.map((c, i) => (
                 <span key={i} style={{ display: "inline-flex", gap: 12 }}>
                   {i > 0 && <span style={{ color: "#b8960c" }}>·</span>}
@@ -66,31 +66,27 @@ export default function ObsidianTemplate({ content, candidate }: TemplateProps) 
           )}
         </div>
         {GOLD_RULE}
-        <div style={{ padding: "40px 64px", flex: 1 }}>
-          <div style={{ fontSize: 11, color: "#5a5030", letterSpacing: 1, marginBottom: 26, textTransform: "uppercase" }}>{today}</div>
+        <div style={{ padding: "28px 64px", flex: 1 }}>
+          <div style={{ fontSize: 11, color: "#5a5030", letterSpacing: 1, marginBottom: 16, textTransform: "uppercase" }}>{today}</div>
           {(content.recipientName || content.company) && (
-            <div style={{ marginBottom: 20 }}>
+            <div style={{ marginBottom: 16 }}>
               {content.recipientName && (
-                <strong style={{ fontFamily: FF.elegantSerif, fontSize: 17, color: "#f0c040", display: "block" }}>{content.recipientName}</strong>
+                <strong style={{ fontFamily: FF.elegantSerif, fontSize: 14, color: "#f0c040", display: "block" }}>{content.recipientName}</strong>
               )}
               {content.company && <span style={{ color: "#8a7a5a", fontSize: 12 }}>{content.company}</span>}
             </div>
           )}
-          <div style={{ fontFamily: FF.elegantSerif, fontSize: 19, fontStyle: "italic", color: "#e8dcc8", marginBottom: 20 }}>
+          <div style={{ fontFamily: FF.elegantSerif, fontSize: 14, fontStyle: "italic", color: "#e8dcc8", marginBottom: 16 }}>
             {content.recipientName
               ? t("salutation_named", { name: content.recipientName })
               : t("salutation_generic")}
           </div>
           {content.body ? (
-            <div
-              style={{ color: "#c8b898", fontWeight: 300 }}
-              className="[&>p]:mb-[16px] [&>ul]:mb-[16px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[16px] [&>ol]:list-decimal [&>ol]:pl-5"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-            />
+            <LetterBody html={content.body} style={{ color: "#c8b898", fontWeight: 300 }} />
           ) : (
             <p style={{ color: "#5a5030", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
           )}
-          <div style={{ marginTop: 40, borderTop: "1px solid #2a2a2a", paddingTop: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+          <div style={{ marginTop: 16, borderTop: "1px solid #2a2a2a", paddingTop: 22, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
             <div>
               {content.closing && (
                 <div style={{ fontFamily: FF.elegantSerif, fontStyle: "italic", color: "#8a7a5a", fontSize: 14 }}>{content.closing},</div>

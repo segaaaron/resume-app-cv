@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -19,7 +19,7 @@ export default function GazetteTemplate({ content, candidate }: TemplateProps) {
       lineHeight: 1.82,
       color: "#111",
       minHeight: "297mm",
-      padding: "52px 68px",
+      padding: "20px 68px",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
     }}>
@@ -28,7 +28,7 @@ export default function GazetteTemplate({ content, candidate }: TemplateProps) {
           Application for Employment
         </div>
         {candidate.name && (
-          <div style={{ fontSize: 34, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", fontFamily: FF.elegantSerif, lineHeight: 1 }}>
+          <div style={{ fontSize: 28, fontWeight: 700, letterSpacing: "0.04em", textTransform: "uppercase", fontFamily: FF.elegantSerif, lineHeight: 1 }}>
             {candidate.name}
           </div>
         )}
@@ -49,10 +49,10 @@ export default function GazetteTemplate({ content, candidate }: TemplateProps) {
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 20px 220px", gap: 0, marginTop: 28 }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 20px 220px", gap: 0, marginTop: 10 }}>
         <div>
           {(content.recipientName || content.company) && (
-            <div style={{ fontSize: 10, marginBottom: 18, color: "#555", fontStyle: "italic" }}>
+            <div style={{ fontSize: 10, marginBottom: 16, color: "#555", fontStyle: "italic" }}>
               To: {[content.recipientName, content.company].filter(Boolean).join(", ")}
             </div>
           )}
@@ -62,15 +62,11 @@ export default function GazetteTemplate({ content, candidate }: TemplateProps) {
               : t("salutation_generic")}
           </p>
           {content.body ? (
-            <div
-              style={{ fontSize: 9.5, lineHeight: 1.88 }}
-              className="[&>p]:mb-[15px] [&>p]:text-justify [&>ul]:mb-[15px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[15px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-            />
+            <LetterBody html={content.body} />
           ) : (
             <p style={{ fontSize: 9.5, color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
           )}
-          <div style={{ marginTop: 28, borderTop: "1px solid #aaa", paddingTop: 12 }}>
+          <div style={{ marginTop: 16, borderTop: "1px solid #aaa", paddingTop: 12 }}>
             {content.closing && (
               <div style={{ fontSize: 10, fontStyle: "italic", marginBottom: 4, color: "#555" }}>{content.closing},</div>
             )}

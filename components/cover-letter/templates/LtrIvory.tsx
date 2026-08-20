@@ -9,6 +9,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact, AIco, aFade } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -42,7 +43,7 @@ export default function LtrIvory(props: TemplateProps) {
         <div style={{ marginBottom: 18 }}><LTo v={v} font={LATO} color={c} /></div>
         <AHead icon="brief" color={c} font={LATO} variant="tab" track="0.2em" size={11}>{v.subject || `Re: ${v.role}`}</AHead>
         <div style={{ fontSize: "11.5pt", fontWeight: 700, marginBottom: 10 }}>{v.greeting}</div>
-        <LBody v={v} font={LATO} fs={11.1} lh={1.78} />
+        <LBody v={v} font={LATO} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 }}>
             <span style={{ flex: 1, height: 1, background: "#e8e2d6" }} />

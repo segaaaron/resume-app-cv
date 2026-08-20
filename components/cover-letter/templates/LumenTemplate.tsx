@@ -1,12 +1,19 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate, initials } from "./_shared"
 
 /**
  * Lumen — Minimalista. Source: Georgia serif w/ gold monogram (#C9A84C). Falls back to Playfair/Georgia.
+
+ * CONTRASTE (reporte del CEO, 2026-08-19): los textos secundarios —el cargo, los
+ * contactos, la fecha— estaban en grises tan claros que sobre la hoja blanca
+ * DESAPARECÍAN. En pantalla grande casi se adivinan; impresos o en un PDF que el
+ * recruiter abre al vuelo, no están. Un dato de contacto ilegible es un dato que
+ * no existe. Los grises subieron al rango que sí se lee sobre blanco; el peso y
+ * el tamaño no se tocaron, así que la jerarquía visual del diseño es la misma.
  */
 export default function LumenTemplate({ content, candidate }: TemplateProps) {
   const t = useTranslations("cover_letter_editor")
@@ -21,14 +28,14 @@ export default function LumenTemplate({ content, candidate }: TemplateProps) {
       background: "#fff",
       fontFamily: FF.elegantSerif,
       fontSize: "10.5pt",
-      lineHeight: 1.95,
+      lineHeight: 1.5,
       color: "#2c2c2c",
       minHeight: "297mm",
-      padding: "72px 100px",
+      padding: "48px 88px",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
     }}>
-      <div style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+      <div style={{ display: "flex", justifyContent: "center", marginBottom: 24 }}>
         <div style={{
           width: 88,
           height: 88,
@@ -47,7 +54,7 @@ export default function LumenTemplate({ content, candidate }: TemplateProps) {
       </div>
       {candidate.name && (
         <div style={{
-          fontSize: 20,
+          fontSize: 14,
           fontWeight: 400,
           letterSpacing: "0.1em",
           textAlign: "center",
@@ -59,7 +66,7 @@ export default function LumenTemplate({ content, candidate }: TemplateProps) {
       {candidate.jobTitle && (
         <div style={{
           fontSize: 9.5,
-          color: "#c8b060",
+          color: "#8a6d2f",
           letterSpacing: "0.18em",
           textTransform: "uppercase",
           textAlign: "center",
@@ -73,25 +80,25 @@ export default function LumenTemplate({ content, candidate }: TemplateProps) {
         justifyContent: "center",
         gap: 10,
         marginBottom: 16,
-        color: "#d4b870",
+        color: "#8a6d2f",
         fontSize: 14,
         letterSpacing: "0.3em",
       }}>
-        <span style={{ fontSize: 20 }}>·</span>
+        <span style={{ fontSize: 14 }}>·</span>
         <span>✦</span>
-        <span style={{ fontSize: 20 }}>·</span>
+        <span style={{ fontSize: 14 }}>·</span>
       </div>
       <div style={{
         display: "flex",
         justifyContent: "center",
         fontSize: 9,
-        color: "#b0a080",
-        marginBottom: 52,
+        color: "#6b6250",
+        marginBottom: 24,
         letterSpacing: "0.04em",
       }}>
         {contacts.map((c, i) => (
           <span key={i}>
-            {i > 0 && <span style={{ color: "#d4c090", whiteSpace: "pre" }}>{"  ·  "}</span>}
+            {i > 0 && <span style={{ color: "#a08a4a", whiteSpace: "pre" }}>{"  ·  "}</span>}
             {c}
           </span>
         ))}
@@ -100,9 +107,9 @@ export default function LumenTemplate({ content, candidate }: TemplateProps) {
       <div style={{
         textAlign: "center",
         fontSize: 10,
-        color: "#aaa",
-        marginBottom: 36,
-        lineHeight: 1.7,
+        color: "#6b6b6b",
+        marginBottom: 24,
+        lineHeight: 1.5,
         fontStyle: "italic",
       }}>
         {today} {content.recipientName || content.company ? ` |  ${[content.recipientName, content.company].filter(Boolean).join(", ")}` : ""}
@@ -115,16 +122,12 @@ export default function LumenTemplate({ content, candidate }: TemplateProps) {
       </div>
 
       {content.body ? (
-        <div
-          style={{ fontSize: "10.5pt", lineHeight: 2, color: "#333" }}
-          className="[&>p]:mb-[22px] [&>p]:text-justify [&>ul]:mb-[22px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[22px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-        />
+        <LetterBody html={content.body} style={{ color: "#333" }} />
       ) : (
         <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
       )}
 
-      <div style={{ marginTop: 56, textAlign: "center" }}>
+      <div style={{ marginTop: 24, textAlign: "center" }}>
         {content.closing && (
           <div style={{ fontStyle: "italic", fontSize: 11, color: "#8a7860", marginBottom: 8 }}>
             {content.closing},

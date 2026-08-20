@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -18,7 +18,7 @@ export default function SterlingTemplate({ content, candidate }: TemplateProps) 
       background: "#fff",
       fontFamily: FF.systemSans,
       fontSize: "10.5pt",
-      lineHeight: 1.85,
+      lineHeight: 1.5,
       color: "#1a1a1a",
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
@@ -26,7 +26,7 @@ export default function SterlingTemplate({ content, candidate }: TemplateProps) 
     }}>
       <div style={{
         background: "linear-gradient(135deg, #1E293B 0%, #0F172A 100%)",
-        padding: "56px 80px",
+        padding: "48px 80px",
         textAlign: "center",
         position: "relative",
         overflow: "hidden",
@@ -76,10 +76,10 @@ export default function SterlingTemplate({ content, candidate }: TemplateProps) 
         ))}
       </div>
 
-      <div style={{ padding: "52px 80px 72px" }}>
+      <div style={{ padding: "48px 80px 48px" }}>
         <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 18, letterSpacing: "0.04em" }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", marginBottom: 32, lineHeight: 1.7, color: "#475569" }}>
+          <div style={{ fontSize: "10.5pt", marginBottom: 24, lineHeight: 1.5, color: "#475569" }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
@@ -89,18 +89,14 @@ export default function SterlingTemplate({ content, candidate }: TemplateProps) 
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{ fontSize: "10.5pt", lineHeight: 1.9 }}
-            className="[&>p]:mb-[20px] [&>ul]:mb-[20px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[20px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 56 }}>
+        <div style={{ marginTop: 24 }}>
           {content.closing && <p style={{ fontSize: "10.5pt", marginBottom: 20 }}>{content.closing},</p>}
           {candidate.name && (
-            <div style={{ marginTop: 28, fontSize: 16, fontWeight: 600, color: "#0F172A", letterSpacing: "0.06em", textTransform: "uppercase" }}>
+            <div style={{ marginTop: 24, fontSize: 14, fontWeight: 600, color: "#0F172A", letterSpacing: "0.06em", textTransform: "uppercase" }}>
               {candidate.name}
             </div>
           )}

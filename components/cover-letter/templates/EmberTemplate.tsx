@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate, initials } from "./_shared"
 
@@ -19,7 +19,7 @@ export default function EmberTemplate({ content, candidate }: TemplateProps) {
       background: "#fff",
       fontFamily: FF.systemSans,
       fontSize: "10.5pt",
-      lineHeight: 1.8,
+      lineHeight: 1.5,
       color: "#1a1a1a",
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
@@ -91,10 +91,10 @@ export default function EmberTemplate({ content, candidate }: TemplateProps) {
         ))}
       </div>
 
-      <div style={{ padding: "44px 72px 64px" }}>
+      <div style={{ padding: "44px 72px 48px" }}>
         <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 18 }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", marginBottom: 28, lineHeight: 1.65, color: "#475569" }}>
+          <div style={{ fontSize: "10.5pt", marginBottom: 24, lineHeight: 1.5, color: "#475569" }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
@@ -104,18 +104,14 @@ export default function EmberTemplate({ content, candidate }: TemplateProps) {
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{ fontSize: "10.5pt", lineHeight: 1.88 }}
-            className="[&>p]:mb-[18px] [&>ul]:mb-[18px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[18px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 52 }}>
+        <div style={{ marginTop: 24 }}>
           {content.closing && <p style={{ fontSize: "10.5pt", marginBottom: 20 }}>{content.closing},</p>}
           {candidate.name && (
-            <div style={{ marginTop: 20, fontSize: 16, fontWeight: 800, color: "#EA580C", letterSpacing: "-0.01em" }}>
+            <div style={{ marginTop: 20, fontSize: 14, fontWeight: 800, color: "#EA580C", letterSpacing: "-0.01em" }}>
               {candidate.name}
             </div>
           )}

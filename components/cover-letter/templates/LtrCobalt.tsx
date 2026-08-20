@@ -7,6 +7,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -40,7 +41,7 @@ export default function LtrCobalt(props: TemplateProps) {
         </div>
         <AHead icon="brief" color={c} font={PLEX} variant="tab">{v.subject || `Application for ${v.role}`}</AHead>
         <div style={{ fontSize: "11.5pt", fontWeight: 600, marginBottom: 9 }}>{v.greeting}</div>
-        <LBody v={v} font={PLEX} fs={10.9} lh={1.7} />
+        <LBody v={v} font={PLEX} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={PLEX} color={c} /></div>
       </div>
     </div>

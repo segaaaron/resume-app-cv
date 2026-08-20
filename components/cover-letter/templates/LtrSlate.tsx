@@ -8,6 +8,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -43,7 +44,7 @@ export default function LtrSlate(props: TemplateProps) {
         </div>
         <AHead icon="mail" color={C} font={WORKS} variant="split" sub={v.role}>{v.subject || "Cover Letter"}</AHead>
         <div style={{ fontSize: "11.5pt", fontWeight: 700, marginBottom: 9 }}>{v.greeting}</div>
-        <LBody v={v} font={WORKS} fs={10.9} lh={1.68} />
+        <LBody v={v} font={WORKS} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={WORKS} color={a} /></div>
       </div>
     </div>

@@ -7,6 +7,7 @@
 
 import type { TemplateProps } from "./types"
 import { AContact, AIco, aFade } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -32,7 +33,7 @@ export default function LtrCardinal(props: TemplateProps) {
         <div style={{ fontSize: "10.4pt", color: "#6b7078", marginBottom: 14 }}>{today}</div>
         <div style={{ marginBottom: 16 }}><LTo v={v} font={LATO} color={c} /></div>
         <div style={{ fontFamily: MERRI, fontSize: "12.5pt", fontWeight: 700, marginBottom: 11 }}>{v.greeting}</div>
-        <LBody v={v} font={MERRI} fs={10.9} lh={1.8} indent={22} />
+        <LBody v={v} font={MERRI} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} indent={22} />
         <div style={{ marginTop: "auto", paddingTop: 26, borderTop: `1px solid ${aFade(c, 0.25)}` }}><LSign v={v} font={LATO} color={c} line={false} /></div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate, firstInitial } from "./_shared"
 
@@ -17,7 +17,7 @@ export default function VantageTemplate({ content, candidate }: TemplateProps) {
       background: "#fff",
       fontFamily: FF.systemSans,
       fontSize: "10.5pt",
-      lineHeight: 1.8,
+      lineHeight: 1.5,
       color: "#1a1a1a",
       minHeight: "297mm",
       display: "flex",
@@ -30,7 +30,7 @@ export default function VantageTemplate({ content, candidate }: TemplateProps) {
         background: "#0E7490",
         display: "flex",
         flexDirection: "column",
-        padding: "52px 24px",
+        padding: "48px 24px",
         position: "relative",
         overflow: "hidden",
       }}>
@@ -47,7 +47,7 @@ export default function VantageTemplate({ content, candidate }: TemplateProps) {
           userSelect: "none",
         }}>{ghost}</div>
         {candidate.name && (
-          <div style={{ fontSize: 15, fontWeight: 700, color: "#F0FDFA", letterSpacing: "0.02em", position: "relative", zIndex: 1, marginTop: 180, lineHeight: 1.35 }}>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "#F0FDFA", letterSpacing: "0.02em", position: "relative", zIndex: 1, marginTop: 24, lineHeight: 1.35 }}>
             {candidate.name}
           </div>
         )}
@@ -72,10 +72,10 @@ export default function VantageTemplate({ content, candidate }: TemplateProps) {
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: "52px 44px 52px 48px" }}>
+      <div style={{ flex: 1, padding: "48px 44px 48px 48px" }}>
         <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 18 }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", marginBottom: 28, lineHeight: 1.65, color: "#475569" }}>
+          <div style={{ fontSize: "10.5pt", marginBottom: 24, lineHeight: 1.5, color: "#475569" }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
@@ -85,18 +85,14 @@ export default function VantageTemplate({ content, candidate }: TemplateProps) {
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{ fontSize: "10.5pt", lineHeight: 1.88 }}
-            className="[&>p]:mb-[18px] [&>ul]:mb-[18px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[18px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 52 }}>
+        <div style={{ marginTop: 24 }}>
           {content.closing && <p style={{ fontSize: "10.5pt", marginBottom: 20 }}>{content.closing},</p>}
           {candidate.name && (
-            <div style={{ marginTop: 20, fontSize: 15, fontWeight: 700, color: "#0E7490", letterSpacing: "-0.01em" }}>
+            <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: "#0E7490", letterSpacing: "-0.01em" }}>
               {candidate.name}
             </div>
           )}

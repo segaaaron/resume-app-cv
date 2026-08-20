@@ -10,6 +10,7 @@
 
 import type { TemplateProps } from "./types"
 import { AContact, aFade } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -43,7 +44,7 @@ export default function LtrGraphite(props: TemplateProps) {
           {v.recipient.company && <div style={{ fontSize: 22, fontWeight: 900, color: aFade(a, 0.18), letterSpacing: "-0.03em", whiteSpace: "nowrap" }}>{v.recipient.company}</div>}
         </div>
         <div style={{ fontSize: "11.5pt", fontWeight: 800, marginBottom: 8 }}>{v.greeting}</div>
-        <LBody v={v} font={NUNI} fs={10.9} lh={1.66} />
+        <LBody v={v} font={NUNI} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={NUNI} color={a} /></div>
       </div>
     </div>

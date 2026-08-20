@@ -7,6 +7,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -41,7 +42,7 @@ export default function LtrVerdant(props: TemplateProps) {
         </div>
         <AHead icon="target" color={c} font={SSANS} variant="rule">{v.subject || `Application — ${v.role}`}</AHead>
         <div style={{ fontSize: "12pt", fontWeight: 700, marginBottom: 9 }}>{v.greeting}</div>
-        <LBody v={v} font={SSANS} fs={11} />
+        <LBody v={v} font={SSANS} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={SSANS} color={c} line={false} /></div>
       </div>
     </div>

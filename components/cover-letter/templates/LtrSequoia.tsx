@@ -11,6 +11,7 @@
 import type { ReactNode } from "react"
 import type { TemplateProps } from "./types"
 import { AContact, AIco, aFade, type IconKey } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -53,7 +54,7 @@ export default function LtrSequoia(props: TemplateProps) {
         <Sec n="2" icon="mail" color={c}>Letter</Sec>
         <div style={{ paddingLeft: 31 }}>
           <div style={{ fontFamily: RSLAB, fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{v.greeting}</div>
-          <LBody v={v} font={LATO} fs={10.9} lh={1.68} />
+          <LBody v={v} font={LATO} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         </div>
         <div style={{ marginTop: "auto", paddingTop: 26, paddingLeft: 31 }}><LSign v={v} font={LATO} color={c} line={false} /></div>
       </div>

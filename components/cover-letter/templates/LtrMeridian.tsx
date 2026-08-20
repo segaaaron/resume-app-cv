@@ -8,6 +8,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact, AIco } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -45,7 +46,7 @@ export default function LtrMeridian(props: TemplateProps) {
         </div>
         <AHead icon="mail" color={c} font={LATO} variant="badge">{v.subject || "Cover Letter"}</AHead>
         <div style={{ fontSize: "12pt", fontWeight: 700, marginBottom: 10 }}>{v.greeting}</div>
-        <LBody v={v} font={LATO} />
+        <LBody lh={LETTER_BODY_LH} fs={LETTER_BODY_PT} v={v} font={LATO} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={LATO} color={c} /></div>
       </div>
     </div>

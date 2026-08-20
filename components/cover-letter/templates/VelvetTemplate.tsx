@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -18,7 +18,7 @@ export default function VelvetTemplate({ content, candidate }: TemplateProps) {
       background: "#F9F4EF",
       fontFamily: FF.elegantSerif,
       fontSize: "10.5pt",
-      lineHeight: 1.95,
+      lineHeight: 1.5,
       color: "#2c1810",
       minHeight: "297mm",
       display: "flex",
@@ -64,7 +64,7 @@ export default function VelvetTemplate({ content, candidate }: TemplateProps) {
       <div style={{ padding: "44px 80px 0", flex: 1 }}>
         <div style={{ fontSize: 10, color: "#B0907A", fontFamily: FF.systemSans, marginBottom: 16, letterSpacing: "0.04em" }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", marginBottom: 30, lineHeight: 1.75, color: "#5a3828" }}>
+          <div style={{ fontSize: "10.5pt", marginBottom: 24, lineHeight: 1.5, color: "#5a3828" }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
@@ -74,21 +74,17 @@ export default function VelvetTemplate({ content, candidate }: TemplateProps) {
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{ fontSize: "10.5pt", lineHeight: 2 }}
-            className="[&>p]:mb-[22px] [&>p:nth-of-type(2)]:border-l-[3px] [&>p:nth-of-type(2)]:border-[#7C2D3E] [&>p:nth-of-type(2)]:pl-[18px] [&>p:nth-of-type(2)]:py-[10px] [&>p:nth-of-type(2)]:my-[22px] [&>p:nth-of-type(2)]:italic [&>p:nth-of-type(2)]:bg-[rgba(124,45,62,0.045)] [&>p:nth-of-type(2)]:text-[#5a3828] [&>ul]:mb-[22px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[22px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
         {content.closing && (
-          <div style={{ marginTop: 52, fontStyle: "italic", color: "#7C2D3E", fontSize: 11 }}>
+          <div style={{ marginTop: 24, fontStyle: "italic", color: "#7C2D3E", fontSize: 11 }}>
             {content.closing},
           </div>
         )}
         {candidate.name && (
-          <div style={{ fontStyle: "normal", fontWeight: 700, fontSize: 15, marginTop: 12, color: "#1a0a08", letterSpacing: "0.04em" }}>
+          <div style={{ fontStyle: "normal", fontWeight: 700, fontSize: 14, marginTop: 12, color: "#1a0a08", letterSpacing: "0.04em" }}>
             {candidate.name}
           </div>
         )}
@@ -96,7 +92,7 @@ export default function VelvetTemplate({ content, candidate }: TemplateProps) {
       <div style={{
         height: 8,
         background: "linear-gradient(90deg, #7C2D3E, #9B3A50, #C05068, #9B3A50, #7C2D3E)",
-        marginTop: 44,
+        marginTop: 24,
         position: "relative",
       }}>
         <div style={{ height: 2, background: "rgba(255,255,255,0.25)", marginBottom: 2 }} />

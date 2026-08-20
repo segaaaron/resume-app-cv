@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -18,7 +18,7 @@ export default function AtlasTemplate({ content, candidate }: TemplateProps) {
       background: "#fff",
       fontFamily: FF.elegantSerif,
       fontSize: "10.5pt",
-      lineHeight: 1.85,
+      lineHeight: 1.5,
       color: "#1a1a1a",
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
@@ -26,7 +26,7 @@ export default function AtlasTemplate({ content, candidate }: TemplateProps) {
     }}>
       <div style={{ background: "#111", padding: "44px 80px" }}>
         {candidate.name && (
-          <div style={{ fontSize: 44, fontWeight: 400, color: "#fff", letterSpacing: "0.01em", lineHeight: 1, marginBottom: 10 }}>
+          <div style={{ fontSize: 32, fontWeight: 400, color: "#fff", letterSpacing: "0.01em", lineHeight: 1, marginBottom: 10 }}>
             {candidate.name}
           </div>
         )}
@@ -49,12 +49,12 @@ export default function AtlasTemplate({ content, candidate }: TemplateProps) {
           <span key={i} style={{ fontSize: 9.5, color: "#666", letterSpacing: "0.02em", fontFamily: FF.systemSans }}>{c}</span>
         ))}
       </div>
-      <div style={{ padding: "48px 80px 72px" }}>
+      <div style={{ padding: "48px 80px 48px" }}>
         <div style={{ fontSize: 10, color: "#aaa", marginBottom: 18, fontFamily: FF.systemSans, letterSpacing: "0.04em" }}>
           {today}
         </div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", marginBottom: 30, lineHeight: 1.7, color: "#444" }}>
+          <div style={{ fontSize: "10.5pt", marginBottom: 24, lineHeight: 1.5, color: "#444" }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
@@ -64,18 +64,14 @@ export default function AtlasTemplate({ content, candidate }: TemplateProps) {
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{ fontSize: "10.5pt", lineHeight: 1.9 }}
-            className="[&>p]:mb-[20px] [&>ul]:mb-[20px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[20px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 56 }}>
+        <div style={{ marginTop: 24 }}>
           {content.closing && <p style={{ fontSize: "10.5pt", marginBottom: 20 }}>{content.closing},</p>}
           {candidate.name && (
-            <div style={{ marginTop: 32, fontSize: 20, fontWeight: 400, letterSpacing: "0.06em", color: "#111", fontFamily: FF.elegantSerif }}>
+            <div style={{ marginTop: 24, fontSize: 14, fontWeight: 400, letterSpacing: "0.06em", color: "#111", fontFamily: FF.elegantSerif }}>
               {candidate.name}
             </div>
           )}

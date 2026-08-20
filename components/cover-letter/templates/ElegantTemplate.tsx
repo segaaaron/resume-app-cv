@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 
 export default function ElegantTemplate({ content, colorScheme, candidate }: TemplateProps) {
@@ -33,7 +33,7 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
       {/* ── HEADER — full-width color block ── */}
       <div style={{
         background: hex,
-        padding: `0.3in ${PAD_H} 0.3in`,
+        padding: `0.2in ${PAD_H} 0.2in`,
         flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
@@ -71,7 +71,7 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
               <div style={{
                 fontSize: "9pt", color: "rgba(255,255,255,0.7)",
                 display: "flex", flexWrap: "wrap", gap: "2px 0",
-                lineHeight: 1.6,
+                lineHeight: 1.5,
               }}>
                 {contacts.map((c, i) => (
                   <span key={i}>
@@ -92,7 +92,7 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
 
       {/* ── BODY — flex column, signature pinned to bottom ── */}
       <div style={{
-        padding: `18pt ${PAD_H} 0`,
+        padding: `12pt ${PAD_H} 0`,
         flex: 1,
         display: "flex",
         flexDirection: "column",
@@ -143,11 +143,7 @@ export default function ElegantTemplate({ content, colorScheme, candidate }: Tem
 
           {/* Body — LEFT aligned, NO indent, single line spacing (ES standard) */}
           {content.body ? (
-            <div
-              style={{ fontSize: "11pt", color: "#1a1a1a", lineHeight: 1.4, marginBottom: "10pt" }}
-              className="[&>p]:mb-[10pt] [&>p]:text-left [&>p]:indent-0 [&>ul]:mb-[10pt] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[10pt] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body ?? "") }}
-            />
+            <LetterBody html={content.body ?? ""} style={{ color: "#1a1a1a", marginBottom: "10pt" }} />
           ) : (
             <p style={{ fontSize: "11pt", color: "#cccccc", fontStyle: "italic", marginBottom: "10pt" }}>
               {t("body_placeholder_template")}

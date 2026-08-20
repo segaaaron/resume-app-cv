@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -18,14 +18,14 @@ export default function VersoTemplate({ content, candidate }: TemplateProps) {
       background: "#FDFAF5",
       fontFamily: FF.elegantSerif,
       fontSize: "10.5pt",
-      lineHeight: 2.05,
+      lineHeight: 1.5,
       color: "#2c2c2c",
       minHeight: "297mm",
-      padding: "96px 128px",
+      padding: "48px 88px",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
     }}>
-      <div style={{ textAlign: "center", fontSize: 22, color: "#c8b8a0", marginBottom: 44, letterSpacing: "0.4em" }}>
+      <div style={{ textAlign: "center", fontSize: 22, color: "#c8b8a0", marginBottom: 24, letterSpacing: "0.4em" }}>
         — ✦ —
       </div>
       {candidate.name && (
@@ -55,27 +55,23 @@ export default function VersoTemplate({ content, candidate }: TemplateProps) {
           fontSize: 9,
           color: "#b8a898",
           letterSpacing: "0.06em",
-          marginBottom: 56,
+          marginBottom: 24,
           fontStyle: "italic",
         }}>{contacts.join("  ·  ")}</div>
       )}
 
-      <p style={{ fontSize: "10.5pt", lineHeight: 2.1, marginBottom: 26, textAlign: "left" }}>
+      <p style={{ fontSize: "10.5pt", lineHeight: 1.5, marginBottom: 24, textAlign: "left" }}>
         {content.recipientName
           ? t("salutation_named", { name: content.recipientName })
           : t("salutation_generic")}
       </p>
       {content.body ? (
-        <div
-          style={{ fontSize: "10.5pt", lineHeight: 2.1, fontStyle: "italic", color: "#333" }}
-          className="[&>p]:mb-[26px] [&>p]:text-justify [&>ul]:mb-[26px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[26px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-        />
+        <LetterBody html={content.body} style={{ fontStyle: "italic", color: "#333" }} />
       ) : (
         <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
       )}
 
-      <div style={{ fontSize: 10, marginTop: 60, textAlign: "right", fontStyle: "italic", color: "#7a6858" }}>
+      <div style={{ fontSize: 10, marginTop: 24, textAlign: "right", fontStyle: "italic", color: "#7a6858" }}>
         {today}
       </div>
       {content.closing && (
@@ -88,7 +84,7 @@ export default function VersoTemplate({ content, candidate }: TemplateProps) {
           {candidate.name}
         </div>
       )}
-      <div style={{ textAlign: "center", fontSize: 13, color: "#c8b8a0", marginTop: 56, letterSpacing: "0.3em" }}>
+      <div style={{ textAlign: "center", fontSize: 13, color: "#c8b8a0", marginTop: 24, letterSpacing: "0.3em" }}>
         · · ·
       </div>
     </div>

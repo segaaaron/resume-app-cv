@@ -10,6 +10,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -42,7 +43,7 @@ export default function LtrCerulean(props: TemplateProps) {
         <div style={{ marginBottom: 14 }}><LTo v={v} font={ASAP} color={c} /></div>
         <AHead icon="mail" color={c} font={ASAP} variant="badge" size={11.5}>{v.subject || "Cover Letter"}</AHead>
         <div style={{ fontSize: "11.5pt", fontWeight: 700, marginBottom: 8 }}>{v.greeting}</div>
-        <LBody v={v} font={ASAP} fs={10.8} lh={1.68} />
+        <LBody v={v} font={ASAP} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={ASAP} color={c} line={false} /></div>
       </div>
     </div>

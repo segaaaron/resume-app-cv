@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -17,7 +17,7 @@ export default function TerraTemplate({ content, candidate }: TemplateProps) {
       fontFamily: FF.systemSans,
       color: "#2a2418",
       fontSize: 13.5,
-      lineHeight: 1.7,
+      lineHeight: 1.5,
       minHeight: "297mm",
       display: "grid",
       gridTemplateColumns: "220px 1fr",
@@ -25,7 +25,7 @@ export default function TerraTemplate({ content, candidate }: TemplateProps) {
       printColorAdjust: "exact",
     }}>
       <div style={{ background: "#2a2418", padding: "48px 28px", display: "flex", flexDirection: "column" }}>
-        <div style={{ marginBottom: 32 }}>
+        <div style={{ marginBottom: 24 }}>
           <svg width={64} height={64} viewBox="0 0 64 64" fill="none">
             <path d="M32 56 C32 56 8 40 8 20 C8 10 18 4 28 6 C20 16 20 32 32 40 C44 32 44 16 36 6 C46 4 56 10 56 20 C56 40 32 56 32 56Z" fill="#6b8f4e" opacity="0.8" />
             <path d="M32 56 L32 30" stroke="#4a6b30" strokeWidth="1.5" strokeLinecap="round" />
@@ -39,7 +39,7 @@ export default function TerraTemplate({ content, candidate }: TemplateProps) {
           </div>
         )}
         {candidate.jobTitle && (
-          <div style={{ fontSize: 11, color: "#8a7a5a", letterSpacing: 2, textTransform: "uppercase", marginBottom: 28 }}>
+          <div style={{ fontSize: 11, color: "#8a7a5a", letterSpacing: 2, textTransform: "uppercase", marginBottom: 24 }}>
             {candidate.jobTitle}
           </div>
         )}
@@ -86,28 +86,24 @@ export default function TerraTemplate({ content, candidate }: TemplateProps) {
         {(content.recipientName || content.company) && (
           <div style={{ marginBottom: 16 }}>
             {content.recipientName && (
-              <strong style={{ fontFamily: FF.elegantSerif, fontSize: 17, color: "#2a2418", display: "block" }}>{content.recipientName}</strong>
+              <strong style={{ fontFamily: FF.elegantSerif, fontSize: 14, color: "#2a2418", display: "block" }}>{content.recipientName}</strong>
             )}
             {content.company && <span style={{ fontSize: 12, color: "#6a5a3a" }}>{content.company}</span>}
           </div>
         )}
         <div style={{ width: 32, height: 2, background: "#6b8f4e", margin: "20px 0" }} />
-        <div style={{ fontFamily: FF.elegantSerif, fontSize: 20, fontStyle: "italic", color: "#2a2418", marginBottom: 18, marginTop: 16 }}>
+        <div style={{ fontFamily: FF.elegantSerif, fontSize: 14, fontStyle: "italic", color: "#2a2418", marginBottom: 18, marginTop: 16 }}>
           {content.recipientName
             ? t("salutation_named", { name: content.recipientName })
             : t("salutation_generic")}
         </div>
         {content.body ? (
-          <div
-            style={{ color: "#3a3020", fontWeight: 300 }}
-            className="[&>p]:mb-[15px] [&>ul]:mb-[15px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[15px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} style={{ color: "#3a3020", fontWeight: 300 }} />
         ) : (
           <p style={{ color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
         {content.closing && (
-          <div style={{ color: "#6a5a3a", fontStyle: "italic", marginTop: 30 }}>{content.closing},</div>
+          <div style={{ color: "#6a5a3a", fontStyle: "italic", marginTop: 24 }}>{content.closing},</div>
         )}
         {candidate.name && (
           <div style={{ fontFamily: FF.elegantSerif, fontSize: 26, color: "#2a2418", marginTop: 4 }}>{candidate.name}</div>

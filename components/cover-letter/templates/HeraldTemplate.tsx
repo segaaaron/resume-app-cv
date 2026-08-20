@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -35,7 +35,7 @@ export default function HeraldTemplate({ content, candidate }: TemplateProps) {
       fontFamily: FF.systemSans,
       color: "#1a1025",
       fontSize: 13.5,
-      lineHeight: 1.7,
+      lineHeight: 1.5,
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
@@ -57,7 +57,7 @@ export default function HeraldTemplate({ content, candidate }: TemplateProps) {
         </div>
         <div style={{ flex: 1 }}>
           {candidate.name && (
-            <div style={{ fontFamily: FF.elegantSerif, fontSize: 36, fontWeight: 600, color: "#1a1025", letterSpacing: "0.5px" }}>
+            <div style={{ fontFamily: FF.elegantSerif, fontSize: 32, fontWeight: 600, color: "#1a1025", letterSpacing: "0.5px" }}>
               {candidate.name}
             </div>
           )}
@@ -82,27 +82,23 @@ export default function HeraldTemplate({ content, candidate }: TemplateProps) {
         {(content.recipientName || content.company) && (
           <div style={{ marginBottom: 18 }}>
             {content.recipientName && (
-              <strong style={{ fontFamily: FF.elegantSerif, fontSize: 17, fontWeight: 600, color: "#1a1025" }}>{content.recipientName}</strong>
+              <strong style={{ fontFamily: FF.elegantSerif, fontSize: 14, fontWeight: 600, color: "#1a1025" }}>{content.recipientName}</strong>
             )}
             {content.company && <span style={{ fontSize: 12, color: "#7a6a8a", display: "block" }}>{content.company}</span>}
           </div>
         )}
         <div style={{ width: 48, height: 2, background: "linear-gradient(90deg, #3d1a5c, #8a5aaa)", margin: "18px 0" }} />
-        <div style={{ fontFamily: FF.elegantSerif, fontSize: 19, color: "#1a1025", marginBottom: 16 }}>
+        <div style={{ fontFamily: FF.elegantSerif, fontSize: 14, color: "#1a1025", marginBottom: 16 }}>
           {content.recipientName
             ? t("salutation_named", { name: content.recipientName })
             : t("salutation_generic")}
         </div>
         {content.body ? (
-          <div
-            style={{ color: "#2a1a35", fontWeight: 300 }}
-            className="[&>p]:mb-[15px] [&>ul]:mb-[15px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[15px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} style={{ color: "#2a1a35", fontWeight: 300 }} />
         ) : (
           <p style={{ color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 36, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div style={{ marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             {content.closing && (
               <div style={{ color: "#7a6a8a", fontSize: 13, fontStyle: "italic", fontFamily: FF.elegantSerif, marginBottom: 4 }}>

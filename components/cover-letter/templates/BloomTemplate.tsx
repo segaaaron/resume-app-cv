@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -41,7 +41,7 @@ export default function BloomTemplate({ content, candidate }: TemplateProps) {
       fontFamily: FF.systemSans,
       color: "#2a1820",
       fontSize: 13.5,
-      lineHeight: 1.7,
+      lineHeight: 1.5,
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
@@ -61,7 +61,7 @@ export default function BloomTemplate({ content, candidate }: TemplateProps) {
         </svg>
         <div style={{ paddingLeft: 16, position: "relative" }}>
           {candidate.name && (
-            <div style={{ fontFamily: FF.elegantSerif, fontSize: 36, fontWeight: 600, color: "#5a1a2e", letterSpacing: "0.5px", lineHeight: 1.1 }}>
+            <div style={{ fontFamily: FF.elegantSerif, fontSize: 32, fontWeight: 600, color: "#5a1a2e", letterSpacing: "0.5px", lineHeight: 1.1 }}>
               {candidate.name}
             </div>
           )}
@@ -86,7 +86,7 @@ export default function BloomTemplate({ content, candidate }: TemplateProps) {
         {(content.recipientName || content.company) && (
           <div style={{ marginBottom: 16 }}>
             {content.recipientName && (
-              <strong style={{ fontFamily: FF.elegantSerif, fontSize: 17, fontWeight: 600, color: "#2a1820", display: "block" }}>{content.recipientName}</strong>
+              <strong style={{ fontFamily: FF.elegantSerif, fontSize: 14, fontWeight: 600, color: "#2a1820", display: "block" }}>{content.recipientName}</strong>
             )}
             {content.company && <span style={{ fontSize: 12, color: "#8a6070" }}>{content.company}</span>}
           </div>
@@ -102,21 +102,17 @@ export default function BloomTemplate({ content, candidate }: TemplateProps) {
           </svg>
           <div style={{ flex: 1, height: 1, background: "#f0c0d0" }} />
         </div>
-        <div style={{ fontFamily: FF.elegantSerif, fontSize: 18, fontStyle: "italic", color: "#2a1820", marginBottom: 16 }}>
+        <div style={{ fontFamily: FF.elegantSerif, fontSize: 14, fontStyle: "italic", color: "#2a1820", marginBottom: 16 }}>
           {content.recipientName
             ? t("salutation_named", { name: content.recipientName })
             : t("salutation_generic")}
         </div>
         {content.body ? (
-          <div
-            style={{ color: "#2a1820", fontWeight: 300 }}
-            className="[&>p]:mb-[15px] [&>ul]:mb-[15px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[15px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} style={{ color: "#2a1820", fontWeight: 300 }} />
         ) : (
           <p style={{ color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 36, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+        <div style={{ marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
           <div>
             {content.closing && (
               <div style={{ fontFamily: FF.elegantSerif, fontStyle: "italic", color: "#8a6070", fontSize: 14 }}>{content.closing},</div>

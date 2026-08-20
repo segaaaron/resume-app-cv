@@ -9,6 +9,7 @@
 
 import type { TemplateProps } from "./types"
 import { AIco } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -44,7 +45,7 @@ export default function LtrGarnet(props: TemplateProps) {
       <div style={{ padding: "10px 52px 36px", flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ marginBottom: 16 }}><LTo v={v} font={LATO} color={c} /></div>
         <div style={{ fontFamily: GARA, fontSize: 17, fontWeight: 600, marginBottom: 10 }}>{v.greeting}</div>
-        <LBody v={v} font={GARA} fs={13.2} lh={1.62} />
+        <LBody v={v} font={GARA} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20 }}>
           <LSign v={v} font={LATO} color={c} />
           <AIco k="spark" c={c} size={34} variant="outline" shape="circle" />

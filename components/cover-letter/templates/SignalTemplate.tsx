@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -49,7 +49,7 @@ export default function SignalTemplate({ content, candidate }: TemplateProps) {
       width: "100%",
       color: "#1a2332",
       fontSize: 14,
-      lineHeight: 1.6,
+      lineHeight: 1.5,
       minHeight: "297mm",
       display: "flex",
       flexDirection: "column",
@@ -61,7 +61,7 @@ export default function SignalTemplate({ content, candidate }: TemplateProps) {
         <div style={{ position: "absolute", bottom: -30, right: 60, width: 120, height: 120, borderRadius: "50%", background: "rgba(0,184,196,0.07)" }} />
         <div style={{ position: "relative" }}>
           {candidate.name && (
-            <div style={{ fontSize: 34, fontWeight: 700, color: "#fff", letterSpacing: "-0.5px" }}>{candidate.name}</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#fff", letterSpacing: "-0.5px" }}>{candidate.name}</div>
           )}
           {candidate.jobTitle && (
             <div style={{ fontSize: 14, fontWeight: 400, color: "#00b8c4", letterSpacing: 2, textTransform: "uppercase", marginTop: 4 }}>
@@ -80,9 +80,9 @@ export default function SignalTemplate({ content, candidate }: TemplateProps) {
       </div>
 
       <div style={{ padding: "44px 52px", flex: 1 }}>
-        <div style={{ fontSize: 12, color: "#7a8a9a", marginBottom: 28, letterSpacing: "0.5px" }}>{today}</div>
+        <div style={{ fontSize: 12, color: "#7a8a9a", marginBottom: 24, letterSpacing: "0.5px" }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ marginBottom: 28 }}>
+          <div style={{ marginBottom: 24 }}>
             {content.recipientName && <strong style={{ display: "block", fontWeight: 600, color: "#0f2240" }}>{content.recipientName}</strong>}
             {content.company}
           </div>
@@ -94,17 +94,13 @@ export default function SignalTemplate({ content, candidate }: TemplateProps) {
             : t("salutation_generic")}
         </div>
         {content.body ? (
-          <div
-            style={{ color: "#2c3e50", fontSize: 13.5 }}
-            className="[&>p]:mb-[16px] [&>ul]:mb-[16px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[16px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} style={{ color: "#2c3e50" }} />
         ) : (
           <p style={{ color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 36 }}>
+        <div style={{ marginTop: 24 }}>
           {content.closing && <div style={{ fontSize: 13, color: "#2c3e50", marginBottom: 6 }}>{content.closing},</div>}
-          {candidate.name && <div style={{ fontSize: 18, fontWeight: 700, color: "#0f2240", marginTop: 4 }}>{candidate.name}</div>}
+          {candidate.name && <div style={{ fontSize: 14, fontWeight: 700, color: "#0f2240", marginTop: 4 }}>{candidate.name}</div>}
           {candidate.jobTitle && (
             <div style={{ fontSize: 12, color: "#00b8c4", letterSpacing: 1, textTransform: "uppercase" }}>{candidate.jobTitle}</div>
           )}

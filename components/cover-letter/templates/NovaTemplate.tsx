@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -17,7 +17,7 @@ export default function NovaTemplate({ content, candidate }: TemplateProps) {
       fontFamily: FF.systemSans,
       color: "#1a1a2e",
       fontSize: 13.5,
-      lineHeight: 1.65,
+      lineHeight: 1.5,
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
@@ -25,7 +25,7 @@ export default function NovaTemplate({ content, candidate }: TemplateProps) {
       <div style={{
         position: "relative",
         background: "linear-gradient(135deg, #16213e 0%, #0f3460 60%, #533483 100%)",
-        padding: "52px 56px 44px",
+        padding: "48px 56px 44px",
         overflow: "hidden",
         minHeight: 200,
       }}>
@@ -68,7 +68,7 @@ export default function NovaTemplate({ content, candidate }: TemplateProps) {
             }}>{candidate.jobTitle}</div>
           )}
           {candidate.name && (
-            <div style={{ fontSize: 38, fontWeight: 700, color: "#fff", lineHeight: 1.1 }}>{candidate.name}</div>
+            <div style={{ fontSize: 32, fontWeight: 700, color: "#fff", lineHeight: 1.1 }}>{candidate.name}</div>
           )}
           <div style={{ display: "flex", gap: 20, marginTop: 20, flexWrap: "wrap" }}>
             {candidate.email && <div style={{ color: "rgba(255,255,255,0.7)", fontSize: 11.5 }}>{candidate.email}</div>}
@@ -105,25 +105,21 @@ export default function NovaTemplate({ content, candidate }: TemplateProps) {
           <div style={{ fontSize: 12, color: "#3a3a5c", marginBottom: 6 }}>{today}</div>
         </div>
         <div style={{ padding: "36px 40px" }}>
-          <div style={{ fontSize: 15, fontWeight: 600, color: "#0f3460", marginBottom: 16 }}>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "#0f3460", marginBottom: 16 }}>
             {content.recipientName
               ? t("salutation_named", { name: content.recipientName })
               : t("salutation_generic")}
           </div>
           {content.body ? (
-            <div
-              style={{ color: "#2c2c4a", fontSize: 13 }}
-              className="[&>p]:mb-[14px] [&>ul]:mb-[14px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[14px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-            />
+            <LetterBody html={content.body} style={{ color: "#2c2c4a" }} />
           ) : (
             <p style={{ color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
           )}
           {content.closing && (
-            <div style={{ color: "#7c3aed", fontWeight: 500, marginTop: 28 }}>{content.closing},</div>
+            <div style={{ color: "#7c3aed", fontWeight: 500, marginTop: 24 }}>{content.closing},</div>
           )}
           {candidate.name && (
-            <div style={{ fontSize: 20, fontWeight: 700, color: "#1a1a2e", marginTop: 4 }}>{candidate.name}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#1a1a2e", marginTop: 4 }}>{candidate.name}</div>
           )}
         </div>
       </div>

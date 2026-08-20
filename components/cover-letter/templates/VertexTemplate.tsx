@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -18,7 +18,7 @@ export default function VertexTemplate({ content, candidate }: TemplateProps) {
       background: "#fff",
       fontFamily: FF.systemSans,
       fontSize: "10.5pt",
-      lineHeight: 1.75,
+      lineHeight: 1.5,
       color: "#1e293b",
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
@@ -71,10 +71,10 @@ export default function VertexTemplate({ content, candidate }: TemplateProps) {
           </div>
         ))}
       </div>
-      <div style={{ padding: "40px 64px 60px" }}>
+      <div style={{ padding: "40px 64px 48px" }}>
         <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 10 }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", color: "#475569", marginBottom: 28, lineHeight: 1.65 }}>
+          <div style={{ fontSize: "10.5pt", color: "#475569", marginBottom: 24, lineHeight: 1.5 }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
@@ -84,21 +84,17 @@ export default function VertexTemplate({ content, candidate }: TemplateProps) {
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{ fontSize: "10.5pt", lineHeight: 1.85, color: "#334155" }}
-            className="[&>p]:mb-[18px] [&>ul]:mb-[18px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[18px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+          <LetterBody html={content.body} style={{ color: "#334155" }} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
         {content.closing && (
-          <div style={{ marginTop: 48, color: "#94A3B8", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>
+          <div style={{ marginTop: 24, color: "#94A3B8", fontSize: 10, textTransform: "uppercase", letterSpacing: "0.08em" }}>
             {content.closing}
           </div>
         )}
         {candidate.name && (
-          <div style={{ marginTop: 20, fontSize: 15, fontWeight: 700, color: "#2563EB" }}>{candidate.name}</div>
+          <div style={{ marginTop: 20, fontSize: 14, fontWeight: 700, color: "#2563EB" }}>{candidate.name}</div>
         )}
       </div>
     </div>

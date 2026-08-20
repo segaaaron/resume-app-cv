@@ -9,6 +9,7 @@
 
 import type { TemplateProps } from "./types"
 import { AContact, aFade } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -45,7 +46,7 @@ export default function LtrNordic(props: TemplateProps) {
           <div style={{ fontSize: "10.2pt", color: "#6b7078", textAlign: "right" }}>{today}</div>
         </div>
         <div style={{ fontSize: "12pt", fontWeight: 700, marginBottom: 10 }}>{v.greeting}</div>
-        <LBody v={v} font={CABIN} fs={11} lh={1.72} />
+        <LBody v={v} font={CABIN} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26, textAlign: "center" }}><LSign v={v} font={CABIN} color={c} centered /></div>
       </div>
     </div>

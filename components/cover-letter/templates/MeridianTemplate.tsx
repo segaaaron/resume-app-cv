@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -27,7 +27,7 @@ export default function MeridianTemplate({ content, candidate }: TemplateProps) 
       fontFamily: FF.systemSans,
       color: "#2a1f0e",
       fontSize: 13.5,
-      lineHeight: 1.75,
+      lineHeight: 1.5,
       minHeight: "297mm",
       position: "relative",
       WebkitPrintColorAdjust: "exact",
@@ -55,10 +55,10 @@ export default function MeridianTemplate({ content, candidate }: TemplateProps) 
       </svg>
 
       <div style={{ position: "relative", zIndex: 1 }}>
-        <div style={{ display: "flex", justifyContent: "center", padding: "36px 0 0" }}>{ORN}</div>
-        <div style={{ textAlign: "center", padding: "16px 60px 32px", borderBottom: "1px solid #c9a96e" }}>
+        <div style={{ display: "flex", justifyContent: "center", padding: "28px 0 0" }}>{ORN}</div>
+        <div style={{ textAlign: "center", padding: "16px 60px 28px", borderBottom: "1px solid #c9a96e" }}>
           {candidate.name && (
-            <div style={{ fontFamily: FF.elegantSerif, fontSize: 42, fontWeight: 600, color: "#1a1208", letterSpacing: 3 }}>
+            <div style={{ fontFamily: FF.elegantSerif, fontSize: 32, fontWeight: 600, color: "#1a1208", letterSpacing: 3 }}>
               {candidate.name}
             </div>
           )}
@@ -81,31 +81,27 @@ export default function MeridianTemplate({ content, candidate }: TemplateProps) 
           )}
         </div>
 
-        <div style={{ padding: "40px 68px" }}>
-          <div style={{ fontSize: 11, color: "#8a6d3b", letterSpacing: 1, textTransform: "uppercase", marginBottom: 28 }}>{today}</div>
+        <div style={{ padding: "28px 68px" }}>
+          <div style={{ fontSize: 11, color: "#8a6d3b", letterSpacing: 1, textTransform: "uppercase", marginBottom: 16 }}>{today}</div>
           {(content.recipientName || content.company) && (
-            <div style={{ marginBottom: 20, fontSize: 13 }}>
+            <div style={{ marginBottom: 16, fontSize: 13 }}>
               {content.recipientName && (
-                <strong style={{ fontFamily: FF.elegantSerif, fontSize: 16, display: "block", color: "#1a1208" }}>{content.recipientName}</strong>
+                <strong style={{ fontFamily: FF.elegantSerif, fontSize: 14, display: "block", color: "#1a1208" }}>{content.recipientName}</strong>
               )}
               {content.company}
             </div>
           )}
-          <div style={{ fontFamily: FF.elegantSerif, fontSize: 18, fontStyle: "italic", color: "#1a1208", marginBottom: 20 }}>
+          <div style={{ fontFamily: FF.elegantSerif, fontSize: 14, fontStyle: "italic", color: "#1a1208", marginBottom: 16 }}>
             {content.recipientName
               ? t("salutation_named", { name: content.recipientName })
               : t("salutation_generic")}
           </div>
           {content.body ? (
-            <div
-              style={{ color: "#3a2e1a", fontWeight: 300 }}
-              className="[&>p]:mb-[16px] [&>ul]:mb-[16px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[16px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-            />
+            <LetterBody html={content.body} style={{ color: "#3a2e1a", fontWeight: 300 }} />
           ) : (
             <p style={{ color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
           )}
-          <div style={{ marginTop: 40 }}>
+          <div style={{ marginTop: 16 }}>
             {content.closing && (
               <div style={{ fontSize: 12, fontFamily: FF.elegantSerif, fontStyle: "italic", color: "#5c4a2a" }}>{content.closing},</div>
             )}
@@ -115,7 +111,7 @@ export default function MeridianTemplate({ content, candidate }: TemplateProps) 
           </div>
         </div>
 
-        <div style={{ textAlign: "center", padding: "20px 0 30px", borderTop: "1px solid #c9a96e", marginTop: 40 }}>{ORN}</div>
+        <div style={{ textAlign: "center", padding: "20px 0 28px", borderTop: "1px solid #c9a96e", marginTop: 16 }}>{ORN}</div>
       </div>
     </div>
   )

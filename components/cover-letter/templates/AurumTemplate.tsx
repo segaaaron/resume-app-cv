@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate, firstInitial } from "./_shared"
 
@@ -19,17 +19,17 @@ export default function AurumTemplate({ content, candidate }: TemplateProps) {
       background: "#FAF7F0",
       fontFamily: FF.elegantSerif,
       fontSize: "10.5pt",
-      lineHeight: 1.95,
+      lineHeight: 1.5,
       color: "#2a2218",
       minHeight: "297mm",
-      padding: "72px 88px",
+      padding: "48px 88px",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
     }}>
-      <div style={{ height: 1, background: "linear-gradient(90deg, transparent 0%, #C9A84C 20%, #e8d090 50%, #C9A84C 80%, transparent 100%)", marginBottom: 44 }} />
+      <div style={{ height: 1, background: "linear-gradient(90deg, transparent 0%, #C9A84C 20%, #e8d090 50%, #C9A84C 80%, transparent 100%)", marginBottom: 24 }} />
       <div style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
         <div style={{
-          fontSize: 52,
+          fontSize: 32,
           fontWeight: 700,
           color: "#C9A84C",
           lineHeight: 0.9,
@@ -51,14 +51,14 @@ export default function AurumTemplate({ content, candidate }: TemplateProps) {
         </div>
       </div>
       {contacts.length > 0 && (
-        <div style={{ fontSize: 9.5, color: "#8a7455", marginBottom: 36, display: "flex", gap: 24, paddingTop: 6, fontFamily: FF.systemSans, flexWrap: "wrap" }}>
+        <div style={{ fontSize: 9.5, color: "#8a7455", marginBottom: 24, display: "flex", gap: 24, paddingTop: 6, fontFamily: FF.systemSans, flexWrap: "wrap" }}>
           {contacts.map((c, i) => <span key={i}>{c}</span>)}
         </div>
       )}
-      <div style={{ height: 1, background: "linear-gradient(90deg, #C9A84C 0%, #e8d090 40%, transparent 80%)", marginBottom: 40 }} />
+      <div style={{ height: 1, background: "linear-gradient(90deg, #C9A84C 0%, #e8d090 40%, transparent 80%)", marginBottom: 24 }} />
       <div style={{ fontSize: 10, color: "#B8986A", fontFamily: FF.systemSans, marginBottom: 16, letterSpacing: "0.04em" }}>{today}</div>
       {(content.recipientName || content.company) && (
-        <div style={{ fontSize: "10.5pt", marginBottom: 30, lineHeight: 1.75, color: "#5a4830" }}>
+        <div style={{ fontSize: "10.5pt", marginBottom: 24, lineHeight: 1.5, color: "#5a4830" }}>
           {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
         </div>
       )}
@@ -68,23 +68,19 @@ export default function AurumTemplate({ content, candidate }: TemplateProps) {
           : t("salutation_generic")}
       </p>
       {content.body ? (
-        <div
-          style={{ fontSize: "10.5pt", lineHeight: 2 }}
-          className="[&>p]:mb-[22px] [&>ul]:mb-[22px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[22px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-          dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-        />
+        <LetterBody html={content.body} />
       ) : (
         <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
       )}
       {content.closing && (
-        <div style={{ marginTop: 56, fontStyle: "italic", color: "#6a5840" }}>{content.closing},</div>
+        <div style={{ marginTop: 24, fontStyle: "italic", color: "#6a5840" }}>{content.closing},</div>
       )}
       {candidate.name && (
         <div style={{ fontStyle: "normal", fontWeight: 700, fontSize: 14, marginTop: 12, letterSpacing: "0.05em", color: "#1a140a" }}>
           {candidate.name}
         </div>
       )}
-      <div style={{ height: 1, background: "linear-gradient(90deg, transparent 0%, #C9A84C 20%, #e8d090 50%, #C9A84C 80%, transparent 100%)", marginTop: 56 }} />
+      <div style={{ height: 1, background: "linear-gradient(90deg, transparent 0%, #C9A84C 20%, #e8d090 50%, #C9A84C 80%, transparent 100%)", marginTop: 24 }} />
     </div>
   )
 }

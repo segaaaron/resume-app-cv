@@ -10,6 +10,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact, aFade } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -41,7 +42,7 @@ export default function LtrCopper(props: TemplateProps) {
         <div style={{ marginBottom: 15 }}><LTo v={v} font={KARLA} color={c} /></div>
         <AHead icon="mail" color={c} font={PTS} variant="tab" track="0.06em">{v.subject || `Re: ${v.role}`}</AHead>
         <div style={{ fontFamily: PTS, fontSize: "12.5pt", fontWeight: 700, marginBottom: 9 }}>{v.greeting}</div>
-        <LBody v={v} font={KARLA} fs={11} lh={1.7} />
+        <LBody v={v} font={KARLA} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={KARLA} color={c} /></div>
       </div>
     </div>

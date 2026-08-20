@@ -1,7 +1,7 @@
 "use client"
 
 import { useTranslations, useLocale } from "next-intl"
-import DOMPurify from "isomorphic-dompurify"
+import LetterBody from "./LetterBody"
 import type { TemplateProps } from "./types"
 import { FF, formatDate } from "./_shared"
 
@@ -18,14 +18,14 @@ export default function MosaicTemplate({ content, candidate }: TemplateProps) {
       background: "#FAF5FF",
       fontFamily: FF.systemSans,
       fontSize: "10.5pt",
-      lineHeight: 1.8,
+      lineHeight: 1.5,
       color: "#1e1b4b",
       minHeight: "297mm",
       WebkitPrintColorAdjust: "exact",
       printColorAdjust: "exact",
     }}>
       <div style={{
-        padding: "52px 72px 44px",
+        padding: "28px 72px 28px",
         backgroundImage: "radial-gradient(circle, rgba(124,58,237,0.13) 1px, transparent 1px)",
         backgroundSize: "18px 18px",
         backgroundColor: "#FAF5FF",
@@ -56,7 +56,7 @@ export default function MosaicTemplate({ content, candidate }: TemplateProps) {
           </div>
         )}
         {candidate.jobTitle && (
-          <div style={{ fontSize: 11, color: "#7C3AED", fontWeight: 600, marginBottom: 22, letterSpacing: "0.02em" }}>
+          <div style={{ fontSize: 11, color: "#7C3AED", fontWeight: 600, marginBottom: 16, letterSpacing: "0.02em" }}>
             {candidate.jobTitle}
           </div>
         )}
@@ -66,41 +66,34 @@ export default function MosaicTemplate({ content, candidate }: TemplateProps) {
           ))}
         </div>
       </div>
-      <div style={{ padding: "44px 72px 64px", background: "#fff" }}>
-        <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 18 }}>{today}</div>
+      <div style={{ padding: "28px 72px 28px", background: "#fff" }}>
+        <div style={{ fontSize: 10, color: "#94A3B8", marginBottom: 16 }}>{today}</div>
         {(content.recipientName || content.company) && (
-          <div style={{ fontSize: "10.5pt", marginBottom: 28, lineHeight: 1.65, color: "#4C1D95" }}>
+          <div style={{ fontSize: "10.5pt", marginBottom: 16, lineHeight: 1.5, color: "#4C1D95" }}>
             {content.recipientName}{content.recipientName && content.company && <br />}{content.company}
           </div>
         )}
-        <p style={{ fontSize: "10.5pt", marginBottom: 18, color: "#1E1B4B" }}>
+        <p style={{ fontSize: "10.5pt", marginBottom: 16, color: "#1E1B4B" }}>
           {content.recipientName
             ? t("salutation_named", { name: content.recipientName })
             : t("salutation_generic")}
         </p>
         {content.body ? (
-          <div
-            style={{
-              fontSize: "10.5pt",
-              lineHeight: 1.88,
+          <LetterBody html={content.body} style={{
               color: "#1E1B4B",
               borderLeft: "3px solid #7C3AED",
               paddingLeft: 16,
               paddingTop: 4,
               paddingBottom: 4,
               background: "rgba(124,58,237,0.03)",
-              marginBottom: 18,
-            }}
-            className="[&>p]:mb-[18px] [&>p:last-child]:mb-0 [&>ul]:mb-[18px] [&>ul]:list-disc [&>ul]:pl-5 [&>ol]:mb-[18px] [&>ol]:list-decimal [&>ol]:pl-5 prose max-w-none"
-            dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content.body) }}
-          />
+              marginBottom: 16 }} />
         ) : (
           <p style={{ fontSize: "10.5pt", color: "#cccccc", fontStyle: "italic" }}>{t("body_placeholder_template")}</p>
         )}
-        <div style={{ marginTop: 52 }}>
-          {content.closing && <p style={{ fontSize: "10.5pt", marginBottom: 20 }}>{content.closing},</p>}
+        <div style={{ marginTop: 16 }}>
+          {content.closing && <p style={{ fontSize: "10.5pt", marginBottom: 16 }}>{content.closing},</p>}
           {candidate.name && (
-            <div style={{ marginTop: 20, fontSize: 16, fontWeight: 800, color: "#7C3AED" }}>
+            <div style={{ marginTop: 16, fontSize: 14, fontWeight: 800, color: "#7C3AED" }}>
               {candidate.name}
             </div>
           )}

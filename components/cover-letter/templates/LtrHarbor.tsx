@@ -9,6 +9,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact, AIco, aFade, aMix } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -33,7 +34,7 @@ export default function LtrHarbor(props: TemplateProps) {
             <h1 style={{ margin: 0, fontSize: 30, fontWeight: 700, letterSpacing: "-0.02em" }}>{v.name}</h1>
             {v.jobTitle && <div style={{ fontSize: "11.5pt", color: aMix(c, 0.1), fontWeight: 600, marginTop: 3 }}>{v.jobTitle}</div>}
           </div>
-          <div style={{ textAlign: "right", fontSize: "10pt", color: "#5b6068", lineHeight: 1.6 }}>{today}{props.candidate.address && <><br />{props.candidate.address}</>}</div>
+          <div style={{ textAlign: "right", fontSize: "10pt", color: "#5b6068", lineHeight: 1.5 }}>{today}{props.candidate.address && <><br />{props.candidate.address}</>}</div>
         </div>
         {(colA.length > 0 || colB.length > 0) && (
           <div style={{ marginTop: 13, display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 14px" }}>
@@ -46,7 +47,7 @@ export default function LtrHarbor(props: TemplateProps) {
         <div style={{ marginBottom: 16 }}><LTo v={v} font={FRANK} color={c} /></div>
         <AHead icon="brief" color={c} font={FRANK} variant="bar">{v.subject || `Application — ${v.role}`}</AHead>
         <div style={{ fontSize: "11.5pt", fontWeight: 700, marginBottom: 9 }}>{v.greeting}</div>
-        <LBody v={v} font={FRANK} fs={10.9} lh={1.68} />
+        <LBody v={v} font={FRANK} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26 }}><LSign v={v} font={FRANK} color={c} line={false} /></div>
       </div>
     </div>

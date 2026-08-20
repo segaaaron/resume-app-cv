@@ -9,6 +9,7 @@
 
 import type { TemplateProps } from "./types"
 import { AHead, AContact } from "@/components/resume/templates/ats/atoms"
+import { LETTER_BODY_PT, LETTER_BODY_LH } from "./_metrics"
 import { LTo, LBody, LSign, useLtrView, formatToday } from "./ltr/atoms"
 import { designAccent } from "@/lib/resume/template-accent"
 import { useLocale } from "next-intl"
@@ -41,7 +42,7 @@ export default function LtrSable(props: TemplateProps) {
         </div>
         <AHead icon="mail" color={c} font={SSANS} variant="rule">{v.subject || "Letter of Introduction"}</AHead>
         <div style={{ fontFamily: SPEC, fontSize: "13pt", fontWeight: 600, marginBottom: 9 }}>{v.greeting}</div>
-        <LBody v={v} font={SPEC} fs={11.6} lh={1.72} />
+        <LBody v={v} font={SPEC} fs={LETTER_BODY_PT} lh={LETTER_BODY_LH} />
         <div style={{ marginTop: "auto", paddingTop: 26, display: "flex", justifyContent: "space-between", alignItems: "flex-end", gap: 20 }}>
           <LSign v={v} font={SSANS} color={c} />
           {(v.recipient.company || v.role) && <div style={{ fontFamily: SPEC, fontSize: 11, fontStyle: "italic", color: c, textAlign: "right" }}>{v.recipient.company}{v.recipient.company && <br />}{v.role}</div>}
