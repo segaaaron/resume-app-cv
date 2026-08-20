@@ -834,59 +834,7 @@ function ObsidianThumb() {
   )
 }
 
-function CodexThumb() {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#f8f5ee" />
-      <rect x="3" y="3" width="74" height="104" stroke="#8b6340" strokeWidth="0.6" fill="none" />
-      <rect x="6" y="6" width="68" height="98" stroke="#c9a96e" strokeWidth="0.3" fill="none" />
-      <circle cx="40" cy="6" r="1" fill="#c9a96e" />
-      <circle cx="40" cy="104" r="1" fill="#c9a96e" />
-      <path d="M20,14 C20,12 28,10 40,10 C52,10 60,12 60,14 L60,22 L40,28 L20,22 Z" fill="#c9a96e" opacity="0.1" stroke="#8b6340" strokeWidth="0.3" />
-      <circle cx="40" cy="18" r="2" stroke="#8b6340" strokeWidth="0.3" fill="none" />
-      <text x="40" y="34" textAnchor="middle" fontSize="6" fontWeight="bold" fill="#2c1f0e" fontFamily="Georgia">Name</text>
-      <rect x="22" y="38" width="36" height="1" fill="#8b6340" />
-      <rect x="22" y="40" width="36" height="0.5" fill="#8b6340" />
-      <text x="40" y="48" textAnchor="middle" fontSize="4" fontStyle="italic" fill="#6b4a25" fontFamily="Georgia">Title</text>
-      <text x="14" y="58" fontSize="6" fontWeight="bold" fill="#8b6340" fontFamily="Georgia">D</text>
-      <rect x="22" y="56" width="48" height="1.2" rx="0.6" fill="#2c1f0e" opacity="0.45" />
-      <rect x="14" y="60" width="56" height="1.2" rx="0.6" fill="#2c1f0e" opacity="0.45" />
-      <rect x="14" y="64" width="56" height="1.2" rx="0.6" fill="#2c1f0e" opacity="0.4" />
-      <rect x="14" y="70" width="56" height="1.2" rx="0.6" fill="#2c1f0e" opacity="0.4" />
-      <rect x="50" y="90" width="22" height="2" fill="#2c1f0e" />
-    </svg>
-  )
-}
 
-function AxiomThumb() {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#1a1f2a" />
-      <g opacity="0.2" stroke="#58a6ff" strokeWidth="0.4" fill="none">
-        <path d="M50 6 L60 6 L60 12 L70 12" />
-        <path d="M55 12 L55 20 L70 20" />
-        <circle cx="60" cy="6" r="0.8" fill="#58a6ff" />
-        <circle cx="60" cy="12" r="0.8" fill="#58a6ff" />
-      </g>
-      <circle cx="6" cy="8" r="1" fill="#3fb950" />
-      <rect x="9" y="7" width="22" height="1" fill="#3fb950" />
-      <rect x="6" y="12" width="36" height="4" fill="#f0f6fc" />
-      <rect x="6" y="18" width="18" height="2.5" rx="1" fill="#222831" stroke="#30363D" strokeWidth="0.3" />
-      <rect x="8" y="19" width="14" height="1" fill="#58a6ff" />
-      <rect x="6" y="26" width="68" height="14" rx="1" fill="#222831" stroke="#30363D" strokeWidth="0.3" />
-      <rect x="9" y="29" width="50" height="1" fill="#8b949e" />
-      <rect x="9" y="32" width="14" height="1" fill="#79c0ff" />
-      <rect x="25" y="32" width="20" height="1" fill="#a8d5a2" />
-      <rect x="9" y="35" width="14" height="1" fill="#79c0ff" />
-      <rect x="25" y="35" width="20" height="1" fill="#a8d5a2" />
-      <rect x="6" y="46" width="14" height="1" fill="#3fb950" />
-      <rect x="6" y="50" width="60" height="1.2" rx="0.6" fill="#c9d1d9" opacity="0.6" />
-      <rect x="6" y="54" width="54" height="1.2" rx="0.6" fill="#c9d1d9" opacity="0.6" />
-      <rect x="6" y="60" width="60" height="1.2" rx="0.6" fill="#c9d1d9" opacity="0.4" />
-      <rect x="6" y="92" width="22" height="2" fill="#f0f6fc" />
-    </svg>
-  )
-}
 
 function TerraThumb() {
   return (
@@ -913,32 +861,6 @@ function TerraThumb() {
   )
 }
 
-function FlareThumb() {
-  return (
-    <svg viewBox="0 0 80 110" className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
-      <rect width="80" height="110" fill="#fff" />
-      <defs><linearGradient id="flare-hero" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#ff6b35" /><stop offset="0.5" stopColor="#f7c948" /><stop offset="1" stopColor="#ff6b35" /></linearGradient></defs>
-      <rect x="0" y="0" width="80" height="36" fill="url(#flare-hero)" />
-      <g opacity="0.18" fill="#1a0a2e">
-        <polygon points="68,4 70,18 68,20 66,18" />
-        <polygon points="68,32 70,22 68,20 66,22" />
-        <polygon points="60,18 68,18 70,20 68,22" />
-        <polygon points="76,18 68,18 66,20 68,22" />
-      </g>
-      <rect x="6" y="6" width="20" height="1.4" fill="#1a0a2e" opacity="0.5" />
-      <rect x="6" y="12" width="36" height="5" fill="#1a0a2e" />
-      <rect x="6" y="20" width="18" height="2" fill="#1a0a2e" opacity="0.7" />
-      <rect x="6" y="26" width="14" height="3" rx="1.5" fill="#1a0a2e" opacity="0.15" />
-      <rect x="22" y="26" width="14" height="3" rx="1.5" fill="#1a0a2e" opacity="0.15" />
-      <polyline points="6,42 14,46 22,42 30,46 38,42 46,46 54,42 62,46 70,42" stroke="#f7c948" strokeWidth="1" fill="none" />
-      <rect x="6" y="52" width="60" height="1.2" rx="0.6" fill="#2a1a3e" opacity="0.45" />
-      <rect x="6" y="56" width="54" height="1.2" rx="0.6" fill="#2a1a3e" opacity="0.45" />
-      <rect x="6" y="62" width="60" height="1.2" rx="0.6" fill="#2a1a3e" opacity="0.35" />
-      <rect x="6" y="66" width="50" height="1.2" rx="0.6" fill="#2a1a3e" opacity="0.35" />
-      <rect x="6" y="92" width="22" height="2" fill="#1a0a2e" />
-    </svg>
-  )
-}
 
 function HeraldThumb() {
   return (
@@ -1085,10 +1007,7 @@ export function CoverLetterThumbnail({ id, color }: { id: string; color: string 
   if (id === "meridian") return <MeridianThumb />
   if (id === "nova") return <NovaThumb />
   if (id === "obsidian") return <ObsidianThumb />
-  if (id === "codex") return <CodexThumb />
-  if (id === "axiom") return <AxiomThumb />
   if (id === "terra") return <TerraThumb />
-  if (id === "flare") return <FlareThumb />
   if (id === "herald") return <HeraldThumb />
   if (id === "bloom") return <BloomThumb />
   return <ElegantThumb color={color} />

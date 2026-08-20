@@ -44,10 +44,7 @@ import SignalTemplate from "./templates/SignalTemplate"
 import MeridianTemplate from "./templates/MeridianTemplate"
 import NovaTemplate from "./templates/NovaTemplate"
 import ObsidianTemplate from "./templates/ObsidianTemplate"
-import CodexTemplate from "./templates/CodexTemplate"
-import AxiomTemplate from "./templates/AxiomTemplate"
 import TerraTemplate from "./templates/TerraTemplate"
-import FlareTemplate from "./templates/FlareTemplate"
 import HeraldTemplate from "./templates/HeraldTemplate"
 import BloomTemplate from "./templates/BloomTemplate"
 import LtrMeridian from "./templates/LtrMeridian"
@@ -160,10 +157,7 @@ export default function CoverLetterPrintLayout({ letterId, title, colorScheme, f
     if (templateId === "meridian") return <MeridianTemplate {...props} />
     if (templateId === "nova") return <NovaTemplate {...props} />
     if (templateId === "obsidian") return <ObsidianTemplate {...props} />
-    if (templateId === "codex") return <CodexTemplate {...props} />
-    if (templateId === "axiom") return <AxiomTemplate {...props} />
     if (templateId === "terra") return <TerraTemplate {...props} />
-    if (templateId === "flare") return <FlareTemplate {...props} />
     if (templateId === "herald") return <HeraldTemplate {...props} />
     if (templateId === "bloom") return <BloomTemplate {...props} />
     if (templateId === "ltrmeridian") return <LtrMeridian {...props} />

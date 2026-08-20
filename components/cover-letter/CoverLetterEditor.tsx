@@ -7,7 +7,7 @@ import { apiFetch } from "@/lib/apiFetch"
 import { parseListPage, type ListPage } from "@/lib/api/list-page"
 import { reportUxFailure } from "@/lib/client-error-reporter"
 import { compressImage } from "@/lib/compressImage"
-import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil, ShieldCheck } from "lucide-react"
+import { ArrowLeft, Save, Loader2, Check, AlertCircle, Sparkles, Lock, ChevronDown, ChevronRight, Camera, X, FileText, Eye, User, Mail, Phone, MapPin, Link2, Globe, Building2, Briefcase, Type, LayoutGrid, Pencil } from "lucide-react"
 import DownloadMenu from "@/components/shared/DownloadMenu"
 import { useTranslations, useLocale } from "next-intl"
 import SummaryVersionModal, { type SummaryVersion } from "@/components/resume/sections/SummaryVersionModal"
@@ -60,10 +60,7 @@ const TEMPLATE_COMPONENTS: Record<string, React.ComponentType<TemplateProps>> = 
   meridian:  dynamic(() => import("./templates/MeridianTemplate"),      { ssr: false }),
   nova:      dynamic(() => import("./templates/NovaTemplate"),          { ssr: false }),
   obsidian:  dynamic(() => import("./templates/ObsidianTemplate"),      { ssr: false }),
-  codex:     dynamic(() => import("./templates/CodexTemplate"),         { ssr: false }),
-  axiom:     dynamic(() => import("./templates/AxiomTemplate"),         { ssr: false }),
   terra:     dynamic(() => import("./templates/TerraTemplate"),         { ssr: false }),
-  flare:     dynamic(() => import("./templates/FlareTemplate"),         { ssr: false }),
   herald:    dynamic(() => import("./templates/HeraldTemplate"),        { ssr: false }),
   bloom:     dynamic(() => import("./templates/BloomTemplate"),         { ssr: false }),
   // ── 15 letter designs mirroring the ATS resume set (Ltr*) ─────────────────
@@ -97,8 +94,7 @@ type TemplateId =
   | "vertex"
   | "folio" | "gazette" | "verso"
   | "aurum" | "onyx" | "velvet"
-  | "signal" | "meridian" | "nova" | "obsidian" | "codex" | "axiom" | "terra"
-  | "flare" | "herald" | "bloom"
+  | "signal" | "meridian" | "nova" | "obsidian" | "terra" | "herald" | "bloom"
   | "ltrmeridian" | "ltrverdant" | "ltrcardinal" | "ltrcobalt" | "ltrslate"
   | "ltrnordic" | "ltronyx" | "ltrsable" | "ltrcerulean" | "ltrivory"
   | "ltrgarnet" | "ltrcopper" | "ltrharbor" | "ltrgraphite" | "ltrsequoia"
@@ -126,12 +122,10 @@ interface Props {
 // The description is a REQUIRED field: without real context (role, experience,
 // target position) the model returns an empty body → off_topic 422. 40 chars forces
 // at least one substantive sentence, so a thin prompt never reaches the endpoint.
-const AI_PROMPT_MIN = 40
 
 // Per-answer cap of the three structured questions. Mirrors the server limit
 // (AI_INPUT_LIMITS.coverLetterHighlight) — a longer answer would be rejected
 // with a 400 the user cannot see the cause of.
-const HIGHLIGHT_MAX = 400
 
 // Alphabetical by `id`. `elegant` (free) kept at top for prominence; the rest
 // of the PRO templates follow in strict alpha order for predictable browsing.
@@ -140,15 +134,12 @@ const TEMPLATES: { id: TemplateId; labelKey: string; pro?: boolean }[] = [
   { id: "architect", labelKey: "template_architect", pro: true },
   { id: "atlas",     labelKey: "template_atlas",     pro: true },
   { id: "aurum",     labelKey: "template_aurum",     pro: true },
-  { id: "axiom",     labelKey: "template_axiom",     pro: true },
   { id: "bloom",     labelKey: "template_bloom",     pro: true },
-  { id: "codex",     labelKey: "template_codex",     pro: true },
   { id: "consul",    labelKey: "template_consul",    pro: true },
   { id: "diagonal",  labelKey: "template_diagonal",  pro: true },
   { id: "echo",      labelKey: "template_echo",      pro: true },
   { id: "ember",     labelKey: "template_ember",     pro: true },
   { id: "executive", labelKey: "template_executive", pro: true },
-  { id: "flare",     labelKey: "template_flare",     pro: true },
   { id: "folio",     labelKey: "template_folio",     pro: true },
   { id: "fortis",    labelKey: "template_fortis",    pro: true },
   { id: "gazette",   labelKey: "template_gazette",   pro: true },
@@ -234,15 +225,12 @@ export default function CoverLetterEditor({
   )
   const [openSection, setOpenSection] = useState<"candidate" | "content" | "body" | null>(null)
   const toggleSection = (id: "candidate" | "content" | "body") => setOpenSection(prev => prev === id ? null : id)
-  const [sidebarTab, setSidebarTab] = useState<"content" | "templates" | "ai" | "ats">("content")
+  const [sidebarTab, setSidebarTab] = useState<"content" | "templates" | "ai">("content")
   const [mobileView, setMobileView] = useState<"form" | "preview">("form")
   const [photoPosition, setPhotoPosition] = useState<number>(
     typeof initialCandidate.photoPosition === "number" ? initialCandidate.photoPosition : 50
   )
   const photoInputRef = useRef<HTMLInputElement>(null)
-  const aiPromptRef = useRef<HTMLTextAreaElement>(null)
-  const aiAchievementRef = useRef<HTMLTextAreaElement>(null)
-  const aiFitRef = useRef<HTMLTextAreaElement>(null)
 
   async function handlePhotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -268,13 +256,12 @@ export default function CoverLetterEditor({
   // The candidate's own words, asked as three focused questions instead of one
   // blank box. A blank box gets a paraphrase of the job ad; these get the two
   // things a letter is made of — why this company, and the proof they can do it.
-  const [hlMotivation, setHlMotivation] = useState("")
-  const [hlAchievement, setHlAchievement] = useState("")
-  const [hlFit, setHlFit] = useState("")
-  const highlightsFilled = [hlMotivation, hlAchievement, hlFit].map((v) => v.trim()).filter(Boolean).join(" ")
   // ONE job description for the whole editor: it targets the AI generation (the
   // tailoring brief) AND the ATS panel. Lifted here so the two are never out of sync.
   const [jobDescription, setJobDescription] = useState("")
+  /** Nota ATS de la carta recién generada. Dato, nunca puerta: si es baja, la carta
+      se entrega igual y esto sólo dice qué términos de la vacante quedaron afuera. */
+  const [aiAts, setAiAts] = useState<{ score: number; matched: string[]; missing: string[] } | null>(null)
   const [aiGenerated, setAiGenerated] = useState(false)
   const [improvingAI, setImprovingAI] = useState(false)
   const [letterVersions, setLetterVersions] = useState<SummaryVersion[]>([])
@@ -360,28 +347,27 @@ export default function CoverLetterEditor({
     router.push("/dashboard/cover-letters")
   }
 
+  /**
+   * Con qué escribe la IA. Basta UNA de las cuatro: un CV elegido, la oferta
+   * pegada, el puesto o la empresa.
+   *
+   * No es el formulario de antes con otro nombre. Aquello exigía que el usuario
+   * REDACTARA dos respuestas —justo el trabajo que viene a delegar—; esto sólo
+   * comprueba que haya algo de dónde escribir. Con las cuatro vacías el modelo no
+   * tiene ni el oficio, y la carta saldría de ningún lado.
+   */
+  const canGenerate = Boolean(
+    selectedResumeId || jobDescription.trim() || content.subject?.trim() || content.company?.trim(),
+  )
+
   async function handleGenerateAI() {
-    // Required-field guard. The button stays enabled on purpose so the click gives
-    // the user a SPECIFIC alert (which field, where it is) instead of a dead greyed
-    // button that leaves them wondering why nothing happens. Also focus the field so
-    // they land exactly on it.
-    // Both required questions must be answered, AND the answers together must
-    // carry enough substance for the model to write from — the copy promises
-    // exactly this, so the check has to mean it. A thin prompt is what produced
-    // the off_topic 422, and one filled box does not make a letter.
-    const missingRequired = !hlMotivation.trim()
-      ? aiPromptRef.current
-      : !hlAchievement.trim()
-        ? aiAchievementRef.current
-        : null
-    if (missingRequired || highlightsFilled.length < AI_PROMPT_MIN) {
-      toast.error(t("ai_highlights_required_alert"), { duration: 6000 })
-      // Land them on the first question still empty, not just on the top field.
-      const target = missingRequired ?? aiPromptRef.current
-      target?.focus()
-      target?.scrollIntoView({ behavior: "smooth", block: "center" })
-      return
-    }
+    // No hay nada que completar antes de apretar. El guard anterior exigía dos
+    // respuestas escritas y abortaba con un toast: cancelaba la llamada ANTES de
+    // que la IA viera nada, que es el mismo defecto que el proyecto ya corrigió
+    // en los módulos ("el guard alimenta el prompt, nunca cancela la llamada").
+    // Con el CV enchufado —el selector estuvo roto desde mayo— y la oferta
+    // pegada, el modelo tiene con qué escribir; y sin oferta, la deriva del
+    // puesto en el servidor.
     setGenerating(true)
     preCheck("generate-cover-letter")
     try {
@@ -396,11 +382,6 @@ export default function CoverLetterEditor({
           jobTitle: content.subject || undefined,
           tone: aiTone,
           language: locale,
-          highlights: {
-            motivation: hlMotivation.trim() || undefined,
-            achievement: hlAchievement.trim() || undefined,
-            fit: hlFit.trim() || undefined,
-          },
           jobDescription: jobDescription.trim() || undefined,
         }),
       })
@@ -418,6 +399,7 @@ export default function CoverLetterEditor({
       const data = await res.json()
       if (!res.ok) throw new Error(data.error)
       updateContent("body", data.body)
+      setAiAts(data.ats ?? null)
       setAiGenerated(true)
       toast.success(t("ai_success"))
       await aiOnSuccess()
@@ -617,17 +599,6 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
     ["creative", t("ai_tone_creative")],
   ] as const
 
-  // One row per question, rendered by map — the three inputs differ only in
-  // their copy and their state, so they are data, not three copy-pasted blocks.
-  // `fit` is optional: motivation + achievement already carry a letter, and a
-  // third mandatory box is where people start typing filler.
-  const highlightFields = [
-    { key: "motivation", value: hlMotivation, set: setHlMotivation, ref: aiPromptRef, label: t("ai_hl_motivation_label"), placeholder: t("ai_hl_motivation_placeholder"), optional: false },
-    { key: "achievement", value: hlAchievement, set: setHlAchievement, ref: aiAchievementRef, label: t("ai_hl_achievement_label"), placeholder: t("ai_hl_achievement_placeholder"), optional: false },
-    { key: "fit", value: hlFit, set: setHlFit, ref: aiFitRef, label: t("ai_hl_fit_label"), placeholder: t("ai_hl_fit_placeholder"), optional: true },
-  ] as const
-
-
   // Palette constants used in conditional inline styles (tab bar, template grid)
   const NAVY_DEEP = "#0B1B3D", NAVY_MID = "#1a2e4a", CYAN = "#00D4FF"
   const BORDER_LIGHT = "#C8DCF0", MUTED_LABEL = "#7A9BB5"
@@ -753,7 +724,6 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
               { key: "content",   icon: <FileText className="w-3 h-3" />,   label: t("tab_content"),   activeStyle: { background: `linear-gradient(135deg, ${NAVY_DEEP} 0%, ${NAVY_MID} 100%)`, color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(11,27,61,0.2)" }, inactiveStyle: { background: "rgba(11,27,61,0.05)", color: MUTED_LABEL, border: `1px solid ${BORDER_LIGHT}` } },
               { key: "templates", icon: <LayoutGrid className="w-3 h-3" />,  label: t("tab_templates"), activeStyle: { background: "linear-gradient(135deg, #3B4F7A 0%, #2A3D6B 100%)", color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(42,61,107,0.25)" }, inactiveStyle: { background: "rgba(11,27,61,0.05)", color: MUTED_LABEL, border: `1px solid ${BORDER_LIGHT}` } },
               { key: "ai",        icon: <Sparkles className="w-3 h-3" />,    label: t("tab_ai"),        activeStyle: { background: `linear-gradient(135deg, ${CYAN} 0%, #00A8CC 100%)`, color: NAVY_DEEP, border: "none", boxShadow: "0 4px 14px rgba(0,212,255,0.35)" }, inactiveStyle: { background: "rgba(0,212,255,0.08)", color: "#00A8CC", border: "1px solid rgba(0,212,255,0.25)" } },
-              { key: "ats",       icon: <ShieldCheck className="w-3 h-3" />, label: t("tab_ats"),       activeStyle: { background: "linear-gradient(135deg, #10B981 0%, #059669 100%)", color: "#ffffff", border: "none", boxShadow: "0 4px 12px rgba(16,185,129,0.3)" }, inactiveStyle: { background: "rgba(16,185,129,0.08)", color: "#059669", border: "1px solid rgba(16,185,129,0.25)" } },
             ] as const).map(({ key, icon, label, activeStyle, inactiveStyle }) => (
               <button
                 key={key}
@@ -823,9 +793,6 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
             </div>
           )}
 
-          {sidebarTab === "ats" && (
-            <CoverLetterAtsPanel body={content.body} company={content.company} jobTitle={content.subject ?? ""} jobDescription={jobDescription} onJobDescriptionChange={setJobDescription} isPro={isPro} onUpgrade={() => setUpgradeOpen(true)} onImproveWithJob={() => setSidebarTab("ai")} />
-          )}
 
           {sidebarTab === "content" && (() => {
             const candidateSubtitle = candidate.name || t("candidate_section")
@@ -1004,7 +971,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                         <div className="bg-white border border-[#C8DCF0] rounded-[10px] p-1">
                           <RichTextEditor value={content.body} onChange={(html) => updateContent("body", html)} placeholder={t("body_placeholder")} />
                         </div>
-                        <button type="button" onClick={() => { updateContent("body", ""); setHlMotivation(""); setHlAchievement(""); setHlFit(""); setAiGenerated(false); setSidebarTab("ai") }} disabled={generating}
+                        <button type="button" onClick={() => { updateContent("body", ""); setAiGenerated(false); setSidebarTab("ai") }} disabled={generating}
                           className={`text-[11px] text-dash-muted flex items-center gap-[5px] ${generating ? "opacity-40" : ""}`}>
                           <X className="w-[11px] h-[11px]" />{t("ai_regenerate")}
                         </button>
@@ -1057,7 +1024,7 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                       <p className="text-[11px] text-white/60 leading-[1.5] mb-[10px]">{t("body_complete_desc")}</p>
                       <button
                         type="button"
-                        onClick={() => { updateContent("body", ""); setHlMotivation(""); setHlAchievement(""); setHlFit(""); setAiGenerated(false) }}
+                        onClick={() => { updateContent("body", ""); setAiGenerated(false) }}
                         className="w-full inline-flex items-center justify-center gap-1.5 transition-all text-[11px] font-semibold text-white/70 bg-white/[0.08] border border-white/15 rounded-lg px-3 py-2">
                         <X className="w-3 h-3" />
                         {t("body_complete_clear")}
@@ -1099,55 +1066,14 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                       </div>
                     </div>
 
-                    {/* The candidate's own words — three focused questions instead of one
-                        blank box. Each answer is routed to a specific paragraph of the
-                        letter server-side (motivation → hook, achievement + fit → body),
-                        which is what a single textarea could never tell the model. */}
-                    <div className="mb-3">
-                      <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] mb-[6px] flex items-center gap-[6px]">
-                        {t("ai_highlights_label")}
-                        <span className="text-[#00D4FF] not-italic normal-case" aria-hidden>*</span>
-                      </div>
-                      <div className="flex flex-col gap-2.5">
-                        {highlightFields.map((f) => (
-                          <div key={f.key}>
-                            <label htmlFor={`ai-hl-${f.key}`} className="block text-[10.5px] font-semibold text-white/50 mb-[5px] leading-[1.3]">
-                              {f.label}
-                              {f.optional && (
-                                <span className="ml-1 text-white/30 font-normal">{t("ai_jd_optional")}</span>
-                              )}
-                            </label>
-                            <div className="relative">
-                              <textarea
-                                id={`ai-hl-${f.key}`}
-                                ref={f.ref}
-                                value={f.value}
-                                onChange={(e) => f.set(e.target.value)}
-                                placeholder={f.placeholder}
-                                rows={2}
-                                maxLength={HIGHLIGHT_MAX}
-                                aria-required={!f.optional}
-                                className="w-full bg-white/[0.05] border border-white/[0.12] rounded-lg pt-[10px] px-3 pb-6 text-[12px] text-white outline-none resize-none transition-shadow"
-                                onFocus={(e) => { e.currentTarget.style.boxShadow = "0 0 0 2px rgba(0,212,255,0.3)" }}
-                                onBlur={(e) => { e.currentTarget.style.boxShadow = "none" }} />
-                              <span className={`absolute tabular-nums bottom-[6px] right-[10px] text-[10px] ${f.value.length >= HIGHLIGHT_MAX - 50 ? "text-[#fbbf24]" : "text-white/40"}`}>
-                                {f.value.length}/{HIGHLIGHT_MAX}
-                              </span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Required-field guard: the model needs real context to write a letter.
-                          A thin prompt (a bare role, a few words) is what produced the
-                          off_topic 422 — so block generation until there is enough to work with. */}
-                      {(!hlMotivation.trim() || !hlAchievement.trim() || highlightsFilled.length < AI_PROMPT_MIN) && (
-                        <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4]">{t("ai_highlights_hint")}</p>
-                      )}
-                    </div>
-
-                    {/* Job description — optional. Feeds the deterministic tailoring
-                        brief (grounds the letter in the vacancy) AND the ATS panel;
-                        one JD for both, so they never drift apart. */}
+                    {/* La ÚNICA caja. Decisión del CEO (2026-08-19): pedirle al usuario
+                        tres respuestas escritas antes de ver una sola línea invertía el
+                        trato — si sabe redactar "reduje la mora coordinando al equipo",
+                        la parte difícil ya la hizo él. Acá pega la oferta, que es un
+                        texto que YA tiene, y el resto sale de su CV. Si no la tiene, el
+                        modelo escribe para lo que ese puesto pide normalmente: la
+                        pantalla nunca bloquea. Alimenta también el panel ATS — una sola
+                        oferta para los dos, así nunca se separan. */}
                     <div className="mb-3">
                       <div className="text-[11px] font-semibold text-white/60 tracking-[0.01em] mb-[6px] flex items-center gap-[6px]">
                         {t("ai_jd_label")}
@@ -1178,9 +1104,28 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                             <p className="text-[11px] text-white/60 mt-1 leading-[1.5]">{t("ai_generated_desc")}</p>
                           </div>
                         </div>
+                        {/* La nota que el servidor ya había calculado al escribirla.
+                            No condiciona nada: informa qué términos de la vacante
+                            quedaron afuera para que el usuario decida si insiste. */}
+                        {aiAts && (
+                          <div className="rounded-lg bg-white/[0.06] border border-white/[0.12] px-3 py-2">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-[18px] font-bold text-white tabular-nums leading-none">{aiAts.score}</span>
+                              <span className="text-[10px] text-white/50">/ 100</span>
+                              <span className="text-[10.5px] text-white/70 ml-auto">
+                                {t("ai_ats_matched", { n: aiAts.matched.length, total: aiAts.matched.length + aiAts.missing.length })}
+                              </span>
+                            </div>
+                            {aiAts.missing.length > 0 && (
+                              <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4]">
+                                {t("ai_ats_missing", { n: aiAts.missing.length, list: aiAts.missing.slice(0, 5).join(", ") })}
+                              </p>
+                            )}
+                          </div>
+                        )}
                         <button
                           type="button"
-                          onClick={() => { updateContent("body", ""); setHlMotivation(""); setHlAchievement(""); setHlFit(""); setAiGenerated(false) }}
+                          onClick={() => { updateContent("body", ""); setAiGenerated(false) }}
                           className="w-full inline-flex items-center justify-center gap-1.5 transition-all text-[11px] font-semibold text-white/70 bg-white/[0.08] border border-white/15 rounded-lg px-3 py-2">
                           <X className="w-3 h-3" />
                           {t("ai_regenerate_clear")}
@@ -1190,12 +1135,17 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
 
                     {/* Generate */}
                     {!aiGenerated && (
-                      <button onClick={handleGenerateAI} disabled={generating || improvingAI}
+                      <button onClick={handleGenerateAI} disabled={generating || improvingAI || !canGenerate}
                         className="w-full inline-flex items-center justify-center gap-2 transition-all disabled:opacity-60 text-[13px] font-bold text-[#0B1B3D] py-[11px] px-[14px] rounded-[10px]"
                         style={{ background: "linear-gradient(135deg, #00D4FF 0%, #00A8CC 100%)", boxShadow: "0 6px 18px rgba(0,212,255,0.3)" }}>
                         {generating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
                         {generating ? t("ai_generating") : t("ai_generate")}
                       </button>
+                    )}
+                    {/* Un botón apagado y mudo deja al usuario adivinando qué le falta
+                        — por eso el botón se apaga Y dice por qué, en una línea. */}
+                    {!aiGenerated && !canGenerate && (
+                      <p className="text-[10px] text-white/45 mt-1.5 leading-[1.4] text-center">{t("ai_generate_needs_input")}</p>
                     )}
 
                     {/* Improve — the second pass Summary and bullets always had.
@@ -1210,6 +1160,26 @@ function updateContent(field: keyof CoverLetterContent, value: string) {
                       </button>
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Chequeo ATS, acá y no en su propia pestaña. Corre en el navegador y
+                  NO gasta un solo token —`analyzeCoverLetterAts` es determinista—, así
+                  que separarlo nunca ahorró nada: sólo obligaba a cambiar de pestaña
+                  para ver la nota de la carta que se acaba de escribir. Y traía su
+                  propia caja de la oferta, duplicando la de arriba.
+                  El gate PRO se conserva TAL CUAL: el panel decide con `isPro`, y
+                  quién ve qué no cambia con esta mudanza. */}
+              {(content.body?.trim().length ?? 0) >= 20 && (
+                <div className="mt-3">
+                  <CoverLetterAtsPanel
+                    body={content.body}
+                    company={content.company}
+                    jobTitle={content.subject ?? ""}
+                    jobDescription={jobDescription}
+                    isPro={isPro}
+                    onUpgrade={() => setUpgradeOpen(true)}
+                  />
                 </div>
               )}
             </div>

@@ -13,7 +13,8 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff } from "../shared/ai-helpers"
+import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff, losesStatedFigure } from "../shared/ai-helpers"
+import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metrics"
 // The letter takes the BAR and the never-invent list, and not `proseRules`:
 // those describe how a CV BULLET opens and how long it runs ("• ", one tense,
 // 16-28 words, a past-tense verb first), which is the wrong shape for a letter
@@ -104,9 +105,31 @@ export class AICoverLetterModule {
 
     const highlightValues = [highlights?.motivation, highlights?.achievement, highlights?.fit]
       .map((v) => v?.trim() ?? "")
+    /**
+     * DOS preguntas distintas, y estaban en la misma comprobación.
+     *
+     * "¿Es seguro el texto que escribió el usuario?" y "¿hay con qué escribir la
+     * carta?" no son lo mismo. `validateAIInput` contesta la primera y trata el
+     * vacío como inválido, así que al quitar de la pantalla las tres cajas
+     * obligatorias esta línea empezó a devolver 400 en cada intento: con un CV
+     * elegido y sin nada tipeado, la concatenación quedaba vacía y la petición
+     * moría antes de mirar el CV. El currículum nunca entró en `userText` — es
+     * contenido nuestro, no texto que el usuario acaba de pegar.
+     *
+     * Ahora: se valida lo que el usuario escribió SI escribió algo, y la
+     * pregunta de si hay material se hace aparte, contando también el CV y la
+     * oferta. La oferta no entra en la concatenación a propósito: tiene su propio
+     * tope de 6.000 caracteres y sumarla haría estallar el de `userText`.
+     */
     const userText = [company, jobTitle, recipientName, recipientTitle, userPrompt, ...highlightValues].filter(Boolean).join(" ")
-    const validation = validateAIInput(userText, AI_INPUT_LIMITS.userText)
-    if (!validation.valid) throw new AppError("invalid_input", 400)
+    if (userText) {
+      const validation = validateAIInput(userText, AI_INPUT_LIMITS.userText)
+      if (!validation.valid) throw new AppError("invalid_input", 400)
+    }
+    // Sin CV, sin oferta y sin un solo dato del puesto no hay carta que escribir.
+    // Es el mismo criterio que apaga el botón en la pantalla, comprobado también
+    // acá: el cliente no es el dueño de esta regla.
+    if (!resumeId && !jobDescription?.trim() && !userText) throw new AppError("invalid_input", 400)
 
     if (company) { const v = validateAIInput(company, AI_INPUT_LIMITS.company); if (!v.valid) throw new AppError("invalid_input", 400) }
     if (recipientName) { const v = validateAIInput(recipientName, AI_INPUT_LIMITS.recipientName); if (!v.valid) throw new AppError("invalid_input", 400) }
@@ -148,7 +171,7 @@ export class AICoverLetterModule {
     // the real lines that back them. The model writes prose around this skeleton,
     // so the letter is tailored AND grounded by construction, not by hope.
     const brief = buildCoverLetterBrief({ jobDescription, sectionData, company, jobTitle })
-    const briefBlock = this.renderBriefBlock(brief, language)
+    const briefBlock = this.renderBriefBlock(brief, language) + this.roleFallbackBlock(brief.hasJd, jobTitle, language)
 
     // The candidate's own input. The structured form wins when present: three
     // labelled answers tell the model WHICH paragraph each fact belongs to,
@@ -188,7 +211,7 @@ ${recipientName ? `Hiring Manager: ${recipientName}${recipientTitle ? `, ${recip
 
 Tone: ${toneLabel}
 
-Write 3 tight paragraphs (4 maximum), 250–350 words TOTAL — the finished letter MUST fit on ONE page. A recruiter skims it in under 30 seconds; a shorter, specific letter beats a long one:
+Write 3 tight paragraphs (4 maximum), 250–${LETTER_ONE_PAGE_WORDS} words TOTAL — the finished letter MUST fit on ONE page. A recruiter skims it in under 30 seconds; a shorter, specific letter beats a long one:
 1. HOOK — Open with a specific, compelling reason why this candidate wants THIS role at THIS company. Reference something concrete about the company or the role. No generic openers like "I am writing to apply...".
 2. FIT & ACHIEVEMENTS — Highlight 2–3 specific accomplishments from the candidate's profile that are directly relevant to this role, and what they uniquely bring. Use ONLY the real technologies, employers, and results the profile states. Use ONLY figures the profile explicitly states; if it states none, describe the impact WITHOUT a number.
 3. CLOSING CTA — End with a confident, warm call to action that invites next steps.
@@ -225,7 +248,7 @@ ${recipientName ? `Responsable de selección: ${recipientName}${recipientTitle ?
 
 Tono: ${toneLabel}
 
-Escribe 3 párrafos concisos (4 máximo), 250–350 palabras EN TOTAL — la carta terminada DEBE caber en UNA página. El recruiter la escanea en menos de 30 segundos; una carta más corta y específica gana a una larga:
+Escribe 3 párrafos concisos (4 máximo), 250–${LETTER_ONE_PAGE_WORDS} palabras EN TOTAL — la carta terminada DEBE caber en UNA página. El recruiter la escanea en menos de 30 segundos; una carta más corta y específica gana a una larga:
 1. GANCHO — Abre con una razón específica y convincente de por qué este candidato quiere ESTE puesto en ESTA empresa. Referencia algo concreto del rol o la empresa. Nada genérico como "Me dirijo a usted para...".
 2. ENCAJE Y LOGROS — Destaca 2–3 logros concretos del perfil del candidato directamente relevantes para este puesto, y qué aporta que otros no. Usa SOLO las tecnologías, empresas y resultados reales que declara el perfil. Usa SOLO cifras que el perfil declare explícitamente; si no declara ninguna, describe el impacto SIN número.
 3. CIERRE Y CTA — Cierra con una llamada a la acción segura y cálida que invite a los siguientes pasos.
@@ -346,7 +369,10 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
         }
       }
     }
-
+    // Último paso: que entre en una página. Va al FINAL a propósito — los guards de
+    // arriba pueden alargar la carta (el de keywords teje términos nuevos), así que
+    // medir antes daría un número que ya no es el que se entrega.
+    body = await this.fitLetterToOnePage(body, prompt, langInstruction, language, grounding, retryUsages)
     const html = plainToHtml(body)
 
     const genUsage = response.usage
@@ -359,7 +385,26 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       completionTokens,
       costUsd: computeCostUsd(AI_MODEL_PROSE, promptTokens, completionTokens),
     })
-    return { body: html }
+    /**
+     * La nota ATS viaja CON la carta. Ya estaba calculada —el motor puntúa el
+     * borrador dentro del bucle de generación— y se tiraba: `return { body }`. El
+     * usuario tenía que ir a mirarla a otro lado para enterarse de algo que el
+     * servidor supo antes de responderle. Cero tokens extra: es determinista.
+     *
+     * Es un DATO, nunca una puerta. Si la oferta no se pegó, no hay contra qué
+     * puntuar y viaja `undefined` — la carta se entrega igual. Ninguna nota, por
+     * baja que sea, impide entregar la carta.
+     */
+    const graded = jobDescription?.trim() ? analyzeCoverLetterAts(htmlToPlain(html), jobDescription) : null
+    if (!graded) return { body: html }
+    return {
+      body: html,
+      ats: {
+        score: graded.score,
+        matched: graded.keywords.matched,
+        missing: graded.keywords.missing,
+      },
+    }
   }
 
   /** Render the deterministic brief into the prompt. Empty string when there is
@@ -487,14 +532,108 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
   /** One grounded retry when the first draft invented content. Names the failure
    *  last (the model must be told what it did wrong), and never quotes the invented
    *  token back. Returns null on any failure — the first draft still stands. */
-  private async retryGroundedGeneration(
+
+  /** Palabras de prosa, para contrastar contra lo que entra en la hoja. */
+  private letterWordCount(body: string): number {
+    return body.trim().split(/\s+/).filter(Boolean).length
+  }
+
+  /**
+   * La carta se pasa de una página — y ese es el ÚNICO problema que se corrige acá.
+   *
+   * Medido: las 55 plantillas sostienen 377 palabras con el contrato tipográfico
+   * (`LETTER_ONE_PAGE_WORDS` deja margen sobre esa medición). Por encima, el PDF
+   * sale de dos páginas, que no es la convención del rubro y no es lo que el
+   * propio prompt promete.
+   *
+   * LO QUE NO HACE, y es la parte importante: no acorta a costa del contenido. Un
+   * recorte que se lleva puesto un dato deja una carta más corta y peor, y lo que
+   * se paga acá es el valor curricular, no el largo. Por eso el reintento pide
+   * comprimir RELLENO —conectores, preámbulos, adjetivos— y la versión corta se
+   * acepta sólo si además de entrar NO pierde ninguna cifra que el candidato
+   * declaró y NO inventa nada nuevo. Si no cumple, gana la original: dos páginas
+   * con la información completa valen más que una página incompleta.
+   *
+   * Un solo reintento, como el resto de los guards del módulo.
+   */
+  private async fitLetterToOnePage(
+    body: string,
     basePrompt: string,
     langInstruction: string,
     language: "es" | "en",
-  ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
+    grounding: string,
+    retryUsages: { prompt_tokens?: number; completion_tokens?: number }[],
+  ): Promise<string> {
+    const words = this.letterWordCount(body)
+    if (words <= LETTER_ONE_PAGE_WORDS) return body
+
+    this.logger.warn("[AIService.generateCoverLetter] letter over one page, compressing", { words })
     const note = language === "en"
-      ? "YOUR LAST DRAFT INVENTED FACTS. Rewrite the letter using ONLY what the candidate profile states. Do NOT invent numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
-      : "TU BORRADOR ANTERIOR INVENTÓ DATOS. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO inventes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre inventado como \"XYZ Corp\"."
+      ? `YOUR LAST DRAFT WAS ${words} WORDS AND DOES NOT FIT ON ONE PAGE. Rewrite it in ${LETTER_ONE_PAGE_WORDS} words or fewer. Cut ONLY filler: connectors, preambles, adjectives, and any sentence that states no fact. KEEP every concrete detail — figures, tools, employers, responsibilities and results the candidate stated. Do NOT drop a number to save words, and do NOT add anything new.`
+      : `TU BORRADOR ANTERIOR TIENE ${words} PALABRAS Y NO ENTRA EN UNA PÁGINA. Reescríbelo en ${LETTER_ONE_PAGE_WORDS} palabras o menos. Recorta SOLO relleno: conectores, preámbulos, adjetivos y cualquier frase que no aporte un dato. CONSERVA todos los datos concretos — cifras, herramientas, empleadores, responsabilidades y resultados que el candidato declaró. NO quites un número para ahorrar palabras, y NO agregues nada nuevo.`
+
+    const retry = await this.retryWithNote(basePrompt, note, langInstruction, language)
+    if (!retry) return body
+    retryUsages.push(retry.usage ?? {})
+    const shorter = stripSignOff(retry.body)
+
+    if (losesStatedFigure(body, shorter)) {
+      this.logger.warn("[AIService.generateCoverLetter] compressed draft dropped a figure; keeping the full letter")
+      return body
+    }
+    if (this.letterInventsContent(shorter, grounding)) {
+      this.logger.warn("[AIService.generateCoverLetter] compressed draft invented content; keeping the full letter")
+      return body
+    }
+    if (this.letterWordCount(shorter) >= words) return body
+    return shorter
+  }
+
+  /**
+   * El único camino de reintento del módulo: mismo modelo, mismo `system` en los
+   * dos idiomas, y lo único que cambia es la nota que explica qué salió mal.
+   *
+   * Estaba escrito tres veces (grounding, keywords y ahora el largo). Tres copias
+   * del mismo bloque son tres lugares donde arreglar un `system` que falta en una
+   * rama — que es exactamente la omisión que 9ba3af2 tuvo que corregir en diez
+   * módulos.
+   */
+  /**
+   * Qué hacer cuando el usuario no pegó la oferta.
+   *
+   * La pantalla dejó de pedirle tres respuestas escritas y ahora tiene UNA caja:
+   * la vacante. Pero mucha gente no la tiene a mano, y una caja vacía no puede
+   * volver a ser un muro — el módulo entero está construido sobre que ningún
+   * botón de IA devuelve un hueco.
+   *
+   * LA LÍNEA, que es la misma que fija la doctrina de redacción: decir en qué
+   * consiste normalmente un puesto es conocimiento del oficio y es el valor que
+   * se paga; afirmar algo sobre ESTA empresa o sobre ESTE proceso de selección
+   * sería inventar un hecho. Por eso el bloque autoriza lo primero y prohíbe lo
+   * segundo de forma explícita: nada de "su reciente ronda de inversión", nada
+   * de "su cultura de innovación", nada de requisitos que nadie publicó.
+   *
+   * Vacío cuando SÍ hay oferta: ahí manda el brief real y este texto sólo haría
+   * ruido en el prompt.
+   */
+  private roleFallbackBlock(hasJd: boolean, jobTitle: string | undefined, language: "es" | "en"): string {
+    if (hasJd) return ""
+    const role = (jobTitle ?? "").trim()
+    return language === "en"
+      ? `\n=== NO VACANCY TEXT WAS PROVIDED ===
+Write for what ${role ? `a "${role}" role` : "this role"} normally involves: the duties, tools and responsibilities the trade is made of. That is professional knowledge and it belongs in the letter.
+NEVER state anything about THIS employer — no achievements, funding, culture, products, size or history — and never invent a requirement as if the vacancy had published it. Anchor every claim about the candidate in their résumé, exactly as above.\n`
+      : `\n=== NO SE PEGÓ EL TEXTO DE LA VACANTE ===
+Escribe para lo que ${role ? `un puesto de "${role}"` : "este puesto"} implica normalmente: las tareas, herramientas y responsabilidades de las que está hecho ese oficio. Eso es conocimiento profesional y sí va en la carta.
+NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, ni productos, ni tamaño, ni historia— ni inventes un requisito como si la vacante lo hubiera publicado. Todo lo que digas del candidato sale de su CV, igual que arriba.\n`
+  }
+
+  private async retryWithNote(
+    basePrompt: string,
+    note: string,
+    langInstruction: string,
+    language: "es" | "en",
+  ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     try {
       const res = await this.aiClient.chat({
         model: AI_MODEL_PROSE,
@@ -502,10 +641,9 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
         temperature: AI_TEMPERATURE_STRUCTURED,
         response_format: { type: "json_object" },
         messages: [
-          // Both branches, because a `system` that exists in one language is a
-          // ROLE the other language never receives — the same omission 9ba3af2
-          // fixed in ten other modules. The retry is where grounding matters most,
-          // so an English letter must not be asked in Spanish not to invent.
+          // Las dos ramas, porque un `system` que existe en un idioma es un ROL que
+          // el otro nunca recibe. El reintento es donde más importa, así que una
+          // carta en inglés no puede pedirse en español.
           { role: "system", content: language === "en"
             ? `You are a senior cover-letter writer. You NEVER invent figures, companies or technologies absent from the profile. ${langInstruction}`
             : `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
@@ -520,6 +658,17 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     }
   }
 
+  private async retryGroundedGeneration(
+    basePrompt: string,
+    langInstruction: string,
+    language: "es" | "en",
+  ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
+    const note = language === "en"
+      ? "YOUR LAST DRAFT INVENTED FACTS. Rewrite the letter using ONLY what the candidate profile states. Do NOT invent numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
+      : "TU BORRADOR ANTERIOR INVENTÓ DATOS. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO inventes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre inventado como \"XYZ Corp\"."
+    return this.retryWithNote(basePrompt, note, langInstruction, language)
+  }
+
   /** ATS-in-the-loop retry: weave in specific résumé-supported vacancy terms the
    *  first draft missed — naturally, through real achievements, never inventing and
    *  never keyword-stuffing, and still one page. Returns null on any failure so the
@@ -532,31 +681,9 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
   ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     const list = keywords.slice(0, 8).join(", ")
     const note = language === "en"
-      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT invent anything, do NOT keyword-stuff, keep it 250–350 words and ONE page.`
-      : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO inventes nada, NO amontones keywords, mantenla en 250–350 palabras y UNA página.`
-    try {
-      const res = await this.aiClient.chat({
-        model: AI_MODEL_PROSE,
-        max_tokens: 900,
-        temperature: AI_TEMPERATURE_STRUCTURED,
-        response_format: { type: "json_object" },
-        messages: [
-          // Both branches, because a `system` that exists in one language is a
-          // ROLE the other language never receives — the same omission 9ba3af2
-          // fixed in ten other modules. The retry is where grounding matters most,
-          // so an English letter must not be asked in Spanish not to invent.
-          { role: "system", content: language === "en"
-            ? `You are a senior cover-letter writer. You NEVER invent figures, companies or technologies absent from the profile. ${langInstruction}`
-            : `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
-          { role: "user", content: `${basePrompt}\n\n${note}` },
-        ],
-      })
-      const parsed = parseAIJson<{ body?: unknown }>(res.choices[0]?.message?.content ?? "")
-      if (typeof parsed.body !== "string" || !parsed.body.trim()) return null
-      return { body: parsed.body, usage: res.usage }
-    } catch {
-      return null
-    }
+      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT invent anything, do NOT keyword-stuff, keep it under ${LETTER_ONE_PAGE_WORDS} words and ONE page.`
+      : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO inventes nada, NO amontones keywords, mantenla por debajo de ${LETTER_ONE_PAGE_WORDS} palabras y UNA página.`
+    return this.retryWithNote(basePrompt, note, langInstruction, language)
   }
 
   async improveCoverLetter(userId: string, input: ImproveCoverLetterInput, plan: string): Promise<VersionsResult> {
@@ -642,7 +769,7 @@ GOLDEN RULES (apply all):
    - Version 1: Formal and executive
    - Version 2: Balanced and direct
    - Version 3: Dynamic and impact-oriented
-6. Maximum 4 paragraphs per version, up to 350 words. Dense in value, no filler. (This app's own generator writes 3-4 tight paragraphs — roughly 250-350 words, one page — so keep each version in that range and never pad to fill space.)
+6. Maximum 4 paragraphs per version, up to ${LETTER_ONE_PAGE_WORDS} words. Dense in value, no filler. (This app's own generator writes 3-4 tight paragraphs — roughly 250-${LETTER_ONE_PAGE_WORDS} words, one page — so keep each version in that range and never pad to fill space.)
 7. If the letter is already strong — concrete, specific, free of clichés, and aligned to the role — return {"status": "already_optimized", "versions": []}. That is a correct and expected answer. Never pad the response with three cosmetic rewordings of a letter that did not need them.
 
 ON NUMBERS — read this last and follow it exactly:
@@ -671,7 +798,7 @@ REGLAS DE ORO (aplica todas):
    - Versión 1: Formal y ejecutiva
    - Versión 2: Equilibrada y directa
    - Versión 3: Dinámica y orientada al impacto
-6. Máximo 4 párrafos por versión, hasta 350 palabras. Denso en valor, sin relleno. (El generador de esta misma app escribe 3-4 párrafos concisos — unas 250-350 palabras, una página — así que mantén cada versión en ese rango y nunca rellenes para ocupar espacio.)
+6. Máximo 4 párrafos por versión, hasta ${LETTER_ONE_PAGE_WORDS} palabras. Denso en valor, sin relleno. (El generador de esta misma app escribe 3-4 párrafos concisos — unas 250-${LETTER_ONE_PAGE_WORDS} palabras, una página — así que mantén cada versión en ese rango y nunca rellenes para ocupar espacio.)
 7. Si la carta ya está fuerte — concreta, específica, sin clichés y alineada al puesto — devuelve {"status": "already_optimized", "versions": []}. Es una respuesta correcta y esperada. Nunca rellenes con tres reescrituras cosméticas de una carta que no las necesitaba.
 
 SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:
@@ -775,7 +902,12 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     // feedback from prompted LLMs", but that it "works well in tasks that can
     // use reliable external feedback". hasCliche is exactly that.
     const flawed = rewritten.filter(hasCliche)
-    if (flawed.length === 0) {
+    // Una versión que no entra en una página es un defecto como el cliché, y se
+    // juzga sobre el CONJUNTO: las tres son alternativas por tono y basta con que
+    // el usuario tenga UNA que entre para poder elegir bien. Exigir que entren las
+    // tres gastaría el reintento para nada.
+    const noneFits = rewritten.every((v) => this.letterWordCount(v) > LETTER_ONE_PAGE_WORDS)
+    if (flawed.length === 0 && !noneFits) {
       this.logSummaryUsage(userId, plan, response.usage, undefined)
       // Same rule as bullets and summaries: our own words, spell-checked.
       const cleanBody = await cleanGeneratedText(rewritten, language)
@@ -785,9 +917,10 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     this.logger.warn("[AIService.improveCoverLetter] retrying once", {
       flawed: flawed.length,
       total: rewritten.length,
+      noneFits,
       cliches: [...new Set(flawed.flatMap(findCliches))],
     })
-    const retry = await this.retryLetterForQuality(prompt, langInstruction, language)
+    const retry = await this.retryLetterForQuality(prompt, langInstruction, language, noneFits)
     if (retry) {
       const retryClean = this.usableVersions(retry.versions, source, plainBody)
 
@@ -798,10 +931,19 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // one version because another still carried filler, and swapping the
       // whole set risked trading a clean tone for a flawed one. Here every slot
       // can only improve or stay.
+      // Una ranura sólo puede mejorar. La alternativa entra si arregla el defecto
+      // que tenía esta versión —el cliché, o el no caber— y NUNCA si para lograrlo
+      // se llevó puesta una cifra que el candidato declaró: una carta más corta a
+      // la que le falta un dato es peor que la larga completa.
       const merged = rewritten.map((first, i) => {
         const alt = retryClean[i]
         if (!alt) return first
-        return hasCliche(first) && !hasCliche(alt) ? alt : first
+        if (losesStatedFigure(first, alt)) return first
+        if (hasCliche(first) && !hasCliche(alt)) return alt
+        const firstFits = this.letterWordCount(first) <= LETTER_ONE_PAGE_WORDS
+        const altFits = this.letterWordCount(alt) <= LETTER_ONE_PAGE_WORDS
+        if (!firstFits && altFits && !hasCliche(alt)) return alt
+        return first
       })
 
       const fixed = flawed.length - merged.filter(hasCliche).length
@@ -858,10 +1000,19 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     basePrompt: string,
     langInstruction: string,
     language: "es" | "en",
+    /** true cuando NINGUNA versión entraba en una página. */
+    alsoTooLong = false,
   ): Promise<{ versions: unknown; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     const note = language === "en"
       ? "YOUR LAST ATTEMPT FAILED. Write all three letters again from scratch — do NOT paraphrase what you wrote before, start fresh.\n\nYour writing leaned on filler that says nothing about this person — the kind of phrase that fits any candidate in any role. Replace every one of them with a concrete detail the letter already gives: the company, the work, the actual result. If a sentence would still make sense in someone else's letter, it does not belong in this one."
       : "TU INTENTO ANTERIOR FALLÓ. Escribe las tres cartas otra vez desde cero — NO parafrasees lo anterior, empieza de nuevo.\n\nTu redacción se apoyó en relleno que no dice nada de esta persona — de esas frases que le encajan a cualquier candidato en cualquier puesto. Sustituye cada una por un dato concreto que la carta ya da: la empresa, el trabajo, el resultado real. Si una frase seguiría teniendo sentido en la carta de otro, no pertenece a esta."
+
+    // El MISMO reintento cubre los dos defectos. Dos reintentos separados serían
+    // dos usos y dos esperas para el usuario por una sola petición — y el módulo
+    // ya tiene la regla de un solo reintento por la misma razón.
+    const lengthNote = language === "en"
+      ? `\n\nEvery version was also too long for one page. Keep each one at ${LETTER_ONE_PAGE_WORDS} words or fewer by cutting filler ONLY — never a figure, tool, employer or result the candidate stated.`
+      : `\n\nAdemás, ninguna versión entraba en una página. Mantén cada una en ${LETTER_ONE_PAGE_WORDS} palabras o menos recortando SOLO relleno — nunca una cifra, herramienta, empleador o resultado que el candidato declaró.`
 
     try {
       const res = await this.aiClient.chat({
@@ -873,7 +1024,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
           { role: "system", content: language === "en"
             ? `You are an Elite Career Consultant. You NEVER invent figures and never write placeholders. ${langInstruction}`
             : `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
-          { role: "user", content: `${basePrompt}\n\n${note}` },
+          { role: "user", content: `${basePrompt}\n\n${note}${alsoTooLong ? lengthNote : ""}` },
         ],
       })
       const parsed = parseAIJson<{ versions?: unknown }>(res.choices[0]?.message?.content ?? "")

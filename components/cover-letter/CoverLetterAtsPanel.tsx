@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useTranslations } from "next-intl"
-import { ShieldCheck, Lock, Loader2, CheckCircle2, AlertTriangle, XCircle, Sparkles } from "lucide-react"
+import { ShieldCheck, Lock, Loader2, CheckCircle2, AlertTriangle, XCircle } from "lucide-react"
 import { analyzeCoverLetterAts, type CoverLetterAtsResult, type CoverLetterAtsVerdict } from "@/lib/ats/cover-letter-ats"
 
 /** Strip TipTap HTML to the plain text the ATS engine reads. Client-safe. */
@@ -39,15 +39,13 @@ interface Props {
   /** The single job description shared with the AI generator (lifted to the editor)
    *  so tailoring and ATS scoring run against the exact same vacancy text. */
   jobDescription: string
-  onJobDescriptionChange: (v: string) => void
   isPro: boolean
   onUpgrade: () => void
   /** Jump to the AI tab so the buyer can regenerate the body against this exact JD —
    *  turns the "missing keywords" diagnosis into a one-click action. */
-  onImproveWithJob?: () => void
 }
 
-export default function CoverLetterAtsPanel({ body, jobDescription, onJobDescriptionChange, isPro, onUpgrade, onImproveWithJob }: Props) {
+export default function CoverLetterAtsPanel({ body, jobDescription, isPro, onUpgrade }: Props) {
   const t = useTranslations("cover_letter_editor")
   const jd = jobDescription
   const [result, setResult] = useState<CoverLetterAtsResult | null>(null)
@@ -106,18 +104,10 @@ export default function CoverLetterAtsPanel({ body, jobDescription, onJobDescrip
         </div>
       </div>
 
-      {/* Job description */}
-      <div>
-        <label className="mb-1 block text-[10px] font-bold uppercase tracking-[0.06em] text-dash-muted">{t("ats_jd_label")}</label>
-        <textarea
-          value={jd}
-          onChange={(e) => onJobDescriptionChange(e.target.value)}
-          placeholder={t("ats_jd_placeholder")}
-          rows={4}
-          maxLength={6000}
-          className="w-full resize-none rounded-xl border border-[#C8DCF0] bg-white px-3 py-2 text-[12px] text-dash-navy outline-none focus:border-emerald-400"
-        />
-      </div>
+      {/* La oferta ya no se pide acá. Vivía en DOS pantallas —esta y la de generar—
+          compartiendo estado: el usuario veía el mismo pedido dos veces y no sabía
+          si tenía que pegarlo dos veces. Ahora hay una sola caja, arriba, y este
+          panel lee de ahí. */}
 
       <button
         type="button"
@@ -164,16 +154,6 @@ export default function CoverLetterAtsPanel({ body, jobDescription, onJobDescrip
                   <span key={kw} className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10.5px] font-semibold text-amber-700">{kw}</span>
                 ))}
               </div>
-              {isPro && onImproveWithJob && (
-                <button
-                  type="button"
-                  onClick={onImproveWithJob}
-                  className="mt-2.5 inline-flex items-center gap-1.5 rounded-lg bg-[#00A8CC] px-3 py-2 text-[11px] font-bold text-white transition-all hover:bg-[#0090b0] hover:shadow-md"
-                >
-                  <Sparkles width={13} height={13} />
-                  {t("ats_improve_with_job")}
-                </button>
-              )}
             </div>
           )}
 

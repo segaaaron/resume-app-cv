@@ -15,8 +15,8 @@
 
 /** Every premium cover-letter template id. `elegant` is the only free one. */
 export const LTR_PRO_IDS: readonly string[] = [
-  "architect", "atlas", "aurum", "axiom", "bloom", "codex", "consul", "diagonal",
-  "echo", "ember", "executive", "flare", "folio", "fortis", "gazette", "gradient",
+  "architect", "atlas", "aurum", "bloom", "consul", "diagonal",
+  "echo", "ember", "executive", "folio", "fortis", "gazette", "gradient",
   "herald", "lumen", "material", "meridian", "minimal", "monogram", "mosaic",
   "newspaper", "nova", "obsidian", "onyx", "prism", "sidebar", "signal", "split",
   "sterling", "terra", "timeline", "twotone", "vantage", "velvet", "verso", "vertex",

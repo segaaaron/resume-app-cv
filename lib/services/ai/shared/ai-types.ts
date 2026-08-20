@@ -408,6 +408,21 @@ export type CvAnalysis = z.infer<typeof CvAnalysisSchema>
 
 export interface CoverLetterResult {
   body: string
+  /**
+   * La nota ATS de la carta recién escrita, cuando hubo una oferta contra la cual
+   * puntuar. El motor ya la calculaba dentro de la generación y se descartaba: el
+   * usuario tenía que buscarla en otra pantalla para saber algo que el servidor ya
+   * sabía. Es determinista, así que viajar con la respuesta no cuesta un token.
+   *
+   * Opcional a propósito. Sin oferta no hay dimensión de keywords que medir, y una
+   * nota nunca condiciona la entrega de la carta.
+   */
+  ats?: {
+    score: number
+    /** Términos de la vacante que la carta SÍ usa, y los que le faltan. */
+    matched: string[]
+    missing: string[]
+  }
 }
 
 export interface SkillItem {
