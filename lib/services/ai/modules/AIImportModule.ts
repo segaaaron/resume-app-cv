@@ -71,7 +71,7 @@ export class AIImportModule {
 
     const system =
       "You are a precise resume data extractor. Extract ONLY information explicitly present in the resume text. " +
-      "NEVER hard-code, guess or complete missing data — if a field is absent, leave it empty. " +
+      "NEVER guess or complete missing data — if a field is absent, leave it empty. " +
       "Preserve the original language and wording of the content; do not translate or rewrite. " +
       "Return ONLY valid JSON (no markdown). If the text is not a resume/CV, return {\"isResume\": false}."
 
@@ -141,7 +141,7 @@ export class AIImportModule {
     const note = language === "es"
       ? "El contenido puede estar en español; consérvalo tal cual."
       : "Content may be in English; keep it as-is."
-    return `Extract this resume into the following JSON shape. Include a field ONLY if it is present in the text; otherwise omit it or leave it empty. Do not hard-code anything. ${note}
+    return `Extract this resume into the following JSON shape. Include a field ONLY if it is present in the text; otherwise omit it or leave it empty. Do not fill in anything the text does not contain. ${note}
 
 {
   "isResume": true,
@@ -193,7 +193,7 @@ ${rawText}`
     // This used to return "" on any mismatch, which meant the person who
     // imported a two-column PDF lost their own email and phone: extractors emit
     // "mikisaravia ios@gmail.com" for an address rendered without the space, and
-    // a literal substring check calls that an hard-coded fact. Nothing is hard-coded
+    // a literal substring check calls that a hard-coded fact. Nothing is hard-coded
     // here either — when the model's value does not check out, the address is
     // read out of the document itself. Empty now means the CV really has none.
     const contactOrEmpty = (v: unknown): string => {

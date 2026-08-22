@@ -1,4 +1,5 @@
 import { parseBullets } from "@/lib/services/ai/shared/bullets"
+import { isImprovableLine } from "./bullet-strength"
 import type { RecruiterFix } from "./build-report"
 
 /**
@@ -102,7 +103,7 @@ export function verifyContextOf(sectionData: Record<string, unknown>, resumeText
  * Por qué se descartó. Se devuelve en vez de un booleano para poder MEDIRLO:
  * un guard que sólo dice «no» esconde si está filtrando de más.
  */
-export type RejectReason = "missing_target" | "quote_not_in_cv" | "broken_reference"
+export type RejectReason = "missing_target" | "quote_not_in_cv" | "broken_reference" | "line_has_no_defect"
 
 export function rejectionOf(fix: RecruiterFix, ctx: VerifyContext): RejectReason | null {
   // 1. La línea que dice tocar tiene que existir.
@@ -115,6 +116,61 @@ export function rejectionOf(fix: RecruiterFix, ctx: VerifyContext): RejectReason
     // alcanza con que el puesto tenga alguna línea que reescribir. Exigir que el
     // índice caiga justo descartaría hallazgos buenos cuyo número se corrió.
     if (bullets.length === 0) return "missing_target"
+  }
+
+  /**
+   * 1.b LA LÍNEA QUE SEÑALA TIENE QUE TENER UN DEFECTO — el freno del bucle.
+   *
+   * ── MEDIDO CONTRA LA API REAL, 2026-08-21 ────────────────────────────────
+   *
+   * Se corrió el ATS sobre cuatro CVs, se aplicó TODO lo que ofreció, y se
+   * volvió a correr sobre el CV ya corregido:
+   *
+   *   es-cajero-banco    22 → 25   apliqué 3   REINCIDENTES 3
+   *   es-peluquera       14 → 37   apliqué 3   REINCIDENTES 3
+   *   es-soldador        10 → 22   apliqué 3   REINCIDENTES 3
+   *   es-recepcionista   15 → 31   apliqué 3   REINCIDENTES 3
+   *
+   * Cuatro de cuatro. Y lo que la segunda ronda volvía a señalar era EL TEXTO
+   * QUE SE ACABABA DE APLICAR — «Realicé arqueo y cuadre diario de caja contra
+   * efectivo, vouchers y comprobantes antes del cierre» marcado otra vez.
+   *
+   * Pasadas por el motor determinista, esas cuatro líneas dan:
+   *
+   *   mejorable=false   score=0   razones=[]
+   *
+   * ── LA CAUSA, Y POR QUÉ NINGÚN GUARD DE TEXTO LA ARREGLA ─────────────────
+   *
+   * Un modelo al que se le pregunta «¿qué está mal en este CV?» SIEMPRE
+   * encuentra algo: es un crítico generativo, y un crítico generativo no tiene
+   * condición de parada. Por buena que quede la línea, la próxima corrida
+   * propone otra vuelta. No es un defecto del prompt — es la forma de la
+   * pregunta.
+   *
+   * La condición de parada tiene que ser DETERMINISTA, y ya existía. Es la regla
+   * que el CEO puso al principio de todo:
+   *
+   *   «El que manda es el ATS. Si tenés otras cosas que validar, deberías
+   *    validar contra la respuesta del ATS y no a ciegas.»
+   *
+   * Así que la opinión del modelo sobre una línea entra sólo si el motor
+   * determinista también ve algo ahí. Si la línea no tiene defecto, no hay nada
+   * que arreglar por más que el modelo sepa escribirla distinto.
+   *
+   * ── EL ERROR SIMÉTRICO, VIGILADO ─────────────────────────────────────────
+   *
+   * Esto NO silencia al modelo sobre líneas malas: una con apertura de tarea,
+   * frase vacía, demasiado corta o demasiado larga sigue pasando, con su botón.
+   * Lo único que se calla es «puedo escribir esto distinto» sobre una línea que
+   * ya está bien — que es el trabajo infinito.
+   *
+   * Y sólo aplica a `rewrite_bullet`. Un requisito, una errata o una habilidad
+   * que falta no se juzgan por la calidad de una línea.
+   */
+  if (a?.kind === "rewrite_bullet") {
+    const role = ctx.roles.find((r) => r.id === a.targetId)
+    const linea = role ? parseBullets(role.description ?? "")[a.index ?? 0] : undefined
+    if (linea && !isImprovableLine(linea)) return "line_has_no_defect"
   }
 
   // 2. Una frase que quedó sin su nombre no se muestra.
@@ -151,6 +207,7 @@ export function verifiedRecruiterFixes(
     missing_target: 0,
     quote_not_in_cv: 0,
     broken_reference: 0,
+    line_has_no_defect: 0,
   }
   const kept: RecruiterFix[] = []
   for (const f of fixes) {

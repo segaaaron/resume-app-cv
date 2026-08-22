@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react"
 import { createPortal } from "react-dom"
+import { Z_MODAL_FOLLOW_UP } from "@/lib/ui/z-layers"
 import { useTranslations } from "next-intl"
 import { Briefcase, X } from "lucide-react"
 
@@ -55,7 +56,11 @@ export default function JobPickerModal({ title, subtitle, jobs, recommendedId, r
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[130] flex items-center justify-center p-4"
+      className="fixed inset-0 flex items-center justify-center p-4"
+      /* ENCIMA DE QUIEN LO ABRIÓ. Esto se abre DESDE el modal del ejecutor
+         (`z-9999`) y estaba en `z-130`: quedaba detrás, invisible y sin poder
+         cerrarse, con la app esperando una respuesta que el usuario no veía. */
+      style={{ zIndex: Z_MODAL_FOLLOW_UP }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="job-picker-title"

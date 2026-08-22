@@ -45,6 +45,7 @@ import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, a
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
 import { assessDescription, opensInThirdPersonEs } from "../shared/bullet-quality"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { hasCliche } from "../shared/cliches"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
@@ -283,7 +284,7 @@ Devuelve un objeto JSON:
 }
 
 Reglas:
-- Copiá "checkId" EXACTO como se te dio. Nunca te lo afirmes, nunca reescribas una línea que no está en la lista.
+- Copiá "checkId" EXACTO como se te dio. Nunca uses uno que no esté en la lista, nunca reescribas una línea que no está en la lista.
 - Usá el prefijo •. Nombrá en qué consiste el trabajo con las palabras de ese oficio.
 - Voz humana: variá el largo y la estructura de las frases; natural, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantené cada reescritura anclada a un dato concreto ya presente en el source.
 - "metricHint" dice QUÉ MEDIR en esa línea exacta — nunca una cifra, nunca la quemes — y sólo cuando la línea no tiene número. "demonstrates" es la blanda que esa línea pasa a probar. Las dos VIAJAN CON LA LÍNEA; nunca como tarea aparte.
@@ -369,6 +370,8 @@ Reglas:
       let offered = 0
       let kept = 0
       let droppedHardCoded = 0
+      /** Reescrituras descartadas por dejar afuera un término de la vacante. */
+      let droppedTerm = 0
       let droppedFigure = 0
       let droppedTrivial = 0
       const seen = new Set<string>()
@@ -415,6 +418,25 @@ Reglas:
         // Sin cambio real: idéntica, o un cambio de sinónimos.
         if (original && (isTrivialEdit(original, text) || isCosmeticReword(original, text))) { droppedTrivial++; continue }
 
+        /**
+         * Y NUNCA DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
+         *
+         * Medido de punta a punta: un CV entró con 23 y salió con 16 después de
+         * aplicar lo que este mismo panel ofreció. La reescritura era más rica,
+         * conservaba las cifras y decía más palabras — y por el camino se comía
+         * un término de la oferta. Las duras pesan .45: es la palanca más cara
+         * del informe, y ninguno de los cinco guards de arriba la mira, porque
+         * todos juzgan el TEXTO y éste juzga contra LA VACANTE.
+         *
+         * Se pregunta con `termPresent`, la misma función con la que el matcher
+         * cuenta la cobertura. No es un criterio nuevo: es el criterio del
+         * puntaje, aplicado antes de escribir en vez de después de perder.
+         */
+        if (original) {
+          const perdidos = droppedPostingTerms(original, text, [...posting.hardSkills, ...posting.softSkills])
+          if (perdidos.length > 0) { droppedTerm += perdidos.length; continue }
+        }
+
         // Reescritura lateral sobre una línea ya fuerte: distinta, no mejor.
         if (original) {
           const strong = assessDescription(original).weakOpenerIndices.length === 0 && !hasCliche(original)
@@ -446,7 +468,7 @@ Reglas:
         || losesStatedFigure(origSummary, summaryRaw)
         || figureLosesItsVerb(origSummary, summaryRaw)
       ) ? null : summaryRaw
-      return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial }
+      return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm }
     }
 
     let out = applyGuards(raw)
@@ -458,6 +480,13 @@ Reglas:
       if (out.droppedFigure > 0) reasons.push(language === "en" ? "a figure the CV already states was dropped or altered" : "borró o cambió una cifra que el CV ya dice")
       if (out.droppedHardCoded > 0) reasons.push(language === "en" ? "a bracket placeholder or a tool the candidate never declared" : "un corchete de relleno o una herramienta que el candidato no declaró")
       if (out.droppedTrivial > 0) reasons.push(language === "en" ? "the line barely changed, or changed without gaining anything" : "la línea casi no cambió, o cambió sin ganar nada")
+      // El motivo más caro se le dice con nombre: no es «mejorala otra vez», es
+      // «conservá las palabras de la oferta que la línea ya decía».
+      if (out.droppedTerm > 0) {
+        reasons.push(language === "en"
+          ? "the rewrite dropped a term the posting asks for that the original line already had — keep those words"
+          : "la reescritura dejó afuera un término que la vacante pide y que la línea original ya decía — conservá esas palabras")
+      }
       calls++
       const retryResponse = await doChat(rejectedNudge(language, reasons))
       usages.push(retryResponse.usage ?? {})
@@ -473,7 +502,7 @@ Reglas:
       }
     }
 
-    const { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial } = out
+    const { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm } = out
 
     // UNA fila de AIUsageLog por petición: el panel de admin agrupa por conteo,
     // así que un reintento no puede figurar como dos llamadas.
@@ -487,8 +516,8 @@ Reglas:
       costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
     })
 
-    if (droppedHardCoded > 0 || droppedFigure > 0 || droppedTrivial > 0) {
-      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedHardCoded, droppedFigure, droppedTrivial })
+    if (droppedHardCoded > 0 || droppedFigure > 0 || droppedTrivial > 0 || droppedTerm > 0) {
+      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedHardCoded, droppedFigure, droppedTrivial, droppedTerm })
       reportGuardDrops({
         endpoint: "tailor-cv",
         offered,
@@ -496,6 +525,7 @@ Reglas:
         hardCoded: droppedHardCoded,
         figureLoss: droppedFigure,
         trivial: droppedTrivial,
+        termLoss: droppedTerm,
       })
     }
 

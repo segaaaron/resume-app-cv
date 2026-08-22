@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/dialog"
 import { ArrowDown, Plus, Minus } from "lucide-react"
 import { diffLines } from "@/lib/services/ai/shared/line-diff"
+import { Z_MODAL_FOLLOW_UP } from "@/lib/ui/z-layers"
 
 export type SuggestionField =
   | "summary"
@@ -93,7 +94,11 @@ export default function SuggestionDiffModal({
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-[560px] w-[calc(100vw-2rem)] sm:w-[95vw] border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.08)] gap-0">
+      {/* ENCIMA DE QUIEN LO ABRIÓ. Esta confirmación se lanza desde el modal del
+          ejecutor (a pantalla completa), y sin la capa explícita caía detrás:
+          el usuario agregaba una habilidad, la viñeta nueva se mostraba para que
+          la confirmara, y la confirmación era invisible. */}
+      <DialogContent layer={Z_MODAL_FOLLOW_UP} className="p-0 overflow-hidden rounded-2xl max-w-[560px] w-[calc(100vw-2rem)] sm:w-[95vw] border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.08)] gap-0">
         {/* Head */}
         <div className="relative px-4 sm:px-7 pt-5 sm:pt-[26px] pb-4 sm:pb-5 border-b border-[#E8EDF6] bg-gradient-to-b from-[#F5F7FB] to-white">
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[60%] h-px bg-gradient-to-r from-transparent via-[#00D4FF] to-transparent opacity-60" />

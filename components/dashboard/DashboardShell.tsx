@@ -261,16 +261,26 @@ export default function DashboardShell({
             </button>
 
             {/* Page title */}
-            <div className="flex-1">
-              <span className="text-base font-bold text-dash-navy tracking-[-0.025em] [font-family:var(--dash-serif)]">
+            <div className="min-w-0 flex-1">
+              <span className="block truncate text-base font-bold text-dash-navy tracking-[-0.025em] [font-family:var(--dash-serif)]">
                 {pageTitle}
               </span>
             </div>
 
             {/* Right side */}
             <div className="flex items-center gap-2">
-              {/* Lang switcher */}
-              <div className="hidden sm:flex">
+              {/*
+                EL IDIOMA, SIEMPRE A LA VISTA — también en teléfono.
+                Estaba `hidden sm:flex`, así que por debajo de 640px la única
+                forma de cambiarlo era abrir el menú lateral y bajar hasta una
+                sección «Idioma» al final de todo. Cambiar de idioma no es una
+                preferencia enterrada: en este producto decide en qué idioma
+                escribe la IA y en qué idioma se lee el CV. Va donde el usuario
+                ya lo busca, que es donde está en escritorio.
+                El título de la página cede el espacio (`truncate`), porque el
+                título se deduce de dónde estás parado y el idioma no.
+              */}
+              <div className="flex shrink-0">
                 <LocaleSwitcher />
               </div>
 

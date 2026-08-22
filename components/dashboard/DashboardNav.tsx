@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { useTranslations, useLocale } from "next-intl"
 import { NavItem, SectionLabel, NavSeparator } from "./_nav-sub"
-import LocaleSwitcher from "@/components/marketing/LocaleSwitcher"
 import ImportResumeButton from "./ImportResumeButton"
 import NavPendingOverlay from "./NavPendingOverlay"
 
@@ -215,16 +214,12 @@ export default function DashboardNav({
           </div>
         )}
 
-        {/* Import + language — drawer only (desktop has both in the topbar).
-            The topbar hides Import below 640px with `hidden sm:block`, and it
-            lived nowhere else: on a phone the feature was simply unreachable. */}
-        <div className="lg:hidden">
-          <NavSeparator />
-          <SectionLabel label={t("section_language")} />
-          <div className="px-[11px] py-[6px]">
-            <LocaleSwitcher />
-          </div>
-        </div>
+        {/* El selector de idioma YA NO VIVE ACÁ: se fue a la barra superior,
+            visible sin abrir nada, igual que en escritorio. Tenerlo en los dos
+            lados sería el mismo control en dos sitios — y el de adentro, el que
+            nadie encuentra. Importar CV sí se queda arriba (bloque anterior):
+            la barra lo esconde por debajo de 640px y no vive en ningún otro
+            lado, así que en teléfono el menú es su única casa. */}
       </nav>
 
       {/* Footer */}

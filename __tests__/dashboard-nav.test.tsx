@@ -61,10 +61,26 @@ describe("DashboardNav — mobile drawer", () => {
     expect(html).toContain("section_import")
   })
 
-  it("keeps the language switcher", () => {
+  /**
+   * EL IDIOMA SE FUE DEL MENÚ, A PROPÓSITO.
+   *
+   * «El idioma está en el menú, sacalo de ahí; quiero que esté visible arriba
+   * como en escritorio» (CEO, 2026-08-22).
+   *
+   * Antes vivía en los dos lados sólo en escritorio: la barra lo escondía por
+   * debajo de 640px (`hidden sm:flex`), así que en teléfono la única forma de
+   * cambiarlo era abrir el cajón y bajar hasta una sección al final de todo.
+   * Ahora la barra lo muestra siempre y el cajón no lo repite — el mismo control
+   * en dos sitios deja uno que nadie encuentra.
+   *
+   * Este test se invirtió: antes exigía que estuviera acá, ahora exige que NO.
+   * Importar CV sigue en el cajón y su test sigue arriba, porque ése sí es el
+   * único lugar donde vive en teléfono.
+   */
+  it("ya no lleva el selector de idioma: vive en la barra superior", () => {
     pathname = "/en/dashboard/resumes"
     const html = mount(<DashboardNav user={USER} isPro drawerOpen />)
-    expect(html).toContain("section_language")
+    expect(html).not.toContain("section_language")
   })
 
   // Import only makes sense where the topbar shows it — the resumes list.

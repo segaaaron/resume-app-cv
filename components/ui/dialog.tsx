@@ -43,15 +43,36 @@ function DialogContent({
   className,
   children,
   showCloseButton = true,
+  layer,
   ...props
 }: DialogPrimitive.Popup.Props & {
   showCloseButton?: boolean
+  /**
+   * Capa explícita, para un diálogo que se abre ENCIMA de otra superficie.
+   *
+   * ── POR QUÉ EL PRIMITIVO NECESITABA ESTO ─────────────────────────────────
+   *
+   * Todos los diálogos de la app viven en `z-50`, y eso alcanza mientras se
+   * abran sobre la página. El editor tiene superficies propias a pantalla
+   * completa —el modal del ejecutor está en 9999— y un diálogo lanzado DESDE
+   * una de ellas caía detrás: el usuario apretaba «agregar habilidad», la
+   * viñeta nueva se mostraba para que la confirmara, y la confirmación
+   * aparecía debajo, invisible y sin poder cerrarse.
+   *
+   * No había forma de decirlo: `DialogContent` monta su propio `DialogOverlay`
+   * sin props, así que ni pasando `className` se podía subir el fondo. El
+   * defecto era la ausencia de esta palanca.
+   *
+   * Sin `layer` NADA cambia — los `z-50` siguen intactos para toda la app.
+   */
+  layer?: number
 }) {
   return (
     <DialogPortal>
-      <DialogOverlay />
+      <DialogOverlay style={layer ? { zIndex: layer } : undefined} />
       <DialogPrimitive.Popup
         data-slot="dialog-content"
+        style={layer ? { zIndex: layer, ...(props.style ?? {}) } : props.style}
         className={cn(
           "fixed top-1/2 left-1/2 z-50 grid w-full max-w-[calc(100%-2rem)] -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl bg-popover p-4 text-sm text-popover-foreground ring-1 ring-foreground/10 duration-100 outline-none sm:max-w-sm data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
           className

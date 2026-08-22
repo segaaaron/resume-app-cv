@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { createPortal } from "react-dom"
+import { Z_MODAL } from "@/lib/ui/z-layers"
 import { useTranslations } from "next-intl"
 import { Loader2, Sparkles, X } from "lucide-react"
 import {
@@ -38,7 +39,9 @@ import TermCard from "./TermCard"
  * detrás de un filtro que no tenía motivo para tocar. Cosas que se esfuman al
  * resolverlas es exactamente lo que hacía sentir el panel un pozo.
  */
-type Filter = "all" | "open" | "done" | ReportSectionId
+/** Las pestañas del ejecutor. Exportado porque el panel elige con cuál abrirlo. */
+export type TailorFilter = "all" | "open" | "done" | ReportSectionId
+type Filter = TailorFilter
 
 interface Props {
   report: AtsReport
@@ -52,6 +55,14 @@ interface Props {
   onClose: () => void
   /** Abre enfocando un hallazgo puntual, cuando se entró desde el riel. */
   focusCheckId?: string | null
+  /**
+   * El término que se pidió resolver, para aterrizar en SU tarjeta.
+   *
+   * El riel ya no escribe la viñeta por su cuenta: manda acá. Sin esto el modal
+   * abría arriba de todo y el usuario tenía que buscar entre ocho tarjetas la
+   * que acababa de pedir.
+   */
+  focusTerm?: string | null
   /** Con qué filtro abre. El veredicto del reclutador entra en «opcionales». */
   initialFilter?: Filter
   /** Colocar un término que falta: la palanca más grande del puntaje. */
@@ -63,7 +74,7 @@ interface Props {
 }
 
 export default function TailorModal({
-  report, resolutions, appliedIds, onApply, onUndo, onRemove, onApplyAll, onClose, focusCheckId, initialFilter, onWeaveTerm, onAddTerm, addedTerms, busyTerm, busy,
+  report, resolutions, appliedIds, onApply, onUndo, onRemove, onApplyAll, onClose, focusCheckId, focusTerm, initialFilter, onWeaveTerm, onAddTerm, addedTerms, busyTerm, busy,
 }: Props) {
   const t = useTranslations("editor.ats")
   const [filter, setFilter] = useState<Filter>(initialFilter ?? "all")
@@ -89,6 +100,14 @@ export default function TailorModal({
     el?.scrollIntoView({ block: "center", behavior: "smooth" })
   }, [focusCheckId])
 
+  /** Lo mismo para un término: el riel manda acá y hay que aterrizar en su tarjeta. */
+  useEffect(() => {
+    if (!focusTerm) return
+    document
+      .querySelector(`[data-term="${CSS.escape(focusTerm)}"]`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" })
+  }, [focusTerm, filter])
+
   const workload = useMemo(() => solvableChecks(report), [report])
   // Los términos que faltan son trabajo del ejecutor, no una tabla al costado:
   // las duras pesan .45 y eran lo único caro que quedaba fuera de acá.
@@ -103,6 +122,22 @@ export default function TailorModal({
   const pendingTotal = pending.length + terms2.length
   const gain = useMemo(() => recoverablePoints(report), [report])
   const terms = useMemo(() => report.terms.map((x) => x.term), [report.terms])
+
+  /**
+   * Los términos que ESTA pestaña muestra.
+   *
+   * Vivía en línea dentro del JSX y el mensaje de «no hay nada acá» miraba
+   * `terms2` —el total— en vez de esto. En «Aplicados», con cero tarjetas y
+   * términos pendientes en otra sección, no salía ni la lista ni el mensaje:
+   * un hueco mudo. Un solo lugar decide qué se pinta y qué cuenta como vacío.
+   */
+  const termsShown = useMemo(
+    () =>
+      filter === "all" || filter === "open" || filter === "hard" || filter === "soft" || filter === "other"
+        ? terms2.filter((x) => filter === "all" || filter === "open" || x.section === filter)
+        : [],
+    [terms2, filter],
+  )
 
   const shown = workload.filter((c) => {
     if (filter === "all") return true
@@ -126,15 +161,24 @@ export default function TailorModal({
 
   return createPortal(
     <div
-      className="ats-panel fixed inset-0 z-[9999] flex items-center justify-center p-4"
-      style={{ background: "rgba(20,20,15,.55)" }}
+      className="ats-panel fixed inset-0 flex items-center justify-center p-4"
+      style={{ zIndex: Z_MODAL, background: "rgba(20,20,15,.55)" }}
       onClick={onClose}
       role="dialog"
       aria-modal="true"
       aria-label={t("tailor_title_short")}
     >
       <section
-        className="flex max-h-[88vh] w-full max-w-[840px] flex-col overflow-hidden rounded-2xl"
+        /*
+          ALTURA FIJA, NO «HASTA». Era `max-h-[88vh]` sin altura: la caja se
+          encogía al contenido, así que pasar de «Todas 8» a «Aplicados 0» hacía
+          saltar el modal de casi toda la pantalla a una franja — y el usuario
+          perdía el punto donde estaba mirando en cada clic de filtro. Los
+          filtros cambian QUÉ se ve, no cuánto mide la ventana.
+          El tope en píxeles evita el defecto opuesto: en una pantalla muy alta,
+          88vh con dos tarjetas es una caja casi vacía.
+        */
+        className="flex h-[88vh] max-h-[760px] w-full max-w-[840px] flex-col overflow-hidden rounded-2xl"
         style={{ background: "var(--a-bg)", boxShadow: "var(--a-sh-lg)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -200,7 +244,11 @@ export default function TailorModal({
           )}
         </div>
 
-        <div className="flex flex-col gap-3 overflow-y-auto px-5 py-4">
+        {/* `flex-1 min-h-0` es lo que hace que el scroll ocurra ACÁ ADENTRO. Sin
+            `min-h-0` un hijo flex no baja de su altura de contenido, así que el
+            `overflow-y-auto` no enganchaba nunca: en vez de scrollear, la lista
+            empujaba la caja. */}
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-5 py-4">
           {shown.map((c, i) => (
             <FixCard
               key={c.id}
@@ -216,22 +264,27 @@ export default function TailorModal({
               busy={busy}
             />
           ))}
-          {(filter === "all" || filter === "open" || filter === "hard" || filter === "soft" || filter === "other") &&
-            terms2
-              .filter((x) => filter === "all" || filter === "open" || x.section === filter)
-              .map((x, i) => (
-                <TermCard
-                  key={`term-${x.term}`}
-                  term={x}
-                  order={shown.length + i + 1}
-                  onWeave={(term) => onWeaveTerm?.(term)}
-                  onAdd={(term) => onAddTerm?.(term)}
-                  added={!!addedTerms?.has(x.term)}
-                  busy={busyTerm === x.term}
-                />
-              ))}
+          {termsShown.map((x, i) => (
+            <TermCard
+              key={`term-${x.term}`}
+              term={x}
+              order={shown.length + i + 1}
+              onWeave={(term) => onWeaveTerm?.(term)}
+              onAdd={(term) => onAddTerm?.(term)}
+              added={!!addedTerms?.has(x.term)}
+              busy={busyTerm === x.term}
+            />
+          ))}
 
-          {shown.length === 0 && terms2.length === 0 && (
+          {/*
+            EL VACÍO ES EL DE ESTA PESTAÑA, no el del informe entero.
+            Decía `shown.length === 0 && terms2.length === 0`, y los términos
+            sólo se pintan en all/open/hard/soft/other. En «Aplicados» con cero
+            tarjetas y términos pendientes en otra sección, las dos condiciones
+            no se cumplían a la vez: no salía el mensaje y quedaba un hueco mudo
+            — que además era la mitad del salto de altura.
+          */}
+          {shown.length === 0 && termsShown.length === 0 && (
             <p className="py-8 text-center text-[12px]" style={{ color: "var(--a-muted-2)" }}>
               {t("tailor_empty_filter")}
             </p>

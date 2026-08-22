@@ -126,7 +126,7 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                       {row.term}
                     </p>
 
-                    <div className="mt-1.5 flex items-center gap-2">
+                    <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1.5">
                       {/* Los dos números, dichos. Un «3 / 0» obliga a recordar
                           cuál lado es cuál; una frase corta no.
                           El guion del lado de la vacante NO es un cero: el
@@ -155,14 +155,27 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                             <Check className="h-3 w-3" /> {t("term_added")}
                           </span>
                         )}
-                        {/* Agregarlo a la lista es determinista y gratis. */}
+                        {/*
+                          LOS BOTONES DICEN QUÉ HACEN.
+                          ── EL DEFECTO (reportado, 2026-08-22) ──────────────
+                          Eran dos cuadrados de 32px con un icono cada uno, uno
+                          al lado del otro, sin una sola palabra: «¿qué mierdas
+                          es eso, para qué es ese +?». Y era una pregunta
+                          razonable — el nombre vivía en el `title`, que en un
+                          panel nadie descubre y en táctil no existe.
+                          Peor: hacen cosas DISTINTAS y ninguna se deducía del
+                          icono. Agregar escribe el término en la lista de
+                          Habilidades, gratis y al instante. Demostrar abre el
+                          ejecutor para escribirlo DENTRO de una viñeta, que es
+                          lo que lo vuelve prueba y no afirmación. Confundirlos
+                          es hacer el trabajo equivocado.
+                        */}
                         {canAdd && (
                           <button
                             type="button"
                             onClick={() => onAdd?.(row.term)}
                             title={t("term_add")}
-                            aria-label={t("term_add")}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg border transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg border px-2 text-[10px] font-bold transition-colors hover:brightness-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             style={{
                               borderColor: "var(--a-border-2)",
                               color: "var(--a-ink-2)",
@@ -173,18 +186,17 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                               outlineColor: "var(--a-accent-ink)",
                             }}
                           >
-                            <Plus className="h-3.5 w-3.5" />
+                            <Plus className="h-3 w-3 shrink-0" />
+                            {t("term_add_short")}
                           </button>
                         )}
-                        {/* Escribirlo DENTRO de una viñeta es lo que lo vuelve prueba. */}
                         {canWeave && (
                           <button
                             type="button"
                             onClick={() => onWeave?.(row.term)}
                             disabled={busyTerm === row.term}
                             title={t("term_weave")}
-                            aria-label={t("term_weave")}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg transition-transform hover:scale-[1.06] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                            className="flex h-8 shrink-0 items-center gap-1 rounded-lg px-2 text-[10px] font-bold transition-transform hover:scale-[1.04] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                             style={{
                               background: "var(--a-ai-soft)",
                               color: "var(--a-ai-ink)",
@@ -192,7 +204,8 @@ export default function TermTable({ terms, onAdd, onWeave, addedTerms, busyTerm 
                               outlineColor: "var(--a-ai)",
                             }}
                           >
-                            <Sparkles className="h-3.5 w-3.5" />
+                            <Sparkles className="h-3 w-3 shrink-0" />
+                            {t("term_weave_short")}
                           </button>
                         )}
                       </span>

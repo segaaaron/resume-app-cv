@@ -43,10 +43,19 @@ export interface GuardDropReport {
   figureLoss: number
   /** Sin cambio real: idéntica, sinónimo, tercera persona, lateral o repetida. */
   trivial: number
+  /**
+   * Reescrituras que dejaban afuera un término que la vacante pide.
+   *
+   * El motivo más caro y el último en tener guard: las duras pesan .45, así que
+   * una sola pérdida baja el puntaje más que todos los demás motivos juntos.
+   * Vigilarlo por separado es lo que permite ver si el PROMPT empezó a comerse
+   * términos, en vez de descubrirlo cuando un CV vuelve con menos puntos.
+   */
+  termLoss: number
 }
 
 export function reportGuardDrops(r: GuardDropReport): void {
-  const dropped = r.hardCoded + r.figureLoss + r.trivial
+  const dropped = r.hardCoded + r.figureLoss + r.trivial + r.termLoss
   if (dropped <= 0) return
   logger.error("rewrites dropped by post-model guards", {
     endpoint: r.endpoint,
@@ -56,6 +65,7 @@ export function reportGuardDrops(r: GuardDropReport): void {
     hardCoded: r.hardCoded,
     figureLoss: r.figureLoss,
     trivial: r.trivial,
+    termLoss: r.termLoss,
     // Lo que se mira de un vistazo: si esto se acerca a 1, el guard dejó de
     // proteger y empezó a tapar.
     dropRate: r.offered > 0 ? Math.round((dropped / r.offered) * 100) / 100 : 0,

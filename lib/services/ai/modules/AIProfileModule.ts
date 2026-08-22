@@ -203,7 +203,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
 }
 
 Reglas:
-- Usa SIEMPRE los ids exactos del listado de secciones de arriba. Usá sólo los ids listados; nunca te afirmes uno.
+- Usa SIEMPRE los ids exactos del listado de secciones de arriba. Usá sólo los ids listados; nunca uses uno que no esté ahí.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
 - No afirmes datos (fechas, empresas, métricas) que el candidato no mencionó.
 - Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados".
@@ -272,7 +272,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
      * The model was returning "Diseño y mantenimiento de bases de datos
      * relacionales" where a résumé needs "PostgreSQL": an ATS matches keywords,
      * and a description of an activity matches nothing. The ceiling is read off
-     * our own curated dictionary rather than hard-coded — of its 1,002 entries,
+     * our own curated dictionary rather tha hard-coded — of its 1,002 entries,
      * 94% are one or two words and none exceeds four, and the four-word ones are
      * a name plus its acronym ("Applicant Tracking Systems (ATS)").
      *
@@ -385,7 +385,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         // failed grounding, and the whole entry — description included — was
         // thrown away. The user saw an assistant that returned only a summary.
         // Now the ungrounded FIELD is blanked, not the work the user described;
-        // an empty employer is a hole they fill in, never an hard-coded company.
+        // an empty employer is a hole they fill in, never a hard-coded company.
         if (!employerGrounded && !roleGrounded) {
           // Nothing here comes from the user. This one really is hard-coded.
           droppedNewWork++

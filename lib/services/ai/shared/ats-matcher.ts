@@ -20,7 +20,7 @@
 // sets would force each engine to score inputs it cannot see. See TITLE_CONNECTORS
 // below for why the two word lists must stay separate too.
 
-import { SCORE_WEIGHTS, OLD_TITLE_CREDIT, LISTED_ONLY_CREDIT, QUANTIFICATION_BAND } from "@/lib/ats/scoring-config"
+import { SCORE_WEIGHTS, OLD_TITLE_CREDIT, LISTED_ONLY_CREDIT, QUANTIFICATION_BAND, CREDIBILITY_PENALTIES } from "@/lib/ats/scoring-config"
 import { computeScoreBreakdown, type ScoreBreakdown } from "@/lib/ats/score-breakdown"
 import type { ATSSubScores, GapLever } from "./ai-types"
 import { normalizeTerm, termPresent, escapeRegExp } from "@/lib/ats/vocabulary"
@@ -264,9 +264,25 @@ function impactCoverage(pct?: number | null): number | null {
   const { min, max } = QUANTIFICATION_BAND
   if (pct >= min && pct <= max) return 100
   if (pct < min) return Math.round((pct / min) * 100)
-  // Por encima del techo: se descuenta lo que sobra, con el mismo criterio con
-  // que el medidor pinta el exceso fuera de la banda.
-  return Math.max(0, Math.round(100 - ((pct - max) / (100 - max)) * 100))
+  /**
+   * POR ENCIMA DEL TECHO SE DESCUENTA, PERO NO SE ARRASA — y el descuento no lo
+   * elige esta función.
+   *
+   * La primera versión bajaba linealmente hasta CERO, y eso hacía que un CV con
+   * TODAS las viñetas cuantificadas puntuara exactamente igual que uno SIN UNA
+   * SOLA CIFRA. No son la misma falta ni de lejos: el segundo no dice ningún
+   * resultado, el primero los dice de más. Empatarlos es la clase de número que
+   * el CEO lee como que el panel se contradice — «cuantifiqué todo y me diste lo
+   * mismo que si no hubiera cuantificado nada».
+   *
+   * El precio de saturar YA estaba declarado en el proyecto:
+   * `CREDIBILITY_PENALTIES.metricSaturation` = 12, el mismo que cobra el bloque
+   * de credibilidad por este mismo defecto. Usar esa constante —y no un número
+   * nuevo— es lo que evita que las dos pantallas cobren cosas distintas por lo
+   * mismo. Al 100% la categoría queda en 88, no en 0.
+   */
+  const castigo = CREDIBILITY_PENALTIES.metricSaturation.value
+  return Math.round(100 - (castigo * (pct - max)) / (100 - max))
 }
 
 function sectionsScore(s: SectionPresence): number {
@@ -398,7 +414,7 @@ export function computeATSMatch(
     // The stuffing answer. Dumping every missing keyword into Skills still
     // moves the score — coverage only asks whether the word is there — but now
     // all of them come back listed-only, and the user sees exactly which
-    // claims their own CV does not back up. A fact, not an hard-coded penalty.
+    // claims their own CV does not back up. A fact, not a hard-coded penalty.
     // Deduped: a posting can list the same requirement as both a hard skill and a
     // soft one ("Debugging production issues"), and concatenating the two buckets
     // emitted it twice. React saw two children with the same key and warned that it

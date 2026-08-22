@@ -26,11 +26,44 @@ const COUNT_UP_MS = 520
 
 type Tone = "ok" | "warn" | "bad"
 
-function toneOf(score: number, criticalCount: number): Tone {
-  if (criticalCount > 0) return score >= READY_SCORE ? "warn" : "bad"
+/**
+ * EL COLOR DICE EL PUNTAJE. Nada más, y por eso se puede creer.
+ *
+ * ── LA REGLA, DEL CEO (2026-08-22) ─────────────────────────────────────────
+ *
+ *   «Hay reglas de colores: cuando está en menos de lo requerido está rojo,
+ *    luego amarillo, si ya está estable es verde.»
+ *
+ * ── QUÉ HACÍA ANTES, Y POR QUÉ ESTABA MAL ─────────────────────────────────
+ *
+ * El tono miraba TAMBIÉN la cuenta de hallazgos críticos, y ahí adentro va
+ * `hard.requirements`: los requisitos duros de la vacante, que el propio panel
+ * declara sin salida —«ninguna reescritura lo cambia: es un requisito que
+ * cumplís o no»— y para los que publica un techo aparte.
+ *
+ * Al candidato al que le falta un título eso le dejaba el anillo NARANJA PARA
+ * SIEMPRE: podía llegar a 88, cerrar todo lo demás, y el color no se movía
+ * nunca. Su pregunta fue «¿el anillo sólo maneja un color?». Para él, sí.
+ *
+ * Un intento intermedio lo ató a los críticos QUE TIENEN BOTÓN. Mejor, y aun así
+ * equivocado: seguía siendo un color que responde a dos cosas a la vez, y por lo
+ * tanto uno que no se puede leer sin saber cuál de las dos lo movió.
+ *
+ * Ahora el anillo contesta UNA pregunta —¿cuánto coincidís con esta vacante?— y
+ * la contesta con el umbral, que es el mismo que dibuja la barra de abajo. Lo
+ * crítico tiene su propia tarjeta, en rojo, con su propio texto. Cada cosa dicha
+ * una vez, en su lugar: la regla de este panel desde el principio.
+ */
+function toneOf(score: number): Tone {
   if (score >= READY_SCORE) return "ok"
-  return score >= 55 ? "warn" : "bad"
+  return score >= WARN_SCORE ? "warn" : "bad"
 }
+
+/**
+ * Debajo de esto el CV no compite: no es «podría mejorar», es que el filtro lo
+ * deja afuera. Entre esto y el umbral, amarillo — hay con qué trabajar.
+ */
+const WARN_SCORE = 55
 
 const TONE_VAR: Record<Tone, string> = {
   ok: "var(--a-ok)",
@@ -102,7 +135,7 @@ interface Props {
 
 export default function ScoreDial({ score, criticalCount, criticalSolvable, recoverable }: Props) {
   const t = useTranslations("editor.ats")
-  const tone = toneOf(score, criticalCount)
+  const tone = toneOf(score)
   const shown = useCountUp(score)
   const color = TONE_VAR[tone]
 
@@ -110,7 +143,13 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-4">
         <div className="relative shrink-0">
-          <svg viewBox="0 0 130 130" width="118" height="118" aria-hidden="true">
+          {/* 104 y no 118. En el riel quedan ~288px útiles: con el dial en 118 más
+              el gap, al texto le sobraban ~154 y el veredicto —«1 arreglo crítico
+              antes de mandarlo», quince palabras largas en español— se apilaba en
+              tres renglones apretados contra el borde. Catorce píxeles menos en un
+              número que ya se lee de sobra son catorce más para la frase que
+              explica por qué. */}
+          <svg viewBox="0 0 130 130" width="104" height="104" aria-hidden="true">
             <circle cx="65" cy="65" r={RADIUS} fill="none" stroke="var(--a-track)" strokeWidth="9" />
             <circle
               className="ats-dial-arc"
@@ -123,7 +162,7 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
           </svg>
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <span
-              className="text-[34px] font-bold leading-none tabular-nums [font-family:var(--dash-serif)]"
+              className="text-[30px] font-bold leading-none tabular-nums [font-family:var(--dash-serif)]"
               style={{ color: "var(--a-ink)" }}
             >
               {shown}
@@ -137,14 +176,14 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
         </div>
 
         <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-bold leading-tight" style={{ color }}>
+          <p className="text-[15px] font-bold leading-tight [text-wrap:balance] [overflow-wrap:anywhere]" style={{ color }}>
             {criticalCount > 0
               ? t("verdict_blocked", { count: criticalCount })
               : score >= READY_SCORE
                 ? t("verdict_ready")
                 : t("verdict_below")}
           </p>
-          <p className="mt-1 text-[11px] leading-snug" style={{ color: "var(--a-muted)" }}>
+          <p className="mt-1 text-[11px] leading-snug [overflow-wrap:anywhere]" style={{ color: "var(--a-muted)" }}>
             {criticalCount === 0
               ? t("verdict_scope_hint")
               : criticalSolvable === 0
@@ -162,7 +201,7 @@ export default function ScoreDial({ score, criticalCount, criticalSolvable, reco
                 style={{ width: `${Math.max(0, Math.min(100, score))}%`, background: color }} />
               <i className="absolute inset-y-0 w-px" style={{ left: `${READY_SCORE}%`, background: "var(--a-border-2)" }} />
             </div>
-            <div className="mt-1 flex justify-between text-[9px] font-semibold uppercase tracking-[0.06em]"
+            <div className="mt-1 flex justify-between gap-2 text-[9px] font-semibold uppercase tracking-[0.06em]"
               style={{ color: "var(--a-muted-2)" }}>
               <span>{t("threshold_label", { score: READY_SCORE })}</span>
               {recoverable > 0 && <span>{t("recoverable_label", { points: recoverable })}</span>}

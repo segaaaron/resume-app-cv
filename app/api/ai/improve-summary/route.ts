@@ -3,11 +3,15 @@ import { z } from "zod"
 import { requireUser, handleError, apiError } from "@/lib/controllers/shared"
 import { aiService } from "@/lib/controllers/ai-deps"
 import { AI_INPUT_LIMITS } from "@/lib/services/ai/shared/ai-types"
+import { POSTING_TERMS_IN_PROMPT } from "@/lib/ats/rewrite-keeps-match"
 
 const schema = z.object({
   summary: z.string().max(AI_INPUT_LIMITS.summary).optional(),
   userDescription: z.string().max(AI_INPUT_LIMITS.userDescription).optional(),
   sectionData: z.record(z.string(), z.unknown()).optional(),
+  // Lo que la vacante pide, tal como lo extrajo el ATS. El tope es el mismo que
+  // usa el prompt para no recibir una lista que después recorta en silencio.
+  postingTerms: z.array(z.string().max(80)).max(POSTING_TERMS_IN_PROMPT).optional(),
   language: z.enum(["es", "en"]).optional(),
 })
 

@@ -308,10 +308,45 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
     })
   }
 
+  /**
+   * LAS BLANDAS QUE SÓLO ESTÁN EN LA LISTA, QUE NO SE VEÍAN EN NINGÚN LADO.
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-22) ───────────────────────
+   *
+   *   «Está en 84%, esa información que tengo, ¿para qué me sirve? ¿Cómo llego
+   *    al 100?»
+   *
+   * La sección mostraba CINCO blandas, las cinco bajo «DEMOSTRADAS», sin una
+   * sola faltante — y el número decía 84. No había forma de contestarle, porque
+   * lo que le faltaba NO ESTABA EN PANTALLA.
+   *
+   * La tabla se armaba con dos baldes: `demonstratedSoftSkills` (probadas) y
+   * `missingSoftSkills` (ausentes del CV). Una blanda que el CV SÍ dice, pero
+   * sólo en la lista de habilidades, no cae en ninguno: el puntaje le aplicaba
+   * el descuento de `LISTED_ONLY_CREDIT` y la pantalla no la nombraba. El número
+   * cobraba algo que la lista no mostraba — exactamente lo que este panel existe
+   * para no hacer.
+   *
+   * Medido contra su captura: 3 demostradas + 2 sólo listadas sobre 5 da
+   * (3 + 2×0.6)/5 = 84%. El 84 era correcto; la lista estaba incompleta.
+   *
+   * Entran acá, con `listOnly` puesto, así que la tabla las agrupa bajo «SÓLO EN
+   * LA LISTA» con su botón — el mismo trato que ya tenían las duras.
+   */
+  const softListedOnly = (result.listedOnlyKeywords ?? []).filter((k) => {
+    const norm = k.toLowerCase().trim()
+    const esBlanda = (result.extractedKeywords?.softSkills ?? []).some((s) => s.toLowerCase().trim() === norm)
+    const yaEstá = [...(result.demonstratedSoftSkills ?? []), ...(result.missingSoftSkills ?? [])]
+      .some((s) => s.toLowerCase().trim() === norm)
+    return esBlanda && !yaEstá
+  })
+
+  const softShown = [...(result.demonstratedSoftSkills ?? []), ...softListedOnly]
+
   const terms = [
     ...(result.matchedKeywords ?? []),
     ...(result.missingKeywords ?? []),
-    ...(result.demonstratedSoftSkills ?? []),
+    ...softShown,
     ...(result.missingSoftSkills ?? []),
   ]
 
@@ -324,7 +359,7 @@ export function buildPanelReport(input: PanelReportInput): AtsReport {
     listedOnlyKeywords: result.listedOnlyKeywords ?? [],
     matchedKeywords: result.matchedKeywords ?? [],
     missingSoftSkills: result.missingSoftSkills ?? [],
-    matchedSoftSkills: result.demonstratedSoftSkills ?? [],
+    matchedSoftSkills: softShown,
     unmetRequirements,
     templateSafety: result.templateSafety ?? "safe",
     recruiterFixes,

@@ -58,7 +58,11 @@ describe("si los guards descartan todo, se pide una vez más", () => {
     const chat = chatSequence(
       // Borra el 120 que el candidato ya dice: `losesStatedFigure` la mata.
       { summary: null, rewrites: [{ checkId: "c1", text: "• Atendí ventanilla con control de caja y arqueo diario." }] },
-      { summary: null, rewrites: [{ checkId: "c1", text: "• Procesé 120 transacciones diarias con arqueo de caja y control de comprobantes." }] },
+      // La buena: conserva el 120 Y «control de caja», que la vacante pide por
+      // nombre. Antes decía «arqueo de caja y control de comprobantes» — el
+      // guard de términos, que llegó después, la descartaba con razón: perder un
+      // término de la oferta le baja el puntaje al candidato.
+      { summary: null, rewrites: [{ checkId: "c1", text: "• Procesé 120 transacciones diarias con control de caja y arqueo de comprobantes." }] },
     )
     const mod = new AITailorModule({ chat } as never, logger as never)
     const res = await mod.tailorCV("u1", input as never, "PRO")

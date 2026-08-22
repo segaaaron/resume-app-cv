@@ -6,11 +6,12 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage, hasHardCodedFact } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hasHardCodedFact, losesStatedFigure } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit, isCosmeticReword, addsNoInformation, dropsContentWithoutGain } from "../shared/text-similarity"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
 import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { hasCliche } from "../shared/cliches"
@@ -30,6 +31,32 @@ export class AIBulletModule {
     private readonly aiClient: IAIClient,
     private readonly logger: ILogger,
   ) {}
+
+  /**
+   * LA REGLA DE KEYWORDS, DICHA POR EL ATS Y NO ADIVINADA POR EL MODELO.
+   *
+   * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS» (CEO,
+   * 2026-08-22, tercera vez). Este prompt decía «incorporá 1-2 keywords del
+   * sector/puesto» y el modelo elegía cuáles mirando el título — nombres
+   * plausibles para el oficio, no los que ESTA vacante pide por nombre. Tejer
+   * «Excel» donde la oferta dice «Power BI» no mueve un solo punto.
+   *
+   * Con la lista, la instrucción deja de ser un consejo genérico y pasa a ser el
+   * dato: éstas son las palabras que el filtro busca, usá las que el trabajo
+   * descrito respalde. Sin ella —un CV que se edita sin haber pegado una
+   * vacante— se conserva el texto de siempre: falla ABIERTO.
+   */
+  private atsKeywordRule(terms: readonly string[], en: boolean): string {
+    if (terms.length === 0) {
+      return en
+        ? "naturally incorporate 1-2 industry/role keywords within bullets."
+        : "incorpora 1-2 keywords del sector/puesto de forma natural dentro de los bullets."
+    }
+    const lista = terms.join(", ")
+    return en
+      ? `these are the terms THIS posting asks for by name — ${lista}. Weave in only the ones the described work genuinely supports, in the candidate's own words. Never add a term the source does not back, and never drop one the original line already had.`
+      : `estos son los términos que ESTA vacante pide por nombre — ${lista}. Tejé sólo los que el trabajo descrito respalde de verdad, con las palabras del candidato. Nunca agregues uno que el source no respalde, y nunca saques uno que la línea original ya decía.`
+  }
 
   async improveBullet(userId: string, input: ImproveBulletInput, plan: string): Promise<BulletResult> {
     await enforceAIQuota(userId, "improve-bullet", plan)
@@ -194,15 +221,19 @@ Return the strongest rewrite as "text", plus up to 2 "alternatives" that argue t
 - "technical": the engineering — systems, tools, architecture, how it was built.
 - "business": what it was worth — users, revenue, cost, risk, time.
 - "leadership": people and process — who was aligned, what practice changed.
-Every angle obeys the anti-hard-coded fact rules above: an angle the source does not support is simply omitted. Two honest options beat three where one is hard-coded.
+Every angle obeys the rules above: an angle the source does not support is simply omitted. Two honest options beat three where one is hard-coded.
 Add "why" to each (max 20 words): what the candidate gains over their original wording. Name the concrete change, never "more impactful".\n`
         : `\n=== DALE A ELEGIR AL CANDIDATO ===
 Devuelve la mejor reescritura en "text", más hasta 2 "alternatives" que defiendan el MISMO trabajo desde otro ángulo:
 - "technical": la ingeniería — sistemas, herramientas, arquitectura, cómo se construyó.
 - "business": cuánto valió — usuarios, ingresos, costo, riesgo, tiempo.
 - "leadership": personas y proceso — a quién se alineó, qué práctica cambió.
-Cada ángulo cumple las reglas anti-alucinación de arriba: un ángulo que el source no respalda simplemente se omite. Dos opciones honestas valen más que tres con una quemadas.
+Cada ángulo cumple las reglas de arriba: un ángulo que el source no respalda simplemente se omite. Dos opciones honestas valen más que tres con una quemada.
 Agrega "why" a cada una (máx 20 palabras): qué gana el candidato frente a su redacción original. Nombra el cambio concreto, nunca "más impactante".\n`
+
+    const postingTerms = input.postingTerms ?? []
+    const atsRule = this.atsKeywordRule(postingTerms, true)
+    const atsRuleEs = this.atsKeywordRule(postingTerms, false)
 
     const prompt = language === "en"
       ? `${cvValueBar("en")}
@@ -226,8 +257,8 @@ TRANSFORMATION RULES:
    - Leadership/Management: Led, Mentored, Coordinated, Aligned, Consolidated, Transformed, Prioritized
    - Operations/Process: Reduced, Standardized, Implemented, Centralized, Increased, Structured
    - Sales/Business/Marketing: Grew, Closed, Negotiated, Expanded, Positioned, Captured, Generated
-4. ATS: naturally incorporate 1-2 industry/role keywords within bullets.
-5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never hard-code one.
+4. ATS: ${atsRule}
+5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never supply one yourself.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
 7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. Either end on a concrete result the source states (a number, a named system, a real outcome) or end on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
 8. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
@@ -261,8 +292,8 @@ REGLAS DE TRANSFORMACIÓN:
    - Liderazgo/Gestión: Lideré, Mentoré, Coordiné, Alineé, Consolidé, Transformé, Prioricé
    - Operaciones/Procesos: Reduje, Estandaricé, Implementé, Centralicé, Incrementé, Estructuré
    - Ventas/Negocio/Marketing: Crecí, Cerré, Negocié, Expandí, Posicioné, Capturé, Generé
-4. ATS: incorpora 1-2 keywords del sector/puesto de forma natural dentro de los bullets.
-5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo afirmes.
+4. ATS: ${atsRuleEs}
+5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo pongas vos.
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
 7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto que el source declare (una cifra, un sistema nombrado, un resultado real) o termina en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
 8. DEJA EN PAZ LOS BULLETS YA FUERTES. Si un bullet ya empieza con un verbo de acción fuerte Y nombra trabajo específico (herramientas, sistemas o resultados reales), ya está bien — OMÍTELO. NO lo reescribas solo para decirlo distinto o "condensarlo": cambiar "mejorar"→"ampliar" o eliminar "fortalecer el rendimiento del equipo" lo hace DIFERENTE, no mejor, y pierde en silencio detalle que el candidato declaró. Reescribe un bullet así SOLO si puedes AGREGAR un resultado concreto, cifra o keyword que el source respalde. Ante la duda, déjalo.
@@ -375,11 +406,47 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           && assessDescription(original).weakOpenerIndices.length === 0
           && !hasCliche(original)
         if (originalIsStrong && dropsContentWithoutGain(original, suggested)) { droppedTrivial++; continue }
+        /**
+         * Y NUNCA BORRAR LA CIFRA QUE EL CANDIDATO ESCRIBIÓ.
+         *
+         * ── EL HUECO, ENCONTRADO BARRIENDO LOS CUATRO PRODUCTORES ─────────
+         *
+         * Esta regla se midió y se cerró el 2026-08-19 en tailor (viñetas y
+         * resumen), en review y en el ATS. `improve-bullet` escribe la misma
+         * clase de prosa, va al mismo campo del CV, y quedó afuera.
+         *
+         * Ninguno de los cuatro guards de arriba lo ve, y está documentado en
+         * el propio test de la regla: `hasHardCodedFact` caza cifras AÑADIDAS,
+         * no borradas · `isTrivialEdit` y `isCosmeticReword` no aplican porque
+         * la redacción SÍ cambió · `dropsContentWithoutGain` ve ganancia
+         * porque el texto creció, y además sólo corre si la línea original era
+         * fuerte.
+         *
+         * El caso medido entonces: «Cut medication errors from 12 to 3 per
+         * month» volvía más rica y sin el 12 ni el 3. El usuario aprieta un
+         * botón rotulado como mejora y pierde lo único de esa línea que un
+         * reclutador puede pesar.
+         */
+        if (losesStatedFigure(original, suggested)) { droppedTrivial++; continue }
+        /**
+         * NI DEJAR AFUERA UN TÉRMINO QUE LA VACANTE PIDE.
+         *
+         * La otra mitad de la regla 4: al modelo se le dice cuáles son, y acá se
+         * verifica que no se haya llevado ninguno puesto. Medido en el ejecutor,
+         * que tenía el mismo hueco: un CV entró con 23 y salió con 16 aplicando
+         * lo que el panel ofrecía, porque la reescritura —más rica, con las
+         * cifras intactas— se comía un término de la oferta.
+         *
+         * Se pregunta con `termPresent`, la misma función con la que el matcher
+         * cuenta la cobertura: el guard y el puntaje no pueden discrepar.
+         * Sin vacante analizada la lista viene vacía y esto no descarta nada.
+         */
+        if (droppedPostingTerms(original, suggested, postingTerms).length > 0) { droppedTrivial++; continue }
 
         seenIndices.add(index)
 
         // Alternatives face the SAME gauntlet as the main rewrite. Offering a
-        // second angle must not become a side door for an hard-coded figure or a
+        // second angle must not become a side door for a hard-coded figure or a
         // lossy reword: the user picks one of these with a click, so a variant
         // that fails a guard is worse than having no choice at all. Anything that
         // does not survive is simply not offered — fewer honest options beat more.
@@ -389,6 +456,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
             && a.text !== suggested
             && !hasHardCodedFact(a.text, source)
             && !isTrivialEdit(original, a.text)
+            && !losesStatedFigure(original, a.text)
+            && droppedPostingTerms(original, a.text, postingTerms).length === 0
             && !(originalIsStrong && dropsContentWithoutGain(original, a.text)))
           .slice(0, 2)
 
@@ -443,7 +512,26 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         : language === "en"
           ? `${withoutLicence}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`
           : `${withoutLicence}\n\nEl bullet de arriba tiene el defecto diagnosticado que se nombra en esta petición, así que SÍ se puede mejorar. Devuelve exactamente una entrada para el índice 0 que lo arregle, conservando todos los datos.`
-      const retry = await callModel(insist)
+      /**
+       * Y SI LO QUE FALLÓ FUE UN TÉRMINO, SE LE DICE CUÁL.
+       *
+       * Cazado en el pase de QA de esta sesión. El guard de términos descarta la
+       * reescritura que deja afuera una palabra que la vacante pide, y este
+       * reintento decía sólo «el bullet tiene el defecto diagnosticado, arreglalo».
+       * El modelo no tenía forma de saber qué se le tiró: reescribía igual, el
+       * guard lo descartaba otra vez, y el usuario recibía «ya está bien» sobre
+       * una línea que SÍ se podía mejorar — con el uso ya gastado.
+       *
+       * Es la misma lección que el ejecutor ya había pagado con `rejectedNudge`:
+       * un guard que descarta en silencio convierte el reintento en una segunda
+       * moneda tirada a la basura.
+       */
+      const conTérminos = postingTerms.length > 0
+        ? insist + (language === "en"
+          ? `\n\nKeep every term the original line already had from this list: ${postingTerms.join(", ")}. Dropping one costs the candidate points.`
+          : `\n\nConservá todos los términos de esta lista que la línea original ya decía: ${postingTerms.join(", ")}. Dejar uno afuera le cuesta puntos al candidato.`)
+        : insist
+      const retry = await callModel(conTérminos)
       const retryUsage = retry.usage
       logAIUsage(userId, "improve-bullet", {
         model: AI_MODEL_PROSE,

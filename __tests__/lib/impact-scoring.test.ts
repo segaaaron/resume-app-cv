@@ -31,6 +31,41 @@ const EV = "Gestioné cartera en Salesforce, pipeline en CRM, negociación con c
 const scoreAt = (pct: number | null) =>
   computeATSMatch(KW, HAY, "Ejecutivo Comercial", SECTIONS, EV, undefined, undefined, undefined, undefined, pct).score
 
+/**
+ * SATURAR NO ES LO MISMO QUE NO CUANTIFICAR NADA, y el número tiene que decirlo.
+ *
+ * La primera versión de `impactCoverage` bajaba linealmente hasta CERO por
+ * encima de la banda. Al 100% de viñetas cuantificadas daba exactamente lo mismo
+ * que al 0%: la categoría en cero. No son la misma falta — uno no dice ningún
+ * resultado, el otro los dice de más — y empatarlos es la clase de número que se
+ * lee como que el panel se contradice solo.
+ *
+ * Estos tests EJECUTAN el motor y comparan puntajes. Ninguno de los que ya
+ * existían miraba los extremos de la curva, y por eso el defecto pasó verde.
+ */
+describe("saturar de cifras cuesta, pero mucho menos que no tener ninguna", () => {
+  it("un CV con TODAS las viñetas cuantificadas puntúa más que uno sin ninguna", () => {
+    expect(scoreAt(100)).toBeGreaterThan(scoreAt(0))
+  })
+
+  /**
+   * El precio de saturar ya estaba declarado en el proyecto: el bloque de
+   * credibilidad cobra `metricSaturation` por este mismo defecto. Si esta curva
+   * cobrara otra cosa, las dos pantallas dirían números distintos por lo mismo.
+   */
+  it("y lo que cuesta saturar sale de la penalización ya declarada", () => {
+    const dentro = scoreAt(QUANTIFICATION_BAND.max)
+    const saturado = scoreAt(100)
+    expect(saturado).toBeLessThan(dentro)
+    // 12 sobre 100 de una categoría que pesa 0.08: menos de un punto entero.
+    expect(dentro - saturado).toBeLessThanOrEqual(2)
+  })
+
+  it("pasarse sigue siendo peor que quedarse en la banda", () => {
+    expect(scoreAt(90)).toBeLessThan(scoreAt(QUANTIFICATION_BAND.max))
+  })
+})
+
 describe("cuantificar los logros sube el puntaje", () => {
   it("un CV sin ninguna cifra puntúa menos que uno en la banda", () => {
     expect(scoreAt(0)).toBeLessThan(scoreAt(QUANTIFICATION_BAND.min))

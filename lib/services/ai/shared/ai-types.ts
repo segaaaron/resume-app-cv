@@ -598,6 +598,22 @@ export type BulletFocus = "metric" | "weak_verb" | "cliche" | "polish"
 
 export interface ImproveBulletInput {
   text: string
+  /**
+   * Los términos que la vacante pide, tal como los extrajo el ATS.
+   *
+   * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS» (CEO). Este
+   * endpoint reescribe texto que vive DENTRO del CV, así que lo que escriba
+   * mueve el puntaje — y hasta ahora lo hacía a ciegas: el prompt le pedía
+   * «incorporá keywords del sector» y el modelo elegía cuáles, mirando el título
+   * del puesto. Ahora recibe las de ESTA oferta, y un guard verifica que no deje
+   * afuera ninguna que la línea ya decía.
+   *
+   * Opcional a propósito: se puede editar un CV sin haber pegado una vacante.
+   * Sin la lista el comportamiento es el de antes — falla ABIERTO, nunca en
+   * silencio hacia menos valor.
+   */
+  postingTerms?: string[]
+
   jobTitle?: string
   employer?: string
   industry?: string
@@ -612,12 +628,37 @@ export interface ImproveBulletInput {
 }
 
 export interface GenerateSummaryInput {
+  /**
+   * Los términos que la vacante pide, tal como los extrajo el ATS.
+   *
+   * Genera un resumen NUEVO, así que no hay términos que perder — pero sí hay
+   * cuáles nombrar. Sin esto la fase 1 le pedía al modelo «detectá las keywords
+   * ATS del sector» y elegía nombres plausibles para el oficio en vez de los que
+   * ESTA oferta pide. Opcional: sin vacante analizada, el prompt es el de antes.
+   */
+  postingTerms?: string[]
   sectionData?: Record<string, unknown>
   language?: string
 }
 
 export interface ImproveSummaryInput {
   summary?: string
+  /**
+   * Los términos que la vacante pide, tal como los extrajo el ATS.
+   *
+   * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS» (CEO). Este
+   * endpoint reescribe texto que vive DENTRO del CV, así que lo que escriba
+   * mueve el puntaje — y hasta ahora lo hacía a ciegas: el prompt le pedía
+   * «incorporá keywords del sector» y el modelo elegía cuáles, mirando el título
+   * del puesto. Ahora recibe las de ESTA oferta, y un guard verifica que no deje
+   * afuera ninguna que la línea ya decía.
+   *
+   * Opcional a propósito: se puede editar un CV sin haber pegado una vacante.
+   * Sin la lista el comportamiento es el de antes — falla ABIERTO, nunca en
+   * silencio hacia menos valor.
+   */
+  postingTerms?: string[]
+
   userDescription?: string
   sectionData?: Record<string, unknown>
   language?: string

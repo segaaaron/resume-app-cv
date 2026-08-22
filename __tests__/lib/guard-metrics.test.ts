@@ -22,13 +22,13 @@ vi.mock("@/lib/logger", () => ({
 
 const { reportGuardDrops } = await import("@/lib/services/ai/shared/guard-metrics")
 
-const base = { endpoint: "tailor-cv", offered: 10, kept: 7, hardCoded: 1, figureLoss: 1, trivial: 1 }
+const base = { endpoint: "tailor-cv", offered: 10, kept: 7, hardCoded: 1, figureLoss: 1, trivial: 1, termLoss: 0 }
 
 describe("reportGuardDrops", () => {
   beforeEach(() => sink.mockClear())
 
   it("no escribe nada cuando la corrida no descartó nada", () => {
-    reportGuardDrops({ ...base, kept: 10, hardCoded: 0, figureLoss: 0, trivial: 0 })
+    reportGuardDrops({ ...base, kept: 10, hardCoded: 0, figureLoss: 0, trivial: 0, termLoss: 0 })
     expect(sink).not.toHaveBeenCalled()
   })
 
@@ -49,6 +49,19 @@ describe("reportGuardDrops", () => {
     const [a, b] = sink.mock.calls
     expect(a[0].message).toBe(b[0].message)
     expect(a[0].message).not.toMatch(/\d/)
+  })
+
+  /**
+   * EL MOTIVO MÁS CARO CUENTA COMO DESCARTE. `termLoss` llegó último y el total
+   * se sumaba sin él: una corrida donde el modelo se comía tres términos y nada
+   * más figuraba como «cero descartes» — el panel de guards diría que todo está
+   * bien justo cuando está pasando lo que más cuesta.
+   */
+  it("cuenta la pérdida de términos dentro del total descartado", () => {
+    reportGuardDrops({ ...base, hardCoded: 0, figureLoss: 0, trivial: 0, termLoss: 3, kept: 7 })
+    expect(sink).toHaveBeenCalledTimes(1)
+    expect(sink.mock.calls[0][0].context.dropped).toBe(3)
+    expect(sink.mock.calls[0][0].context.termLoss).toBe(3)
   })
 
   it("lleva el denominador: 3 de 4 y 3 de 40 no son el mismo producto", () => {

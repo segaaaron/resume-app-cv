@@ -70,12 +70,27 @@ describe("los puntos prometidos salen del desglose", () => {
   })
 
   /**
-   * NO SE SUMA CON LOS PESOS DE LOS CHEQUEOS. `hard.requirements` toma el suyo
-   * del MISMO desglose (`recoverableOf`), así que sumar las dos cosas contaría
-   * los requisitos dos veces — y el panel volvería a prometer un número que no
-   * puede cumplir, que es de donde salió toda esta clase de defecto.
+   * LOS REQUISITOS NO SE PROMETEN, NI UNA VEZ.
+   *
+   * ── QUÉ VIGILABA ESTE TEST, Y QUÉ VIGILA AHORA ───────────────────────────
+   *
+   * Nacido contra el DOBLE conteo: `hard.requirements` toma su peso del mismo
+   * desglose, así que sumar las dos cosas daba 40 donde había 20. Eso sigue
+   * valiendo y sigue comprobado abajo.
+   *
+   * Pero 20 tampoco era correcto, y lo destapó la pregunta del CEO de si el
+   * puntaje puede llegar a 100. La tarjeta de requisitos declara, con estas
+   * palabras, «ninguna reescritura lo cambia: es un requisito que cumplís o no»,
+   * y publica el TECHO que impone. Contar esos puntos como recuperables ponía al
+   * dial a prometer justo lo que la tarjeta de al lado declaraba imposible.
+   *
+   * Medido sobre un CV con un requisito sin cumplir: el dial decía «+25», de los
+   * cuales 19 eran del requisito. Seis eran reales.
+   *
+   * Así que ahora la categoría queda FUERA del total: el chequeo conserva su
+   * peso —es cuánto vale esa tarjeta— y el dial promete sólo lo alcanzable.
    */
-  it("no cuenta dos veces los requisitos incumplidos", () => {
+  it("no promete los puntos de un requisito sin salida", () => {
     const r = buildAtsReport(input({
       categories: [
         { category: "mustHaves", coveragePct: 0, weight: 0.20, share: 20, points: 0, recoverable: 20, basis: "chosen" },
@@ -83,7 +98,8 @@ describe("los puntos prometidos salen del desglose", () => {
       unmetRequirements: ["Título en Ingeniería Comercial"],
     }))
     const checkWeight = openChecks(r).find((c) => c.id === "hard.requirements")?.weight ?? 0
-    expect(checkWeight).toBe(20)              // el chequeo pesa lo mismo…
-    expect(recoverablePoints(r)).toBe(20)     // …y el total NO es 40
+    expect(checkWeight).toBe(20)             // la tarjeta sigue valiendo 20…
+    expect(recoverablePoints(r)).toBe(0)     // …y el dial no promete ninguno
+    expect(recoverablePoints(r)).not.toBe(40) // el doble conteo original
   })
 })

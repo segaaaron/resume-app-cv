@@ -136,7 +136,7 @@ describe("lo descartado se cuenta", () => {
       ctx(),
     )
     expect(out.kept).toHaveLength(1)
-    expect(out.rejected).toEqual({ broken_reference: 1, quote_not_in_cv: 1, missing_target: 1 })
+    expect(out.rejected).toEqual({ broken_reference: 1, quote_not_in_cv: 1, missing_target: 1, line_has_no_defect: 0 })
   })
 })
 

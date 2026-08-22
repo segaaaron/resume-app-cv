@@ -19,6 +19,7 @@ import { cvValueBar, noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
 import { buildModePrompt } from "./profile-modes"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { assessSummary, extractProfileMetrics, extractMetricsFromText } from "../shared/summary-quality"
 import { clicheBanList } from "../shared/cliches"
 import {
@@ -50,6 +51,7 @@ export class AISummaryModule {
     await enforceAIQuota(userId, "generate-summary", plan)
 
     const { sectionData, language: rawLanguage } = input
+    const postingTerms = input.postingTerms ?? []
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const resumeContext = buildResumeContext(sectionData ?? {}, language)
@@ -67,6 +69,21 @@ export class AISummaryModule {
     const metrics = extractProfileMetrics(sectionData)
     const { block: metricBlockEN, rule: numbersRuleEN } = buildMetricGuidance(metrics, "en")
     const { block: metricBlockES, rule: numbersRuleES } = buildMetricGuidance(metrics, "es")
+
+    /**
+     * LAS KEYWORDS LAS DICE EL ATS, NO LAS DEDUCE EL MODELO.
+     *
+     * La fase 1 pedía «detectá las keywords ATS del sector»: el modelo elegía
+     * nombres plausibles para el oficio, no los que ESTA vacante pide. Escribir
+     * «Excel» donde la oferta dice «Power BI» no mueve un punto.
+     */
+    const atsLine = postingTerms.length > 0
+      ? (language === "en"
+        ? `Terms THIS posting asks for by name — use only the ones the profile genuinely backs: ${postingTerms.join(", ")}`
+        : `Términos que ESTA vacante pide por nombre — usá sólo los que el perfil respalde de verdad: ${postingTerms.join(", ")}`)
+      : (language === "en"
+        ? "Key ATS keywords for the sector to include naturally"
+        : "Keywords ATS del sector para incluir de forma natural")
 
     const prompt = language === "en"
       ? `${cvValueBar("en")}
@@ -86,7 +103,7 @@ PHASE 1 — INTERNAL DIAGNOSIS (do not include in response, use to guide writing
 • Primary sector and industry
 • 2-3 unique differentiators: what this candidate has that others in their role don't
 • Most impactful achievement (include the figure only if the profile states one; otherwise describe the achievement without a number)
-• Key ATS keywords for the sector to include naturally
+• ${atsLine}
 
 PHASE 2 — GENERATE 3 VERSIONS (include in JSON response):
 
@@ -288,6 +305,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
 
   async improveSummary(userId: string, input: ImproveSummaryInput, plan: string): Promise<VersionsResult> {
     const { summary, userDescription, sectionData, language: rawLanguage } = input
+    const postingTerms = input.postingTerms ?? []
     const { language, langInstruction } = resolveLanguage(rawLanguage)
 
     const hasSummary = summary && typeof summary === "string" && summary.trim().length > 10
@@ -584,7 +602,23 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     // threshold). If none survive → already_optimized; otherwise return only the
     // versions that are a real improvement — never a near-copy of the original.
     if (hasSummary && summary) {
-      const meaningful = gated.versions.filter((v) => !isTrivialEdit(summary, v.text))
+      /**
+       * Y NINGUNA VERSIÓN PUEDE DEJAR AFUERA UN TÉRMINO DE LA VACANTE.
+       *
+       * «El ATS manda: todo lo que tenga el ATS debe consultar al ATS» (CEO,
+       * 2026-08-22). El resumen es texto del CV: el matcher lo lee como
+       * cualquier viñeta, así que una versión que se lleva puesto «Salesforce»
+       * baja el puntaje igual — y este endpoint reescribía sin haber visto nunca
+       * la oferta. Su fase 1 le pedía al modelo deducir «las keywords ATS del
+       * sector»: nombres plausibles para el oficio, no los que ESTA vacante pide.
+       *
+       * Mismo `termPresent` que usa el matcher: el guard y el puntaje no pueden
+       * discrepar. Sin vacante analizada la lista viene vacía y no filtra nada.
+       */
+      const meaningful = gated.versions.filter(
+        (v) => !isTrivialEdit(summary, v.text)
+          && droppedPostingTerms(summary, v.text, postingTerms).length === 0,
+      )
       if (meaningful.length === 0) {
         return { versions: [], status: "already_optimized" }
       }

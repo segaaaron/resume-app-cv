@@ -83,6 +83,9 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   "lib/doctrine-ownership.test.ts": { max: 3, razon: "los tres prompts que escriben prosa del CV citan la doctrina compartida" },
   "lib/grounding-covers-the-work.test.ts": { max: 2, razon: "el grounding del ejecutor ya no recorta a ciegas los puestos" },
   "lib/no-invention-framing.test.ts": { max: 1, razon: "la extracción conserva el no-inventes; los seis de prosa no" },
+  "lib/modal-stacking.test.ts": { max: 7, razon: "ningún modal vuelve a elegir su capa a mano; el defecto es una clase que NO debe estar" },
+  "lib/figure-guard-ownership.test.ts": { max: 14, razon: "la regla de la cifra es una llamada AUSENTE en el módulo que se la salta" },
+  "lib/dial-tone.test.ts": { max: 1, razon: "el tono no puede volver a recibir los críticos; se vigila la FIRMA, que es una ausencia" },
 }
 
 function walk(dir: string): string[] {

@@ -128,15 +128,22 @@ export default function ReportRail({
           cuántos chequeos abiertos, cuántos términos sin decir. El dial dice la
           nota; esto dice de qué está hecha. */}
       <div className="grid grid-cols-3 gap-2">
+        {/* La etiqueta CONCUERDA con su número. Decía «1 términos sin decir» y
+            «1 chequeos abiertos»: la cadena era fija y el número variable, así
+            que en singular el panel escribía mal el idioma del usuario. Un
+            detalle, y de los que hacen dudar de todo lo demás que dice. */}
         {[
           { n: `${report.terms.filter((x) => x.section === "hard" && x.cv > 0).length}/${report.terms.filter((x) => x.section === "hard").length}`,
-            k: "tally_hard", tone: "var(--a-ok)" },
-          { n: String(open.length), k: "tally_open", tone: "var(--a-warn)" },
-          { n: String(report.terms.filter((x) => x.cv === 0).length), k: "tally_missing", tone: "var(--a-bad)" },
+            k: "tally_hard", count: null as number | null, tone: "var(--a-ok)" },
+          { n: String(open.length), k: "tally_open", count: open.length, tone: "var(--a-warn)" },
+          { n: String(report.terms.filter((x) => x.cv === 0).length), k: "tally_missing",
+            count: report.terms.filter((x) => x.cv === 0).length, tone: "var(--a-bad)" },
         ].map((x) => (
           <div key={x.k} className="rounded-xl px-2.5 py-2 text-center" style={{ background: "var(--a-surface)", border: "1px solid var(--a-border)" }}>
             <span className="block text-[16px] font-bold leading-none tabular-nums" style={{ color: x.tone }}>{x.n}</span>
-            <span className="mt-1 block text-[9px] leading-tight" style={{ color: "var(--a-muted-2)" }}>{t(x.k)}</span>
+            <span className="mt-1 block text-[9px] leading-tight [overflow-wrap:anywhere]" style={{ color: "var(--a-muted-2)" }}>
+              {x.count === null ? t(x.k) : t(x.k, { count: x.count })}
+            </span>
           </div>
         ))}
       </div>

@@ -170,7 +170,14 @@ export default function CheckRow({ check, onSolve, onFix, busy }: Props) {
               {check.evidence.slice(0, 8).map((e, i) => (
                 <li
                   key={`${check.id}-ev-${i}`}
-                  className="max-w-full truncate rounded-md px-2 py-1 text-[10.5px] font-medium"
+                  /* ENVUELVE, NO CORTA. Con `truncate` la ficha era una línea sin
+                     retorno: en el riel de ~320px «Marketing Digital / Community
+                     Manager · 2023 – 2024» se cortaba en «· 202…» — y el año es
+                     JUSTO el dato del que habla el hallazgo de fechas. El
+                     `title` no alcanza: en un panel nadie descubre un tooltip, y
+                     en táctil no existe. Ahora la ficha crece a dos renglones y
+                     dice el nombre entero; las cortas siguen siendo pastillas. */
+                  className="max-w-full rounded-md px-2 py-1 text-[10.5px] font-medium leading-snug [overflow-wrap:anywhere]"
                   style={{ background: "var(--a-surface-3)", color: "var(--a-ink-2)" }}
                   title={e}
                 >

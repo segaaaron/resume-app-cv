@@ -174,13 +174,13 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
     // Grounding for hasHardCodedFact: skills/education context + every job's
     // bullets + the skill itself. Including the skill is what lets the new bullet
-    // name it without being flagged as an hard-coded technology; anything ELSE the
+    // name it without being flagged as a hard-coded technology; anything ELSE the
     // model introduces (a second framework, a metric) still trips the guard.
     //
     // Soft mode does NOT license the skill word — a soft skill is a behavior, not
     // a technology, so the bullet proves it through actions already in the CV and
     // never needs to name it. Leaving the term out of grounding keeps the guard
-    // honest: an hard-coded tool/metric still trips, common prose verbs do not.
+    // honest: a hard-coded tool/metric still trips, common prose verbs do not.
     const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
     const groundingSource = soft
       ? `${resumeContext}\n${workList}`

@@ -99,7 +99,11 @@ describe("tailor no abre trabajo por su cuenta", () => {
     const chat = chatReturning({
       summary: null,
       rewrites: [
-        { checkId: "c1", text: "• Diseñé y operé los servicios de pago del checkout" },
+        // En inglés y conservando «services», que es lo que la vacante pide por
+        // nombre: el fixture mezclaba un CV inglés con una reescritura española,
+        // así que el guard de términos —que llegó después— la descartaba con
+        // razón y este test fallaba por algo que no venía a probar.
+        { checkId: "c1", text: "• Designed and ran the checkout payment services end to end" },
         { checkId: "inventado", text: "• Nadie pidió esto" },
       ],
     })

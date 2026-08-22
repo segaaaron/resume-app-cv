@@ -39,6 +39,7 @@
 import type { CvFixAction } from "@/lib/services/ai/shared/ai-types"
 import type { ReportPosting } from "./report"
 import { verdictContradictions } from "./verdict-contradiction"
+import { isImprovableLine } from "./bullet-strength"
 import type { CategoryBreakdown, ScoreCategory } from "./score-breakdown"
 import type { BareYearRole, WritingChecks } from "./writing-checks"
 import type { ATSContentQuality } from "@/lib/services/ai/shared/ai-types"
@@ -453,17 +454,31 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
    * Acá van las que diluyen, dichas por su nombre.
    */
   for (const r of input.writing.bulletRanking) {
-    if (r.weakest.length === 0) continue
+    /**
+     * SÓLO LAS QUE UNA REESCRITURA PUEDE ARREGLAR — no las últimas del ranking.
+     *
+     * `weakest` es el resultado de ORDENAR: en un puesto de nueve líneas siempre
+     * sobran tres, y al reescribir la peor otra ocupa su lugar. Medido sobre el
+     * propio algoritmo: seis rondas, tres hallazgos cada una, para siempre. El
+     * usuario resolvía y el panel le devolvía la misma cantidad — el bucle
+     * infinito que el CEO preguntó si existía. Existía.
+     *
+     * Que un puesto tenga demasiadas líneas es un problema de VOLUMEN y se
+     * arregla cortando, no reescribiendo. Eso ya tiene dueño: `tips.balance` y
+     * `tips.role_range`, sin botón, porque cuál cortar lo decide él.
+     */
+    const mejorables = r.weakest.filter((w) => isImprovableLine(w.text))
+    if (mejorables.length === 0) continue
     push({
       id: `tips.dilutes.${r.targetId}`,
       section: "tips",
       state: "warn",
       weight: 0,
       titleKey: "check.dilutes",
-      params: { job: r.jobTitle, count: r.weakest.length },
+      params: { job: r.jobTitle, count: mejorables.length },
       owner: "tailor",
-      action: { kind: "rewrite_bullet", targetId: r.targetId, index: r.weakest[0].index },
-      evidence: r.weakest.map((w) => w.text),
+      action: { kind: "rewrite_bullet", targetId: r.targetId, index: mejorables[0].index },
+      evidence: mejorables.map((w) => w.text),
     })
   }
 
@@ -478,7 +493,10 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       // Cuántas líneas lleva un puesto no se arregla reescribiendo una: se
       // arregla cortando, y cuál cortar lo dice `tips.dilutes` con su botón.
       owner: "user",
-      evidence: [b.jobTitle],
+      // SIN EVIDENCIA. El título ya dice el puesto —«Marketing Digital /
+      // Community Manager tiene 5 viñetas»— y debajo se pintaba una ficha gris
+      // con ese mismo nombre otra vez. Repetir el dato no lo vuelve accionable:
+      // ocupa alto, se lee como si fuera un botón, y no lleva a ningún lado.
     })
   }
 
@@ -491,7 +509,7 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       titleKey: r.count > r.max ? "check.role_over" : "check.role_under",
       params: { job: r.jobTitle, count: r.count, min: r.min, max: r.max },
       owner: "user",
-      evidence: [r.jobTitle],
+      // Misma razón: el título ya nombra el puesto y dice la cuenta.
     })
   }
 
@@ -589,6 +607,15 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
       params: { issue: cleanIssue(f.issue) },
       owner: "tailor",
       action: f.action,
+      /**
+       * EL CAMBIO A HACER, QUE VENÍA VIAJANDO Y NO LLEGABA A NINGUNA PARTE.
+       *
+       * `RecruiterFix.fix` existe desde siempre, el modelo lo devuelve («el
+       * cambio exacto a hacer», dice el prompt en los dos idiomas) y este
+       * `push()` lo ignoraba. La tarjeta quedaba con la cita y un botón, sin
+       * decir nunca qué iba a pasar al apretarlo.
+       */
+      fixHint: f.fix?.trim() || undefined,
     })
   })
 
@@ -656,10 +683,41 @@ export function buildAtsReport(input: BuildReportInput): AtsReport {
     terms,
     bullets: [...(input.bullets ?? [])],
     overOptimised: input.score >= OVER_OPTIMISATION_SCORE,
-    // Del desglose, que es quien lo calcula. Derivarlo de los pesos de los
-    // chequeos dejaba fuera los términos —la palanca más grande— y el panel
-    // prometía «+0» con treinta puntos en juego.
-    recoverable: input.categories.reduce((sum, c) => sum + c.recoverable, 0),
+    /**
+     * LO QUE SE PUEDE RECUPERAR TRABAJANDO — no todo lo que falta.
+     *
+     * Del desglose, que es quien lo calcula. Derivarlo de los pesos de los
+     * chequeos dejaba fuera los términos —la palanca más grande— y el panel
+     * prometía «+0» con treinta puntos en juego.
+     *
+     * ── PERO LOS REQUISITOS NO ENTRAN, Y ESO ES EL ARREGLO ────────────────
+     *
+     * «No tenemos información errónea hacia el usuario» (CEO, 2026-08-21).
+     * Teníamos, y era el número más grande de la pantalla.
+     *
+     * `mustHaves` son los requisitos duros de la vacante. La tarjeta
+     * `hard.requirements` los declara SIN salida, con estas palabras: «ninguna
+     * reescritura lo cambia: es un requisito que cumplís o no», y publica el
+     * TECHO que imponen. Sumarlos igual a «recuperables» hacía que el dial y esa
+     * tarjeta se contradijeran en la misma pantalla.
+     *
+     * Medido sobre un CV con un requisito sin cumplir:
+     *
+     *   dial:                        «+25 recuperables»
+     *   de esos, del requisito:       19
+     *   alcanzables trabajando:        6
+     *   techo que declara la tarjeta:  81  (= 100 − 19)
+     *
+     * El usuario perseguía diecinueve puntos que no existen para él, y el propio
+     * panel se lo decía dos tarjetas más abajo.
+     *
+     * Cuando la vacante no lista requisitos, o él los cumple, esta categoría
+     * aporta 0 y excluirla no cambia nada: el número sólo se mueve justo cuando
+     * estaba mintiendo.
+     */
+    recoverable: input.categories
+      .filter((c) => c.category !== "mustHaves")
+      .reduce((sum, c) => sum + c.recoverable, 0),
     posting: input.posting,
     /**
      * EL VEREDICTO, SÓLO SI NO CONTRADICE AL INFORME.

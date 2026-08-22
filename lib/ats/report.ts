@@ -101,6 +101,26 @@ export interface ReportCheck {
    * evidencia el aviso se vuelve accionable sin abrir nada.
    */
   evidence?: string[]
+  /**
+   * QUÉ CAMBIAR, EN PALABRAS DEL MODELO. Texto crudo, no clave i18n.
+   *
+   * ── EL DEFECTO QUE CIERRA (reportado con captura, 2026-08-21) ─────────────
+   *
+   * El hallazgo del reclutador llega con cuatro campos —`issue`, `why`, `fix`,
+   * `needsFromYou`— y la tarjeta mostraba UNO: `issue`, crudo, como título entre
+   * comillas. El resto se tiraba en el `push()`.
+   *
+   * Resultado en pantalla: una cita, la etiqueta «AVISO · no mueve el número» y
+   * un botón «Aplicar». Ni qué está mal, ni qué cambia si aprieta. La pregunta
+   * del CEO fue literal: «me decís algo pero no existe mejora para eso, ¿qué
+   * hago con eso?». No había respuesta posible en la tarjeta.
+   *
+   * Es texto del modelo y por eso NO es una clave: viaja crudo, igual que
+   * `issue`. Va en su propio campo y no dentro de `detailKey` porque ese hueco
+   * lo rotula la tarjeta como «Por qué importa», y el cambio a hacer no es la
+   * razón — meterlo ahí sería etiquetar mal para ahorrarse un campo.
+   */
+  fixHint?: string
 }
 
 export interface ReportSection {

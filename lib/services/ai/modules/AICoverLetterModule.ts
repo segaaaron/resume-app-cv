@@ -227,7 +227,7 @@ Rules:
 - NEVER these phrases. Every one is checked and a letter carrying any is rejected: ${clicheBanList("en")}
 - Each paragraph must be 2–4 sentences, substantive and specific — never padding to reach a length
 - The letter must feel written by a human, not AI
-- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never hard-code one.
+- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never supply one yourself.
 
 Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using \\n\\n>"}`
       : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
@@ -264,7 +264,7 @@ Reglas:
 - NUNCA estas frases. Todas se comprueban y una carta que lleve cualquiera se rechaza: ${clicheBanList("es")}
 - Cada párrafo debe tener 2–4 oraciones, sustanciales y específicas — nunca relleno para alcanzar un largo
 - La carta debe sonar escrita por un humano, no por IA
-- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo afirmes.
+- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo pongas vos.
 
 Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo usando \\n\\n>"}`
 
@@ -520,7 +520,7 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
   }
 
   /** True when a fresh cover-letter draft carries content the profile does not
-   *  support: an hard-coded metric/technology (hasHardCodedFact), a figure the
+   *  support: a hard-coded metric/technology (hasHardCodedFact), a figure the
    *  profile never states, or a stand-in employer name absent from the source. */
   private letterHardCodesContent(body: string, grounding: string): boolean {
     if (hasHardCodedFact(body, grounding)) return true

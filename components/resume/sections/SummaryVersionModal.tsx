@@ -2,6 +2,7 @@
 
 import { useTranslations } from "next-intl"
 import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Z_MODAL_FOLLOW_UP } from "@/lib/ui/z-layers"
 import { Check, Zap, TrendingUp, Code2, Star, Landmark, Scale, Rocket, ShieldCheck } from "lucide-react"
 
 /**
@@ -102,7 +103,11 @@ export default function SummaryVersionModal({ open, versions, onClose, onSelect,
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose() }}>
-      <DialogContent className="p-0 overflow-hidden rounded-2xl max-w-[580px] w-[calc(100vw-2rem)] sm:w-[95vw] border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.08)] gap-0">
+      {/* El panel ATS lo abre desde su modal a pantalla completa: sin la capa
+          explícita, las versiones del resumen salían detrás. Mismo defecto que
+          la confirmación de la viñeta, encontrado barriendo en vez de esperando
+          la siguiente captura. */}
+      <DialogContent layer={Z_MODAL_FOLLOW_UP} className="p-0 overflow-hidden rounded-2xl max-w-[580px] w-[calc(100vw-2rem)] sm:w-[95vw] border border-[#D9E1ED] shadow-[0_40px_100px_rgba(0,212,255,0.08)] gap-0">
 
         {/* Header */}
         <div className="relative px-5 sm:px-7 pt-5 sm:pt-6 pb-4 border-b border-[#E8EDF6] bg-gradient-to-b from-[#F5F7FB] to-white">

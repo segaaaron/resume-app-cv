@@ -18,7 +18,8 @@ import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
 import { parseAIJson, safeParseAIJson, resolveLanguage, hasHardCodedFact, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
-import { isCosmeticReword } from "../shared/text-similarity"
+import { isCosmeticReword, isTrivialEdit } from "../shared/text-similarity"
+import { droppedPostingTerms } from "@/lib/ats/rewrite-keeps-match"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { EMBEDDING_MODEL } from "../OpenAIClientAdapter"
 import {
@@ -216,7 +217,16 @@ export class AIReviewModule {
    *    read therefore returned fewer findings than the last, on a CV nobody had
    *    touched. Handing out a copy ends that whole class of bug.
    */
-  private groundForThisResume(analysis: CvAnalysis, sectionData: Record<string, unknown>): CvAnalysis {
+  private groundForThisResume(
+    analysis: CvAnalysis,
+    sectionData: Record<string, unknown>,
+    /**
+     * Lo que la vacante pide, para que ningún botón devuelva un CV con menos
+     * cobertura de la que tenía. Vacío = no se puede juzgar y no se descarta
+     * nada: falla ABIERTO, igual que el resto de los guards de acá.
+     */
+    postingTerms: readonly string[] = [],
+  ): CvAnalysis {
     const copy = structuredClone(analysis)
     for (const f of copy.criticalFixes) {
       f.action = groundFixAction(f.action, sectionData)
@@ -246,6 +256,80 @@ export class AIReviewModule {
         })
         f.action = { kind: "manual" }
       }
+
+      /**
+       * NI UN BOTÓN QUE ESCRIBE LO QUE YA ESTÁ ESCRITO.
+       *
+       * ── LA REGLA, TEXTUAL (CEO, 2026-08-21) ────────────────────────────
+       *
+       *   «Si lo que sugerís como mejora es idéntico en un 90 a 100% no es
+       *    mejora. Si es de 89 para abajo es considerado como mejora.»
+       *
+       * Reportado con captura: la tarjeta ofrecía cambiar «Diseñar e
+       * implementar campañas orientadas a conversión (…) 10% a 20% (…)» por
+       * «Diseñé e implementé campañas orientadas a conversión (…) 10% a 20%
+       * (…)». Dos palabras de veinticinco, y para verlas había que comparar
+       * dos párrafos casi iguales.
+       *
+       * ── POR QUÉ ACÁ, Y NO DONDE LO PUSE PRIMERO ────────────────────────
+       *
+       * El primer arreglo fue en el árbitro del panel, y era un parche: dejaba
+       * la regla en UN consumidor mientras el hallazgo seguía saliendo intacto
+       * hacia cualquier otro. Éste es el único punto donde el texto ACTUAL del
+       * CV y la propuesta están los dos en la mano, y corre en los TRES
+       * caminos de lectura —análisis nuevo y los dos aciertos de caché—,
+       * porque la respuesta depende del CV como está HOY.
+       *
+       * Es la misma pregunta que ya se hace la línea de arriba sobre la cifra,
+       * con los mismos datos y el mismo desenlace. No es un dueño nuevo: es el
+       * dueño que ya estaba, preguntando lo que le faltaba preguntar.
+       *
+       * ── DEGRADA, NO BORRA, Y ESO CIERRA EL CÍRCULO SOLO ────────────────
+       *
+       * `manual` conserva el diagnóstico y quita únicamente la escritura —
+       * igual que arriba. Y `build-report` ya descarta los hallazgos del
+       * reclutador cuya acción es `manual`, así que la tarjeta muerta
+       * desaparece del panel sin que haga falta una segunda regla que la
+       * filtre. El umbral tampoco se escribe acá: `TRIVIAL_EDIT_SIMILARITY`
+       * ya vale 0.90 y ya significa esto.
+       */
+      /**
+       * NI UN BOTÓN QUE TE BAJA EL PUNTAJE.
+       *
+       * ── MEDIDO DE PUNTA A PUNTA (2026-08-21) ──────────────────────────
+       *
+       * Ocho CVs, aplicando todo lo que este panel ofreció y volviendo a
+       * medir. Uno salió PEOR: `en-security-guard`, **23 → 16**.
+       *
+       * La reescritura era más rica, conservaba las cifras y decía más
+       * palabras — y por el camino dejaba afuera un término de la oferta. Las
+       * duras pesan .45: es la palanca más cara del informe.
+       *
+       * Los dos guards de arriba miran el TEXTO (¿borró la cifra?, ¿cambió de
+       * verdad?). Éste mira LA VACANTE, y lo hace con `termPresent`, la misma
+       * función con la que el matcher cuenta la cobertura — así que si esto
+       * dice que el término se cayó, el puntaje va a contar uno menos. No es un
+       * criterio nuevo: es el del puntaje, aplicado antes de escribir.
+       *
+       * Degrada a `manual` como los otros: el diagnóstico casi siempre es
+       * cierto, lo que no sirve es ESE reemplazo.
+       */
+      if (target && f.fix?.trim() && f.action.kind !== "manual" && postingTerms.length > 0) {
+        const perdidos = droppedPostingTerms(target, f.fix, postingTerms)
+        if (perdidos.length > 0) {
+          this.logger.warn("[AIService.atsScore] fix would drop a term the posting asks for — degraded to advice", {
+            kind: f.action.kind, dropped: perdidos.length,
+          })
+          f.action = { kind: "manual" }
+        }
+      }
+
+      if (target && f.fix?.trim() && f.action.kind !== "manual" && isTrivialEdit(target, f.fix)) {
+        this.logger.warn("[AIService.atsScore] fix rewrites the line as-is — degraded to advice", {
+          kind: f.action.kind,
+        })
+        f.action = { kind: "manual" }
+      }
     }
     return copy
   }
@@ -260,6 +344,8 @@ export class AIReviewModule {
     sectionData: Record<string, unknown> = {},
     /** Scopes the cached answer to the résumé, so deleting the CV deletes it. */
     resumeId?: string,
+    /** Lo que la vacante pide. Viaja hasta el guard que impide bajar el puntaje. */
+    postingTerms: readonly string[] = [],
   ): Promise<CvAnalysis | null> {
     // Same resume, same posting, same language → the answer we already gave.
     // No call, no tokens, no quota: it is the identical question.
@@ -275,7 +361,7 @@ export class AIReviewModule {
     if (!cachedAnalysis) this.spentAModelCall = true
     if (cachedAnalysis) {
       this.logger.info("[AIService.analyzeResume] cache hit (memory)")
-      return this.groundForThisResume(cachedAnalysis, sectionData)
+      return this.groundForThisResume(cachedAnalysis, sectionData, postingTerms)
     }
     // Then the durable one. The in-memory map held only until the page was
     // reloaded or the container restarted, so re-running the analysis on an
@@ -291,7 +377,7 @@ export class AIReviewModule {
         this.spentAModelCall = false
         this.logger.info("[AIService.analyzeResume] cache hit (stored)")
         this.analysisCache.set(cacheKey, restored.data)
-        return this.groundForThisResume(restored.data, sectionData)
+        return this.groundForThisResume(restored.data, sectionData, postingTerms)
       }
     }
 
@@ -601,7 +687,7 @@ Reglas duras:
       // Stored AFTER every guard, so a reload re-serves the answer the user
       // actually saw — not the raw model reply a guard had already rejected.
       await writeAnswer("analysis", cacheKey, a, AI_MODEL_PROSE, resumeId)
-      return this.groundForThisResume(a, sectionData)
+      return this.groundForThisResume(a, sectionData, postingTerms)
     } catch (err) {
       this.logger.warn("[AIService.atsScore] recruiter analysis failed (non-fatal)", { err: err instanceof Error ? err.message : String(err) })
       return null
@@ -936,7 +1022,7 @@ Reglas:
     // awaited work before we collect it (the embedding pass) fails closed too — so
     // this promise can never dangle or reject. The .catch is a belt against a future
     // edit adding a throwing call between here and the await.
-    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}, resumeId).catch(() => null)
+    const analysisPromise = this.analyzeResume(userId, resumeText, jobContext, plan, en, langInstruction, sectionData ?? {}, resumeId, [...extraction.hardSkills, ...extraction.softSkills]).catch(() => null)
 
     // ── Deterministic scoring in code ──────────────────────────────────────────
     const cvTitles = buildCVTitles(data)

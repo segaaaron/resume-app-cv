@@ -19,7 +19,8 @@ import { tailorResolutions } from "@/lib/ats/tailor-resolutions"
 import { allChecks } from "@/lib/ats/report"
 import ReportRail from "./ats-report/ReportRail"
 import { applyAllPlan, solvableChecks, tailorWorkload } from "@/lib/ats/report"
-import TailorModal from "./ats-report/TailorModal"
+import TailorModal, { type TailorFilter } from "./ats-report/TailorModal"
+import { postingTermsForPrompt } from "@/lib/ats/rewrite-keeps-match"
 import { appliedSignatures, rememberApplied } from "@/lib/ats/applied-memory"
 import { useShallow } from "zustand/react/shallow"
 // Same normalization the matcher used to decide "demonstrated", so an accented
@@ -231,7 +232,14 @@ export default function ATSScorePanel() {
    */
   // El modal muestra el estado de ocupado; acá sólo se registra cuál par está
   // en vuelo, para que `runMerge` no dispare dos veces sobre el mismo.
-  const [, setMergingKey] = useState<string | null>(null)
+  /**
+   * La fusión en vuelo. El valor se ESCRIBÍA Y SE TIRABA —`const [, setMergingKey]`—
+   * así que ninguna tarjeta sabía que había una llamada corriendo: apretabas
+   * «fusionarlas», el modelo tardaba sus segundos y el botón se quedaba mudo.
+   * Reportado tal cual: «como que tarda en cargar, ¿no sería mejor agregar un
+   * loading?». El loading ya existía; lo que faltaba era decirle cuándo.
+   */
+  const [mergingKey, setMergingKey] = useState<string | null>(null)
 
   async function runMerge(c: { targetId: string; indexes: [number, number]; texts: [string, string] }) {
     const key = `merge-${c.targetId}-${c.indexes[0]}-${c.indexes[1]}`
@@ -278,6 +286,7 @@ export default function ATSScorePanel() {
   // from the Tailor run (§③) so ALL bullet work lives in the one list below (§②).
 
   const [weavingSoft, setWeavingSoft] = useState<string | null>(null)
+
   /**
    * The "where does this go?" step of weaving a soft skill.
    *
@@ -304,7 +313,16 @@ export default function ATSScorePanel() {
       const res = await apiFetch("/api/ai/improve-bullet", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: b.text, jobTitle: b.jobTitle || undefined, language: cvLanguage, focus }),
+        // Y LOS TÉRMINOS DE LA VACANTE, DEL INFORME. «El ATS manda: todo lo que
+        // tenga el ATS debe consultar al ATS» (CEO). Este endpoint reescribía una
+        // viñeta del CV sin haber visto nunca la oferta: su prompt le pedía
+        // «incorporá keywords del sector» y el modelo elegía cuáles mirando el
+        // título. Salen del informe —no del crudo del servidor— por la misma
+        // razón que todo lo demás: una sola puerta.
+        body: JSON.stringify({
+          text: b.text, jobTitle: b.jobTitle || undefined, language: cvLanguage, focus,
+          postingTerms: postingTermsForPrompt(report?.posting?.hardSkills, report?.posting?.softSkills),
+        }),
       })
       if (!res.ok) {
         const body = (await res.json().catch(() => null)) as { error?: string } | null
@@ -547,6 +565,36 @@ export default function ATSScorePanel() {
   // of the best-fit job (never names the word), then confirm via the same diff
   // modal before it lands — the user is the honesty gate. Appends a new bullet.
 
+  /**
+   * CUANDO NO HAY DÓNDE ESCRIBIRLA, NO SE TERMINA EN UN «NO».
+   *
+   * ── EL DEFECTO (reportado con captura, 2026-08-21) ───────────────────────
+   *
+   * El panel decía «Demostrá "Análisis de indicadores comerciales" en una
+   * viñeta», él apretaba, y la respuesta era un aviso gris: «No encontré un
+   * puesto donde encaje de forma natural.» Fin. Su pregunta fue «¿a qué se debe
+   * esto?», y era la correcta: el panel le pidió algo, le cobró el uso y el
+   * cooldown, y le contestó que no.
+   *
+   * La regla del proyecto es que NINGÚN endpoint de IA entrega un hueco: se
+   * pregunta, se reintenta una vez, y se rellena con algo útil y verdadero. Acá
+   * lo verdadero existe y es determinista: el término puede ir a Habilidades sin
+   * gastar una llamada. No es lo mismo que demostrarlo en una viñeta —lo dice el
+   * propio panel— pero es más que nada, y lo elige él.
+   *
+   * Sólo se llega acá cuando NO se puede preguntar por el puesto: o él ya eligió
+   * uno y el modelo igual se negó, o el CV no tiene ningún puesto con id al que
+   * escribir. En los demás casos se abre el selector, que es mejor respuesta.
+   */
+  function noFitDeadEnd(skill: string) {
+    toast.info(t("soft_skill_no_fit"), {
+      action: {
+        label: t("term_add"),
+        onClick: () => { addKeywordToSkills(skill) },
+      },
+    })
+  }
+
   async function weaveSkill(skill: string, targetId?: string, soft = true) {
     if (weavingSoft) return
     setWeavingSoft(skill)
@@ -589,13 +637,13 @@ export default function ATSScorePanel() {
       }
       if (!data || data.status === "no_fit") {
         if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
-        else toast.info(t("soft_skill_no_fit"))
+        else noFitDeadEnd(skill)
         return
       }
       const job = work.find((j) => j.id === data.targetId)
       if (!job) {
         if (!targetId && work.some((j) => j.id)) setSoftPick({ skill, recommendedId: null, draft: null, soft })
-        else toast.info(t("soft_skill_no_fit"))
+        else noFitDeadEnd(skill)
         return
       }
       // First pass: show WHERE it would go and let the user move it. Only the
@@ -730,7 +778,9 @@ export default function ATSScorePanel() {
   const [tailorOpen, setTailorOpen] = useState(false)
   const [focusCheckId, setFocusCheckId] = useState<string | null>(null)
   /** Con qué filtro abre el ejecutor. El veredicto entra directo a «opcionales». */
-  const [tailorFilter, setTailorFilter] = useState<"all" | "tips">("all")
+  const [tailorFilter, setTailorFilter] = useState<TailorFilter>("all")
+  /** El término que el riel mandó a resolver, para aterrizar en su tarjeta. */
+  const [focusTerm, setFocusTerm] = useState<string | null>(null)
   const [appliedCheckIds, setAppliedCheckIds] = useState<Set<string>>(new Set())
 
 
@@ -777,6 +827,16 @@ export default function ATSScorePanel() {
     rewriteSummary: wantsSummary,
     autoRunSignal: autoTailorSignal,
   })
+  /**
+   * UNA SOLA BANDERA DE «HAY UNA LLAMADA CORRIENDO», para las tarjetas.
+   *
+   * Las tarjetas recibían `tailor.loading`, que sólo cubre al ejecutor. Fusionar
+   * dos líneas y tejer un término son OTROS endpoints, con sus propios estados —
+   * así que durante esas dos el botón no mostraba nada y la pantalla parecía
+   * congelada. El spinner estaba escrito en `FixCard` desde siempre; nunca se le
+   * dijo cuándo encenderlo.
+   */
+  const panelBusy = tailor.loading || !!mergingKey || !!weavingSoft
 
   /** Lo que el ejecutor escribió, atado al hallazgo que cierra. */
   const resolutions = useMemo(
@@ -1239,10 +1299,30 @@ export default function ATSScorePanel() {
               onSolve={(checkId) => { setFocusCheckId(checkId ?? null); setTailorOpen(true) }}
               onFix={fixCheck}
               onAddTerm={(term) => { addKeywordToSkills(term) }}
-              onWeaveTerm={(term) => { void weaveSkill(term, undefined, false) }}
+              /**
+               * DEMOSTRAR UN TÉRMINO SE RESUELVE EN TAILOR, NO EN EL RIEL.
+               *
+               * «Tailor es quien resuelve todo esto» (CEO, 2026-08-22). El riel
+               * llamaba a `weaveSkill` por su cuenta: la misma acción existía en
+               * dos sitios, con dos presentaciones y dos formas de fallar — y la
+               * del riel era la peor, porque escribía en el CV sin mostrar antes
+               * la tarjeta con la línea propuesta.
+               *
+               * Ahora abre el ejecutor en la sección del término y aterriza en
+               * SU tarjeta, igual que `onSolve` hace con un hallazgo. Agregarlo a
+               * Habilidades se queda acá: es determinista, no gasta llamada y no
+               * hay nada que revisar antes.
+               */
+              onWeaveTerm={(term) => {
+                const section = report.terms.find((x) => x.term === term)?.section
+                setTailorFilter(section === "hard" || section === "soft" || section === "other" ? section : "open")
+                setFocusTerm(term)
+                setFocusCheckId(null)
+                setTailorOpen(true)
+              }}
               addedTerms={addedKeywords}
               busyTerm={weavingSoft}
-              busy={tailor.loading}
+              busy={panelBusy}
             />
           </div>
         )}
@@ -1553,11 +1633,12 @@ export default function ATSScorePanel() {
           onClose={() => { setTailorOpen(false); setFocusCheckId(null) }}
           focusCheckId={focusCheckId}
           initialFilter={tailorFilter}
+          focusTerm={focusTerm}
           onWeaveTerm={(term) => { void weaveSkill(term, undefined, false) }}
           onAddTerm={(term) => { addKeywordToSkills(term) }}
           addedTerms={addedKeywords}
           busyTerm={weavingSoft}
-          busy={tailor.loading}
+          busy={panelBusy}
         />
       )}
 
