@@ -35,7 +35,7 @@
 //   · Nothing here states a fact about the person. Skills and credentials are
 //     what the ROLE usually carries, and the user ticks them one by one.
 
-import { cvValueBar, neverInventRule, proseRules } from "../shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 
 export type ProfileMode = "seed" | "certifications" | "bullets"
 
@@ -182,7 +182,7 @@ Every trade has standard content: the controls it runs under, the documents it h
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ${declared ? `WHAT THIS CANDIDATE HAS ALREADY DECLARED — tools, standards and skills, from their own CV:
 ${declared}
@@ -206,7 +206,7 @@ Todo oficio tiene un contenido estándar: los controles bajo los que opera, los 
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 ${declared ? `LO QUE ESTE CANDIDATO YA DECLARÓ — herramientas, normas y habilidades, sacadas de su propio CV:
 ${declared}

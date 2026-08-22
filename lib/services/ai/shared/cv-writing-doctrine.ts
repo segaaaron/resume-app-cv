@@ -82,25 +82,64 @@ export function cvValueBar(language: string): string {
  * The facts only the candidate can state. Identical in both branches by design:
  * this list is the product's promise, and it must not vary by language.
  */
-export function neverInventRule(language: string): string {
+/**
+ * LO PROHIBIDO ES EL DATO QUEMADO, no que la IA escriba.
+ *
+ * ── POR QUÉ ESTA FUNCIÓN SE LLAMABA `neverInventRule`, Y POR QUÉ YA NO ──────
+ *
+ * El nombre viejo arrastraba el marco equivocado a los diez sitios que la citan,
+ * y ese marco se aplicó de más durante meses: bastaba que una salida sonara a
+ * logro para que un guard la tratara como invención. El CEO lo corrigió tres
+ * veces, con estas palabras:
+ *
+ *   «Lo que para mí es un invento es cuando creás información QUEMADA. Lo que la
+ *    IA genera no son inventadas: son mejoras que te da según la información que
+ *    tiene.»
+ *
+ * La línea, entonces, no pasa por quién escribe la frase sino por DE DÓNDE SALE
+ * EL DATO:
+ *
+ *   QUEMADO — la cifra de un ejemplo, el nombre de una marca que él no declaró,
+ *   un título que no tiene. No salió de este candidato. Prohibido siempre.
+ *
+ *   DERIVADO — el vocabulario real de su oficio para el trabajo que describió,
+ *   su propio resultado escrito con el verbo que le corresponde, el tamaño
+ *   medible de lo que contó, propuesto como rango que él confirma. Eso es el
+ *   producto, y callárselo lo deja con la lista de tareas que ya tenía.
+ */
+export function noHardCodedFactsRule(language: string): string {
   return language === "en"
-    ? `NEVER STATE THESE — only the candidate can, and inventing one is what makes a CV fail an interview:
+    ? `WHAT IS FORBIDDEN IS A HARD-CODED FACT — a datum you burned in yourself.
+
+A figure taken from an example, from a template, or from what "usually" happens in that trade is hard-coded: it did not come from this candidate, and it is what makes a CV collapse in an interview.
+
+Everything you write FROM WHAT THEY TOLD YOU is not invention — it is the improvement they are paying for. Naming the trade's real vocabulary for the work they described, writing their outcome with the verb it deserves, proposing the measurable size of what they did: none of that is inventing. Withholding it leaves them with the same duty list they typed.
+
+These are the hard-coded ones — only the candidate can state them:
 - A figure STAMPED ON FROM OUTSIDE: a number that comes from you, from an example, or from what "usually" happens in that trade, rather than from the work THIS candidate described. That is the forbidden one.
   You MAY propose a figure when the work they described plainly has a measurable size and they simply did not write it down — and then you write it as a RANGE they can confirm or correct in one click ("between 50 and 100 transactions a day"), never as a precise number presented as fact. A range they adjust is theirs; a number you decided is not.
 - Employers, clients or products by proper name that they did not mention.
 - Software or systems by BRAND name THAT THEY DID NOT STATE. Say "core banking system", never a vendor they never mentioned.
   BUT: a tool, standard or system the candidate already listed in their skills, or named in their own words, is THEIRS — write it where the work they described actually used it. Two examples of the principle, from opposite trades and never of the wording: a welder who lists TIG does not get "performed welding", and a payroll clerk who lists the collective agreement does not get "processed payroll". Suppressing what the candidate declared protects them from nothing; it removes the exact keyword an ATS searches for.
-- Results or achievements ("reduced errors", "improved efficiency", "increased sales") — a result is a fact about them.
+- A RESULT THEY NEVER DESCRIBED. "Reduced errors", "improved efficiency", "increased sales" are forbidden only when the source says nothing about a reduction, an improvement or a rise — bolting an outcome onto work they described as a task is the invention.
+  When they DID describe the outcome, write it with the verb it deserves. "I checked the invoices and there were fewer mistakes" becomes "Reduced invoicing errors by reviewing every batch before release" — that is not inventing, it is their own information written the way a CV is written, and it is the value they are paying for. Suppressing the verb because it sounds like an achievement leaves them with a duty list.
 - Certifications, licences or degrees.
 - Seniority they did not claim: no "led", "managed" or "supervised" unless they said so.
 If the work genuinely had a number and they did not give it, propose the range and mark it as theirs to confirm. Never leave the line naked when a size is obvious, and never hand them a precise figure you chose.`
-    : `NUNCA AFIRMES ESTO — sólo el candidato puede, e inventar uno es lo que hace que un CV se caiga en la entrevista:
+    : `LO PROHIBIDO ES UN DATO QUEMADO — un dato que pusiste vos.
+
+Una cifra sacada de un ejemplo, de una plantilla o de lo que "suele" pasar en ese oficio está quemada: no salió de este candidato, y es lo que hace que un CV se caiga en la entrevista.
+
+Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ no es invento — es la mejora que está pagando. Nombrar el vocabulario real de su oficio para el trabajo que describió, escribir su resultado con el verbo que le corresponde, proponer el tamaño medible de lo que hizo: nada de eso es inventar. Callártelo lo deja con la misma lista de tareas que él tipeó.
+
+Éstos son los datos quemados — sólo el candidato puede afirmarlos:
 - Una cifra PUESTA DESDE AFUERA: un número que sale de vos, de un ejemplo, o de lo que "suele" pasar en ese oficio, y no del trabajo que ESTE candidato contó. Ésa es la prohibida.
   SÍ podés proponer una cifra cuando el trabajo que describió tiene un tamaño medible evidente y él simplemente no lo escribió — y entonces la escribís como RANGO que él confirma o corrige en un clic ("entre 50 y 100 transacciones por día"), nunca como un número exacto presentado como hecho. Un rango que él ajusta es suyo; un número que decidiste vos, no.
 - Empleadores, clientes o productos con nombre propio que no mencionó.
 - Software o sistemas con nombre de MARCA QUE ÉL NO HAYA DECLARADO. Decí "sistema core bancario", nunca un proveedor que no mencionó.
   PERO: una herramienta, norma o sistema que el candidato ya listó en sus habilidades, o que nombró con sus propias palabras, es SUYO — escribilo donde el trabajo que contó realmente lo usó. Dos ejemplos del principio, de rubros opuestos y nunca de la redacción: un soldador que declara TIG no recibe "realicé soldaduras", y una liquidadora de sueldos que declara el convenio colectivo no recibe "procesé la nómina". Ocultar lo que el candidato declaró no lo protege de nada: le saca la keyword exacta que busca un ATS.
-- Resultados o logros ("reduje errores", "mejoré la eficiencia", "aumenté las ventas") — un resultado es un hecho sobre él.
+- UN RESULTADO QUE ÉL NUNCA CONTÓ. "Reduje errores", "mejoré la eficiencia", "aumenté las ventas" están prohibidos SÓLO cuando el source no dice nada de una baja, una mejora ni una suba — pegarle un resultado a un trabajo que él describió como tarea, eso es el invento.
+  Cuando SÍ contó el resultado, escribilo con el verbo que le corresponde. "Revisaba las facturas y había menos errores" se convierte en "Reduje los errores de facturación revisando cada lote antes de emitirlo" — eso no es inventar: es su propia información escrita como se escribe un CV, y es el valor que está pagando. Callarse el verbo porque suena a logro lo deja con una lista de tareas.
 - Certificaciones, licencias ni títulos.
 - Jerarquía que no declaró: nada de "lideré", "gestioné" ni "supervisé" si no lo dijo.
 Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marcalo como suyo para confirmar. Nunca dejes la línea pelada cuando el tamaño es obvio, y nunca le entregues una cifra exacta elegida por vos.`
@@ -135,7 +174,7 @@ export function proseRules(language: string): string {
  * Endpoints that only need part of it call the pieces directly.
  */
 export function cvWritingDoctrine(language: string): string {
-  return [cvValueBar(language), neverInventRule(language), proseRules(language)].join("\n\n")
+  return [cvValueBar(language), noHardCodedFactsRule(language), proseRules(language)].join("\n\n")
 }
 
 /**
@@ -181,7 +220,7 @@ La línea que el candidato escribió BIEN — específica, con el vocabulario de
  * entries and administered doses". Richer, truthful, and stripped of the only
  * two numbers a recruiter can weigh.
  *
- * `neverInventRule` covers the fabricated figure. Nothing covered the deleted
+ * `noHardCodedFactsRule` covers the fabricated figure. Nothing covered the deleted
  * one, and it is the worse of the two: the candidate spent a year earning that
  * number, and the button that removed it said it would improve the line.
  */

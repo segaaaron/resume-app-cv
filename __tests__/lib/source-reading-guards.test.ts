@@ -80,6 +80,8 @@ const REGISTRO: Record<string, { max: number; razon: string }> = {
   "lib/ats-panel-memory.test.ts": { max: 1, razon: "la copia del estado final existe en los dos idiomas" },
   "lib/ats-no-duplicate-sections.test.ts": { max: 1, razon: "el panel no conserva ningún bloque propio" },
   "lib/impact-scoring.test.ts": { max: 1, razon: "la banda de cuantificación tiene un solo dueño, no una copia en el panel" },
+  "lib/doctrine-ownership.test.ts": { max: 3, razon: "los tres prompts que escriben prosa del CV citan la doctrina compartida" },
+  "lib/no-invention-framing.test.ts": { max: 1, razon: "la extracción conserva el no-inventes; los seis de prosa no" },
 }
 
 function walk(dir: string): string[] {

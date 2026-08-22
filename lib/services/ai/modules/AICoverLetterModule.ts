@@ -20,7 +20,7 @@ import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metr
 // 16-28 words, a past-tense verb first), which is the wrong shape for a letter
 // and would fight the paragraph structure below. The two that do apply are the
 // two that are about content rather than form.
-import { cvValueBar, neverInventRule } from "../shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { assessCoverLetter } from "../shared/cover-letter-quality"
@@ -199,7 +199,7 @@ Write a complete, compelling cover letter body for the following candidate and p
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ${untrustedDataRule(true)}
 
@@ -236,7 +236,7 @@ Escribe el cuerpo completo de una carta de presentación para el siguiente candi
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 ${untrustedDataRule(false)}
 
@@ -645,7 +645,7 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
           // el otro nunca recibe. El reintento es donde más importa, así que una
           // carta en inglés no puede pedirse en español.
           { role: "system", content: language === "en"
-            ? `You are a senior cover-letter writer. You NEVER invent figures, companies or technologies absent from the profile. ${langInstruction}`
+            ? `You are a senior cover-letter writer. You never hard-code figures, companies or technologies absent from the profile. ${langInstruction}`
             : `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}` },
         ],
@@ -747,9 +747,11 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
         ].filter(Boolean).join(" | ")
 
     const prompt = language === "en"
-      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+      ? `${noHardCodedFactsRule("en")}
+
+ADDITIONAL RULES:
 1. ONLY rewrite using information already present in the current letter and the context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the source.
-2. Preserve real metrics from the original. If none exist, write without numbers — NEVER invent a figure and NEVER leave a bracket like [X%]. The letter is sent as-is; an unfilled bracket reads as unfinished.
+2. Preserve every metric the original states. Never leave a bracket standing in for a figure.
 3. If a version would require fabricating content to be impactful, prefer a shorter, conservative rewrite anchored to the source.
 
 TASK: Improve this cover letter body and generate 3 optimized versions.
@@ -764,7 +766,7 @@ GOLDEN RULES (apply all):
 3. Impact verbs: Led, Developed, Optimized, Implemented, Grew, Drove. NEVER use "Responsible for".
 3a. The closing invites next steps without any adjective about the candidate's own feelings. "I would welcome the chance to walk you through the migration plan", "I would be glad to talk about how this maps to your platform work" — warmth comes from the specific thing being offered, not from naming an emotion. The banned list above removes the usual closing; this is what replaces it.
 3b. Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text.
-4. If the original has metrics, preserve them. If not, write without numbers. NEVER invent figures and NEVER leave brackets.
+4. Preserve every metric the original states. Never leave a bracket.
 5. Each version must have a distinct tone:
    - Version 1: Formal and executive
    - Version 2: Balanced and direct
@@ -776,9 +778,11 @@ ON NUMBERS — read this last and follow it exactly:
 The letter above may contain no figures at all. That is FINE and very common. A letter with zero numbers, written around concrete specifics the candidate actually stated (the product, the stack, the team, the role), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not present in the letter or context above will be rejected and the candidate will get nothing back. Write the strongest letter you can using only what is there.
 
 Respond ONLY with valid JSON, shaped: a "status" key set to "improved", and a "versions" key holding an array of exactly three strings. Each string is one entire rewritten letter — every paragraph of it, separated by \\n\\n. Write all three in full. Nothing else in the response.`
-      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+      : `${noHardCodedFactsRule("es")}
+
+REGLAS ADICIONALES:
 1. SOLO reescribe usando información ya presente en la carta actual y el contexto de arriba. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no presentes en el source.
-2. Conserva métricas reales del original. Si no las hay, escribe sin números — NUNCA inventes una cifra y NUNCA dejes un corchete tipo [X%]. La carta se envía tal cual; un corchete sin rellenar se lee como algo sin terminar.
+2. Conservá cada métrica que el original declara. Nunca dejes un corchete en lugar de una cifra.
 3. Si una versión requiere fabricar contenido para ser impactante, prefiere una reescritura más corta y conservadora anclada al source.
 
 TAREA: Mejora el siguiente cuerpo de carta de presentación y genera 3 versiones optimizadas.
@@ -793,7 +797,7 @@ REGLAS DE ORO (aplica todas):
 3. Verbos de impacto: Lideré, Desarrollé, Optimicé, Implementé, Incrementé. NUNCA uses "Responsable de".
 3a. El cierre invita a los siguientes pasos sin ningún adjetivo sobre lo que el candidato siente. "Me gustaría explicarles cómo planteé la migración", "Estaría encantado de comentar cómo encaja esto con su plataforma" — la cercanía viene de lo concreto que se ofrece, no de nombrar una emoción. La lista prohibida de arriba quita el cierre habitual; esto es lo que lo sustituye.
 3b. NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto.
-4. Si hay métricas en el texto original, consérvalas. Si no las hay, escribe sin números. NUNCA inventes cifras y NUNCA dejes corchetes.
+4. Conservá cada métrica que el original declara. Nunca dejes un corchete.
 5. Cada versión debe tener un tono distinto:
    - Versión 1: Formal y ejecutiva
    - Versión 2: Equilibrada y directa
@@ -821,7 +825,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
               ? "You are an Elite Career Consultant specialized in writing high-impact cover letters for hiring processes. " +
                 "Your specialty is turning generic letters into text that makes the candidate stand out through concrete achievements and impactful language. " +
                 "You ONLY work with professional cover letters. " +
-                "You NEVER invent figures and NEVER write bracket placeholders — when there is no real metric, you write without a number. " +
+                "You never write bracket placeholders — when there is no real metric, you write without a number. " +
                 "If the content is not a professional cover letter, respond only with: {\"versions\": []} and nothing else. "
               : "Eres un Consultor de Carrera de Élite especializado en redacción de cartas de presentación de alto impacto para procesos de selección. " +
                 "Tu especialidad es transformar cartas genéricas en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
@@ -1022,7 +1026,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
         response_format: { type: "json_object" },
         messages: [
           { role: "system", content: language === "en"
-            ? `You are an Elite Career Consultant. You NEVER invent figures and never write placeholders. ${langInstruction}`
+            ? `You are a senior CV writer. You never hard-code figures and never write placeholders. ${langInstruction}`
             : `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}${alsoTooLong ? lengthNote : ""}` },
         ],

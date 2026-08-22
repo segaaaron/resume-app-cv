@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest"
 import { IMPACT_OPENERS_ES, opensInThirdPersonEs } from "@/lib/services/ai/shared/bullet-quality"
 import { readFileSync } from "node:fs"
 import { join } from "node:path"
-import { cvValueBar, neverInventRule, proseRules, alreadyGoodRule, cvWritingDoctrine } from "@/lib/services/ai/shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule, cvWritingDoctrine } from "@/lib/services/ai/shared/cv-writing-doctrine"
 
 /**
  * One bar for every AI surface, and it must not drift.
@@ -22,7 +22,7 @@ const LANGS = ["es", "en"] as const
 
 describe("the CV-writing bar", () => {
   it("exists in both languages, and they are different texts", () => {
-    for (const part of [cvValueBar, neverInventRule, proseRules, alreadyGoodRule]) {
+    for (const part of [cvValueBar, noHardCodedFactsRule, proseRules, alreadyGoodRule]) {
       const es = part("es")
       const en = part("en")
       expect(es.length).toBeGreaterThan(300)
@@ -52,12 +52,16 @@ describe("the CV-writing bar", () => {
       [/cifra puesta desde afuera/i, /figure stamped on from outside/i],
       [/empleadores/i, /employers/i],
       [/marca/i, /brand/i],
-      [/resultados o logros/i, /results or achievements/i],
+      // Cambió de «resultados o logros» a «un resultado que él nunca contó».
+      // La regla vieja prohibía el VERBO y no el hecho no declarado, y chocaba
+      // de frente con `proseRules`, que le da al modelo «Reduje / Incrementé»
+      // como ejemplos de buena apertura: el mismo prompt daba y quitaba.
+      [/resultado que él nunca contó/i, /result they never described/i],
       [/certificaciones/i, /certifications/i],
       [/jerarquía|lideré/i, /seniority|led/i],
     ]
-    const es = neverInventRule("es")
-    const en = neverInventRule("en")
+    const es = noHardCodedFactsRule("es")
+    const en = noHardCodedFactsRule("en")
     for (const [reEs, reEn] of checks) {
       expect(es, `es: ${reEs}`).toMatch(reEs)
       expect(en, `en: ${reEn}`).toMatch(reEn)
@@ -90,7 +94,7 @@ describe("the CV-writing bar", () => {
     for (const lang of LANGS) {
       const all = cvWritingDoctrine(lang)
       expect(all).toContain(cvValueBar(lang))
-      expect(all).toContain(neverInventRule(lang))
+      expect(all).toContain(noHardCodedFactsRule(lang))
       expect(all).toContain(proseRules(lang))
     }
   })
@@ -154,7 +158,7 @@ describe("the CV-writing bar", () => {
   it("gives the cover letter the content rules and not the bullet form rules", () => {
     const src = readFileSync(join(process.cwd(), "lib/services/ai/modules/AICoverLetterModule.ts"), "utf8")
     expect(src).toContain("cvValueBar")
-    expect(src).toContain("neverInventRule")
+    expect(src).toContain("noHardCodedFactsRule")
     // Checked as a CALL, not as a mention: the module's own comment explains why
     // the form rules are excluded, and a substring match would fail on the reason.
     expect(src).not.toMatch(/proseRules\(/)
@@ -202,26 +206,26 @@ describe("the CV-writing bar", () => {
  */
 describe("qué cifra puede escribir el modelo", () => {
   it.each([["es"], ["en"]])("prohíbe la cifra puesta desde afuera (%s)", (lang) => {
-    const rule = neverInventRule(lang)
+    const rule = noHardCodedFactsRule(lang)
     expect(rule).toMatch(lang === "es" ? /desde afuera/i : /from outside/i)
     expect(rule).toMatch(lang === "es" ? /suele/i : /usually/i)
   })
 
   it.each([["es"], ["en"]])("autoriza el rango que el candidato confirma (%s)", (lang) => {
-    const rule = neverInventRule(lang)
+    const rule = noHardCodedFactsRule(lang)
     expect(rule).toMatch(lang === "es" ? /RANGO/ : /RANGE/)
     expect(rule).toMatch(lang === "es" ? /confirma|corrige/i : /confirm|correct/i)
   })
 
   /** Y lo que NO cambió: un número exacto presentado como hecho sigue prohibido. */
   it.each([["es"], ["en"]])("sigue prohibiendo el número exacto elegido por el modelo (%s)", (lang) => {
-    const rule = neverInventRule(lang)
+    const rule = noHardCodedFactsRule(lang)
     expect(rule).toMatch(lang === "es" ? /nunca como un número exacto/i : /never as a precise number/i)
   })
 
   /** Ya no se acepta dejar la línea pelada cuando el tamaño es obvio. */
   it.each([["es"], ["en"]])("ya no manda escribir la línea sin número (%s)", (lang) => {
-    const rule = neverInventRule(lang)
+    const rule = noHardCodedFactsRule(lang)
     expect(rule).not.toMatch(lang === "es" ? /escribí la línea sin número/i : /write the line without one/i)
   })
 })
@@ -265,4 +269,46 @@ describe("los verbos de impacto llegan al prompt", () => {
       expect(v, v).toMatch(/(é|í)$|^(reduje|resolví|construí|atendí)$/)
     }
   })
+})
+
+/**
+ * LAS DOS REGLAS NO PUEDEN DECIR LO CONTRARIO.
+ *
+ * `proseRules` le da al modelo «Reduje, Incrementé, Mejoré» como ejemplos del
+ * registro correcto, y `noHardCodedFactsRule` prohibía exactamente «reduje errores,
+ * mejoré la eficiencia, aumenté las ventas». Las dos van en el MISMO prompt.
+ *
+ * OpenAI documenta que ante reglas en conflicto el modelo gasta razonamiento
+ * intentando reconciliarlas en vez de elegir una — y el resultado eran viñetas
+ * tibias que no decían el logro que el candidato sí había contado.
+ *
+ * La regla estaba mal escrita: prohibía el VERBO en vez del hecho no declarado.
+ * Si el candidato contó que redujo los errores, escribirlo con ese verbo no es
+ * inventar; es su información redactada como se redacta un CV.
+ */
+describe("la doctrina no se contradice a sí misma", () => {
+  for (const lang of ["es", "en"] as const) {
+    it(`los verbos de impacto no están prohibidos (${lang})`, () => {
+      const forbidden = noHardCodedFactsRule(lang).toLowerCase()
+      const encouraged = proseRules(lang).toLowerCase()
+      // Los verbos que el prompt ofrece como buenos no pueden figurar como
+      // prohibidos sin su condición: lo vedado es el resultado NO CONTADO.
+      for (const v of lang === "es" ? ["reduje", "incrementé"] : ["reduced", "increased"]) {
+        if (!encouraged.includes(v)) continue
+        const appears = forbidden.includes(v)
+        if (appears) {
+          // Puede aparecer, pero SÓLO dentro de la excepción explícita.
+          expect(forbidden, `"${v}" prohibido sin la condición`).toMatch(
+            lang === "es" ? /sólo cuando el source no dice/i : /forbidden only when the source says nothing/i,
+          )
+        }
+      }
+    })
+
+    it(`y dice explícitamente que el resultado contado SÍ se escribe (${lang})`, () => {
+      expect(noHardCodedFactsRule(lang)).toMatch(
+        lang === "es" ? /Cuando SÍ contó el resultado/i : /When they DID describe the outcome/i,
+      )
+    })
+  }
 })

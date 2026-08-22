@@ -41,7 +41,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { parseAIJson, resolveLanguage, hallucinationKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
-import { cvValueBar, neverInventRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
 import { assessDescription, opensInThirdPersonEs } from "../shared/bullet-quality"
@@ -184,7 +184,7 @@ export class AITailorModule {
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ${keepCandidateFactsRule("en")}
 
@@ -225,7 +225,7 @@ Rules:
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 ${keepCandidateFactsRule("es")}
 

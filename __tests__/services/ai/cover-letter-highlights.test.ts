@@ -179,7 +179,7 @@ describe("improveCoverLetter — rewrite follows the letter's own language", () 
     expect(chat).toHaveBeenCalled()
     const prompt = sentPrompt(chat)
     // English prompt for an English letter, even though the caller said "es".
-    expect(prompt).toContain("CRITICAL ANTI-HALLUCINATION RULES")
+    expect(prompt).toContain("WHAT IS FORBIDDEN IS A HARD-CODED FACT")
     expect(prompt).not.toContain("REGLAS CRÍTICAS")
   })
 })

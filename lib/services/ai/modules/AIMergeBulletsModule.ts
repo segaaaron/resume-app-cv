@@ -22,7 +22,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { resolveLanguage, detectHallucination, parseAIJson, losesStatedFigure } from "../shared/ai-helpers"
-import { cvValueBar, neverInventRule, keepCandidateFactsRule } from "../shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { contentDroppedFrom } from "../shared/text-similarity"
 import { clicheBanList } from "../shared/cliches"
@@ -80,7 +80,7 @@ export class AIMergeBulletsModule {
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ${keepCandidateFactsRule("en")}
 
@@ -103,7 +103,7 @@ BULLET B: ${b}`
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 ${keepCandidateFactsRule("es")}
 

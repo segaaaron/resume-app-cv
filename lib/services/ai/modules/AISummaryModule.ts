@@ -15,7 +15,7 @@ import { cleanGeneratedText } from "../shared/clean-output"
 import { parseAIJson, resolveLanguage } from "../shared/ai-helpers"
 import { buildMetricGuidance, gateSummaryVersions, type GatedVersion, type SummaryGateUsage } from "../shared/summary-gate"
 import { askUntilAnswered, retryNudge } from "../shared/never-empty"
-import { cvValueBar, neverInventRule } from "../shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
 import { buildModePrompt } from "./profile-modes"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { isTrivialEdit } from "../shared/text-similarity"
@@ -69,10 +69,11 @@ export class AISummaryModule {
     const { block: metricBlockES, rule: numbersRuleES } = buildMetricGuidance(metrics, "es")
 
     const prompt = language === "en"
-      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
-1. ONLY use information present in the CANDIDATE PROFILE below. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not present in the profile.
-2. NEVER write a placeholder. No [X years], [N projects], [X%], [N teams], or anything in brackets standing in for a figure. This text is written straight into the candidate's CV and goes to recruiters as-is; a bracket left in it reads as an unfinished resume. When the profile states no figure, write the sentence WITHOUT a number — a specific, concrete claim with no metric beats a bracket.
-3. If a version would require fabricating content to be impactful, prefer a shorter, more conservative version anchored to the actual profile.
+      ? `${cvValueBar("en")}
+
+${noHardCodedFactsRule("en")}
+
+NEVER write a bracket placeholder. No [X years], [N projects], [X%] — this text goes into the candidate's CV as-is and a bracket reads as an unfinished resume.
 
 TASK: Analyze this professional profile and generate 3 high-impact resume summaries, each with a different positioning.
 
@@ -97,12 +98,12 @@ Version 3 — VALUE PROPOSITION: Focuses on what the candidate brings to their n
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ABSOLUTE RULES:
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove, Designed. NEVER these clichés: ${clicheBanList("en")}. Every one of them is checked and rejected — a version carrying any is thrown away.
 • No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
-• If no metrics in profile: write without numbers. NEVER invent figures and NEVER leave a bracket like [X%] — an unfilled bracket in a CV reads as unfinished.
+• Never leave a bracket like [X%]: unfilled, in a CV it reads as unfinished.
 • Each version must feel written by the candidate — personal and authentic, not AI-generated.
 • Vary sentence length and structure between the 3 versions — avoid a uniform rhythm that reads as AI. Natural, conversational voice, not a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor claims to concrete specifics from the profile (tools, sector, real achievement) rather than vague adjectives.
 
@@ -111,10 +112,11 @@ ${numbersRuleEN}
 
 Respond ONLY with valid JSON. Each entry is the complete text itself, not a label:
 {"versions": ["<the complete executive summary>", "<the complete specialist summary>", "<the complete value-proposition summary>"]}`
-      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
-1. SOLO usa información presente en el PERFIL DEL CANDIDATO de abajo. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas que no estén en el perfil.
-2. NUNCA escribas un placeholder. Ni [X años], ni [N proyectos], ni [X%], ni [N equipos], ni nada entre corchetes que sustituya a una cifra. Este texto se escribe directo en el CV del candidato y llega al recruiter tal cual; un corchete olvidado ahí se lee como un CV a medio hacer. Si el perfil no declara la cifra, escribe la frase SIN número — una afirmación concreta sin métrica vale más que un corchete.
-3. Si una versión requiere fabricar contenido para ser impactante, prefiere una versión más corta y conservadora, anclada al perfil real.
+      : `${cvValueBar("es")}
+
+${noHardCodedFactsRule("es")}
+
+NUNCA escribas un corchete. Ni [X años], ni [N proyectos], ni [X%] — este texto entra en el CV tal cual y un corchete se lee como un CV a medio hacer.
 
 TAREA: Analiza este perfil profesional y genera 3 resúmenes de CV de alto impacto, cada uno con posicionamiento diferente.
 
@@ -139,12 +141,12 @@ Versión 3 — PROPUESTA DE VALOR: Enfoca en lo que el candidato aporta a su pr�
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 REGLAS ABSOLUTAS:
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó, Diseñó. NUNCA estas frases, se comprueban y se rechazan: ${clicheBanList("es")}.
 • Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
-• Si no hay métricas en el perfil: escribe sin números. NUNCA inventes cifras y NUNCA dejes un corchete tipo [X%] — un corchete sin rellenar en un CV se lee como algo sin terminar.
+• Nunca dejes un corchete tipo [X%]: sin rellenar, en un CV se lee como algo sin terminar.
 • Cada versión debe sonar escrita por el candidato — personal y auténtica, no genérica.
 • Varía el largo y la estructura de las frases entre las 3 versiones — evita un ritmo uniforme que suena a IA. Voz natural y conversacional, no nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla las afirmaciones a datos concretos del perfil (herramientas, sector, logro real) en vez de adjetivos vagos.
 
@@ -182,7 +184,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
             // bastaba con borrar. La fórmula además imponía un esqueleto único,
             // chocando con "varía la estructura entre las 3 versiones".
             (language === "en"
-              ? "You ONLY respond to real professional profiles. You NEVER invent figures and NEVER write bracket placeholders — when there is no metric, you write without a number. " +
+              ? "You ONLY respond to real professional profiles. You never write bracket placeholders. " +
                 "If the data does not correspond to a real professional profile, respond only with: {\"versions\": []} and nothing else. "
               : "SOLO respondes con perfiles profesionales reales. NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica, escribes sin número. " +
                 "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
@@ -342,18 +344,22 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
     // rescue it in 5 of 6 runs.
     const { block: metricBlock, rule: numbersRule } = buildMetricGuidance(metrics, language)
 
-    const criticalEN = `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
-1. ONLY rewrite using information already present in the original summary, candidate instruction, or resume context above. Do NOT introduce technologies, frameworks, company names, job titles, certifications, percentages, real numbers, or dates not stated by the user.
-2. Preserve real metrics from the original. If none exist, write without numbers — NEVER invent a figure and NEVER leave a bracket like [X%] or [N projects]. This text goes into the candidate's CV as-is; an unfilled bracket reads as an unfinished resume.
-3. If you cannot improve a version without inventing content, return a conservative rewording that stays anchored to the source.
-4. HUMAN VOICE (avoid AI-detection): vary sentence length and structure; natural, conversational tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Anchor to concrete specifics from the source, not vague adjectives.
+    const criticalEN = `${cvValueBar("en")}
+
+${noHardCodedFactsRule("en")}
+
+Preserve every figure the original states. Never write a bracket placeholder like [X%] — it goes into the CV as-is and reads as unfinished.
+
+HUMAN VOICE (avoid AI-detection): vary sentence length and structure; natural, conversational tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Anchor to concrete specifics from the source, not vague adjectives.
 
 `
-    const criticalES = `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
-1. SOLO reescribe usando información ya presente en el resumen original, la instrucción del candidato o el contexto del CV. NO introduzcas tecnologías, frameworks, nombres de empresas, cargos, certificaciones, porcentajes, números reales ni fechas no aportadas por el usuario.
-2. Conserva métricas reales del original. Si no las hay, escribe sin números — NUNCA inventes una cifra y NUNCA dejes un corchete tipo [X%] o [N proyectos]. Este texto entra en el CV del candidato tal cual; un corchete sin rellenar se lee como un CV sin terminar.
-3. Si no puedes mejorar una versión sin inventar contenido, devuelve una reescritura conservadora anclada al source.
-4. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases; tono natural y conversacional, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla a datos concretos del source, no a adjetivos vagos.
+    const criticalES = `${cvValueBar("es")}
+
+${noHardCodedFactsRule("es")}
+
+Conservá cada cifra que el original declara. Nunca escribas un corchete tipo [X%] — entra en el CV tal cual y se lee como un CV sin terminar.
+
+VOZ HUMANA (evita detección de IA): variá el largo y la estructura de las frases; tono natural y conversacional, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Anclá a datos concretos del source, no a adjetivos vagos.
 
 `
 
@@ -385,10 +391,10 @@ Version 3 — VALUE PROPOSITION (3 sentences): Combines most impactful past achi
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ABSOLUTE RULES:
-• Preserve real metrics from the original. If none: write without numbers. NEVER invent figures, NEVER leave brackets.
+• Preserve every metric the original states. Never leave a bracket.
 • PROHIBITED — every one is checked and rejected; a version carrying any is discarded: ${clicheBanList("en")}.
 • No personal pronouns (I, My, I am), and NEVER the third person either ("Manages", "Handles", "Their experience positions them") — a summary written about the candidate reads as a reference letter somebody else wrote. Open with a NOUN PHRASE or the work itself: "Bank teller with…", "Day-to-day management of…", "Cash reconciliation and counter service across…".
 • Impact verbs: Led, Developed, Transformed, Scaled, Optimized, Implemented, Drove.
@@ -412,7 +418,7 @@ Version 2 — SPECIALIST (2-3 sentences): Emphasis on technical/functional stack
 Version 3 — VALUE PROPOSITION (3 sentences): Focuses on what the candidate brings to their next team. Combines skills + vision of future value.
 
 RULES:
-• If the candidate didn't specify metrics: write without numbers. NEVER invent figures, NEVER leave brackets.
+• Never leave a bracket standing in for a figure.
 • No personal pronouns. Impact verbs first. Never these, they are checked and rejected: ${clicheBanList("en")}.
 • Each version must sound authentic — personal, not generic.
 
@@ -447,10 +453,10 @@ Versión 3 — PROPUESTA DE VALOR (3 oraciones): Combina logro más impactante d
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 REGLAS ABSOLUTAS:
-• Conserva métricas reales del original. Si no hay: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
+• Conservá cada métrica que el original declara. Nunca dejes un corchete.
 • PROHIBIDO — estas frases se comprueban y se rechazan; una versión que lleve cualquiera se descarta: ${clicheBanList("es")}.
 • Sin pronombres personales (Yo, Mi, Soy), y TAMPOCO tercera persona ("Atiende", "Gestiona", "Su experiencia la posiciona") — un resumen escrito SOBRE el candidato se lee como una carta de recomendación redactada por otro. Empezá con una FRASE NOMINAL o con el trabajo en sí: "Cajera con experiencia en…", "Gestión diaria de…", "Arqueo de caja y atención en ventanilla en…".
 • Verbos de impacto: Lideró, Desarrolló, Transformó, Escaló, Optimizó, Implementó, Impulsó.
@@ -474,7 +480,7 @@ Versión 2 — ESPECIALISTA (2-3 oraciones): Énfasis en stack técnico/funciona
 Versión 3 — PROPUESTA DE VALOR (3 oraciones): Enfoca en qué aporta el candidato a su próximo equipo. Combina habilidades + visión de valor futuro.
 
 REGLAS:
-• Si el candidato no especificó métricas: escribe sin números. NUNCA inventes cifras, NUNCA dejes corchetes.
+• Nunca dejes un corchete en lugar de una cifra.
 • Sin pronombres personales. Verbos de impacto al inicio. Nunca estas, se comprueban y se rechazan: ${clicheBanList("es")}.
 • Cada versión debe sonar auténtica — personal, no genérica.
 
@@ -502,12 +508,12 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
               ? "You are an Elite Career Consultant specialized in writing high-impact professional summaries for résumés. " +
                 "You turn generic summaries into text that makes the candidate stand out through concrete achievements and impactful language. " +
                 "You ONLY work with professional résumé summaries and real work profiles. " +
-                "You NEVER invent figures and NEVER write bracket placeholders — when there is no real metric, you write without a number. " +
+                "You never write bracket placeholders. " +
                 "If the content is unrelated to a professional profile, respond only with: {\"versions\": []} and nothing else. "
               : "Eres un Consultor de Carrera de Élite especializado en redacción de resúmenes profesionales de alto impacto para CVs. " +
                 "Transformas resúmenes genéricos en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
                 "SOLO trabajas con resúmenes profesionales de CV y perfiles laborales reales. " +
-                "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
+                "Nunca escribís placeholders entre corchetes. " +
                 "Si el contenido no tiene relación con un perfil profesional, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },

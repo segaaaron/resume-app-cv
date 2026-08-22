@@ -25,6 +25,7 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
 import { AI_INPUT_LIMITS, type SkillBulletInput, type SkillBulletResult } from "../shared/ai-types"
+import { noHardCodedFactsRule } from "../shared/cv-writing-doctrine"
 
 interface WorkRow { id?: string; jobTitle?: string; employer?: string; description?: string }
 
@@ -61,7 +62,9 @@ export class AISkillBulletModule {
    */
   private buildSoftPrompt(skill: string, resumeContext: string, workList: string, language: string): string {
     return language === "en"
-      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+      ? `${noHardCodedFactsRule("en")}
+
+ADDITIONAL RULES:
 1. Use ONLY facts already in the chosen job. Do NOT introduce any technology, framework, tool, company, certification, percentage, number, or date not already in that job.
 2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet states a demonstrated behavior, not a measured result. A bracket or invented figure gets the CV rejected.
 3. The bullet asserts the candidate SHOWED "${skill}" at the chosen job. Place it only where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
@@ -78,11 +81,13 @@ RULES:
 - Choose the single best-fit job by ID. If it fits none credibly, return {"targetId": null, "text": null}.
 - Write exactly ONE bullet, prefixed with "• ", verb-first (e.g. Coordinated, Presented, Aligned, Mentored, Facilitated, Negotiated). No pronouns (I, my). No clichés ("Responsible for", "Helped with").
 - Show the behavior through a real action anchored to that job. Do NOT write the word "${skill}" as a label; prove it. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy".
-- State a capability/action only. Do NOT invent an outcome, metric, scale, or timeframe. If you cannot write it without inventing a figure, still write the action WITHOUT the figure — never fabricate one.
+- State the capability and the work it consists of. Do not attach an outcome, metric, scale or timeframe the candidate never described — that would be a fact about them, hard-coded by you. If they gave you nothing to work from, write the capability and what that work consists of — that is already more than they typed.
 
 Respond ONLY with valid JSON (no markdown):
 {"targetId": "ID", "text": "• bullet that demonstrates ${skill}"}`
-      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+      : `${noHardCodedFactsRule("es")}
+
+REGLAS ADICIONALES:
 1. Usa SOLO datos que ya estén en el puesto elegido. NO introduzcas NINGUNA tecnología, framework, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
 2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet expresa una conducta demostrada, no un resultado medido. Un corchete o cifra inventada hace que le rechacen el CV.
 3. El bullet afirma que el candidato DEMOSTRÓ "${skill}" en el puesto elegido. Colócalo solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
@@ -99,7 +104,7 @@ REGLAS:
 - Elige el único puesto que mejor encaje por ID. Si no encaja en ninguno de forma creíble, devuelve {"targetId": null, "text": null}.
 - Escribe exactamente UN bullet, con prefijo "• ", verbo primero (ej.: Coordiné, Presenté, Alineé, Mentoré, Facilité, Negocié). Sin pronombres (yo, mi). Sin clichés ("Responsable de", "Ayudé con").
 - Muestra la conducta a través de una acción real anclada a ese puesto. NO escribas la palabra "${skill}" como etiqueta; demuéstrala. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia".
-- Expresa solo una capacidad/acción. NO inventes un resultado, métrica, escala ni plazo. Si no puedes escribirlo sin inventar una cifra, escribe igual la acción SIN la cifra — nunca la fabriques.
+- Expresá la capacidad y en qué consiste ese trabajo. No le pegues un resultado, métrica, escala ni plazo que el candidato nunca contó — eso sería un dato sobre él, quemado por vos. Si el candidato no te dio con qué, escribí la capacidad y en qué consiste — eso ya es más de lo que él tipeó.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"targetId": "ID", "text": "• bullet que demuestre ${skill}"}`
@@ -184,7 +189,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
     const prompt = soft
       ? this.buildSoftPrompt(skill, resumeContext, workList, language)
       : language === "en"
-      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
+      ? `${noHardCodedFactsRule("en")}
+
+ADDITIONAL RULES:
 1. Write about ONLY the skill "${skill}" and the job you place it in. Do NOT introduce any OTHER technology, framework, library, tool, company, certification, percentage, number, or date not already in that job.
 2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet has no metric — it states a capability, not a measured result. A bracket or invented figure gets the CV rejected.
 3. The bullet asserts the candidate USED this skill at the chosen job. Only place it where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
@@ -201,11 +208,13 @@ RULES:
 - Choose the single best-fit job by ID. If the skill fits none credibly, return {"targetId": null, "text": null}.
 - Write exactly ONE bullet, prefixed with "• ", verb-first (e.g. Built, Integrated, Automated, Migrated, Implemented). No pronouns (I, my). No clichés ("Responsible for", "Helped with").
 - The bullet must naturally contain "${skill}" and read like something the candidate would say in an interview — vary rhythm, natural tone, not a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy".
-- State a capability/action only. Do NOT invent an outcome, metric, scale, or timeframe. If you cannot write it without inventing a figure, still write the capability WITHOUT the figure — never fabricate one.
+- State the capability and the work it consists of. Do not attach an outcome, metric, scale or timeframe the candidate never described — that would be a fact about them, hard-coded by you. If they gave you nothing to work from, write the capability and what that work consists of — that is already more than they typed.
 
 Respond ONLY with valid JSON (no markdown):
 {"targetId": "ID", "text": "• bullet that uses ${skill}"}`
-      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
+      : `${noHardCodedFactsRule("es")}
+
+REGLAS ADICIONALES:
 1. Escribe SOLO sobre la habilidad "${skill}" y el puesto donde la coloques. NO introduzcas NINGUNA otra tecnología, framework, librería, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
 2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet no tiene métrica — expresa una capacidad, no un resultado medido. Un corchete o cifra inventada hace que le rechacen el CV.
 3. El bullet afirma que el candidato USÓ esta habilidad en el puesto elegido. Colócala solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
@@ -222,7 +231,7 @@ REGLAS:
 - Elige el único puesto que mejor encaje por ID. Si no encaja en ninguno de forma creíble, devuelve {"targetId": null, "text": null}.
 - Escribe exactamente UN bullet, con prefijo "• ", verbo primero (ej.: Desarrollé, Integré, Automaticé, Migré, Implementé). Sin pronombres (yo, mi). Sin clichés ("Responsable de", "Ayudé con").
 - El bullet debe contener "${skill}" de forma natural y sonar como algo que el candidato diría en una entrevista — varía el ritmo, tono natural, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia".
-- Expresa solo una capacidad/acción. NO inventes un resultado, métrica, escala ni plazo. Si no puedes escribirlo sin inventar una cifra, escribe igual la capacidad SIN la cifra — nunca la fabriques.
+- Expresá la capacidad y en qué consiste ese trabajo. No le pegues un resultado, métrica, escala ni plazo que el candidato nunca contó — eso sería un dato sobre él, quemado por vos. Si el candidato no te dio con qué, escribí la capacidad y en qué consiste — eso ya es más de lo que él tipeó.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
 {"targetId": "ID", "text": "• bullet que use ${skill}"}`
@@ -243,7 +252,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           role: "system",
           content:
             "You are an elite resume coach. You weave a skill the candidate already has into a single, credible experience bullet. " +
-            "You NEVER invent metrics, numbers, outcomes, or technologies not already present — you write a capability statement grounded in the chosen job. " +
+            "You never hard-code metrics, numbers, outcomes, or technologies not already present — you write a capability statement grounded in the chosen job. " +
             "Returning {\"targetId\": null} when no job is a credible fit is a correct, expected answer. " +
             langInstruction,
         },

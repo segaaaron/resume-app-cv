@@ -12,6 +12,7 @@ import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit, isCosmeticReword, addsNoInformation, dropsContentWithoutGain } from "../shared/text-similarity"
 import { assessDescription, isDescriptionOptimized, assessImprovability } from "../shared/bullet-quality"
+import { cvValueBar, noHardCodedFactsRule, proseRules } from "../shared/cv-writing-doctrine"
 import { hasCliche } from "../shared/cliches"
 import {
   AI_INPUT_LIMITS,
@@ -68,7 +69,7 @@ export class AIBulletModule {
      * work. None of that needs a figure.
      *
      * The signal was right; blocking on it was wrong. It is passed to the model
-     * as the `metric` focus, whose instruction already reads "NEVER invent a
+     * as the `metric` focus, whose instruction already reads "never hard-code a
      * number and never ask for one; if the source has no figure, improve the
      * wording". The guard now sharpens the request instead of cancelling it.
      */
@@ -140,8 +141,8 @@ export class AIBulletModule {
         es: "contiene un cliché de reclutador / muletilla vacía — la reescritura DEBE quitarlo y decir el trabajo concreto en su lugar",
       },
       metric: {
-        en: "states no result — sharpen the action and the outcome the source already contains. NEVER invent a number and never ask for one; if the source has no figure, improve the wording",
-        es: "no expresa resultado — afila la acción y el resultado que el source YA contiene. NUNCA inventes una cifra ni la pidas; si el source no tiene número, mejora la redacción",
+        en: "states no result — sharpen the action and the outcome the source already contains. When the work plainly has a measurable size they did not write down, propose it as a range for them to confirm; never hard-code a precise figure",
+        es: "no expresa resultado — afilá la acción y el resultado que el source YA contiene. Cuando el trabajo tiene un tamaño medible evidente que él no escribió, proponelo como rango para que lo confirme; nunca quemes una cifra exacta",
       },
       // Not a defect: no rule fired on this bullet and the user asked anyway.
       // The request is to make it read as a professional wrote it — sharper verb,
@@ -204,12 +205,13 @@ Cada ángulo cumple las reglas anti-alucinación de arriba: un ángulo que el so
 Agrega "why" a cada una (máx 20 palabras): qué gana el candidato frente a su redacción original. Nombra el cambio concreto, nunca "más impactante".\n`
 
     const prompt = language === "en"
-      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
-1. ONLY rewrite using information present in the original bullets and the context above. Do NOT introduce technologies, frameworks, libraries, company names, job titles, certifications, percentages, real numbers, dates, or any metric not explicitly provided.
-2. NEVER write a placeholder. No [X%], [N users], [$Z], <number>, or anything in brackets standing in for a figure. What you return is written straight into the candidate's CV, and a bracket left in it gets the CV rejected. If a bullet has no number in the source, still improve its wording and impact WITHOUT a figure — stronger verb, clearer action and outcome. NEVER invent a number and NEVER ask the user for one.
-3. CAR method (Action-Context-Result) — the "Result" segment can only cite results EXPLICITLY present in the source.
+      ? `${cvValueBar("en")}
 
-TASK: Improve the bullets of this work experience for an executive resume.
+${noHardCodedFactsRule("en")}
+
+${proseRules("en")}
+
+TASK: Improve the bullets of this work experience.
 
 ${context ? `Position context: ${context}` : ""}
 
@@ -238,12 +240,13 @@ Include an entry in "improvements" ONLY for a bullet you can MATERIALLY improve 
 
 Respond ONLY with valid JSON (no markdown):
 {"status": "improved", "improvements": [{"index": 0, "text": "• improved bullet", "why": "names the system instead of the duty", "alternatives": [{"text": "• same work, business angle", "angle": "business", "why": "leads with what it was worth"}]}]}`
-      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
-1. SOLO reescribe usando información presente en los bullets originales y el contexto de arriba. NO introduzcas tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, porcentajes, números reales, fechas, ni métricas no proporcionadas.
-2. NUNCA escribas un placeholder. Ni [X%], ni [N usuarios], ni [$Z], ni <número>, ni nada entre corchetes que sustituya a una cifra. Lo que devuelves se escribe directo en el CV del candidato, y un corchete olvidado ahí hace que le rechacen el CV. Si un bullet no tiene cifra en el source, igual mejóralo por redacción e impacto SIN una cifra — verbo más fuerte, acción y resultado más claros. NUNCA inventes un número y NUNCA le pidas uno al usuario.
-3. Método CAR (Acción-Contexto-Resultado) — el "Resultado" solo puede citar resultados EXPLÍCITOS en el source.
+      : `${cvValueBar("es")}
 
-TAREA: Mejora los bullets de esta experiencia laboral para un CV ejecutivo.
+${noHardCodedFactsRule("es")}
+
+${proseRules("es")}
+
+TAREA: Mejorá los bullets de esta experiencia laboral.
 
 ${context ? `Contexto del puesto: ${context}` : ""}
 
@@ -289,18 +292,14 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           // inglés recibía el rol y las restricciones duras en un idioma y la tarea en
           // otro, que es justo donde se cuelan los errores de una de las dos ramas.
           content: (language === "en"
-            ? "You are an Elite Career Consultant specialized in optimizing executive résumés for Fortune 500 companies and high-growth startups. " +
-              "Your specialty: turning generic descriptions into high-impact bullets that pass ATS filters and hold a recruiter's attention in the first 6 seconds. " +
-              "You use the CAR method (Action-Context-Result) and prioritize business outcomes over duties. " +
+            ? "You write CV bullets for the trade the candidate actually works in — a bank teller, a welder, a nurse, a lawyer, a farmer or a software engineer, and each one in the vocabulary of THEIR trade. " +
+              "Turn a duty into a line that names the real work: Action → Context → Result, where the result is one the source states. " +
               "You ONLY process real professional work experience. If the content is not work experience, respond: {\"status\": \"off_topic\", \"improvements\": []}. " +
-              "You NEVER invent figures and NEVER write bracket placeholders — when a metric is missing you improve the wording without inventing one or asking the user for it. " +
               "Returning fewer suggestions than requested is correct: you only suggest what genuinely improves. "
-            : "Eres un Consultor de Carrera de Élite con expertise en optimización de CVs ejecutivos para empresas Fortune 500 y startups de alto crecimiento. " +
-              "Tu especialidad: transformar descripciones genéricas en bullets de alto impacto que superan filtros ATS y capturan la atención de recruiters en los primeros 6 segundos de lectura. " +
-              "Usas el método CAR (Acción-Contexto-Resultado) y priorizas logros de negocio sobre responsabilidades. " +
-              "SOLO procesas contenido de experiencia laboral profesional real. Si el contenido no es de experiencia laboral, responde: {\"status\": \"off_topic\", \"improvements\": []}. " +
-              "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando falta una métrica, mejoras la redacción del bullet sin inventar ni pedir un número. " +
-              "Devolver menos sugerencias de las que te piden es correcto: solo sugieres lo que mejora de verdad. "
+            : "Escribís viñetas de CV para el oficio en el que el candidato trabaja de verdad — un cajero de banco, un soldador, una enfermera, un abogado, un agricultor o un ingeniero de software, y cada uno en el vocabulario de SU oficio. " +
+              "Convertís una tarea en una línea que nombra el trabajo real: Acción → Contexto → Resultado, y el resultado es uno que el source declara. " +
+              "SOLO procesás contenido de experiencia laboral profesional real. Si el contenido no es de experiencia laboral, respondé: {\"status\": \"off_topic\", \"improvements\": []}. " +
+              "Devolver menos sugerencias de las que te piden es correcto: solo sugerís lo que mejora de verdad. "
           ) + langInstruction,
         },
         { role: "user", content: userContent },

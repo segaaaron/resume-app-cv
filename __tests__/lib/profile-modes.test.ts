@@ -112,8 +112,8 @@ describe("the assistant's three prompts", () => {
     }
     // The shared doctrine (cv-writing-doctrine.ts) carries this list now, so the
     // assertion follows it there — one source, both languages.
-    expect(buildModePrompt("bullets", "x: y", "es").system).toMatch(/NUNCA AFIRMES ESTO/)
-    expect(buildModePrompt("bullets", "x: y", "en").system).toMatch(/NEVER STATE THESE/)
+    expect(buildModePrompt("bullets", "x: y", "es").system).toMatch(/LO PROHIBIDO ES UN DATO QUEMADO/)
+    expect(buildModePrompt("bullets", "x: y", "en").system).toMatch(/WHAT IS FORBIDDEN IS A HARD-CODED FACT/)
   })
 
   it("keeps a budget on every mode", () => {

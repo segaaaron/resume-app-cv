@@ -16,7 +16,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
 import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
-import { cvValueBar, neverInventRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
+import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
 import { computeCostUsd } from "../shared/cost-tracker"
@@ -132,7 +132,7 @@ const ANALYSIS_CACHE_MAX = 100
  * algo que no tiene que hacer.
  */
 const DOCTRINE_FINGERPRINT = createHash("sha256")
-  .update(`${cvValueBar("es")}\u0000${neverInventRule("es")}\u0000${proseRules("es")}`)
+  .update(`${cvValueBar("es")}\u0000${noHardCodedFactsRule("es")}\u0000${proseRules("es")}`)
   .digest("hex")
   .slice(0, 8)
 const ANALYSIS_REVISION = `v3-${DOCTRINE_FINGERPRINT}`
@@ -314,12 +314,12 @@ export class AIReviewModule {
     })()
 
     const prompt = en
-      ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you NEVER invent facts — every claim quotes the candidate's real text.
+      ? `You are a senior technical recruiter and ATS specialist. You have screened 10,000+ resumes and know exactly how Workday, Greenhouse, Taleo, iCIMS and Lever parse a PDF and rank a candidate. You are blunt and specific, and you never hard-code a fact — every claim quotes the candidate's real text.
 ${untrustedDataRule(true)}
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ${keepCandidateFactsRule("en")}
 
@@ -389,7 +389,7 @@ ${untrustedDataRule(false)}
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 ${keepCandidateFactsRule("es")}
 
@@ -847,7 +847,7 @@ Reglas:
                   ? "You are an expert on the STANDARD requirements of professional roles, for ATS compatibility analysis. " +
                     "Given a job title, you infer that role's typical, well-established requirements (never inventing niche or company-specific ones). You NEVER assign a numeric score — you only extract keywords and give advice. "
                   : "Eres un experto en los requisitos ESTÁNDAR de roles profesionales para análisis de compatibilidad ATS. " +
-                    "Dado un título de puesto, infieres los requisitos típicos y bien establecidos de ese rol (sin inventar requisitos de nicho ni específicos de una empresa). NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ")
+                    "Dado un título de puesto, infieres los requisitos típicos y bien establecidos de ese rol (no requisitos de nicho ni específicos de una empresa: ésos son datos quemados). NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ")
               : (language === "en"
                   ? "You are an expert job-posting requirement extractor, for ATS compatibility analysis. " +
                     "You only process real job descriptions. You NEVER assign a numeric score — you only extract keywords and give advice. "
@@ -1293,7 +1293,7 @@ INSTRUCTIONS:
 
 ${cvValueBar("en")}
 
-${neverInventRule("en")}
+${noHardCodedFactsRule("en")}
 
 ${keepCandidateFactsRule("en")}
 
@@ -1323,7 +1323,7 @@ CRITICAL RULES FOR SUGGESTIONS (mandatory, no exceptions):
 3. DO NOT add a NEW bullet describing work the candidate never mentioned. Rewriting an existing bullet so it names the operations, documents, materials or controls that work consists of is required, not "new content".
 4. OMIT "suggestion" in one case only: when the improvement would require stating a FACT about the person they did not give — a figure, an employer, a tool they never listed. Then use ONLY "text" (e.g., "Add measurable metrics to your achievements" — NOT "Achieved 80% reduction in load time"). Naming what the work of their trade consists of is NOT that case: that is the thing you are here to write.
 5. NEVER use placeholders like [X%], [N users], <number>, or similar in the preview field. The preview must be production-ready text.
-6. If you can write the improvement without inventing a fact, WRITE IT. Advice with no preview leaves the user the problem and no way to fix it: you named the defect and withheld the repair. Measured on a real CV: five improvements, five verdicts, zero buttons. "If in doubt, omit" was the right rule when a preview could invent; the bar above now says what an acceptable preview is, and doubt is not an answer.
+6. If you can write the improvement from what the source already says, WRITE IT. Advice with no preview leaves the user the problem and no way to fix it: you named the defect and withheld the repair. Measured on a real CV: five improvements, five verdicts, zero buttons. "If in doubt, omit" was the right rule when a preview could invent; the bar above now says what an acceptable preview is, and doubt is not an answer.
 7. For an ADVICE-ONLY improvement (no "suggestion"), STILL add a "location" object with the section it refers to, so the user knows WHERE to apply it: { "field": <one of the field values above>, "targetId": "<ID:xxx if the field starts with workExperience.>" }. e.g. advice about a skills typo → "location": { "field": "skills" }.
 
 Respond ONLY with valid JSON (no markdown):
@@ -1363,7 +1363,7 @@ INSTRUCCIONES:
 
 ${cvValueBar("es")}
 
-${neverInventRule("es")}
+${noHardCodedFactsRule("es")}
 
 ${keepCandidateFactsRule("es")}
 
@@ -1393,7 +1393,7 @@ REGLAS CRÍTICAS PARA SUGGESTIONS (obligatorias, sin excepciones):
 3. NO agregues un bullet NUEVO que describa trabajo que el candidato nunca mencionó. Reescribir un bullet existente para que nombre las operaciones, documentos, materiales o controles en que consiste ese trabajo es obligatorio, no "contenido nuevo".
 4. OMITE "suggestion" en un solo caso: cuando la mejora exigiría afirmar un DATO sobre la persona que ella no dio — una cifra, un empleador, una herramienta que no declaró. Ahí usa SOLO "text" (ej.: "Añade métricas medibles a tus logros" — NO "Logré reducir el tiempo de carga en un 80%"). Nombrar en qué consiste el trabajo de su oficio NO es ese caso: eso es lo que tenés que escribir.
 5. NUNCA uses placeholders como [X%], [N usuarios], <número>, ni similares en el campo preview. El preview debe ser texto listo para producción.
-6. Si podés escribir la mejora sin inventar un dato, ESCRIBILA. Un consejo sin preview le deja al usuario el problema y ninguna forma de arreglarlo: le nombraste el defecto y le negaste el arreglo. Medido en un CV real: cinco mejoras, cinco veredictos, cero botones. "Ante la duda, omitir" era la regla correcta cuando un preview podía inventar; ahora la vara de arriba ya dice qué es un preview aceptable, y dudar no es una respuesta.
+6. Si podés escribir la mejora con lo que el source ya dice, ESCRIBILA. Un consejo sin preview le deja al usuario el problema y ninguna forma de arreglarlo: le nombraste el defecto y le negaste el arreglo. Medido en un CV real: cinco mejoras, cinco veredictos, cero botones. "Ante la duda, omitir" era la regla correcta cuando un preview podía inventar; ahora la vara de arriba ya dice qué es un preview aceptable, y dudar no es una respuesta.
 7. Para una mejora SOLO-CONSEJO (sin "suggestion"), IGUAL agrega un objeto "location" con la sección a la que se refiere, para que el usuario sepa DÓNDE aplicarla: { "field": <uno de los valores de field de arriba>, "targetId": "<ID:xxx si el field empieza por workExperience.>" }. ej.: consejo sobre un typo en skills → "location": { "field": "skills" }.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
