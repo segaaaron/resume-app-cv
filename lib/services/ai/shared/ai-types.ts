@@ -27,7 +27,7 @@ export interface VersionsResult {
 
 // One improved bullet, addressed by its position in the ORIGINAL description.
 // Presence is a decision, not a slot: a bullet the model cannot improve without
-// inventing facts simply has no entry. Forcing one output per input is what made
+// hard-coding facts simply has no entry. Forcing one output per input is what made
 // the model echo its input back with a placeholder bolted on — it had no way to
 // decline. Mirrors TailorBulletChange, which got this right from the start.
 export const BulletImprovementSchema = z.object({
@@ -78,7 +78,7 @@ export interface BulletResult {
   /**
    * `needs_your_input`: the bullet is well formed but never states what it
    * achieved. A rewrite cannot supply that — only the candidate knows the
-   * result, and inventing one is the line this product does not cross. Distinct
+   * result, and hard-coding one is the line this product does not cross. Distinct
    * from `already_optimized`, which means there is genuinely nothing to fix.
    */
   status: "improved" | "already_optimized" | "needs_your_input"
@@ -89,7 +89,7 @@ export interface BulletResult {
 export const ImproveBulletResponseSchema = z.object({
   improvements: z.array(BulletImprovementSchema),
   // `needs_your_input`: well formed, but it never states a result. Only the
-  // candidate can supply that, so the UI asks instead of inventing or lying.
+  // candidate can supply that, so the UI asks instead of hard-coding or lying.
   status: z.enum(["improved", "already_optimized", "needs_your_input"]),
 })
 
@@ -108,7 +108,7 @@ export interface ATSSubScores {
 /** One actionable lever in the "path to your target score". Each answers the
  *  user's real question — "what do I do to reach 90/100?" — with a concrete
  *  action AND the score points it can recover, derived from the SAME weights the
- *  score uses (not invented). Structured, not localized: the UI writes the copy. */
+ *  score uses (not hard-coded). Structured, not localized: the UI writes the copy. */
 export interface GapLever {
   /** Which score lever this is. `template` is the layout penalty, not a matcher category. */
   key: "hardSkills" | "mustHaves" | "title" | "softSkills" | "sections" | "impact" | "template"
@@ -130,7 +130,7 @@ export interface ATSContentQuality {
   weakOpenerBullets: number
   /** A few weak bullets (no figure and/or a duty opener), each LOCATED by job so
    *  the UI can offer an inline "improve this bullet" that rewrites it honestly
-   *  (stronger verb, tighter phrasing) — never inventing a number. */
+   *  (stronger verb, tighter phrasing) — never hard-coding a number. */
   metriclessBullets: MetriclessBullet[]
 }
 
@@ -234,7 +234,7 @@ export interface ATSScoreResult {
   /**
    * The arithmetic behind the score, published so the panel can show it.
    *
-   * A score whose weights nobody can question reads as invented — and the weights
+   * A score whose weights nobody can question reads as hard-coded — and the weights
    * ARE ours, chosen not measured. The honest answer is not a better-sounding
    * number, it is showing the sum: what each category covered, what it was worth,
    * and what backs that weight. Optional so a cached result from before this
@@ -500,7 +500,7 @@ export type ReviewResult = z.infer<typeof ReviewResponseSchema>
 
 /** review-cv return: the LLM review PLUS a deterministic, JD-independent resume
  *  score computed in code (see resume-score.ts). The score never depends on the
- *  LLM, so it is reproducible and cannot be hallucinated. */
+ *  LLM, so it is reproducible and cannot be hard-coded. */
 export type ReviewCVResult = ReviewResult & {
   resumeScore: import("./resume-score").ResumeScore
 }
@@ -514,7 +514,7 @@ export const ItemUpdateSchema = z.object({
 
 export const NewWorkExperienceSchema = z.object({
   // Empty is legal on purpose: when the candidate describes a job without naming
-  // the company, the model is told to send "" rather than invent one. Requiring
+  // the company, the model is told to send "" rather than hard-code one. Requiring
   // min(1) here failed the safeParse for the WHOLE response, which silently fell
   // back to the unvalidated object — validation off for every other field too.
   jobTitle: z.string(),
@@ -566,7 +566,7 @@ export const FillProfileResponseSchema = z.object({
   /**
    * A study the candidate described that is not yet on the CV. Same rule as a
    * new job: whatever they did not state stays an empty string rather than an
-   * invented university or year.
+   * hard-coded university or year.
    */
   educationNew: z.array(z.object({
     degree: z.string(),
@@ -791,7 +791,7 @@ export interface SkillBulletInput {
    * bullet; a soft skill ("teamwork", "communication") is proven by DEMONSTRATING
    * the behavior — the bullet need not contain the word. When true, the prompt
    * asks for evidence of the behavior and the "bullet must contain the skill"
-   * output guard is skipped. All anti-invention guards stay on. Defaults to hard.
+   * output guard is skipped. All anti-hard-coded fact guards stay on. Defaults to hard.
    */
   soft?: boolean
   /**
@@ -806,7 +806,7 @@ export interface SkillBulletInput {
 export type SkillBulletResult =
   | { status: "written"; targetId: string; jobTitle: string; employer: string; text: string }
   // No job in the CV is a reasonable home for the skill, or the draft failed the
-  // anti-invention guards — either way there is nothing safe to insert.
+  // anti-hard-coded fact guards — either way there is nothing safe to insert.
   | { status: "no_fit" }
   // The work experience ALREADY shows this skill. Distinct from no_fit: nothing
   // is wrong, the job is simply done, and writing another bullet about it would

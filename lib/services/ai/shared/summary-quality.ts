@@ -60,7 +60,7 @@ function startsWithImpact(text: string): boolean {
  * Judges a professional summary against the criteria improve-summary's prompt
  * already lists. `profileHasMetrics` comes from the CV itself: a summary is not
  * penalised for lacking a figure the candidate never provided — demanding one
- * is exactly what used to push the model into inventing it.
+ * is exactly what used to push the model into hard-coding it.
  */
 export function assessSummary(summary: string, profileHasMetrics: boolean): SummaryQuality {
   const text = (summary ?? "").trim()

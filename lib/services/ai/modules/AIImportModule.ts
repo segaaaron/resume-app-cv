@@ -7,10 +7,10 @@
 // Why AI-primary and not the regex heuristic: rule-based parsing tops out around
 // 65–85% field recall because every template layout is a new edge case. An LLM
 // generalises across layouts (industry parsers report 95–99%). But a naïve LLM
-// hallucinates — it invents companies, drops bullets, guesses language levels.
+// hard-codes companies, drops bullets, guesses language levels.
 // So this module is GROUNDED: every extracted entity's key field must appear in
 // the source text (isGroundedIn) or it is discarded, and every description is
-// checked with detectHallucination. The model locates data; it never fabricates.
+// checked with hasHardCodedFact. The model locates data; it never fabricates.
 //
 // The route keeps the deterministic parseResumeText as a guaranteed fallback:
 // if this returns null (not a resume / empty / model error), import still works
@@ -19,7 +19,7 @@
 import { AI_MODEL, AI_TEMPERATURE, logAIUsage } from "@/lib/ai-client"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
-import { parseAIJson, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
+import { parseAIJson, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
 import { appearsIn, normaliseFigures, recoverContact, hostOf, linesForRole } from "../shared/import-recovery"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { ResumeSectionsSchema, type ResumeSections } from "@/types/resume"
@@ -71,7 +71,7 @@ export class AIImportModule {
 
     const system =
       "You are a precise resume data extractor. Extract ONLY information explicitly present in the resume text. " +
-      "NEVER invent, guess or complete missing data — if a field is absent, leave it empty. " +
+      "NEVER hard-code, guess or complete missing data — if a field is absent, leave it empty. " +
       "Preserve the original language and wording of the content; do not translate or rewrite. " +
       "Return ONLY valid JSON (no markdown). If the text is not a resume/CV, return {\"isResume\": false}."
 
@@ -120,7 +120,7 @@ export class AIImportModule {
     //
     // A contact field does NOT count here any more. Contacts are now recovered
     // from the document when the model's version fails to check out, so a run
-    // where the model invented every single field still comes back carrying the
+    // where the model hard-coded every single field still comes back carrying the
     // real email — and "we have an email" is not a résumé. Judge on substance:
     // a name, or an actual section. Otherwise the deterministic parser, which
     // is better than a page holding one address, never gets its turn.
@@ -141,7 +141,7 @@ export class AIImportModule {
     const note = language === "es"
       ? "El contenido puede estar en español; consérvalo tal cual."
       : "Content may be in English; keep it as-is."
-    return `Extract this resume into the following JSON shape. Include a field ONLY if it is present in the text; otherwise omit it or leave it empty. Do not invent anything. ${note}
+    return `Extract this resume into the following JSON shape. Include a field ONLY if it is present in the text; otherwise omit it or leave it empty. Do not hard-code anything. ${note}
 
 {
   "isResume": true,
@@ -175,7 +175,7 @@ ${rawText}`
 
   /**
    * Apply ids + defaults, then DROP any entity whose identifying field is not
-   * grounded in the source text, and blank any hallucinated description. This is
+   * grounded in the source text, and blank any hard-coded description. This is
    * what guarantees precision: the model can only surface data that is actually
    * in the document.
    */
@@ -193,7 +193,7 @@ ${rawText}`
     // This used to return "" on any mismatch, which meant the person who
     // imported a two-column PDF lost their own email and phone: extractors emit
     // "mikisaravia ios@gmail.com" for an address rendered without the space, and
-    // a literal substring check calls that an invention. Nothing is invented
+    // a literal substring check calls that an hard-coded fact. Nothing is hard-coded
     // here either — when the model's value does not check out, the address is
     // read out of the document itself. Empty now means the CV really has none.
     const contactOrEmpty = (v: unknown): string => {
@@ -216,15 +216,15 @@ ${rawText}`
     // ("15 %" for "15%") or one tool name it spelled differently is enough to
     // delete every bullet of that job — nine lines of someone's career, gone
     // because of the tenth. Bullets are independent claims and are now judged as
-    // such: the invented line is dropped, the verifiable ones are kept.
+    // such: the hard-coded line is dropped, the verifiable ones are kept.
     //
     // Prose (a paragraph with no line breaks) is unchanged: it is one claim, and
-    // half a hallucinated paragraph is not a safe thing to keep.
+    // half a hard-coded paragraph is not a safe thing to keep.
     let dropped = 0
     const safeDesc = (v: unknown): string => {
       const val = s(v)
       if (!val) return ""
-      if (!detectHallucination(val, rawText)) return val
+      if (!hasHardCodedFact(val, rawText)) return val
 
       const lines = val.split("\n").map((l) => l.trim()).filter(Boolean)
       if (lines.length < 2) { dropped++; return "" }
@@ -233,7 +233,7 @@ ${rawText}`
       // model that writes "15 %" are stating the same number, and cutting the
       // line over the space deletes the user's own achievement.
       const normalisedSource = normaliseFigures(rawText)
-      const kept = lines.filter((line) => !detectHallucination(normaliseFigures(line), normalisedSource))
+      const kept = lines.filter((line) => !hasHardCodedFact(normaliseFigures(line), normalisedSource))
       dropped += lines.length - kept.length
       return kept.join("\n")
     }
@@ -248,7 +248,7 @@ ${rawText}`
     // Whatever was dropped is counted and reported. A silent discard is how a
     // job lost all its bullets without anything, anywhere, saying so.
     const reportDropped = () => {
-      if (dropped > 0) this.logger.warn("[AIImport] hallucinated lines dropped", { count: dropped })
+      if (dropped > 0) this.logger.warn("[AIImport] hard-coded lines dropped", { count: dropped })
       if (recoveredContacts.fixed > 0 || recoveredContacts.lost > 0) {
         this.logger.warn("[AIImport] contact fields", recoveredContacts)
       }

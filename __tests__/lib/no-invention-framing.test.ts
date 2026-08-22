@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { readFileSync } from "node:fs"
+import { readFileSync, readdirSync } from "node:fs"
 import { join } from "node:path"
 
 /**
@@ -24,7 +24,8 @@ import { join } from "node:path"
  *
  * Los módulos de EXTRACCIÓN sí deben decirlo. `AIImportModule` lee un PDF y
  * transcribe: si el documento no trae el teléfono, no hay que fabricar uno. Ahí
- * «no inventes» es literal y correcto, porque no está redactando nada.
+ * «no completes lo que el documento no trae» es literal y correcto ahí, porque
+ * no está redactando nada — está transcribiendo.
  */
 const PROSA = [
   "AIBulletModule",
@@ -72,12 +73,34 @@ describe("y todos leen la doctrina compartida", () => {
   }
 })
 
-describe("la extracción SÍ lo conserva, y es correcto", () => {
+describe("la extracción conserva la REGLA, no el vocabulario", () => {
   /**
-   * Transcribir un PDF no es redactar. Si el documento no trae el dato, no hay
-   * nada que derivar — inventarlo ahí sí sería fabricar información del usuario.
+   * Transcribir un PDF no es redactar: si el documento no trae el teléfono, no
+   * hay nada que derivar y completarlo sería fabricar información del usuario.
+   * Esa regla se queda — lo que se fue es la palabra, que arrastraba el marco a
+   * los módulos que SÍ redactan.
    */
   it("AIImportModule sigue prohibiendo completar lo que el documento no trae", () => {
-    expect(read("AIImportModule")).toContain("NEVER invent")
+    expect(read("AIImportModule")).toContain("guess or complete missing data")
+  })
+})
+
+describe("ningún servicio de IA conserva el vocabulario viejo", () => {
+  /**
+   * El barrido es sobre `lib/services/ai/**` — los servicios y sus modelos.
+   * Fuera de ahí no se tocó nada: el resto del proyecto usa esas palabras en
+   * contextos que no son prompts (el blog lista «Reinventé» como verbo de acción
+   * válido para un CV, y eso es correcto).
+   */
+  it("el barrido cubre todos los módulos y compartidos", () => {
+    const files = readdirSync(join(process.cwd(), "lib/services/ai/modules"))
+      .concat(readdirSync(join(process.cwd(), "lib/services/ai/shared")).map((f) => `../shared/${f}`))
+      .filter((f) => f.endsWith(".ts"))
+    const sucios: string[] = []
+    for (const f of files) {
+      const src = readFileSync(join(process.cwd(), "lib/services/ai/modules", f), "utf8")
+      if (/\binvent[a-z]*\b|hallucinat/i.test(src)) sucios.push(f)
+    }
+    expect(sucios).toEqual([])
   })
 })

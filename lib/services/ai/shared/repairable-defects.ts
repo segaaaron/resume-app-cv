@@ -5,7 +5,7 @@
 //
 // It used to be answered twice, differently. The ATS panel counted a missing
 // figure as a defect and drew "Rewrite this bullet"; the endpoint refuses to
-// invent numbers, so it answered "already well written" and the press was wasted.
+// hard-code numbers, so it answered "already well written" and the press was wasted.
 // The user saw a button offering to fix something that, on click, was declared
 // fine — the panel promising work the engine had already ruled out.
 //
@@ -21,7 +21,7 @@ import { hasCliche } from "./cliches"
  * may have been repaired since — by us, on the previous press. Verifying it
  * turns "the user asked" into "the user asked and it is still broken".
  *
- * `metric` deliberately never counts: we refuse to invent figures, so a missing
+ * `metric` deliberately never counts: we refuse to hard-code figures, so a missing
  * number is not a defect an AI rewrite can repair, and treating it as one is
  * what kept the rewrite button live forever.
  */

@@ -57,7 +57,7 @@ describe("isTrivialEdit", () => {
   // with " among [N users]" bolted on — scores ~0.88 and is NOT caught here, by
   // design: appending a metric is only worthless when the metric is a fake
   // placeholder, and that case is killed upstream by the placeholder ban in
-  // detectHallucination({ allowPlaceholders: false }). The same append with a
+  // hasHardCodedFact({ allowPlaceholders: false }). The same append with a
   // REAL figure from the CV is a genuine improvement and must survive.
   it("does not catch a metric append — that is the placeholder ban's job", () => {
     const original = "• Refactored the home module, resulting in improved user engagement."

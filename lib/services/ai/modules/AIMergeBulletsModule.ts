@@ -21,7 +21,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { resolveLanguage, detectHallucination, parseAIJson, losesStatedFigure } from "../shared/ai-helpers"
+import { resolveLanguage, hasHardCodedFact, parseAIJson, losesStatedFigure } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { contentDroppedFrom } from "../shared/text-similarity"
@@ -124,8 +124,8 @@ BULLET A: ${a}
 BULLET B: ${b}`
 
     const system = language === "en"
-      ? `You are an elite résumé editor. You fuse two bullets from the same role into one line that keeps every fact and invents nothing. Returning {"status": "not_mergeable"} is a correct answer when the two lines are about different work. ${langInstruction}`
-      : `Eres un editor de currículums de élite. Fusionas dos bullets del mismo puesto en una línea que conserva todos los datos y no inventa nada. Devolver {"status": "not_mergeable"} es una respuesta correcta cuando las dos líneas tratan de trabajos distintos. ${langInstruction}`
+      ? `You are an elite résumé editor. You fuse two bullets from the same role into one line that keeps every fact and adds none. Returning {"status": "not_mergeable"} is a correct answer when the two lines are about different work. ${langInstruction}`
+      : `Eres un editor de currículums de élite. Fusionas dos bullets del mismo puesto en una línea que conserva todos los datos y no quema nada. Devolver {"status": "not_mergeable"} es una respuesta correcta cuando las dos líneas tratan de trabajos distintos. ${langInstruction}`
 
     let text: string
     let usage: { prompt_tokens?: number; completion_tokens?: number } | undefined
@@ -217,9 +217,9 @@ BULLET B: ${b}`
     /**
      * The merge is a promise: nothing the candidate wrote is lost, and nothing
      * they did not write appears. Checked against BOTH source lines together —
-     * anything in the result that is grounded in neither is invented.
+     * anything in the result that is grounded in neither is hard-coded.
      */
-    if (detectHallucination(text, `${a}\n${b}`)) {
+    if (hasHardCodedFact(text, `${a}\n${b}`)) {
       this.logger.warn("[AIService.mergeBullets] merged bullet introduced ungrounded content — discarded", { targetId })
       return { status: "not_mergeable" }
     }
@@ -309,7 +309,7 @@ BULLET B: ${b}`
       if (!out) return null
       out = out.replace(/^\s*[•·▪‣*\-–—]\s*/, "").replace(/^["\u2018\u2019\u201c\u201d']|["\u2018\u2019\u201c\u201d']$/g, "").trim()
       // Every check the first answer had to pass, on the second one too.
-      if (detectHallucination(out, `${a}\n${b}`)) return null
+      if (hasHardCodedFact(out, `${a}\n${b}`)) return null
       if (out.length < Math.max(a.length, b.length)) return null
       if (losesStatedFigure(`${a}\n${b}`, out)) return null
       if (contentDroppedFrom(a, out).length || contentDroppedFrom(b, out).length) return null

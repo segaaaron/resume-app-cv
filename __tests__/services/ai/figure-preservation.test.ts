@@ -16,7 +16,7 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
  *         and administered doses across two wards"
  *
  * Four of five bullets on that CV lost their numbers, and EVERY existing guard
- * passed it: nothing was invented, so `detectHallucination` was quiet; the text
+ * passed it: nothing was invented, so `hasHardCodedFact` was quiet; the text
  * grew, so `dropsContentWithoutGain` saw a gain; the wording changed, so
  * `isTrivialEdit` and `isCosmeticReword` did not apply.
  *
@@ -106,7 +106,7 @@ describe("losesStatedFigure", () => {
    * perdía una línea mejor por decir la misma cifra de otra forma.
    *
    * Que el 75 sea correcto NO lo decide este guard: la cifra no está en el CV,
-   * así que `hallucinationKind` la marca como `figure` y llega con el chip
+   * así que `hardCodedFactKind` la marca como `figure` y llega con el chip
    * "confirmá la cifra". El candidato la confirma o la corrige antes de aplicar.
    */
   it("allows the same achievement restated as another figure", () => {

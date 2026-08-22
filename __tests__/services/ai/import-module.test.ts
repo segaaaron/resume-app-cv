@@ -74,7 +74,7 @@ Xiobit — iOS Developer 2015-2016
     // The invented figure is the only thing gone.
     expect(desc).not.toContain("47%")
     // And it is not silent any more.
-    expect(logger.warn).toHaveBeenCalledWith("[AIImport] hallucinated lines dropped", { count: 1 })
+    expect(logger.warn).toHaveBeenCalledWith("[AIImport] hard-coded lines dropped", { count: 1 })
   })
 
   /**

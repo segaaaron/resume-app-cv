@@ -242,7 +242,7 @@ function isNamedToken(lowerWord: string, raw: string): boolean {
  *      functionality" → "…into the iOS app".
  *
  * Distinct from the other guards: not a near-copy (isTrivialEdit), not a synonym
- * swap (isCosmeticReword), not a fabrication (detectHallucination). Stem-aware so a
+ * swap (isCosmeticReword), not a fabrication (hasHardCodedFact). Stem-aware so a
  * tense change (mentoring → mentored) is not a "new" word. Apply ONLY to an
  * already-strong bullet — a weak bullet legitimately loses filler when fixed.
  */
@@ -326,7 +326,7 @@ const FILLER_WORDS = new Set([
  * MEASURED, 2026-08-19: "Confirmé los turnos por teléfono el día anterior" fused
  * into "…confirmando por teléfono el día anterior" — the OBJECT of the sentence,
  * the appointments themselves, simply gone. No figure was lost so
- * `losesStatedFigure` was quiet; nothing was invented so `detectHallucination`
+ * `losesStatedFigure` was quiet; nothing was hard-coded so `hasHardCodedFact`
  * was quiet; and `dropsContentWithoutGain` can never fire on a merge, because a
  * merge always adds the other line's words and so always shows a "gain".
  *

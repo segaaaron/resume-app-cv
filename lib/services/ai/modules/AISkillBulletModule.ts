@@ -3,7 +3,7 @@
 //
 // The user is looking at a skill they own (it sits in their skills list) that no
 // bullet mentions, and wants it surfaced in the experience where it best fits.
-// This writes a single capability bullet — verb-first, no invented metric, no
+// This writes a single capability bullet — verb-first, no hard-coded metric, no
 // bracket placeholder — and returns it for the user to confirm in the diff modal.
 // The human-in-the-loop confirm is the honesty gate: an assertion the user never
 // did is rejected by them, exactly like every other suggestion in the editor.
@@ -20,7 +20,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { normalizeTerm, termPresent } from "@/lib/ats/vocabulary"
-import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hasHardCodedFact } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
 import { isTrivialEdit } from "../shared/text-similarity"
@@ -57,7 +57,7 @@ export class AISkillBulletModule {
    * for (teamwork, communication, leadership, adaptability, problem-solving,
    * ownership) in one real bullet. Unlike the hard variant, the bullet does not
    * name the skill — it shows the action that proves it, grounded in the chosen
-   * job's real work. Every anti-invention rule stays; only the "name the term"
+   * job's real work. Every anti-hard-coded fact rule stays; only the "name the term"
    * requirement is dropped, because that is not how a soft skill reads on a CV.
    */
   private buildSoftPrompt(skill: string, resumeContext: string, workList: string, language: string): string {
@@ -66,7 +66,7 @@ export class AISkillBulletModule {
 
 ADDITIONAL RULES:
 1. Use ONLY facts already in the chosen job. Do NOT introduce any technology, framework, tool, company, certification, percentage, number, or date not already in that job.
-2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet states a demonstrated behavior, not a measured result. A bracket or invented figure gets the CV rejected.
+2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet states a demonstrated behavior, not a measured result. A bracket or hard-coded figure gets the CV rejected.
 3. The bullet asserts the candidate SHOWED "${skill}" at the chosen job. Place it only where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
 
 TASK: The job asks for the soft skill "${skill}" and the candidate's CV does not yet evidence it. Pick the ONE job below where it most credibly fits and write ONE new bullet that DEMONSTRATES "${skill}" through a concrete action — do NOT name the skill; show it (e.g. for "communication": "Presented release trade-offs to product and design so the team aligned on scope"; for "teamwork": "Coordinated with the backend and QA teams to unblock the mobile release").
@@ -89,7 +89,7 @@ Respond ONLY with valid JSON (no markdown):
 
 REGLAS ADICIONALES:
 1. Usa SOLO datos que ya estén en el puesto elegido. NO introduzcas NINGUNA tecnología, framework, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
-2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet expresa una conducta demostrada, no un resultado medido. Un corchete o cifra inventada hace que le rechacen el CV.
+2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet expresa una conducta demostrada, no un resultado medido. Un corchete o cifra quemadas hace que le rechacen el CV.
 3. El bullet afirma que el candidato DEMOSTRÓ "${skill}" en el puesto elegido. Colócalo solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
 
 TAREA: La oferta pide la habilidad blanda "${skill}" y el CV del candidato aún no la evidencia. Elige el ÚNICO puesto de abajo donde encaje de forma más creíble y escribe UN bullet nuevo que DEMUESTRE "${skill}" mediante una acción concreta — NO nombres la habilidad; muéstrala (ej. para "comunicación": "Presenté las decisiones de release a producto y diseño para alinear el alcance con el equipo"; para "trabajo en equipo": "Coordiné con los equipos de backend y QA para desbloquear el release móvil").
@@ -172,15 +172,15 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return `ID:${j.id} | ${j.jobTitle ?? ""} at ${j.employer ?? ""}:\n${bulletLines}`
     }).join("\n\n")
 
-    // Grounding for detectHallucination: skills/education context + every job's
+    // Grounding for hasHardCodedFact: skills/education context + every job's
     // bullets + the skill itself. Including the skill is what lets the new bullet
-    // name it without being flagged as an invented technology; anything ELSE the
+    // name it without being flagged as an hard-coded technology; anything ELSE the
     // model introduces (a second framework, a metric) still trips the guard.
     //
     // Soft mode does NOT license the skill word — a soft skill is a behavior, not
     // a technology, so the bullet proves it through actions already in the CV and
     // never needs to name it. Leaving the term out of grounding keeps the guard
-    // honest: an invented tool/metric still trips, common prose verbs do not.
+    // honest: an hard-coded tool/metric still trips, common prose verbs do not.
     const resumeContext = buildResumeContext(sectionData, language, { includeWorkExperience: false })
     const groundingSource = soft
       ? `${resumeContext}\n${workList}`
@@ -193,7 +193,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
 ADDITIONAL RULES:
 1. Write about ONLY the skill "${skill}" and the job you place it in. Do NOT introduce any OTHER technology, framework, library, tool, company, certification, percentage, number, or date not already in that job.
-2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet has no metric — it states a capability, not a measured result. A bracket or invented figure gets the CV rejected.
+2. NEVER write a number or a bracket placeholder ([X%], [N users], <number>). This bullet has no metric — it states a capability, not a measured result. A bracket or hard-coded figure gets the CV rejected.
 3. The bullet asserts the candidate USED this skill at the chosen job. Only place it where the job's title/bullets make that credible; if no job is a credible home, return {"targetId": null}.
 
 TASK: The candidate already lists "${skill}" as one of their skills, but no bullet shows it. Pick the ONE job below where it most credibly fits and write ONE new bullet that demonstrates it.
@@ -216,7 +216,7 @@ Respond ONLY with valid JSON (no markdown):
 
 REGLAS ADICIONALES:
 1. Escribe SOLO sobre la habilidad "${skill}" y el puesto donde la coloques. NO introduzcas NINGUNA otra tecnología, framework, librería, herramienta, empresa, certificación, porcentaje, número ni fecha que no esté ya en ese puesto.
-2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet no tiene métrica — expresa una capacidad, no un resultado medido. Un corchete o cifra inventada hace que le rechacen el CV.
+2. NUNCA escribas un número ni un placeholder entre corchetes ([X%], [N usuarios], <número>). Este bullet no tiene métrica — expresa una capacidad, no un resultado medido. Un corchete o cifra quemadas hace que le rechacen el CV.
 3. El bullet afirma que el candidato USÓ esta habilidad en el puesto elegido. Colócala solo donde el título/bullets del puesto lo hagan creíble; si ningún puesto es un hogar creíble, devuelve {"targetId": null}.
 
 TAREA: El candidato ya lista "${skill}" entre sus habilidades, pero ningún bullet la muestra. Elige el ÚNICO puesto de abajo donde encaje de forma más creíble y escribe UN bullet nuevo que la demuestre.
@@ -281,10 +281,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       return { status: "no_fit" }
     }
 
-    // Anti-invention: the new bullet may only introduce the skill itself, no other
+    // Anti-hard-coded fact: the new bullet may only introduce the skill itself, no other
     // metric or technology absent from the CV.
-    if (detectHallucination(text, groundingSource)) {
-      this.logger.warn("[AIService.weaveSkillBullet] dropped hallucinated bullet", {
+    if (hasHardCodedFact(text, groundingSource)) {
+      this.logger.warn("[AIService.weaveSkillBullet] dropped hard-coded bullet", {
         skill, previewSample: text.slice(0, 120),
       })
       return { status: "no_fit" }

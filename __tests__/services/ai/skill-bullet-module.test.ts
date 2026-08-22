@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 
 // Isolate from quota/db and cost logging. buildResumeContext is stubbed to ""
-// so grounding for detectHallucination comes from the indexed jobs + the skill.
+// so grounding for hasHardCodedFact comes from the indexed jobs + the skill.
 vi.mock("@/lib/services/ai/shared/quota-enforcer", () => ({ enforceAIQuota: vi.fn().mockResolvedValue(undefined) }))
 vi.mock("@/lib/ai-client", () => ({
   AI_MODEL_PROSE: "gpt-prose",

@@ -53,8 +53,8 @@ describe("la viñeta vuelve con todo resuelto", () => {
    */
   it("el prompt prohíbe que la pista traiga una cifra", () => {
     const src = read(MOD)
-    expect(src).toContain("never a number, never invent one")
-    expect(src).toContain("nunca una cifra, nunca la inventes")
+    expect(src).toContain("never a number, never hard-code one")
+    expect(src).toContain("nunca una cifra, nunca la quemes")
   })
 })
 

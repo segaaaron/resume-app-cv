@@ -6,7 +6,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, resolveLanguage, detectHallucination } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hasHardCodedFact } from "../shared/ai-helpers"
 import { retryNudge } from "../shared/never-empty"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { parseBullets, renderBulletsForPrompt } from "../shared/bullets"
@@ -50,7 +50,7 @@ export class AIBulletModule {
      * again and got a fresh rewrite of our own output, forever.
      *
      * The judgement is deterministic and made here: weak opener, cliché, too
-     * thin, too long. A missing figure is NOT in that list — we refuse to invent
+     * thin, too long. A missing figure is NOT in that list — we refuse to hard-code
      * numbers, so it is not something a rewrite can repair.
      *
      * `focus` is the exception: the panel diagnosed a specific defect and the
@@ -194,14 +194,14 @@ Return the strongest rewrite as "text", plus up to 2 "alternatives" that argue t
 - "technical": the engineering — systems, tools, architecture, how it was built.
 - "business": what it was worth — users, revenue, cost, risk, time.
 - "leadership": people and process — who was aligned, what practice changed.
-Every angle obeys the anti-hallucination rules above: an angle the source does not support is simply omitted. Two honest options beat three where one is invented.
+Every angle obeys the anti-hard-coded fact rules above: an angle the source does not support is simply omitted. Two honest options beat three where one is hard-coded.
 Add "why" to each (max 20 words): what the candidate gains over their original wording. Name the concrete change, never "more impactful".\n`
         : `\n=== DALE A ELEGIR AL CANDIDATO ===
 Devuelve la mejor reescritura en "text", más hasta 2 "alternatives" que defiendan el MISMO trabajo desde otro ángulo:
 - "technical": la ingeniería — sistemas, herramientas, arquitectura, cómo se construyó.
 - "business": cuánto valió — usuarios, ingresos, costo, riesgo, tiempo.
 - "leadership": personas y proceso — a quién se alineó, qué práctica cambió.
-Cada ángulo cumple las reglas anti-alucinación de arriba: un ángulo que el source no respalda simplemente se omite. Dos opciones honestas valen más que tres con una inventada.
+Cada ángulo cumple las reglas anti-alucinación de arriba: un ángulo que el source no respalda simplemente se omite. Dos opciones honestas valen más que tres con una quemadas.
 Agrega "why" a cada una (máx 20 palabras): qué gana el candidato frente a su redacción original. Nombra el cambio concreto, nunca "más impactante".\n`
 
     const prompt = language === "en"
@@ -227,7 +227,7 @@ TRANSFORMATION RULES:
    - Operations/Process: Reduced, Standardized, Implemented, Centralized, Increased, Structured
    - Sales/Business/Marketing: Grew, Closed, Negotiated, Expanded, Positioned, Captured, Generated
 4. ATS: naturally incorporate 1-2 industry/role keywords within bullets.
-5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never invent one.
+5. HUMAN VOICE (avoid AI-detection): vary sentence length and structure — never a uniform rhythm. Write the way the candidate would speak in an interview, not like a press release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Anchor each rewrite to a concrete detail already in the source (tool, product, team size, timeframe) when available — never hard-code one.
 6. Each entry replaces exactly ONE original bullet: give its "index" and prefix the text with "• ". Never merge, split or reorder bullets.
 7. END ON SUBSTANCE. Never close a bullet with a vague impact clause that names nothing concrete — banned tails: "to improve X", "to enhance/support/streamline/strengthen Y", "improving the experience", "strengthening performance", "ensuring smooth operations", and any "…to <verb> <abstract noun>" tacked on to sound impactful. Either end on a concrete result the source states (a number, a named system, a real outcome) or end on the concrete action itself. A shorter bullet that stops at the real work beats one padded with a hollow purpose clause.
 8. LEAVE STRONG BULLETS ALONE. If a bullet already opens with a strong action verb AND names specific work (real tools, systems, or outcomes), it is already good — OMIT it. Do NOT reword it just to phrase it differently or "tighten" it: swapping "enhance"→"expand" or dropping "strengthen team performance" makes it DIFFERENT, not better, and quietly loses detail the candidate stated. Only rewrite such a bullet if you can ADD a concrete result, number, or keyword the source supports. When in doubt, leave it.
@@ -262,7 +262,7 @@ REGLAS DE TRANSFORMACIÓN:
    - Operaciones/Procesos: Reduje, Estandaricé, Implementé, Centralicé, Incrementé, Estructuré
    - Ventas/Negocio/Marketing: Crecí, Cerré, Negocié, Expandí, Posicioné, Capturé, Generé
 4. ATS: incorpora 1-2 keywords del sector/puesto de forma natural dentro de los bullets.
-5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo inventes.
+5. VOZ HUMANA (evita detección de IA): varía el largo y la estructura de las frases — nunca un ritmo uniforme. Escribe como el candidato hablaría en una entrevista, no como nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada reescritura a un dato concreto ya presente en el source (herramienta, producto, tamaño de equipo, plazo) cuando exista — nunca lo afirmes.
 6. Cada entrada reemplaza exactamente UN bullet original: da su "index" y prefija el texto con "• ". Nunca fusiones, dividas ni reordenes bullets.
 7. TERMINA EN SUSTANCIA. Nunca cierres un bullet con una cola de impacto vaga que no nombra nada concreto — colas prohibidas: "para mejorar X", "para asegurar/garantizar/fortalecer Y", "contribuyendo a la eficiencia", "asegurando el desarrollo", "mejorando la experiencia", "optimizando el rendimiento", y cualquier "…para <verbo> <sustantivo abstracto>" añadido para sonar impactante. Termina en un resultado concreto que el source declare (una cifra, un sistema nombrado, un resultado real) o termina en la acción concreta misma. Un bullet más corto que se detiene en el trabajo real gana a uno rellenado con una cláusula de propósito hueca.
 8. DEJA EN PAZ LOS BULLETS YA FUERTES. Si un bullet ya empieza con un verbo de acción fuerte Y nombra trabajo específico (herramientas, sistemas o resultados reales), ya está bien — OMÍTELO. NO lo reescribas solo para decirlo distinto o "condensarlo": cambiar "mejorar"→"ampliar" o eliminar "fortalecer el rendimiento del equipo" lo hace DIFERENTE, no mejor, y pierde en silencio detalle que el candidato declaró. Reescribe un bullet así SOLO si puedes AGREGAR un resultado concreto, cifra o keyword que el source respalde. Ante la duda, déjalo.
@@ -282,7 +282,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // and a truncated JSON is a parse error, not a shorter answer. Raised only
       // for the single-bullet request that asks for them.
       max_tokens: wantsVariants ? 1800 : 1200,
-      // improve-bullet uses low temperature (0.3) to reduce hallucinations.
+      // improve-bullet uses low temperature (0.3) to reduce hard-coded facts.
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
@@ -327,7 +327,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
 
       const improvements: BulletImprovement[] = []
       const seenIndices = new Set<number>()
-      let droppedHallucinated = 0
+      let droppedHardCoded = 0
       let droppedTrivial = 0
       let droppedDuplicate = 0
 
@@ -348,8 +348,8 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         if (seenIndices.has(index)) { droppedDuplicate++; continue }
 
         // Placeholders are now banned outright, so allowPlaceholders is off: a
-        // suggestion carrying "[N users]" is a hallucination like any other.
-        if (detectHallucination(suggested, source)) { droppedHallucinated++; continue }
+        // suggestion carrying "[N users]" is a hard-coded fact like any other.
+        if (hasHardCodedFact(suggested, source)) { droppedHardCoded++; continue }
         if (isTrivialEdit(original, suggested)) { droppedTrivial++; continue }
         // Same guard Review uses: a synonym-only swap ("enhance"→"improve") on an
         // otherwise-identical bullet reads the same on both sides — drop it rather
@@ -379,7 +379,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         seenIndices.add(index)
 
         // Alternatives face the SAME gauntlet as the main rewrite. Offering a
-        // second angle must not become a side door for an invented figure or a
+        // second angle must not become a side door for an hard-coded figure or a
         // lossy reword: the user picks one of these with a click, so a variant
         // that fails a guard is worse than having no choice at all. Anything that
         // does not survive is simply not offered — fewer honest options beat more.
@@ -387,7 +387,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
           .map((a) => ({ ...a, text: a.text.trim() }))
           .filter((a) => a.text
             && a.text !== suggested
-            && !detectHallucination(a.text, source)
+            && !hasHardCodedFact(a.text, source)
             && !isTrivialEdit(original, a.text)
             && !(originalIsStrong && dropsContentWithoutGain(original, a.text)))
           .slice(0, 2)
@@ -400,9 +400,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         })
       }
 
-      if (droppedHallucinated > 0 || droppedTrivial > 0 || droppedDuplicate > 0) {
+      if (droppedHardCoded > 0 || droppedTrivial > 0 || droppedDuplicate > 0) {
         this.logger.warn("[AIService.improveBullet] dropped suggestions", {
-          droppedHallucinated,
+          droppedHardCoded,
           droppedTrivial,
           droppedDuplicate,
           kept: improvements.length,
@@ -438,7 +438,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       const withoutLicence = prompt.replace(licence, "")
       const insist = !diagnosed
         // No diagnosis to lean on: ask again, plainly. Claiming a defect the
-        // panel never found would push the model to invent one and "fix" it.
+        // panel never found would push the model to hard-code one and "fix" it.
         ? prompt + retryNudge(language)
         : language === "en"
           ? `${withoutLicence}\n\nThe bullet above has the diagnosed defect named in this request, so it CAN be improved. Return exactly one entry for index 0 that fixes it, preserving every fact.`

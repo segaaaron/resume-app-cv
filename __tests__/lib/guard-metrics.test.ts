@@ -22,13 +22,13 @@ vi.mock("@/lib/logger", () => ({
 
 const { reportGuardDrops } = await import("@/lib/services/ai/shared/guard-metrics")
 
-const base = { endpoint: "tailor-cv", offered: 10, kept: 7, invented: 1, figureLoss: 1, trivial: 1 }
+const base = { endpoint: "tailor-cv", offered: 10, kept: 7, hardCoded: 1, figureLoss: 1, trivial: 1 }
 
 describe("reportGuardDrops", () => {
   beforeEach(() => sink.mockClear())
 
   it("no escribe nada cuando la corrida no descartó nada", () => {
-    reportGuardDrops({ ...base, kept: 10, invented: 0, figureLoss: 0, trivial: 0 })
+    reportGuardDrops({ ...base, kept: 10, hardCoded: 0, figureLoss: 0, trivial: 0 })
     expect(sink).not.toHaveBeenCalled()
   })
 

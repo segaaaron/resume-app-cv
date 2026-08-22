@@ -7,7 +7,7 @@
 // surfaces the remainder — skills they demonstrably used and forgot to list.
 //
 // By construction every result is backed by the candidate's own writing, so it
-// can never fabricate a skill or invent a proficiency. It is the same detection
+// can never fabricate a skill or hard-code a proficiency. It is the same detection
 // primitive the paid ATS matcher uses (termPresent, alias-aware), no model, no
 // cost, no drift. Cannot produce keyword stuffing: it only echoes proof already
 // on the page.

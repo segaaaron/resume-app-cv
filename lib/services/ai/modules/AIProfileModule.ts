@@ -11,7 +11,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
-import { parseAIJson, buildSectionContext, resolveLanguage, detectHallucination, isGroundedIn } from "../shared/ai-helpers"
+import { parseAIJson, buildSectionContext, resolveLanguage, hasHardCodedFact, isGroundedIn } from "../shared/ai-helpers"
 import { computeCostUsd } from "../shared/cost-tracker"
 import { canonicalSkillName } from "@/lib/ats/skill-catalog"
 import { buildModePrompt } from "./profile-modes"
@@ -79,10 +79,10 @@ export class AIProfileModule {
     const sectionsWithIds = [workExpCtx, educationCtx, projectsCtx, volunteerCtx].filter(Boolean).join("\n")
 
     const userPrompt = language === "en"
-      ? `CRITICAL ANTI-HALLUCINATION RULES (mandatory, no exceptions):
-1. ONLY produce content derivable from the candidate's instruction and the CURRENT RESUME above. Do NOT invent technologies, frameworks, libraries, company names, job titles, certifications, dates, percentages, or real numbers not provided.
+      ? `GROUNDING RULES (mandatory, no exceptions):
+1. ONLY produce content derivable from the candidate's instruction and the CURRENT RESUME above. Do NOT state technologies, frameworks, libraries, company names, job titles, certifications, dates, percentages, or real numbers not provided.
 2. NEVER use placeholders like [X%] or [N users] in final output — if the user didn't provide a metric, omit it.
-3. For workExperienceNew: every entry must come from a job or a PROFESSION the candidate states. If they name only a profession ("I am a telecommunications engineer with 5 years"), still create ONE entry: jobTitle = that profession, employer = "", dates = "", and a description of 4-5 bullets of the work that role normally does — that draft is the point, and they review it before it reaches the resume. If they describe a job but never name the company, leave employer as "" — NEVER invent a company name. Omit the whole entry only when neither the company nor the role comes from the instruction.
+3. For workExperienceNew: every entry must come from a job or a PROFESSION the candidate states. If they name only a profession ("I am a telecommunications engineer with 5 years"), still create ONE entry: jobTitle = that profession, employer = "", dates = "", and a description of 4-5 bullets of the work that role normally does — that draft is the point, and they review it before it reaches the resume. If they describe a job but never name the company, leave employer as "" — NEVER hard-code a company name. Omit the whole entry only when neither the company nor the role comes from the instruction.
 4. For suggestedSkills: only skills explicitly mentioned in the instruction or the current resume.
 5. inferredSkills is the ONE field where you may go beyond what the candidate wrote: list skills their role normally carries and that they most likely have. Keep them plausible for THIS role and seniority — never a tool from another trade, never a certification, never anything that implies a fact about them (an employer, a degree, a licence). The candidate reviews these one by one before any of them reaches the resume.
 
@@ -135,9 +135,9 @@ Respond ONLY with valid JSON (no markdown). Only include fields that actually ch
 }
 
 Rules:
-- ALWAYS use the exact ids from the section listing above. Never invent an id.
+- ALWAYS use the exact ids from the section listing above. Use only the ids listed; never make one up.
 - Improved descriptions integrate what the candidate said + what already existed, cohesively and professionally.
-- Do not invent data (dates, companies, metrics) the candidate didn't mention.
+- Do not hard-code data (dates, companies, metrics) the candidate didn't mention.
 - Human voice (avoid AI-detection): write summaries/descriptions with varied sentence length and a natural tone, not a press release. Avoid AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven".
 
 ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-second read):
@@ -147,10 +147,10 @@ ATS-FRIENDLY WRITING (the content must pass an ATS scan AND a recruiter's 7-seco
 - Dates in MM/YYYY whenever the candidate provides one (ATS parse employment dates to compute tenure).
 - Plain "• " bullets only — no tables, columns, emojis or special characters.
 - Weave the candidate's real skills/keywords naturally into summary and bullets (not only the skills list), since ATS reward a keyword that appears in context.`
-      : `REGLAS CRÍTICAS ANTI-ALUCINACIÓN (obligatorias, sin excepciones):
-1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO inventes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
+      : `REGLAS DE ANCLAJE (obligatorias, sin excepciones):
+1. SOLO produce contenido derivable de la instrucción del candidato y del CV ACTUAL de arriba. NO quemes tecnologías, frameworks, librerías, nombres de empresas, cargos, certificaciones, fechas, porcentajes ni números reales no proporcionados.
 2. NUNCA uses placeholders como [X%] o [N usuarios] en el output final — si el usuario no proporcionó una métrica, omítela.
-3. Para workExperienceNew: cada entrada debe provenir de un trabajo o de una PROFESIÓN que el candidato declara. Si solo nombra una profesión ("soy ingeniero de telecomunicaciones con 5 años"), crea igual UNA entrada: jobTitle = esa profesión, employer = "", fechas = "", y una description de 4-5 viñetas del trabajo que ese puesto normalmente hace — ese borrador es justamente el objetivo, y el candidato lo revisa antes de que llegue al CV. Si describe un trabajo pero nunca nombra la empresa, deja employer como "" — NUNCA inventes un nombre de empresa. Omite la entrada completa solo cuando ni la empresa ni el puesto provienen de la instrucción.
+3. Para workExperienceNew: cada entrada debe provenir de un trabajo o de una PROFESIÓN que el candidato declara. Si solo nombra una profesión ("soy ingeniero de telecomunicaciones con 5 años"), crea igual UNA entrada: jobTitle = esa profesión, employer = "", fechas = "", y una description de 4-5 viñetas del trabajo que ese puesto normalmente hace — ese borrador es justamente el objetivo, y el candidato lo revisa antes de que llegue al CV. Si describe un trabajo pero nunca nombra la empresa, deja employer como "" — NUNCA quemes un nombre de empresa. Omite la entrada completa solo cuando ni la empresa ni el puesto provienen de la instrucción.
 4. Para suggestedSkills: solo habilidades mencionadas explícitamente en la instrucción o en el CV actual.
 5. inferredSkills es el ÚNICO campo donde puedes ir más allá de lo que el candidato escribió: lista habilidades que su puesto normalmente lleva y que con toda probabilidad tiene. Mantenlas plausibles para ESTE puesto y ESTA antigüedad — nunca una herramienta de otro oficio, nunca una certificación, nunca nada que afirme un hecho sobre él (un empleador, un título, una licencia). El candidato las revisa una por una antes de que ninguna llegue al CV.
 
@@ -203,9 +203,9 @@ Responde ÚNICAMENTE con JSON válido (sin markdown). Solo incluye los campos qu
 }
 
 Reglas:
-- Usa SIEMPRE los ids exactos del listado de secciones de arriba. Nunca inventes un id.
+- Usa SIEMPRE los ids exactos del listado de secciones de arriba. Usá sólo los ids listados; nunca te afirmes uno.
 - Las descripciones mejoradas integran lo que el candidato dijo + lo que ya existía, de forma cohesiva y profesional.
-- No inventes datos (fechas, empresas, métricas) que el candidato no mencionó.
+- No afirmes datos (fechas, empresas, métricas) que el candidato no mencionó.
 - Voz humana (evita detección de IA): escribe resúmenes/descripciones con frases de largo variado y tono natural, no nota de prensa. Evita palabras-IA: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados".
 
 ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundos de un reclutador):
@@ -229,11 +229,11 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
           content:
             (language === "en"
               ? "You are an expert professional résumé writer. Your job is to take the candidate's instructions and turn them into concrete professional content for each section of their résumé. " +
-                "You respect and expand on what the candidate states — you never invent information not derived from their description. " +
+                "You respect and expand on what the candidate states — you never hard-code information not derived from their description. " +
                 "You ONLY process instructions related to a real professional profile. " +
                 "If the text is unrelated to professional matters, respond with: {} and nothing else. "
               : "Eres un redactor experto en CVs profesionales. Tu trabajo es tomar instrucciones del candidato y traducirlas en contenido profesional concreto para cada sección de su CV. " +
-                "Respetas y amplías lo que el candidato menciona — nunca inventas información no derivada de su descripción. " +
+                "Respetas y amplías lo que el candidato menciona — nunca quemás información no derivada de su descripción. " +
                 "SOLO procesas instrucciones relacionadas con perfil laboral real. " +
                 "Si el texto no tiene relación profesional, responde con: {} sin texto adicional. ") +
             langInstruction,
@@ -263,7 +263,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
     const validProjIds = new Set(((sd.projects ?? []) as { id: string }[]).map((p) => p.id))
     const validVolIds = new Set(((sd.volunteer ?? []) as { id: string }[]).map((v) => v.id))
 
-    // Anti-hallucination grounding source = user instruction + current resume.
+    // Anti-hard-coded fact grounding source = user instruction + current resume.
     const groundingSource = `${prompt}\n${resumeContext}`.toLowerCase()
 
     /**
@@ -272,7 +272,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
      * The model was returning "Diseño y mantenimiento de bases de datos
      * relacionales" where a résumé needs "PostgreSQL": an ATS matches keywords,
      * and a description of an activity matches nothing. The ceiling is read off
-     * our own curated dictionary rather than invented — of its 1,002 entries,
+     * our own curated dictionary rather than hard-coded — of its 1,002 entries,
      * 94% are one or two words and none exceeds four, and the four-word ones are
      * a name plus its acronym ("Applicant Tracking Systems (ATS)").
      *
@@ -381,17 +381,17 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         const roleGrounded = !!role && isGroundedIn(role, promptLower)
         // Requiring BOTH grounded binned the common case: people describe a job
         // ("I cooked for three years in a hotel restaurant") without naming the
-        // company. The model has to put SOMETHING in `employer`, that invention
+        // company. The model has to put SOMETHING in `employer`, that hard-coded fact
         // failed grounding, and the whole entry — description included — was
         // thrown away. The user saw an assistant that returned only a summary.
         // Now the ungrounded FIELD is blanked, not the work the user described;
-        // an empty employer is a hole they fill in, never an invented company.
+        // an empty employer is a hole they fill in, never an hard-coded company.
         if (!employerGrounded && !roleGrounded) {
-          // Nothing here comes from the user. This one really is invented.
+          // Nothing here comes from the user. This one really is hard-coded.
           droppedNewWork++
           return null
         }
-        // The description is checked for invented tech and metrics ONLY when the
+        // The description is checked for hard-coded tech and metrics ONLY when the
         // entry is tied to a real employer the user named. There, a tool they
         // never mentioned is a false claim about a real job.
         //
@@ -403,7 +403,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
         if (
           employerGrounded &&
           entry.description &&
-          detectHallucination(entry.description, `${prompt}\n${resumeContext}`)
+          hasHardCodedFact(entry.description, `${prompt}\n${resumeContext}`)
         ) {
           droppedNewWork++
           return null
@@ -419,7 +419,7 @@ ESCRITURA ATS-FRIENDLY (el contenido debe pasar un ATS Y el escaneo de 7 segundo
       .slice(0, 3)
 
     if (droppedSkills > 0 || droppedNewWork > 0 || blankedFields > 0 || droppedEducation > 0) {
-      this.logger.warn("[AIService.fillProfile] dropped hallucinated content", {
+      this.logger.warn("[AIService.fillProfile] dropped hard-coded content", {
         droppedSkills,
         droppedNewWork,
         blankedFields,

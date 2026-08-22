@@ -153,7 +153,7 @@ describe("generateCoverLetter — tailoring brief (Phase 2)", () => {
  * pedidas". Eso se guardaba como la carta del candidato y se envía a un
  * reclutador tal cual.
  *
- * `detectHallucination` no lo veía: sólo acusa un número cuando lleva unidad
+ * `hasHardCodedFact` no lo veía: sólo acusa un número cuando lleva unidad
  * (%, users, requests), y es estrecho a propósito porque un falso positivo ahí
  * cuesta la carta entera. Aquí sí se puede ser estricto, porque no descarta
  * nada: dispara UN reintento y, si el segundo no convence, queda el primero.
@@ -196,7 +196,7 @@ describe("generateCoverLetter — cifras sin respaldo", () => {
  * Dos caminos escriben la carta del usuario; no pueden tener dos varas.
  *
  * `generateCoverLetter` pasaba por `letterInventsContent` y `usableVersions`
- * —el único filtro del camino de MEJORAR— sólo por `detectHallucination`. Así
+ * —el único filtro del camino de MEJORAR— sólo por `hasHardCodedFact`. Así
  * que la fuga medida en generate (el modelo hablándole al operador con nuestra
  * propia instrucción: "3 párrafos, 250-350 palabras") entraba igual por mejorar.
  * El propio comentario de esa función dice "un solo dueño, para que el reintento

@@ -186,7 +186,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
             (language === "en"
               ? "You ONLY respond to real professional profiles. You never write bracket placeholders. " +
                 "If the data does not correspond to a real professional profile, respond only with: {\"versions\": []} and nothing else. "
-              : "SOLO respondes con perfiles profesionales reales. NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica, escribes sin número. " +
+              : "SOLO respondes con perfiles profesionales reales. NUNCA quemás cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica, escribes sin número. " +
                 "Si los datos no corresponden a un perfil profesional real, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },
@@ -250,7 +250,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
 
     // No previous summary to fall back to in generate-summary. If every version
     // was dropped, return empty array with a status flag so the frontend can
-    // show its own empty-state — never surface invented content.
+    // show its own empty-state — never surface hard-coded content.
     if (gated.versions.length === 0) {
       return { versions: [], status: "already_optimized" }
     }
@@ -497,7 +497,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
       model: AI_MODEL_PROSE,
       max_tokens: 700,
       // improve-summary uses 0.3 — must stay close to the existing summary and
-      // avoid inventing metrics or technologies.
+      // avoid hard-coding metrics or technologies.
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
@@ -555,7 +555,7 @@ Responde ÚNICAMENTE con JSON válido. Cada entrada es el texto completo en sí,
 
     // The same gate generate-summary goes through. Source = everything the
     // candidate stated: the summary they wrote, how they described themselves,
-    // and the CV. Anything outside it is invented.
+    // and the CV. Anything outside it is hard-coded.
     const gated = await gateSummaryVersions(this.aiClient, this.logger, {
       rawVersions: parsed.versions,
       source: [summary ?? "", userDescription ?? "", resumeContext].join("\n"),

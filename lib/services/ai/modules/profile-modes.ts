@@ -83,14 +83,14 @@ function seed(role: string, language: string): Built {
     ? `You are an expert résumé writer. You write the opening of someone's CV from the job they name.
 
 FIRST decide whether the text names a job, trade or profession that exists in the labour market.
-- If it does NOT (a greeting, a question, a sum, loose letters, a request for something else), answer with exactly the JSON ${OFF_TOPIC_SENTINEL} and nothing else. Never invent a job from a text that does not name one.
+- If it does NOT (a greeting, a question, a sum, loose letters, a request for something else), answer with exactly the JSON ${OFF_TOPIC_SENTINEL} and nothing else. Never state a job from a text that does not name one.
 - If it DOES, even as one or two words with no other detail, that is a complete instruction: write the opening, never ask for more data and never return an empty object.
 
 NEVER state a fact about the person: no employers, no dates, no figures, no degrees held, no licences held. You write what THAT ROLE normally does and needs.`
     : `Eres un redactor experto en CVs profesionales. Escribes el arranque del CV de alguien a partir del puesto que declara.
 
 PRIMERO decides si el texto nombra un trabajo, oficio o profesión que exista en el mercado laboral.
-- Si NO lo nombra (un saludo, una pregunta, una cuenta, letras sueltas, un pedido de otra cosa), respondes exactamente con el JSON ${OFF_TOPIC_SENTINEL} y nada más. Nunca inventes un puesto a partir de un texto que no lo nombra.
+- Si NO lo nombra (un saludo, una pregunta, una cuenta, letras sueltas, un pedido de otra cosa), respondes exactamente con el JSON ${OFF_TOPIC_SENTINEL} y nada más. Nunca afirmes un puesto a partir de un texto que no lo nombra.
 - Si SÍ lo nombra, aunque sean una o dos palabras y sin ningún otro dato, eso es una instrucción completa: escribes el arranque, nunca pides más datos y nunca devuelves un objeto vacío.
 
 NUNCA afirmas un hecho sobre la persona: ni empleadores, ni fechas, ni cifras, ni títulos obtenidos, ni licencias que tenga. Escribes lo que ESE PUESTO normalmente hace y necesita.`
@@ -108,7 +108,7 @@ If it names a job, respond ONLY with this JSON:
   ],
   "inferredSkills": ["<4-6 skills standard for that role: canonical name of a tool, standard or methodology, 1-3 words>"]
 }
-Each summary is 2-3 sentences, no pronouns, no invented figures, no clichés ('proactive', 'team player', 'results-driven'). The three are genuinely DIFFERENT readings of the same job — not the same paragraph reworded — and all three are true of anyone doing that job.
+Each summary is 2-3 sentences, no pronouns, no hard-coded figures, no clichés ('proactive', 'team player', 'results-driven'). The three are genuinely DIFFERENT readings of the same job — not the same paragraph reworded — and all three are true of anyone doing that job.
 Never open with "Responsible for" or "In charge of": name the work itself.
 Open each summary with a NOUN PHRASE or a gerund — "Day-to-day management of…", "Hive inspection and colony health…", "Managing the teller line…". Never with a conjugated third-person verb ("Manages", "Operates", "Coordinates", "Delivers"): that reads as a reference letter written about someone else, and a CV summary is written from inside the role.`
     : `Texto del candidato: "${role}"
@@ -123,7 +123,7 @@ Si nombra un puesto, responde ÚNICAMENTE con este JSON:
   ],
   "inferredSkills": ["<4-6 habilidades estándar de ese puesto: nombre canónico de herramienta, norma o metodología, 1-3 palabras>"]
 }
-Cada resumen tiene 2-3 frases, sin pronombres, sin cifras inventadas, sin clichés ('proactivo', 'trabajo en equipo', 'orientado a resultados'). Los tres son lecturas GENUINAMENTE distintas del mismo puesto — no el mismo párrafo reescrito — y los tres son ciertos para cualquiera que haga ese trabajo.
+Cada resumen tiene 2-3 frases, sin pronombres, sin cifras quemadas, sin clichés ('proactivo', 'trabajo en equipo', 'orientado a resultados'). Los tres son lecturas GENUINAMENTE distintas del mismo puesto — no el mismo párrafo reescrito — y los tres son ciertos para cualquiera que haga ese trabajo.
 Nunca abras con "Responsable de" ni "Encargado de": nombrá el trabajo en sí.
 Empezá cada resumen con un SUSTANTIVO o una frase nominal — "Gestión diaria de…", "Manejo de colmenas…", "Atención en ventanilla…". Nunca con un verbo conjugado en tercera persona ("Gestiona", "Aporta", "Realiza"): eso se lee como una carta de recomendación sobre otra persona, y un resumen de CV se escribe desde adentro del puesto.`
 
@@ -187,10 +187,10 @@ ${noHardCodedFactsRule("en")}
 ${declared ? `WHAT THIS CANDIDATE HAS ALREADY DECLARED — tools, standards and skills, from their own CV:
 ${declared}
 
-USE THEM. These are not yours to invent; they are already on the page in their own hand, and a bullet that describes the work without naming the tool they use for it throws away the keyword the CV was supposed to carry. Naming the tool costs nothing and is the difference between a line a parser skips and one it matches — same facts either way, and only one of them is searchable. Name a declared tool ONLY where it genuinely belongs to the activity they described; never scatter the list across every line.
+USE THEM. These are not yours to hard-code; they are already on the page in their own hand, and a bullet that describes the work without naming the tool they use for it throws away the keyword the CV was supposed to carry. Naming the tool costs nothing and is the difference between a line a parser skips and one it matches — same facts either way, and only one of them is searchable. Name a declared tool ONLY where it genuinely belongs to the activity they described; never scatter the list across every line.
 ` : ""}
 SHAPE:
-- ONE bullet per activity they mentioned. Never merge two, never invent a fourth.
+- ONE bullet per activity they mentioned. Never merge two, never add a fourth they did not mention.
 - Open with a first-person past-tense action verb.
 - Never name the job title or the employer inside a bullet: the CV heading already carries them.
 
@@ -211,10 +211,10 @@ ${noHardCodedFactsRule("es")}
 ${declared ? `LO QUE ESTE CANDIDATO YA DECLARÓ — herramientas, normas y habilidades, sacadas de su propio CV:
 ${declared}
 
-USALAS. No son tuyas para inventar: ya están escritas por él en su CV, y una viñeta que describe el trabajo sin nombrar la herramienta con la que lo hace tira a la basura la keyword que ese CV tenía que llevar. Nombrar la herramienta no cuesta nada y es la diferencia entre una línea que el parser saltea y una que matchea — los mismos hechos en las dos, y sólo una es buscable. Nombrá una herramienta declarada SÓLO donde de verdad pertenece a la actividad que él contó; nunca repartas la lista por todas las líneas.
+USALAS. No son tuyas para quemar: ya están escritas por él en su CV, y una viñeta que describe el trabajo sin nombrar la herramienta con la que lo hace tira a la basura la keyword que ese CV tenía que llevar. Nombrar la herramienta no cuesta nada y es la diferencia entre una línea que el parser saltea y una que matchea — los mismos hechos en las dos, y sólo una es buscable. Nombrá una herramienta declarada SÓLO donde de verdad pertenece a la actividad que él contó; nunca repartas la lista por todas las líneas.
 ` : ""}
 FORMA:
-- UNA viñeta por cada actividad que mencionó. No fusiones dos ni inventes una cuarta.
+- UNA viñeta por cada actividad que mencionó. No fusiones dos ni agregues una cuarta que no mencionó.
 - Abre con un verbo en PRIMERA persona del pasado simple: la forma -é/-í (Ejecuté, Atendí, Registré, Coordiné). NUNCA la forma -ó de tercera persona, que se lee como si otro escribiera sobre él.
 - Nunca nombres el puesto ni la empresa dentro de la viñeta: el encabezado del CV ya los muestra.
 
@@ -250,9 +250,9 @@ Escribí las viñetas en ESPAÑOL — este CV está en español, sin importar en
  * got back bullets about "matrices de test" and "criterios de aceptación" —
  * generic QA nouns, not one tool named. The prompt could not do better: it was
  * handed the role and one sentence, so it had no idea which tools were his, and
- * the never-invent rule (correctly) forbids naming a brand out of nowhere.
+ * the never-hard-code rule (correctly) forbids naming a brand out of nowhere.
  *
- * Passing what he already declared closes both halves at once. It invents
+ * Passing what he already declared closes both halves at once. It hard-codes
  * nothing — every word here was typed by the candidate — and it is precisely
  * what an ATS searches for.
  */

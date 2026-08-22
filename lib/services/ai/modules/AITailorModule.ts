@@ -40,7 +40,7 @@ import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
-import { parseAIJson, resolveLanguage, hallucinationKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
+import { parseAIJson, resolveLanguage, hardCodedFactKind, losesStatedFigure, figureLosesItsVerb } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { askUntilAnswered, rejectedNudge, retryNudge } from "../shared/never-empty"
 import { isTrivialEdit, isCosmeticReword, dropsContentWithoutGain, rewriteBelongsTo } from "../shared/text-similarity"
@@ -156,7 +156,7 @@ export class AITailorModule {
     }).join("\n\n")
 
     // Lo que el modelo tiene permitido haber sabido. Sin las viñetas acá, toda
-    // reescritura fiel se leería como contenido inventado y el guard la tiraría.
+    // reescritura fiel se leería como contenido quemado y el guard la tiraría.
     const groundingSource = `${resumeContext}\n${workList}`
 
     /** La lista de tareas: qué línea, cuál es su texto de hoy, y por qué. */
@@ -216,10 +216,10 @@ Return a JSON object:
 }
 
 Rules:
-- Echo "checkId" EXACTLY as given. Never invent one, never rewrite a line that is not on the list.
+- Echo "checkId" EXACTLY as given. Never make one up, never rewrite a line that is not on the list.
 - Use the • prefix. Name what the work consists of in this trade's words.
 - Human voice: vary sentence length and structure; natural, not press-release. Banned AI-tell words: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy". Keep each rewrite anchored to a concrete detail already in the source.
-- "metricHint" names WHAT TO MEASURE on that exact line — never a number, never invent one — and only when the line has no figure. "demonstrates" is the soft skill that line now proves. Both travel WITH the line; never as a separate task.
+- "metricHint" names WHAT TO MEASURE on that exact line — never a number, never hard-code one — and only when the line has no figure. "demonstrates" is the soft skill that line now proves. Both travel WITH the line; never as a separate task.
 - Include an entry ONLY for a line you can materially improve. Omit every other one. If none qualify, return an empty array — that is a correct and expected answer.`
       : `Eres un estratega experto en currículos. Recibís líneas que YA tienen diagnóstico. Escribí sus reemplazos.
 
@@ -257,13 +257,13 @@ Devuelve un objeto JSON:
 }
 
 Reglas:
-- Copiá "checkId" EXACTO como se te dio. Nunca inventes uno, nunca reescribas una línea que no está en la lista.
+- Copiá "checkId" EXACTO como se te dio. Nunca te lo afirmes, nunca reescribas una línea que no está en la lista.
 - Usá el prefijo •. Nombrá en qué consiste el trabajo con las palabras de ese oficio.
 - Voz humana: variá el largo y la estructura de las frases; natural, no nota de prensa. Palabras-IA prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia". Mantené cada reescritura anclada a un dato concreto ya presente en el source.
-- "metricHint" dice QUÉ MEDIR en esa línea exacta — nunca una cifra, nunca la inventes — y sólo cuando la línea no tiene número. "demonstrates" es la blanda que esa línea pasa a probar. Las dos VIAJAN CON LA LÍNEA; nunca como tarea aparte.
+- "metricHint" dice QUÉ MEDIR en esa línea exacta — nunca una cifra, nunca la quemes — y sólo cuando la línea no tiene número. "demonstrates" es la blanda que esa línea pasa a probar. Las dos VIAJAN CON LA LÍNEA; nunca como tarea aparte.
 - Incluí una entrada SÓLO por una línea que puedas mejorar de verdad. Omití todas las demás. Si ninguna califica, devolvé un array vacío — es una respuesta correcta y esperada.`
 
-    const systemPrompt = `You are an elite career coach. You rewrite résumé lines that already carry a diagnosis; you do not decide which lines need work. Return ONLY valid JSON. If the input is off-topic or nonsensical, return { "summary": null, "rewrites": [] }. Whether a line is already good is defined in the user message — apply that and nothing else. You never invent figures and never write bracket placeholders; a line the CV gives no number for is written without one. ${langInstruction}`
+    const systemPrompt = `You are an elite career coach. You rewrite résumé lines that already carry a diagnosis; you do not decide which lines need work. Return ONLY valid JSON. If the input is off-topic or nonsensical, return { "summary": null, "rewrites": [] }. Whether a line is already good is defined in the user message — apply that and nothing else. You never hard-code figures and never write bracket placeholders; a line the CV gives no number for is written without one. ${langInstruction}`
 
     // Un CV rico (varios puestos × varias líneas) más el resumen pasa los 900
     // tokens de JSON con facilidad — a 900 la respuesta se truncaba a mitad de
@@ -306,7 +306,7 @@ Reglas:
       isAnswered: (r) => !!r && ((typeof r.summary === "string" && r.summary.trim().length > 0)
         || (r.rewrites ?? []).length > 0),
       // Nada verdadero se puede fabricar acá: una línea que el modelo se negó a
-      // escribir no se puede escribir en código sin inventar contenido.
+      // escribir no se puede escribir en código sin quemar contenido.
       fallback: () => null,
       onFilled: (what) => this.logger.warn("[AIService.tailorCV] empty answer filled", { what }),
     })
@@ -342,7 +342,7 @@ Reglas:
       const byCheckId = new Map<string, TailorWorkItem>(grounded.map((w) => [w.checkId, w]))
       let offered = 0
       let kept = 0
-      let droppedInvented = 0
+      let droppedHardCoded = 0
       let droppedFigure = 0
       let droppedTrivial = 0
       const seen = new Set<string>()
@@ -366,8 +366,8 @@ Reglas:
          * sigue tirando sin preguntar es el placeholder —un "[X%]" jamás puede
          * llegar al CV— y la marca que el candidato no declaró.
          */
-        const kind = hallucinationKind(text, groundingSource)
-        if (kind === "placeholder" || kind === "brand") { droppedInvented++; continue }
+        const kind = hardCodedFactKind(text, groundingSource)
+        if (kind === "placeholder" || kind === "brand") { droppedHardCoded++; continue }
 
         // Una reescritura que habla DE la persona en tercera persona se lee como
         // una carta que escribió otro, dentro de su propio historial.
@@ -420,7 +420,7 @@ Reglas:
         || losesStatedFigure(origSummary, summaryRaw)
         || figureLosesItsVerb(origSummary, summaryRaw)
       ) ? null : summaryRaw
-      return { summary, rewrites, offered, kept, droppedInvented, droppedFigure, droppedTrivial }
+      return { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial }
     }
 
     let out = applyGuards(raw)
@@ -430,7 +430,7 @@ Reglas:
     if (out.kept === 0 && !out.summary && out.offered > 0 && calls < 2) {
       const reasons: string[] = []
       if (out.droppedFigure > 0) reasons.push(language === "en" ? "a figure the CV already states was dropped or altered" : "borró o cambió una cifra que el CV ya dice")
-      if (out.droppedInvented > 0) reasons.push(language === "en" ? "a bracket placeholder or a tool the candidate never declared" : "un corchete de relleno o una herramienta que el candidato no declaró")
+      if (out.droppedHardCoded > 0) reasons.push(language === "en" ? "a bracket placeholder or a tool the candidate never declared" : "un corchete de relleno o una herramienta que el candidato no declaró")
       if (out.droppedTrivial > 0) reasons.push(language === "en" ? "the line barely changed, or changed without gaining anything" : "la línea casi no cambió, o cambió sin ganar nada")
       calls++
       const retryResponse = await doChat(rejectedNudge(language, reasons))
@@ -440,14 +440,14 @@ Reglas:
         const retried = applyGuards(second)
         // Se queda con la que sobrevive; si la segunda tampoco sobrevive, no se
         // fabrica nada: una línea que el modelo no escribió no se puede escribir
-        // en código sin inventar contenido sobre la persona.
+        // en código sin quemar contenido sobre la persona.
         if (retried.kept > 0 || retried.summary) out = retried
       } catch {
         this.logger.warn("[AIService.tailorCV] unparseable JSON on guard retry")
       }
     }
 
-    const { summary, rewrites, offered, kept, droppedInvented, droppedFigure, droppedTrivial } = out
+    const { summary, rewrites, offered, kept, droppedHardCoded, droppedFigure, droppedTrivial } = out
 
     // UNA fila de AIUsageLog por petición: el panel de admin agrupa por conteo,
     // así que un reintento no puede figurar como dos llamadas.
@@ -461,13 +461,13 @@ Reglas:
       costUsd: computeCostUsd(AI_MODEL, promptTokens, completionTokens),
     })
 
-    if (droppedInvented > 0 || droppedFigure > 0 || droppedTrivial > 0) {
-      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedInvented, droppedFigure, droppedTrivial })
+    if (droppedHardCoded > 0 || droppedFigure > 0 || droppedTrivial > 0) {
+      this.logger.warn("[AIService.tailorCV] dropped rewrites", { droppedHardCoded, droppedFigure, droppedTrivial })
       reportGuardDrops({
         endpoint: "tailor-cv",
         offered,
         kept,
-        invented: droppedInvented,
+        hardCoded: droppedHardCoded,
         figureLoss: droppedFigure,
         trivial: droppedTrivial,
       })

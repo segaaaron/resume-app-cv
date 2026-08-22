@@ -16,7 +16,7 @@
 // bullet we asked for changed nothing on screen.
 //
 // A behaviour cannot be matched as a string, and it cannot be pattern-matched
-// either without inventing a rule per behaviour — the list problem again, one
+// either without hard-coding a rule per behaviour — the list problem again, one
 // rule short forever. What CAN be done is read the bullet and answer whether it
 // shows the behaviour, which is exactly what a recruiter does.
 //

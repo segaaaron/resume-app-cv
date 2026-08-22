@@ -38,7 +38,7 @@ export interface GuardDropReport {
   /** Las que sobrevivieron y llegan al usuario. */
   kept: number
   /** Placeholder `[X%]` o marca que el candidato no declaró: hecho falso sobre él. */
-  invented: number
+  hardCoded: number
   /** Borró o alteró una cifra suya. */
   figureLoss: number
   /** Sin cambio real: idéntica, sinónimo, tercera persona, lateral o repetida. */
@@ -46,14 +46,14 @@ export interface GuardDropReport {
 }
 
 export function reportGuardDrops(r: GuardDropReport): void {
-  const dropped = r.invented + r.figureLoss + r.trivial
+  const dropped = r.hardCoded + r.figureLoss + r.trivial
   if (dropped <= 0) return
   logger.error("rewrites dropped by post-model guards", {
     endpoint: r.endpoint,
     offered: r.offered,
     kept: r.kept,
     dropped,
-    invented: r.invented,
+    hardCoded: r.hardCoded,
     figureLoss: r.figureLoss,
     trivial: r.trivial,
     // Lo que se mira de un vistazo: si esto se acerca a 1, el guard dejó de

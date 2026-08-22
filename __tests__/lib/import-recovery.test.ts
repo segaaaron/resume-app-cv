@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { appearsIn, normaliseFigures, recoverContact, hostOf, linesForRole, tighten } from "@/lib/services/ai/shared/import-recovery"
-import { detectHallucination, isGroundedIn } from "@/lib/services/ai/shared/ai-helpers"
+import { hasHardCodedFact, isGroundedIn } from "@/lib/services/ai/shared/ai-helpers"
 
 /**
  * The verification that used to delete the user's own data.
@@ -53,15 +53,15 @@ describe("what the PDF says, the CV keeps", () => {
   it("stops treating a re-spaced figure as an invented one", () => {
     const source = "• Improved software quality, reducing production bugs by 15%"
     const model = "Improved software quality, reducing production bugs by 15 %"
-    expect(detectHallucination(model, source)).toBe(true)                                   // before
-    expect(detectHallucination(normaliseFigures(model), normaliseFigures(source))).toBe(false) // after
+    expect(hasHardCodedFact(model, source)).toBe(true)                                   // before
+    expect(hasHardCodedFact(normaliseFigures(model), normaliseFigures(source))).toBe(false) // after
   })
 
   it("still catches a figure that is genuinely not in the CV", () => {
     // The protection that matters is intact: 20% is not 15%.
     const source = "• Reduced production bugs by 15%"
     const invented = "Reduced production bugs by 20%"
-    expect(detectHallucination(normaliseFigures(invented), normaliseFigures(source))).toBe(true)
+    expect(hasHardCodedFact(normaliseFigures(invented), normaliseFigures(source))).toBe(true)
   })
 
   it("reads thousands separators as one number", () => {

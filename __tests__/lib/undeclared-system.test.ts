@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { hallucinationKind } from "@/lib/services/ai/shared/ai-helpers"
+import { hardCodedFactKind } from "@/lib/services/ai/shared/ai-helpers"
 
 /**
  * UN SISTEMA CON NOMBRE PROPIO QUE EL CANDIDATO NUNCA DECLARÓ.
@@ -26,7 +26,7 @@ describe("caza el sistema que el CV no dice, en cualquier rubro", () => {
     ["diseño técnico", "Dibujé planos de estructura en AutoCAD2024.", CV_BANCO],
   ]
   for (const [rubro, texto, cv] of casos) {
-    it(rubro, () => expect(hallucinationKind(texto, cv)).toBe("brand"))
+    it(rubro, () => expect(hardCodedFactKind(texto, cv)).toBe("brand"))
   }
 })
 
@@ -47,7 +47,7 @@ describe("y NO toca lo que es legítimo", () => {
     ["una norma", "Apliqué la norma ISO 9001 en los controles de calidad.", CV_BANCO],
   ]
   for (const [que, texto, cv] of casos) {
-    it(que, () => expect(hallucinationKind(texto, cv), texto).not.toBe("brand"))
+    it(que, () => expect(hardCodedFactKind(texto, cv), texto).not.toBe("brand"))
   }
 })
 
@@ -59,6 +59,6 @@ describe("lo que este guard deliberadamente NO mira", () => {
    * de fingir que está cubierto.
    */
   it("una marca sin mayúscula interna ni dígitos se le escapa, y está asumido", () => {
-    expect(hallucinationKind("Operé Temenos a diario en ventanilla.", CV_BANCO)).not.toBe("brand")
+    expect(hardCodedFactKind("Operé Temenos a diario en ventanilla.", CV_BANCO)).not.toBe("brand")
   })
 })

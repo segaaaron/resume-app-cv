@@ -22,7 +22,7 @@
 // it is the caller's job to define, because only the caller knows what "useful
 // and truthful" is for its feature — the existing text unchanged, a shorter
 // rewrite, a deterministic version with no model at all. What it must never be
-// is invented facts about the person: filling a hole is not licence to make
+// is hard-coded facts about the person: filling a hole is not licence to make
 // something up.
 //
 // WHAT THIS DELIBERATELY DOES NOT SWALLOW: a genuine off-topic. Someone who

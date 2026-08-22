@@ -32,7 +32,7 @@ export interface BuildSectionContextOptions {
    * Render `description` as indexed bullet lines via the shared bullets
    * contract. Opt-in: only work experience stores bullets — education,
    * projects and volunteer descriptions are prose, and indexing prose would
-   * invent a structure the data doesn't have.
+   * hard-code a structure the data doesn't have.
    */
   bullets?: boolean
 }
@@ -86,12 +86,12 @@ export function resolveLanguage(raw?: string): { language: "es" | "en"; langInst
   return { language, langInstruction }
 }
 
-// ─── Anti-hallucination helpers (shared across all AI modules) ────────────────
+// ─── Anti-hard-coded fact helpers (shared across all AI modules) ────────────────
 
 /**
- * Tech/framework buzzwords commonly invented out of nowhere by LLMs.
+ * Tech/framework buzzwords commonly hard-coded out of nowhere by LLMs.
  * If any of these appears in the AI output but NOT in the source context,
- * we treat the output as a hallucination.
+ * we treat the output as a hard-coded fact.
  */
 export const TECH_BUZZWORDS: readonly string[] = [
   "graphql", "redux", "kubernetes", "docker", "terraform", "tca", "swiftui",
@@ -103,7 +103,7 @@ export const TECH_BUZZWORDS: readonly string[] = [
 ]
 
 /**
- * Metric tokens that count as INVENTED when they appear in AI output but not in
+ * Metric tokens that count as hard-coded when they appear in AI output but not in
  * the source. Deliberately NARROW: every token here that the model writes and
  * the source lacks costs the user their whole suggestion, so a false positive
  * is expensive. Only units that are unambiguously performance claims.
@@ -115,12 +115,12 @@ export const METRIC_REGEX =
 
 /**
  * Any figure that quantifies something — used to ask "does this text contain a
- * real number at all?", never to accuse the model of inventing one.
+ * real number at all?", never to accuse the model of hard-coding one.
  *
  * Deliberately BROAD, and deliberately broader than METRIC_REGEX. The two
  * answer opposite questions and want opposite errors:
  *
- *   METRIC_REGEX      "is this invented?"  → a false positive DROPS the user's
+ *   METRIC_REGEX      "is this hard-coded?"  → a false positive DROPS the user's
  *                                            suggestion, so it stays narrow.
  *   ANY_METRIC_REGEX  "does this quantify?" → a false negative just means we
  *                                            nag about a metric that is there,
@@ -216,8 +216,8 @@ export function resolveJobId(raw: string | undefined, jobs: { id?: string }[]): 
 /**
  * True when the rewrite has dropped a figure the ORIGINAL stated.
  *
- * THE SYMMETRIC HALF OF `detectHallucination`, and it was missing.
- * `detectHallucination` asks "did it ADD a number nobody gave?" — the failure
+ * THE SYMMETRIC HALF OF `hasHardCodedFact`, and it was missing.
+ * `hasHardCodedFact` asks "did it ADD a number nobody gave?" — the failure
  * that gets a CV caught in an interview. This asks "did it REMOVE a number the
  * candidate did give?" — the failure that quietly deletes the one thing on the
  * line a recruiter can weigh, and it is the more expensive of the two, because
@@ -229,7 +229,7 @@ export function resolveJobId(raw: string | undefined, jobs: { id?: string }[]): 
  * into "Reduced medication errors by reconciling prescriptions, MAR entries and
  * administered doses" — richer, truthful, and stripped of 12 and 3. Four of five
  * bullets on that CV lost their figures, and every existing guard passed it:
- * nothing was invented, nothing was trivially reworded, and the text grew, so
+ * nothing was hard-coded, nothing was trivially reworded, and the text grew, so
  * `dropsContentWithoutGain` saw a gain.
  *
  * Compared on DIGITS, not on the token: "1.400" and "1,400" are the same figure
@@ -280,7 +280,7 @@ function statedFigures(text: string): string[] {
  *
  * Lo que YA NO tira: decir la misma cifra de otra forma ("de 12 a 3" → "75%").
  * Si el número nuevo es correcto no lo decide este guard — no está en el CV, así
- * que `hallucinationKind` lo marca `figure` y llega con el chip "confirmá la
+ * que `hardCodedFactKind` lo marca `figure` y llega con el chip "confirmá la
  * cifra", que es exactamente donde esa pregunta se contesta: se la hace al
  * candidato. Antes se tiraba la línea entera y él nunca veía nada.
  */
@@ -374,10 +374,10 @@ export const METRIC_PLACEHOLDER_REGEX =
   /\[\s*(?:x\b|n\b|z\b|\$|\d|number\b|métrica\b|metric\b|porcentaje\b|percent\b|cifra\b)/i
 
 /**
- * Fail-safe hallucination detector. Returns true if `text` looks like it
+ * Fail-safe hard-coded fact detector. Returns true if `text` looks like it
  * introduces data (placeholders, metrics, or technologies) not present in
  * `sourceContext`. Callers should drop/replace flagged content rather than
- * surface invented data to the user.
+ * surface hard-coded data to the user.
  *
  * Detection layers:
  *   1. Metric placeholders like [X%], [N users], [métrica].
@@ -448,19 +448,19 @@ function namesUndeclaredSystem(text: string, sourceContext: string): boolean {
 }
 
 /**
- * POR QUÉ se disparó `detectHallucination`. Las tres causas no son iguales.
+ * POR QUÉ se disparó `hasHardCodedFact`. Las tres causas no son iguales.
  *
  * La función devuelve un booleano y quien llama tiraba la sugerencia entera, sin
- * distinguir un `[X%]` de una marca inventada de una CIFRA. Y la cifra es el caso
+ * distinguir un `[X%]` de una marca quemada de una CIFRA. Y la cifra es el caso
  * que el CEO corrigió el 2026-08-20: proponer el tamaño del trabajo que el
- * candidato describió NO es inventar — inventar es quemar un número desde afuera.
+ * candidato describió NO es quemar — quemar es quemar un número desde afuera.
  * Una cifra propuesta se le MUESTRA para que la confirme o la corrija; lo que se
  * sigue tirando sin preguntar es el placeholder (nunca puede llegar al CV) y la
  * marca que el candidato no declaró (eso sí es un hecho falso sobre él).
  *
  * `null` = nada que objetar.
  */
-export function hallucinationKind(
+export function hardCodedFactKind(
   text: string,
   sourceContext: string,
 ): "placeholder" | "brand" | "figure" | null {
@@ -478,7 +478,7 @@ export function hallucinationKind(
   return null
 }
 
-export function detectHallucination(text: string, sourceContext: string): boolean {
+export function hasHardCodedFact(text: string, sourceContext: string): boolean {
   if (!text) return false
   const sourceLower = sourceContext.toLowerCase()
 

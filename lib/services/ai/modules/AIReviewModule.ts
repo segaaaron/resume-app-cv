@@ -15,7 +15,7 @@ import { AppError } from "@/lib/services/auth/AppError"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota, refundDailyQuota } from "../shared/quota-enforcer"
-import { parseAIJson, safeParseAIJson, resolveLanguage, detectHallucination, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
+import { parseAIJson, safeParseAIJson, resolveLanguage, hasHardCodedFact, losesStatedFigure, figureLosesItsVerb, resolveJobId } from "../shared/ai-helpers"
 import { cvValueBar, noHardCodedFactsRule, keepCandidateFactsRule, proseRules, alreadyGoodRule } from "../shared/cv-writing-doctrine"
 import { parseBullets } from "../shared/bullets"
 import { isCosmeticReword } from "../shared/text-similarity"
@@ -257,7 +257,7 @@ export class AIReviewModule {
     // No call, no tokens, no quota: it is the identical question.
     // ANALYSIS_REVISION is part of the key on purpose. The cache answers "same
     // resume, same posting → same answer", and that is exactly right until the
-    // QUESTION changes. When the prompt was corrected to stop the model inventing
+    // QUESTION changes. When the prompt was corrected to stop the model hard-coding
     // date problems, every CV already analysed kept serving the old verdict from
     // the database — the fix shipped and the user still saw the bug, with no way
     // to tell which. Bump this whenever the prompt or the schema changes; the old
@@ -309,8 +309,8 @@ export class AIReviewModule {
         : `[dato para ti, no cites esta línea] ${withOutcome} de ${cq.totalBullets} bullets declaran un resultado medible (${pct}%).`
       if (pct >= 50) return line
       return en
-        ? `${line}\nThis is the candidate's BIGGEST problem and it must be criticalFixes[0]. Write it in YOUR OWN words, addressed to the candidate — never repeat the bracketed line above. The resume lists what they DID, not what it ACHIEVED. Quote ONE real bullet as the example, explain that a recruiter cannot tell a good iOS developer from an average one without outcomes, and name exactly what to add (scale, impact, time saved, people led). Do NOT invent a number — ask for theirs.`
-        : `${line}\nEste es el problema MÁS GRANDE del candidato y debe ser criticalFixes[0]. Escríbelo con TUS palabras, dirigido al candidato — nunca repitas la línea entre corchetes de arriba. El CV enumera lo que HIZO, no lo que LOGRÓ. Cita UN bullet real como ejemplo, explica que un reclutador no puede distinguir a un buen desarrollador de uno promedio sin resultados, y dile exactamente qué agregar (escala, impacto, tiempo ahorrado, personas a cargo). NO inventes una cifra — pídele la suya.`
+        ? `${line}\nThis is the candidate's BIGGEST problem and it must be criticalFixes[0]. Write it in YOUR OWN words, addressed to the candidate — never repeat the bracketed line above. The resume lists what they DID, not what it ACHIEVED. Quote ONE real bullet as the example, explain that a recruiter cannot tell a good iOS developer from an average one without outcomes, and name exactly what to add (scale, impact, time saved, people led). Do NOT state a number — ask for theirs.`
+        : `${line}\nEste es el problema MÁS GRANDE del candidato y debe ser criticalFixes[0]. Escríbelo con TUS palabras, dirigido al candidato — nunca repitas la línea entre corchetes de arriba. El CV enumera lo que HIZO, no lo que LOGRÓ. Cita UN bullet real como ejemplo, explica que un reclutador no puede distinguir a un buen desarrollador de uno promedio sin resultados, y dile exactamente qué agregar (escala, impacto, tiempo ahorrado, personas a cargo). NO quemes una cifra — pídele la suya.`
     })()
 
     const prompt = en
@@ -357,7 +357,7 @@ Return JSON with this exact shape:
 
 Review the resume against ALL of the following and report every real problem you find (quote the text):
 1. SPELLING & GRAMMAR in the prose — quote the exact error and the correction ("more then" → "more than", "Debeloper" → "Developer"). Never skip this.
-2. QUANTIFICATION — bullets that state a duty with no result; metrics too small to impress ("by 3%", "50 users"); or figures so large they read as invented ("by 50%") the candidate must be ready to defend.
+2. QUANTIFICATION — bullets that state a duty with no result; metrics too small to impress ("by 3%", "50 users"); or figures so large they read as hard-coded ("by 50%") the candidate must be ready to defend.
 3. WEAK WRITING — bullets opening with a duty phrase ("Responsible for", "Helped with") or a weak/passive verb instead of a strong action verb.
 4. ATS PARSEABILITY — dates not in a machine-friendly format (prefer MM/YYYY over a bare year); non-standard section headings; a name/contact line a parser could garble; anything a layout hides from the parser.
 5. STRUCTURE — no explicit "Professional Summary" heading; more than 2 pages; missing LinkedIn/GitHub for a senior technical candidate; illogical section order.
@@ -370,7 +370,7 @@ Hard rules:
 - DEPTH IS THE POINT. "issue" quotes the candidate's actual line. "why" names the concrete consequence for THIS posting (which requirement goes unmatched, what the recruiter concludes) — never a generic platitude. "fix" is the REPLACEMENT TEXT, ready to paste, written in the candidate's voice — not a description of what they should do. A fix the user cannot copy straight into their CV is a wasted fix.
 - "fix" IS NEVER EMPTY AND NEVER AN INSTRUCTION. Measured: on the thinnest résumé in the set, three fixes came back as an empty string and one read "Rewrite the line to name the process you handled" — the user is shown a button that writes nothing, or writes homework into their CV. If the line is thin, that is precisely when you write it: name what that trade's work consists of, using the bar above, and state no fact about the person. If you truly cannot write the replacement, use action.kind "manual" and put the advice in "fix" as a complete sentence addressed to the candidate — but never leave it blank.
 - WHEN THE LINE NEEDS A NUMBER THE CANDIDATE HAS NOT GIVEN: write "fix" as the sentence WITHOUT the number, ending naturally, and put the request in "needsFromYou" as ONE concrete example sentence showing what a finished version looks like — using an obviously illustrative figure. Write it as a single example, never as a menu: "e.g. 'reducing crash rate from 2.1% to 0.4% across 50k users'". NEVER emit bracket placeholders like [insert metric] or [timeframe] anywhere: a list of options inside brackets is not an example, it is homework, and if it reaches the CV a recruiter reads it verbatim.
-- Ground EVERYTHING in the real resume text — quote it. Never invent a fact, metric or percentage.
+- Ground EVERYTHING in the real resume text — quote it. Never state a fact, metric or percentage the CV does not contain.
 - Do NOT list which job-description keywords are missing — that is reported separately.
 - No generic filler ("use action verbs" with no example) — always tie the advice to the candidate's actual line.
 - The verdict MUST plainly state whether the resume is strong enough for THIS job and name the single biggest thing holding it back.
@@ -384,7 +384,7 @@ Hard rules:
   · remove_duplicates — the same bullet text appears more than once.
   · manual — anything else (missing LinkedIn, an unexplained gap, a claim only the candidate can verify). Use it freely; a wrong action is worse than none.
 - Respond ONLY with the JSON, no markdown.`
-      : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA inventas datos — cada afirmación cita el texto real del candidato.
+      : `Eres un reclutador técnico senior y especialista en ATS. Has filtrado más de 10.000 CVs y sabes exactamente cómo Workday, Greenhouse, Taleo, iCIMS y Lever parsean un PDF y rankean a un candidato. Eres directo y específico, y NUNCA quemás datos — cada afirmación cita el texto real del candidato.
 ${untrustedDataRule(false)}
 
 ${cvValueBar("es")}
@@ -427,7 +427,7 @@ Devuelve JSON con esta forma exacta:
 
 Revisa el CV contra TODO lo siguiente y reporta cada problema real que encuentres (cita el texto):
 1. ORTOGRAFÍA Y GRAMÁTICA de la prosa — cita el error exacto y la corrección ("more then" → "more than", "Debeloper" → "Developer"). Nunca lo saltes.
-2. CUANTIFICACIÓN — bullets que expresan una tarea sin resultado; métricas demasiado chicas para impresionar ("by 3%", "50 users"); o cifras tan grandes que parecen inventadas ("by 50%") que el candidato debe poder defender.
+2. CUANTIFICACIÓN — bullets que expresan una tarea sin resultado; métricas demasiado chicas para impresionar ("by 3%", "50 users"); o cifras tan grandes que parecen quemadas ("by 50%") que el candidato debe poder defender.
 3. ESCRITURA DÉBIL — bullets que abren con una frase de tarea ("Responsible for", "Helped with") o un verbo débil/pasivo en vez de un verbo de acción fuerte.
 4. PARSEABILIDAD ATS — fechas no en formato máquina (prefiere MM/YYYY sobre solo el año); encabezados de sección no estándar; una línea de nombre/contacto que un parser pueda romper; cualquier cosa que el layout esconda del parser.
 5. ESTRUCTURA — sin encabezado explícito de "Resumen Profesional"; más de 2 páginas; falta LinkedIn/GitHub para un candidato técnico senior; orden de secciones ilógico.
@@ -440,7 +440,7 @@ Reglas duras:
 - LA PROFUNDIDAD ES EL PUNTO. "issue" cita la línea real del candidato. "why" nombra la consecuencia concreta para ESTA vacante (qué requisito queda sin cubrir, qué concluye el reclutador) — nunca una generalidad. "fix" es el TEXTO DE REEMPLAZO, listo para pegar, escrito en la voz del candidato — no una descripción de lo que debería hacer. Un arreglo que el usuario no puede copiar tal cual a su CV es un arreglo desperdiciado.
 - "fix" NUNCA VA VACÍO NI ES UNA INSTRUCCIÓN. Medido: en el CV más flaco del set, tres arreglos volvieron como cadena vacía y uno decía "Reescribe la línea para nombrar el proceso real que manejaste" — al usuario le queda un botón que no escribe nada, o que le mete la tarea dentro del CV. Si la línea es flaca, es justo cuando la escribís: nombrá en qué consiste el trabajo de ese oficio, con la vara de arriba, sin afirmar ningún dato sobre la persona. Si de verdad no podés escribir el reemplazo, usá action.kind "manual" y poné el consejo en "fix" como una oración completa dirigida al candidato — pero nunca en blanco.
 - CUANDO LA LÍNEA NECESITA UN NÚMERO QUE EL CANDIDATO NO DIO: escribe "fix" como la oración SIN el número, terminada de forma natural, y pon el pedido en "needsFromYou" como UN ejemplo concreto que muestre cómo se ve la versión terminada, con una cifra obviamente ilustrativa. Escríbelo como un solo ejemplo, nunca como un menú: "ej.: 'reduciendo los crashes de 2,1% a 0,4% en 50.000 usuarios'". NUNCA uses marcadores entre corchetes como [inserta métrica] o [plazo]: una lista de opciones entre corchetes no es un ejemplo, es tarea, y si llega al CV el reclutador la lee tal cual.
-- Ancla TODO en el texto real del CV — cítalo. Nunca inventes un dato, métrica ni porcentaje.
+- Ancla TODO en el texto real del CV — cítalo. Nunca afirmes un dato, métrica ni porcentaje que el CV no diga.
 - NO listes qué keywords de la vacante faltan — eso se reporta aparte.
 - Sin relleno genérico ("usa verbos de acción" sin ejemplo) — siempre atá el consejo a la línea real del candidato.
 - El veredicto DEBE decir claramente si el CV es lo bastante fuerte para ESTE puesto y nombrar lo único más grande que lo frena.
@@ -471,7 +471,7 @@ Reglas duras:
         temperature: AI_TEMPERATURE_PRECISE,
         response_format: { type: "json_object" },
         messages: [
-          { role: "system", content: "You are a senior technical recruiter and ATS specialist. You are blunt, specific, and only report problems grounded in the actual resume text — you never invent them. " + langInstruction },
+          { role: "system", content: "You are a senior technical recruiter and ATS specialist. You are blunt, specific, and only report problems grounded in the actual resume text — you never hard-code them. " + langInstruction },
           { role: "user", content: prompt },
         ],
       })
@@ -545,7 +545,7 @@ Reglas duras:
          *
          * Stripping the brackets leaves "improving for in", so the text is
          * REPLACED rather than cleaned. Ours is one plain sentence, and it never
-         * invents a figure — that is still the candidate's to supply.
+         * hard-codes a figure — that is still the candidate's to supply.
          */
         /**
          * A rewrite with no figure in it always owes the candidate a figure.
@@ -663,7 +663,7 @@ Return JSON with this exact shape:
 Rules:
 - hardSkills/softSkills/mustHaves: write each item exactly as it would appear on a resume (canonical form, e.g. "JavaScript", "Project Management"). Max ~12 hard skills.
 - mustHaves: an ALTERNATIVE LIST IS ONE REQUIREMENT. If the posting says "Degree in Business Engineering, Business Administration, Marketing or related", that is a SINGLE mustHaves entry written as one string — never three entries, one per career. Split apart, each is judged on its own and at most one can ever be met, so the others are reported as unmet for every candidate alive. Same for "Excel or Google Sheets". Only split when the posting truly demands BOTH ("Excel AND SQL").
-- Extract ONLY what the job description actually asks for. Do not invent requirements.
+- Extract ONLY what the job description actually asks for. Do not hard-code requirements.
 - WRITE EVERY ITEM IN THE RESUME'S LANGUAGE, not the posting's. If the posting is in another language, TRANSLATE each requirement — the candidate reads this report in their own language, and an untranslated requirement also never matches their resume text.
 - Every suggestion carries an "action" — the tool that performs it, which the user gets as a working button: add_skill (put the exact skill in "value"), rewrite_bullet (give the job ID shown as "ID:x" in the resume and the bullet's 0-based index), rewrite_summary, fix_dates, remove_duplicates, or manual when nothing in the editor can do it in one click. A wrong action is worse than manual.
 - If the text is NOT a real job description, return: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
@@ -689,7 +689,7 @@ Devuelve JSON con esta forma exacta:
 Reglas:
 - hardSkills/softSkills/mustHaves: escribe cada ítem tal como aparecería en un CV (forma canónica, ej. "JavaScript", "Gestión de Proyectos"). Máx ~12 hard skills.
 - mustHaves: UNA LISTA DE ALTERNATIVAS ES UN SOLO REQUISITO. Si el aviso dice "Licenciatura en Ingeniería Comercial, Administración de Empresas, Marketing o carreras afines", eso es UNA sola entrada de mustHaves escrita como una sola cadena — nunca tres entradas, una por carrera. Separadas, cada una se juzga sola y como mucho puede cumplirse una: las demás figuran como incumplidas para cualquier candidato del planeta. Lo mismo con "Excel o Google Sheets". Separá sólo cuando el aviso exige AMBAS ("Excel Y SQL").
-- Extrae SOLO lo que la descripción realmente pide. No inventes requisitos.
+- Extrae SOLO lo que la descripción realmente pide. No agregues requisitos que no estén.
 - ESCRIBE CADA ÍTEM EN EL IDIOMA DEL CV, no en el de la oferta. Si la oferta está en otro idioma, TRADUCE cada requisito — el candidato lee este informe en su idioma, y un requisito sin traducir tampoco matchea nunca con el texto de su CV.
 - Cada sugerencia lleva una "action" — la herramienta que la ejecuta, que el usuario recibe como botón real: add_skill (pon la habilidad exacta en "value"), rewrite_bullet (da el ID del puesto que aparece como "ID:x" en el CV y el índice 0-based del bullet), rewrite_summary, fix_dates, remove_duplicates, o manual cuando nada en el editor pueda hacerlo en un clic. Una acción equivocada es peor que manual.
 - Si el texto NO es una descripción de puesto real, devuelve: {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
@@ -697,9 +697,9 @@ Reglas:
 
     // Role-only mode: infer the STANDARD requirements for the target role (no
     // real posting). Same JSON shape → same deterministic engine. Honest about
-    // scope: standard expectations only, never invented company-specific asks.
+    // scope: standard expectations only, never hard-coded company-specific asks.
     const rolePrompt = en
-      ? `Infer the STANDARD hiring requirements for the target role below — the hard skills, soft skills, must-haves and canonical job title a typical posting for this role would list. Base it ONLY on common, well-established expectations for this role. Do NOT invent niche, company-specific or unusual requirements. If the role is too vague or is not a real job role, return off_topic.
+      ? `Infer the STANDARD hiring requirements for the target role below — the hard skills, soft skills, must-haves and canonical job title a typical posting for this role would list. Base it ONLY on common, well-established expectations for this role. Do NOT state niche, company-specific or unusual requirements. If the role is too vague or is not a real job role, return off_topic.
 
 === TARGET ROLE ===
 ${roleTitle ?? ""}
@@ -718,10 +718,10 @@ Return JSON with this exact shape:
 
 Rules:
 - Only STANDARD requirements for this role. Max ~12 hard skills.
-- Do NOT invent niche/company-specific requirements — only what a typical posting for this role lists.
+- Do NOT add niche or company-specific requirements — only what a typical posting for this role lists.
 - If the role is too vague to infer, return {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Respond ONLY with the JSON, no markdown.`
-      : `Infiere los requisitos ESTÁNDAR de contratación para el rol objetivo de abajo — las habilidades técnicas, blandas, requisitos duros y el título canónico que una oferta típica de este rol listaría. Básate SOLO en expectativas comunes y bien establecidas de este rol. NO inventes requisitos de nicho, específicos de una empresa ni inusuales. Si el rol es demasiado vago o no es un rol real, devuelve off_topic.
+      : `Infiere los requisitos ESTÁNDAR de contratación para el rol objetivo de abajo — las habilidades técnicas, blandas, requisitos duros y el título canónico que una oferta típica de este rol listaría. Básate SOLO en expectativas comunes y bien establecidas de este rol. NO quemes requisitos de nicho, específicos de una empresa ni inusuales. Si el rol es demasiado vago o no es un rol real, devuelve off_topic.
 
 === ROL OBJETIVO ===
 ${roleTitle ?? ""}
@@ -740,7 +740,7 @@ Devuelve JSON con esta forma exacta:
 
 Reglas:
 - Solo requisitos ESTÁNDAR de este rol. Máx ~12 hard skills.
-- NO inventes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
+- NO quemes requisitos de nicho/específicos de empresa — solo lo que una oferta típica del rol lista.
 - Si el rol es demasiado vago para inferir, devuelve {"jobTitle":"","hardSkills":[],"softSkills":[],"mustHaves":[],"summary":"","label":"off_topic"}
 - Responde ÚNICAMENTE con el JSON, sin markdown.`
 
@@ -845,7 +845,7 @@ Reglas:
                 // "only real job descriptions" rule would off_topic a valid title.
                 (language === "en"
                   ? "You are an expert on the STANDARD requirements of professional roles, for ATS compatibility analysis. " +
-                    "Given a job title, you infer that role's typical, well-established requirements (never inventing niche or company-specific ones). You NEVER assign a numeric score — you only extract keywords and give advice. "
+                    "Given a job title, you infer that role's typical, well-established requirements (never hard-coding niche or company-specific ones). You NEVER assign a numeric score — you only extract keywords and give advice. "
                   : "Eres un experto en los requisitos ESTÁNDAR de roles profesionales para análisis de compatibilidad ATS. " +
                     "Dado un título de puesto, infieres los requisitos típicos y bien establecidos de ese rol (no requisitos de nicho ni específicos de una empresa: ésos son datos quemados). NUNCA asignas un puntaje numérico — solo extraes keywords y das consejos. ")
               : (language === "en"
@@ -1283,7 +1283,7 @@ INSTRUCTIONS:
 2. Answer the question directly if it is specific.
 3. Be concrete — mention real sections or data from the resume.
 4. Tone: professional consultant, direct and constructive.
-5. SPELLING & GRAMMAR: proof-read every field. When you find a typo, misspelling or grammar error (e.g. "Objetive-C" → "Objective-C", "React Navite" → "React Native", "Web Debeloper" → "Web Developer", "more then" → "more than"), add an IMPROVEMENT whose "suggestion" corrects ONLY the error in the affected field. Rules: fix the typo, keep everything else byte-for-byte; NEVER "correct" a real technology/brand/proper name or change meaning; the preview is the full corrected field value. Correcting a typo is NOT inventing content — it is allowed and expected.
+5. SPELLING & GRAMMAR: proof-read every field. When you find a typo, misspelling or grammar error (e.g. "Objetive-C" → "Objective-C", "React Navite" → "React Native", "Web Debeloper" → "Web Developer", "more then" → "more than"), add an IMPROVEMENT whose "suggestion" corrects ONLY the error in the affected field. Rules: fix the typo, keep everything else byte-for-byte; NEVER "correct" a real technology/brand/proper name or change meaning; the preview is the full corrected field value. Correcting a typo is NOT hard-coding content — it is allowed and expected.
 6. REVIEW WITH A SENIOR RECRUITER'S LENS. A recruiter spends 6-11 seconds on the first pass, 80% of it on the TOP of the resume. Apply these priorities, in order:
    a. TOP-THIRD FIRST: the current job title and the professional summary carry the most weight — a missing/weak current title or a vague summary is the #1 reason to reject on the first scan. Flag these before anything lower on the page.
    b. SENIORITY SIGNALS: reward scope and ownership — team size led, budget owned, cross-functional leadership, systems designed. If the target is a senior/lead role and the bullets read as individual-contributor tasks, say so.
@@ -1319,11 +1319,11 @@ For STRENGTHS: do NOT include suggestion. Strengths confirm what is already work
 
 CRITICAL RULES FOR SUGGESTIONS (mandatory, no exceptions):
 1. Include "suggestion" whenever you can write the improved line without stating a FACT about the candidate they did not give. Naming what the work of their trade consists of is not a fact about them — it is the content of the task they said they performed, and writing it is the whole point. Returning their own sentence back to them, tidied, is not a suggestion.
-2. DO NOT invent: technologies, frameworks, libraries, tools, company names, job titles, certifications, percentages, numbers, dates, or any metric not explicitly stated in the input.
+2. DO NOT state: technologies, frameworks, libraries, tools, company names, job titles, certifications, percentages, numbers, dates, or any metric not explicitly stated in the input.
 3. DO NOT add a NEW bullet describing work the candidate never mentioned. Rewriting an existing bullet so it names the operations, documents, materials or controls that work consists of is required, not "new content".
 4. OMIT "suggestion" in one case only: when the improvement would require stating a FACT about the person they did not give — a figure, an employer, a tool they never listed. Then use ONLY "text" (e.g., "Add measurable metrics to your achievements" — NOT "Achieved 80% reduction in load time"). Naming what the work of their trade consists of is NOT that case: that is the thing you are here to write.
 5. NEVER use placeholders like [X%], [N users], <number>, or similar in the preview field. The preview must be production-ready text.
-6. If you can write the improvement from what the source already says, WRITE IT. Advice with no preview leaves the user the problem and no way to fix it: you named the defect and withheld the repair. Measured on a real CV: five improvements, five verdicts, zero buttons. "If in doubt, omit" was the right rule when a preview could invent; the bar above now says what an acceptable preview is, and doubt is not an answer.
+6. If you can write the improvement from what the source already says, WRITE IT. Advice with no preview leaves the user the problem and no way to fix it: you named the defect and withheld the repair. Measured on a real CV: five improvements, five verdicts, zero buttons. "If in doubt, omit" was the right rule when a preview could state a new fact; the bar above now says what an acceptable preview is, and doubt is not an answer.
 7. For an ADVICE-ONLY improvement (no "suggestion"), STILL add a "location" object with the section it refers to, so the user knows WHERE to apply it: { "field": <one of the field values above>, "targetId": "<ID:xxx if the field starts with workExperience.>" }. e.g. advice about a skills typo → "location": { "field": "skills" }.
 
 Respond ONLY with valid JSON (no markdown):
@@ -1353,7 +1353,7 @@ INSTRUCCIONES:
 2. Responde directamente a la pregunta si es específica.
 3. Sé concreto — menciona secciones o datos reales del CV.
 4. Tono: consultor profesional, directo y constructivo.
-5. ORTOGRAFÍA Y GRAMÁTICA: revisa cada campo. Cuando encuentres una falta, error tipográfico o gramatical (ej.: "Objetive-C" → "Objective-C", "React Navite" → "React Native", "Analystical" → "Analytical", "Debeloper" → "Developer"), agrega una MEJORA cuyo "suggestion" corrija SOLO el error en el campo afectado. Reglas: corrige la falta, deja todo lo demás idéntico; NUNCA "corrijas" una tecnología/marca/nombre propio real ni cambies el significado; el preview es el valor completo corregido del campo. Corregir una falta NO es inventar contenido — está permitido y es esperado.
+5. ORTOGRAFÍA Y GRAMÁTICA: revisa cada campo. Cuando encuentres una falta, error tipográfico o gramatical (ej.: "Objetive-C" → "Objective-C", "React Navite" → "React Native", "Analystical" → "Analytical", "Debeloper" → "Developer"), agrega una MEJORA cuyo "suggestion" corrija SOLO el error en el campo afectado. Reglas: corrige la falta, deja todo lo demás idéntico; NUNCA "corrijas" una tecnología/marca/nombre propio real ni cambies el significado; el preview es el valor completo corregido del campo. Corregir una falta NO es quemar contenido — está permitido y es esperado.
 6. REVISA CON LA MIRADA DE UN RECLUTADOR SENIOR. Un reclutador dedica 6-11 segundos al primer vistazo, 80% al TERCIO SUPERIOR del CV. Aplica estas prioridades, en orden:
    a. TERCIO SUPERIOR PRIMERO: el puesto actual y el resumen profesional pesan más — un título actual débil/ausente o un resumen vago es la razón #1 de rechazo en el primer escaneo. Señálalos antes que nada de más abajo.
    b. SEÑALES DE SENIORITY: premia alcance y ownership — tamaño de equipo liderado, presupuesto gestionado, liderazgo cross-funcional, sistemas diseñados. Si el objetivo es un rol senior/lead y los bullets se leen como tareas de colaborador individual, dilo.
@@ -1389,11 +1389,11 @@ Para STRENGTHS: NO incluyas suggestion. Las fortalezas confirman lo que ya funci
 
 REGLAS CRÍTICAS PARA SUGGESTIONS (obligatorias, sin excepciones):
 1. Incluí "suggestion" siempre que puedas escribir la línea mejorada sin afirmar un DATO sobre el candidato que él no dio. Nombrar en qué consiste el trabajo de su oficio no es un dato sobre él — es el contenido de la tarea que dijo hacer, y escribirlo es justamente el punto. Devolverle su propia oración acomodada no es una sugerencia.
-2. NO inventes: tecnologías, frameworks, librerías, herramientas, nombres de empresas, cargos, certificaciones, porcentajes, números, fechas, ni ninguna métrica que no esté explícitamente declarada en el input.
+2. NO quemes: tecnologías, frameworks, librerías, herramientas, nombres de empresas, cargos, certificaciones, porcentajes, números, fechas, ni ninguna métrica que no esté explícitamente declarada en el input.
 3. NO agregues un bullet NUEVO que describa trabajo que el candidato nunca mencionó. Reescribir un bullet existente para que nombre las operaciones, documentos, materiales o controles en que consiste ese trabajo es obligatorio, no "contenido nuevo".
 4. OMITE "suggestion" en un solo caso: cuando la mejora exigiría afirmar un DATO sobre la persona que ella no dio — una cifra, un empleador, una herramienta que no declaró. Ahí usa SOLO "text" (ej.: "Añade métricas medibles a tus logros" — NO "Logré reducir el tiempo de carga en un 80%"). Nombrar en qué consiste el trabajo de su oficio NO es ese caso: eso es lo que tenés que escribir.
 5. NUNCA uses placeholders como [X%], [N usuarios], <número>, ni similares en el campo preview. El preview debe ser texto listo para producción.
-6. Si podés escribir la mejora con lo que el source ya dice, ESCRIBILA. Un consejo sin preview le deja al usuario el problema y ninguna forma de arreglarlo: le nombraste el defecto y le negaste el arreglo. Medido en un CV real: cinco mejoras, cinco veredictos, cero botones. "Ante la duda, omitir" era la regla correcta cuando un preview podía inventar; ahora la vara de arriba ya dice qué es un preview aceptable, y dudar no es una respuesta.
+6. Si podés escribir la mejora con lo que el source ya dice, ESCRIBILA. Un consejo sin preview le deja al usuario el problema y ninguna forma de arreglarlo: le nombraste el defecto y le negaste el arreglo. Medido en un CV real: cinco mejoras, cinco veredictos, cero botones. "Ante la duda, omitir" era la regla correcta cuando un preview podía quemar; ahora la vara de arriba ya dice qué es un preview aceptable, y dudar no es una respuesta.
 7. Para una mejora SOLO-CONSEJO (sin "suggestion"), IGUAL agrega un objeto "location" con la sección a la que se refiere, para que el usuario sepa DÓNDE aplicarla: { "field": <uno de los valores de field de arriba>, "targetId": "<ID:xxx si el field empieza por workExperience.>" }. ej.: consejo sobre un typo en skills → "location": { "field": "skills" }.
 
 Responde ÚNICAMENTE con JSON válido (sin markdown):
@@ -1452,7 +1452,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
       // returns per-error corrections, so the JSON is larger. Sized to the worst
       // case (5 strengths + 5 improvements, each with a full-field preview).
       max_tokens: 1300,
-      // review-cv usa temperatura baja (0.3) para reducir alucinaciones en suggestions.preview.
+      // review-cv usa temperatura baja (0.3) para que el preview se ciña al texto del CV.
       // No afecta a otros endpoints — cada módulo elige la suya.
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
@@ -1600,7 +1600,7 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
        * seguía ahí — porque nunca se había ido. Un botón que devuelve el problema
        * gasta el clic, el uso y la paciencia.
        *
-       * Nadie comprobaba lo evidente. El guard de invención mira cifras y marcas;
+       * Nadie comprobaba lo evidente. El guard de dato quemado mira cifras y marcas;
        * el de reescritura cosmética, si cambió lo suficiente. Ninguno preguntaba
        * si la propuesta sigue teniendo el defecto que la motivó.
        */
@@ -1617,10 +1617,10 @@ Responde ÚNICAMENTE con JSON válido (sin markdown):
         return { ...item, suggestion: undefined, location: loc }
       }
 
-      // Fail-safe: if preview seems to have invented data not present in the
+      // Fail-safe: if preview seems to have hard-coded data not present in the
       // resume context, drop the suggestion and keep only the advisory text.
-      if (detectHallucination(cleanedPreview, resumeContext)) {
-        this.logger.warn("[AIService.reviewCV] dropped hallucinated suggestion", {
+      if (hasHardCodedFact(cleanedPreview, resumeContext)) {
+        this.logger.warn("[AIService.reviewCV] dropped hard-coded suggestion", {
           field,
           previewSample: cleanedPreview.slice(0, 120),
         })

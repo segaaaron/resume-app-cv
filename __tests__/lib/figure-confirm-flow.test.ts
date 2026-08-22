@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs"
 import { tailorResolutions } from "@/lib/ats/tailor-resolutions"
 import type { AtsReport } from "@/lib/ats/report"
 import { join } from "node:path"
-import { hallucinationKind } from "@/lib/services/ai/shared/ai-helpers"
+import { hardCodedFactKind } from "@/lib/services/ai/shared/ai-helpers"
 
 /**
  * Una cifra propuesta se CONFIRMA; no se tira.
@@ -24,11 +24,11 @@ const read = (p: string) => readFileSync(join(process.cwd(), p), "utf8")
 
 describe("por que se disparo el guard", () => {
   it("una cifra sin respaldo se marca como cifra, no como invento", () => {
-    expect(hallucinationKind("Reduje la mora un 30% gestionando la cartera", CV)).toBe("figure")
+    expect(hardCodedFactKind("Reduje la mora un 30% gestionando la cartera", CV)).toBe("figure")
   })
 
   it("un placeholder sigue siendo placeholder", () => {
-    expect(hallucinationKind("Reduje la mora un [X%] gestionando la cartera", CV)).toBe("placeholder")
+    expect(hardCodedFactKind("Reduje la mora un [X%] gestionando la cartera", CV)).toBe("placeholder")
   })
 
   /**
@@ -38,23 +38,23 @@ describe("por que se disparo el guard", () => {
    * quede escrito: este test cubre lo que el guard SI puede ver.
    */
   it("una marca tecnica que el candidato no declaro sigue siendo invento", () => {
-    expect(hallucinationKind("Gestione la cartera desplegando en Kubernetes", CV)).toBe("brand")
+    expect(hardCodedFactKind("Gestione la cartera desplegando en Kubernetes", CV)).toBe("brand")
   })
 
   it("una reescritura limpia no dispara nada", () => {
-    expect(hallucinationKind("Negocie acuerdos de pago con clientes en mora temprana", CV)).toBeNull()
+    expect(hardCodedFactKind("Negocie acuerdos de pago con clientes en mora temprana", CV)).toBeNull()
   })
 
   /** La cifra que el candidato SI declaro nunca fue el problema. */
   it("no marca una cifra que ya esta en el CV", () => {
-    expect(hallucinationKind("Coordine un equipo de 3 analistas", "Coordine un equipo de 3 analistas")).toBeNull()
+    expect(hardCodedFactKind("Coordine un equipo de 3 analistas", "Coordine un equipo de 3 analistas")).toBeNull()
   })
 })
 
 describe("el camino completo, de tailor a la tarjeta", () => {
   /**
    * ESTOS TESTS LEÍAN EL CÓDIGO. Buscaban cadenas como
-   * `toContain("const kind = hallucinationKind(text, groundingSource)")` — una
+   * `toContain("const kind = hardCodedFactKind(text, groundingSource)")` — una
    * línea literal, con su nombre de variable y todo. Pasaban en verde con el
    * puente desconectado, y se ponían en rojo por renombrar `kind`. Ahora se
    * ejecuta el puente y se lee la bandera que sale del otro lado.

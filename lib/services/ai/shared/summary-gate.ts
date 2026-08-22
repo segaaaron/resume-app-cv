@@ -12,7 +12,7 @@
 import { AI_MODEL } from "@/lib/ai-client"
 import type { IAIClient } from "@/lib/interfaces/IAIClient"
 import type { ILogger } from "@/lib/interfaces/ILogger"
-import { parseAIJson, stripVersionLabel, detectHallucination, ANY_METRIC_REGEX } from "./ai-helpers"
+import { parseAIJson, stripVersionLabel, hasHardCodedFact, ANY_METRIC_REGEX } from "./ai-helpers"
 import { assessSummary } from "./summary-quality"
 import { isTrivialEdit } from "./text-similarity"
 
@@ -24,7 +24,7 @@ export interface SummaryGateUsage {
 export interface SummaryGateInput {
   /** Whatever came back in `versions` — unvalidated, straight from the model. */
   rawVersions: unknown
-  /** Everything the candidate stated. Anything outside it is a hallucination. */
+  /** Everything the candidate stated. Anything outside it is a hard-coded fact. */
   source: string
   /** The candidate's real figures. Empty is a valid, common profile. */
   metrics: string[]
@@ -92,14 +92,14 @@ export function buildMetricGuidance(
     return {
       block: metrics.length ? `\n=== THE CANDIDATE'S REAL NUMBERS ===\n${metrics.map((m) => `• ${m}`).join("\n")}` : "",
       rule: metrics.length
-        ? `ON NUMBERS — read this last and follow it exactly:\nThe candidate's real figures are listed above. At least one of them MUST appear, as a figure, in EVERY version. "Cut crash rate 20%" is worth more to a recruiter than "significantly improved stability" — the number IS the point, and vaguing it out throws away the strongest thing this candidate has. Never round it, never invent one that is not on that list, and never leave a bracket.`
+        ? `ON NUMBERS — read this last and follow it exactly:\nThe candidate's real figures are listed above. At least one of them MUST appear, as a figure, in EVERY version. "Cut crash rate 20%" is worth more to a recruiter than "significantly improved stability" — the number IS the point, and vaguing it out throws away the strongest thing this candidate has. Never round it, never hard-code one that is not on that list, and never leave a bracket.`
         : `ON NUMBERS — read this last and follow it exactly:\nThis profile states no figures at all. That is FINE and very common. A summary with zero numbers, built on concrete specifics the candidate actually has (sector, stack, scope, real achievement), is a CORRECT and expected answer — not a weak one. Do NOT reach for a number to sound impressive: any figure not in the profile will be rejected and the candidate will get nothing back.`,
     }
   }
   return {
     block: metrics.length ? `\n=== LAS CIFRAS REALES DEL CANDIDATO ===\n${metrics.map((m) => `• ${m}`).join("\n")}` : "",
     rule: metrics.length
-      ? `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nLas cifras reales del candidato están listadas arriba. Al menos una DEBE aparecer, como cifra, en CADA versión. "Redujo los crashes un 20%" vale más para un recruiter que "mejoró significativamente la estabilidad" — el número ES el punto, y difuminarlo tira lo más fuerte que tiene este candidato. Nunca la redondees, nunca inventes una que no esté en esa lista, y nunca dejes un corchete.`
+      ? `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nLas cifras reales del candidato están listadas arriba. Al menos una DEBE aparecer, como cifra, en CADA versión. "Redujo los crashes un 20%" vale más para un recruiter que "mejoró significativamente la estabilidad" — el número ES el punto, y difuminarlo tira lo más fuerte que tiene este candidato. Nunca la redondees, nunca afirmes una que no esté en esa lista, y nunca dejes un corchete.`
       : `SOBRE LAS CIFRAS — lee esto al final y cúmplelo exactamente:\nEste perfil no declara ninguna cifra. Eso está BIEN y es muy común. Un resumen con cero números, construido sobre datos concretos que el candidato sí tiene (sector, stack, alcance, logro real), es una respuesta CORRECTA y esperada — no una respuesta débil. NO busques un número para sonar impresionante: cualquier cifra que no esté en el perfil será rechazada y el candidato no recibirá nada.`,
   }
 }
@@ -124,19 +124,19 @@ export async function gateSummaryVersions(
     .filter((e) => e.text.trim().length > 0)
     .slice(0, 3)
 
-  // Anything the candidate did not state — invented tech, invented figures, or a
-  // "[X%]" placeholder — never reaches the CV. detectHallucination has no
+  // Anything the candidate did not state — hard-coded tech, hard-coded figures, or a
+  // "[X%]" placeholder — never reaches the CV. hasHardCodedFact has no
   // opt-out: allowPlaceholders was removed in F1 once a bracket shipped into a
   // real summary.
   let dropped = 0
   const clean = candidates.filter((v) => {
-    if (detectHallucination(v.text, source)) {
+    if (hasHardCodedFact(v.text, source)) {
       dropped++
       return false
     }
     return true
   })
-  if (dropped > 0) logger.warn(`[${endpoint}] dropped hallucinated versions`, { dropped, kept: clean.length })
+  if (dropped > 0) logger.warn(`[${endpoint}] dropped versions with a hard-coded fact`, { dropped, kept: clean.length })
 
   const ranked = dropNearDuplicates(rank(clean, profileHasMetrics))
 
@@ -180,9 +180,9 @@ export async function gateSummaryVersions(
   const retry = await retryForQuality(aiClient, input, { missingMetrics, hasCliche })
   if (!retry) return { versions: ranked, retryUsage: null }
 
-  // The retry is model output too — it gets the same hallucination check the
+  // The retry is model output too — it gets the same hard-coded fact check the
   // first attempt got. Skipping it here would make "retry" a way in.
-  const retryClean = retry.versions.filter((v) => !detectHallucination(v.text, source))
+  const retryClean = retry.versions.filter((v) => !hasHardCodedFact(v.text, source))
   const retryRanked = dropNearDuplicates(rank(retryClean, profileHasMetrics))
   if (retryRanked.length === 0) {
     logger.warn(`[${endpoint}] retry produced nothing usable — keeping the first result`)
@@ -289,7 +289,7 @@ async function retryForQuality(
       temperature,
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
+        { role: "system", content: `Escribís resúmenes de CV para el oficio del candidato. Nunca quemás una cifra ni escribís placeholders. ${langInstruction}` },
         { role: "user", content: `${basePrompt}\n\n${parts.join("\n\n")}` },
       ],
     })

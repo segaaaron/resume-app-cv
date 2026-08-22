@@ -142,7 +142,7 @@ interface Coverage {
  * A keyword sitting in the Skills list is a claim; the same keyword inside a
  * work-experience bullet is evidence. Recruiters read it that way, and so does
  * every semantic screener. Nothing is scored down for being listed-only — the
- * distinction is reported, not penalised. Inventing a discount ("a listed skill
+ * distinction is reported, not penalised. hard-coding a discount ("a listed skill
  * is worth 60%") would be exactly the fabricated precision this product has
  * been purging.
  */
@@ -398,7 +398,7 @@ export function computeATSMatch(
     // The stuffing answer. Dumping every missing keyword into Skills still
     // moves the score — coverage only asks whether the word is there — but now
     // all of them come back listed-only, and the user sees exactly which
-    // claims their own CV does not back up. A fact, not an invented penalty.
+    // claims their own CV does not back up. A fact, not an hard-coded penalty.
     // Deduped: a posting can list the same requirement as both a hard skill and a
     // soft one ("Debugging production issues"), and concatenating the two buckets
     // emitted it twice. React saw two children with the same key and warned that it

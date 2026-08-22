@@ -9,7 +9,7 @@
 //
 // THE LINE THIS DRAWS, and it is the only subtle part:
 //
-//   INVENTING A FACT ABOUT THE PERSON — forbidden, always. Figures, employers,
+//   hard-coding A FACT ABOUT THE PERSON — forbidden, always. Figures, employers,
 //   brand-name systems, results, certifications, seniority. Only they know those,
 //   and a CV that states one they did not is a CV that fails an interview.
 //
@@ -89,11 +89,11 @@ export function cvValueBar(language: string): string {
  *
  * El nombre viejo arrastraba el marco equivocado a los diez sitios que la citan,
  * y ese marco se aplicó de más durante meses: bastaba que una salida sonara a
- * logro para que un guard la tratara como invención. El CEO lo corrigió tres
+ * logro para que un guard la tratara como dato quemado. El CEO lo corrigió tres
  * veces, con estas palabras:
  *
- *   «Lo que para mí es un invento es cuando creás información QUEMADA. Lo que la
- *    IA genera no son inventadas: son mejoras que te da según la información que
+ *   «Lo que para mí es un dato quemado es cuando creás información QUEMADA. Lo que la
+ *    IA genera no son quemadas: son mejoras que te da según la información que
  *    tiene.»
  *
  * La línea, entonces, no pasa por quién escribe la frase sino por DE DÓNDE SALE
@@ -113,7 +113,7 @@ export function noHardCodedFactsRule(language: string): string {
 
 A figure taken from an example, from a template, or from what "usually" happens in that trade is hard-coded: it did not come from this candidate, and it is what makes a CV collapse in an interview.
 
-Everything you write FROM WHAT THEY TOLD YOU is not invention — it is the improvement they are paying for. Naming the trade's real vocabulary for the work they described, writing their outcome with the verb it deserves, proposing the measurable size of what they did: none of that is inventing. Withholding it leaves them with the same duty list they typed.
+Everything you write FROM WHAT THEY TOLD YOU is the improvement they are paying for. Naming the trade's real vocabulary for the work they described, writing their outcome with the verb it deserves, proposing the measurable size of what they did: none of that is hard-coded. Withholding it leaves them with the same duty list they typed.
 
 These are the hard-coded ones — only the candidate can state them:
 - A figure STAMPED ON FROM OUTSIDE: a number that comes from you, from an example, or from what "usually" happens in that trade, rather than from the work THIS candidate described. That is the forbidden one.
@@ -121,8 +121,8 @@ These are the hard-coded ones — only the candidate can state them:
 - Employers, clients or products by proper name that they did not mention.
 - Software or systems by BRAND name THAT THEY DID NOT STATE. Say "core banking system", never a vendor they never mentioned.
   BUT: a tool, standard or system the candidate already listed in their skills, or named in their own words, is THEIRS — write it where the work they described actually used it. Two examples of the principle, from opposite trades and never of the wording: a welder who lists TIG does not get "performed welding", and a payroll clerk who lists the collective agreement does not get "processed payroll". Suppressing what the candidate declared protects them from nothing; it removes the exact keyword an ATS searches for.
-- A RESULT THEY NEVER DESCRIBED. "Reduced errors", "improved efficiency", "increased sales" are forbidden only when the source says nothing about a reduction, an improvement or a rise — bolting an outcome onto work they described as a task is the invention.
-  When they DID describe the outcome, write it with the verb it deserves. "I checked the invoices and there were fewer mistakes" becomes "Reduced invoicing errors by reviewing every batch before release" — that is not inventing, it is their own information written the way a CV is written, and it is the value they are paying for. Suppressing the verb because it sounds like an achievement leaves them with a duty list.
+- A RESULT THEY NEVER DESCRIBED. "Reduced errors", "improved efficiency", "increased sales" are forbidden only when the source says nothing about a reduction, an improvement or a rise — bolting an outcome onto work they described as a task is the hard-coded part.
+  When they DID describe the outcome, write it with the verb it deserves. "I checked the invoices and there were fewer mistakes" becomes "Reduced invoicing errors by reviewing every batch before release" — that is their own information written the way a CV is written, and it is the value they are paying for. Suppressing the verb because it sounds like an achievement leaves them with a duty list.
 - Certifications, licences or degrees.
 - Seniority they did not claim: no "led", "managed" or "supervised" unless they said so.
 If the work genuinely had a number and they did not give it, propose the range and mark it as theirs to confirm. Never leave the line naked when a size is obvious, and never hand them a precise figure you chose.`
@@ -130,7 +130,7 @@ If the work genuinely had a number and they did not give it, propose the range a
 
 Una cifra sacada de un ejemplo, de una plantilla o de lo que "suele" pasar en ese oficio está quemada: no salió de este candidato, y es lo que hace que un CV se caiga en la entrevista.
 
-Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ no es invento — es la mejora que está pagando. Nombrar el vocabulario real de su oficio para el trabajo que describió, escribir su resultado con el verbo que le corresponde, proponer el tamaño medible de lo que hizo: nada de eso es inventar. Callártelo lo deja con la misma lista de tareas que él tipeó.
+Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ es la mejora que está pagando. Nombrar el vocabulario real de su oficio para el trabajo que describió, escribir su resultado con el verbo que le corresponde, proponer el tamaño medible de lo que hizo: nada de eso está quemado. Callártelo lo deja con la misma lista de tareas que él tipeó.
 
 Éstos son los datos quemados — sólo el candidato puede afirmarlos:
 - Una cifra PUESTA DESDE AFUERA: un número que sale de vos, de un ejemplo, o de lo que "suele" pasar en ese oficio, y no del trabajo que ESTE candidato contó. Ésa es la prohibida.
@@ -138,8 +138,8 @@ Todo lo que escribas A PARTIR DE LO QUE ÉL TE CONTÓ no es invento — es la me
 - Empleadores, clientes o productos con nombre propio que no mencionó.
 - Software o sistemas con nombre de MARCA QUE ÉL NO HAYA DECLARADO. Decí "sistema core bancario", nunca un proveedor que no mencionó.
   PERO: una herramienta, norma o sistema que el candidato ya listó en sus habilidades, o que nombró con sus propias palabras, es SUYO — escribilo donde el trabajo que contó realmente lo usó. Dos ejemplos del principio, de rubros opuestos y nunca de la redacción: un soldador que declara TIG no recibe "realicé soldaduras", y una liquidadora de sueldos que declara el convenio colectivo no recibe "procesé la nómina". Ocultar lo que el candidato declaró no lo protege de nada: le saca la keyword exacta que busca un ATS.
-- UN RESULTADO QUE ÉL NUNCA CONTÓ. "Reduje errores", "mejoré la eficiencia", "aumenté las ventas" están prohibidos SÓLO cuando el source no dice nada de una baja, una mejora ni una suba — pegarle un resultado a un trabajo que él describió como tarea, eso es el invento.
-  Cuando SÍ contó el resultado, escribilo con el verbo que le corresponde. "Revisaba las facturas y había menos errores" se convierte en "Reduje los errores de facturación revisando cada lote antes de emitirlo" — eso no es inventar: es su propia información escrita como se escribe un CV, y es el valor que está pagando. Callarse el verbo porque suena a logro lo deja con una lista de tareas.
+- UN RESULTADO QUE ÉL NUNCA CONTÓ. "Reduje errores", "mejoré la eficiencia", "aumenté las ventas" están prohibidos SÓLO cuando el source no dice nada de una baja, una mejora ni una suba — pegarle un resultado a un trabajo que él describió como tarea, eso es lo quemado.
+  Cuando SÍ contó el resultado, escribilo con el verbo que le corresponde. "Revisaba las facturas y había menos errores" se convierte en "Reduje los errores de facturación revisando cada lote antes de emitirlo" — eso es su propia información escrita como se escribe un CV, y es el valor que está pagando. Callarse el verbo porque suena a logro lo deja con una lista de tareas.
 - Certificaciones, licencias ni títulos.
 - Jerarquía que no declaró: nada de "lideré", "gestioné" ni "supervisé" si no lo dijo.
 Si el trabajo realmente tenía un número y no lo dio, proponé el rango y marcalo como suyo para confirmar. Nunca dejes la línea pelada cuando el tamaño es obvio, y nunca le entregues una cifra exacta elegida por vos.`
@@ -209,7 +209,7 @@ La línea que el candidato escribió BIEN — específica, con el vocabulario de
 }
 
 /**
- * The other half of "never invent": never delete.
+ * The other half of "never hard-code": never delete.
  *
  * WHY THIS EXISTS, and it was found by measuring the opposite case. The bar
  * above tells the model to name what the work consists of, and on a résumé the

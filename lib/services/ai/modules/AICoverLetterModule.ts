@@ -13,9 +13,9 @@ import type { ILogger } from "@/lib/interfaces/ILogger"
 import { enforceAIQuota } from "../shared/quota-enforcer"
 import { untrustedDataRule } from "../shared/untrusted-input"
 import { cleanGeneratedText } from "../shared/clean-output"
-import { parseAIJson, escapeHtml, resolveLanguage, detectHallucination, stripVersionLabel, stripSignOff, losesStatedFigure } from "../shared/ai-helpers"
+import { parseAIJson, escapeHtml, resolveLanguage, hasHardCodedFact, stripVersionLabel, stripSignOff, losesStatedFigure } from "../shared/ai-helpers"
 import { LETTER_ONE_PAGE_WORDS } from "@/components/cover-letter/templates/_metrics"
-// The letter takes the BAR and the never-invent list, and not `proseRules`:
+// The letter takes the BAR and the never-hard-code list, and not `proseRules`:
 // those describe how a CV BULLET opens and how long it runs ("• ", one tense,
 // 16-28 words, a past-tense verb first), which is the wrong shape for a letter
 // and would fight the paragraph structure below. The two that do apply are the
@@ -54,9 +54,9 @@ import {
  * looked like an echo and already_optimized could not fire at all.
  */
 // Stand-in employer names a thin profile provokes ("XYZ Corp", "[Company]",
-// "Company Name"). detectHallucination catches invented metrics/tech but not a
+// "Company Name"). hasHardCodedFact catches hard-coded metrics/tech but not a
 // fabricated proper noun, so this belts that specific, reported failure. A match
-// only counts as invented when it is NOT in the grounding source (a real employer
+// only counts as hard-coded when it is NOT in the grounding source (a real employer
 // literally called "ABC" survives).
 const PLACEHOLDER_COMPANY_REGEX =
   /\b(?:XYZ|ABC)\b|\[(?:company|empresa|name|nombre|position|puesto)[^\]]*\]|\bcompany name\b|\bnombre de la empresa\b/i
@@ -222,12 +222,12 @@ Rules:
 - Do NOT use placeholder text like [Company] or [Name] — use the actual values provided
 - NEVER name a company, employer, product, or client that is not in the candidate profile. NEVER use a stand-in like "XYZ Corp", "ABC Company", or "Company Name" — if the profile names no employer, describe the work without naming one.
 - Do NOT sign off. End with the closing paragraph. No "Sincerely,", no name line, no "[Your Name]" — the app renders the candidate's real name below your text, so a signature here duplicates it or leaves an unfilled bracket in their letter.
-- Do NOT invent facts, metrics, technologies, or experiences not present in the candidate profile
+- Do NOT state facts, metrics, technologies, or experiences not present in the candidate profile
 - NEVER write a bracket placeholder such as [X%] or [N projects]. This letter is sent to a recruiter as-is. If the candidate states no figure, write the achievement without a number.
 - NEVER these phrases. Every one is checked and a letter carrying any is rejected: ${clicheBanList("en")}
 - Each paragraph must be 2–4 sentences, substantive and specific — never padding to reach a length
 - The letter must feel written by a human, not AI
-- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never invent one.
+- Human voice (avoid AI-detection): vary sentence length and rhythm — do not make every sentence the same length. Write conversationally, the way the candidate would speak, not like a press release. Also banned: "Spearheaded", "Leveraged", "Orchestrated", "Utilized", "Synergy", "Results-driven". Ground every claim in a concrete detail from the profile (tool, company, real result) — never hard-code one.
 
 Respond ONLY with JSON: {"body": "<full letter body with paragraph breaks using \\n\\n>"}`
       : `Eres un redactor senior especializado en cartas de presentación que consiguen entrevistas en empresas top. Tienes años de experiencia ayudando a profesionales a destacar en procesos de selección.
@@ -257,21 +257,21 @@ Reglas:
 - BRIEF DE PERSONALIZACIÓN PRIMERO: si arriba aparece una sección "BRIEF DE PERSONALIZACIÓN", ese es el plan. Teje sus keywords destacadas en el párrafo de ENCAJE A TRAVÉS de los logros reales que lista (parafraséalos, nunca los cites textual), y conecta explícitamente 2-3 de ellos con las necesidades de la vacante. NUNCA menciones ni reclames nada bajo su línea "NUNCA reclames" — el perfil no lo respalda.
 - Escribe SOLO el cuerpo (sin saludo, sin fecha, sin bloque de firma)
 - NO uses placeholders como [Empresa] o [Nombre] — usa los valores reales proporcionados
-- NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre inventado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
+- NUNCA nombres una empresa, empleador, producto o cliente que no esté en el perfil del candidato. NUNCA uses un nombre quemado como "XYZ Corp", "Empresa ABC" o "Nombre de la Empresa" — si el perfil no nombra un empleador, describe el trabajo sin nombrarlo.
 - NO firmes la carta. Termina con el párrafo de cierre. Sin "Atentamente,", sin línea de nombre, sin "[Tu Nombre]" — la app renderiza el nombre real del candidato debajo de tu texto, así que una firma aquí lo duplica o le deja un corchete sin rellenar.
-- NO inventes datos, métricas, tecnologías ni experiencias que no estén en el perfil del candidato
+- NO afirmes datos, métricas, tecnologías ni experiencias que no estén en el perfil del candidato
 - NUNCA escribas un placeholder entre corchetes como [X%] o [N proyectos]. Esta carta se envía al recruiter tal cual. Si el candidato no declara la cifra, escribe el logro sin número.
 - NUNCA estas frases. Todas se comprueban y una carta que lleve cualquiera se rechaza: ${clicheBanList("es")}
 - Cada párrafo debe tener 2–4 oraciones, sustanciales y específicas — nunca relleno para alcanzar un largo
 - La carta debe sonar escrita por un humano, no por IA
-- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo inventes.
+- Voz humana (evita detección de IA): varía el largo y el ritmo de las frases — no hagas todas las oraciones del mismo largo. Escribe conversacional, como hablaría el candidato, no como nota de prensa. También prohibidas: "Orquestó", "Apalancó", "Utilizó", "sinergia", "orientado a resultados". Ancla cada afirmación a un dato concreto del perfil (herramienta, empresa, resultado real) — nunca lo afirmes.
 
 Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo usando \\n\\n>"}`
 
     const response = await this.aiClient.chat({
       model: AI_MODEL_PROSE,
       max_tokens: 900,
-      // STRUCTURED (0.3), not CREATIVE (0.7): this endpoint invented employers and
+      // STRUCTURED (0.3), not CREATIVE (0.7): this endpoint hard-coded employers and
       // metrics ("XYZ Corp", "+40%") at high temperature with nothing filtering the
       // output. Variety now comes from the tone param and the human-voice rules, not
       // raw randomness — improveCoverLetter uses the same 0.3 for the same reason.
@@ -321,20 +321,20 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
       body = stripSignOff(parsed.body)
     }
 
-    // Anti-invention guard — a fabricated metric, technology, or employer not in the
+    // Anti-hard-coded fact guard — a fabricated metric, technology, or employer not in the
     // profile is exactly what got a user a letter about "XYZ Corp" and "+40%". The JD
     // counts as a grounding source too, so featuring a real vacancy term the brief
     // asked for is never flagged. On a trip, retry ONCE grounded harder.
     const grounding = [resumeContext, userPrompt ?? "", ...highlightValues, jobDescription ?? "", company ?? "", jobTitle ?? "", recipientName ?? "", recipientTitle ?? ""].join("\n")
-    if (this.letterInventsContent(body, grounding)) {
-      this.logger.warn("[AIService.generateCoverLetter] draft invented content, retrying grounded")
+    if (this.letterHardCodesContent(body, grounding)) {
+      this.logger.warn("[AIService.generateCoverLetter] draft hard-coded content, retrying grounded")
       const retry = await this.retryGroundedGeneration(prompt, langInstruction, language)
       if (retry) {
         retryUsages.push(retry.usage ?? {})
         const retryBody = stripSignOff(retry.body)
         // Prefer the retry when it's clean; if both are flagged keep the retry
         // (grounded-harder) and log — the gate lowers the odds, it never returns nothing.
-        if (!this.letterInventsContent(retryBody, grounding)) {
+        if (!this.letterHardCodesContent(retryBody, grounding)) {
           body = retryBody
         } else {
           body = retryBody
@@ -346,7 +346,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
     // ── ATS-in-the-loop ────────────────────────────────────────────────────────
     // The deterministic ATS engine grades the draft; if the JD keyword overlap is
     // weak, spend ONE retry weaving in the vacancy terms the résumé genuinely
-    // supports (from the brief's featureKeywords — never the gaps, so no invention).
+    // supports (from the brief's featureKeywords — never the gaps, so no hard-coded fact).
     // Keep the retry ONLY when it stays clean AND actually scores higher. This is the
     // "expert engine + AI" loop: the engine judges, the model improves toward it.
     if (jobDescription && brief.hasJd && brief.featureKeywords.length > 0) {
@@ -360,7 +360,7 @@ Responde ÚNICAMENTE con JSON: {"body": "<cuerpo completo con saltos de párrafo
             retryUsages.push(retry.usage ?? {})
             const retryBody = stripSignOff(retry.body)
             const after = analyzeCoverLetterAts(retryBody, jobDescription)
-            if (!this.letterInventsContent(retryBody, grounding) && after.keywords.score > before.keywords.score) {
+            if (!this.letterHardCodesContent(retryBody, grounding) && after.keywords.score > before.keywords.score) {
               body = retryBody
             } else {
               this.logger.info("[AIService.generateCoverLetter] ATS retry kept the original (not cleaner/higher)")
@@ -462,7 +462,7 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
   /**
    * Cifras que la carta afirma y el perfil no respalda.
    *
-   * `detectHallucination` sólo acusa un número cuando lleva unidad (%, users,
+   * `hasHardCodedFact` sólo acusa un número cuando lleva unidad (%, users,
    * requests…), y es estrecho a propósito: un falso positivo ahí le cuesta al
    * usuario su carta entera. El precio de esa decisión es que un número pelado
    * pasa — y una carta se envía a un reclutador tal cual.
@@ -471,10 +471,10 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
    * y le habló al operador con NUESTRA propia instrucción dentro de la carta —
    * "te devuelvo una versión final en 3 párrafos, dentro de las 250–350 palabras
    * pedidas". Ni "3", ni "250", ni "350" existen en el CV ni en la vacante. La
-   * regla que lo caza es la misma que lo cazaría si hubiera inventado "atendí a
+   * regla que lo caza es la misma que lo cazaría si hubiera quemado "atendí a
    * 250 clientes": una cifra que el candidato no dio.
    *
-   * Aquí sí se puede ser estricto donde `detectHallucination` no puede: esto NO
+   * Aquí sí se puede ser estricto donde `hasHardCodedFact` no puede: esto NO
    * descarta la carta, dispara UN reintento, y si el segundo intento tampoco
    * convence queda en pie el primero. El costo de equivocarse es una llamada.
    */
@@ -520,17 +520,17 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
   }
 
   /** True when a fresh cover-letter draft carries content the profile does not
-   *  support: an invented metric/technology (detectHallucination), a figure the
+   *  support: an hard-coded metric/technology (hasHardCodedFact), a figure the
    *  profile never states, or a stand-in employer name absent from the source. */
-  private letterInventsContent(body: string, grounding: string): boolean {
-    if (detectHallucination(body, grounding)) return true
+  private letterHardCodesContent(body: string, grounding: string): boolean {
+    if (hasHardCodedFact(body, grounding)) return true
     if (this.letterStatesUnsourcedFigure(body, grounding).length > 0) return true
     const m = body.match(PLACEHOLDER_COMPANY_REGEX)
     return !!m && !grounding.toLowerCase().includes(m[0].toLowerCase())
   }
 
-  /** One grounded retry when the first draft invented content. Names the failure
-   *  last (the model must be told what it did wrong), and never quotes the invented
+  /** One grounded retry when the first draft hard-coded content. Names the failure
+   *  last (the model must be told what it did wrong), and never quotes the hard-coded
    *  token back. Returns null on any failure — the first draft still stands. */
 
   /** Palabras de prosa, para contrastar contra lo que entra en la hoja. */
@@ -551,7 +551,7 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
    * se paga acá es el valor curricular, no el largo. Por eso el reintento pide
    * comprimir RELLENO —conectores, preámbulos, adjetivos— y la versión corta se
    * acepta sólo si además de entrar NO pierde ninguna cifra que el candidato
-   * declaró y NO inventa nada nuevo. Si no cumple, gana la original: dos páginas
+   * declaró y NO quema nada nuevo. Si no cumple, gana la original: dos páginas
    * con la información completa valen más que una página incompleta.
    *
    * Un solo reintento, como el resto de los guards del módulo.
@@ -581,8 +581,8 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
       this.logger.warn("[AIService.generateCoverLetter] compressed draft dropped a figure; keeping the full letter")
       return body
     }
-    if (this.letterInventsContent(shorter, grounding)) {
-      this.logger.warn("[AIService.generateCoverLetter] compressed draft invented content; keeping the full letter")
+    if (this.letterHardCodesContent(shorter, grounding)) {
+      this.logger.warn("[AIService.generateCoverLetter] compressed draft hard-coded content; keeping the full letter")
       return body
     }
     if (this.letterWordCount(shorter) >= words) return body
@@ -609,7 +609,7 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
    * LA LÍNEA, que es la misma que fija la doctrina de redacción: decir en qué
    * consiste normalmente un puesto es conocimiento del oficio y es el valor que
    * se paga; afirmar algo sobre ESTA empresa o sobre ESTE proceso de selección
-   * sería inventar un hecho. Por eso el bloque autoriza lo primero y prohíbe lo
+   * sería quemar un hecho. Por eso el bloque autoriza lo primero y prohíbe lo
    * segundo de forma explícita: nada de "su reciente ronda de inversión", nada
    * de "su cultura de innovación", nada de requisitos que nadie publicó.
    *
@@ -622,10 +622,10 @@ ${evidence ? `Respáldalos con estos logros reales del CV (parafrasea, no cites 
     return language === "en"
       ? `\n=== NO VACANCY TEXT WAS PROVIDED ===
 Write for what ${role ? `a "${role}" role` : "this role"} normally involves: the duties, tools and responsibilities the trade is made of. That is professional knowledge and it belongs in the letter.
-NEVER state anything about THIS employer — no achievements, funding, culture, products, size or history — and never invent a requirement as if the vacancy had published it. Anchor every claim about the candidate in their résumé, exactly as above.\n`
+NEVER state anything about THIS employer — no achievements, funding, culture, products, size or history — and never hard-code a requirement as if the vacancy had published it. Anchor every claim about the candidate in their résumé, exactly as above.\n`
       : `\n=== NO SE PEGÓ EL TEXTO DE LA VACANTE ===
 Escribe para lo que ${role ? `un puesto de "${role}"` : "este puesto"} implica normalmente: las tareas, herramientas y responsabilidades de las que está hecho ese oficio. Eso es conocimiento profesional y sí va en la carta.
-NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, ni productos, ni tamaño, ni historia— ni inventes un requisito como si la vacante lo hubiera publicado. Todo lo que digas del candidato sale de su CV, igual que arriba.\n`
+NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, ni productos, ni tamaño, ni historia— ni afirmes un requisito como si la vacante lo hubiera publicado. Todo lo que digas del candidato sale de su CV, igual que arriba.\n`
   }
 
   private async retryWithNote(
@@ -646,7 +646,7 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
           // carta en inglés no puede pedirse en español.
           { role: "system", content: language === "en"
             ? `You are a senior cover-letter writer. You never hard-code figures, companies or technologies absent from the profile. ${langInstruction}`
-            : `Eres un redactor senior de cartas de presentación. NUNCA inventas cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
+            : `Eres un redactor senior de cartas de presentación. NUNCA quemás cifras, empresas ni tecnologías que no estén en el perfil. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}` },
         ],
       })
@@ -664,13 +664,13 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
     language: "es" | "en",
   ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     const note = language === "en"
-      ? "YOUR LAST DRAFT INVENTED FACTS. Rewrite the letter using ONLY what the candidate profile states. Do NOT invent numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
-      : "TU BORRADOR ANTERIOR INVENTÓ DATOS. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO inventes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre inventado como \"XYZ Corp\"."
+      ? "YOUR LAST DRAFT STATED FACTS THE CANDIDATE NEVER GAVE. Rewrite the letter using ONLY what the candidate profile states. Do NOT state numbers, percentages, employers, companies, products, or technologies. If the profile gives no figure, write the achievement without one. Never write a stand-in name like \"XYZ Corp\"."
+      : "TU BORRADOR ANTERIOR AFIRMÓ DATOS QUE EL CANDIDATO NUNCA DIO. Reescribe la carta usando SOLO lo que declara el perfil del candidato. NO quemes números, porcentajes, empleadores, empresas, productos ni tecnologías. Si el perfil no da una cifra, escribe el logro sin ella. Nunca escribas un nombre quemado como \"XYZ Corp\"."
     return this.retryWithNote(basePrompt, note, langInstruction, language)
   }
 
   /** ATS-in-the-loop retry: weave in specific résumé-supported vacancy terms the
-   *  first draft missed — naturally, through real achievements, never inventing and
+   *  first draft missed — naturally, through real achievements, never hard-coding and
    *  never keyword-stuffing, and still one page. Returns null on any failure so the
    *  first draft stands. */
   private async retryWeaveKeywords(
@@ -681,8 +681,8 @@ NUNCA afirmes nada sobre ESTA empresa —ni logros, ni inversión, ni cultura, n
   ): Promise<{ body: string; usage: { prompt_tokens?: number; completion_tokens?: number } | undefined } | null> {
     const list = keywords.slice(0, 8).join(", ")
     const note = language === "en"
-      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT invent anything, do NOT keyword-stuff, keep it under ${LETTER_ONE_PAGE_WORDS} words and ONE page.`
-      : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO inventes nada, NO amontones keywords, mantenla por debajo de ${LETTER_ONE_PAGE_WORDS} palabras y UNA página.`
+      ? `Your last draft under-used the vacancy's language. Rewrite the letter weaving these résumé-supported terms in NATURALLY, through the candidate's real achievements: ${list}. Do NOT state anything, do NOT keyword-stuff, keep it under ${LETTER_ONE_PAGE_WORDS} words and ONE page.`
+      : `Tu borrador anterior usó poco el lenguaje de la vacante. Reescribe la carta tejiendo estos términos que el CV respalda de forma NATURAL, a través de los logros reales del candidato: ${list}. NO quemes nada, NO amontones keywords, mantenla por debajo de ${LETTER_ONE_PAGE_WORDS} palabras y UNA página.`
     return this.retryWithNote(basePrompt, note, langInstruction, language)
   }
 
@@ -814,7 +814,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       model: AI_MODEL_PROSE,
       max_tokens: 1000,
       // improve-cover-letter uses 0.3 — must stay close to the original body
-      // and avoid inventing metrics or technologies.
+      // and avoid hard-coding metrics or technologies.
       temperature: AI_TEMPERATURE_STRUCTURED,
       response_format: { type: "json_object" },
       messages: [
@@ -830,7 +830,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
               : "Eres un Consultor de Carrera de Élite especializado en redacción de cartas de presentación de alto impacto para procesos de selección. " +
                 "Tu especialidad es transformar cartas genéricas en textos que destacan al candidato con logros concretos y lenguaje de impacto. " +
                 "SOLO trabajas con cartas de presentación laborales. " +
-                "NUNCA inventas cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
+                "NUNCA quemás cifras y NUNCA escribes placeholders entre corchetes — cuando no hay métrica real, escribes sin número. " +
                 "Si el contenido no es una carta de presentación laboral, responde únicamente con: {\"versions\": []} sin texto adicional. ") +
             langInstruction,
         },
@@ -879,7 +879,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
     // requests, would have kept the filler.
     const rewritten = this.usableVersions(parsed.versions, source, plainBody)
 
-    // Nothing survived: every version either invented something or just echoed
+    // Nothing survived: every version either hard-coded something or just echoed
     // the letter back. Both mean the same to the user, and both must return the
     // original rather than dress a non-improvement up as a choice.
     if (rewritten.length === 0) {
@@ -981,13 +981,13 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
       // not a rewrite. Doing it here means every reader below — the cliché gate,
       // the retry decision — sees the text the user would actually get.
       .map(substituteCliches)
-      // La MISMA definición de "inventado" que usa la carta nueva. Estaban
-      // divididas: generate pasaba por `letterInventsContent` y esto sólo por
-      // `detectHallucination`, así que la fuga medida ahí —el modelo hablándole
+      // La MISMA definición de "quemado" que usa la carta nueva. Estaban
+      // divididas: generate pasaba por `letterHardCodesContent` y esto sólo por
+      // `hasHardCodedFact`, así que la fuga medida ahí —el modelo hablándole
       // al operador con nuestra propia instrucción, "3 párrafos, 250-350
       // palabras"— entraba igual por el camino de mejorar. Dos caminos escriben
       // la carta del usuario; no pueden tener dos varas.
-      .filter((v) => !this.letterInventsContent(v, source))
+      .filter((v) => !this.letterHardCodesContent(v, source))
       .filter((v) => !isTrivialEdit(plainBody, v))
   }
 
@@ -1027,7 +1027,7 @@ Responde ÚNICAMENTE con JSON válido, con esta forma: una clave "status" con el
         messages: [
           { role: "system", content: language === "en"
             ? `You are a senior CV writer. You never hard-code figures and never write placeholders. ${langInstruction}`
-            : `Eres un Consultor de Carrera de Élite. NUNCA inventas cifras ni escribes placeholders. ${langInstruction}` },
+            : `Eres un Consultor de Carrera de Élite. NUNCA quemás cifras ni escribes placeholders. ${langInstruction}` },
           { role: "user", content: `${basePrompt}\n\n${note}${alsoTooLong ? lengthNote : ""}` },
         ],
       })

@@ -119,7 +119,7 @@ function opensWeakly(text: string): boolean {
  *
  * Reports, never judges: a bullet without a figure is not automatically bad —
  * plenty of real work has no number attached, and demanding one is exactly what
- * used to push the model into inventing "[N users]". Callers decide what to do
+ * used to push the model into hard-coding "[N users]". Callers decide what to do
  * with the ratio; this only says what is there.
  */
 export function assessDescription(description: string): DescriptionQuality {
@@ -161,7 +161,7 @@ export function assessResumeContent(sectionData: Record<string, unknown>): ATSCo
     weakOpenerBullets += q.weakOpenerIndices.length
     for (const b of q.bullets) {
       // Surface weak bullets LOCATED: no figure OR a duty opener. Weak openers
-      // are the most improvable without inventing a number, so include them too.
+      // are the most improvable without hard-coding a number, so include them too.
       if ((!b.hasMetric || b.weakOpener) && metriclessBullets.length < METRICLESS_LIMIT) {
         metriclessBullets.push({
           text: b.text,
@@ -192,7 +192,7 @@ export function assessResumeContent(sectionData: Record<string, unknown>): ATSCo
  * model's — it has to be made in code, before the call.
  *
  * "Actionable" is deliberately narrow, and excludes a missing figure. We refuse
- * to invent numbers, so a bullet with no metric is not something the AI can
+ * to hard-code numbers, so a bullet with no metric is not something the AI can
  * repair; treating it as a defect is what kept the button alive forever on
  * bullets that were already fine.
  *
@@ -224,7 +224,7 @@ export function isDescriptionOptimized(description: string): boolean {
  *   improvable   a defect a rewrite can repair (weak opener, cliché, length)
  *   needs_input  well-formed but says only WHAT you did, never what it achieved.
  *                A rewrite cannot add the result — only the candidate knows it,
- *                and inventing one is the line this product does not cross.
+ *                and hard-coding one is the line this product does not cross.
  *   optimized    verb-first, states an outcome, nothing left to do
  *
  * Measured on real bullets across fields: 8 of 12 weak ones ("Handled customer

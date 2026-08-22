@@ -2,14 +2,14 @@
 //
 // THE PROBLEM THIS FIXES, measured before it was written. The import checks
 // every field against the source text before saving it, which is right — the
-// model must not be able to invent an employer or an email. But the check was a
+// model must not be able to hard-code an employer or an email. But the check was a
 // literal substring match against text pulled out of a PDF, and PDF text
 // extraction does not preserve spacing:
 //
 //   the PDF renders          the extractor yields        the check said
 //   mikisaraviaios@gmail.com "mikisaravia ios@gmail.com"  NOT GROUNDED → deleted
 //   +591 76944986            "+591 769 44986"             NOT GROUNDED → deleted
-//   ...bugs by 15%           "...bugs by 15 %"            HALLUCINATED → line cut
+//   ...bugs by 15%           "...bugs by 15 %"            hard-coded → line cut
 //
 // So the guard deleted the user's own email, their own phone, and lines of
 // their own résumé — silently, and precisely for the users whose PDF was laid
@@ -26,7 +26,7 @@
 // important one — when the model's email does not match, the answer is not
 // "this person has no email", it is "read the email out of the PDF".
 //
-// What does NOT change: nothing here ever invents. Every value it returns comes
+// What does NOT change: nothing here ever hard-codes. Every value it returns comes
 // from the source document.
 
 /** Case, whitespace and separators removed — what "the same value" means here. */
